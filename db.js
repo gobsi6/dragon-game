@@ -44,6 +44,34 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS chat_region ON chat(region, id);
 `);
 
+
+// ── 2단계 열 추가: 이미 있는 데이터는 그대로 두고 빠진 열만 붙입니다 ──
+const dragonCols = db.prepare('PRAGMA table_info(dragons)').all().map((c) => c.name);
+const addCol = (name, def) => {
+  if (!dragonCols.includes(name)) db.exec(`ALTER TABLE dragons ADD COLUMN ${name} ${def}`);
+};
+addCol('avatar', 'BLOB');
+addCol('avatar_type', 'TEXT');
+addCol('avatar_ver', 'INTEGER NOT NULL DEFAULT 0');
+addCol('level', 'INTEGER NOT NULL DEFAULT 1');
+addCol('xp', 'INTEGER NOT NULL DEFAULT 0');
+addCol('hp', 'INTEGER NOT NULL DEFAULT 100');
+addCol('hp_max', 'INTEGER NOT NULL DEFAULT 100');
+addCol('en', 'INTEGER NOT NULL DEFAULT 50');
+addCol('en_max', 'INTEGER NOT NULL DEFAULT 50');
+addCol('ap', 'INTEGER NOT NULL DEFAULT 10');
+addCol('ap_max', 'INTEGER NOT NULL DEFAULT 10');
+addCol('gold', 'INTEGER NOT NULL DEFAULT 0');
+addCol('claw', 'INTEGER NOT NULL DEFAULT 10');
+addCol('scale', 'INTEGER NOT NULL DEFAULT 10');
+addCol('wing', 'INTEGER NOT NULL DEFAULT 10');
+addCol('wisdom', 'INTEGER NOT NULL DEFAULT 10');
+addCol('stance', "TEXT NOT NULL DEFAULT 'hermit'");
+
+// 그림(avatar)을 뺀 드래곤 정보 열
+const DRAGON_FIELDS = `id, name, kind, region, avatar_ver, level, xp, hp, hp_max, en, en_max,
+  ap, ap_max, gold, claw, scale, wing, wisdom, stance`;
+
 const q = {
   countUsers:   db.prepare('SELECT COUNT(*) AS n FROM users'),
   userByName:   db.prepare('SELECT * FROM users WHERE username = ?'),
@@ -51,9 +79,13 @@ const q = {
   createSess:   db.prepare('INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)'),
   sessUser:     db.prepare('SELECT u.id, u.username, u.is_gm FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?'),
   deleteSess:   db.prepare('DELETE FROM sessions WHERE token = ?'),
-  dragonByUser: db.prepare('SELECT id, name, kind, region FROM dragons WHERE user_id = ?'),
+  dragonByUser: db.prepare(`SELECT ${DRAGON_FIELDS} FROM dragons WHERE user_id = ?`),
   dragonByName: db.prepare('SELECT id FROM dragons WHERE name = ?'),
-  createDragon: db.prepare('INSERT INTO dragons (user_id, name, kind, region, created_at, last_seen) VALUES (?, ?, ?, ?, ?, ?)'),
+  createDragon: db.prepare(`INSERT INTO dragons (user_id, name, kind, region, created_at, last_seen, claw, scale, wing, wisdom)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
+  setAvatar:    db.prepare('UPDATE dragons SET avatar = ?, avatar_type = ?, avatar_ver = avatar_ver + 1 WHERE id = ?'),
+  avatarVer:    db.prepare('SELECT avatar_ver FROM dragons WHERE id = ?'),
+  getAvatar:    db.prepare('SELECT avatar, avatar_type FROM dragons WHERE id = ?'),
   setRegion:    db.prepare('UPDATE dragons SET region = ? WHERE id = ?'),
   touch:        db.prepare('UPDATE dragons SET last_seen = ? WHERE id = ?'),
   addChat:      db.prepare('INSERT INTO chat (region, dragon_id, name, kind, text, at) VALUES (?, ?, ?, ?, ?, ?)'),
@@ -70,10 +102,17 @@ module.exports = {
   deleteSession: (token) => q.deleteSess.run(token),
   getDragonByUser: (userId) => q.dragonByUser.get(userId),
   dragonNameTaken: (name) => !!q.dragonByName.get(name),
-  createDragon: (userId, name, kind, region) => {
+  createDragon: (userId, name, kind, region, stats) => {
     const now = Date.now();
-    return q.createDragon.run(userId, name, kind, region, now, now).lastInsertRowid;
+    q.createDragon.run(userId, name, kind, region, now, now,
+      stats.claw, stats.scale, stats.wing, stats.wisdom);
+    return q.dragonByUser.get(userId);
   },
+  setAvatar: (dragonId, buf, type) => {
+    q.setAvatar.run(buf, type, dragonId);
+    return q.avatarVer.get(dragonId).avatar_ver;
+  },
+  getAvatar: (dragonId) => q.getAvatar.get(dragonId),
   setRegion: (dragonId, region) => q.setRegion.run(region, dragonId),
   touch: (dragonId) => q.touch.run(Date.now(), dragonId),
   addChat: (region, m) => {

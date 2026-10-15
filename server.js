@@ -8,13 +8,15 @@ const bcrypt = require('bcryptjs');
 const { Server } = require('socket.io');
 
 const db = require('./db');
-const { KINDS, REGIONS } = require('./game-data');
+const { KINDS, REGIONS, STANCES } = require('./game-data');
 
 const PORT = process.env.PORT || 3000;
 const MOVE_COOLDOWN = 1500; // ms, 연속 이동 방지
 const CHAT_COOLDOWN = 700;  // ms, 도배 방지
 const CHAT_MAX = 200;       // 글자 수
 const HISTORY = 30;         // 지역에 들어갈 때 보여줄 지난 대화 수
+const AVATAR_MAX = 400000;  // 프로필 그림 최대 크기 (base64 글자 수, 약 300KB)
+const AVATAR_COOLDOWN = 5000;
 
 const app = express();
 app.use(express.json({ limit: '10kb' }));
@@ -67,6 +69,16 @@ app.post('/api/login', (req, res) => {
   res.json({ token });
 });
 
+// 프로필 그림. 주소 끝의 ?v=버전 덕분에 그림을 바꾸면 새로 받아집니다.
+app.get('/avatar/:id', (req, res) => {
+  const row = db.getAvatar(Number(req.params.id));
+  if (!row || !row.avatar) return res.status(404).end();
+  res.set('Content-Type', row.avatar_type);
+  res.set('Cache-Control', 'public, max-age=31536000, immutable');
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.send(row.avatar);
+});
+
 app.post('/api/logout', (req, res) => {
   const token = str(req.body?.token);
   if (token) db.deleteSession(token);
@@ -78,7 +90,17 @@ app.post('/api/logout', (req, res) => {
 // dragonId → { socket, dragon: { id, name, kind, region } }
 const online = new Map();
 
-const publicDragon = (d) => ({ id: d.id, name: d.name, kind: d.kind });
+const publicDragon = (d) => ({ id: d.id, name: d.name, kind: d.kind, av: d.avatar_ver });
+
+// 내 드래곤의 전체 정보 (나에게만 보냄)
+const meOf = (d) => ({
+  ...publicDragon(d),
+  level: d.level, xp: d.xp, xpMax: d.level * 100,
+  hp: d.hp, hpMax: d.hp_max, en: d.en, enMax: d.en_max,
+  ap: d.ap, apMax: d.ap_max, gold: d.gold,
+  stats: { claw: d.claw, scale: d.scale, wing: d.wing, wisdom: d.wisdom },
+  stance: d.stance, stanceName: STANCES[d.stance] || '',
+});
 
 function occupants(region) {
   const list = [];
@@ -154,7 +176,7 @@ io.on('connection', (socket) => {
 
   socket.emit('init', {
     me: { username: user.username, isGm: !!user.is_gm },
-    dragon: dragon ? publicDragon(dragon) : null,
+    dragon: dragon ? meOf(dragon) : null,
     kinds: KINDS,
     regions: REGIONS,
   });
@@ -172,10 +194,8 @@ io.on('connection', (socket) => {
     if (!KINDS[kind]) return ack({ error: '드래곤 종류를 골라 주세요.' });
     if (db.dragonNameTaken(name)) return ack({ error: '이미 대륙에 같은 이름의 드래곤이 있어요.' });
 
-    const region = KINDS[kind].home;
-    const id = db.createDragon(user.id, name, kind, region);
-    const created = { id, name, kind, region };
-    ack({ ok: true, dragon: publicDragon(created) });
+    const created = db.createDragon(user.id, name, kind, KINDS[kind].home, KINDS[kind].stats);
+    ack({ ok: true, dragon: meOf(created) });
     enterWorld(socket, created);
   });
 
@@ -208,6 +228,28 @@ io.on('connection', (socket) => {
     broadcastPresence(to);
     broadcastCounts();
     sendRegionState(socket, d);
+    ack({ ok: true });
+  });
+
+  socket.on('dragon:avatar', (payload, ack) => {
+    if (typeof ack !== 'function') ack = () => {};
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어 주세요.' });
+
+    const m = /^data:image\/(webp|jpeg|png);base64,([A-Za-z0-9+/=]+)$/.exec(str(payload?.dataUrl));
+    if (!m) return ack({ error: '그림 파일을 읽지 못했어요. 다른 그림으로 해 주세요.' });
+    if (m[2].length > AVATAR_MAX) return ack({ error: '그림이 너무 커요.' });
+
+    const now = Date.now();
+    if (now - (socket.data.lastAvatar || 0) < AVATAR_COOLDOWN) {
+      return ack({ error: '그림은 잠시 뒤에 다시 바꿀 수 있어요.' });
+    }
+    socket.data.lastAvatar = now;
+
+    const d = entry.dragon;
+    d.avatar_ver = db.setAvatar(d.id, Buffer.from(m[2], 'base64'), `image/${m[1]}`);
+    socket.emit('me', meOf(d));
+    broadcastPresence(d.region);
     ack({ ok: true });
   });
 
