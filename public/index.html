@@ -356,6 +356,10 @@
   .seg span { padding: 6px 0; text-align: center; color: var(--muted); }
   .seg span.on { background: var(--forest); color: #F4F7FA; font-weight: 600; }
 
+  /* 지역 소개 + 행동 버튼을 감싸는 카드 */
+  .region-card { padding: 20px 24px 16px; display: flex; flex-direction: column; gap: 16px; }
+  .region-card .quote { max-width: none; margin-top: 12px; background: var(--surface-2); padding: 10px 14px 10px 16px; }
+  .region-card .actions { padding-top: 14px; border-top: 1px solid var(--line-in); }
   .where .k { font-size: 12px; color: var(--muted); letter-spacing: .08em; }
   .where .title { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
   .where h1 { margin: 0; font: 900 34px/1.2 var(--serif); }
@@ -449,6 +453,7 @@
     .profile, .side { max-width: none; }
     .center { order: -1; }  /* 휴대폰에서는 지역과 지도를 먼저 */
     .where h1 { font-size: 28px; }
+    .region-card { padding: 16px 14px 14px; gap: 14px; }
     .log { min-height: 260px; max-height: 360px; }
   }
 </style>
@@ -566,21 +571,24 @@
     </section>
 
     <div class="center">
-      <section class="where" aria-label="현재 지역">
-        <span class="k">지금 머무는 곳</span>
-        <div class="title"><h1 id="region-name"></h1><span class="tag" id="region-tag"></span></div>
-        <p class="quote" id="region-desc"></p>
+      <section class="frame region-card" aria-label="현재 지역">
+        <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+        <div class="where">
+          <span class="k">지금 머무는 곳</span>
+          <div class="title"><h1 id="region-name"></h1><span class="tag" id="region-tag"></span></div>
+          <p class="quote" id="region-desc"></p>
+        </div>
+        <div class="actions" id="actions">
+          <button class="btn primary" type="button" data-act="explore"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>탐사<span class="cost">−1</span></button>
+          <button class="btn" type="button" data-act="gather"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3A6B50" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19c0-8 6-13 14-14-1 8-6 14-14 14z"/><path d="M5 19l7-7"/></svg>채집<span class="cost">−1</span></button>
+          <button class="btn" type="button" data-act="hunt"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3C5A73" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19L19 5"/><path d="M14 5h5v5"/><path d="M4 15l5 5"/></svg>사냥<span class="cost">−2</span></button>
+          <button class="btn" type="button" id="market-open" hidden><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7A5A16" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l2-5h14l2 5"/><path d="M4 9v11h16V9"/><path d="M3 9h18"/><path d="M10 20v-6h4v6"/></svg>시장</button>
+          <button class="btn" type="button" id="intimidate" hidden><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#A63E4B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17l-1-10 5 4 4-6 4 6 5-4-1 10z"/><path d="M8 21l4-3 4 3"/></svg>위협하기<span class="cost">−2</span></button>
+          <button class="btn" type="button" id="nest-open"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7E8389" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-6 8 6"/><path d="M6 10v9h12v-9"/></svg>둥지</button>
+          <button class="btn" type="button" id="exp-open"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2A4256" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/><path d="M9 2h6"/></svg>원정 보내기</button>
+          <span class="note">숫자는 소모하는 행동력이다.</span>
+        </div>
       </section>
-      <div class="actions" id="actions">
-        <button class="btn primary" type="button" data-act="explore"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>탐사<span class="cost">−1</span></button>
-        <button class="btn" type="button" data-act="gather"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3A6B50" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19c0-8 6-13 14-14-1 8-6 14-14 14z"/><path d="M5 19l7-7"/></svg>채집<span class="cost">−1</span></button>
-        <button class="btn" type="button" data-act="hunt"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3C5A73" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19L19 5"/><path d="M14 5h5v5"/><path d="M4 15l5 5"/></svg>사냥<span class="cost">−2</span></button>
-        <button class="btn" type="button" id="market-open" hidden><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7A5A16" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l2-5h14l2 5"/><path d="M4 9v11h16V9"/><path d="M3 9h18"/><path d="M10 20v-6h4v6"/></svg>시장</button>
-        <button class="btn" type="button" id="intimidate" hidden><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#A63E4B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17l-1-10 5 4 4-6 4 6 5-4-1 10z"/><path d="M8 21l4-3 4 3"/></svg>위협하기<span class="cost">−2</span></button>
-        <button class="btn" type="button" id="nest-open"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7E8389" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-6 8 6"/><path d="M6 10v9h12v-9"/></svg>둥지</button>
-        <button class="btn" type="button" id="exp-open"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2A4256" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/><path d="M9 2h6"/></svg>원정 보내기</button>
-        <span class="note">숫자는 소모하는 행동력이다.</span>
-      </div>
       <section class="frame expcard" id="expcard" aria-live="polite" hidden>
         <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
         <span class="k" id="exp-k">원정 중</span>
