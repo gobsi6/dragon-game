@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>용의 대륙</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -189,7 +189,8 @@
   .expcard .bar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #2A4256, #6F9BBC); transition: width 1s linear; }
   .expcard .row { justify-content: flex-start; }
   .expcard .row .btn { flex: 0 0 auto; }
-  .routes.locked .pill { opacity: .45; pointer-events: none; }
+  .routes.locked ~ svg .node.open { pointer-events: none; cursor: default; }
+  .routes.locked ~ svg .halo { display: none; }
   .chip .next { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
   .dlg { position: fixed; width: min(440px, calc(100% - 32px)); max-height: calc(100vh - 48px); padding: 18px 18px 16px; color: var(--ink); overflow: auto; }
@@ -362,17 +363,39 @@
   .tag.wild { border-color: #A9C4B2; background: #EEF4EF; color: #2F5D45; }
   .tag.human { border-color: #B9C7D3; background: #EEF2F6; color: #2E4A60; }
   .quote { margin: 10px 0 0; padding: 10px 0 10px 16px; border-left: 2px solid #B6B9B5; font: 500 16px/1.75 var(--serif); color: #30353A; max-width: 40em; }
-  .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  .actions .note { font-size: 12px; color: var(--muted); }
+  .actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .actions .note { font-size: 11.5px; color: var(--muted); margin-left: 4px; }
+  .actions .btn {
+    min-height: 34px; padding: 0 10px 0 9px; gap: 6px;
+    font-size: 13px; font-weight: 500; letter-spacing: -.01em;
+    background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: 3px;
+    box-shadow: 0 1px 0 rgba(31, 35, 38, .04);
+    transition: border-color .15s, background-color .15s;
+  }
+  .actions .btn:hover:not(:disabled) { background: #fff; border-color: var(--steel); }
+  .actions .btn.primary { background: var(--steel); border-color: var(--steel-d); box-shadow: 0 1px 0 rgba(31, 35, 38, .08); }
+  .actions .btn.primary:hover:not(:disabled) { background: var(--steel-d); }
+  .actions .btn svg { width: 15px; height: 15px; }
+  .actions .btn .cost {
+    margin-left: 1px; padding: 0 5px; border-radius: 2px;
+    font-size: 11px; line-height: 17px; font-weight: 600; font-variant-numeric: tabular-nums;
+    background: #ECEEEC; color: var(--muted);
+  }
+  .actions .btn.primary .cost { background: rgba(255, 255, 255, .16); color: #E3EBF2; }
 
   .map { padding: 10px; }
   .map .routes { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 8px 10px; }
   .map .routes .l { font: 700 14px/1.4 var(--serif); color: var(--steel-d); margin-right: 6px; }
-  .pill { min-height: 34px; padding: 0 12px; background: var(--surface-2); border: 1px solid #D7A9AE; border-radius: 3px; color: #7A2631; font-size: 14px; }
-  .pill:hover { background: #FBEFF0; }
+  .map .routes .hint { font-size: 12px; color: var(--muted); }
+  .map .routes .hint i { display: inline-block; width: 9px; height: 9px; margin: 0 3px -1px; border: 2px solid #B84653; border-radius: 50%; background: #F7F5EE; }
   .map svg { display: block; width: 100%; height: auto; }
   .map .node.open { cursor: pointer; }
-  .map .node.open:hover circle.ring, .map .node.open:focus circle.ring { fill: #FBEFF0; }
+  .map .node.open:hover circle.ring, .map .node.open:focus-visible circle.ring { fill: #F6D9DC; }
+  .map .node.open:hover text, .map .node.open:focus-visible text { fill: #8A2E37; }
+  .map .node.open:focus-visible circle.ring { stroke-width: 4.5; }
+  .map .halo { transform-box: fill-box; transform-origin: center; animation: halo 2.2s ease-out infinite; pointer-events: none; }
+  @keyframes halo { 0% { transform: scale(1); opacity: .55; } 80%, 100% { transform: scale(2.1); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .map .halo { animation: none; opacity: .3; } }
   .map .node:focus { outline: none; }
 
   .here { display: flex; flex-direction: column; gap: 14px; padding: 16px 10px 18px; border-bottom: 1px solid var(--line-in); }
@@ -395,7 +418,14 @@
   .say .btn { min-height: 40px; padding: 0 14px; font-size: 14px; }
 
   /* ── 하단 메뉴 ── */
-  .dock { background: rgba(250, 250, 249, .72); backdrop-filter: blur(6px); border-top: 3px double var(--line); }
+  /* 화면 맨 아래에 고정. 본문은 메뉴 높이(--dock-h)만큼 아래 여백을 둬서 가려지지 않게 함 */
+  .dock {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+    padding-bottom: env(safe-area-inset-bottom);
+    background: rgba(250, 250, 249, .88); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    border-top: 3px double var(--line);
+  }
+  #game { padding-bottom: var(--dock-h, 56px); }
   .dock .in { max-width: 1280px; margin: 0 auto; padding: 4px 24px; display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 6px; }
   .dock button {
     min-height: 44px; padding: 0 16px; display: flex; align-items: center; gap: 7px;
@@ -408,7 +438,7 @@
   }
 
   .toast {
-    position: fixed; left: 50%; bottom: 72px; transform: translateX(-50%); z-index: 20;
+    position: fixed; left: 50%; bottom: calc(var(--dock-h, 56px) + 16px); transform: translateX(-50%); z-index: 20;
     max-width: calc(100% - 32px); padding: 10px 16px;
     background: rgba(31, 35, 38, .92); color: #F4F7FA; border-radius: 3px; font-size: 14px;
     display: flex; gap: 12px; align-items: center;
@@ -444,7 +474,7 @@
 <!-- 드래곤 만들기 -->
 <section id="create" class="frame gate wide" hidden>
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
-  <h1>어떤 드래곤으로 태어날까요</h1>
+  <h1>어떤 드래곤으로 태어날까</h1>
   <p class="lead">종류에 따라 처음 눈뜨는 땅과 타고난 능력이 다르다. 한 번 정하면 바꿀 수 없다.</p>
   <form id="create-form">
     <div class="kinds" id="kinds" role="group" aria-label="드래곤 종류"></div>
@@ -579,7 +609,7 @@
       </section>
       <section class="frame map" aria-label="대륙 지도">
         <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
-        <div class="routes" id="routes"><span class="l">날아갈 수 있는 곳</span></div>
+        <div class="routes" id="routes"><span class="l">날아갈 수 있는 곳</span><span class="hint" id="routes-hint">지도에서 <i></i>표시를 눌러 날아간다.</span></div>
         <svg viewBox="0 0 1000 640" role="img" aria-label="대륙 지도" id="map-svg"><g id="terrain"></g><g id="overlay"></g></svg>
       </section>
     </div>
@@ -747,12 +777,12 @@
         body: JSON.stringify({ username: f.username.value, password: f.password.value }),
       });
       const data = await res.json();
-      if (!res.ok) return ($('auth-error').textContent = data.error || '다시 시도해 주세요.');
+      if (!res.ok) return ($('auth-error').textContent = data.error || '다시 시도해 보자.');
       store.set(data.token);
       f.reset();
       connect();
     } catch {
-      $('auth-error').textContent = '서버에 연결하지 못했어요. 서버가 켜져 있는지 확인해 주세요.';
+      $('auth-error').textContent = '서버에 연결하지 못했다. 서버가 켜져 있는지 확인해 보자.';
     }
   });
 
@@ -778,7 +808,7 @@
   // 아직 만들지 않은 기능
   document.addEventListener('click', (e) => {
     const b = e.target.closest('[data-soon]');
-    if (b) toast(`${b.dataset.soon}${josa(b.dataset.soon, '은', '는')} 다음 업데이트에서 열려요.`);
+    if (b) toast(`${b.dataset.soon}${josa(b.dataset.soon, '은', '는')} 다음 업데이트에서 열린다.`);
   });
 
   // ── 드래곤 만들기 ──
@@ -862,7 +892,7 @@
   $('create-form').addEventListener('submit', (e) => {
     e.preventDefault();
     $('create-error').textContent = '';
-    if (!S.pickKind) return ($('create-error').textContent = '드래곤 종류를 골라 주세요.');
+    if (!S.pickKind) return ($('create-error').textContent = '드래곤 종류를 골라야 한다.');
     socket.emit('dragon:create', { name: e.target.name.value, kind: S.pickKind, alloc }, (res) => {
       if (res.error) return ($('create-error').textContent = res.error);
       setMe(res.dragon);
@@ -943,9 +973,9 @@
     if (!a) return;
     pmenu.hidden = true;
     if (a === 'new') $('avatar-file').click();
-    if (a === 'recrop') loadImage(avatarUrl(S.me)).then(openCrop).catch(() => toast('그림을 불러오지 못했어요.'));
-    if (a === 'delete' && confirm('그림을 지울까요? 지우면 종류별 문양으로 돌아간다.')) {
-      socket.emit('dragon:avatar:delete', {}, (res) => toast(res.error || '그림을 지웠어요.'));
+    if (a === 'recrop') loadImage(avatarUrl(S.me)).then(openCrop).catch(() => toast('그림을 불러오지 못했다.'));
+    if (a === 'delete' && confirm('그림을 지울까? 지우면 종류별 문양으로 돌아간다.')) {
+      socket.emit('dragon:avatar:delete', {}, (res) => toast(res.error || '그림을 지웠다.'));
     }
   });
 
@@ -962,7 +992,7 @@
     e.target.value = '';
     if (!file) return;
     const url = URL.createObjectURL(file);
-    loadImage(url).then(openCrop).catch(() => toast('그림 파일을 읽지 못했어요. 다른 그림으로 해 주세요.'))
+    loadImage(url).then(openCrop).catch(() => toast('그림 파일을 읽지 못했다. 다른 그림으로 해 보자.'))
       .finally(() => setTimeout(() => URL.revokeObjectURL(url), 1000));
   });
 
@@ -1055,7 +1085,7 @@
     let data = c.toDataURL('image/webp', 0.88);
     if (!data.startsWith('data:image/webp')) data = c.toDataURL('image/jpeg', 0.88);
     $('crop').close();
-    socket.emit('dragon:avatar', { dataUrl: data }, (res) => toast(res.error || '그림을 바꿨어요.'));
+    socket.emit('dragon:avatar', { dataUrl: data }, (res) => toast(res.error || '그림을 바꿨다.'));
   });
 
   // ── 단발 행동 ──
@@ -1070,6 +1100,9 @@
     const away = !!me.exp || !!me.restAt;
     $('actions').hidden = away;
     $('routes').classList.toggle('locked', away);
+    $('routes-hint').innerHTML = away
+      ? (me.exp ? '원정을 떠나 있는 동안에는 날아갈 수 없다.' : '둥지에서 쉬는 동안에는 날아갈 수 없다.')
+      : '지도에서 <i></i>표시를 눌러 날아간다.';
     const town = S.region && S.shops.includes(S.region);
     for (const b of document.querySelectorAll('[data-act]')) {
       const t = b.dataset.act;
@@ -1166,7 +1199,7 @@
   }
   $('exp-claim').addEventListener('click', finishExp);
   $('exp-recall').addEventListener('click', () => {
-    if (confirm('지금 불러들이면 지금까지 찾은 몫만 받는다. 불러들일까요?')) finishExp();
+    if (confirm('지금 불러들이면 지금까지 찾은 몫만 받는다. 불러들일까?')) finishExp();
   });
 
   // 도착 알림: 짧은 종소리와 브라우저 알림
@@ -1396,7 +1429,7 @@
             note.textContent = `어디서든 둥지로 곧장 날아갈 수 있다. 행동력 ${S.nestRules.homeFlightAp}이 든다.`;
             row.appendChild(btn(`둥지로 날아가기 −${S.nestRules.homeFlightAp}`, () => { nestAct('nest:home'); }, true, !!me.exp || !!me.restAt || me.ap < S.nestRules.homeFlightAp));
             if (!town) row.appendChild(btn(`여기로 둥지 옮기기 (금화 ${S.nestRules.moveCost})`, () => {
-              if (confirm(`${S.regions[S.region].name}${ro(S.regions[S.region].name)} 둥지를 옮길까요? 금화 ${S.nestRules.moveCost}닢이 들고, 보물더미도 함께 옮겨진다.`)) nestAct('nest:build');
+              if (confirm(`${S.regions[S.region].name}${ro(S.regions[S.region].name)} 둥지를 옮길까? 금화 ${S.nestRules.moveCost}닢이 들고, 보물더미도 함께 옮겨진다.`)) nestAct('nest:build');
             }, false, !!me.exp || me.gold < S.nestRules.moveCost));
           }
         }
@@ -1506,7 +1539,7 @@
     if (!b || b.dataset.s === S.me.stance) return;
     const name = b.textContent;
     const hours = Math.round(S.trade.stanceCooldown / 3600000);
-    if (!confirm(`성향을 '${name}'${ro(name)} 바꿀까요? 바꾼 뒤 ${hours}시간 동안은 다시 바꿀 수 없다.`)) return;
+    if (!confirm(`성향을 '${name}'${ro(name)} 바꿀까? 바꾼 뒤 ${hours}시간 동안은 다시 바꿀 수 없다.`)) return;
     socket.emit('stance:set', { stance: b.dataset.s }, (res) => {
       if (res.error) return toast(res.error);
       showResult(res.result);
@@ -1655,17 +1688,6 @@
     tag.className = `tag ${r.tag === '야생' ? 'wild' : 'human'}`;
     $('region-desc').textContent = `“${r.desc}”`;
 
-    const routes = $('routes');
-    routes.querySelectorAll('.pill').forEach((b) => b.remove());
-    for (const id of r.links) {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'pill';
-      b.textContent = S.regions[id].name;
-      b.setAttribute('aria-label', `${S.regions[id].name}${ro(S.regions[id].name)} 날아가기`);
-      b.addEventListener('click', () => move(id));
-      routes.appendChild(b);
-    }
     renderOverlay();
     renderActions();
   }
@@ -1718,6 +1740,10 @@
         );
       } else if (isOpen) {
         node.append(
+          el('title', {}, `${r.name}${ro(r.name)} 날아가기`),
+          // 휴대폰에서도 손가락으로 누르기 쉽게 보이지 않는 넓은 영역
+          el('circle', { cx: r.x, cy: r.y + 12, r: 46, fill: 'transparent' }),
+          el('circle', { class: 'halo', cx: r.x, cy: r.y, r: 12, fill: 'none', stroke: '#B84653', 'stroke-width': 3 }),
           el('circle', { class: 'ring', cx: r.x, cy: r.y, r: 12, fill: '#F7F5EE', stroke: '#B84653', 'stroke-width': 3.2 }),
           el('circle', { cx: r.x, cy: r.y, r: 4, fill: '#B84653' }),
         );
@@ -1859,15 +1885,15 @@
         socket.disconnect();
         show('auth');
       } else {
-        toast('서버에 연결하지 못했어요. 다시 잇는 중이에요.');
+        toast('서버에 연결하지 못했다. 다시 잇는 중이다.');
       }
     });
     socket.on('disconnect', (reason) => {
       if (reason === 'io client disconnect' || reason === 'io server disconnect') return;
-      toast('연결이 끊겼어요. 다시 잇는 중이에요.');
+      toast('연결이 끊겼다. 다시 잇는 중이다.');
     });
     socket.on('kicked', () => {
-      toast('다른 창에서 같은 드래곤으로 접속했어요.', {
+      toast('다른 창에서 같은 드래곤으로 접속했다.', {
         label: '이 창에서 다시 접속',
         run: () => { hideToast(); socket.connect(); },
       });
@@ -1922,6 +1948,13 @@
     socket.on('chat', addChat);
     socket.on('system', (m) => addSystem(m.text));
   }
+
+  // 하단 메뉴 높이를 재서 본문 여백과 알림 위치에 씀 (휴대폰에서 두 줄이 되어도 맞음)
+  const dock = document.querySelector('.dock');
+  const setDockH = () => document.documentElement.style.setProperty('--dock-h', `${dock.offsetHeight}px`);
+  if ('ResizeObserver' in window) new ResizeObserver(setDockH).observe(dock);
+  window.addEventListener('resize', setDockH);
+  setDockH();
 
   if (store.get()) connect();
   else show('auth');

@@ -45,13 +45,13 @@ app.post('/api/register', (req, res) => {
   const username = str(req.body?.username);
   const password = typeof req.body?.password === 'string' ? req.body.password : '';
   if (!/^[가-힣A-Za-z0-9_]{2,16}$/.test(username)) {
-    return res.status(400).json({ error: '아이디는 한글, 영문, 숫자, _로 2~16자까지 쓸 수 있어요.' });
+    return res.status(400).json({ error: '아이디는 한글, 영문, 숫자, _로 2~16자까지 쓸 수 있다.' });
   }
   if (password.length < 4 || password.length > 64) {
-    return res.status(400).json({ error: '비밀번호는 4~64자로 정해 주세요.' });
+    return res.status(400).json({ error: '비밀번호는 4~64자로 정해야 한다.' });
   }
   if (db.getUserByName(username)) {
-    return res.status(409).json({ error: '이미 있는 아이디예요. 다른 아이디를 골라 주세요.' });
+    return res.status(409).json({ error: '이미 있는 아이디다. 다른 아이디를 골라야 한다.' });
   }
   const isGm = db.countUsers() === 0; // 처음 만든 계정이 GM
   const userId = db.createUser(username, bcrypt.hashSync(password, 10), isGm);
@@ -65,7 +65,7 @@ app.post('/api/login', (req, res) => {
   const password = typeof req.body?.password === 'string' ? req.body.password : '';
   const user = db.getUserByName(username);
   if (!user || !bcrypt.compareSync(password, user.pw_hash)) {
-    return res.status(401).json({ error: '아이디나 비밀번호가 맞지 않아요.' });
+    return res.status(401).json({ error: '아이디나 비밀번호가 맞지 않는다.' });
   }
   const token = crypto.randomBytes(24).toString('hex');
   db.createSession(token, user.id);
@@ -221,15 +221,15 @@ io.on('connection', (socket) => {
 
   socket.on('dragon:create', (payload, ack) => {
     if (typeof ack !== 'function') return;
-    if (db.getDragonByUser(user.id)) return ack({ error: '이미 드래곤이 있어요.' });
+    if (db.getDragonByUser(user.id)) return ack({ error: '이미 드래곤이 있다.' });
 
     const name = str(payload?.name);
     const kind = str(payload?.kind);
     if (!/^[가-힣A-Za-z0-9]{2,12}$/.test(name)) {
-      return ack({ error: '이름은 한글, 영문, 숫자로 2~12자까지 쓸 수 있어요.' });
+      return ack({ error: '이름은 한글, 영문, 숫자로 2~12자까지 쓸 수 있다.' });
     }
-    if (!KINDS[kind]) return ack({ error: '드래곤 종류를 골라 주세요.' });
-    if (db.dragonNameTaken(name)) return ack({ error: '이미 대륙에 같은 이름의 드래곤이 있어요.' });
+    if (!KINDS[kind]) return ack({ error: '드래곤 종류를 골라야 한다.' });
+    if (db.dragonNameTaken(name)) return ack({ error: '이미 대륙에 같은 이름의 드래곤이 있다.' });
 
     // 자유 포인트 검사: 정수, 0~perStat, 합이 정확히 points
     const alloc = payload?.alloc || {};
@@ -238,13 +238,13 @@ io.on('connection', (socket) => {
     for (const { key } of STATS) {
       const v = alloc[key] ?? 0;
       if (!Number.isInteger(v) || v < 0 || v > CREATION.perStat) {
-        return ack({ error: `한 능력치에는 0~${CREATION.perStat}점까지 넣을 수 있어요.` });
+        return ack({ error: `한 능력치에는 0~${CREATION.perStat}점까지 넣을 수 있다.` });
       }
       spent += v;
       final[key] = KINDS[kind].stats[key] + v;
     }
     if (spent !== CREATION.points) {
-      return ack({ error: `능력치 포인트 ${CREATION.points}점을 모두 나눠 주세요.` });
+      return ack({ error: `능력치 포인트 ${CREATION.points}점을 모두 나눠야 한다.` });
     }
 
     const { hpMax, enMax } = derive(final);
@@ -256,19 +256,19 @@ io.on('connection', (socket) => {
   socket.on('move', (payload, ack) => {
     if (typeof ack !== 'function') ack = () => {};
     const entry = entryOf(socket);
-    if (!entry) return ack({ error: '먼저 드래곤을 만들어 주세요.' });
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
 
     const d = entry.dragon;
     if (d.exp_end) return ack({ error: '원정을 떠나 있는 동안에는 날아갈 수 없다.' });
     if (d.rest_at) return ack({ error: '둥지에서 쉬는 중이다. 먼저 깨어나야 한다.' });
     const from = d.region;
     const to = str(payload?.to);
-    if (!REGIONS[to]) return ack({ error: '없는 지역이에요.' });
-    if (!REGIONS[from].links.includes(to)) return ack({ error: '그곳은 여기서 바로 날아갈 수 없어요.' });
+    if (!REGIONS[to]) return ack({ error: '없는 지역이다.' });
+    if (!REGIONS[from].links.includes(to)) return ack({ error: '그곳은 여기서 바로 날아갈 수 없다.' });
 
     const now = Date.now();
     if (now - (socket.data.lastMove || 0) < MOVE_COOLDOWN) {
-      return ack({ error: '날개를 잠깐 쉬고 다시 날아 주세요.' });
+      return ack({ error: '날개를 잠깐 쉬고 다시 날아야 한다.' });
     }
     socket.data.lastMove = now;
 
@@ -290,15 +290,15 @@ io.on('connection', (socket) => {
   socket.on('dragon:avatar', (payload, ack) => {
     if (typeof ack !== 'function') ack = () => {};
     const entry = entryOf(socket);
-    if (!entry) return ack({ error: '먼저 드래곤을 만들어 주세요.' });
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
 
     const m = /^data:image\/(webp|jpeg|png);base64,([A-Za-z0-9+/=]+)$/.exec(str(payload?.dataUrl));
-    if (!m) return ack({ error: '그림 파일을 읽지 못했어요. 다른 그림으로 해 주세요.' });
-    if (m[2].length > AVATAR_MAX) return ack({ error: '그림이 너무 커요.' });
+    if (!m) return ack({ error: '그림 파일을 읽지 못했다. 다른 그림으로 해 보자.' });
+    if (m[2].length > AVATAR_MAX) return ack({ error: '그림이 너무 크다.' });
 
     const now = Date.now();
     if (now - (socket.data.lastAvatar || 0) < AVATAR_COOLDOWN) {
-      return ack({ error: '그림은 잠시 뒤에 다시 바꿀 수 있어요.' });
+      return ack({ error: '그림은 잠시 뒤에 다시 바꿀 수 있다.' });
     }
     socket.data.lastAvatar = now;
 
@@ -313,7 +313,7 @@ io.on('connection', (socket) => {
   socket.on('dragon:avatar:delete', (payload, ack) => {
     if (typeof ack !== 'function') ack = () => {};
     const entry = entryOf(socket);
-    if (!entry) return ack({ error: '먼저 드래곤을 만들어 주세요.' });
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
     const d = entry.dragon;
     if (!d.has_avatar) return ack({ ok: true });
     d.avatar_ver = db.clearAvatar(d.id);
@@ -328,7 +328,7 @@ io.on('connection', (socket) => {
   socket.on('act', (payload, ack) => {
     if (typeof ack !== 'function') return;
     const entry = entryOf(socket);
-    if (!entry) return ack({ error: '먼저 드래곤을 만들어 주세요.' });
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
     const fn = ACTIONS[str(payload?.type)];
     if (!fn) return ack({ error: '알 수 없는 행동이다.' });
 
@@ -349,7 +349,7 @@ io.on('connection', (socket) => {
   socket.on('exp:start', (payload, ack) => {
     if (typeof ack !== 'function') return;
     const entry = entryOf(socket);
-    if (!entry) return ack({ error: '먼저 드래곤을 만들어 주세요.' });
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
     const d = entry.dragon;
     logic.regen(d);
     const res = logic.startExpedition(d, Number(payload?.minutes));
@@ -365,7 +365,7 @@ io.on('connection', (socket) => {
   socket.on('exp:finish', (payload, ack) => {
     if (typeof ack !== 'function') return;
     const entry = entryOf(socket);
-    if (!entry) return ack({ error: '먼저 드래곤을 만들어 주세요.' });
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
     const d = entry.dragon;
     logic.regen(d);
     const res = logic.finishExpedition(d);
@@ -380,7 +380,7 @@ io.on('connection', (socket) => {
   socket.on('inv:get', (payload, ack) => {
     if (typeof ack !== 'function') return;
     const entry = entryOf(socket);
-    if (!entry) return ack({ error: '먼저 드래곤을 만들어 주세요.' });
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
     ack({ ok: true, items: db.inventory(entry.dragon.id), equip: logic.equipOf(entry.dragon) });
   });
 
@@ -390,7 +390,7 @@ io.on('connection', (socket) => {
     socket.on(event, (payload, ack) => {
       if (typeof ack !== 'function') return;
       const entry = entryOf(socket);
-      if (!entry) return ack({ error: '먼저 드래곤을 만들어 주세요.' });
+      if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
       const now = Date.now();
       if (now - (socket.data.lastItem || 0) < 300) return ack({ error: '숨을 고르는 중이다.' });
       socket.data.lastItem = now;
@@ -437,7 +437,7 @@ io.on('connection', (socket) => {
   socket.on('nest:get', (payload, ack) => {
     if (typeof ack !== 'function') return;
     const entry = entryOf(socket);
-    if (!entry) return ack({ error: '먼저 드래곤을 만들어 주세요.' });
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
     const d = entry.dragon;
     const items = d.nest ? db.hoard(d.id) : [];
     // 순위: 접속 중인 드래곤은 메모리 값, 나머지는 저장 공간 값
@@ -468,7 +468,7 @@ io.on('connection', (socket) => {
   socket.on('market:get', (payload, ack) => {
     if (typeof ack !== 'function') return;
     const entry = entryOf(socket);
-    if (!entry) return ack({ error: '먼저 드래곤을 만들어 주세요.' });
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
     const res = logic.marketInfo(entry.dragon, db.inventory(entry.dragon.id));
     ack(res.error ? res : { ok: true, market: res });
   });

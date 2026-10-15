@@ -548,7 +548,7 @@ function hoardMove(d, dir, what, qty, have, hoardHave) {
   if (!d.nest || d.region !== d.nest) return { error: '보물더미는 둥지에 있을 때만 만질 수 있다.' };
   if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
   qty = Math.floor(qty);
-  if (!(qty > 0)) return { error: '개수를 다시 정해 주세요.' };
+  if (!(qty > 0)) return { error: '개수를 다시 정해야 한다.' };
   if (what === 'gold') {
     if (dir === 'put') {
       if (d.gold < qty) return { error: '그만한 금화가 없다.' };
