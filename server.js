@@ -8,7 +8,10 @@ const bcrypt = require('bcryptjs');
 const { Server } = require('socket.io');
 
 const db = require('./db');
-const { KINDS, REGIONS, STANCES, STATS, CREATION, derive } = require('./game-data');
+const {
+  KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, CREATURES, RULES, SLOTS, RECIPES, SHOPS, repTier, TRADE, NEST,
+} = require('./game-data');
+const logic = require('./game-logic');
 
 const PORT = process.env.PORT || 3000;
 const MOVE_COOLDOWN = 1500; // ms, 연속 이동 방지
@@ -91,17 +94,39 @@ app.post('/api/logout', (req, res) => {
 const online = new Map();
 
 // av: 그림 버전. 0이면 그림이 없어서 종류별 문양을 보여줌
-const publicDragon = (d) => ({ id: d.id, name: d.name, kind: d.kind, av: d.has_avatar ? d.avatar_ver : 0 });
+// away: 원정을 떠나 자리를 비운 상태
+const publicDragon = (d) => ({
+  id: d.id, name: d.name, kind: d.kind, av: d.has_avatar ? d.avatar_ver : 0, away: !!d.exp_end, resting: !!d.rest_at,
+});
 
 // 내 드래곤의 전체 정보 (나에게만 보냄)
 const meOf = (d) => ({
   ...publicDragon(d),
   level: d.level, xp: d.xp, xpMax: d.level * 100,
-  hp: d.hp, hpMax: d.hp_max, en: d.en, enMax: d.en_max,
+  hp: d.hp, hpMax: logic.hpCap(d), en: d.en, enMax: logic.enCap(d),
   ap: d.ap, apMax: d.ap_max, gold: d.gold,
-  stats: { claw: d.claw, scale: d.scale, wing: d.wing, wisdom: d.wisdom, majesty: d.majesty },
+  stats: logic.statsOf(d),                 // 장신구까지 더한 값
+  statBonus: logic.bonusOf(d).stats,       // 그중 장신구 몫
+  equip: logic.equipOf(d),
   stance: d.stance, stanceName: STANCES[d.stance] || '',
+  apAt: d.ap_at,
+  enAt: d.en_at,
+  rep: Object.fromEntries(Object.keys(SHOPS).map((r) => {
+    const v = logic.repOf(d)[r] || 0;
+    return [r, { value: v, name: repTier(v) }];
+  })),
+  stanceAt: d.stance_at || 0,
+  nest: d.nest || null,
+  restAt: d.rest_at || null,
+  hoardGold: d.hoard_gold || 0,
+  exp: d.exp_end ? { region: d.exp_region, start: d.exp_start, end: d.exp_end } : null,
 });
+
+// 회복을 계산한 뒤 내 정보를 보냄
+function sendMe(socket, d) {
+  logic.regen(d);
+  socket.emit('me', meOf(d));
+}
 
 function occupants(region) {
   const list = [];
@@ -145,6 +170,7 @@ function enterWorld(socket, dragon) {
     prev.socket.disconnect(true);
   }
   socket.data.dragonId = dragon.id;
+  logic.regen(dragon);
   online.set(dragon.id, { socket, dragon });
   socket.join(dragon.region);
   db.touch(dragon.id);
@@ -177,11 +203,19 @@ io.on('connection', (socket) => {
 
   socket.emit('init', {
     me: { username: user.username, isGm: !!user.is_gm },
-    dragon: dragon ? meOf(dragon) : null,
+    dragon: dragon ? (logic.regen(dragon), meOf(dragon)) : null,
     kinds: KINDS,
     regions: REGIONS,
     stats: STATS,
     creation: CREATION,
+    items: ITEMS,
+    huntable: Object.keys(CREATURES),
+    rules: { cost: RULES.cost, apEvery: RULES.apEvery, enEvery: RULES.enEvery, expeditionMinutes: RULES.expeditionMinutes },
+    slots: SLOTS,
+    recipes: RECIPES,
+    shops: Object.keys(SHOPS),
+    trade: TRADE,
+    nestRules: NEST,
   });
   if (dragon) enterWorld(socket, dragon);
 
@@ -225,6 +259,8 @@ io.on('connection', (socket) => {
     if (!entry) return ack({ error: '먼저 드래곤을 만들어 주세요.' });
 
     const d = entry.dragon;
+    if (d.exp_end) return ack({ error: '원정을 떠나 있는 동안에는 날아갈 수 없다.' });
+    if (d.rest_at) return ack({ error: '둥지에서 쉬는 중이다. 먼저 깨어나야 한다.' });
     const from = d.region;
     const to = str(payload?.to);
     if (!REGIONS[to]) return ack({ error: '없는 지역이에요.' });
@@ -287,6 +323,162 @@ io.on('connection', (socket) => {
     ack({ ok: true });
   });
 
+  // ── 단발 행동: 탐사·채집·사냥 ──
+  const ACTIONS = { explore: logic.explore, gather: logic.gather, hunt: logic.hunt };
+  socket.on('act', (payload, ack) => {
+    if (typeof ack !== 'function') return;
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어 주세요.' });
+    const fn = ACTIONS[str(payload?.type)];
+    if (!fn) return ack({ error: '알 수 없는 행동이다.' });
+
+    const now = Date.now();
+    if (now - (socket.data.lastAct || 0) < 400) return ack({ error: '숨을 고르는 중이다.' });
+    socket.data.lastAct = now;
+
+    const d = entry.dragon;
+    logic.regen(d, now);
+    const res = fn(d);
+    if (res.error) return ack(res);
+    db.saveState(d, res.items);
+    sendMe(socket, d);
+    ack({ ok: true, result: res });
+  });
+
+  // ── 원정 ──
+  socket.on('exp:start', (payload, ack) => {
+    if (typeof ack !== 'function') return;
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어 주세요.' });
+    const d = entry.dragon;
+    logic.regen(d);
+    const res = logic.startExpedition(d, Number(payload?.minutes));
+    if (res.error) return ack(res);
+    db.saveState(d);
+    sendMe(socket, d);
+    broadcastPresence(d.region);
+    system(d.region, `${d.name}${josa(d.name, '이', '가')} 원정을 떠났다.`, socket);
+    ack({ ok: true });
+  });
+
+  // 도착 뒤 결과 받기, 또는 일찍 불러들이기 (서버가 시각으로 판단)
+  socket.on('exp:finish', (payload, ack) => {
+    if (typeof ack !== 'function') return;
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어 주세요.' });
+    const d = entry.dragon;
+    logic.regen(d);
+    const res = logic.finishExpedition(d);
+    if (res.error) return ack(res);
+    db.saveState(d, res.items);
+    sendMe(socket, d);
+    broadcastPresence(d.region);
+    system(d.region, `${d.name}${josa(d.name, '이', '가')} 원정에서 돌아왔다.`, socket);
+    ack({ ok: true, result: res });
+  });
+
+  socket.on('inv:get', (payload, ack) => {
+    if (typeof ack !== 'function') return;
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어 주세요.' });
+    ack({ ok: true, items: db.inventory(entry.dragon.id), equip: logic.equipOf(entry.dragon) });
+  });
+
+  // ── 제작 · 회복약 · 장신구 ──
+  // 모두 같은 모양: 규칙 함수를 부르고, 성공하면 저장하고 내 정보를 다시 보냄
+  const itemAction = (event, run, after) => {
+    socket.on(event, (payload, ack) => {
+      if (typeof ack !== 'function') return;
+      const entry = entryOf(socket);
+      if (!entry) return ack({ error: '먼저 드래곤을 만들어 주세요.' });
+      const now = Date.now();
+      if (now - (socket.data.lastItem || 0) < 300) return ack({ error: '숨을 고르는 중이다.' });
+      socket.data.lastItem = now;
+      const d = entry.dragon;
+      logic.regen(d, now);
+      const have = (id) => db.itemCount(d.id, id);
+      const res = run(d, payload || {}, have);
+      if (res.error) return ack(res);
+      db.saveState(d, res.items, res.hoardItems);
+      sendMe(socket, d);
+      if (after) after(d, res);
+      ack({ ok: true, result: res });
+    });
+  };
+  itemAction('craft', (d, p, have) => logic.craft(d, str(p.recipe), have));
+  itemAction('item:use', (d, p, have) => logic.useItem(d, str(p.item), have));
+  itemAction('equip', (d, p, have) => logic.equip(d, str(p.item), have));
+  itemAction('unequip', (d, p) => logic.unequip(d, str(p.slot)));
+
+  // ── 인간 마을 ──
+  itemAction('stance:set', (d, p) => logic.setStance(d, str(p.stance)));
+  itemAction('market:buy', (d, p, have) => logic.buy(d, str(p.item), Number(p.qty), have));
+  itemAction('market:sell', (d, p, have) => logic.sell(d, str(p.item), Number(p.qty), have));
+  itemAction('intimidate', (d) => logic.intimidate(d));
+  // ── 둥지 ──
+  const presenceAfter = (d) => broadcastPresence(d.region);
+  itemAction('nest:build', (d) => logic.buildNest(d));
+  itemAction('rest:start', (d) => logic.startRest(d), presenceAfter);
+  itemAction('rest:stop', (d) => logic.stopRest(d), presenceAfter);
+  itemAction('hoard:put', (d, p, have) => logic.hoardMove(d, 'put', str(p.what), Number(p.qty), have, () => 0));
+  itemAction('hoard:take', (d, p) => logic.hoardMove(d, 'take', str(p.what), Number(p.qty), () => 0, (id) => db.hoardCount(d.id, id)));
+  // 둥지로 곧장 날아가기: 지역이 바뀌므로 이동과 같은 처리를 함
+  itemAction('nest:home', (d) => logic.flyHome(d), (d, res) => {
+    const ga = josa(d.name, '이', '가');
+    socket.leave(res.from);
+    system(res.from, `${d.name}${ga} 둥지를 향해 날아갔다.`);
+    socket.join(d.region);
+    system(d.region, `${d.name}${ga} 둥지로 돌아왔다.`, socket);
+    broadcastPresence(res.from);
+    broadcastPresence(d.region);
+    broadcastCounts();
+    sendRegionState(socket, d);
+  });
+  socket.on('nest:get', (payload, ack) => {
+    if (typeof ack !== 'function') return;
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어 주세요.' });
+    const d = entry.dragon;
+    const items = d.nest ? db.hoard(d.id) : [];
+    // 순위: 접속 중인 드래곤은 메모리 값, 나머지는 저장 공간 값
+    const all = db.allHoards();
+    const byDragon = new Map();
+    for (const x of all.items) {
+      if (!byDragon.has(x.dragon_id)) byDragon.set(x.dragon_id, []);
+      byDragon.get(x.dragon_id).push(x);
+    }
+    const ranking = all.dragons.map((r) => {
+      const live = online.get(r.id)?.dragon;
+      const gold = live ? live.hoard_gold : r.hoard_gold;
+      return {
+        id: r.id, name: r.name, kind: r.kind, av: r.has_avatar ? r.avatar_ver : 0, nest: live ? live.nest : r.nest,
+        value: logic.hoardValue(gold || 0, byDragon.get(r.id) || []),
+      };
+    }).sort((a, b) => b.value - a.value);
+    ack({
+      ok: true,
+      nest: {
+        region: d.nest, here: !!d.nest && d.region === d.nest,
+        gold: d.hoard_gold || 0, items, value: logic.hoardValue(d.hoard_gold || 0, items),
+        ranking: ranking.slice(0, 10), myRank: ranking.findIndex((r) => r.id === d.id) + 1,
+      },
+    });
+  });
+
+  socket.on('market:get', (payload, ack) => {
+    if (typeof ack !== 'function') return;
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어 주세요.' });
+    const res = logic.marketInfo(entry.dragon, db.inventory(entry.dragon.id));
+    ack(res.error ? res : { ok: true, market: res });
+  });
+
+  // 화면이 회복 시각이 됐다고 알려주면 다시 계산해서 보냄
+  socket.on('me:sync', () => {
+    const entry = entryOf(socket);
+    if (entry) sendMe(socket, entry.dragon);
+  });
+
   socket.on('chat', (payload) => {
     const entry = entryOf(socket);
     if (!entry) return;
@@ -307,6 +499,8 @@ io.on('connection', (socket) => {
     const entry = entryOf(socket);
     if (!entry) return;
     online.delete(entry.dragon.id);
+    logic.regen(entry.dragon);
+    db.saveState(entry.dragon);
     db.touch(entry.dragon.id);
     if (socket.data.kicked) return; // 다른 창으로 옮겨간 경우는 조용히
     const d = entry.dragon;

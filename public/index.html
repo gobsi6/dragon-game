@@ -169,6 +169,125 @@
   .cropdlg .note { margin: 0; font-size: 12px; color: var(--muted); }
   .pmenu { left: 50%; right: auto; top: 170px; transform: translateX(-50%); z-index: 6; min-width: 170px; }
 
+  /* ── 행동 결과 · 원정 ── */
+  .btn:disabled { opacity: .45; cursor: default; }
+  .result { padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+  .result .rt { display: flex; align-items: baseline; gap: 10px; }
+  .result .rt b { font: 700 16px/1.3 var(--serif); color: var(--steel-d); }
+  .result .rt .x { margin-left: auto; min-height: 32px; padding: 0 8px; background: transparent; border: 0; color: var(--muted); font-size: 13px; }
+  .result .lines { margin: 0; padding: 0; list-style: none; font: 500 15px/1.75 var(--serif); color: #30353A; }
+  .gains { display: flex; flex-wrap: wrap; gap: 6px; }
+  .gain { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border: 1px solid var(--line-in); background: var(--surface-2); font-size: 13px; border-radius: 2px; }
+  .gain::before { content: ""; width: 6px; height: 6px; transform: rotate(45deg); background: var(--r, var(--orn)); }
+  .gain.common { --r: #9A9C98; } .gain.uncommon { --r: #3C5A73; } .gain.rare { --r: #B8913A; border-color: #E2CF9E; background: #FBF6E8; }
+  .gain.lvl { --r: var(--forest); color: var(--forest); font-weight: 600; }
+  .expcard { padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
+  .expcard .k { font-size: 12px; color: var(--muted); letter-spacing: .08em; }
+  .expcard h2 { margin: 0; font: 700 22px/1.3 var(--serif); }
+  .expcard .clock { font: 700 44px/1 var(--serif); font-variant-numeric: tabular-nums; color: var(--steel-d); letter-spacing: .02em; }
+  .expcard .bar { height: 6px; border-radius: 3px; background: #E1E3E0; box-shadow: inset 0 1px 1px rgba(31, 35, 38, .14); }
+  .expcard .bar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #2A4256, #6F9BBC); transition: width 1s linear; }
+  .expcard .row { justify-content: flex-start; }
+  .expcard .row .btn { flex: 0 0 auto; }
+  .routes.locked .pill { opacity: .45; pointer-events: none; }
+  .chip .next { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .dlg { position: fixed; width: min(440px, calc(100% - 32px)); max-height: calc(100vh - 48px); padding: 18px 18px 16px; color: var(--ink); overflow: auto; }
+  .dlg::backdrop { background: rgba(31, 35, 38, .55); }
+  .dlg .body { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+  .dlg .note { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.6; }
+  .opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .opt { text-align: left; padding: 12px 14px; background: var(--surface-2); border: 1px solid var(--line-in); border-radius: 3px; display: flex; flex-direction: column; gap: 2px; }
+  .opt b { font: 700 18px/1.3 var(--serif); }
+  .opt span { font-size: 12px; color: var(--muted); }
+  .opt[aria-pressed="true"] { border-color: var(--steel); box-shadow: inset 0 0 0 1px var(--steel); background: #fff; }
+  .check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); }
+  .check input { width: 18px; height: 18px; accent-color: var(--steel); }
+  .inv { display: flex; flex-direction: column; }
+  .inv .it { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 10px 2px; border-top: 1px solid var(--line-in); }
+  .inv .it b { font: 700 15px/1.4 var(--serif); display: flex; align-items: center; gap: 8px; }
+  .inv .it b::before { content: ""; width: 7px; height: 7px; transform: rotate(45deg); background: var(--r); flex: none; }
+  .inv .it.common { --r: #9A9C98; } .inv .it.uncommon { --r: #3C5A73; } .inv .it.rare { --r: #B8913A; }
+  .inv .it .q { font-weight: 600; font-variant-numeric: tabular-nums; align-self: center; grid-row: span 2; }
+  .inv .it small { font-size: 12px; color: var(--muted); }
+  .inv .empty { padding: 18px 0; text-align: center; color: var(--muted); font-size: 14px; border-top: 1px solid var(--line-in); }
+  .who .away { font-size: 11px; color: #7A5A16; border: 1px solid #E2CF9E; background: #FBF6E8; padding: 0 6px; border-radius: 2px; margin-left: auto; margin-right: 2px; white-space: nowrap; }
+
+  /* ── 장신구 · 제작 ── */
+  .attr b .plus { font: 600 11px/1 var(--sans); color: var(--forest); margin-left: 2px; vertical-align: super; font-style: normal; }
+  .gear { display: flex; flex-direction: column; gap: 6px; }
+  .gear .l { font-size: 12px; color: var(--muted); }
+  .gear-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .slot { min-height: 44px; padding: 6px 10px; text-align: left; background: var(--surface-2); border: 1px dashed var(--line-soft); border-radius: 3px; display: flex; flex-direction: column; justify-content: center; gap: 1px; }
+  .slot.on { border-style: solid; border-color: #B9C7D3; background: #F4F7FA; }
+  .slot small { font-size: 11px; color: var(--muted); }
+  .slot span { font: 700 13px/1.3 var(--serif); overflow-wrap: anywhere; }
+  .slot.empty span { font: 400 12px/1.3 var(--sans); color: #8A8F94; }
+  .dlg.wide { width: min(620px, calc(100% - 32px)); }
+  .dlg h3 { margin: 6px 0 0; font: 700 14px/1.4 var(--serif); color: var(--steel-d); }
+  .recipe { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; padding: 12px 2px; border-top: 1px solid var(--line-in); align-items: center; }
+  .recipe .nm { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .recipe .nm b { font: 700 15px/1.4 var(--serif); display: flex; align-items: center; gap: 8px; }
+  .recipe .nm b::before { content: ""; width: 7px; height: 7px; transform: rotate(45deg); background: var(--r); flex: none; }
+  .recipe.common { --r: #9A9C98; } .recipe.uncommon { --r: #3C5A73; } .recipe.rare { --r: #B8913A; }
+  .recipe .eff { font-size: 13px; color: var(--steel-d); }
+  .recipe .needs { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 5px; }
+  .need { padding: 2px 8px; font-size: 12px; border: 1px solid var(--line-in); background: var(--surface-2); border-radius: 2px; font-variant-numeric: tabular-nums; }
+  .need.lack { color: #A63E4B; border-color: #E6C3C7; background: #FBF1F2; }
+  .recipe .btn { min-height: 38px; padding: 0 14px; font-size: 14px; }
+  .inv .it .acts { grid-column: 1 / -1; display: flex; gap: 6px; margin-top: 4px; }
+  .inv .it .acts .btn { min-height: 34px; padding: 0 12px; font-size: 13px; }
+  .inv .it .eff { font-size: 12px; color: var(--steel-d); }
+  .inv-gear { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .inv-gear .slot { flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; }
+  .inv-gear .slot .btn { min-height: 32px; padding: 0 10px; font-size: 12px; flex: none; }
+
+  /* ── 성향 · 평판 · 시장 ── */
+  .seg button { padding: 6px 0; min-height: 36px; text-align: center; color: var(--muted); background: transparent; border: 0; font-size: 13px; }
+  .seg button + button { border-left: 1px solid #DDDFDB; }
+  .seg button.on { background: var(--forest); color: #F4F7FA; font-weight: 600; }
+  .seg button:not(.on):hover { background: #ECEEEC; }
+  .reps { display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
+  .reps div { display: flex; justify-content: space-between; }
+  .reps span:first-child { color: var(--ink-2); }
+  .reps b { font-weight: 600; }
+  .reps b.good { color: var(--forest); } .reps b.bad { color: #A63E4B; }
+  .mk-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; font-size: 13px; color: var(--ink-2); }
+  .mk-top b { color: var(--ink); font-weight: 600; }
+  .mk-closed { padding: 16px; text-align: center; color: #A63E4B; background: #FBF1F2; border: 1px solid #E6C3C7; font-size: 14px; }
+  .mk-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 10px 2px; border-top: 1px solid var(--line-in); align-items: center; }
+  .mk-row .nm { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .mk-row .nm b { font: 700 15px/1.4 var(--serif); display: flex; align-items: center; gap: 8px; }
+  .mk-row .nm b::before { content: ""; width: 7px; height: 7px; transform: rotate(45deg); background: var(--r); flex: none; }
+  .mk-row.common { --r: #9A9C98; } .mk-row.uncommon { --r: #3C5A73; } .mk-row.rare { --r: #B8913A; }
+  .mk-row .nm small { font-size: 12px; color: var(--muted); }
+  .mk-row .nm .eff { font-size: 12px; color: var(--steel-d); }
+  .mk-row .acts { display: flex; gap: 6px; align-items: center; }
+  .mk-row .price { font-weight: 600; font-variant-numeric: tabular-nums; font-size: 14px; white-space: nowrap; }
+  .mk-row .btn { min-height: 34px; padding: 0 12px; font-size: 13px; }
+
+  /* ── 둥지 ── */
+  .restcard .clock { font-size: 34px; }
+  .nest-state { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  .nest-state .where { font: 700 18px/1.3 var(--serif); }
+  .nest-state .row { flex-wrap: wrap; }
+  .hoard-sum { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; padding: 12px 14px; background: #FBF6E8; border: 1px solid #E2CF9E; }
+  .hoard-sum .v { font: 700 26px/1 var(--serif); color: #6B4E12; font-variant-numeric: tabular-nums; }
+  .hoard-sum .l { font-size: 13px; color: #6B5A3A; }
+  .gold-move { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .gold-move .input { width: 110px; min-height: 36px; }
+  .gold-move .btn { min-height: 36px; padding: 0 12px; font-size: 13px; }
+  .rank { display: flex; flex-direction: column; }
+  .rank .r { display: grid; grid-template-columns: 28px 30px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 2px; border-top: 1px solid var(--line-in); }
+  .rank .r.me { background: #F4F7FA; }
+  .rank .n { font: 700 15px/1 var(--serif); color: var(--muted); text-align: center; }
+  .rank .r:nth-child(-n+3) .n { color: #8C6A1E; }
+  .rank .ava { width: 30px; height: 30px; }
+  .rank b { font: 700 14px/1.3 var(--serif); overflow-wrap: anywhere; }
+  .rank small { display: block; font-size: 12px; color: var(--muted); }
+  .rank .val { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .who .rest { font-size: 11px; color: #2E4A60; border: 1px solid #B9C7D3; background: #EEF2F6; padding: 0 6px; border-radius: 2px; margin-left: auto; margin-right: 2px; white-space: nowrap; }
+
   /* ── 상단 상태 바 ── */
   .top { background: rgba(250, 250, 249, .72); backdrop-filter: blur(6px); border-bottom: 3px double var(--line); position: relative; z-index: 5; }
   .top .in { max-width: 1280px; margin: 0 auto; padding: 10px 24px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 24px; }
@@ -353,7 +472,7 @@
         <div><div class="t">용의 대륙</div><div class="s" id="online-count"></div></div>
       </div>
       <div class="chips">
-        <div class="chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3C5A73" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12M6 21h12M7 3c0 5 10 5 10 9s-10 4-10 9M17 3c0 5-10 5-10 9s10 4 10 9"/></svg><span class="l">행동력</span><span class="v" id="ap"></span></div>
+        <div class="chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3C5A73" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12M6 21h12M7 3c0 5 10 5 10 9s-10 4-10 9M17 3c0 5-10 5-10 9s10 4 10 9"/></svg><span class="l">행동력</span><span class="v" id="ap"></span><span class="next" id="ap-next"></span></div>
         <div class="chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7E8389" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/></svg><span class="l">금화</span><span class="v" id="gold"></span></div>
         <div class="menu-wrap">
           <button class="iconbtn" id="menu-btn" type="button" aria-label="설정" aria-expanded="false" aria-controls="menu"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
@@ -404,9 +523,15 @@
         <div class="attr"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3C5A73" stroke-width="1.5" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="2.5"/></svg><b id="st-wisdom"></b><span>지혜</span></div>
         <div class="attr"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3C5A73" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M4 17l-1-10 5 4 4-6 4 6 5-4-1 10z"/><path d="M4 20h16"/></svg><b id="st-majesty"></b><span>위엄</span></div>
       </div>
+      <div class="gear">
+        <span class="l">장신구</span>
+        <div class="gear-grid" id="gear"></div>
+      </div>
       <div class="stance">
         <span class="l">인간을 대하는 방식</span>
-        <div class="seg" id="stance"><span data-s="friendly">우호</span><span data-s="hermit">은둔</span><span data-s="hostile">적대</span></div>
+        <div class="seg" id="stance" role="group" aria-label="성향 바꾸기"><button type="button" data-s="friendly">우호</button><button type="button" data-s="hermit">은둔</button><button type="button" data-s="hostile">적대</button></div>
+        <div class="reps" id="reps"></div>
+        <div class="reps"><div><span>둥지</span><b id="nest-where"></b></div></div>
       </div>
     </section>
 
@@ -417,12 +542,41 @@
         <p class="quote" id="region-desc"></p>
       </section>
       <div class="actions" id="actions">
-        <button class="btn primary" type="button" data-soon="탐사"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>탐사<span class="cost">−1</span></button>
-        <button class="btn" type="button" data-soon="채집"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3A6B50" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19c0-8 6-13 14-14-1 8-6 14-14 14z"/><path d="M5 19l7-7"/></svg>채집<span class="cost">−1</span></button>
-        <button class="btn" type="button" data-soon="사냥"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3C5A73" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19L19 5"/><path d="M14 5h5v5"/><path d="M4 15l5 5"/></svg>사냥<span class="cost">−2</span></button>
-        <button class="btn" type="button" data-soon="둥지"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7E8389" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-6 8 6"/><path d="M6 10v9h12v-9"/></svg>둥지로</button>
+        <button class="btn primary" type="button" data-act="explore"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>탐사<span class="cost">−1</span></button>
+        <button class="btn" type="button" data-act="gather"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3A6B50" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19c0-8 6-13 14-14-1 8-6 14-14 14z"/><path d="M5 19l7-7"/></svg>채집<span class="cost">−1</span></button>
+        <button class="btn" type="button" data-act="hunt"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3C5A73" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19L19 5"/><path d="M14 5h5v5"/><path d="M4 15l5 5"/></svg>사냥<span class="cost">−2</span></button>
+        <button class="btn" type="button" id="market-open" hidden><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7A5A16" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l2-5h14l2 5"/><path d="M4 9v11h16V9"/><path d="M3 9h18"/><path d="M10 20v-6h4v6"/></svg>시장</button>
+        <button class="btn" type="button" id="intimidate" hidden><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#A63E4B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17l-1-10 5 4 4-6 4 6 5-4-1 10z"/><path d="M8 21l4-3 4 3"/></svg>위협하기<span class="cost">−2</span></button>
+        <button class="btn" type="button" id="nest-open"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7E8389" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-6 8 6"/><path d="M6 10v9h12v-9"/></svg>둥지</button>
+        <button class="btn" type="button" id="exp-open"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2A4256" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/><path d="M9 2h6"/></svg>원정 보내기</button>
         <span class="note">숫자는 소모하는 행동력이다.</span>
       </div>
+      <section class="frame expcard" id="expcard" aria-live="polite" hidden>
+        <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+        <span class="k" id="exp-k">원정 중</span>
+        <h2 id="exp-where"></h2>
+        <div class="clock" id="exp-clock"></div>
+        <div class="bar"><i id="exp-bar"></i></div>
+        <p class="note" id="exp-note" style="margin: 0; font-size: 13px; color: var(--muted)"></p>
+        <div class="row">
+          <button class="btn primary" type="button" id="exp-claim" hidden>결과 받기</button>
+          <button class="btn" type="button" id="exp-recall">일찍 불러들이기</button>
+        </div>
+      </section>
+      <section class="frame expcard restcard" id="restcard" aria-live="polite" hidden>
+        <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+        <span class="k">둥지에서 쉬는 중</span>
+        <h2 id="rest-where"></h2>
+        <div class="clock" id="rest-clock"></div>
+        <p class="note" id="rest-note" style="margin: 0; font-size: 13px; color: var(--muted)"></p>
+        <div class="row"><button class="btn primary" type="button" id="rest-stop">깨어나기</button><button class="btn" type="button" id="rest-nest">보물더미 보기</button></div>
+      </section>
+      <section class="frame result" id="result" aria-live="polite" hidden>
+        <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+        <div class="rt"><b id="result-title"></b><button class="x" type="button" id="result-close">닫기</button></div>
+        <ul class="lines" id="result-lines"></ul>
+        <div class="gains" id="result-gains"></div>
+      </section>
       <section class="frame map" aria-label="대륙 지도">
         <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
         <div class="routes" id="routes"><span class="l">날아갈 수 있는 곳</span></div>
@@ -449,9 +603,9 @@
   <nav class="dock" aria-label="주 메뉴">
     <div class="in">
       <button type="button" aria-current="page"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20l5-12 4 6 3-4 6 10z"/><circle cx="17" cy="6" r="2"/></svg>대륙</button>
-      <button type="button" data-soon="둥지"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><path d="M5 20V10a7 7 0 0 1 14 0v10"/><path d="M10 20v-5a2 2 0 0 1 4 0v5"/></svg>둥지</button>
-      <button type="button" data-soon="소지품"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8h12l-1 12H7z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>소지품</button>
-      <button type="button" data-soon="제작"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l9-9"/><path d="M12 4l8 8-3 3-8-8z"/></svg>제작</button>
+      <button type="button" id="dock-nest"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><path d="M5 20V10a7 7 0 0 1 14 0v10"/><path d="M10 20v-5a2 2 0 0 1 4 0v5"/></svg>둥지</button>
+      <button type="button" id="inv-open"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8h12l-1 12H7z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>소지품</button>
+      <button type="button" id="craft-open"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l9-9"/><path d="M12 4l8 8-3 3-8-8z"/></svg>제작</button>
       <button type="button" data-soon="결투장"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 9l6 6M15 9l-6 6"/></svg>결투장</button>
       <button type="button" data-soon="동료"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="9" r="3"/><circle cx="16" cy="10" r="2.5"/><path d="M3 20c0-3.5 3-6 6-6s6 2.5 6 6"/><path d="M15 15c3 0 6 2 6 5"/></svg>동료</button>
     </div>
@@ -466,6 +620,58 @@
     <label class="zoom"><span>확대</span><input type="range" id="crop-zoom" min="1" max="4" step="0.01" value="1"></label>
     <p class="note">끌어서 위치를 맞춘다. 동그라미 안쪽은 목록의 작은 사진에 쓰인다.</p>
     <div class="row"><button class="btn" type="button" id="crop-cancel">취소</button><button class="btn primary" type="button" id="crop-ok">적용</button></div>
+  </div>
+</dialog>
+
+<dialog class="frame dlg" id="exp-dlg" aria-labelledby="exp-dlg-title">
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="exp-dlg-title">원정 보내기</h2></div>
+  <div class="body">
+    <p class="note" id="exp-dlg-where"></p>
+    <div class="opts" id="exp-opts" role="group" aria-label="원정 시간"></div>
+    <p class="note">길게 보낼수록 드문 물건을 찾을 가능성이 커진다. 떠난 동안에는 채팅만 할 수 있고, 브라우저를 닫아도 원정은 계속된다.</p>
+    <label class="check"><input type="checkbox" id="exp-notify"> 돌아오면 알림 받기 (이 창이 열려 있을 때)</label>
+    <div class="row"><button class="btn" type="button" id="exp-cancel">취소</button><button class="btn primary" type="button" id="exp-go">떠나기</button></div>
+  </div>
+</dialog>
+
+<dialog class="frame dlg wide" id="craft-dlg" aria-labelledby="craft-dlg-title">
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="craft-dlg-title">제작</h2></div>
+  <div class="body">
+    <p class="note" id="craft-status"></p>
+    <div id="craft-list"></div>
+    <div class="row"><button class="btn" type="button" id="craft-close">닫기</button></div>
+  </div>
+</dialog>
+
+<dialog class="frame dlg wide" id="nest-dlg" aria-labelledby="nest-dlg-title">
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="nest-dlg-title">둥지</h2></div>
+  <div class="body" id="nest-body"></div>
+  <div class="row" style="margin-top: 12px"><button class="btn" type="button" id="nest-close">닫기</button></div>
+</dialog>
+
+<dialog class="frame dlg wide" id="market-dlg" aria-labelledby="market-dlg-title">
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="market-dlg-title">시장</h2></div>
+  <div class="body">
+    <div class="mk-top"><span id="mk-where"></span><span>가진 금화 <b id="mk-gold"></b></span></div>
+    <p class="note" id="mk-note"></p>
+    <div id="mk-body"></div>
+    <div class="row"><button class="btn" type="button" id="market-close">닫기</button></div>
+  </div>
+</dialog>
+
+<dialog class="frame dlg wide" id="inv-dlg" aria-labelledby="inv-dlg-title">
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="inv-dlg-title">소지품</h2></div>
+  <div class="body">
+    <h3>착용 중인 장신구</h3>
+    <div class="inv-gear" id="inv-gear"></div>
+    <h3>가진 물건</h3>
+    <div class="inv" id="inv-list"></div>
+    <div class="row"><button class="btn" type="button" id="inv-close">닫기</button></div>
   </div>
 </dialog>
 
@@ -677,9 +883,33 @@
     $('hp-bar').style.width = pct(me.hp, me.hpMax);
     $('en-t').innerHTML = `<b>${me.en}</b><span> / ${me.enMax}</span>`;
     $('en-bar').style.width = pct(me.en, me.enMax);
-    for (const k of ['claw', 'scale', 'wing', 'wisdom', 'majesty']) $(`st-${k}`).textContent = me.stats[k];
-    for (const s of $('stance').children) s.classList.toggle('on', s.dataset.s === me.stance);
+    for (const k of ['claw', 'scale', 'wing', 'wisdom', 'majesty']) {
+      const plus = me.statBonus?.[k] || 0;
+      $(`st-${k}`).innerHTML = `${me.stats[k]}${plus ? `<i class="plus">+${plus}</i>` : ''}`;
+    }
+    renderGear();
+    for (const s of $('stance').children) {
+      s.classList.toggle('on', s.dataset.s === me.stance);
+      s.setAttribute('aria-pressed', String(s.dataset.s === me.stance));
+    }
+    const reps = $('reps');
+    reps.replaceChildren();
+    for (const [r, v] of Object.entries(me.rep || {})) {
+      const row = document.createElement('div');
+      row.innerHTML = '<span></span><b></b>';
+      row.querySelector('span').textContent = `${S.regions[r]?.name} 평판`;
+      const b = row.querySelector('b');
+      b.textContent = v.name;
+      b.className = v.value >= 20 ? 'good' : v.value <= -20 ? 'bad' : '';
+      reps.appendChild(row);
+    }
     $('ap').textContent = `${me.ap} / ${me.apMax}`;
+    $('nest-where').textContent = me.nest ? S.regions[me.nest].name : '없음';
+    renderActions();
+    renderExpedition();
+    renderRest();
+    renderOverlay();
+    if ($('craft-dlg')?.open) renderCraft();
     $('gold').textContent = me.gold.toLocaleString();
 
     const p = $('portrait');
@@ -828,6 +1058,594 @@
     socket.emit('dragon:avatar', { dataUrl: data }, (res) => toast(res.error || '그림을 바꿨어요.'));
   });
 
+  // ── 단발 행동 ──
+  const fmt = (ms) => {
+    const t = Math.max(0, Math.ceil(ms / 1000));
+    const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
+    return h ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  };
+  function renderActions() {
+    const me = S.me;
+    if (!me || !S.rules) return;
+    const away = !!me.exp || !!me.restAt;
+    $('actions').hidden = away;
+    $('routes').classList.toggle('locked', away);
+    const town = S.region && S.shops.includes(S.region);
+    for (const b of document.querySelectorAll('[data-act]')) {
+      const t = b.dataset.act;
+      b.hidden = t === 'hunt' && town;   // 인간의 땅에서는 사냥 대신 시장
+      b.disabled = me.ap < S.rules.cost[t];
+      b.title = me.ap < S.rules.cost[t] ? '행동력이 모자란다.' : '';
+    }
+    $('market-open').hidden = !town;
+    $('intimidate').hidden = !town || me.stance !== 'hostile';
+    $('intimidate').disabled = me.ap < S.trade.intimidateCost;
+  }
+  function showResult(r) {
+    $('result-title').textContent = r.title;
+    const ul = $('result-lines');
+    ul.replaceChildren(...r.lines.map((t) => { const li = document.createElement('li'); li.textContent = t; return li; }));
+    const g = $('result-gains');
+    const chips = [];
+    const chip = (cls, text) => { const c = document.createElement('span'); c.className = `gain ${cls}`; c.textContent = text; chips.push(c); };
+    for (const it of r.items || []) chip(S.items[it.id].rarity, `${S.items[it.id].name} ×${it.qty}`);
+    if (r.gold) chip('common', `금화 ${r.gold}`);
+    if (r.xp) chip('common', `경험 +${r.xp}`);
+    if (r.levelUp) chip('lvl', `레벨이 올랐다! Lv. ${S.me.level}`);
+    g.replaceChildren(...chips);
+    g.hidden = !chips.length;
+    $('result').hidden = false;
+  }
+  $('result-close').addEventListener('click', () => ($('result').hidden = true));
+  for (const b of document.querySelectorAll('[data-act]')) {
+    b.addEventListener('click', () => {
+      socket.emit('act', { type: b.dataset.act }, (res) => {
+        if (res.error) return toast(res.error);
+        showResult(res.result);
+      });
+    });
+  }
+
+  // ── 원정 ──
+  let expPick = null;
+  function renderExpOpts() {
+    const box = $('exp-opts');
+    box.replaceChildren();
+    for (const m of S.rules.expeditionMinutes) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'opt';
+      b.setAttribute('aria-pressed', String(expPick === m));
+      const label = m < 60 ? `${m}분` : `${m / 60}시간`;
+      b.innerHTML = '<b></b><span></span>';
+      b.querySelector('b').textContent = label;
+      b.querySelector('span').textContent = `재료 약 ${m / 10}번 찾기`;
+      b.addEventListener('click', () => { expPick = m; renderExpOpts(); });
+      box.appendChild(b);
+    }
+  }
+  $('exp-open').addEventListener('click', () => {
+    expPick = expPick || S.rules.expeditionMinutes[0];
+    $('exp-dlg-where').textContent = `${S.regions[S.region].name} 깊은 곳으로 떠난다.`;
+    try { $('exp-notify').checked = localStorage.getItem('exp-notify') === '1'; } catch {}
+    renderExpOpts();
+    $('exp-dlg').showModal();
+  });
+  $('exp-cancel').addEventListener('click', () => $('exp-dlg').close());
+  $('exp-go').addEventListener('click', async () => {
+    const want = $('exp-notify').checked;
+    try { localStorage.setItem('exp-notify', want ? '1' : '0'); } catch {}
+    if (want && 'Notification' in window && Notification.permission === 'default') {
+      try { await Notification.requestPermission(); } catch {}
+    }
+    socket.emit('exp:start', { minutes: expPick }, (res) => {
+      if (res.error) return toast(res.error);
+      $('exp-dlg').close();
+      $('result').hidden = true;
+    });
+  });
+  function renderExpedition() {
+    const e = S.me?.exp;
+    $('expcard').hidden = !e;
+    if (!e) return;
+    const now = Date.now();
+    const done = now >= e.end;
+    $('exp-k').textContent = done ? '원정에서 돌아왔다' : '원정 중';
+    $('exp-where').textContent = `${S.regions[e.region].name} 깊은 곳`;
+    $('exp-clock').textContent = done ? '도착' : fmt(e.end - now);
+    $('exp-bar').style.width = `${Math.min(100, ((now - e.start) / (e.end - e.start)) * 100)}%`;
+    $('exp-note').textContent = done ? '결과를 받으면 다시 움직일 수 있다.' : '떠난 동안에는 채팅만 할 수 있다.';
+    $('exp-claim').hidden = !done;
+    $('exp-recall').hidden = done;
+  }
+  function finishExp() {
+    socket.emit('exp:finish', {}, (res) => {
+      if (res.error) return toast(res.error);
+      showResult(res.result);
+    });
+  }
+  $('exp-claim').addEventListener('click', finishExp);
+  $('exp-recall').addEventListener('click', () => {
+    if (confirm('지금 불러들이면 지금까지 찾은 몫만 받는다. 불러들일까요?')) finishExp();
+  });
+
+  // 도착 알림: 짧은 종소리와 브라우저 알림
+  let notifiedFor = null;
+  function chime() {
+    try {
+      const ac = new (window.AudioContext || window.webkitAudioContext)();
+      [659, 880, 1175].forEach((f, i) => {
+        const o = ac.createOscillator(), g = ac.createGain();
+        o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, ac.currentTime + i * 0.18);
+        g.gain.exponentialRampToValueAtTime(0.15, ac.currentTime + i * 0.18 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + i * 0.18 + 0.9);
+        o.connect(g).connect(ac.destination);
+        o.start(ac.currentTime + i * 0.18);
+        o.stop(ac.currentTime + i * 0.18 + 1);
+      });
+    } catch {}
+  }
+  function arrived() {
+    let on = false;
+    try { on = localStorage.getItem('exp-notify') === '1'; } catch {}
+    if (!on) return;
+    chime();
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try { new Notification('용의 대륙', { body: `${S.me.name}${josa(S.me.name, '이', '가')} 원정에서 돌아왔다.` }); } catch {}
+    }
+  }
+
+  // 1초마다: 행동력 회복 시각, 원정 시계
+  let syncAsked = 0;
+  setInterval(() => {
+    const me = S.me;
+    if (!me || !S.rules || $('game').hidden) return;
+    const now = Date.now();
+    if (me.ap < me.apMax) {
+      const left = me.apAt + S.rules.apEvery - now;
+      $('ap-next').textContent = `+1 ${fmt(left)}`;
+      if (left <= 0 && now - syncAsked > 5000) { syncAsked = now; socket.emit('me:sync'); }
+    } else {
+      $('ap-next').textContent = '';
+    }
+    if (me.restAt) renderRest();
+    if (me.exp) {
+      renderExpedition();
+      if (now >= me.exp.end && notifiedFor !== me.exp.end) { notifiedFor = me.exp.end; arrived(); }
+    }
+  }, 1000);
+
+  // ── 물건 설명 ──
+  const statName = (k) => S.stats.find((x) => x.key === k)?.name || k;
+  const slotName = (k) => S.slots.find((x) => x.key === k)?.name || k;
+  function effectText(it) {
+    if (it.type === 'use') {
+      const u = it.use, out = [];
+      if (u.hp) out.push(`체력 +${u.hp}`);
+      if (u.en) out.push(`기력 +${u.en}`);
+      if (u.ap) out.push(`행동력 +${u.ap}`);
+      return out.join(', ');
+    }
+    if (it.type === 'equip') {
+      const out = Object.entries(it.bonus || {}).map(([k, v]) => `${statName(k)} +${v}`);
+      if (it.expRare) out.push(`원정 귀한 물건 +${Math.round(it.expRare * 100)}%`);
+      return `${slotName(it.slot)} 장신구. ${out.join(', ')}`;
+    }
+    return '';
+  }
+
+  // 프로필 카드의 장신구 자리
+  function renderGear() {
+    const box = $('gear');
+    if (!S.slots || !S.me) return;
+    box.replaceChildren();
+    for (const sl of S.slots) {
+      const id = S.me.equip?.[sl.key];
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `slot ${id ? 'on' : 'empty'}`;
+      b.innerHTML = '<small></small><span></span>';
+      b.querySelector('small').textContent = sl.name;
+      b.querySelector('span').textContent = id ? S.items[id].name : '비어 있음';
+      if (id) b.title = effectText(S.items[id]);
+      b.addEventListener('click', openInv);
+      box.appendChild(b);
+    }
+  }
+
+  // ── 소지품 ──
+  let invCache = {};
+  function fetchInv(done) {
+    socket.emit('inv:get', {}, (res) => {
+      if (res.error) return toast(res.error);
+      invCache = Object.fromEntries(res.items.map((x) => [x.item, x.qty]));
+      done && done(res);
+    });
+  }
+  function itemAct(event, payload) {
+    socket.emit(event, payload, (res) => {
+      if (res.error) return toast(res.error);
+      if (res.result?.lines) toast(res.result.lines.join(' '));
+      fetchInv(() => { if ($('inv-dlg').open) renderInv(); if ($('craft-dlg').open) renderCraft(); });
+    });
+  }
+  function renderInv() {
+    const g = $('inv-gear');
+    g.replaceChildren();
+    for (const sl of S.slots) {
+      const id = S.me.equip?.[sl.key];
+      const d = document.createElement('div');
+      d.className = `slot ${id ? 'on' : 'empty'}`;
+      d.innerHTML = '<div style="min-width: 0"><small></small><br><span></span></div>';
+      d.querySelector('small').textContent = sl.name;
+      d.querySelector('span').textContent = id ? S.items[id].name : '비어 있음';
+      if (id) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'btn';
+        b.textContent = '벗기';
+        b.addEventListener('click', () => itemAct('unequip', { slot: sl.key }));
+        d.appendChild(b);
+      }
+      g.appendChild(d);
+    }
+
+    const order = { rare: 0, uncommon: 1, common: 2 };
+    const typeOrder = (it) => (it.type === 'equip' ? 0 : it.type === 'use' ? 1 : 2);
+    const list = Object.entries(invCache)
+      .filter(([id, q]) => S.items[id] && q > 0)
+      .sort(([a], [b]) => typeOrder(S.items[a]) - typeOrder(S.items[b])
+        || order[S.items[a].rarity] - order[S.items[b].rarity]
+        || S.items[a].name.localeCompare(S.items[b].name, 'ko'));
+    const box = $('inv-list');
+    box.replaceChildren();
+    if (!list.length) {
+      const p = document.createElement('div');
+      p.className = 'empty';
+      p.textContent = '아직 모은 물건이 없다. 탐사나 채집으로 모아 보자.';
+      box.appendChild(p);
+    }
+    for (const [id, qty] of list) {
+      const it = S.items[id];
+      const row = document.createElement('div');
+      row.className = `it ${it.rarity}`;
+      row.innerHTML = '<b></b><span class="q"></span><small></small>';
+      row.querySelector('b').textContent = it.name;
+      row.querySelector('.q').textContent = `×${qty}`;
+      row.querySelector('small').textContent = it.desc;
+      if (it.type) {
+        const eff = document.createElement('span');
+        eff.className = 'eff';
+        eff.textContent = effectText(it);
+        row.appendChild(eff);
+        const acts = document.createElement('div');
+        acts.className = 'acts';
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'btn';
+        b.textContent = it.type === 'use' ? '사용' : '착용';
+        b.addEventListener('click', () => itemAct(it.type === 'use' ? 'item:use' : 'equip', { item: id }));
+        acts.appendChild(b);
+        row.appendChild(acts);
+      }
+      box.appendChild(row);
+    }
+  }
+  function openInv() { fetchInv(() => { renderInv(); if (!$('inv-dlg').open) $('inv-dlg').showModal(); }); }
+  $('inv-open').addEventListener('click', openInv);
+
+  // ── 둥지 ──
+  function renderRest() {
+    const me = S.me;
+    const on = !!me?.restAt;
+    $('restcard').hidden = !on;
+    if (!on) return;
+    const r = S.nestRules.rest;
+    $('rest-where').textContent = `${S.regions[me.nest].name}의 둥지`;
+    $('rest-clock').textContent = fmt(Date.now() - me.restAt);
+    $('rest-note').textContent = `쉬는 동안 체력·기력은 ${r.hp}배, 행동력은 ${r.ap}배 빨리 찬다. 브라우저를 닫아도 계속 쉰다.`;
+  }
+  $('rest-stop').addEventListener('click', () => nestAct('rest:stop'));
+  $('rest-nest').addEventListener('click', openNest);
+  $('nest-open').addEventListener('click', openNest);
+  $('dock-nest').addEventListener('click', openNest);
+  $('nest-close').addEventListener('click', () => $('nest-dlg').close());
+
+  function nestAct(event, payload = {}) {
+    socket.emit(event, payload, (res) => {
+      if (res.error) return toast(res.error);
+      toast(res.result.lines.join(' '));
+      if ($('nest-dlg').open) openNest();
+    });
+  }
+  function openNest() {
+    socket.emit('nest:get', {}, (res) => {
+      if (res.error) return toast(res.error);
+      const n = res.nest;
+      const me = S.me;
+      fetchInv(() => {
+        const body = $('nest-body');
+        body.replaceChildren();
+        const add = (html) => { const d = document.createElement('div'); d.innerHTML = html; body.appendChild(d); return d; };
+        const btn = (text, fn, primary, disabled) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = `btn${primary ? ' primary' : ''}`;
+          b.textContent = text;
+          b.disabled = !!disabled;
+          b.addEventListener('click', fn);
+          return b;
+        };
+
+        // 상태와 할 수 있는 일
+        const st = add('<div class="nest-state"><span class="where"></span></div><p class="note" style="margin: 6px 0 0"></p><div class="row" style="justify-content: flex-start; flex-wrap: wrap; margin-top: 10px"></div>');
+        const row = st.querySelector('.row');
+        const note = st.querySelector('.note');
+        const town = S.shops.includes(S.region);
+        if (!n.region) {
+          st.querySelector('.where').textContent = '아직 둥지가 없다';
+          note.textContent = town ? '인간의 땅에는 둥지를 틀 수 없다. 야생의 땅으로 가자.' : `처음 둥지를 트는 데는 아무것도 들지 않는다.`;
+          if (!town) row.appendChild(btn(`${S.regions[S.region].name}에 둥지 틀기`, () => nestAct('nest:build'), true, !!me.exp));
+        } else {
+          st.querySelector('.where').textContent = `${S.regions[n.region].name}의 둥지`;
+          if (n.here) {
+            note.textContent = me.restAt ? '지금 둥지에서 쉬고 있다.' : '둥지에서 쉬면 회복이 빨라진다. 쉬는 동안에는 채팅과 제작, 보물더미 정리만 할 수 있다.';
+            row.appendChild(me.restAt ? btn('깨어나기', () => nestAct('rest:stop'), true) : btn('둥지에서 쉬기', () => nestAct('rest:start'), true, !!me.exp));
+          } else {
+            note.textContent = `어디서든 둥지로 곧장 날아갈 수 있다. 행동력 ${S.nestRules.homeFlightAp}이 든다.`;
+            row.appendChild(btn(`둥지로 날아가기 −${S.nestRules.homeFlightAp}`, () => { nestAct('nest:home'); }, true, !!me.exp || !!me.restAt || me.ap < S.nestRules.homeFlightAp));
+            if (!town) row.appendChild(btn(`여기로 둥지 옮기기 (금화 ${S.nestRules.moveCost})`, () => {
+              if (confirm(`${S.regions[S.region].name}${ro(S.regions[S.region].name)} 둥지를 옮길까요? 금화 ${S.nestRules.moveCost}닢이 들고, 보물더미도 함께 옮겨진다.`)) nestAct('nest:build');
+            }, false, !!me.exp || me.gold < S.nestRules.moveCost));
+          }
+        }
+
+        // 보물더미
+        if (n.region) {
+          const h = document.createElement('h3');
+          h.textContent = '보물더미';
+          body.appendChild(h);
+          const sum = add('<div class="hoard-sum"><span class="v"></span><span class="l"></span></div>');
+          sum.querySelector('.v').textContent = n.value.toLocaleString();
+          sum.querySelector('.l').textContent = `보물더미 가치 (금화 ${n.gold.toLocaleString()}닢과 물건)${n.myRank ? `, 대륙 ${n.myRank}위` : ''}`;
+          if (!n.here) {
+            const p = document.createElement('p');
+            p.className = 'note';
+            p.textContent = '보물더미는 둥지에 있을 때만 넣고 꺼낼 수 있다.';
+            body.appendChild(p);
+          } else {
+            const gm = add('<div class="gold-move"><label class="sr" for="hoard-gold">금화 수</label><input class="input" id="hoard-gold" type="number" min="1" inputmode="numeric" placeholder="금화"></div>');
+            const box = gm.querySelector('.gold-move');
+            const amount = () => Number($('hoard-gold').value);
+            box.append(
+              btn(`쌓기 (가진 금화 ${me.gold})`, () => nestAct('hoard:put', { what: 'gold', qty: amount() })),
+              btn(`꺼내기 (쌓인 금화 ${n.gold})`, () => nestAct('hoard:take', { what: 'gold', qty: amount() })),
+            );
+            const list = document.createElement('div');
+            list.className = 'inv';
+            const items = n.items.filter((x) => S.items[x.item]);
+            for (const x of items) {
+              const it = S.items[x.item];
+              const r2 = document.createElement('div');
+              r2.className = `it ${it.rarity}`;
+              r2.innerHTML = '<b></b><span class="q"></span><small></small><div class="acts"></div>';
+              r2.querySelector('b').textContent = it.name;
+              r2.querySelector('.q').textContent = `×${x.qty}`;
+              r2.querySelector('small').textContent = `보물더미에 있음, 개당 가치 ${it.value}`;
+              r2.querySelector('.acts').append(btn('1개 꺼내기', () => nestAct('hoard:take', { what: x.item, qty: 1 })));
+              if (x.qty > 1) r2.querySelector('.acts').append(btn('모두 꺼내기', () => nestAct('hoard:take', { what: x.item, qty: x.qty })));
+              list.appendChild(r2);
+            }
+            body.appendChild(list);
+            const h2 = document.createElement('h3');
+            h2.textContent = '소지품에서 쌓기';
+            body.appendChild(h2);
+            const inv = document.createElement('div');
+            inv.className = 'inv';
+            const own = Object.entries(invCache).filter(([id, q]) => S.items[id] && q > 0)
+              .sort(([a], [b]) => S.items[b].value - S.items[a].value);
+            if (!own.length) {
+              const e = document.createElement('div');
+              e.className = 'empty';
+              e.textContent = '쌓을 물건이 없다.';
+              inv.appendChild(e);
+            }
+            for (const [id, q] of own) {
+              const it = S.items[id];
+              const r3 = document.createElement('div');
+              r3.className = `it ${it.rarity}`;
+              r3.innerHTML = '<b></b><span class="q"></span><small></small><div class="acts"></div>';
+              r3.querySelector('b').textContent = it.name;
+              r3.querySelector('.q').textContent = `×${q}`;
+              r3.querySelector('small').textContent = `개당 가치 ${it.value}`;
+              r3.querySelector('.acts').append(btn('1개 쌓기', () => nestAct('hoard:put', { what: id, qty: 1 })));
+              if (q > 1) r3.querySelector('.acts').append(btn('모두 쌓기', () => nestAct('hoard:put', { what: id, qty: q })));
+              inv.appendChild(r3);
+            }
+            body.appendChild(inv);
+          }
+        }
+
+        // 순위
+        const h3 = document.createElement('h3');
+        h3.textContent = '대륙의 보물더미';
+        body.appendChild(h3);
+        const rank = document.createElement('div');
+        rank.className = 'rank';
+        if (!n.ranking.length) {
+          const e = document.createElement('p');
+          e.className = 'note';
+          e.textContent = '아직 둥지를 튼 드래곤이 없다.';
+          rank.appendChild(e);
+        }
+        n.ranking.forEach((r, i) => {
+          const d = document.createElement('div');
+          d.className = `r${r.id === me.id ? ' me' : ''}`;
+          d.innerHTML = '<span class="n"></span><span class="ava"></span><div><b></b><small></small></div><span class="val"></span>';
+          d.querySelector('.n').textContent = i + 1;
+          const ava = d.querySelector('.ava');
+          ava.style.setProperty('--c', `var(--k-${r.kind})`);
+          const url = avatarUrl(r);
+          if (url) { const img = document.createElement('img'); img.src = url; img.alt = ''; ava.appendChild(img); }
+          else ava.innerHTML = emblem(r.kind, 30);
+          d.querySelector('b').textContent = r.name;
+          d.querySelector('small').textContent = `${S.regions[r.nest]?.name || ''}의 둥지`;
+          d.querySelector('.val').textContent = r.value.toLocaleString();
+          rank.appendChild(d);
+        });
+        body.appendChild(rank);
+        if (!$('nest-dlg').open) $('nest-dlg').showModal();
+      });
+    });
+  }
+
+  // ── 성향 바꾸기 ──
+  $('stance').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-s]');
+    if (!b || b.dataset.s === S.me.stance) return;
+    const name = b.textContent;
+    const hours = Math.round(S.trade.stanceCooldown / 3600000);
+    if (!confirm(`성향을 '${name}'${ro(name)} 바꿀까요? 바꾼 뒤 ${hours}시간 동안은 다시 바꿀 수 없다.`)) return;
+    socket.emit('stance:set', { stance: b.dataset.s }, (res) => {
+      if (res.error) return toast(res.error);
+      showResult(res.result);
+    });
+  });
+
+  // ── 시장 · 위협 ──
+  function marketRow(id, cls) {
+    const it = S.items[id];
+    const row = document.createElement('div');
+    row.className = `mk-row ${it.rarity} ${cls || ''}`;
+    row.innerHTML = '<div class="nm"><b></b><small></small></div><div class="acts"></div>';
+    row.querySelector('b').textContent = it.name;
+    row.querySelector('small').textContent = it.desc;
+    if (it.type) {
+      const e = document.createElement('span');
+      e.className = 'eff';
+      e.textContent = effectText(it);
+      row.querySelector('.nm').appendChild(e);
+    }
+    return row;
+  }
+  function mkButton(text, onClick, disabled) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn';
+    b.textContent = text;
+    b.disabled = !!disabled;
+    b.addEventListener('click', onClick);
+    return b;
+  }
+  function openMarket() {
+    socket.emit('market:get', {}, (res) => {
+      if (res.error) return toast(res.error);
+      const m = res.market;
+      $('mk-where').textContent = `${S.regions[m.region].name}, 평판 ${m.repName}`;
+      $('mk-gold').textContent = `${S.me.gold.toLocaleString()}닢`;
+      $('mk-note').textContent = {
+        friendly: '인간과 어울리는 드래곤에게는 평판이 높을수록 값을 잘 쳐준다. 거래할 때마다 평판이 조금씩 오른다.',
+        hermit: '사람의 모습으로 섞여 들어가 정체를 숨겼다. 값은 조금 손해 보지만 평판은 변하지 않는다.',
+        hostile: '',
+      }[m.stance];
+      const body = $('mk-body');
+      body.replaceChildren();
+      if (m.closed) {
+        const c = document.createElement('div');
+        c.className = 'mk-closed';
+        c.textContent = m.closed;
+        body.appendChild(c);
+      } else {
+        const h1 = document.createElement('h3');
+        h1.textContent = '사기';
+        body.appendChild(h1);
+        for (const x of m.buy) {
+          const row = marketRow(x.id);
+          const acts = row.querySelector('.acts');
+          const p = document.createElement('span');
+          p.className = 'price';
+          p.textContent = `${x.price}닢`;
+          acts.append(p, mkButton('사기', () => trade('market:buy', { item: x.id, qty: 1 }), S.me.gold < x.price));
+          body.appendChild(row);
+        }
+        const h2 = document.createElement('h3');
+        h2.textContent = '팔기';
+        body.appendChild(h2);
+        if (!m.sell.length) {
+          const e = document.createElement('p');
+          e.className = 'note';
+          e.textContent = '팔 물건이 없다.';
+          body.appendChild(e);
+        }
+        const order = { rare: 0, uncommon: 1, common: 2 };
+        for (const x of m.sell.sort((a, b) => order[S.items[a.id].rarity] - order[S.items[b.id].rarity])) {
+          const row = marketRow(x.id);
+          row.querySelector('b').textContent = `${S.items[x.id].name} ×${x.qty}`;
+          const acts = row.querySelector('.acts');
+          const p = document.createElement('span');
+          p.className = 'price';
+          p.textContent = `개당 ${x.price}닢`;
+          acts.append(p, mkButton('1개 팔기', () => trade('market:sell', { item: x.id, qty: 1 })));
+          if (x.qty > 1) acts.append(mkButton('모두 팔기', () => trade('market:sell', { item: x.id, qty: x.qty })));
+          body.appendChild(row);
+        }
+      }
+      if (!$('market-dlg').open) $('market-dlg').showModal();
+    });
+  }
+  function trade(event, payload) {
+    socket.emit(event, payload, (res) => {
+      if (res.error) return toast(res.error);
+      toast(res.result.lines.join(' '));
+      setTimeout(openMarket, 50);
+    });
+  }
+  $('market-open').addEventListener('click', openMarket);
+  $('market-close').addEventListener('click', () => $('market-dlg').close());
+  $('intimidate').addEventListener('click', () => {
+    socket.emit('intimidate', {}, (res) => {
+      if (res.error) return toast(res.error);
+      showResult(res.result);
+    });
+  });
+
+  // ── 제작 ──
+  function renderCraft() {
+    const me = S.me;
+    $('craft-status').textContent = `기력 ${me.en} / ${me.enMax}, 지혜 ${me.stats.wisdom}. 기력은 2분마다 1씩 찬다.`;
+    const box = $('craft-list');
+    box.replaceChildren();
+    const groups = [['회복약', (it) => it.type === 'use'], ['장신구', (it) => it.type === 'equip']];
+    for (const [title, test] of groups) {
+      const h = document.createElement('h3');
+      h.textContent = title;
+      box.appendChild(h);
+      for (const r of S.recipes.filter((x) => test(S.items[x.out]))) {
+        const it = S.items[r.out];
+        const row = document.createElement('div');
+        row.className = `recipe ${it.rarity}`;
+        row.innerHTML = '<div class="nm"><b></b><span class="eff"></span></div><button type="button" class="btn primary">만들기</button><div class="needs"></div>';
+        row.querySelector('b').textContent = it.name;
+        row.querySelector('.eff').textContent = effectText(it);
+        const needs = row.querySelector('.needs');
+        let ok = true;
+        const add = (text, lack) => { const n = document.createElement('span'); n.className = `need${lack ? ' lack' : ''}`; n.textContent = text; needs.appendChild(n); if (lack) ok = false; };
+        for (const [id, n] of Object.entries(r.needs)) add(`${S.items[id].name} ${invCache[id] || 0}/${n}`, (invCache[id] || 0) < n);
+        add(`기력 ${r.en}`, me.en < r.en);
+        if (r.wis) add(`지혜 ${r.wis} 이상`, me.stats.wisdom < r.wis);
+        const b = row.querySelector('.btn');
+        b.disabled = !ok || !!me.exp;
+        b.addEventListener('click', () => itemAct('craft', { recipe: r.out }));
+        box.appendChild(row);
+      }
+    }
+  }
+  $('craft-open').addEventListener('click', () => fetchInv(() => { renderCraft(); $('craft-dlg').showModal(); }));
+  $('craft-close').addEventListener('click', () => $('craft-dlg').close());
+
+  $('inv-close').addEventListener('click', () => $('inv-dlg').close());
+
   // ── 지역 ──
   function renderRegion() {
     const r = S.regions[S.region];
@@ -849,6 +1667,7 @@
       routes.appendChild(b);
     }
     renderOverlay();
+    renderActions();
   }
 
   // 지형 그림은 한 번만 불러오고, 길과 지역 표시는 위에 따로 그림
@@ -916,6 +1735,13 @@
         'paint-order': 'stroke', stroke: '#ECE7D3', 'stroke-width': 6, 'stroke-linejoin': 'round',
       }, r.name);
       node.appendChild(label);
+      if (S.me?.nest === r.id) {
+        const hx = r.x - 30, hy = r.y - 12;
+        node.append(
+          el('rect', { x: hx - 12, y: hy - 12, width: 24, height: 24, rx: 3, fill: '#FBF6E8', stroke: '#8C6A1E', 'stroke-width': 2 }),
+          el('path', { d: `M${hx - 7},${hy + 1} l7,-6 7,6 M${hx - 5},${hy} v7 h10 v-7`, fill: 'none', stroke: '#8C6A1E', 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }),
+        );
+      }
       const n = S.counts[r.id] || 0;
       if (n && !isHere) {
         node.append(
@@ -966,7 +1792,19 @@
       k.textContent = S.kinds[d.kind]?.name || '';
       nm.append(b, k);
       row.append(ava, nm);
-      if (S.me && d.id === S.me.id) {
+      if (d.away) {
+        const a = document.createElement('span');
+        a.className = 'away';
+        a.textContent = '원정 중';
+        row.appendChild(a);
+      }
+      if (d.resting) {
+        const a = document.createElement('span');
+        a.className = 'rest';
+        a.textContent = '쉬는 중';
+        row.appendChild(a);
+      }
+      if (S.me && d.id === S.me.id && !d.away && !d.resting) {
         const me = document.createElement('span');
         me.className = 'me';
         me.textContent = '나';
@@ -1040,6 +1878,14 @@
       S.regions = data.regions;
       S.stats = data.stats;
       S.creation = data.creation;
+      S.items = data.items;
+      S.rules = data.rules;
+      S.huntable = data.huntable;
+      S.slots = data.slots;
+      S.recipes = data.recipes;
+      S.shops = data.shops;
+      S.trade = data.trade;
+      S.nestRules = data.nestRules;
       if (data.dragon) {
         setMe(data.dragon);
         show('game');
