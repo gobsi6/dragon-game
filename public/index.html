@@ -358,7 +358,12 @@
   .fr-row .dot.on { background: #3A8A5C; }
   .fr-row .acts { display: flex; gap: 6px; }
   .fr-row .acts .btn { min-height: 32px; padding: 0 10px; font-size: 12.5px; }
-  .dock .badge { min-width: 17px; height: 17px; padding: 0 5px; border-radius: 9px; background: #A63E4B; color: #fff; font: 600 11px/17px var(--sans); text-align: center; }
+  /* 알림 숫자는 아이콘 오른쪽 위에 얹어서 메뉴 폭을 바꾸지 않는다 */
+  .dock .ico { display: contents; }   /* 넓은 화면: 숫자는 이름 오른쪽 */
+  .dock .badge { order: 2; margin-left: -2px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: #A63E4B; color: #fff; font: 600 10.5px/17px var(--sans); text-align: center; box-shadow: 0 0 0 2px #FAFAF9; pointer-events: none; }
+  .dock .badge.pop { animation: badge-pop .35s ease-out; }
+  @keyframes badge-pop { 0% { transform: scale(.6); } 60% { transform: scale(1.18); } 100% { transform: scale(1); } }
+  @media (prefers-reduced-motion: reduce) { .dock .badge.pop { animation: none; } }
   .tr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .tr-side { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--surface-2); border: 1px solid var(--line-in); min-width: 0; }
   .tr-side.ready { border-color: #A9C4B2; box-shadow: inset 0 0 0 1px #A9C4B2; background: #F3F8F4; }
@@ -560,13 +565,20 @@
     border-top: 3px double var(--line);
   }
   #game { padding-bottom: var(--dock-h, 56px); }
-  .dock .in { max-width: 1280px; margin: 0 auto; padding: 4px 24px; display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 6px; }
+  /* 메뉴는 같은 폭의 칸으로 나눠 정확히 가운데에 둔다. 메뉴 수가 바뀌어도 칸이 알아서 늘어남 */
+  .dock .in { max-width: 900px; margin: 0 auto; padding: 4px 16px; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 0 4px; }
   .dock button {
-    min-height: 44px; padding: 0 16px; display: flex; align-items: center; gap: 7px;
+    min-height: 44px; padding: 0 6px; display: flex; align-items: center; justify-content: center; gap: 7px; white-space: nowrap; min-width: 0;
     background: transparent; border: 0; border-bottom: 3px solid transparent;
     color: #363B40; font: 500 13px/1 var(--serif);
   }
   .dock button:active { background: rgba(60, 90, 115, .08); }
+  @media (max-width: 640px) {
+    .dock .in { padding: 2px 4px; gap: 0; }
+    .dock button { flex-direction: column; gap: 3px; min-height: 52px; padding: 4px 0 2px; font-size: 11px; }
+    .dock .ico { display: inline-flex; position: relative; }   /* 좁은 화면: 숫자는 아이콘 오른쪽 위 */
+    .dock .badge { position: absolute; top: -7px; left: 11px; margin: 0; }
+  }
   .dock button[aria-current="page"] {
     background: linear-gradient(180deg, rgba(60, 90, 115, 0) 0%, rgba(60, 90, 115, .08) 45%, rgba(60, 90, 115, .23) 100%);
     border-bottom-color: var(--steel-d); color: var(--steel-d); font-weight: 700;
@@ -778,13 +790,13 @@
 
   <nav class="dock" aria-label="주 메뉴">
     <div class="in">
-      <button type="button" id="dock-map" aria-current="page"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20l5-12 4 6 3-4 6 10z"/><circle cx="17" cy="6" r="2"/></svg>대륙</button>
-      <button type="button" id="dock-nest" data-dlg="nest-dlg"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><path d="M5 20V10a7 7 0 0 1 14 0v10"/><path d="M10 20v-5a2 2 0 0 1 4 0v5"/></svg>둥지</button>
-      <button type="button" id="inv-open" data-dlg="inv-dlg"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8h12l-1 12H7z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>소지품</button>
-      <button type="button" id="craft-open" data-dlg="craft-dlg"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l9-9"/><path d="M12 4l8 8-3 3-8-8z"/></svg>제작</button>
-      <button type="button" data-soon="결투장"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 9l6 6M15 9l-6 6"/></svg>결투장</button>
-      <button type="button" id="dock-friends" data-dlg="friends-dlg"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="9" r="3"/><circle cx="16" cy="10" r="2.5"/><path d="M3 20c0-3.5 3-6 6-6s6 2.5 6 6"/><path d="M15 15c3 0 6 2 6 5"/></svg>동료<span class="badge" id="friends-badge" hidden></span></button>
-      <button type="button" id="dock-tp" data-dlg="tp-dlg"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="2.2"/><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7"/><path d="M5.5 5.5a9.2 9.2 0 0 0 0 13M18.5 5.5a9.2 9.2 0 0 1 0 13"/></svg>텔레파시<span class="badge tp" id="tp-badge" hidden></span></button>
+      <button type="button" id="dock-map" aria-current="page"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20l5-12 4 6 3-4 6 10z"/><circle cx="17" cy="6" r="2"/></svg></span><span class="lbl">대륙</span></button>
+      <button type="button" id="dock-nest" data-dlg="nest-dlg"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><path d="M5 20V10a7 7 0 0 1 14 0v10"/><path d="M10 20v-5a2 2 0 0 1 4 0v5"/></svg></span><span class="lbl">둥지</span></button>
+      <button type="button" id="inv-open" data-dlg="inv-dlg"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8h12l-1 12H7z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></span><span class="lbl">소지품</span></button>
+      <button type="button" id="craft-open" data-dlg="craft-dlg"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l9-9"/><path d="M12 4l8 8-3 3-8-8z"/></svg></span><span class="lbl">제작</span></button>
+      <button type="button" data-soon="결투장"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 9l6 6M15 9l-6 6"/></svg></span><span class="lbl">결투장</span></button>
+      <button type="button" id="dock-friends" data-dlg="friends-dlg"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="9" r="3"/><circle cx="16" cy="10" r="2.5"/><path d="M3 20c0-3.5 3-6 6-6s6 2.5 6 6"/><path d="M15 15c3 0 6 2 6 5"/></svg><span class="badge" id="friends-badge" hidden></span></span><span class="lbl">동료</span></button>
+      <button type="button" id="dock-tp" data-dlg="tp-dlg"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="2.2"/><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7"/><path d="M5.5 5.5a9.2 9.2 0 0 0 0 13M18.5 5.5a9.2 9.2 0 0 1 0 13"/></svg><span class="badge tp" id="tp-badge" hidden></span></span><span class="lbl">텔레파시</span></button>
     </div>
   </nav>
 </div>
@@ -2278,11 +2290,16 @@
       done && done();
     });
   }
-  function renderFriendsBadge(n) {
-    const b = $('friends-badge');
+  // 메뉴 알림 숫자: 100 이상은 99+, 숫자가 늘면 살짝 튀어오른다
+  function setBadge(b, n) {
+    const prev = Number(b.dataset.n || 0);
+    b.dataset.n = n;
     b.hidden = !n;
-    b.textContent = n;
+    b.textContent = n > 99 ? '99+' : n;
+    b.closest('button')?.setAttribute('aria-label', b.closest('button').querySelector('.lbl').textContent + (n ? ` (${n})` : ''));
+    if (n > prev) { b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); }
   }
+  function renderFriendsBadge(n) { setBadge($('friends-badge'), n); }
   const avaEl = (d, size) => {
     const a = document.createElement('span');
     a.className = 'ava';
@@ -2510,7 +2527,7 @@
     if (m < 1440) return `${Math.floor(m / 60)}시간 전`;
     return `${Math.floor(m / 1440)}일 전`;
   };
-  function renderTpBadge(n) { const b = $('tp-badge'); b.hidden = !n; b.textContent = n; }
+  function renderTpBadge(n) { setBadge($('tp-badge'), n); }
   function openTpList() {
     tpWith = null;
     socket.emit('tp:threads', {}, (res) => {
@@ -2623,6 +2640,7 @@
       socket.emit('tp:heard', { id: m.from.id }, () => {});
       return;
     }
+    renderTpBadge(Number($('tp-badge').dataset.n || 0) + 1);
     if ($('tp-dlg').open && tpWith === null) openTpList();
     toast(`${m.from.name}의 목소리가 머릿속에 울린다.`, { label: '듣기', run: () => { hideToast(); openTp(m.from.id); } });
   }
