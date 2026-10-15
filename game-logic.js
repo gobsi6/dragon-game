@@ -5,7 +5,10 @@
 
 const {
   REGIONS, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, RECIPES, SLOTS, STANCES, SHOPS, repTier, TRADE, NEST,
+  SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN,
 } = require('./game-data');
+
+const SR = STANCE_RULES;
 
 const STAT_KEYS = ['claw', 'scale', 'wing', 'wisdom', 'majesty'];
 
@@ -28,6 +31,7 @@ function bonusOf(d) {
     for (const [k, v] of Object.entries(it.bonus || {})) b[k] += v;
     expRare += it.expRare || 0;
   }
+  b.majesty += fameTier(d.fame || 0).majesty; // 용족 명성
   return { stats: b, expRare };
 }
 // 타고난 값 + 장신구
@@ -68,8 +72,10 @@ function regen(d, now = Date.now()) {
       d[atKey] = d[key] >= cap ? now : d[atKey] + n * every;
     }
   };
-  // 둥지에서 쉬는 동안에는 더 빨리 참
-  const m = d.rest_at ? NEST.rest : { ap: 1, hp: 1, en: 1 };
+  // 둥지에서 쉬면 더 빨리 참 (은둔은 더욱). 우호는 인간 마을에서 치료사 덕에 체력이 빨리 참
+  let m = { ap: 1, hp: 1, en: 1 };
+  if (d.rest_at) m = d.stance === 'hermit' ? SR.hermit.rest : NEST.rest;
+  else if (d.stance === 'friendly' && isTown(d.region)) m = { ap: 1, hp: SR.friendly.townHpRegen, en: 1 };
   tick('ap', d.ap_max, 'ap_at', RULES.apEvery / m.ap);
   tick('hp', hpCap(d), 'hp_at', RULES.hpEvery / m.hp);
   tick('en', enCap(d), 'en_at', RULES.enEvery / m.en);
@@ -79,6 +85,64 @@ function regen(d, now = Date.now()) {
 function spendAp(d, n, now = Date.now()) {
   if (d.ap >= d.ap_max) d.ap_at = now;
   d.ap -= n;
+}
+
+// 행동에 드는 행동력. 은둔은 인간 마을에서 변장하느라 탐사·채집에 더 듦
+function actionCost(d, type) {
+  let c = RULES.cost[type];
+  if (d.stance === 'hermit' && isTown(d.region) && (type === 'explore' || type === 'gather')) c += SR.hermit.townApExtra;
+  return c;
+}
+
+// ── 용족 명성 ──────────────────────────────────────
+// 단계가 바뀌면 알려 줄 문장을 돌려줌
+function addFame(d, n) {
+  const before = fameTier(d.fame || 0);
+  d.fame = Math.max(-100, Math.min(100, (d.fame || 0) + n));
+  const after = fameTier(d.fame);
+  if (after === before) return null;
+  if (after.majesty === 0) return '드래곤들 사이의 소문이 잠잠해졌다.';
+  if (n > 0) {
+    return after.majesty > 0
+      ? `용족 명성이 '${after.name}' 단계에 이르렀다. 위엄이 높아진다.`
+      : `드래곤들 사이의 소문이 '${after.name}' 단계로 잦아들었다.`;
+  }
+  return after.majesty < 0
+    ? `드래곤들 사이에 '${after.name}'의 소문이 돈다. 위엄이 꺾인다.`
+    : `용족 명성이 '${after.name}' 단계로 내려갔다.`;
+}
+
+// ── 적대: 현상금과 습격 ────────────────────────────
+// 어느 마을이든 원수가 되면 현상금이 걸림
+function hasBounty(d) {
+  if (d.stance !== 'hostile') return false;
+  return Object.keys(SHOPS).some((r) => (repOf(d)[r] || 0) <= SR.hostile.bountyRep);
+}
+// 습격당하면 체력과 금화를 잃음. 일어나지 않으면 null
+function ambush(d, chance) {
+  if (d.perks?.guard) chance /= 2; // 둥지의 파수꾼
+  if (!hasBounty(d) || Math.random() >= chance) return null;
+  const h = SR.hostile;
+  const dmg = Math.max(4, Math.round(randInt(h.ambushDmg[0], h.ambushDmg[1]) - statsOf(d).scale * 0.3));
+  d.hp = Math.max(1, d.hp - dmg);
+  const lost = Math.min(40, Math.floor(d.gold * h.ambushGold));
+  d.gold -= lost;
+  return {
+    lost,
+    lines: [
+      '현상금을 노린 인간 기사단이 덮쳐 왔다.',
+      lost ? `체력을 ${dmg} 잃고 금화 ${lost}닢을 빼앗겼다.` : `체력을 ${dmg} 잃고 겨우 몸을 뺐다.`,
+    ],
+  };
+}
+
+// 적대 드래곤이 인간 마을에 날아들면 성벽 궁수가 쏨
+function townArrows(d) {
+  if (d.stance !== 'hostile' || !isTown(d.region)) return null;
+  const [a, b] = SR.hostile.arrows;
+  const dmg = Math.max(3, Math.round(randInt(a, b) - statsOf(d).scale * 0.2));
+  d.hp = Math.max(1, d.hp - dmg);
+  return `성벽 위 궁수들이 화살을 퍼부었다. 체력을 ${dmg} 잃었다.`;
 }
 
 // ── 경험치와 레벨 ──────────────────────────────────
@@ -125,7 +189,7 @@ const RESTING = '둥지에서 쉬는 중이다. 먼저 깨어나야 한다.';
 function check(d, type) {
   if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
   if (d.rest_at) return { error: RESTING };
-  const cost = RULES.cost[type];
+  const cost = actionCost(d, type);
   if (d.ap < cost) return { error: `행동력이 모자란다. (${cost} 필요)` };
   return null;
 }
@@ -133,7 +197,7 @@ function check(d, type) {
 function gather(d) {
   const err = check(d, 'gather');
   if (err) return err;
-  spendAp(d, RULES.cost.gather);
+  spendAp(d, actionCost(d, 'gather'));
   const st = statsOf(d);
 
   const n = Math.random() < 0.35 + st.wisdom * 0.01 ? 2 : 1;
@@ -155,8 +219,9 @@ function gather(d) {
 function explore(d) {
   const err = check(d, 'explore');
   if (err) return err;
-  spendAp(d, RULES.cost.explore);
+  spendAp(d, actionCost(d, 'explore'));
   const st = statsOf(d);
+  if (d.stance === 'hermit') st.wisdom += SR.hermit.exploreWisdom; // 은둔: 숨은 것을 잘 찾음
 
   const lines = [pick(SCENES[d.region])];
   let items = [];
@@ -173,7 +238,25 @@ function explore(d) {
   } else {
     lines.push('특별한 것은 찾지 못했지만, 이곳 지리를 조금 더 알게 되었다.');
   }
+  // 우호: 인간 마을 사람들이 선물을 건넴
+  if (d.stance === 'friendly' && isTown(d.region) && Math.random() < SR.friendly.giftChance) {
+    if (Math.random() < 0.5) {
+      const g = randInt(10, 25);
+      gold += g;
+      lines.push(`마을 사람들이 반갑게 다가와 금화 ${g}닢을 건넸다.`);
+    } else {
+      const gifts = SHOPS[d.region].filter((id) => ITEMS[id].type === 'use');
+      const id = pick(gifts);
+      items = bundle([...items.flatMap((x) => Array(x.qty).fill(x.id)), id]);
+      lines.push(`마을 사람이 ${ITEMS[id].name}${josa(ITEMS[id].name, '을', '를')} 선물로 건넸다.`);
+    }
+  }
   d.gold += gold;
+  // 적대: 현상금이 걸려 있으면 야생에서 습격당할 수 있음
+  if (!isTown(d.region)) {
+    const a = ambush(d, SR.hostile.ambush.explore);
+    if (a) { lines.push(...a.lines); gold -= a.lost; }
+  }
   const xp = 6;
   const levelUp = gainXp(d, xp);
   return { title: '탐사', lines, items, gold, xp, levelUp };
@@ -188,11 +271,15 @@ function hunt(d) {
   spendAp(d, RULES.cost.hunt);
 
   const st = statsOf(d);
+  const hostile = d.stance === 'hostile';
+  if (hostile) st.claw += SR.hostile.huntClaw; // 적대: 사냥에 거침없음
+  if (d.perks?.knight) st.claw += 3;           // 등에 탄 용기사
   const power = st.claw + st.wing * 0.5 + d.level * 2;
-  const chance = Math.max(0.15, Math.min(0.9, 0.55 + (power - (12 + c.level * 3)) * 0.04));
+  const fameHunt = fameTier(d.fame || 0).hunt;  // 명성이 낮으면 짐승도 얕봄
+  const chance = Math.max(0.1, Math.min(0.9, 0.55 + (power - (12 + c.level * 3)) * 0.04 + fameHunt));
   const win = Math.random() < chance;
   const rawDmg = randInt(3, 6) * c.level * (win ? 1 : 1.4);
-  const dmg = Math.max(1, Math.round(rawDmg - st.scale * 0.4));
+  const dmg = Math.max(1, Math.round((rawDmg - st.scale * 0.4) * (d.perks?.knight ? 0.7 : 1)));
   d.hp = Math.max(1, d.hp - dmg);
 
   const lines = [];
@@ -202,9 +289,9 @@ function hunt(d) {
   if (win) {
     lines.push(`${c.name}${josa(c.name, '을', '를')} 쓰러뜨렸다. 체력을 ${dmg} 잃었다.`);
     const ids = ['beast_hide'];
-    if (Math.random() < 0.3 + c.level * 0.05) ids.push('sharp_fang');
+    if (Math.random() < 0.3 + c.level * 0.05 + (hostile ? SR.hostile.huntFang : 0)) ids.push('sharp_fang');
     items = bundle(ids);
-    gold = randInt(0, 3) * c.level;
+    gold = Math.round(randInt(0, 3) * c.level * (hostile ? SR.hostile.huntGold : 1));
     xp = 12 + c.level * 6;
     const got = items.map(itemLabel);
     if (gold) got.push(`금화 ${gold}닢`);
@@ -231,23 +318,25 @@ function startExpedition(d, minutes, now = Date.now()) {
 }
 
 // 도착했거나 일찍 불러들였을 때. 지난 시간만큼 보상
-function finishExpedition(d, now = Date.now()) {
+// companions: 함께 간 식구 수 (하나당 찾는 물건 +15%)
+function finishExpedition(d, now = Date.now(), companions = 0) {
   if (!d.exp_end) return { error: '원정을 떠나 있지 않다.' };
   const st = statsOf(d);
   const extra = bonusOf(d).expRare;
+  const hermit = d.stance === 'hermit'; // 은둔: 홀로 깊은 곳을 누비는 데 익숙함
   const planned = (d.exp_end - d.exp_start) / 60000;
   const done = Math.max(0, Math.min(planned, (now - d.exp_start) / 60000));
   const early = done < planned;
   const region = d.exp_region || d.region;
   const where = REGIONS[region].name;
 
-  const rolls = Math.floor(done / 10);
+  const rolls = Math.floor(done / 10 * (1 + companions * KIN.companionBonus));
   const hours = planned / 60;
   const ids = [];
   for (let i = 0; i < rolls; i++) {
     ids.push(rollItem(region, {
-      uncommon: 0.16 + hours * 0.03 + st.wisdom * 0.004,
-      rare: 0.015 + hours * 0.012 + st.wisdom * 0.001 + extra,
+      uncommon: 0.16 + hours * 0.03 + st.wisdom * 0.004 + (hermit ? SR.hermit.expUncommon : 0),
+      rare: 0.015 + hours * 0.012 + st.wisdom * 0.001 + extra + (hermit ? SR.hermit.expRare : 0),
     }));
   }
   const items = bundle(ids);
@@ -266,14 +355,21 @@ function finishExpedition(d, now = Date.now()) {
   }
 
   d.gold += gold;
+  let net = gold;
+  if (rolls > 0 && !isTown(region)) {
+    const a = ambush(d, SR.hostile.ambush.expedition);
+    if (a) { lines.splice(lines.length - 1, 0, ...a.lines); net -= a.lost; }
+  }
   const levelUp = gainXp(d, xp);
   d.exp_start = null;
   d.exp_end = null;
   d.exp_region = null;
-  return { title: early ? '원정 (일찍 돌아옴)' : '원정', lines, items, gold, xp, levelUp, minutes: Math.round(done) };
+  return { title: early ? '원정 (일찍 돌아옴)' : '원정', lines, items, gold: net, xp, levelUp, minutes: Math.round(done) };
 }
 
 // ── 제작 ───────────────────────────────────────────
+// 둥지의 대장장이가 있으면 기력이 30% 덜 듦
+const craftEn = (d, r) => (d.perks?.smith ? Math.ceil(r.en * 0.7) : r.en);
 // have(id): 지금 가진 개수를 알려주는 함수 (저장 공간에서 읽음)
 function craft(d, outId, have) {
   if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
@@ -281,12 +377,13 @@ function craft(d, outId, have) {
   if (!r) return { error: '알 수 없는 제작법이다.' };
   const st = statsOf(d);
   if (st.wisdom < r.wis) return { error: `지혜가 ${r.wis} 이상이어야 만들 수 있다.` };
-  if (d.en < r.en) return { error: `기력이 모자란다. (${r.en} 필요)` };
+  const en = craftEn(d, r);
+  if (d.en < en) return { error: `기력이 모자란다. (${en} 필요)` };
   for (const [id, n] of Object.entries(r.needs)) {
     if (have(id) < n) return { error: `${ITEMS[id].name}${josa(ITEMS[id].name, '이', '가')} 모자란다.` };
   }
   if (d.en >= enCap(d)) d.en_at = Date.now();
-  d.en -= r.en;
+  d.en -= en;
   const items = Object.entries(r.needs).map(([id, n]) => ({ id, qty: -n }));
   items.push({ id: r.out, qty: 1 });
   const xp = 4 + Math.floor(r.en / 2);
@@ -372,12 +469,22 @@ function setStance(d, stance, now = Date.now()) {
   if (left > 0) return { error: `성향은 ${Math.ceil(left / 60000)}분 뒤에 다시 바꿀 수 있다.` };
   d.stance = stance;
   d.stance_at = now;
-  const lines = {
+  const lines = [{
     friendly: '인간과 어울려 살기로 마음먹었다.',
     hermit: '인간의 눈을 피해 조용히 살기로 했다.',
     hostile: '인간에게 발톱을 드러내기로 했다.',
-  };
-  return { title: '성향', lines: [lines[stance]] };
+  }[stance]];
+  // 배신: 적대로 돌아서면 사이가 좋던 마을이 모두 원수가 됨
+  if (stance === 'hostile') {
+    const r = repOf(d);
+    const betrayed = Object.keys(SHOPS).filter((id) => (r[id] || 0) >= SR.friendly.specialFrom);
+    for (const id of betrayed) r[id] = SR.friendly.betrayRep;
+    if (betrayed.length) {
+      const names = betrayed.map((id) => REGIONS[id].name).join('과 ');
+      lines.push(`믿었던 드래곤에게 배신당한 ${names}${josa(names, '이', '가')} 등을 돌렸다. 이제 원수다.`);
+    }
+  }
+  return { title: '성향', lines };
 }
 
 // ── 시장 ───────────────────────────────────────────
@@ -387,15 +494,20 @@ function setStance(d, stance, now = Date.now()) {
 //   적대: 상인이 거래하지 않음 (대신 위협하기)
 function priceRates(d, region) {
   const rep = repOf(d)[region] || 0;
-  if (d.stance === 'hermit') return { sell: 0.5, buy: 1.15 };
-  return { sell: 0.6 * (1 + rep / 250), buy: 1 - rep / 400 };
+  if (d.stance === 'hermit' || d.stance === 'hostile') return { sell: SR.hermit.sell, buy: SR.hermit.buy }; // 적대는 둥지 사람이 대신 흥정할 때만
+  const f = SR.friendly;
+  if (rep < 0) return { sell: f.sell.base * (1 + rep / 250), buy: 1 - rep / 400 };
+  const k = Math.min(rep, 60) / 60; // '신뢰'(60)에서 최고
+  return { sell: f.sell.base + (f.sell.best - f.sell.base) * k, buy: 1 - f.buyDiscount * k };
 }
+// 우호 전용 상품을 살 수 있는지
+const specialOpen = (d) => d.stance === 'friendly' && (repOf(d)[d.region] || 0) >= SR.friendly.specialFrom;
 function marketCheck(d) {
   if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
   if (d.rest_at) return { error: RESTING };
   const shop = SHOPS[d.region];
   if (!shop) return { error: '이곳에는 시장이 없다.' };
-  if (d.stance === 'hostile') return { error: '상인들이 드래곤을 보자마자 가게 문을 닫았다.' };
+  if (d.stance === 'hostile' && !d.perks?.trader) return { error: '상인들이 드래곤을 보자마자 가게 문을 닫았다.' };
   const rep = repOf(d)[d.region] || 0;
   if (d.stance === 'friendly' && rep < TRADE.refuseBelow) return { error: '상인들이 아직 지난 일을 잊지 않았다. 거래를 거절한다.' };
   return null;
@@ -414,26 +526,39 @@ function marketInfo(d, invList) {
     stance: d.stance,
     rep, repName: repTier(rep),
     closed: closed ? closed.error : null,
+    proxy: d.stance === 'hostile' ? d.perks?.trader || null : null, // 대신 흥정하는 둥지 사람
     buy: shop.map((id) => ({ id, price: buyPrice(d, id) })),
+    // 우호일 때만 보임. 평판이 모자라면 잠겨 있음
+    special: d.stance === 'friendly'
+      ? (SHOPS_SPECIAL[d.region] || []).map((id) => ({ id, price: buyPrice(d, id), locked: !specialOpen(d) }))
+      : [],
+    specialFrom: repTier(SR.friendly.specialFrom),
     sell: invList.filter((x) => ITEMS[x.item]).map((x) => ({ id: x.item, qty: x.qty, price: sellPrice(d, x.item) })),
   };
+}
+
+// 우호 드래곤이 거래하면 마을 평판은 오르고 용족 명성은 깎임
+function friendlyTrade(d, lines) {
+  if (d.stance !== 'friendly') return;
+  addRep(d, d.region, 1);
+  const f = addFame(d, SR.friendly.fameOnTrade);
+  if (f) lines.push(f);
 }
 
 function buy(d, id, qty, have) {
   const err = marketCheck(d);
   if (err) return err;
-  if (!SHOPS[d.region].includes(id)) return { error: '이 시장에서는 팔지 않는 물건이다.' };
+  const special = (SHOPS_SPECIAL[d.region] || []).includes(id);
+  if (!SHOPS[d.region].includes(id) && !special) return { error: '이 시장에서는 팔지 않는 물건이다.' };
+  if (special && !specialOpen(d)) return { error: '이 물건은 마을과 더 친해져야 살 수 있다.' };
   qty = Math.max(1, Math.min(20, Math.floor(qty) || 1));
   const cost = buyPrice(d, id) * qty;
   if (d.gold < cost) return { error: `금화가 모자란다. (${cost}닢 필요)` };
   d.gold -= cost;
-  if (d.stance === 'friendly') addRep(d, d.region, 1);
   const name = ITEMS[id].name;
-  return {
-    title: '시장',
-    lines: [`금화 ${cost}닢을 내고 ${name}${qty > 1 ? ` ${qty}개` : ''}${josa(qty > 1 ? '개' : name, '을', '를')} 샀다.`],
-    items: [{ id, qty }],
-  };
+  const lines = [`금화 ${cost}닢을 내고 ${name}${qty > 1 ? ` ${qty}개` : ''}${josa(qty > 1 ? '개' : name, '을', '를')} 샀다.`];
+  friendlyTrade(d, lines);
+  return { title: '시장', lines, items: [{ id, qty }] };
 }
 
 function sell(d, id, qty, have) {
@@ -445,13 +570,10 @@ function sell(d, id, qty, have) {
   if (n < 1) return { error: '가지고 있지 않다.' };
   const gain = sellPrice(d, id) * qty;
   d.gold += gain;
-  if (d.stance === 'friendly') addRep(d, d.region, 1);
   const name = ITEMS[id].name;
-  return {
-    title: '시장',
-    lines: [`${name}${qty > 1 ? ` ${qty}개` : ''}${josa(qty > 1 ? '개' : name, '을', '를')} 팔고 금화 ${gain}닢을 받았다.`],
-    items: [{ id, qty: -qty }],
-  };
+  const lines = [`${name}${qty > 1 ? ` ${qty}개` : ''}${josa(qty > 1 ? '개' : name, '을', '를')} 팔고 금화 ${gain}닢을 받았다.`];
+  friendlyTrade(d, lines);
+  return { title: '시장', lines, items: [{ id, qty: -qty }] };
 }
 
 // ── 위협하기 (적대 성향만) ──────────────────────────
@@ -466,12 +588,13 @@ function intimidate(d) {
   const where = REGIONS[d.region].name;
   // 원수가 된 마을은 미리 대비하고 있어서 더 어려움
   const prepared = (repOf(d)[d.region] || 0) <= -60 ? 0.15 : 0;
-  const chance = Math.max(0.15, Math.min(0.9, 0.4 + (st.majesty - 12) * 0.04 + d.level * 0.02 - prepared));
+  const knight = d.perks?.knight ? 0.1 : 0;
+  const chance = Math.max(0.15, Math.min(0.9, 0.4 + (st.majesty - 12) * 0.04 + d.level * 0.02 - prepared + knight));
   let items = [];
   let gold = 0;
   const lines = [];
   if (Math.random() < chance) {
-    gold = randInt(15, 35) + st.majesty;
+    gold = Math.round((randInt(15, 35) + st.majesty) * SR.hostile.intimidateGold);
     lines.push(`${where} 하늘을 낮게 돌며 포효하자, 인간들이 서둘러 공물을 내왔다.`);
     if (Math.random() < 0.4) {
       const id = pick(SHOPS[d.region]);
@@ -481,11 +604,14 @@ function intimidate(d) {
       lines.push(`금화 ${gold}닢을 빼앗았다.`);
     }
     addRep(d, d.region, -12);
+    lines.push(addFame(d, SR.hostile.fameOnIntimidate) || '드래곤들 사이에 이름이 퍼진다.');
   } else {
     const dmg = Math.max(3, Math.round(randInt(8, 16) - st.scale * 0.3));
     d.hp = Math.max(1, d.hp - dmg);
     lines.push(`성벽 위 궁수들이 화살을 퍼부었다. 체력을 ${dmg} 잃고 물러났다.`);
     addRep(d, d.region, -4);
+    const f = addFame(d, SR.hostile.fameOnIntimidateFail);
+    if (f) lines.push(f);
   }
   d.gold += gold;
   const xp = 8;
@@ -580,4 +706,5 @@ module.exports = {
   craft, useItem, equip, unequip, statsOf, bonusOf, hpCap, enCap, equipOf,
   repOf, setStance, marketInfo, buy, sell, intimidate,
   buildNest, flyHome, startRest, stopRest, hoardMove, hoardValue,
+  actionCost, townArrows, hasBounty, addRep, addFame, craftEn,
 };

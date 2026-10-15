@@ -173,6 +173,16 @@ const ITEMS = {
   silver_chain: { name: '은 사슬',          rarity: 'uncommon', value: 15, desc: '인간 대장장이가 엮은 가는 사슬이다.' },
   travel_map:   { name: '여행자의 지도',    rarity: 'uncommon', type: 'equip', slot: 'charm', bonus: {}, expRare: 0.04, value: 60, desc: '인간들이 그린 대륙 지도다. 생각보다 정확하다.' },
   sea_compass:  { name: '항해사의 나침반',  rarity: 'uncommon', type: 'equip', slot: 'charm', bonus: { wing: 1 }, expRare: 0.03, value: 70, desc: '바늘이 언제나 북쪽을 가리킨다.' },
+
+  // ── 우호 드래곤에게만 파는 물건 (마을 평판 '호의' 이상) ──
+  royal_charm:  { name: '왕실 문장 부적',   rarity: 'rare',     type: 'equip', slot: 'charm', bonus: { majesty: 2, wisdom: 1 }, value: 120, desc: '왕가가 인정한 드래곤에게만 내리는 부적이다.' },
+  tide_amulet:  { name: '해안 수호 목걸이', rarity: 'rare',     type: 'equip', slot: 'neck',  bonus: { scale: 2, wing: 1 },   value: 110, desc: '어부들이 바다의 친구에게 바치는 목걸이다.' },
+
+  // ── 유품: 함께 살던 인간이 세상을 떠나며 남긴 것 ──
+  keepsake_cloth: { name: '낡은 손수건',     rarity: 'common',   value: 20,  desc: '작은 손이 늘 쥐고 있던 손수건이다.' },
+  keepsake_toy:   { name: '손때 묻은 목각 용', rarity: 'uncommon', value: 80,  desc: '어린 날 드래곤을 흉내 내며 깎은 인형이다.' },
+  keepsake_scale: { name: '비늘 목걸이',     rarity: 'rare',     value: 200, desc: '드래곤의 비늘을 꿰어 평생 걸고 다닌 목걸이다.' },
+  keepsake_sword: { name: '용기사의 검',     rarity: 'rare',     value: 180, desc: '드래곤과 함께 하늘을 누빈 기사의 검이다.' },
 };
 
 // 물건 기준 값. value가 없으면 귀한 정도로, 만든 물건은 재료 값으로 정함
@@ -223,6 +233,12 @@ const SHOPS = {
   coast:   ['herbal_ointment', 'salted_fish', 'silver_chain', 'sea_compass'],
 };
 
+// 우호 성향이고 마을 평판이 '호의'(20) 이상일 때만 파는 물건
+const SHOPS_SPECIAL = {
+  capital: ['royal_charm'],
+  coast:   ['tide_amulet'],
+};
+
 // 평판 단계 (-100 ~ 100)
 const REP_TIERS = [
   { min: 60,   name: '신뢰' },
@@ -241,10 +257,120 @@ const NEST = {
 };
 
 const TRADE = {
-  stanceCooldown: 60 * 60 * 1000,   // 성향을 바꾼 뒤 다시 바꾸기까지 (1시간)
+  stanceCooldown: 12 * 60 * 60 * 1000, // 성향을 바꾼 뒤 다시 바꾸기까지 (12시간)
   refuseBelow: -40,                 // 평판이 이보다 낮으면 상인이 거래를 거절
   intimidateCost: 2,                // 위협하기에 드는 행동력
 };
+
+// ── 둥지 식구: 인간 아이와 새끼 드래곤 ─────────────
+// 나이와 기간은 '일' 단위 (실제 시간). 어린 시절은 짧게, 도움을 주는 어른·노년은 2주
+const DAY = 24 * 60 * 60 * 1000;
+const KIN = {
+  maxKin: 2,                          // 둥지에 함께 살 수 있는 식구 수 (인간·알·새끼 드래곤 상관없이)
+  human: {
+    stages: [
+      { name: '아기', from: 0 }, { name: '아이', from: 1 }, { name: '소년', from: 2 },
+      { name: '청년', from: 4 }, { name: '어른', from: 11 }, { name: '노년', from: 18 },
+    ],
+    adultDay: 11,                     // 이날 재주가 정해지고 갈 길을 고름
+    lifespan: 25,                     // 이날이 지나면 세상을 떠남 (어른 1주 + 노년 1주)
+    expeditionFrom: 2,                // 이 나이(소년)부터 원정에 따라감
+    startBond: 20,
+    careCooldown: 3 * 60 * 60 * 1000, // 돌보기 간격 (3시간)
+    neglectAfter: 2,                  // 이만큼(일) 돌보지 않으면
+    neglectPerDay: 5,                 // 하루에 유대가 이만큼 줄어듦
+    restBondPer30m: 1,                // 둥지에서 함께 쉬면 30분마다 유대
+    knightBond: 60,                   // 용기사로 삼으려면 필요한 유대
+    traderBond: 50,                   // 적대 드래곤 대신 시장에서 흥정해 주려면 필요한 유대
+    returnRep: 40,                    // 마을로 돌려보내면 오르는 평판 (원수였어도 -20부터 계산)
+    herbEvery: DAY,                   // 약초꾼이 꿀 고약을 만드는 간격
+  },
+  drake: {
+    hatchTime: 1 * DAY,               // 알을 품기 시작해서 깨어나기까지
+    eggWarnDays: 5,                   // 품지 않은 알: 이날 온기가 옅어진다고 알림
+    eggColdDays: 7,                   // 품지 않은 알: 이날 식어 버림
+    stages: [
+      { name: '해츨링', from: 0 }, { name: '어린 용', from: 4 }, { name: '젊은 용', from: 11 }, { name: '다 자란 용', from: 18 },
+    ],
+    independentDay: 18,               // 이날부터 독립시킬 수 있음 (미뤄도 됨)
+    expeditionFrom: 4,                // 어린 용부터 원정에 따라감
+    huntFrom: 11, huntEvery: DAY,     // 젊은 용부터 혼자 사냥해서 가져옴
+    trainCooldown: 6 * 60 * 60 * 1000, trainAp: 1, trainEn: 5,
+    trainLimit: [4, 8, 12, 16],       // 단계별로 가르칠 수 있는 누적 횟수
+    giftEvery: 3 * DAY,               // 독립한 새끼가 선물을 보내는 간격
+    giftFrom: 3,                      // 최근 독립한 몇 마리까지 선물을 보내는지
+  },
+  // 알을 품는 데 드는 재료 (종류별)
+  eggNeeds: { red: 'fire_crystal', white: 'eternal_ice', green: 'heartwood', black: 'bog_pearl', gold: 'sun_stone', silver: 'deep_pearl' },
+  // 돌보기에 쓰는 물건: 유대가 얼마나 오르는지, 어떤 재주 쪽으로 기우는지
+  care: {
+    grass_seed: { bond: 2, talent: 'herbalist' }, wild_honey: { bond: 6, talent: 'herbalist' },
+    glow_moss: { bond: 5, talent: 'herbalist' }, honey_salve: { bond: 8, talent: 'herbalist' },
+    red_clay: { bond: 3, talent: 'smith' }, bog_iron: { bond: 5, talent: 'smith' },
+    gold_ore: { bond: 7, talent: 'smith' }, obsidian: { bond: 6, talent: 'smith' },
+    salted_fish: { bond: 6, talent: 'guard' }, beast_hide: { bond: 4, talent: 'guard' }, sharp_fang: { bond: 5, talent: 'guard' },
+  },
+  tripTalent: 2,                      // 원정에 한 번 따라갈 때마다 파수꾼 쪽으로
+  companionBonus: 0.15,               // 원정에 따라간 식구 하나당 찾는 물건 +15%
+};
+const TALENTS = {
+  herbalist: { name: '약초꾼',   desc: '둥지에 남으면 하루에 한 번 꿀 고약을 만들어 둔다.' },
+  smith:     { name: '대장장이', desc: '둥지에 남으면 제작에 드는 기력이 30% 줄어든다.' },
+  guard:     { name: '파수꾼',   desc: '둥지에 남으면 기사단 습격과 구출 시도가 절반으로 준다.' },
+};
+const HUMAN_NAMES = ['미르', '엘라', '토비', '세린', '리안', '하나', '오웬', '루카', '니나', '테오', '소이', '다온', '에반', '유나', '카이', '로웬'];
+const DRAKE_NAMES = ['아르', '벨카', '시엘', '모라크', '카이렌', '이그', '루미', '타르', '세라', '노크', '베른', '이즈'];
+
+// 이벤트: 행동마다 일어날 확률 (시험 단계라 넉넉하게)
+const EVENT_RULES = {
+  chance: { explore: 0.3, gather: 0.15, expedition: 0.6, wake: 0.5, intimidate: 1 },
+};
+
+// ── 성향별 장점과 단점 ─────────────────────────────
+// 숫자를 바꾸면 바로 게임에 반영됩니다.
+const STANCE_RULES = {
+  friendly: {
+    sell: { base: 0.6, best: 0.9 },  // 파는 값: 평판 0일 때 기준가의 60%, '신뢰'(60)일 때 90%
+    buyDiscount: 0.3,                 // 사는 값: '신뢰'일 때 30% 할인
+    specialFrom: 20,                  // 이 평판부터 전용 상품이 열림
+    townHpRegen: 2,                   // 인간 마을에 있으면 체력이 몇 배 빨리 차는지
+    giftChance: 0.35,                 // 인간 마을에서 탐사할 때 선물을 받을 확률
+    fameOnTrade: -2,                  // 시장에서 한 번 거래할 때마다 용족 명성 변화
+    betrayRep: -80,                   // 적대로 돌아서면 '호의' 이상이던 마을 평판이 이 값으로
+  },
+  hermit: {
+    sell: 0.4, buy: 1.3,              // 파는 값 40%, 사는 값 130%
+    expUncommon: 0.08, expRare: 0.04, // 원정에서 드문·귀한 물건 확률 추가
+    rest: { hp: 6, en: 6, ap: 3 },    // 둥지에서 쉴 때 회복 배수 (보통은 NEST.rest)
+    exploreWisdom: 2,                 // 탐사할 때 지혜에 더해서 계산
+    townApExtra: 1,                   // 인간 마을에서 탐사·채집할 때 행동력 추가 소모
+  },
+  hostile: {
+    intimidateGold: 1.5,              // 위협하기 공물 배수
+    fameOnIntimidate: 4,              // 위협 성공 시 용족 명성
+    fameOnIntimidateFail: 1,          // 실패해도 대담함은 인정받음
+    huntClaw: 2,                      // 사냥할 때 발톱에 더해서 계산
+    huntFang: 0.15,                   // 송곳니가 나올 확률 추가
+    huntGold: 1.5,                    // 사냥 금화 배수
+    arrows: [6, 12],                  // 인간 마을에 날아들면 입는 피해
+    bountyRep: -60,                   // 어느 마을이든 평판이 이 값 이하면 현상금이 걸림
+    ambush: { explore: 0.2, expedition: 0.35 }, // 야생에서 기사단에게 습격당할 확률
+    ambushDmg: [8, 18],               // 습격 피해
+    ambushGold: 0.15,                 // 습격으로 잃는 금화 비율 (최대 40닢)
+  },
+};
+
+// 용족 명성 (-100 ~ 100): 드래곤들 사이의 체면. 위엄에 더해지고, 낮으면 사냥이 어려워짐
+const FAME_TIERS = [
+  { min: 60,   name: '경외', majesty: 3,  hunt: 0 },
+  { min: 30,   name: '존중', majesty: 2,  hunt: 0 },
+  { min: 10,   name: '인정', majesty: 1,  hunt: 0 },
+  { min: -9,   name: '평범', majesty: 0,  hunt: 0 },
+  { min: -29,  name: '수군거림', majesty: -1, hunt: 0 },
+  { min: -59,  name: '멸시', majesty: -2, hunt: -0.08 },
+  { min: -100, name: '수치', majesty: -3, hunt: -0.15 },
+];
+const fameTier = (v) => FAME_TIERS.find((t) => v >= t.min);
 
 // 지역별 채집 재료
 const REGION_LOOT = {
@@ -295,5 +421,6 @@ const RULES = {
 
 module.exports = {
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES,
-  SHOPS, REP_TIERS, repTier, TRADE, NEST,
+  SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, NEST, STANCE_RULES, FAME_TIERS, fameTier,
+  DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, EVENT_RULES,
 };

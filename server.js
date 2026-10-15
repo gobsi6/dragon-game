@@ -10,8 +10,10 @@ const { Server } = require('socket.io');
 const db = require('./db');
 const {
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, CREATURES, RULES, SLOTS, RECIPES, SHOPS, repTier, TRADE, NEST,
+  STANCE_RULES, FAME_TIERS, fameTier, KIN, TALENTS,
 } = require('./game-data');
 const logic = require('./game-logic');
+const life = require('./game-life');
 
 const PORT = process.env.PORT || 3000;
 const MOVE_COOLDOWN = 1500; // ms, 연속 이동 방지
@@ -119,8 +121,45 @@ const meOf = (d) => ({
   nest: d.nest || null,
   restAt: d.rest_at || null,
   hoardGold: d.hoard_gold || 0,
+  fame: { value: d.fame || 0, name: fameTier(d.fame || 0).name, majesty: fameTier(d.fame || 0).majesty },
+  bounty: logic.hasBounty(d),
+  event: pendingId(d),                // 선택을 기다리는 이벤트가 있는지
+  relIn: db.reqInCount(d.id),         // 받은 동료 요청 수
+  tpUnread: db.tpUnread(d.id),        // 아직 듣지 않은 텔레파시 수
+  kin: d.kinSummary || { home: [], lineage: 0 },
+  perks: d.perks || {},
+  cost: { explore: logic.actionCost(d, 'explore'), gather: logic.actionCost(d, 'gather'), hunt: logic.actionCost(d, 'hunt') },
   exp: d.exp_end ? { region: d.exp_region, start: d.exp_start, end: d.exp_end } : null,
 });
+
+const EVENTS = require('./game-events');
+// 기다리는 이벤트의 이름 (화면의 '일이 생겼다' 줄에 씀)
+function pendingId(d) {
+  if (!d.pending_event) return null;
+  try {
+    const id = JSON.parse(d.pending_event).id;
+    return { id, title: EVENTS.find((e) => e.id === id)?.title || '' };
+  } catch { return null; }
+}
+
+// ── 둥지 식구 ──────────────────────────────────────
+// 지난 시간만큼 식구의 일을 계산하고(성장, 노화, 부화, 선물), 소식이 있으면 알림
+function syncKin(socket, d, now = Date.now()) {
+  const kin = db.kinLoad(d.id);
+  const t = life.tick(d, kin, now);
+  refreshKin(d, kin);
+  db.saveState(d, t.items, t.hoardItems);
+  if (t.lines.length && socket) {
+    socket.emit('notice', { title: '둥지 소식', lines: t.lines, items: [...t.items, ...t.hoardItems], gold: t.gold });
+  }
+  return kin;
+}
+// 식구가 바뀐 뒤: 저장하고, 식구가 주는 도움(d.perks)과 요약을 새로 계산
+function refreshKin(d, kin) {
+  db.kinSaveAll(d.id, kin);
+  d.perks = life.perksOf(kin);
+  d.kinSummary = life.summary(kin, Date.now());
+}
 
 // 회복을 계산한 뒤 내 정보를 보냄
 function sendMe(socket, d) {
@@ -171,6 +210,9 @@ function enterWorld(socket, dragon) {
   }
   socket.data.dragonId = dragon.id;
   logic.regen(dragon);
+  syncKin(socket, dragon);
+  socket.emit('me', meOf(dragon));
+  social.onEnter(socket, dragon);
   online.set(dragon.id, { socket, dragon });
   socket.join(dragon.region);
   db.touch(dragon.id);
@@ -187,6 +229,9 @@ function entryOf(socket) {
   const entry = online.get(socket.data.dragonId);
   return entry && entry.socket === socket ? entry : null;
 }
+
+// 동료: 프로필, 관계, 선물, 교환 (social.js)
+const social = require('./social')({ db, online, entryOf, sendMe, logic, life });
 
 // ── 실시간 (Socket.IO) ─────────────────────────────
 
@@ -210,12 +255,15 @@ io.on('connection', (socket) => {
     creation: CREATION,
     items: ITEMS,
     huntable: Object.keys(CREATURES),
+    kinRules: KIN, talents: TALENTS,
     rules: { cost: RULES.cost, apEvery: RULES.apEvery, enEvery: RULES.enEvery, expeditionMinutes: RULES.expeditionMinutes },
     slots: SLOTS,
     recipes: RECIPES,
     shops: Object.keys(SHOPS),
     trade: TRADE,
     nestRules: NEST,
+    stanceRules: STANCE_RULES,
+    fameTiers: FAME_TIERS,
   });
   if (dragon) enterWorld(socket, dragon);
 
@@ -273,9 +321,11 @@ io.on('connection', (socket) => {
     socket.data.lastMove = now;
 
     const ga = josa(d.name, '이', '가');
+    logic.regen(d, now);
     socket.leave(from);
     d.region = to;
     db.setRegion(d.id, to);
+    const arrows = logic.townArrows(d); // 적대 드래곤이 인간 마을에 날아들면
     system(from, `${d.name}${ga} ${REGIONS[to].name} 쪽으로 날아갔다.`);
     socket.join(to);
     system(to, `${d.name}${ga} ${REGIONS[from].name} 쪽에서 날아왔다.`, socket);
@@ -284,7 +334,13 @@ io.on('connection', (socket) => {
     broadcastPresence(to);
     broadcastCounts();
     sendRegionState(socket, d);
-    ack({ ok: true });
+    social.onMove(d.id);
+    if (arrows) {
+      db.saveState(d);
+      system(to, `${d.name}${ga} 나타나자 성벽 위에서 화살이 쏟아졌다.`, socket);
+    }
+    sendMe(socket, d);
+    ack({ ok: true, notice: arrows });
   });
 
   socket.on('dragon:avatar', (payload, ack) => {
@@ -338,8 +394,10 @@ io.on('connection', (socket) => {
 
     const d = entry.dragon;
     logic.regen(d, now);
+    const kin = syncKin(socket, d, now);
     const res = fn(d);
     if (res.error) return ack(res);
+    res.event = life.rollEvent(d, kin, (id) => db.itemCount(d.id, id), str(payload?.type), now);
     db.saveState(d, res.items);
     sendMe(socket, d);
     ack({ ok: true, result: res });
@@ -352,13 +410,16 @@ io.on('connection', (socket) => {
     if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
     const d = entry.dragon;
     logic.regen(d);
+    const kin = syncKin(socket, d);
     const res = logic.startExpedition(d, Number(payload?.minutes));
     if (res.error) return ack(res);
+    const went = life.expStart(kin);
+    refreshKin(d, kin);
     db.saveState(d);
     sendMe(socket, d);
     broadcastPresence(d.region);
     system(d.region, `${d.name}${josa(d.name, '이', '가')} 원정을 떠났다.`, socket);
-    ack({ ok: true });
+    ack({ ok: true, went });
   });
 
   // 도착 뒤 결과 받기, 또는 일찍 불러들이기 (서버가 시각으로 판단)
@@ -368,8 +429,12 @@ io.on('connection', (socket) => {
     if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
     const d = entry.dragon;
     logic.regen(d);
-    const res = logic.finishExpedition(d);
+    const kin = syncKin(socket, d);
+    const res = logic.finishExpedition(d, Date.now(), life.companions(kin));
     if (res.error) return ack(res);
+    res.lines.push(...life.expFinish(kin, res.minutes));
+    if (res.minutes >= 10) res.event = life.rollEvent(d, kin, (id) => db.itemCount(d.id, id), 'expedition');
+    refreshKin(d, kin);
     db.saveState(d, res.items);
     sendMe(socket, d);
     broadcastPresence(d.region);
@@ -386,7 +451,8 @@ io.on('connection', (socket) => {
 
   // ── 제작 · 회복약 · 장신구 ──
   // 모두 같은 모양: 규칙 함수를 부르고, 성공하면 저장하고 내 정보를 다시 보냄
-  const itemAction = (event, run, after) => {
+  // trigger(res): 성공한 결과를 보고 이벤트를 굴릴 때의 이름 (없으면 굴리지 않음)
+  const itemAction = (event, run, after, trigger) => {
     socket.on(event, (payload, ack) => {
       if (typeof ack !== 'function') return;
       const entry = entryOf(socket);
@@ -396,9 +462,13 @@ io.on('connection', (socket) => {
       socket.data.lastItem = now;
       const d = entry.dragon;
       logic.regen(d, now);
+      const kin = syncKin(socket, d, now);
       const have = (id) => db.itemCount(d.id, id);
-      const res = run(d, payload || {}, have);
+      const res = run(d, payload || {}, have, kin);
       if (res.error) return ack(res);
+      const t = trigger && trigger(res);
+      if (t) res.event = life.rollEvent(d, kin, have, t, now);
+      refreshKin(d, kin);
       db.saveState(d, res.items, res.hoardItems);
       sendMe(socket, d);
       if (after) after(d, res);
@@ -414,12 +484,17 @@ io.on('connection', (socket) => {
   itemAction('stance:set', (d, p) => logic.setStance(d, str(p.stance)));
   itemAction('market:buy', (d, p, have) => logic.buy(d, str(p.item), Number(p.qty), have));
   itemAction('market:sell', (d, p, have) => logic.sell(d, str(p.item), Number(p.qty), have));
-  itemAction('intimidate', (d) => logic.intimidate(d));
+  itemAction('intimidate', (d) => logic.intimidate(d), null, (res) => (res.gold > 0 ? 'intimidate' : null));
   // ── 둥지 ──
   const presenceAfter = (d) => broadcastPresence(d.region);
   itemAction('nest:build', (d) => logic.buildNest(d));
   itemAction('rest:start', (d) => logic.startRest(d), presenceAfter);
-  itemAction('rest:stop', (d) => logic.stopRest(d), presenceAfter);
+  itemAction('rest:stop', (d, p, have, kin) => {
+    const mins = d.rest_at ? (Date.now() - d.rest_at) / 60000 : 0;
+    const res = logic.stopRest(d);
+    if (!res.error) { const l = life.restTogether(kin, mins); if (l) res.lines.push(l); }
+    return res;
+  }, presenceAfter, () => 'wake');
   itemAction('hoard:put', (d, p, have) => logic.hoardMove(d, 'put', str(p.what), Number(p.qty), have, () => 0));
   itemAction('hoard:take', (d, p) => logic.hoardMove(d, 'take', str(p.what), Number(p.qty), () => 0, (id) => db.hoardCount(d.id, id)));
   // 둥지로 곧장 날아가기: 지역이 바뀌므로 이동과 같은 처리를 함
@@ -433,34 +508,43 @@ io.on('connection', (socket) => {
     broadcastPresence(d.region);
     broadcastCounts();
     sendRegionState(socket, d);
+    social.onMove(d.id);
   });
+  // ── 둥지 식구 ──
+  itemAction('kin:care', (d, p, have, kin) => life.care(d, kin, p.id, str(p.item), have));
+  itemAction('kin:rename', (d, p, have, kin) => life.rename(kin, p.id, str(p.name)));
+  itemAction('kin:path', (d, p, have, kin) => life.choosePath(d, kin, p.id, str(p.path), str(p.town)));
+  itemAction('kin:incubate', (d, p, have, kin) => life.incubate(d, kin, p.id, have));
+  itemAction('kin:train', (d, p, have, kin) => life.train(d, kin, p.id, str(p.stat)));
+  itemAction('kin:release', (d, p, have, kin) => life.release(d, kin, p.id));
+
+  // ── 이벤트 ──
+  socket.on('event:get', (payload, ack) => {
+    if (typeof ack !== 'function') return;
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+    const d = entry.dragon;
+    const kin = syncKin(socket, d);
+    const had = d.pending_event;
+    const event = life.getEvent(d, kin, (id) => db.itemCount(d.id, id));
+    if (had && !event) { db.saveState(d); sendMe(socket, d); } // 지나가 버린 이벤트
+    ack(event ? { ok: true, event } : { error: '그 일은 이미 지나갔다.' });
+  });
+  itemAction('event:choose', (d, p, have, kin) => life.chooseEvent(d, kin, have, p.i));
+
   socket.on('nest:get', (payload, ack) => {
     if (typeof ack !== 'function') return;
     const entry = entryOf(socket);
     if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
     const d = entry.dragon;
+    const kin = syncKin(socket, d);
     const items = d.nest ? db.hoard(d.id) : [];
-    // 순위: 접속 중인 드래곤은 메모리 값, 나머지는 저장 공간 값
-    const all = db.allHoards();
-    const byDragon = new Map();
-    for (const x of all.items) {
-      if (!byDragon.has(x.dragon_id)) byDragon.set(x.dragon_id, []);
-      byDragon.get(x.dragon_id).push(x);
-    }
-    const ranking = all.dragons.map((r) => {
-      const live = online.get(r.id)?.dragon;
-      const gold = live ? live.hoard_gold : r.hoard_gold;
-      return {
-        id: r.id, name: r.name, kind: r.kind, av: r.has_avatar ? r.avatar_ver : 0, nest: live ? live.nest : r.nest,
-        value: logic.hoardValue(gold || 0, byDragon.get(r.id) || []),
-      };
-    }).sort((a, b) => b.value - a.value);
     ack({
       ok: true,
       nest: {
         region: d.nest, here: !!d.nest && d.region === d.nest,
         gold: d.hoard_gold || 0, items, value: logic.hoardValue(d.hoard_gold || 0, items),
-        ranking: ranking.slice(0, 10), myRank: ranking.findIndex((r) => r.id === d.id) + 1,
+        kin: life.views(kin, Date.now(), d),
       },
     });
   });
@@ -476,7 +560,9 @@ io.on('connection', (socket) => {
   // 화면이 회복 시각이 됐다고 알려주면 다시 계산해서 보냄
   socket.on('me:sync', () => {
     const entry = entryOf(socket);
-    if (entry) sendMe(socket, entry.dragon);
+    if (!entry) return;
+    syncKin(socket, entry.dragon);
+    sendMe(socket, entry.dragon);
   });
 
   socket.on('chat', (payload) => {
@@ -495,9 +581,12 @@ io.on('connection', (socket) => {
     io.to(d.region).emit('chat', msg);
   });
 
+  social.attach(socket);
+
   socket.on('disconnect', () => {
     const entry = entryOf(socket);
     if (!entry) return;
+    social.onLeave(entry.dragon.id);
     online.delete(entry.dragon.id);
     logic.regen(entry.dragon);
     db.saveState(entry.dragon);
