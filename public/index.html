@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>용의 대륙</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #e4e7e1;
+    --surface: #f2f3ef;
+    --ink: #23272b;
+    --muted: #5d656a;
+    --line: #c6cbc3;
+    --sea: #d3d9d2;
+    --land: #bcc5b6;
+    --land-edge: #9aa597;
+    /* 기본 강조색. 드래곤을 만들면 종류별 색으로 바뀝니다 */
+    --accent: #5e6b64;
+    --accent-ink: #ffffff;
+
+    --k-black: #64557f;
+    --k-gold: #a87a12;
+    --k-white: #4d7c9e;
+    --k-green: #4a7a3d;
+
+    --serif: 'Gowun Batang', 'Nanum Myeongjo', 'AppleMyungjo', serif;
+    --sans: 'Pretendard', -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --bg: #15181b;
+      --surface: #1e2226;
+      --ink: #e3e5e0;
+      --muted: #949a9e;
+      --line: #343a3f;
+      --sea: #191d20;
+      --land: #2a3034;
+      --land-edge: #3e464b;
+      --accent: #9aa59f;
+      --accent-ink: #15181b;
+
+      --k-black: #a796c9;
+      --k-gold: #e2b347;
+      --k-white: #9fc6e3;
+      --k-green: #8cbd73;
+    }
+  }
+  body[data-kind="black"] { --accent: var(--k-black); }
+  body[data-kind="gold"]  { --accent: var(--k-gold); }
+  body[data-kind="white"] { --accent: var(--k-white); }
+  body[data-kind="green"] { --accent: var(--k-green); }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.6 var(--sans);
+    min-height: 100vh;
+    word-break: keep-all;
+  }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  [hidden] { display: none !important; }
+
+  .btn {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    padding: .55em 1em;
+    border-radius: 6px;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+    font-weight: 600;
+  }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .field { display: grid; gap: .3em; }
+  .field span { font-size: 13px; color: var(--muted); }
+  .field input {
+    padding: .6em .8em;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--bg);
+  }
+
+  /* ── 로그인 · 드래곤 만들기 ── */
+  .gate {
+    max-width: 420px;
+    margin: 0 auto;
+    padding: 12vh 20px 40px;
+  }
+  .gate.wide { max-width: 760px; padding-top: 8vh; }
+  .title {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 44px;
+    line-height: 1.15;
+    letter-spacing: -.01em;
+    margin: 0 0 .25em;
+  }
+  .lead { color: var(--muted); margin: 0 0 2em; }
+  .gate form { display: grid; gap: 14px; }
+  .gate .row { display: flex; gap: 8px; margin-top: 6px; }
+  .gate .row .btn { flex: 1; }
+  .error { color: #b3412e; font-size: 14px; min-height: 1.4em; margin: 0; }
+  @media (prefers-color-scheme: dark) { .error { color: #e58a74; } }
+
+  .kinds {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+    margin: 8px 0 18px;
+  }
+  .kind {
+    text-align: left;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: 8px;
+    padding: 14px;
+    display: grid;
+    gap: 6px;
+    align-content: start;
+  }
+  .kind .scale {
+    width: 28px; height: 28px; border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    background: var(--c);
+  }
+  .kind strong { font-family: var(--serif); font-size: 18px; }
+  .kind small { color: var(--muted); font-size: 13px; line-height: 1.5; }
+  .kind[aria-pressed="true"] { border-color: var(--c); box-shadow: inset 0 0 0 1px var(--c); }
+
+  /* ── 게임 화면 ── */
+  .top {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 14px 20px;
+  }
+  .top .brand { font-family: var(--serif); font-weight: 700; font-size: 20px; }
+  .top .me { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .top .me .btn { padding: .35em .8em; font-size: 13px; }
+  .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--c, var(--muted));
+    flex: none;
+  }
+
+  .game {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(300px, 1fr);
+    gap: 28px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 4px 20px 32px;
+  }
+  .where h1 {
+    font-family: var(--serif);
+    font-size: 34px;
+    line-height: 1.2;
+    margin: 0;
+  }
+  .where .tag { color: var(--muted); font-size: 13px; margin: .2em 0 .6em; }
+  .where .desc { font-family: var(--serif); font-size: 16px; line-height: 1.8; max-width: 36em; margin: 0 0 14px; }
+  .routes { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+  .routes .btn { font-size: 14px; padding: .4em .85em; }
+
+  .map {
+    background: var(--sea);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .map svg { display: block; width: 100%; height: auto; }
+  .map .coast { fill: var(--land); stroke: var(--land-edge); stroke-width: 2; }
+  .map .route { stroke: var(--land-edge); stroke-width: 2; stroke-dasharray: 2 7; stroke-linecap: round; }
+  .map .route.open { stroke: var(--accent); stroke-dasharray: none; stroke-width: 2.5; }
+  .map .node circle { fill: var(--surface); stroke: var(--land-edge); stroke-width: 2; }
+  .map .node text { font-family: var(--serif); font-size: 21px; fill: var(--muted); text-anchor: middle; paint-order: stroke; stroke: var(--land); stroke-width: 6px; stroke-linejoin: round; }
+  .map .node .count { font-family: var(--sans); font-size: 15px; font-weight: 600; fill: var(--accent); }
+  .map .node.open { cursor: pointer; }
+  .map .node.open circle { stroke: var(--accent); stroke-width: 3; }
+  .map .node.open text { fill: var(--ink); }
+  .map .node.open:hover circle, .map .node.open:focus circle { fill: var(--accent); }
+  .map .node:focus { outline: none; }
+  .map .node.here circle { fill: var(--accent); stroke: var(--accent); }
+  .map .node.here text { fill: var(--ink); font-weight: 700; }
+  .map .halo { fill: none; stroke: var(--accent); stroke-width: 2; opacity: .5; transform-box: fill-box; transform-origin: center; animation: halo 2.4s ease-out infinite; }
+  @keyframes halo { from { transform: scale(1); opacity: .6; } to { transform: scale(2.4); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .map .halo { animation: none; opacity: .35; transform: scale(1.6); } }
+
+  .side { display: grid; gap: 22px; align-content: start; }
+  .side h2 { font-size: 14px; font-weight: 600; color: var(--muted); margin: 0 0 8px; }
+  .here-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .here-list li { display: flex; align-items: center; gap: 8px; }
+  .here-list .kindname { color: var(--muted); font-size: 13px; }
+  .here-list .you { font-size: 12px; color: var(--accent); }
+  .empty { color: var(--muted); font-size: 14px; margin: 0; }
+
+  .chat { display: flex; flex-direction: column; min-height: 0; }
+  .log {
+    height: 380px;
+    overflow-y: auto;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px 8px 0 0;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .log .msg { overflow-wrap: anywhere; }
+  .log .msg b { font-weight: 600; margin-right: .4em; color: var(--c); }
+  .log .sys { font-family: var(--serif); color: var(--muted); font-size: 14px; }
+  .log .arrive { font-family: var(--serif); color: var(--ink); text-align: center; margin: 6px 0; }
+  .say { display: flex; }
+  .say input {
+    flex: 1; min-width: 0;
+    border: 1px solid var(--line); border-top: 0;
+    border-radius: 0 0 0 8px;
+    padding: .65em .9em;
+    background: var(--bg);
+  }
+  .say .btn { border-radius: 0 0 8px 0; border-top: 0; }
+
+  @media (max-width: 860px) {
+    .game { grid-template-columns: 1fr; gap: 22px; }
+    .where h1 { font-size: 28px; }
+    .log { height: 300px; }
+    .title { font-size: 36px; }
+  }
+
+  .banner {
+    position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
+    background: var(--ink); color: var(--bg);
+    padding: .6em 1.1em; border-radius: 6px; font-size: 14px;
+    max-width: calc(100% - 40px);
+    display: flex; gap: 12px; align-items: center;
+  }
+  .banner .btn { padding: .25em .7em; font-size: 13px; color: var(--ink); }
+</style>
+</head>
+<body>
+
+<!-- 로그인 -->
+<section id="auth" class="gate" hidden>
+  <h1 class="title">용의 대륙</h1>
+  <p class="lead">드래곤이 되어 대륙을 떠돌고, 인간과 어울리거나 멀리하며 살아가는 곳.</p>
+  <form id="auth-form">
+    <label class="field"><span>아이디</span><input name="username" autocomplete="username" required maxlength="16"></label>
+    <label class="field"><span>비밀번호</span><input name="password" type="password" autocomplete="current-password" required maxlength="64"></label>
+    <p class="error" id="auth-error" role="alert"></p>
+    <div class="row">
+      <button class="btn primary" type="submit" data-mode="login">로그인</button>
+      <button class="btn" type="submit" data-mode="register">계정 만들기</button>
+    </div>
+  </form>
+</section>
+
+<!-- 드래곤 만들기 -->
+<section id="create" class="gate wide" hidden>
+  <h1 class="title">어떤 드래곤으로 태어날까요</h1>
+  <p class="lead">종류에 따라 처음 눈뜨는 땅이 달라요. 한 번 정하면 바꿀 수 없어요.</p>
+  <form id="create-form">
+    <div class="kinds" id="kinds" role="group" aria-label="드래곤 종류"></div>
+    <label class="field"><span>이름 (2~12자)</span><input name="name" required maxlength="12" autocomplete="off"></label>
+    <p class="error" id="create-error" role="alert"></p>
+    <div class="row"><button class="btn primary" type="submit">이 드래곤으로 시작</button></div>
+  </form>
+</section>
+
+<!-- 게임 -->
+<div id="game" hidden>
+  <header class="top">
+    <span class="brand">용의 대륙</span>
+    <span class="me">
+      <span class="dot" id="me-dot"></span>
+      <span id="me-name"></span>
+      <button class="btn" id="logout" type="button">로그아웃</button>
+    </span>
+  </header>
+  <main class="game">
+    <section class="where">
+      <h1 id="region-name"></h1>
+      <p class="tag" id="region-tag"></p>
+      <p class="desc" id="region-desc"></p>
+      <div class="routes" id="routes" aria-label="날아갈 수 있는 곳"></div>
+      <div class="map" id="map"></div>
+    </section>
+    <aside class="side">
+      <section>
+        <h2>이곳의 드래곤</h2>
+        <ul class="here-list" id="here"></ul>
+      </section>
+      <section class="chat">
+        <h2>이곳의 이야기</h2>
+        <div class="log" id="log" aria-live="polite"></div>
+        <form class="say" id="say">
+          <input id="say-input" maxlength="200" autocomplete="off" placeholder="이곳의 드래곤들에게 말하기" aria-label="채팅 입력">
+          <button class="btn primary" type="submit">말하기</button>
+        </form>
+      </section>
+    </aside>
+  </main>
+</div>
+
+<div class="banner" id="banner" hidden><span id="banner-text"></span><button class="btn" id="banner-btn" type="button" hidden></button></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+
+  // 받침에 따라 '로'/'으로' 고르기 (ㄹ 받침은 '로')
+  function ro(word) {
+    const c = word.charCodeAt(word.length - 1) - 0xac00;
+    if (c < 0 || c > 11171) return '(으)로';
+    const jong = c % 28;
+    return jong && jong !== 8 ? '으로' : '로';
+  }
+  const TOKEN_KEY = 'dragon-token';
+
+  let socket = null;
+  const S = { kinds: {}, regions: {}, dragon: null, region: null, occupants: [], counts: {}, pickKind: null };
+
+  // ── 저장소 (일부 환경에서 localStorage가 막혀 있을 수 있음) ──
+  const store = {
+    get() { try { return localStorage.getItem(TOKEN_KEY); } catch { return null; } },
+    set(v) { try { localStorage.setItem(TOKEN_KEY, v); } catch {} },
+    clear() { try { localStorage.removeItem(TOKEN_KEY); } catch {} },
+  };
+
+  function show(id) {
+    for (const s of ['auth', 'create', 'game']) $(s).hidden = s !== id;
+  }
+
+  let bannerTimer = null;
+  function banner(text, action) {
+    clearTimeout(bannerTimer);
+    $('banner-text').textContent = text;
+    const b = $('banner-btn');
+    b.hidden = !action;
+    if (action) { b.textContent = action.label; b.onclick = action.run; }
+    $('banner').hidden = false;
+    if (!action) bannerTimer = setTimeout(() => ($('banner').hidden = true), 2600);
+  }
+  const hideBanner = () => ($('banner').hidden = true);
+
+  // ── 로그인 ──
+  $('auth-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const mode = e.submitter?.dataset.mode || 'login';
+    const f = e.target;
+    $('auth-error').textContent = '';
+    try {
+      const res = await fetch(`/api/${mode}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: f.username.value, password: f.password.value }),
+      });
+      const data = await res.json();
+      if (!res.ok) return ($('auth-error').textContent = data.error || '다시 시도해 주세요.');
+      store.set(data.token);
+      f.reset();
+      connect();
+    } catch {
+      $('auth-error').textContent = '서버에 연결하지 못했어요. 서버가 켜져 있는지 확인해 주세요.';
+    }
+  });
+
+  $('logout').addEventListener('click', () => {
+    const token = store.get();
+    if (token) fetch('/api/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) });
+    store.clear();
+    if (socket) socket.disconnect();
+    socket = null;
+    delete document.body.dataset.kind;
+    show('auth');
+  });
+
+  // ── 드래곤 만들기 ──
+  function renderKinds() {
+    const box = $('kinds');
+    box.innerHTML = '';
+    for (const [id, k] of Object.entries(S.kinds)) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'kind';
+      b.style.setProperty('--c', `var(--k-${id})`);
+      b.setAttribute('aria-pressed', String(S.pickKind === id));
+      b.innerHTML = '<span class="scale"></span><strong></strong><small class="b"></small><small class="d"></small>';
+      b.querySelector('strong').textContent = k.name;
+      b.querySelector('.b').textContent = `${k.breath} 브레스 · ${S.regions[k.home].name}에서 시작`;
+      b.querySelector('.d').textContent = k.desc;
+      b.addEventListener('click', () => {
+        S.pickKind = id;
+        document.body.dataset.kind = id;
+        renderKinds();
+      });
+      box.appendChild(b);
+    }
+  }
+
+  $('create-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    $('create-error').textContent = '';
+    if (!S.pickKind) return ($('create-error').textContent = '드래곤 종류를 골라 주세요.');
+    socket.emit('dragon:create', { name: e.target.name.value, kind: S.pickKind }, (res) => {
+      if (res.error) return ($('create-error').textContent = res.error);
+      setDragon(res.dragon);
+      show('game');
+    });
+  });
+
+  function setDragon(d) {
+    S.dragon = d;
+    document.body.dataset.kind = d.kind;
+    $('me-dot').style.setProperty('--c', `var(--k-${d.kind})`);
+    $('me-name').textContent = `${d.name} · ${S.kinds[d.kind].name}`;
+  }
+
+  // ── 지역 화면 ──
+  function renderRegion() {
+    const r = S.regions[S.region];
+    $('region-name').textContent = r.name;
+    $('region-tag').textContent = r.tag;
+    $('region-desc').textContent = r.desc;
+
+    const routes = $('routes');
+    routes.innerHTML = '';
+    for (const id of r.links) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn';
+      b.textContent = `${S.regions[id].name}${ro(S.regions[id].name)} 날아가기`;
+      b.addEventListener('click', () => move(id));
+      routes.appendChild(b);
+    }
+    renderMap();
+  }
+
+  const COAST = 'M180,70 C300,30 420,48 520,42 C640,30 760,55 862,92 C930,160 905,262 886,330 C915,425 862,505 802,560 C742,628 622,650 520,632 C420,644 330,652 250,612 C168,570 128,482 140,392 C110,302 132,202 120,140 C128,100 150,80 180,70 Z';
+
+  function renderMap() {
+    const here = S.regions[S.region];
+    const parts = [`<svg viewBox="0 0 1000 680" role="img" aria-label="대륙 지도"><path class="coast" d="${COAST}"/>`];
+    const drawn = new Set();
+    for (const r of Object.values(S.regions)) {
+      for (const id of r.links) {
+        const key = [r.id, id].sort().join('|');
+        if (drawn.has(key)) continue;
+        drawn.add(key);
+        const t = S.regions[id];
+        const open = r.id === S.region || id === S.region;
+        parts.push(`<line class="route${open ? ' open' : ''}" x1="${r.x}" y1="${r.y}" x2="${t.x}" y2="${t.y}"/>`);
+      }
+    }
+    for (const r of Object.values(S.regions)) {
+      const isHere = r.id === S.region;
+      const isOpen = here.links.includes(r.id);
+      const n = S.counts[r.id] || 0;
+      const attrs = isOpen ? ` tabindex="0" role="button" aria-label="${r.name}${ro(r.name)} 날아가기"` : '';
+      parts.push(`<g class="node${isHere ? ' here' : ''}${isOpen ? ' open' : ''}" data-region="${r.id}"${attrs}>`);
+      if (isHere) parts.push(`<circle class="halo" cx="${r.x}" cy="${r.y}" r="14"/>`);
+      parts.push(`<circle cx="${r.x}" cy="${r.y}" r="14"/><text x="${r.x}" y="${r.y + 42}">${r.name}</text>`);
+      if (n && !isHere) parts.push(`<text class="count" x="${r.x + 24}" y="${r.y - 14}">${n}</text>`);
+      parts.push('</g>');
+    }
+    parts.push('</svg>');
+    $('map').innerHTML = parts.join('');
+  }
+
+  $('map').addEventListener('click', (e) => {
+    const g = e.target.closest('.node.open');
+    if (g) move(g.dataset.region);
+  });
+  $('map').addEventListener('keydown', (e) => {
+    const g = e.target.closest('.node.open');
+    if (g && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); move(g.dataset.region); }
+  });
+
+  function move(to) {
+    socket.emit('move', { to }, (res) => { if (res.error) banner(res.error); });
+  }
+
+  function renderHere() {
+    const ul = $('here');
+    ul.innerHTML = '';
+    for (const d of S.occupants) {
+      const li = document.createElement('li');
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      dot.style.setProperty('--c', `var(--k-${d.kind})`);
+      const name = document.createElement('span');
+      name.textContent = d.name;
+      const kind = document.createElement('span');
+      kind.className = 'kindname';
+      kind.textContent = S.kinds[d.kind]?.name || '';
+      li.append(dot, name, kind);
+      if (S.dragon && d.id === S.dragon.id) {
+        const you = document.createElement('span');
+        you.className = 'you';
+        you.textContent = '나';
+        li.append(you);
+      }
+      ul.appendChild(li);
+    }
+  }
+
+  // ── 채팅 ──
+  function addLine(el) {
+    const log = $('log');
+    const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
+    log.appendChild(el);
+    if (atBottom) log.scrollTop = log.scrollHeight;
+  }
+  function addChat(m) {
+    const p = document.createElement('div');
+    p.className = 'msg';
+    const b = document.createElement('b');
+    b.style.setProperty('--c', `var(--k-${m.kind})`);
+    b.textContent = m.name;
+    p.append(b, document.createTextNode(m.text));
+    addLine(p);
+  }
+  function addSystem(text, cls = 'sys') {
+    const p = document.createElement('div');
+    p.className = cls;
+    p.textContent = text;
+    addLine(p);
+  }
+
+  $('say').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const input = $('say-input');
+    const text = input.value.trim();
+    if (!text) return;
+    socket.emit('chat', { text });
+    input.value = '';
+  });
+
+  // ── 서버 연결 ──
+  function connect() {
+    if (socket) socket.disconnect();
+    socket = io({ auth: { token: store.get() } });
+
+    socket.on('connect', hideBanner);
+    socket.on('connect_error', (err) => {
+      if (err.message === 'auth') {
+        store.clear();
+        socket.disconnect();
+        show('auth');
+      } else {
+        banner('서버에 연결하지 못했어요. 다시 잇는 중이에요.', null);
+      }
+    });
+    socket.on('disconnect', (reason) => {
+      if (reason === 'io client disconnect') return;
+      if (reason !== 'io server disconnect') banner('연결이 끊겼어요. 다시 잇는 중이에요.');
+    });
+    socket.on('kicked', () => {
+      banner('다른 창에서 같은 드래곤으로 접속했어요.', {
+        label: '이 창에서 다시 접속',
+        run: () => { hideBanner(); socket.connect(); },
+      });
+    });
+
+    socket.on('init', (data) => {
+      S.kinds = data.kinds;
+      S.regions = data.regions;
+      if (data.dragon) {
+        setDragon(data.dragon);
+        show('game');
+      } else {
+        S.pickKind = null;
+        renderKinds();
+        show('create');
+      }
+    });
+
+    socket.on('region:state', (data) => {
+      S.region = data.region;
+      S.occupants = data.occupants;
+      renderRegion();
+      renderHere();
+      $('log').innerHTML = '';
+      for (const m of data.history) addChat(m);
+      addSystem(`${S.regions[data.region].name}에 내려앉았다.`, 'arrive');
+      $('log').scrollTop = $('log').scrollHeight;
+    });
+    socket.on('presence', (data) => {
+      if (data.region !== S.region) return;
+      S.occupants = data.occupants;
+      renderHere();
+    });
+    socket.on('world:counts', (counts) => {
+      S.counts = counts;
+      if (S.region) renderMap();
+    });
+    socket.on('chat', addChat);
+    socket.on('system', (m) => addSystem(m.text));
+  }
+
+  if (store.get()) connect();
+  else show('auth');
+})();
+</script>
+</body>
+</html>
