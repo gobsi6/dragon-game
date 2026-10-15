@@ -8,7 +8,7 @@ const bcrypt = require('bcryptjs');
 const { Server } = require('socket.io');
 
 const db = require('./db');
-const { KINDS, REGIONS, STANCES } = require('./game-data');
+const { KINDS, REGIONS, STANCES, STATS, CREATION, derive } = require('./game-data');
 
 const PORT = process.env.PORT || 3000;
 const MOVE_COOLDOWN = 1500; // ms, 연속 이동 방지
@@ -90,7 +90,8 @@ app.post('/api/logout', (req, res) => {
 // dragonId → { socket, dragon: { id, name, kind, region } }
 const online = new Map();
 
-const publicDragon = (d) => ({ id: d.id, name: d.name, kind: d.kind, av: d.avatar_ver });
+// av: 그림 버전. 0이면 그림이 없어서 종류별 문양을 보여줌
+const publicDragon = (d) => ({ id: d.id, name: d.name, kind: d.kind, av: d.has_avatar ? d.avatar_ver : 0 });
 
 // 내 드래곤의 전체 정보 (나에게만 보냄)
 const meOf = (d) => ({
@@ -98,7 +99,7 @@ const meOf = (d) => ({
   level: d.level, xp: d.xp, xpMax: d.level * 100,
   hp: d.hp, hpMax: d.hp_max, en: d.en, enMax: d.en_max,
   ap: d.ap, apMax: d.ap_max, gold: d.gold,
-  stats: { claw: d.claw, scale: d.scale, wing: d.wing, wisdom: d.wisdom },
+  stats: { claw: d.claw, scale: d.scale, wing: d.wing, wisdom: d.wisdom, majesty: d.majesty },
   stance: d.stance, stanceName: STANCES[d.stance] || '',
 });
 
@@ -179,6 +180,8 @@ io.on('connection', (socket) => {
     dragon: dragon ? meOf(dragon) : null,
     kinds: KINDS,
     regions: REGIONS,
+    stats: STATS,
+    creation: CREATION,
   });
   if (dragon) enterWorld(socket, dragon);
 
@@ -194,7 +197,24 @@ io.on('connection', (socket) => {
     if (!KINDS[kind]) return ack({ error: '드래곤 종류를 골라 주세요.' });
     if (db.dragonNameTaken(name)) return ack({ error: '이미 대륙에 같은 이름의 드래곤이 있어요.' });
 
-    const created = db.createDragon(user.id, name, kind, KINDS[kind].home, KINDS[kind].stats);
+    // 자유 포인트 검사: 정수, 0~perStat, 합이 정확히 points
+    const alloc = payload?.alloc || {};
+    let spent = 0;
+    const final = {};
+    for (const { key } of STATS) {
+      const v = alloc[key] ?? 0;
+      if (!Number.isInteger(v) || v < 0 || v > CREATION.perStat) {
+        return ack({ error: `한 능력치에는 0~${CREATION.perStat}점까지 넣을 수 있어요.` });
+      }
+      spent += v;
+      final[key] = KINDS[kind].stats[key] + v;
+    }
+    if (spent !== CREATION.points) {
+      return ack({ error: `능력치 포인트 ${CREATION.points}점을 모두 나눠 주세요.` });
+    }
+
+    const { hpMax, enMax } = derive(final);
+    const created = db.createDragon(user.id, name, kind, KINDS[kind].home, final, hpMax, enMax);
     ack({ ok: true, dragon: meOf(created) });
     enterWorld(socket, created);
   });
@@ -248,6 +268,20 @@ io.on('connection', (socket) => {
 
     const d = entry.dragon;
     d.avatar_ver = db.setAvatar(d.id, Buffer.from(m[2], 'base64'), `image/${m[1]}`);
+    d.has_avatar = 1;
+    socket.emit('me', meOf(d));
+    broadcastPresence(d.region);
+    ack({ ok: true });
+  });
+
+  socket.on('dragon:avatar:delete', (payload, ack) => {
+    if (typeof ack !== 'function') ack = () => {};
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어 주세요.' });
+    const d = entry.dragon;
+    if (!d.has_avatar) return ack({ ok: true });
+    d.avatar_ver = db.clearAvatar(d.id);
+    d.has_avatar = 0;
     socket.emit('me', meOf(d));
     broadcastPresence(d.region);
     ack({ ok: true });

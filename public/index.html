@@ -27,6 +27,8 @@
     --k-gold: #B8913A;   --t-gold: #7A5A16;
     --k-white: #6F9BBC;  --t-white: #2C4F6B;
     --k-green: #5E8A55;  --t-green: #3B5E33;
+    --k-red: #B5473F;    --t-red: #8A2E27;
+    --k-silver: #8C9AA6; --t-silver: #46525C;
 
     --serif: 'Noto Serif KR', 'AppleMyungjo', 'Batang', serif;
     --sans: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
@@ -103,15 +105,69 @@
   .row .btn { flex: 1; }
   .error { color: #A63E4B; font-size: 14px; min-height: 1.4em; margin: 0; }
 
-  .kinds { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+  .kinds { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
   .kind {
     text-align: left; padding: 14px; display: grid; gap: 4px; align-content: start;
     background: var(--surface-2); border: 1px solid var(--line-in); border-radius: 3px;
   }
-  .kind .ring { width: 30px; height: 30px; border-radius: 50%; background: #E3E6E8; box-shadow: 0 0 0 2px var(--surface-2), 0 0 0 4px var(--c); margin: 4px 0 6px 4px; }
+  .kind .emblem { margin: 2px 0 6px; }
   .kind strong { font: 700 17px/1.3 var(--serif); }
   .kind small { color: var(--muted); font-size: 13px; line-height: 1.5; }
+  .kind .strong { color: var(--steel-d); font-weight: 500; }
   .kind[aria-pressed="true"] { border-color: var(--c); box-shadow: inset 0 0 0 1px var(--c); background: #fff; }
+
+  .alloc { padding: 16px 18px 14px; display: flex; flex-direction: column; gap: 4px; }
+  .alloc-h { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+  .alloc-h h2 { margin: 0; font: 700 17px/1.3 var(--serif); }
+  .alloc-h .left { margin-left: auto; font-size: 13px; color: var(--muted); }
+  .alloc-h .left b { display: inline-block; min-width: 2ch; text-align: center; font: 700 18px/1 var(--serif); color: var(--steel-d); }
+  .alloc-h .left.done b { color: var(--forest); }
+  .linkbtn { min-height: 36px; padding: 0 10px; background: transparent; border: 1px solid var(--line-soft); border-radius: 3px; font-size: 13px; color: var(--ink-2); }
+  .arow { display: grid; grid-template-columns: minmax(0, 1fr) 30px 40px 70px 40px 34px; align-items: center; gap: 6px; padding: 7px 0; border-top: 1px solid var(--line-in); }
+  .arow .nm { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .arow .nm b { font: 700 15px/1.3 var(--serif); }
+  .arow .nm small { display: block; font-size: 12px; color: var(--muted); line-height: 1.35; }
+  .arow .base { text-align: center; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .arow .step { width: 40px; height: 40px; padding: 0; background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: 3px; font-size: 18px; line-height: 1; color: var(--steel-d); }
+  .arow .step:disabled { opacity: .35; cursor: default; }
+  .pips { display: flex; justify-content: center; gap: 4px; }
+  .pips i { width: 9px; height: 9px; border: 1px solid var(--orn); transform: rotate(45deg); }
+  .pips i.on { background: var(--steel); border-color: var(--steel-d); }
+  .arow .fin { text-align: right; font: 700 18px/1 var(--serif); font-variant-numeric: tabular-nums; }
+  .derived { display: flex; gap: 18px; justify-content: flex-end; padding-top: 10px; border-top: 3px double var(--line-soft); font-size: 13px; color: var(--muted); }
+  .derived b { font-weight: 600; color: var(--ink); }
+  .alloc-h h2, .linkbtn { white-space: nowrap; }
+  @media (max-width: 520px) {
+    .gate { padding: 24px 14px 20px; margin-top: 3vh; }
+    .gate h1 { font-size: 22px; }
+    .kinds { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .kind { padding: 12px; }
+    .kind .d { display: none; }
+    .alloc { padding: 14px 12px 12px; }
+    .alloc-h { gap: 8px; }
+    .arow { grid-template-columns: minmax(0, 1fr) 40px 54px 40px 30px; }
+    .arow .base { display: none; }
+    .arow .nm small { display: none; }
+  }
+
+  /* ── 종류별 문양 ── */
+  .emblem { display: block; flex: none; }
+  .emblem .bg { fill: var(--c); }
+  .emblem .s { fill: none; stroke: #F7F7F5; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+  .emblem .s.thin { stroke-width: 3.5; }
+  .emblem .h { fill: var(--c); }
+  .emblem .vein { fill: none; stroke: var(--c); stroke-width: 3; stroke-linecap: round; }
+
+  /* ── 그림 자르기 ── */
+  .cropdlg { position: fixed; width: min(380px, calc(100% - 32px)); padding: 18px 18px 16px; color: var(--ink); }
+  .cropdlg::backdrop { background: rgba(31, 35, 38, .55); }
+  .cropdlg .body { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+  #crop-cv { display: block; width: 100%; aspect-ratio: 1; background: #DADCD9; cursor: grab; touch-action: none; border: 1px solid var(--line-soft); }
+  #crop-cv:active { cursor: grabbing; }
+  .zoom { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+  .zoom input { flex: 1; accent-color: var(--steel); }
+  .cropdlg .note { margin: 0; font-size: 12px; color: var(--muted); }
+  .pmenu { left: 50%; right: auto; top: 170px; transform: translateX(-50%); z-index: 6; min-width: 170px; }
 
   /* ── 상단 상태 바 ── */
   .top { background: rgba(250, 250, 249, .72); backdrop-filter: blur(6px); border-bottom: 3px double var(--line); position: relative; z-index: 5; }
@@ -140,6 +196,8 @@
     background: #E8E9E6; color: var(--muted);
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
   }
+  .portrait.empty .over { display: none; }
+  .portrait.empty { background: radial-gradient(circle at 50% 42%, #FFFFFF 0%, #ECEDEA 55%, #DFE1DE 100%); }
   .portrait img { position: absolute; inset: 5px; width: calc(100% - 10px); height: calc(100% - 10px); object-fit: cover; border-radius: 135px 135px 0 0; }
   .portrait .hint { font-size: 13px; }
   .portrait .over { position: absolute; left: 50%; bottom: 46px; transform: translateX(-50%); padding: 4px 12px; background: rgba(31, 35, 38, .7); color: #F4F7FA; font-size: 12px; border-radius: 2px; opacity: 0; transition: opacity .15s; white-space: nowrap; }
@@ -167,10 +225,10 @@
   .vital .h .v span { color: #6A7076; }
   .vital .bar { height: 6px; border-radius: 3px; background: #E1E3E0; box-shadow: inset 0 1px 1px rgba(31, 35, 38, .14); }
   .vital .bar i { display: block; height: 100%; border-radius: 3px; transition: width .3s; }
-  .attrs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 3px double var(--line-soft); border-bottom: 3px double var(--line-soft); padding: 12px 0 10px; }
+  .attrs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-top: 3px double var(--line-soft); border-bottom: 3px double var(--line-soft); padding: 12px 0 10px; }
   .attr { display: flex; flex-direction: column; align-items: center; gap: 3px; }
   .attr + .attr { border-left: 1px solid var(--line-in); }
-  .attr b { font: 700 20px/1.2 var(--serif); }
+  .attr b { font: 700 19px/1.2 var(--serif); }
   .attr span { font-size: 12px; color: var(--muted); }
   .stance { display: flex; flex-direction: column; gap: 6px; }
   .stance .l { font-size: 12px; color: var(--muted); }
@@ -252,7 +310,7 @@
 <section id="auth" class="frame gate" hidden>
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="brand"><svg width="34" height="38" viewBox="0 0 34 38" fill="none" aria-hidden="true"><path d="M17 2l14 5v11c0 9-6 15-14 18C9 33 3 27 3 18V7z" fill="#F7F7F5" stroke="#3C5A73" stroke-width="1.6" stroke-linejoin="round"/><path d="M17 6l10 3.6V18c0 6.8-4.4 11.4-10 13.8C11.4 29.4 7 24.8 7 18V9.6z" stroke="#9DB3C6"/><path d="M11 21c3-1 4-4 6-7 2 3 3 6 6 7-2 0-4 1-6 4-2-3-4-4-6-4z" fill="#3C5A73"/></svg><span class="t">용의 대륙</span></div>
-  <p class="lead">드래곤이 되어 대륙을 떠돌고, 인간과 어울리거나 멀리하며 살아가는 곳.</p>
+  <p class="lead">드래곤이 되어 대륙을 떠돌며, 인간과 어울리거나 멀리하며 살아간다.</p>
   <form id="auth-form">
     <label class="field"><span>아이디</span><input class="input" name="username" autocomplete="username" required maxlength="16"></label>
     <label class="field"><span>비밀번호</span><input class="input" name="password" type="password" autocomplete="current-password" required maxlength="64"></label>
@@ -268,9 +326,18 @@
 <section id="create" class="frame gate wide" hidden>
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <h1>어떤 드래곤으로 태어날까요</h1>
-  <p class="lead">종류에 따라 처음 눈뜨는 땅과 타고난 능력이 달라요. 한 번 정하면 바꿀 수 없어요.</p>
+  <p class="lead">종류에 따라 처음 눈뜨는 땅과 타고난 능력이 다르다. 한 번 정하면 바꿀 수 없다.</p>
   <form id="create-form">
     <div class="kinds" id="kinds" role="group" aria-label="드래곤 종류"></div>
+    <section class="frame alloc" id="alloc" aria-label="능력치 나누기" hidden>
+      <div class="alloc-h">
+        <h2>능력치 나누기</h2>
+        <span class="left" id="pts-left-wrap">남은 포인트 <b id="pts-left"></b></span>
+        <button type="button" class="linkbtn" id="alloc-reset">다시 나누기</button>
+      </div>
+      <div id="alloc-rows"></div>
+      <div class="derived"><span>최대 체력 <b id="d-hp"></b></span><span>최대 기력 <b id="d-en"></b></span></div>
+    </section>
     <label class="field"><span>이름 (2~12자)</span><input class="input" name="name" required maxlength="12" autocomplete="off"></label>
     <p class="error" id="create-error" role="alert"></p>
     <div class="row"><button class="btn primary" type="submit">이 드래곤으로 시작</button></div>
@@ -302,13 +369,18 @@
     <section class="frame profile" aria-label="드래곤 기록">
       <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
       <div class="orn-h"><h2>드래곤 기록</h2></div>
-      <div>
-        <button class="portrait" id="portrait" type="button" aria-label="드래곤 그림 바꾸기">
-          <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#7E8389" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5-9 8"/></svg>
+      <div style="position: relative">
+        <button class="portrait empty" id="portrait" type="button" aria-label="드래곤 그림 올리기" aria-haspopup="true">
+          <span id="portrait-ph"></span>
           <span class="hint">눌러서 그림 올리기</span>
           <span class="over">그림 바꾸기</span>
         </button>
         <input type="file" id="avatar-file" accept="image/*" hidden>
+        <div class="menu frame pmenu" id="pmenu" hidden>
+          <button type="button" data-a="new">새 그림 올리기</button>
+          <button type="button" data-a="recrop">다시 자르기</button>
+          <button type="button" data-a="delete">그림 지우기</button>
+        </div>
         <div class="nameplate">
           <span class="n" id="me-name"></span>
           <div class="sub"><span class="lv" id="me-lv"></span><span id="me-kind"></span></div>
@@ -330,6 +402,7 @@
         <div class="attr"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3C5A73" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3 10a4.5 4.5 0 0 1 9 0a4.5 4.5 0 0 1 9 0"/><path d="M7.5 16a4.5 4.5 0 0 1 9 0"/><path d="M3 10v4M21 10v4"/></svg><b id="st-scale"></b><span>비늘</span></div>
         <div class="attr"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3C5A73" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M3 13c4-6 10-8.5 18-9-1.5 4-4.5 6.5-8 7.5 3 0 5 .8 6 2-4 2.5-9.5 3-16-.5z"/></svg><b id="st-wing"></b><span>날개</span></div>
         <div class="attr"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3C5A73" stroke-width="1.5" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="2.5"/></svg><b id="st-wisdom"></b><span>지혜</span></div>
+        <div class="attr"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3C5A73" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M4 17l-1-10 5 4 4-6 4 6 5-4-1 10z"/><path d="M4 20h16"/></svg><b id="st-majesty"></b><span>위엄</span></div>
       </div>
       <div class="stance">
         <span class="l">인간을 대하는 방식</span>
@@ -348,7 +421,7 @@
         <button class="btn" type="button" data-soon="채집"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3A6B50" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19c0-8 6-13 14-14-1 8-6 14-14 14z"/><path d="M5 19l7-7"/></svg>채집<span class="cost">−1</span></button>
         <button class="btn" type="button" data-soon="사냥"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3C5A73" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19L19 5"/><path d="M14 5h5v5"/><path d="M4 15l5 5"/></svg>사냥<span class="cost">−2</span></button>
         <button class="btn" type="button" data-soon="둥지"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7E8389" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-6 8 6"/><path d="M6 10v9h12v-9"/></svg>둥지로</button>
-        <span class="note">숫자는 쓰이는 행동력</span>
+        <span class="note">숫자는 소모하는 행동력이다.</span>
       </div>
       <section class="frame map" aria-label="대륙 지도">
         <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
@@ -385,6 +458,17 @@
   </nav>
 </div>
 
+<dialog class="frame cropdlg" id="crop" aria-labelledby="crop-title">
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="crop-title">그림 자르기</h2></div>
+  <div class="body">
+    <canvas id="crop-cv" tabindex="0" aria-label="그림 위치. 끌거나 방향키로 옮긴다."></canvas>
+    <label class="zoom"><span>확대</span><input type="range" id="crop-zoom" min="1" max="4" step="0.01" value="1"></label>
+    <p class="note">끌어서 위치를 맞춘다. 동그라미 안쪽은 목록의 작은 사진에 쓰인다.</p>
+    <div class="row"><button class="btn" type="button" id="crop-cancel">취소</button><button class="btn primary" type="button" id="crop-ok">적용</button></div>
+  </div>
+</dialog>
+
 <div class="toast" id="toast" hidden><span id="toast-text"></span><button class="btn" id="toast-btn" type="button" hidden></button></div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -416,6 +500,17 @@
     return j && j !== 8 ? '으로' : '로';
   }
   const avatarUrl = (d) => (d.av ? `/avatar/${d.id}?v=${d.av}` : null);
+
+  // 그림이 없을 때 쓰는 종류별 문양 (브레스를 본뜸)
+  const EMBLEM = {
+    black: '<path d="M50 22C50 22 32 46 32 58a18 18 0 0 0 36 0C68 46 50 22 50 22z" fill="#F7F7F5"/><circle class="h" cx="43" cy="61" r="4"/><circle class="h" cx="55" cy="52" r="2.5"/>',
+    gold: '<path d="M57 18L34 55h15l-6 28 24-38H52z" fill="#F7F7F5"/>',
+    white: '<path class="s" d="M50 22v56M25.8 36l48.4 28M25.8 64l48.4-28"/><path class="s thin" d="M42 26l8 8 8-8M42 74l8-8 8 8M24.5 46.5l11 3-3 11M75.5 53.5l-11-3 3-11M24.5 53.5l11-3-3-11M75.5 46.5l-11 3 3 11"/>',
+    green: '<path d="M27 73c0-28 18-45 46-47-1 28-19 47-46 47z" fill="#F7F7F5"/><path class="vein" d="M30 70L60 40M45 55l-3-10M52 48l9 2"/>',
+    red: '<path d="M50 17c7 15 21 22 21 41a21 21 0 0 1-42 0c0-10 5-17 12-21 0 8 3 12 8 14-2-12 1-22 1-34z" fill="#F7F7F5"/><path class="h" d="M50 50c3 6 8 9 8 15a8 8 0 0 1-16 0c0-6 5-9 8-15z"/>',
+    silver: '<path class="s" d="M22 37q7-6 14 0t14 0 14 0 14 0"/><path class="s" d="M22 50q7-6 14 0t14 0 14 0 14 0"/><path class="s" d="M22 63q7-6 14 0t14 0 14 0 14 0"/>',
+  };
+  const emblem = (kind, size) => `<svg class="emblem" width="${size}" height="${size}" viewBox="0 0 100 100" aria-hidden="true" style="--c: var(--k-${kind})"><circle class="bg" cx="50" cy="50" r="48"/><circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.5"/>${EMBLEM[kind] || ''}</svg>`;
 
   function show(id) {
     for (const s of ['auth', 'create', 'game']) $(s).hidden = s !== id;
@@ -481,6 +576,61 @@
   });
 
   // ── 드래곤 만들기 ──
+  const STAT_ICONS = {
+    claw: '<path d="M6 4c2.5 4.5 2.5 10.5-1 16"/><path d="M12 3c2.5 5.5 2.5 11.5 0 18"/><path d="M18 4c2 4.5 1.5 10.5-2 16"/>',
+    scale: '<path d="M3 10a4.5 4.5 0 0 1 9 0a4.5 4.5 0 0 1 9 0"/><path d="M7.5 16a4.5 4.5 0 0 1 9 0"/><path d="M3 10v4M21 10v4"/>',
+    wing: '<path d="M3 13c4-6 10-8.5 18-9-1.5 4-4.5 6.5-8 7.5 3 0 5 .8 6 2-4 2.5-9.5 3-16-.5z"/>',
+    wisdom: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="2.5"/>',
+    majesty: '<path d="M4 17l-1-10 5 4 4-6 4 6 5-4-1 10z"/><path d="M4 20h16"/>',
+  };
+  const icon = (k) => `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3C5A73" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${STAT_ICONS[k]}</svg>`;
+  const derive = (st) => ({ hpMax: 50 + st.scale * 5, enMax: 30 + st.wisdom * 2 }); // 서버 game-data.js와 같은 식
+  let alloc = {};
+  const resetAlloc = () => { alloc = Object.fromEntries(S.stats.map((s) => [s.key, 0])); };
+
+  function renderAlloc() {
+    const box = $('alloc-rows');
+    const base = S.kinds[S.pickKind]?.stats;
+    $('alloc').hidden = !base;
+    if (!base) return;
+    const { points, perStat } = S.creation;
+    const left = points - Object.values(alloc).reduce((a, b) => a + b, 0);
+    $('pts-left').textContent = left;
+    $('pts-left-wrap').classList.toggle('done', left === 0);
+    box.replaceChildren();
+    const final = {};
+    for (const st of S.stats) {
+      const v = alloc[st.key];
+      final[st.key] = base[st.key] + v;
+      const row = document.createElement('div');
+      row.className = 'arow';
+      row.innerHTML = `<div class="nm">${icon(st.key)}<div><b></b><small></small></div></div>
+        <span class="base" title="타고난 값"></span>
+        <button type="button" class="step" data-d="-1">−</button>
+        <span class="pips" aria-hidden="true">${'<i></i>'.repeat(perStat)}</span>
+        <button type="button" class="step" data-d="1">+</button>
+        <span class="fin"></span>`;
+      row.querySelector('b').textContent = st.name;
+      row.querySelector('small').textContent = st.desc;
+      row.querySelector('.base').textContent = base[st.key];
+      row.querySelectorAll('.pips i').forEach((p, i) => p.classList.toggle('on', i < v));
+      row.querySelector('.fin').textContent = final[st.key];
+      const [minus, plus] = row.querySelectorAll('.step');
+      minus.disabled = v <= 0;
+      plus.disabled = v >= perStat || left <= 0;
+      minus.setAttribute('aria-label', `${st.name} 1점 빼기`);
+      plus.setAttribute('aria-label', `${st.name} 1점 더하기, 지금 ${final[st.key]}`);
+      for (const b of [minus, plus]) {
+        b.addEventListener('click', () => { alloc[st.key] += Number(b.dataset.d); renderAlloc(); });
+      }
+      box.appendChild(row);
+    }
+    const d = derive(final);
+    $('d-hp').textContent = d.hpMax;
+    $('d-en').textContent = d.enMax;
+  }
+  $('alloc-reset').addEventListener('click', () => { resetAlloc(); renderAlloc(); });
+
   function renderKinds() {
     const box = $('kinds');
     box.innerHTML = '';
@@ -490,11 +640,16 @@
       b.className = 'kind';
       b.style.setProperty('--c', `var(--k-${id})`);
       b.setAttribute('aria-pressed', String(S.pickKind === id));
-      b.innerHTML = '<span class="ring"></span><strong></strong><small class="b"></small><small class="d"></small>';
+      b.innerHTML = `${emblem(id, 40)}<strong></strong><small class="b"></small><small class="d"></small>`;
       b.querySelector('strong').textContent = k.name;
       b.querySelector('.b').textContent = `${k.breath} 브레스, ${S.regions[k.home].name}에서 시작`;
       b.querySelector('.d').textContent = k.desc;
-      b.addEventListener('click', () => { S.pickKind = id; renderKinds(); });
+      const top = S.stats.slice().sort((x, y) => k.stats[y.key] - k.stats[x.key]).slice(0, 2).map((x) => x.name);
+      const strong = document.createElement('small');
+      strong.className = 'strong';
+      strong.textContent = `${top.join('·')}${josa(top[1], '이', '가')} 강하다.`;
+      b.appendChild(strong);
+      b.addEventListener('click', () => { S.pickKind = id; renderKinds(); renderAlloc(); });
       box.appendChild(b);
     }
   }
@@ -502,7 +657,7 @@
     e.preventDefault();
     $('create-error').textContent = '';
     if (!S.pickKind) return ($('create-error').textContent = '드래곤 종류를 골라 주세요.');
-    socket.emit('dragon:create', { name: e.target.name.value, kind: S.pickKind }, (res) => {
+    socket.emit('dragon:create', { name: e.target.name.value, kind: S.pickKind, alloc }, (res) => {
       if (res.error) return ($('create-error').textContent = res.error);
       setMe(res.dragon);
       show('game');
@@ -522,7 +677,7 @@
     $('hp-bar').style.width = pct(me.hp, me.hpMax);
     $('en-t').innerHTML = `<b>${me.en}</b><span> / ${me.enMax}</span>`;
     $('en-bar').style.width = pct(me.en, me.enMax);
-    for (const k of ['claw', 'scale', 'wing', 'wisdom']) $(`st-${k}`).textContent = me.stats[k];
+    for (const k of ['claw', 'scale', 'wing', 'wisdom', 'majesty']) $(`st-${k}`).textContent = me.stats[k];
     for (const s of $('stance').children) s.classList.toggle('on', s.dataset.s === me.stance);
     $('ap').textContent = `${me.ap} / ${me.apMax}`;
     $('gold').textContent = me.gold.toLocaleString();
@@ -530,37 +685,147 @@
     const p = $('portrait');
     const url = avatarUrl(me);
     let img = p.querySelector('img');
+    p.classList.toggle('empty', !url);
+    p.querySelector('.hint').hidden = !!url;
+    p.setAttribute('aria-label', url ? '드래곤 그림 메뉴' : '드래곤 그림 올리기');
     if (url) {
+      $('portrait-ph').replaceChildren();
       if (!img) { img = document.createElement('img'); img.alt = ''; p.prepend(img); }
       if (img.getAttribute('src') !== url) img.src = url;
-      p.querySelector('.hint').hidden = true;
-      p.querySelector('svg').style.visibility = 'hidden';
-    } else if (img) {
-      img.remove();
+    } else {
+      if (img) img.remove();
+      $('portrait-ph').innerHTML = emblem(me.kind, 128);
     }
   }
 
-  // ── 프로필 그림 올리기: 256×256으로 줄여서 보냄 ──
-  $('portrait').addEventListener('click', () => $('avatar-file').click());
-  $('avatar-file').addEventListener('change', async (e) => {
+  // ── 프로필 그림: 고르기 → 자르기 → 384×384로 보냄 ──
+  const pmenu = $('pmenu');
+  $('portrait').addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!S.me?.av) return $('avatar-file').click();
+    pmenu.hidden = !pmenu.hidden;
+  });
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#pmenu')) pmenu.hidden = true;
+  });
+  pmenu.addEventListener('click', (e) => {
+    const a = e.target.closest('button')?.dataset.a;
+    if (!a) return;
+    pmenu.hidden = true;
+    if (a === 'new') $('avatar-file').click();
+    if (a === 'recrop') loadImage(avatarUrl(S.me)).then(openCrop).catch(() => toast('그림을 불러오지 못했어요.'));
+    if (a === 'delete' && confirm('그림을 지울까요? 지우면 종류별 문양으로 돌아간다.')) {
+      socket.emit('dragon:avatar:delete', {}, (res) => toast(res.error || '그림을 지웠어요.'));
+    }
+  });
+
+  function loadImage(src) {
+    return new Promise((ok, fail) => {
+      const img = new Image();
+      img.onload = () => ok(img);
+      img.onerror = fail;
+      img.src = src;
+    });
+  }
+  $('avatar-file').addEventListener('change', (e) => {
     const file = e.target.files[0];
     e.target.value = '';
     if (!file) return;
-    try {
-      const bmp = await createImageBitmap(file);
-      const size = 256;
-      const c = document.createElement('canvas');
-      c.width = c.height = size;
-      const s = Math.min(bmp.width, bmp.height);
-      c.getContext('2d').drawImage(bmp, (bmp.width - s) / 2, (bmp.height - s) / 2, s, s, 0, 0, size, size);
-      let data = c.toDataURL('image/webp', 0.86);
-      if (!data.startsWith('data:image/webp')) data = c.toDataURL('image/jpeg', 0.86);
-      socket.emit('dragon:avatar', { dataUrl: data }, (res) => {
-        toast(res.error || '그림을 바꿨어요.');
-      });
-    } catch {
-      toast('그림 파일을 읽지 못했어요. 다른 그림으로 해 주세요.');
-    }
+    const url = URL.createObjectURL(file);
+    loadImage(url).then(openCrop).catch(() => toast('그림 파일을 읽지 못했어요. 다른 그림으로 해 주세요.'))
+      .finally(() => setTimeout(() => URL.revokeObjectURL(url), 1000));
+  });
+
+  const crop = { img: null, V: 0, dpr: 1, cover: 1, s: 1, ox: 0, oy: 0 };
+  const cv = $('crop-cv');
+  function openCrop(img) {
+    crop.img = img;
+    $('crop').showModal();
+    const V = cv.clientWidth;
+    crop.V = V;
+    crop.dpr = window.devicePixelRatio || 1;
+    cv.width = cv.height = Math.round(V * crop.dpr);
+    crop.cover = Math.max(V / img.naturalWidth, V / img.naturalHeight);
+    crop.s = crop.cover;
+    $('crop-zoom').value = 1;
+    crop.ox = (V - img.naturalWidth * crop.s) / 2;
+    crop.oy = (V - img.naturalHeight * crop.s) / 2;
+    drawCrop();
+    cv.focus();
+  }
+  function clampCrop() {
+    const { V, img, s } = crop;
+    crop.ox = Math.min(0, Math.max(V - img.naturalWidth * s, crop.ox));
+    crop.oy = Math.min(0, Math.max(V - img.naturalHeight * s, crop.oy));
+  }
+  function drawCrop() {
+    const ctx = cv.getContext('2d');
+    const { V, dpr, img, s, ox, oy } = crop;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, V, V);
+    ctx.drawImage(img, ox, oy, img.naturalWidth * s, img.naturalHeight * s);
+    ctx.fillStyle = 'rgba(31, 35, 38, .38)';
+    ctx.beginPath();
+    ctx.rect(0, 0, V, V);
+    ctx.arc(V / 2, V / 2, V / 2 - 1, 0, Math.PI * 2);
+    ctx.fill('evenodd');
+    ctx.strokeStyle = 'rgba(255, 255, 255, .85)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(V / 2, V / 2, V / 2 - 1, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  function setZoom(z) {
+    const c = crop.V / 2;
+    const s2 = crop.cover * z;
+    crop.ox = c - (c - crop.ox) * (s2 / crop.s);
+    crop.oy = c - (c - crop.oy) * (s2 / crop.s);
+    crop.s = s2;
+    clampCrop();
+    drawCrop();
+  }
+  $('crop-zoom').addEventListener('input', (e) => setZoom(Number(e.target.value)));
+  cv.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const z = Math.min(4, Math.max(1, Number($('crop-zoom').value) * (e.deltaY < 0 ? 1.08 : 1 / 1.08)));
+    $('crop-zoom').value = z;
+    setZoom(z);
+  }, { passive: false });
+  let drag = null;
+  cv.addEventListener('pointerdown', (e) => {
+    cv.setPointerCapture(e.pointerId);
+    drag = { x: e.clientX, y: e.clientY, ox: crop.ox, oy: crop.oy };
+  });
+  cv.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    crop.ox = drag.ox + e.clientX - drag.x;
+    crop.oy = drag.oy + e.clientY - drag.y;
+    clampCrop();
+    drawCrop();
+  });
+  for (const ev of ['pointerup', 'pointercancel']) cv.addEventListener(ev, () => (drag = null));
+  cv.addEventListener('keydown', (e) => {
+    const d = { ArrowLeft: [10, 0], ArrowRight: [-10, 0], ArrowUp: [0, 10], ArrowDown: [0, -10] }[e.key];
+    if (!d) return;
+    e.preventDefault();
+    crop.ox += d[0];
+    crop.oy += d[1];
+    clampCrop();
+    drawCrop();
+  });
+  $('crop-cancel').addEventListener('click', () => $('crop').close());
+  $('crop-ok').addEventListener('click', () => {
+    const N = 384;
+    const k = N / crop.V;
+    const c = document.createElement('canvas');
+    c.width = c.height = N;
+    const ctx = c.getContext('2d');
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(crop.img, crop.ox * k, crop.oy * k, crop.img.naturalWidth * crop.s * k, crop.img.naturalHeight * crop.s * k);
+    let data = c.toDataURL('image/webp', 0.88);
+    if (!data.startsWith('data:image/webp')) data = c.toDataURL('image/jpeg', 0.88);
+    $('crop').close();
+    socket.emit('dragon:avatar', { dataUrl: data }, (res) => toast(res.error || '그림을 바꿨어요.'));
   });
 
   // ── 지역 ──
@@ -691,7 +956,7 @@
         img.alt = '';
         ava.appendChild(img);
       } else {
-        ava.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7E8389" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5-9 8"/></svg>';
+        ava.innerHTML = emblem(d.kind, 38);
       }
       const nm = document.createElement('div');
       nm.className = 'nm';
@@ -773,12 +1038,16 @@
     socket.on('init', (data) => {
       S.kinds = data.kinds;
       S.regions = data.regions;
+      S.stats = data.stats;
+      S.creation = data.creation;
       if (data.dragon) {
         setMe(data.dragon);
         show('game');
       } else {
         S.pickKind = null;
+        resetAlloc();
         renderKinds();
+        renderAlloc();
         show('create');
       }
     });

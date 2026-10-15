@@ -1,34 +1,70 @@
 // 게임 기본 데이터: 드래곤 종류와 대륙 지도
 // 새 종류나 지역을 추가할 때는 이 파일만 고치면 됩니다.
 
+// 능력치. 키 이름은 저장 공간의 열 이름과 같습니다.
+const STATS = [
+  { key: 'claw',    name: '발톱', desc: '공격할 때 입히는 피해가 커진다.' },
+  { key: 'scale',   name: '비늘', desc: '최대 체력이 늘고 받는 피해가 줄어든다.' },
+  { key: 'wing',    name: '날개', desc: '공격을 잘 피하고, 먼저 움직이며, 빠르게 난다.' },
+  { key: 'wisdom',  name: '지혜', desc: '마법과 제작에 능하고, 숨은 것을 잘 찾아낸다.' },
+  { key: 'majesty', name: '위엄', desc: '인간을 설득하거나 위협하는 힘이 커진다.' },
+];
+
+// 처음 만들 때 나눠 주는 자유 포인트
+const CREATION = {
+  points: 10,   // 모두 써야 시작할 수 있음
+  perStat: 5,   // 한 능력치에 넣을 수 있는 최대치
+};
+
+// 능력치에서 나오는 값
+const derive = (st) => ({
+  hpMax: 50 + st.scale * 5,
+  enMax: 30 + st.wisdom * 2,
+});
+
+// 종류별 기본 능력치는 합이 모두 45가 되도록 맞춤
 const KINDS = {
   black: {
     name: '블랙 드래곤',
     breath: '산(酸)',
     home: 'swamp',
     desc: '늪의 안개 속에 사는 잿빛 비늘의 드래곤. 위협과 약탈에 능하다.',
-    stats: { claw: 13, scale: 11, wing: 10, wisdom: 9 },
+    stats: { claw: 12, scale: 9, wing: 8, wisdom: 7, majesty: 9 },
   },
   gold: {
     name: '골드 드래곤',
-    breath: '화염',
+    breath: '번개',
     home: 'canyon',
-    desc: '햇빛을 머금은 비늘의 드래곤. 보물을 알아보는 눈과 말솜씨가 있다.',
-    stats: { claw: 10, scale: 12, wing: 8, wisdom: 13 },
+    desc: '햇빛을 머금은 비늘의 드래곤. 보물을 알아보는 눈과 말솜씨가 있고, 노하면 하늘에서 심판의 번개를 내린다.',
+    stats: { claw: 8, scale: 9, wing: 7, wisdom: 11, majesty: 10 },
   },
   white: {
     name: '화이트 드래곤',
-    breath: '냉기',
+    breath: '눈보라',
     home: 'snow',
-    desc: '설원의 고요를 사랑하는 드래곤. 홀로 지내는 데 익숙하다.',
-    stats: { claw: 11, scale: 13, wing: 11, wisdom: 8 },
+    desc: '설원의 고요를 사랑하는 드래곤. 홀로 지내는 데 익숙하며, 날갯짓 한 번에 눈보라가 인다.',
+    stats: { claw: 9, scale: 11, wing: 10, wisdom: 7, majesty: 8 },
   },
   green: {
     name: '그린 드래곤',
     breath: '독',
     home: 'forest',
     desc: '숲의 이끼와 약초를 잘 아는 드래곤. 속내를 쉽게 드러내지 않는다.',
-    stats: { claw: 9, scale: 10, wing: 12, wisdom: 12 },
+    stats: { claw: 7, scale: 8, wing: 10, wisdom: 11, majesty: 9 },
+  },
+  red: {
+    name: '레드 드래곤',
+    breath: '화염',
+    home: 'volcano',
+    desc: '화산의 열기 속에서 태어난 드래곤. 자존심이 강하고 싸움을 피하지 않는다.',
+    stats: { claw: 11, scale: 9, wing: 8, wisdom: 6, majesty: 11 },
+  },
+  silver: {
+    name: '실버 드래곤',
+    breath: '안개',
+    home: 'capital',
+    desc: '인간의 성벽 가까이에 둥지를 튼 드래곤. 은빛 안개로 정체를 감추고, 때로 사람의 모습으로 거리를 걷는다.',
+    stats: { claw: 7, scale: 9, wing: 8, wisdom: 10, majesty: 11 },
   },
 };
 
@@ -76,4 +112,4 @@ for (const [a, b] of ROUTES) {
   REGIONS[b].links.push(a);
 }
 
-module.exports = { KINDS, REGIONS, STANCES };
+module.exports = { KINDS, REGIONS, STANCES, STATS, CREATION, derive };

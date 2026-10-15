@@ -67,10 +67,12 @@ addCol('scale', 'INTEGER NOT NULL DEFAULT 10');
 addCol('wing', 'INTEGER NOT NULL DEFAULT 10');
 addCol('wisdom', 'INTEGER NOT NULL DEFAULT 10');
 addCol('stance', "TEXT NOT NULL DEFAULT 'hermit'");
+addCol('majesty', 'INTEGER NOT NULL DEFAULT 10');
 
 // 그림(avatar)을 뺀 드래곤 정보 열
 const DRAGON_FIELDS = `id, name, kind, region, avatar_ver, level, xp, hp, hp_max, en, en_max,
-  ap, ap_max, gold, claw, scale, wing, wisdom, stance`;
+  ap, ap_max, gold, claw, scale, wing, wisdom, majesty, stance,
+  (avatar IS NOT NULL) AS has_avatar`;
 
 const q = {
   countUsers:   db.prepare('SELECT COUNT(*) AS n FROM users'),
@@ -81,9 +83,11 @@ const q = {
   deleteSess:   db.prepare('DELETE FROM sessions WHERE token = ?'),
   dragonByUser: db.prepare(`SELECT ${DRAGON_FIELDS} FROM dragons WHERE user_id = ?`),
   dragonByName: db.prepare('SELECT id FROM dragons WHERE name = ?'),
-  createDragon: db.prepare(`INSERT INTO dragons (user_id, name, kind, region, created_at, last_seen, claw, scale, wing, wisdom)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
+  createDragon: db.prepare(`INSERT INTO dragons (user_id, name, kind, region, created_at, last_seen,
+                              claw, scale, wing, wisdom, majesty, hp, hp_max, en, en_max)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
   setAvatar:    db.prepare('UPDATE dragons SET avatar = ?, avatar_type = ?, avatar_ver = avatar_ver + 1 WHERE id = ?'),
+  clearAvatar:  db.prepare('UPDATE dragons SET avatar = NULL, avatar_type = NULL, avatar_ver = avatar_ver + 1 WHERE id = ?'),
   avatarVer:    db.prepare('SELECT avatar_ver FROM dragons WHERE id = ?'),
   getAvatar:    db.prepare('SELECT avatar, avatar_type FROM dragons WHERE id = ?'),
   setRegion:    db.prepare('UPDATE dragons SET region = ? WHERE id = ?'),
@@ -102,14 +106,18 @@ module.exports = {
   deleteSession: (token) => q.deleteSess.run(token),
   getDragonByUser: (userId) => q.dragonByUser.get(userId),
   dragonNameTaken: (name) => !!q.dragonByName.get(name),
-  createDragon: (userId, name, kind, region, stats) => {
+  createDragon: (userId, name, kind, region, st, hpMax, enMax) => {
     const now = Date.now();
     q.createDragon.run(userId, name, kind, region, now, now,
-      stats.claw, stats.scale, stats.wing, stats.wisdom);
+      st.claw, st.scale, st.wing, st.wisdom, st.majesty, hpMax, hpMax, enMax, enMax);
     return q.dragonByUser.get(userId);
   },
   setAvatar: (dragonId, buf, type) => {
     q.setAvatar.run(buf, type, dragonId);
+    return q.avatarVer.get(dragonId).avatar_ver;
+  },
+  clearAvatar: (dragonId) => {
+    q.clearAvatar.run(dragonId);
     return q.avatarVer.get(dragonId).avatar_ver;
   },
   getAvatar: (dragonId) => q.getAvatar.get(dragonId),
