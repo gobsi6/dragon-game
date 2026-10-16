@@ -1194,10 +1194,13 @@
   @media (prefers-reduced-motion: reduce) { .who .on-dot::after { animation: none; display: none; } }
   /* 이름 줄·종류 줄은 한 줄로만 (넘치면 …). 칸 높이가 늘 같아서 잘리거나 들쭉날쭉하지 않음. 전체는 마우스를 올리면 */
   .here-list .who .nm { flex: 1 1 auto; }
-  .here-list .who .nm b { line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
-  .here-list .who .nm > span { line-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .here-list .who .nm b .ttl { display: inline; vertical-align: 0; }
-  .here-list .who .nm b .ttl::before { display: inline-block; margin-right: 3px; vertical-align: 1px; }
+  .here-list .who .nm b { display: flex; align-items: center; gap: 6px; min-width: 0; line-height: 18px; white-space: nowrap; overflow-wrap: normal; }
+  .here-list .who .nm b .n { min-width: 0; overflow: hidden; text-overflow: ellipsis; font: inherit; color: inherit; }
+  .here-list .who .nm b .relb { flex: none; margin-left: 0; }
+  .here-list .who .nm > span.sub { display: block; line-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .here-list .who .nm .sub .ttl { display: inline; margin: 0; font-size: 11px; vertical-align: 0; }
+  .here-list .who .nm .sub .ttl::before { display: inline-block; margin-right: 3px; vertical-align: 1px; }
+  .here-list .who .away, .here-list .who .rest, .here-list .who .rage { font-size: 10.5px; padding: 0 5px; }
   .here .cnt { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; color: var(--muted); margin-bottom: -2px; }
   .here .cnt b { font-weight: 600; color: var(--ink); }
   .who { display: flex; align-items: center; gap: 12px; padding-left: 4px; }
@@ -5922,8 +5925,12 @@
       }
       const nm = document.createElement('div');
       nm.className = 'nm';
+      // 첫 줄: 이름과 관계 표시 (이름은 줄지 않게). 칭호는 둘째 줄 맨 앞에
       const b = document.createElement('b');
-      b.textContent = d.name;
+      const nmT = document.createElement('span');
+      nmT.className = 'n';
+      nmT.textContent = d.name;
+      b.appendChild(nmT);
       const rel = S.rel?.[d.id];
       if (rel) {
         const t = document.createElement('span');
@@ -5932,15 +5939,17 @@
         b.appendChild(t);
       }
       const k = document.createElement('span');
-      k.textContent = `${S.kinds[d.kind]?.name || ''}${d.place && S.places?.[d.place] ? ` · ${S.places[d.place].name}` : ''}`;
-      if (d.title) { const tt = document.createElement('span'); tt.className = 'ttl'; tt.textContent = d.title; b.prepend(tt); }
+      k.className = 'sub';
+      const kindText = `${S.kinds[d.kind]?.name || ''}${d.place && S.places?.[d.place] ? ` · ${S.places[d.place].name}` : ''}`;
+      if (d.title) { const tt = document.createElement('span'); tt.className = 'ttl'; tt.textContent = d.title; k.append(tt, ` · ${kindText}`); }
+      else k.textContent = kindText;
       // 접속 상태: 접속 중이면 프로필 사진에 초록 불. 접속 안 함은 사진이 흐려지고, 마지막으로 본 때는 마우스를 올리면
       const state = d.online ? '접속 중' : `접속 안 함${d.lastSeen ? ` · ${ago(d.lastSeen)}` : ''}`;
       const aw = document.createElement('span');
       aw.className = 'ava-w';
       aw.appendChild(ava);
       if (d.online) { const dot = document.createElement('i'); dot.className = 'on-dot'; aw.appendChild(dot); }
-      row.title = [d.title ? `${d.title} ${d.name}` : d.name, k.textContent, state].join('\n'); // 잘린 글자 전체
+      row.title = [d.name, d.title ? `칭호: ${d.title}` : '', kindText, state].filter(Boolean).join('\n'); // 잘린 글자 전체
       row.setAttribute('aria-label', `${d.name}, ${state}. 기록 보기`);
       nm.append(b, k);
       row.append(aw, nm);
