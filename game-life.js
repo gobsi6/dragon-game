@@ -484,6 +484,7 @@ function ctxOf(d, kin, have, trigger, now, region = d.region) {
     canTravel: (x) => ageOf(x, now) >= (x.type === 'human' ? H.expeditionFrom : R.expeditionFrom),
     pick,
     have, perks: d.perks || {}, stats: logic.statsOf(d), josa,
+    rivals: d.rivalsCache || [], me: d.name, regionName: REGIONS[region]?.name || '', // 라이벌 이벤트
   };
 }
 const weightOf = (e, c) => (typeof e.weight === 'function' ? e.weight(c) : e.weight);
@@ -558,7 +559,7 @@ function chooseEvent(d, kin, have, idx, now = Date.now()) {
   const reason = ch.need ? ch.need(c, vars) : null;
   if (reason) return { error: reason };
 
-  const out = { lines: [], items: [], gold: 0 };
+  const out = { lines: [], items: [], gold: 0, tells: [] };
   const town = SHOPS[c.region] ? c.region : nearestTown(c.region);
   const h = {
     say: (...l) => out.lines.push(...l),
@@ -589,13 +590,16 @@ function chooseEvent(d, kin, have, idx, now = Date.now()) {
       kin.push(k);
     },
     nearestTown: () => nearestTown(c.region),
+    notify: (id, text) => out.tells.push({ id, text }),           // 다른 드래곤에게 소식 (라이벌 이벤트)
+    buff: (id, minutes) => logic.giveBuff(d, id, minutes),
+    mind: (n) => { if (!logic.berserkOf(d)) d.mind = clamp((d.mind ?? 100) + n, 0, 100); },
     name: (k) => ga(k),
     josa,
   };
   ch.run(h, c, vars);
   d.pending_event = null;
   const label = typeof ch.label === 'function' ? ch.label(c, vars) : ch.label;
-  return { title: e.title, lines: out.lines, items: out.items, gold: out.gold, choice: label };
+  return { title: e.title, lines: out.lines, items: out.items, gold: out.gold, choice: label, tells: out.tells };
 }
 
 module.exports = {

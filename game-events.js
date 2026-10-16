@@ -432,4 +432,80 @@ module.exports = [
       } },
     ],
   },
+
+  // ── 라이벌: 내가 라이벌로 정한 드래곤이 있을 때 ──
+  {
+    id: 'rival_marks',
+    title: '라이벌의 발톱 자국',
+    when: ['explore', 'gather'],
+    weight: 4,
+    cond: (c) => c.rivals.length > 0 && !c.town,
+    setup: (c) => { const r = pick(c.rivals); return { rid: r.id, rname: r.name }; },
+    text: (c, v) => [
+      '바위벽에 깊은 발톱 자국이 새겨져 있다.',
+      `냄새를 맡아 보니 라이벌 ${v.rname}의 것이다. 이 땅이 제 것이라는 표시다.`,
+    ],
+    choices: [
+      { label: '그 위에 더 깊은 자국을 새긴다', run: (h, c, v) => {
+        h.fame(1);
+        h.notify(v.rid, `${c.me}${c.josa(c.me, '이', '가')} ${c.regionName}에 남긴 당신의 발톱 자국 위에 더 깊은 자국을 새겼다. 이 땅은 이제 자기 것이라는 듯이.`);
+        h.say('바위가 갈라질 만큼 깊게 발톱을 박아 넣었다. 이제 이곳은 내 땅이다.');
+      } },
+      { label: '도전의 표시를 남긴다', run: (h, c, v) => {
+        h.buff('might', 30);
+        h.notify(v.rid, `${c.me}${c.josa(c.me, '이', '가')} ${c.regionName}의 바위에 도전의 표시를 남겼다. "결투장에서 기다리겠다."`);
+        h.say('자국 옆에 꼬리로 커다란 원을 그렸다. 언제든 덤비라는 뜻이다. 가슴이 뜨거워진다. (30분 동안 투지: 공격 +15%)');
+      } },
+      { label: '못 본 척 지나간다', run: (h) => h.say('콧김을 한 번 내뿜고 지나쳤다. 지금은 상대할 때가 아니다.') },
+    ],
+  },
+  {
+    id: 'rival_rumor',
+    title: '라이벌의 소문',
+    when: ['explore', 'expedition'],
+    weight: 3,
+    cond: (c) => c.rivals.length > 0,
+    setup: (c) => { const r = pick(c.rivals); return { rid: r.id, rname: r.name, deed: pick(['강적 셋을 연달아 쓰러뜨렸다', '오로라 봉우리 꼭대기까지 날아올랐다', '분화구 근처에서 불길 속을 걸었다', '하룻밤 새 보물더미를 두 배로 불렸다']) }; },
+    text: (c, v) => [
+      '바람결에 드래곤들의 수군거림이 실려 온다.',
+      `"${v.rname}${c.josa(v.rname, '이', '가')} ${v.deed}더군. 요즘 부쩍 강해졌어."`,
+    ],
+    choices: [
+      { label: '질 수 없다. 더 거세게 몰아붙인다', run: (h) => {
+        h.buff('might', 60); h.en(-8);
+        h.say('이를 악물고 날개를 폈다. 오늘은 평소보다 두 배로 사냥할 것이다. (60분 동안 투지: 공격 +15%)');
+      } },
+      { label: '소문을 비틀어 깎아내린다', run: (h, c, v) => {
+        h.fame(-1);
+        h.notify(v.rid, `요즘 당신에 대한 나쁜 소문이 돈다. 처음 퍼뜨린 건 ${c.me}${c.josa(c.me, '이라는', '라는')} 말이 있다.`);
+        h.say('"그거 다 허풍이야." 한마디 했을 뿐인데, 소문은 금세 부풀어 퍼져 나갔다. 용족들의 눈초리가 조금 차가워졌다.');
+      } },
+      { label: '흘려듣는다', run: (h) => { h.mind(5); h.say('남의 이야기에 흔들릴 필요는 없다. 마음이 차분해졌다.'); } },
+    ],
+  },
+  {
+    id: 'rival_scale',
+    title: '떨어진 비늘',
+    when: ['explore', 'gather', 'expedition'],
+    weight: 3,
+    cond: (c) => c.rivals.length > 0 && !c.town,
+    setup: (c) => { const r = pick(c.rivals); return { rid: r.id, rname: r.name }; },
+    text: (c, v) => [
+      '풀숲에 반짝이는 비늘 한 조각이 떨어져 있다.',
+      `라이벌 ${v.rname}의 비늘이다. 방금 전까지 여기서 무언가와 싸운 모양이다.`,
+    ],
+    choices: [
+      { label: '전리품처럼 챙긴다', run: (h, c, v) => {
+        h.give('rival_scale');
+        h.notify(v.rid, `${c.me}${c.josa(c.me, '이', '가')} ${c.regionName}에서 당신이 떨어뜨린 비늘을 주워 전리품처럼 챙겨 갔다.`);
+        h.say('비늘을 집어 들었다. 다음에 만나면 이걸 보여 줘야지.');
+      } },
+      { label: '돌려주겠다고 텔레파시를 보낸다', run: (h, c, v) => {
+        h.fame(1);
+        h.notify(v.rid, `"네 비늘을 ${c.regionName}에서 주웠다. 다음엔 다치지 말고 와라. 쓰러뜨리는 건 내 몫이니까." — ${c.me}`);
+        h.say('비늘을 바위 위에 잘 올려 두고 짧은 생각을 보냈다. 라이벌이라도 지킬 것은 지킨다.');
+      } },
+      { label: '발로 밟아 묻어 버린다', run: (h) => h.say('비늘을 흙 속에 밟아 넣었다. 속이 조금 후련하다.') },
+    ],
+  },
 ];

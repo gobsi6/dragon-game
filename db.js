@@ -243,6 +243,7 @@ const q = {
   relSet:       db.prepare(`INSERT INTO relations (from_id, to_id, kind, at) VALUES (?, ?, ?, ?)
                             ON CONFLICT(from_id, to_id) DO UPDATE SET kind = excluded.kind, at = excluded.at`),
   relDel:       db.prepare('DELETE FROM relations WHERE from_id = ? AND to_id = ?'),
+  rivalFans:    db.prepare("SELECT from_id AS id FROM relations WHERE to_id = ? AND kind = 'rival'"),
   relList:      db.prepare(`SELECT r.to_id AS id, r.kind, d.name, d.kind AS dkind, d.level, d.region, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar
                             FROM relations r JOIN dragons d ON d.id = r.to_id WHERE r.from_id = ? ORDER BY d.name`),
   reqGet:       db.prepare('SELECT at FROM friend_requests WHERE from_id = ? AND to_id = ?'),
@@ -372,6 +373,7 @@ module.exports = {
   relSet: (a, b, kind) => q.relSet.run(a, b, kind, Date.now()),
   relDel: (a, b) => q.relDel.run(a, b),
   relList: (id) => q.relList.all(id),
+  rivalFans: (id) => q.rivalFans.all(id).map((r) => r.id),      // 이 드래곤을 라이벌로 정한 드래곤들
   reqGet: (a, b) => !!q.reqGet.get(a, b),
   reqAdd: (a, b) => q.reqAdd.run(a, b, Date.now()),
   reqDel: (a, b) => q.reqDel.run(a, b),

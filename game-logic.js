@@ -85,6 +85,7 @@ function chronOf(d) {
 function chron(d, k, t, now = Date.now()) {
   const l = chronOf(d);
   l.push({ at: now, k, t });
+  if (k === 'mark') (d._news ||= []).push(t); // 라이벌에게 알릴 큰 사건 (저장하지 않음, 서버가 가져감)
   if (l.length > CHRON_MAX) l.splice(0, l.length - CHRON_MAX);
 }
 
@@ -784,6 +785,11 @@ function combatJson(d) {
   }
   return d.combat;
 }
+// 강화 효과를 줌 (이벤트 등에서)
+function giveBuff(d, id, minutes, now = Date.now()) {
+  if (!BUFFS[id]) return;
+  combatJson(d).buff = { id, until: now + minutes * 60000 };
+}
 function buffOf(d, now = Date.now()) {
   const b = combatJson(d).buff;
   if (!b || !BUFFS[b.id] || b.until <= now) return null;
@@ -1122,7 +1128,7 @@ function hoardValue(gold, items) {
 
 module.exports = {
   regen, gather, explore, hunt, startExpedition, finishExpedition, chooseFork, forkView, expInfo,
-  craft, useItem, equip, unequip, statsOf, bonusOf, hpCap, enCap, equipOf, buffOf,
+  craft, useItem, equip, unequip, statsOf, bonusOf, hpCap, enCap, equipOf, buffOf, giveBuff,
   repOf, setStance, marketInfo, buy, sell, intimidate,
   buildNest, flyHome, startRest, stopRest, hoardMove, hoardValue,
   actionCost, townArrows, hasBounty, addRep, addFame, craftEn, gainXp, spendStats,

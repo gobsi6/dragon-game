@@ -843,14 +843,15 @@
 
   /* ── 본문 ── */
   .main { width: 100%; max-width: 1280px; margin: 0 auto; padding: 22px 24px; display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; }
-  .profile { flex: 1 1 270px; max-width: 300px; padding: 18px 18px 20px; display: flex; flex-direction: column; gap: 16px; }
+  .profile { flex: 1 1 270px; max-width: 300px; padding: 0; display: flex; flex-direction: column; }
+  /* 내용은 안쪽 상자에. 스크롤이 생겨도 안쪽에서만 생기므로 모서리 장식은 다른 칸처럼 바깥 모서리에 걸린다 */
+  .pf-body { padding: 18px 18px 20px; display: flex; flex-direction: column; gap: 16px; min-height: 0; }
   /* 넓은 화면: 왼쪽 드래곤 기록은 스크롤해도 제자리에 붙어 있고, 화면이 낮아 다 안 들어가면 그 안에서만 스크롤 */
   @media (min-width: 861px) {
-    .profile { position: sticky; top: calc(var(--head-h, 0px) + 22px); align-self: flex-start; max-height: calc(100vh - var(--head-h, 0px) - var(--dock-h, 56px) - 44px); overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: #C9CCC8 transparent; }
-    .profile::-webkit-scrollbar { width: 6px; }
-    .profile::-webkit-scrollbar-thumb { background: #C9CCC8; border-radius: 3px; }
-    .profile > .tl { top: 2px; left: 2px; } .profile > .tr { top: 2px; right: 2px; }
-    .profile > .bl { bottom: 2px; left: 2px; } .profile > .br { bottom: 2px; right: 2px; }
+    .profile { position: sticky; top: calc(var(--head-h, 0px) + 22px); align-self: flex-start; max-height: calc(100vh - var(--head-h, 0px) - var(--dock-h, 56px) - 44px); }
+    .pf-body { overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: #C9CCC8 transparent; }
+    .pf-body::-webkit-scrollbar { width: 6px; }
+    .pf-body::-webkit-scrollbar-thumb { background: #C9CCC8; border-radius: 3px; }
   }
   .center { flex: 999 1 540px; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
   /* 하단 메뉴 화면은 팝업 대신 가운데 칸(지역·지도 자리)에 펼친다 */
@@ -909,10 +910,10 @@
   .attr span { font-size: 12px; color: var(--muted); }
   /* 폰·좁은 화면: 가로로 긴 기록 — 동그란 그림 옆에 이름·레벨·체력/기력/정신, 아래에 능력치 */
   @media (max-width: 860px) {
-    .profile { display: grid; grid-template-columns: 92px minmax(0, 1fr); column-gap: 14px; row-gap: 10px; padding: 14px 14px 14px; align-items: start; }
-    .profile > .orn-h { grid-column: 1 / -1; }
-    .profile > .orn-h h2 { font-size: 14px; }
-    .profile > .pf-top { display: contents; }
+    .pf-body { display: grid; grid-template-columns: 92px minmax(0, 1fr); column-gap: 14px; row-gap: 10px; padding: 14px 14px 14px; align-items: start; }
+    .pf-body > .orn-h { grid-column: 1 / -1; }
+    .pf-body > .orn-h h2 { font-size: 14px; }
+    .pf-body > .pf-top { display: contents; }
     .portrait { grid-column: 1; grid-row: 2 / span 2; width: 92px; height: 92px; border-radius: 50%; align-self: center; box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px #CDCFCB; }
     .portrait img { inset: 4px; width: calc(100% - 8px); height: calc(100% - 8px); border-radius: 50%; }
     .portrait #portrait-ph svg { width: 64px; height: 64px; }
@@ -925,13 +926,13 @@
     .nameplate .n { font-size: 20px; }
     .nameplate .sub { font-size: 12px; gap: 6px; }
     .nameplate .xp { margin-top: 4px; }
-    .profile > .vitals { grid-column: 2; grid-row: 3; gap: 6px; }
+    .pf-body > .vitals { grid-column: 2; grid-row: 3; gap: 6px; }
     .vital { gap: 3px; }
     .vital .h { font-size: 12px; gap: 5px; }
     .vital .h svg { width: 13px; height: 13px; }
     .vital .bar { height: 5px; }
-    .profile > .attrs, .profile > .buff-row, .profile > .pts-row, .profile > .more-char { grid-column: 1 / -1; }
-    .profile > .attrs { padding: 8px 0 6px; }
+    .pf-body > .attrs, .pf-body > .buff-row, .pf-body > .pts-row, .pf-body > .more-char { grid-column: 1 / -1; }
+    .pf-body > .attrs { padding: 8px 0 6px; }
     .attr { flex-direction: row; justify-content: center; gap: 5px; flex-wrap: wrap; }
     .attr svg { width: 16px; height: 16px; }
     .attr b { font-size: 16px; }
@@ -1057,6 +1058,10 @@
     display: flex; gap: 12px; align-items: center;
   }
   .toast .btn { min-height: 32px; padding: 0 10px; font-size: 13px; }
+  .toast { width: max-content; line-height: 1.5; }
+  .toast #toast-text { flex: 1 1 auto; min-width: 0; }
+  .toast .btn { flex: none; white-space: nowrap; }
+  @media (max-width: 520px) { .toast { width: calc(100% - 32px); } }
   /* 업데이트 알림: 화면 위쪽 가운데 */
   .update-bar { position: fixed; left: 50%; top: calc(var(--head-h, 0px) + 10px); transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: 10px; width: max-content; max-width: calc(100vw - 24px); padding: 10px 12px 10px 14px; background: var(--steel-d); color: #E9F0F6; border-radius: 4px; box-shadow: 0 8px 24px rgba(20, 30, 40, .28); font-size: 13.5px; line-height: 1.45; animation: bt-in .3s ease-out; }
   .update-bar b { color: #fff; }
@@ -1151,6 +1156,7 @@
   <main class="main" style="flex: 1">
     <section class="frame profile" aria-label="드래곤 기록">
       <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+      <div class="pf-body">
       <div class="orn-h"><h2>드래곤 기록</h2></div>
       <div class="pf-top" style="position: relative">
         <button class="portrait empty" id="portrait" type="button" aria-label="드래곤 그림 올리기" aria-haspopup="true">
@@ -1195,6 +1201,7 @@
       <div class="buff-row" id="buff-row" hidden></div>
       <div class="pts-row" id="pts-row" hidden><span>나눌 능력치 포인트 <b id="pts-n"></b></span><button class="btn primary" type="button" id="pts-open">나누기</button></div>
       <button type="button" class="linkbtn more-char" id="char-more">특성 · 장신구 · 성향 자세히 보기</button>
+      </div>
     </section>
 
     <div class="center">
@@ -3451,7 +3458,8 @@
     });
     section('동료', l.friends, where, (x, a) => btn(a, '텔레파시', () => { $('friends-dlg').close(); openTp(x.id); }));
     section('보낸 동료 요청', l.outgoing, kindLv, (x, a) => btn(a, '거두기', () => socialAct('rel:cancel', { id: x.id })));
-    section('라이벌', l.rivals, kindLv);
+    section('라이벌', l.rivals, (x) => `${x.mutual ? '<span class="relb rival">숙적</span> ' : ''}${kindLv(x)}`, (x, a) => btn(a, '결투 신청', () => challenge(x, 'live')));
+    section('나를 라이벌로 정한 드래곤', l.rivalsIn || [], kindLv, (x, a) => btn(a, '맞받아치기', () => socialAct('rel:mark', { id: x.id, kind: 'rival' }, () => openFriends()), true));
     section('경계', l.wary, kindLv);
     if (!body.children.length) {
       const p = document.createElement('p');
@@ -5349,7 +5357,7 @@
     socket.on('chat:deleted', onChatDeleted);
     socket.on('notice', (r) => {
       // 동료·선물·교환 소식은 바로 알림으로, 둥지 소식은 소식 카드로
-      if (['동료', '동료 요청', '선물', '교환', '결투', '부고', '구조 요청', '칭호'].includes(r.title)) { toast(r.lines.join(' ')); if (r.items?.length) fetchInv(); }
+      if (['동료', '동료 요청', '선물', '교환', '결투', '부고', '구조 요청', '칭호', '라이벌'].includes(r.title)) { toast(r.lines.join(' ')); if (r.items?.length) fetchInv(); }
       else addNews(r);
     });
     socket.on('rel:changed', () => { loadRel(); refreshProfile(); });
@@ -5368,6 +5376,20 @@
     socket.on('grave', onGrave);
     socket.on('grave:end', (x) => { S.graves = S.graves.filter((g) => g.id !== x.id); renderGraves(); });
     socket.on('fallen', () => checkFallen());
+    // 라이벌: 누군가 나를 라이벌로 지목함 → 맞받아칠 수 있음
+    socket.on('rival:named', (x) => {
+      toast(x.text, x.mutual ? null : {
+        label: '맞받아치기',
+        run: () => { hideToast(); socket.emit('rel:mark', { id: x.id, kind: 'rival' }, (res) => { if (res.error) return toast(res.error); toast(`${x.name}${josa(x.name, '을', '를')} 맞받아 라이벌로 정했다. 이제 서로의 숙적이다.`); loadRel(); }); },
+      });
+      loadRel();
+    });
+    // 라이벌과 같은 곳에 있게 됨 → 결투 신청
+    socket.on('rival:near', (x) => {
+      const who = x.mutual ? '숙적' : x.mine ? '라이벌' : '나를 라이벌로 정한';
+      const text = x.arrived ? `${who} ${x.name}${josa(x.name, '이', '가')} 이곳에 날아왔다!` : `${who} ${x.name}${josa(x.name, '이', '가')} 이곳에 있다!`;
+      toast(text, { label: '결투 신청', run: () => { hideToast(); challenge({ id: x.id, name: x.name }, 'live'); } });
+    });
     socket.on('rescue:list', (l) => { S.rescues = l || []; renderRescues(); });
     socket.on('rescued', (r) => { if ($('fall-dlg').open) $('fall-dlg').close(); showResult({ title: '구조', lines: r.lines }); });
     socket.on('rampage:end', onRampageEnd);

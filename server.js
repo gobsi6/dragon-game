@@ -218,6 +218,38 @@ function sendMe(socket, d) {
     if (logic.titleName(d) !== before) setImmediate(() => broadcastPresence(d.region));
   }
   socket.emit('me', meOf(d));
+  rivalNews(d);
+}
+// 라이벌 소식: 레벨업·칭호·강적 처치·쓰러짐 같은 큰 사건을 나를 라이벌로 정한 드래곤들에게 알림
+const RIVAL_NEWS = /레벨 \d+|칭호 '|강적 |쓰러졌다|광폭화했다|다시 태어났다/;
+function rivalNews(d) {
+  const news = (d._news || []).filter((t) => RIVAL_NEWS.test(t));
+  d._news = [];
+  if (!news.length) return;
+  const fans = db.rivalFans(d.id);
+  for (const id of fans) {
+    const lines = news.map((t) => `라이벌 ${d.name}: ${t}`);
+    const e = online.get(id);
+    if (e) e.socket.emit('notice', { title: '라이벌 소식', lines });
+    else for (const l of lines) db.noteAdd(id, l);
+  }
+}
+// 라이벌과 같은 지역에 있게 되면 서로에게 알림 (같은 둘에게는 10분에 한 번)
+const rivalSeen = new Map();
+function rivalNear(d) {
+  const now = Date.now();
+  for (const [id, e] of online) {
+    if (id === d.id || e.dragon.region !== d.region) continue;
+    const a = db.relGet(d.id, id), b = db.relGet(id, d.id);
+    if (a !== 'rival' && b !== 'rival') continue;
+    const key = d.id < id ? `${d.id}-${id}` : `${id}-${d.id}`;
+    if (now - (rivalSeen.get(key) || 0) < 10 * 60000) continue;
+    rivalSeen.set(key, now);
+    const mutual = a === 'rival' && b === 'rival';
+    const me = online.get(d.id);
+    if (me) me.socket.emit('rival:near', { id, name: e.dragon.name, mutual, mine: a === 'rival', arrived: false });
+    e.socket.emit('rival:near', { id: d.id, name: d.name, mutual, mine: b === 'rival', arrived: true });
+  }
 }
 // 채팅 기록에 칭호를 붙임 (지금 단 칭호)
 function withTitles(list) {
@@ -280,6 +312,7 @@ function enterWorld(socket, dragon) {
   social.onEnter(socket, dragon);
   online.set(dragon.id, { socket, dragon });
   socket.join(dragon.region);
+  setImmediate(() => rivalNear(dragon));
   db.touch(dragon.id);
 
   if (!prev) {
@@ -468,6 +501,7 @@ io.on('connection', (socket) => {
 
     broadcastPresence(from);
     broadcastPresence(to);
+    rivalNear(d);
     broadcastCounts();
     sendRegionState(socket, d);
     social.onMove(d.id);
@@ -656,6 +690,9 @@ io.on('connection', (socket) => {
       const have = (id) => db.itemCount(d.id, id);
       const res = run(d, payload || {}, have, kin);
       if (res.error) return ack(res);
+      // 이벤트가 다른 드래곤에게 남긴 소식 (라이벌 이벤트)
+      for (const t of res.tells || []) social.tellRival(t.id, t.text);
+      delete res.tells;
       // 지나온 이야기에 남길 선택·사건
       const cr = CHRON_ON[event];
       if (cr) { const [k, t] = cr(d, res, payload || {}) || []; if (t) logic.chron(d, k, t); }

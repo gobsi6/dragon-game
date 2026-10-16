@@ -39,6 +39,10 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
   };
   const tell = (id, event, data) => { const e = live(id); if (e) e.socket.emit(event, data); };
   const relChanged = (id) => tell(id, 'rel:changed', {});
+  // 내가 라이벌로 정한 드래곤 (이벤트에서 씀)
+  const refreshRivals = (d) => { d.rivalsCache = db.relList(d.id).filter((r) => r.kind === 'rival').map((r) => ({ id: r.id, name: r.name })); };
+  const tellRival = (id, text) => { const t = live(id); if (t) t.socket.emit('notice', { title: '라이벌', lines: [text] }); else db.noteAdd(id, text); };
+  const eul = (n) => `${n}${josa(n, '을', '를')}`;
 
   // 교환·선물이 가능한지. 안 되면 이유를 돌려줌
   function reach(me, them, { needOnline }) {
@@ -123,12 +127,15 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
         row.region = e ? e.dragon.region : r.region;
         row.away = !!e?.dragon.exp_end;
         out.friends.push(row);
-      } else if (r.kind === 'rival') out.rivals.push(row);
+      } else if (r.kind === 'rival') { row.mutual = db.relGet(r.id, me.id) === 'rival'; out.rivals.push(row); }
       else if (r.kind === 'wary') out.wary.push(row);
     }
     out.friends.sort((a, b) => b.online - a.online);
     const view = (r) => ({ id: r.id, name: r.name, kind: r.dkind, level: r.level, av: r.has_avatar ? r.avatar_ver : 0, online: !!live(r.id) });
     out.incoming = db.reqIn(me.id).map(view);
+    // 나를 라이벌로 정했지만 나는 아직 정하지 않은 드래곤
+    const mine = new Set(out.rivals.map((x) => x.id));
+    out.rivalsIn = db.rivalFans(me.id).filter((id) => !mine.has(id)).map((id) => db.getDragon(id)).filter((x) => x && !x.dead_at).map(view);
     out.outgoing = db.reqOut(me.id).map(view);
     return out;
   }
@@ -271,9 +278,30 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       const kind = p.kind === 'rival' || p.kind === 'wary' ? p.kind : null;
       if (isFriend(d.id, id)) return { error: '동료에게는 붙일 수 없다. 먼저 동료 관계를 끊어야 한다.' };
       const name = db.getDragon(id).name;
-      if (!kind) { db.relDel(d.id, id); return { ok: true, lines: [`${name}에게 붙인 표시를 지웠다.`] }; }
+      const was = db.relGet(d.id, id);
+      if (!kind) {
+        db.relDel(d.id, id);
+        refreshRivals(d);
+        if (was === 'rival') { tellRival(id, `${ga(d.name)} 라이벌 표시를 거두었다.`); relChanged(id); }
+        return { ok: true, lines: [`${name}에게 붙인 표시를 지웠다.`] };
+      }
       db.relSet(d.id, id, kind);
       db.reqDel(d.id, id);
+      refreshRivals(d);
+      // 라이벌: 상대에게 알림 (경계는 혼자만 아는 표시라 알리지 않음)
+      if (kind === 'rival' && was !== 'rival') {
+        const mutual = db.relGet(id, d.id) === 'rival';
+        logic.chron(d, 'choice', mutual ? `${eul(name)} 맞받아 라이벌로 정했다. 이제 서로의 숙적이다.` : `${eul(name)} 라이벌로 정했다.`);
+        const t = live(id);
+        const text = mutual ? `${ga(d.name)} 당신의 도전을 받아들였다. 이제 서로의 숙적이다!` : `${ga(d.name)} 당신을 라이벌로 지목했다!`;
+        if (t) {
+          logic.chron(t.dragon, 'mark', mutual ? `${ga(d.name)} 나를 맞받아 라이벌로 정했다.` : `${ga(d.name)} 나를 라이벌로 지목했다.`);
+          db.saveState(t.dragon);
+          t.socket.emit('rival:named', { id: d.id, name: d.name, mutual, text });
+        } else db.noteAdd(id, text);
+        db.saveState(d);
+        relChanged(id);
+      }
       return { ok: true, lines: [`${name}${josa(name, '을', '를')} ${kind === 'rival' ? '라이벌로' : '경계할 드래곤으로'} 표시했다.`] };
     });
 
@@ -418,6 +446,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
 
   // 접속할 때: 자리를 비운 동안 온 소식
   function onEnter(socket, d) {
+    refreshRivals(d);
     const notes = db.notesTake(d.id);
     const tp = db.tpUnread(d.id);
     if (tp) notes.push(`잠든 사이 마음에 남겨진 텔레파시가 ${tp}개 있다.`);
@@ -437,5 +466,5 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     }
   }
 
-  return { attach, onEnter, onLeave, onMove, relIncoming: (id) => db.reqInCount(id) };
+  return { attach, onEnter, onLeave, onMove, relIncoming: (id) => db.reqInCount(id), tellRival, refreshRivals };
 };

@@ -259,6 +259,8 @@ const ITEMS = {
   tide_amulet:  { name: '해안 수호 목걸이', rarity: 'rare',     type: 'equip', slot: 'neck',  bonus: { scale: 2, wing: 1 },   value: 110, desc: '어부들이 바다의 친구에게 바치는 목걸이다.' },
 
   // ── 유품: 함께 살던 인간이 세상을 떠나며 남긴 것 ──
+  // 라이벌 이벤트에서 얻는 물건
+  rival_scale:    { name: '라이벌의 비늘',   rarity: 'uncommon', value: 20,  desc: '라이벌이 떨어뜨리고 간 비늘 한 조각. 볼 때마다 이를 악물게 된다.' },
   keepsake_cloth: { name: '낡은 손수건',     rarity: 'common',   value: 20,  desc: '작은 손이 늘 쥐고 있던 손수건이다.' },
   keepsake_toy:   { name: '손때 묻은 목각 용', rarity: 'uncommon', value: 80,  desc: '어린 날 드래곤을 흉내 내며 깎은 인형이다.' },
   keepsake_scale: { name: '비늘 목걸이',     rarity: 'rare',     value: 200, desc: '드래곤의 비늘을 꿰어 평생 걸고 다닌 목걸이다.' },
