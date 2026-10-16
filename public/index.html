@@ -395,14 +395,14 @@
   .tp-head .linkbtn { margin-left: auto; }
   .tp-msgs { display: flex; flex-direction: column; gap: 10px; min-height: 220px; max-height: 46vh; overflow-y: auto; padding: 14px 12px;
     background: radial-gradient(ellipse 80% 60% at 50% 0%, #F4F3FA 0%, rgba(244, 243, 250, 0) 70%), var(--surface-2); border: 1px solid var(--tp-b); }
-  .tp-msg { max-width: 82%; display: flex; flex-direction: column; gap: 2px; }
+  .tp-msg { max-width: 82%; align-self: flex-start; align-items: flex-start; display: flex; flex-direction: column; gap: 2px; } /* 말풍선이 글자 수만큼만 */
   .tp-msg p { margin: 0; padding: 8px 12px; font: 500 14.5px/1.65 var(--serif); color: #2E2D48; background: var(--tp-l); border: 1px solid var(--tp-b); border-radius: 14px 14px 14px 3px;
     box-shadow: 0 0 0 3px rgba(91, 90, 140, .06), 0 0 14px rgba(91, 90, 140, .12); overflow-wrap: anywhere; white-space: pre-wrap; }
   .tp-msg.mine { align-self: flex-end; align-items: flex-end; }
   .tp-msg.mine p { background: #fff; border-radius: 14px 14px 3px 14px; }
   .tp-msg small { font-size: 11px; color: var(--muted); padding: 0 4px; }
-  .tp-msg.new p { animation: tp-in .9s ease-out; }
-  @keyframes tp-in { from { opacity: 0; filter: blur(3px); transform: translateY(4px); } to { opacity: 1; filter: none; transform: none; } }
+  .tp-msg.new p { animation: tp-in .35s ease-out; }
+  @keyframes tp-in { from { opacity: 0; filter: blur(2px); transform: translateY(3px); } to { opacity: 1; filter: none; transform: none; } }
   @media (prefers-reduced-motion: reduce) { .tp-msg.new p { animation: none; } }
   .tp-empty { margin: auto; text-align: center; font: 500 13px/1.7 var(--serif); color: var(--muted); }
   .tp-form { display: flex; gap: 8px; }
@@ -3065,7 +3065,7 @@
         r.addEventListener('click', () => openTp(t.id));
         box.appendChild(r);
       }
-      openPanel('tp-dlg');
+      if (!$('tp-dlg').open) $('tp-dlg').showModal();
     });
   }
   function tpBubble(m, isNew) {
@@ -3111,7 +3111,7 @@
       box.scrollTop = box.scrollHeight;
       $('tp-closed').hidden = !w.blocked;
       $('tp-closed').textContent = `${w.name}의 마음이 굳게 닫혀 있다. 지금은 텔레파시가 닿지 않는다.`;
-      openPanel('tp-dlg');
+      if (!$('tp-dlg').open) $('tp-dlg').showModal();
       $('tp-input').focus();
     });
   }
@@ -3435,7 +3435,7 @@
 
   // ── 하단 메뉴 화면: 가운데 칸에 펼치기 ──
   // 팝업(모달) 대신 지역 카드와 지도 자리에 보여 준다. 다른 메뉴를 열면 바뀌고, '대륙'이나 닫기로 돌아간다
-  const PANELS = ['char-dlg', 'nest-dlg', 'inv-dlg', 'craft-dlg', 'friends-dlg', 'tp-dlg', 'arena-dlg'];
+  const PANELS = ['char-dlg', 'nest-dlg', 'inv-dlg', 'craft-dlg', 'friends-dlg', 'arena-dlg']; // 텔레파시는 지금 화면 위에 팝업으로
   function openPanel(id) {
     const dlg = $(id);
     if (dlg.open) return;
@@ -4672,13 +4672,12 @@
   const dockBtns = [...document.querySelectorAll('.dock button')];
   const dlgsOf = (b) => (b.dataset.dlg || '').split(' ').filter(Boolean).map((id) => $(id));
   function syncDock() {
-    const on = dockBtns.find((b) => dlgsOf(b).some((d) => d.open)) || ($('tp-dlg').open ? null : $('dock-map'));
+    const on = dockBtns.find((b) => dlgsOf(b).some((d) => d.open)) || $('dock-map');
     for (const b of dockBtns) {
       if (b === on) b.setAttribute('aria-current', 'page');
       else b.removeAttribute('aria-current');
     }
   }
-  new MutationObserver(syncDock).observe($('tp-dlg'), { attributes: true, attributeFilter: ['open'] });
   for (const b of dockBtns) {
     for (const d of dlgsOf(b)) new MutationObserver(syncDock).observe(d, { attributes: true, attributeFilter: ['open'] });
   }
