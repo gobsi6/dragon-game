@@ -365,10 +365,13 @@
   /* 칭호: 이름 옆·위에 붙는 작은 금빛 글씨 */
   .ttl { display: inline-flex; align-items: center; gap: 4px; font: 600 11.5px/1.4 var(--sans); color: #3C5A73; letter-spacing: .01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
   .ttl::before { content: ""; width: 5px; height: 5px; background: #6F93B2; transform: rotate(45deg); flex: none; }
-  .nameplate .ttl { font-size: 12.5px; justify-content: center; }
+  /* 칭호는 이름 바로 앞에 작게 한 줄로 (따로 한 줄을 차지하지 않게). 너무 길면 이름 위로 접힘 */
+  .nrow { display: flex; flex-wrap: wrap; align-items: center; column-gap: 6px; row-gap: 0; min-width: 0; }
+  .nrow .ttl { font-size: 11px; line-height: 1.25; gap: 3px; }
+  .nrow .ttl::before { width: 4px; height: 4px; }
+  .nameplate .nrow { justify-content: center; }
   .log .mh .ttl { font-size: 11px; }
-  .who .nm .ttl { font-size: 11px; color: #3C5A73; }
-  .pf-head .t .ttl { font-size: 12.5px; }
+  .who .nm .ttl { font-size: 10.5px; color: #3C5A73; margin-right: 5px; vertical-align: 1px; display: inline-flex; max-width: 100%; }
   .tt-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
   @media (max-width: 520px) { .tt-list { grid-template-columns: 1fr; } }
   .tt { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; padding: 9px 11px; background: #fff; border: 1px solid var(--line-in); border-radius: 3px; text-align: left; }
@@ -398,6 +401,7 @@
   .pf-head .t { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
   .pf-head .t b { font: 700 22px/1.2 var(--serif); overflow-wrap: anywhere; }
   .pf-head .t span { font-size: 13px; color: var(--ink-2); }
+  .pf-head .t .nrow .ttl { font-size: 11px; color: #3C5A73; }
   .pf-head .chips2 { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
   .st-chip { font-size: 11px; padding: 0 7px; line-height: 19px; border-radius: 2px; border: 1px solid var(--line-soft); color: var(--muted); background: var(--surface-2); }
   .st-chip.on { color: #2F5D45; border-color: #A9C4B2; background: #EEF4EF; }
@@ -567,51 +571,80 @@
   .where .at.show { display: flex; }
   .where .at svg { flex: none; }
   .where .at .sep { color: var(--orn); font-weight: 500; }
-  .pl-head { display: flex; align-items: center; gap: 10px; font: 700 14px/1.4 var(--serif); color: var(--steel-d); }
+  .pl-head { display: flex; align-items: center; gap: 10px; font: 700 13px/1.4 var(--serif); color: var(--steel-d); }
   .pl-head::after { content: ""; flex: 1; height: 1px; background: var(--line-soft); }
   .pl-head::before { content: ""; width: 5px; height: 5px; background: var(--orn); transform: rotate(45deg); flex: none; }
-  .pl-head small { order: 3; font: 400 12px/1 var(--sans); color: var(--muted); }
-  .pl-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-  .pl { --tc: #9AA29D; position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; padding: 10px 12px 10px 15px; text-align: left; background: #fff; border: 1px solid var(--line-in); border-radius: 3px; min-width: 0; overflow: hidden; transition: border-color .15s, background .15s, transform .15s; }
-  .pl::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--tc); }
-  .pl b { font: 700 15px/1.3 var(--serif); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-  .pl .meta { display: flex; align-items: center; gap: 6px; max-width: 100%; }
-  .pl .lv { font: 700 11px/18px var(--sans); padding: 0 6px; border-radius: 2px; color: #fff; background: var(--tc); flex: none; }
-  .pl .pl-tr { font: 600 11.5px/1 var(--sans); color: var(--tc); white-space: nowrap; }
-  .pl .pl-tag { position: absolute; top: 0; right: 0; padding: 2px 7px 3px 8px; font: 700 10.5px/1.3 var(--sans); color: #fff; background: var(--steel-d); border-bottom-left-radius: 3px; display: none; }
-  .pl.easy { --tc: #8A938E; }
-  .pl.fit { --tc: #3F7A5C; }
-  .pl.hard { --tc: #A87A1C; }
-  .pl.deadly { --tc: #A63E4B; }
-  .pl.locked { --tc: #B5B8B4; background: #F3F3F1; }
-  .pl.locked b { color: var(--muted); }
-  .pl.on { border-color: var(--steel-d); box-shadow: inset 0 0 0 1px var(--steel-d), 0 2px 8px rgba(42,66,86,.14); background: #EEF2F6; }
-  .pl.on .pl-tag { display: block; }
-  .pl.on b { padding-right: 46px; }
-  .pl:not(.on):not(.locked):hover { border-color: var(--steel); transform: translateY(-1px); }
-  .pl-now { position: relative; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; padding: 12px 14px; background: var(--surface-2); border: 1px solid var(--line-in); border-left: 3px solid var(--steel); border-radius: 3px; }
-  .pl-now:empty { display: none; }
-  .pl-now .ico { grid-row: span 3; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: #E7ECF1; color: var(--steel-d); align-self: start; }
-  .pl-now .k { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; }
-  .pl-now .pw { font: 700 16px/1.35 var(--serif); color: var(--ink); }
-  .pl-now .pw small { font: 600 12px/1 var(--sans); color: var(--muted); margin-left: 6px; }
-  .pl-now .chips2 { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
-  .pl-now .ch { font: 600 11.5px/20px var(--sans); padding: 0 7px; border-radius: 2px; border: 1px solid; }
-  .pl-now .ch.weak { color: #2F5D45; border-color: #A9C4B2; background: #EEF4EF; }
-  .pl-now .ch.res { color: #8A2E27; border-color: #E6C3C7; background: #FBF1F2; }
-  .pl-now .ch.sp { color: #4A3F78; border-color: #C9C1E3; background: #F3F1FA; }
-  .pl-now p { grid-column: 1 / -1; margin: 6px 0 0; padding-top: 8px; border-top: 1px dashed var(--line-in); font: 500 13.5px/1.65 var(--serif); color: var(--ink-2); }
-  @media (max-width: 520px) {
-    .pl-list { gap: 6px; }
-    .pl { padding: 8px 8px 8px 11px; gap: 4px; }
-    .pl b { font-size: 13.5px; }
-    .pl .meta { flex-direction: column; align-items: flex-start; gap: 3px; }
-    .pl .lv { font-size: 10.5px; line-height: 16px; padding: 0 5px; }
-    .pl .pl-tr { font-size: 10.5px; }
-    .pl .pl-tag { font-size: 9.5px; padding: 1px 5px 2px 6px; }
-    .pl.on b { padding-right: 0; }
-    .pl .pl-tag { top: auto; bottom: 0; border-bottom-left-radius: 0; border-top-left-radius: 3px; }
-    .pl.on { padding-bottom: 20px; }
+  .pl-head small { order: 3; font: 400 11px/1 var(--sans); color: var(--muted); }
+  /* 이곳의 장소: 왼쪽 미니맵(누르면 살펴봄), 오른쪽 위 장소 설명, 아래 사냥감 */
+  .pl-wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr); gap: 10px; align-items: stretch; }
+  .pl-map { position: relative; min-height: 270px; background: #ECEBE6; border: 1px solid var(--line-in); border-radius: 3px; overflow: hidden; container-type: size; }
+  /* 지도 그림과 장소 버튼은 가운데 정사각형 안에 (칸 모양이 바뀌어도 길 끝에 버튼이 맞도록) */
+  .pl-map .sq { position: absolute; left: 50%; top: 50%; width: min(100cqw, 100cqh); height: min(100cqw, 100cqh); transform: translate(-50%, -50%); }
+  .pl-map .sq > svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .pl-map .land-edge { fill: none; stroke: #4F4B3E; stroke-width: 1.5; stroke-linejoin: round; }
+  .pl-map .land-edge.corrupt { stroke: #4A3F78; }
+  .pl-map .rname { position: absolute; left: 10px; top: 8px; font: 700 11.5px/1.3 var(--serif); color: var(--steel-d); letter-spacing: .04em; pointer-events: none; }
+  .pl-map .rname.corrupt { color: #4A3F78; }
+  /* 장소 핀: 끝이 그 자리를 가리키고, 이름표는 핀 아래에 */
+  .pn { --tc: #7C857F; --pin: #FCFBF7; --pin-ink: #2A4256; position: absolute; transform: translate(-50%, -26px); display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 0; background: none; border: 0; cursor: pointer; }
+  .pn .pin { width: 20px; height: 27px; overflow: visible; filter: drop-shadow(0 1.5px 1px rgba(42, 46, 51, .35)); transition: transform .15s; transform-origin: 50% 100%; }
+  .pn .pin path { fill: var(--pin); stroke: var(--pin-ink); stroke-width: 1.8; }
+  .pn .pin circle { fill: var(--tc); }
+  .pn .lb { display: flex; flex-direction: column; align-items: center; padding: 1px 5px 2px; background: rgba(252, 251, 247, .9); border: 1px solid rgba(79, 75, 62, .18); border-radius: 3px; white-space: nowrap; }
+  .pn .lb b { font: 700 11px/1.25 var(--serif); color: var(--ink); }
+  .pn .lb small { font: 600 9.5px/1.2 var(--sans); color: var(--tc); }
+  .pn.easy { --tc: #7C857F; } .pn.fit { --tc: #3F7A5C; } .pn.hard { --tc: #A87A1C; } .pn.deadly { --tc: #A63E4B; }
+  .pn.locked { --tc: #A9ACA8; --pin: #EEEEEA; --pin-ink: #9EA19D; }
+  .pn.locked .pin path { stroke-dasharray: 3 2; }
+  .pn.locked .lb b { color: var(--muted); }
+  /* 지금 있는 곳: 진한 핀, 발밑에 퍼지는 고리 */
+  .pn.on { --pin: var(--steel-d); --pin-ink: #1E3242; z-index: 2; }
+  .pn.on .pin { width: 24px; height: 32px; margin-top: -5px; }
+  .pn.on .pin circle { fill: #FCFBF7; }
+  .pn.on .lb { background: var(--steel-d); border-color: var(--steel-d); }
+  .pn.on .lb b, .pn.on .lb small { color: #fff; }
+  .pn.on::before { content: ""; position: absolute; left: 50%; top: 26px; width: 16px; height: 6px; margin: -3px 0 0 -8px; border-radius: 50%; border: 1.5px solid var(--steel-d); animation: pin-ring 1.8s ease-out infinite; pointer-events: none; }
+  @keyframes pin-ring { from { transform: scale(.6); opacity: .9; } to { transform: scale(2.2); opacity: 0; } }
+  .pn.sel:not(.on) { z-index: 1; }
+  .pn.sel:not(.on) .pin { transform: scale(1.18); }
+  .pn.sel:not(.on) .lb { border-color: var(--steel); box-shadow: 0 0 0 1px var(--steel); }
+  .pn:not(.on):hover .pin { transform: scale(1.12) translateY(-1px); }
+  .pn:focus-visible { outline: none; }
+  .pn:focus-visible .lb { outline: 2px solid var(--steel); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .pn.on::before { animation: none; opacity: .5; } }
+  .pl-side { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .pl-box { display: flex; flex-direction: column; gap: 5px; padding: 10px 12px; background: var(--surface-2); border: 1px solid var(--line-in); border-radius: 3px; min-width: 0; }
+  .pl-box .k { font-size: 10.5px; color: var(--muted); letter-spacing: .04em; display: flex; align-items: center; gap: 6px; }
+  .pl-box .k .now { font: 700 10px/1.4 var(--sans); padding: 0 5px; border-radius: 2px; background: var(--steel-d); color: #fff; letter-spacing: 0; }
+  .pl-box .k .peek { font: 600 10px/1.4 var(--sans); padding: 0 5px; border-radius: 2px; border: 1px dashed var(--steel); color: var(--steel-d); letter-spacing: 0; }
+  .pl-desc { border-left: 3px solid var(--steel); }
+  .pl-desc .nm { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; }
+  .pl-desc .nm b { font: 700 15px/1.3 var(--serif); color: var(--ink); }
+  .pl-desc .lv { font: 700 10px/16px var(--sans); padding: 0 6px; border-radius: 2px; color: #fff; background: var(--tc, #8A938E); }
+  .pl-desc .tr { font: 600 10.5px/1 var(--sans); color: var(--tc, #8A938E); }
+  .pl-desc p { margin: 0; font: 500 12.5px/1.6 var(--serif); color: var(--ink-2); }
+  .pl-desc .go { align-self: flex-start; margin-top: 2px; min-height: 30px; padding: 0 11px; font-size: 12px; }
+  .pl-desc .why { font-size: 11px; color: #A63E4B; }
+  .pl-mon { flex: 1; }
+  .pl-mon .row { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 1px 9px; align-items: center; }
+  .pl-mon .ico svg { width: 15px; height: 15px; }
+  .pl-mon .row + .row { padding-top: 7px; border-top: 1px dashed var(--line-in); }
+  .pl-mon .ico { grid-row: span 2; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: #E7ECF1; color: var(--steel-d); }
+  .pl-mon .row.elite .ico { background: #F6EDD6; color: #8C6A1E; }
+  .pl-mon .pw { font: 700 13.5px/1.3 var(--serif); color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
+  .pl-mon .pw small { font: 600 10.5px/1 var(--sans); color: var(--muted); margin-left: 6px; }
+  .pl-mon .row .s { font-size: 10.5px; color: var(--muted); }
+  .pl-mon .chips2 { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
+  .pl-mon .ch { font: 600 10.5px/18px var(--sans); padding: 0 6px; border-radius: 2px; border: 1px solid; }
+  .pl-mon .ch.weak { color: #2F5D45; border-color: #A9C4B2; background: #EEF4EF; }
+  .pl-mon .ch.res { color: #8A2E27; border-color: #E6C3C7; background: #FBF1F2; }
+  .pl-mon .ch.sp { color: #4A3F78; border-color: #C9C1E3; background: #F3F1FA; }
+  .pl-mon .ch.drop { color: #5A4A12; border-color: #E2CF9E; background: #FBF6E8; }
+  .pl-mon .note { font-size: 11px; color: #4A3F78; }
+  /* 좁은 화면: 미니맵을 위에 넓게, 설명과 사냥감은 그 아래로 */
+  @media (max-width: 620px) {
+    .pl-wrap { grid-template-columns: minmax(0, 1fr); }
+    .pl-map { min-height: 0; height: 250px; }
     .pl-head small { display: none; }
     .where .at { font-size: 15.5px; }
   }
@@ -700,7 +733,6 @@
   .chipbtn.on { background: var(--steel-d); border-color: var(--steel-d); color: #fff; }
   .craft-can { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); cursor: pointer; }
   @media (max-width: 520px) { .craft-can { margin-left: 0; width: 100%; } }
-  .pl-now .ch.drop { color: #5A4A12; border-color: #E2CF9E; background: #FBF6E8; }
   .rampage.grave b { color: #34312B; } .rampage.grave small { color: #6E6A60; }
   .rampage.grave::before { background: #8C877C; box-shadow: none; animation: none; }
   .gr-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 2px; border-top: 1px solid var(--line-in); font-size: 14px; }
@@ -991,7 +1023,8 @@
     .portrait.empty::after { content: "+"; position: absolute; right: 9px; bottom: 9px; width: 22px; height: 22px; border-radius: 50%; background: var(--steel); color: #fff; font: 700 16px/22px var(--sans); text-align: center; box-shadow: 0 0 0 2px var(--surface); }
     .pmenu { top: 130px; left: 14px; transform: none; }
     .nameplate { grid-column: 2; grid-row: 2; margin: 0; padding: 0; background: none; border: 0; box-shadow: none; align-items: flex-start; text-align: left; gap: 2px; min-width: 0; }
-    .nameplate .ttl { justify-content: flex-start; font-size: 11.5px; }
+    .nameplate .nrow { justify-content: flex-start; }
+    .nameplate .ttl { font-size: 10.5px; }
     .nameplate .n { font-size: 20px; }
     .nameplate .sub { font-size: 12px; gap: 6px; }
     .nameplate .xp { margin-top: 4px; }
@@ -1241,8 +1274,7 @@
           <button type="button" data-a="delete">그림 지우기</button>
         </div>
         <div class="nameplate">
-          <span class="ttl" id="me-title" hidden></span>
-          <span class="n" id="me-name"></span>
+          <div class="nrow"><span class="ttl" id="me-title" hidden></span><span class="n" id="me-name"></span></div>
           <div class="sub"><span class="lv" id="me-lv"></span><span id="me-kind"></span></div>
           <div class="xp"><div class="bar"><i id="xp-bar"></i></div><div class="t"><span>경험</span><span id="xp-t"></span></div></div>
         </div>
@@ -1284,9 +1316,14 @@
           <p class="quote" id="region-desc"></p>
         </div>
         <div class="places" id="places" hidden>
-          <div class="pl-head">이곳의 장소<small>눌러서 옮겨 간다</small></div>
-          <div class="pl-list" id="pl-list" role="group" aria-label="이곳의 장소"></div>
-          <div class="pl-now" id="pl-now"></div>
+          <div class="pl-head">이곳의 장소<small>지도에서 눌러 살펴보고 옮겨 간다</small></div>
+          <div class="pl-wrap">
+            <div class="pl-map" id="pl-map" role="group" aria-label="이곳의 장소 지도"></div>
+            <div class="pl-side">
+              <div class="pl-box pl-desc" id="pl-desc"></div>
+              <div class="pl-box pl-mon" id="pl-mon"></div>
+            </div>
+          </div>
         </div>
         <div class="rampage-bars" id="rampage-bars"></div>
         <div class="rampage-bars" id="grave-bars"></div>
@@ -3371,10 +3408,10 @@
     head.appendChild(avaEl(p, 64));
     const t = document.createElement('div');
     t.className = 't';
-    t.innerHTML = `<b id="profile-name"></b><span></span><div class="chips2"></div>`;
+    t.innerHTML = `<div class="nrow"><b id="profile-name"></b></div><span></span><div class="chips2"></div>`;
     t.querySelector('b').textContent = p.name;
     t.querySelector('span').textContent = `${p.kindName} · Lv. ${p.level}`;
-    if (p.title) { const tt = document.createElement('span'); tt.className = 'ttl'; tt.textContent = p.title.name; tt.title = p.title.eff; t.prepend(tt); }
+    if (p.title) { const tt = document.createElement('span'); tt.className = 'ttl'; tt.textContent = p.title.name; tt.title = p.title.eff; t.querySelector('.nrow').prepend(tt); }
     const chips = t.querySelector('.chips2');
     const chip = (text, cls) => { const c = document.createElement('span'); c.className = cls; c.textContent = text; chips.appendChild(c); };
     chip(p.away ? '원정 중' : p.resting ? '둥지에서 쉬는 중' : p.online ? '접속 중' : '접속 안 함', `st-chip${p.online && !p.away ? ' on' : ''}`);
@@ -3951,10 +3988,10 @@
     const head = $('char-head');
     head.replaceChildren(avaEl(me, 48));
     const t = document.createElement('div');
-    t.innerHTML = '<b></b><small></small>';
+    t.innerHTML = '<div class="nrow"><b></b></div><small></small>';
     t.querySelector('b').textContent = me.name;
     t.querySelector('small').textContent = `${S.kinds[me.kind]?.name || ''}${me.bio?.gender ? ` · ${me.bio.gender}` : ''} · Lv. ${me.level}${me.stanceName ? ` · ${me.stanceName}` : ''}`;
-    if (me.title) { const tt = document.createElement('span'); tt.className = 'ttl'; tt.textContent = me.title; t.prepend(tt); }
+    if (me.title) { const tt = document.createElement('span'); tt.className = 'ttl'; tt.textContent = me.title; t.querySelector('.nrow').prepend(tt); }
     head.appendChild(t);
     const old = $('char-head').nextElementSibling;
     if (old?.classList.contains('char-bio')) old.remove();
@@ -4055,6 +4092,98 @@
     return 'easy';
   }
   const TIER_NAME = { easy: '쉬움', fit: '알맞음', hard: '어려움', deadly: '위험', locked: '못 감' };
+  // 미니맵: 지역마다 모양이 조금씩 다른 손그림 같은 땅 (지역 id로 정해져서 늘 같은 모양)
+  function blobPath(seed, cx = 100, cy = 104, r = 84) {
+    let h = 0;
+    for (const c of seed) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    const rnd = () => ((h = (h * 1103515245 + 12345) >>> 0) / 4294967296);
+    const n = 13;
+    const pts = Array.from({ length: n }, (_, i) => {
+      const a = (i / n) * Math.PI * 2 - Math.PI / 2;
+      const rr = r * (0.84 + rnd() * 0.2);
+      return [cx + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.96];
+    });
+    // 이어진 점들을 부드러운 곡선으로 (Catmull-Rom → 베지어)
+    let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+    for (let i = 0; i < n; i++) {
+      const p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
+      const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+      const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+      d += ` C${c1.map((v) => v.toFixed(1))} ${c2.map((v) => v.toFixed(1))} ${p2.map((v) => v.toFixed(1))}`;
+    }
+    return `${d}Z`;
+  }
+  // 장소 자리: 입구(가장 쉬움)는 왼쪽 아래, 그다음은 오른쪽 아래, 가장 깊은 곳은 위. 가운데는 갈림길
+  // 장소 자리 (지도 안 %, 핀 끝이 닿는 곳): 입구는 왼쪽 아래, 그다음은 오른쪽, 가장 깊은 곳은 위
+  const PL_SPOTS = [{ x: 27, y: 70 }, { x: 73, y: 62 }, { x: 47, y: 31 }];
+  // 지역마다의 땅 색과 지형 (대륙 지도와 같은 빛깔)
+  const PL_LOOK = {
+    plains:  { land: '#E8E1C4', mtn: 6, tree: 12, hill: 9, grass: 24, river: true },
+    forest:  { land: '#E2DFC2', tree: 46, pine: 6, grass: 4, pond: 1 },
+    swamp:   { land: '#D9DCC6', pond: 6, reed: 16, dead: 6, tree: 6 },
+    snow:    { land: '#EEF0EC', mtn: 9, snowy: true, pine: 14, drift: 8 },
+    ruins:   { land: '#E6DFC9', pillar: 13, wall: 6, grass: 16, tree: 12 },
+    canyon:  { land: '#E9D6A8', mesa: 12, crack: 10, grass: 8, river: true },
+    volcano: { land: '#DCD5C7', volc: 1, mtn: 9, ash: true, lava: true, rock: 16 },
+  };
+  function terrainSvg(region, spots) {
+    const L = PL_LOOK[region] || PL_LOOK.plains;
+    let h = 7;
+    for (const c of region) h = (h * 33 + c.charCodeAt(0)) >>> 0;
+    const rnd = () => ((h = (h * 1664525 + 1013904223) >>> 0) / 4294967296);
+    const pins = spots.map((q) => [q.x * 2, q.y * 2]);
+    const items = []; // [y, svg] 아래쪽 것이 나중에 그려지게 y로 정렬
+    // 땅 안쪽이고 핀(과 이름표)에서 떨어진 자리
+    const free = (x, y, pad, R = 72) => Math.hypot(x - 100, (y - 104) * 1.05) < R && pins.every(([px, py]) => Math.hypot(x - px, (y - py) * 1.2) > pad && !(Math.abs(x - px) < 46 && y > py - 4 && y < py + 30));
+    const place = (n, pad, fn, R) => { let tries = 0; for (let i = 0; i < n && tries < n * 30; tries++) { const x = 22 + rnd() * 156, y = 26 + rnd() * 156; if (!free(x, y, pad, R)) continue; fn(x, y, i); i++; } };
+    const f = (v) => v.toFixed(1);
+    const INK = '#4F4B3E';
+    // 강
+    let water = '';
+    if (L.river || L.lava) {
+      const sx = 40 + rnd() * 30, pts = [];
+      for (let i = 0; i <= 6; i++) pts.push([sx + i * 22 + (rnd() - 0.5) * 14, 120 + i * 9 + Math.sin(i * 1.7) * 10]);
+      const d = pts.map((q, i) => `${i ? 'L' : 'M'}${f(q[0])},${f(q[1])}`).join(' ');
+      water = L.lava
+        ? `<path d="${d}" fill="none" stroke="#C4643C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity=".85"/><path d="${d}" fill="none" stroke="#F0B25A" stroke-width="1" stroke-linecap="round" opacity=".9"/>`
+        : `<path d="${d}" fill="none" stroke="#8EA6AE" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`;
+    }
+    // 연못
+    place(L.pond || 0, 22, (x, y) => { const rx = 7 + rnd() * 7; items.push([y, `<ellipse cx="${f(x)}" cy="${f(y)}" rx="${f(rx)}" ry="${f(rx * 0.55)}" fill="#B4C3C8" stroke="#8EA6AE" stroke-width=".8"/>`]); });
+    // 산: 밝은 쪽과 그늘진 쪽 (설원이면 흰 산, 화산이면 잿빛)
+    const mtn = (x, y, s) => {
+      const light = L.snowy ? '#F8F9F7' : L.ash ? '#B9B1A3' : '#E9E3CB', dark = L.snowy ? '#C9D3D6' : L.ash ? '#8D857A' : '#C9BF9C';
+      const top = y - s * 1.25;
+      return `<path d="M${f(x - s)},${f(y)} L${f(x)},${f(top)} L${f(x + s)},${f(y)} Z" fill="${light}" stroke="${INK}" stroke-width=".8" stroke-linejoin="round"/><path d="M${f(x)},${f(top)} L${f(x + s)},${f(y)} L${f(x + s * 0.15)},${f(y)} Z" fill="${dark}"/>`
+        + (L.snowy ? '' : `<path d="M${f(x - s * 0.35)},${f(top + s * 0.45)} L${f(x)},${f(top)} L${f(x + s * 0.32)},${f(top + s * 0.4)}" fill="none" stroke="#FCFBF7" stroke-width=".9" opacity=".8"/>`);
+    };
+    // 산맥처럼 몇 개씩 붙여서
+    place(Math.ceil((L.mtn || 0) / 3), 26, (x, y) => { for (let k = 0; k < 3; k++) { const s = 8 + rnd() * 7; const mx = x + (k - 1) * s * 1.1, my = y + (rnd() - 0.5) * 6 + k * 3; if (free(mx, my, 20, 64)) items.push([my, mtn(mx, my, s)]); } }, 60);
+    if (L.volc) place(1, 30, (x, y) => items.push([y, `<path d="M${f(x - 20)},${f(y)} L${f(x - 6)},${f(y - 22)} L${f(x + 6)},${f(y - 22)} L${f(x + 20)},${f(y)} Z" fill="#9C9284" stroke="${INK}" stroke-width=".9" stroke-linejoin="round"/><path d="M${f(x - 6)},${f(y - 22)} L${f(x + 6)},${f(y - 22)} L${f(x + 3)},${f(y - 16)} L${f(x - 2)},${f(y - 12)} L${f(x - 4)},${f(y - 17)} Z" fill="#C4643C"/><circle cx="${f(x + 2)}" cy="${f(y - 30)}" r="4" fill="#CFC9BD" opacity=".8"/><circle cx="${f(x + 7)}" cy="${f(y - 37)}" r="5.5" fill="#CFC9BD" opacity=".6"/>`]), 50);
+    // 탁자 바위 (협곡)
+    place(L.mesa || 0, 20, (x, y) => { const w = 9 + rnd() * 8, t = 7 + rnd() * 6; items.push([y, `<path d="M${f(x - w)},${f(y)} L${f(x - w * 0.7)},${f(y - t)} L${f(x + w * 0.7)},${f(y - t)} L${f(x + w)},${f(y)} Z" fill="#D9B27A" stroke="#7A5E3A" stroke-width=".8" stroke-linejoin="round"/><path d="M${f(x - w * 0.7)},${f(y - t)} L${f(x + w * 0.7)},${f(y - t)} L${f(x + w * 0.6)},${f(y - t + 2.4)} L${f(x - w * 0.6)},${f(y - t + 2.4)} Z" fill="#E9CB98"/>`]); }, 62);
+    // 나무
+    const tree = (x, y, r) => `<circle cx="${f(x)}" cy="${f(y - r)}" r="${f(r)}" fill="#8C9868" stroke="#5B6247" stroke-width=".7"/><circle cx="${f(x - r * 0.3)}" cy="${f(y - r * 1.3)}" r="${f(r * 0.35)}" fill="#A4AE80"/>`;
+    // 숲은 무리 지어
+    if ((L.tree || 0) > 20) place(Math.round(L.tree / 6), 18, (x, y) => { for (let k = 0; k < 6; k++) { const tx = x + (rnd() - 0.5) * 26, ty = y + (rnd() - 0.5) * 20; if (free(tx, ty, 16)) items.push([ty, tree(tx, ty, 3 + rnd() * 1.8)]); } });
+    else place(L.tree || 0, 16, (x, y) => { for (let k = 0; k < 3; k++) { const tx = x + (rnd() - 0.5) * 12, ty = y + (rnd() - 0.5) * 9; if (free(tx, ty, 14)) items.push([ty, tree(tx, ty, 2.6 + rnd() * 1.2)]); } });
+    place(L.pine || 0, 16, (x, y) => items.push([y, `<path d="M${f(x)},${f(y - 10)} L${f(x + 4)},${f(y - 2)} L${f(x - 4)},${f(y - 2)} Z" fill="${L.snowy ? '#7E8F7A' : '#6F7F57'}" stroke="#4F5A3E" stroke-width=".6" stroke-linejoin="round"/><path d="M${f(x)},${f(y - 2)} V${f(y)}" stroke="#4F5A3E" stroke-width=".8"/>`]));
+    place(L.dead || 0, 18, (x, y) => items.push([y, `<path d="M${f(x)},${f(y)} V${f(y - 9)} M${f(x)},${f(y - 5)} l-3,-3 M${f(x)},${f(y - 7)} l3,-2.5" stroke="#5F5A48" stroke-width=".9" stroke-linecap="round" fill="none"/>`]));
+    // 언덕 ⌒, 풀, 갈대, 눈더미
+    place(L.hill || 0, 16, (x, y) => items.push([y, `<path d="M${f(x - 7)},${f(y)} Q${f(x)},${f(y - 7)} ${f(x + 7)},${f(y)}" fill="none" stroke="#9A8456" stroke-width="1.1" stroke-linecap="round"/>`]));
+    place(L.drift || 0, 14, (x, y) => items.push([y, `<path d="M${f(x - 6)},${f(y)} Q${f(x)},${f(y - 4)} ${f(x + 6)},${f(y)}" fill="none" stroke="#A8BAC0" stroke-width="1" stroke-linecap="round"/>`]));
+    place(L.grass || 0, 12, (x, y) => items.push([y, `<path d="M${f(x - 2.5)},${f(y)} l1,-3 M${f(x)},${f(y)} v-3.5 M${f(x + 2.5)},${f(y)} l-1,-3" stroke="#7A8456" stroke-width=".8" stroke-linecap="round" fill="none"/>`]));
+    place(L.reed || 0, 12, (x, y) => items.push([y, `<path d="M${f(x - 2)},${f(y)} v-6 M${f(x)},${f(y)} v-8 M${f(x + 2)},${f(y)} v-5" stroke="#5B6247" stroke-width=".8" stroke-linecap="round"/><ellipse cx="${f(x)}" cy="${f(y - 8.5)}" rx=".9" ry="1.8" fill="#7A6A48"/>`]));
+    place(L.crack || 0, 14, (x, y) => items.push([y, `<path d="M${f(x - 6)},${f(y)} l3,-1.5 l2,1.8 l3,-2.2 l3,1" fill="none" stroke="#9A7A50" stroke-width=".8" stroke-linecap="round"/>`]));
+    place(L.rock || 0, 14, (x, y) => items.push([y, `<path d="M${f(x - 3.5)},${f(y)} L${f(x - 2)},${f(y - 3)} L${f(x + 2)},${f(y - 3.5)} L${f(x + 3.5)},${f(y)} Z" fill="#8D857A" stroke="${INK}" stroke-width=".6"/>`]));
+    // 유적: 기둥과 무너진 벽
+    place(L.pillar || 0, 16, (x, y) => { const t = 6 + rnd() * 5; items.push([y, `<rect x="${f(x - 2)}" y="${f(y - t)}" width="4" height="${f(t)}" fill="#E4DED0" stroke="#7D776B" stroke-width=".7"/><rect x="${f(x - 3)}" y="${f(y - t - 1.5)}" width="6" height="1.6" fill="#CBC4B4" stroke="#7D776B" stroke-width=".5"/>`]); });
+    place(L.wall || 0, 18, (x, y) => items.push([y, `<path d="M${f(x - 9)},${f(y)} V${f(y - 4)} H${f(x - 4)} V${f(y - 6)} H${f(x + 1)} V${f(y - 3)} H${f(x + 9)} V${f(y)} Z" fill="#D5CEBE" stroke="#7D776B" stroke-width=".7"/>`]));
+    items.sort((p, q) => p[0] - q[0]);
+    return { land: L.land, body: water + items.map((x) => x[1]).join('') };
+  }
+  const PIN = '<svg class="pin" viewBox="0 0 24 32" aria-hidden="true"><path d="M12 31c-1.2-4.6-9.5-11-9.5-18.4A9.5 9.5 0 0 1 21.5 12.6C21.5 20 13.2 26.4 12 31z"/><circle cx="12" cy="12.4" r="3.6"/></svg>';
+  let plSel = null; // 지도에서 눌러 살펴보는 장소 (없으면 지금 있는 곳)
   function renderPlaces() {
     const ids = S.regionPlaces?.[S.region];
     $('places').hidden = !ids;
@@ -4062,58 +4191,134 @@
     $('region-at').classList.toggle('show', !!cur);
     $('region-at-t').textContent = cur ? `${cur.name}에 머무는 중` : '';
     if (!ids) return;
-    const box = $('pl-list');
-    box.replaceChildren();
-    for (const id of ids) {
+    if (!ids.includes(plSel)) plSel = null;
+    const selId = plSel || (cur ? S.me.place : ids[0]);
+    const corrupt = S.me?.corrupt?.region === S.region;
+
+    // ── 미니맵: 손으로 그린 듯한 지형 위에 장소 핀 ──
+    const map = $('pl-map');
+    map.replaceChildren();
+    const spots = ids.map((_, i) => PL_SPOTS[i] || PL_SPOTS[PL_SPOTS.length - 1]);
+    const land = blobPath(S.region);
+    const t = terrainSvg(S.region, spots);
+    const clip = `pl-clip-${S.region}`;
+    const sq = document.createElement('div');
+    sq.className = 'sq';
+    sq.innerHTML = `<svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      <defs><clipPath id="${clip}"><path d="${land}"/></clipPath></defs>
+      <path d="${land}" transform="translate(2.5 3.5)" fill="rgba(79,75,62,.14)"/>
+      <path d="${land}" fill="${t.land}"/>
+      <g clip-path="url(#${clip})">${t.body}${corrupt ? '<rect width="200" height="200" fill="#6B4E9A" opacity=".09"/>' : ''}</g>
+      <path d="${land}" class="land-edge${corrupt ? ' corrupt' : ''}"/>
+    </svg>`;
+    map.appendChild(sq);
+    const rn = document.createElement('span');
+    rn.className = `rname${corrupt ? ' corrupt' : ''}`;
+    rn.textContent = `${S.regions[S.region].name}${corrupt ? ' · 오염됨' : ''}`;
+    map.appendChild(rn);
+    ids.forEach((id, i) => {
       const p = S.places[id];
+      const spot = spots[i];
       const tier = placeTier(p);
       const on = S.me?.place === id;
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = `pl ${tier}${on ? ' on' : ''}`;
-      b.innerHTML = '<span class="pl-tag">현위치</span><b></b><span class="meta"><span class="lv"></span><span class="pl-tr"></span></span>';
+      b.className = `pn ${tier}${on ? ' on' : ''}${id === selId ? ' sel' : ''}`;
+      b.style.left = `${spot.x}%`;
+      b.style.top = `${spot.y}%`;
+      b.innerHTML = `${PIN}<span class="lb"><b></b><small></small></span>`;
       b.querySelector('b').textContent = p.name;
-      b.querySelector('.lv').textContent = `Lv.${p.level}`;
-      b.querySelector('.pl-tr').textContent = TIER_NAME[tier];
-      b.setAttribute('aria-pressed', String(on));
-      b.setAttribute('aria-label', `${p.name}, 사냥터 레벨 ${p.level}, ${TIER_NAME[tier]}${on ? ', 머무는 중' : ''}`);
-      b.title = tier === 'locked' ? `레벨 ${p.level - S.placeRules.tooHard}부터 들어갈 수 있다` : p.desc;
-      b.addEventListener('click', () => {
-        if (on) return;
-        if (tier === 'locked') return toast(`레벨 ${p.level - S.placeRules.tooHard}부터 들어갈 수 있다.`);
-        socket.emit('place:go', { id }, (res) => {
-          if (res.error) return toast(res.error);
-          toast(`${p.name}. ${res.result.lines[0]}`);
-        });
-      });
-      box.appendChild(b);
-    }
-    const now = $('pl-now');
-    now.replaceChildren();
-    if (!cur) return;
-    const els = (l) => l.map((x) => S.combat.elements[x]).join('·');
-    const ico = document.createElement('span');
-    ico.className = 'ico';
-    ico.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19L19 5"/><path d="M14 5h5v5"/><path d="M4 15l5 5"/></svg>';
+      b.querySelector('small').textContent = `${on ? '현위치 · ' : ''}Lv.${p.level} · ${TIER_NAME[tier]}`;
+      b.setAttribute('aria-pressed', String(id === selId));
+      b.setAttribute('aria-label', `${p.name}, 사냥터 레벨 ${p.level}, ${TIER_NAME[tier]}${on ? ', 머무는 중' : ''}. 눌러서 살펴보기`);
+      b.addEventListener('click', () => { plSel = id; renderPlaces(); });
+      b.addEventListener('dblclick', () => goPlace(id)); // 두 번 누르면 바로 옮겨 감
+      sq.appendChild(b);
+    });
+
+    // ── 장소 설명 ──
+    const p = S.places[selId];
+    const tier = placeTier(p);
+    const here = S.me?.place === selId;
+    const tc = getComputedStyle(map.querySelector('.pn.sel') || map).getPropertyValue('--tc').trim() || '#8A938E';
+    const desc = $('pl-desc');
+    desc.replaceChildren();
+    desc.style.setProperty('--tc', tc);
     const k = document.createElement('span');
     k.className = 'k';
-    k.textContent = `${cur.name}의 사냥감`;
-    const who = document.createElement('span');
-    who.className = 'pw';
-    who.textContent = cur.creature;
-    const sm = document.createElement('small');
-    sm.textContent = `Lv.${cur.level}`;
-    who.appendChild(sm);
-    const chips = document.createElement('span');
+    k.innerHTML = `장소 <span class="${here ? 'now' : 'peek'}">${here ? '현위치' : '살펴보는 중'}</span>`;
+    const nm = document.createElement('div');
+    nm.className = 'nm';
+    nm.innerHTML = '<b></b><span class="lv"></span><span class="tr"></span>';
+    nm.querySelector('b').textContent = p.name;
+    nm.querySelector('.lv').textContent = `Lv.${p.level}`;
+    nm.querySelector('.tr').textContent = TIER_NAME[tier];
+    const d = document.createElement('p');
+    d.textContent = p.desc;
+    desc.append(k, nm, d);
+    if (!here) {
+      if (tier === 'locked') {
+        const w = document.createElement('span');
+        w.className = 'why';
+        w.textContent = `레벨 ${p.level - S.placeRules.tooHard}부터 들어갈 수 있다.`;
+        desc.appendChild(w);
+      } else {
+        const go = document.createElement('button');
+        go.type = 'button';
+        go.className = 'btn primary go';
+        go.textContent = '여기로 옮겨 가기';
+        go.addEventListener('click', () => goPlace(selId));
+        desc.appendChild(go);
+      }
+    }
+
+    // ── 등장하는 사냥감 ──
+    const mon = $('pl-mon');
+    mon.replaceChildren();
+    const mk = document.createElement('span');
+    mk.className = 'k';
+    mk.textContent = '등장하는 사냥감';
+    mon.appendChild(mk);
+    const pre = corrupt ? '오염된 ' : '';
+    const SVG_PAW = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19L19 5"/><path d="M14 5h5v5"/><path d="M4 15l5 5"/></svg>';
+    const SVG_CROWN = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 17l-1-10 5 4 4-6 4 6 5-4-1 10z"/><path d="M4 20h16"/></svg>';
+    const row = (cls, ico, name, lv, sub) => {
+      const r = document.createElement('div');
+      r.className = `row ${cls}`;
+      r.innerHTML = `<span class="ico">${ico}</span><span class="pw"></span><span class="s"></span>`;
+      r.querySelector('.pw').textContent = name;
+      const sm = document.createElement('small'); sm.textContent = `Lv.${lv}`; r.querySelector('.pw').appendChild(sm);
+      r.querySelector('.s').textContent = sub;
+      mon.appendChild(r);
+      return r;
+    };
+    row('', SVG_PAW, `${pre}${p.creature}`, p.level, '사냥하면 만난다');
+    row('elite', SVG_CROWN, `${pre}${p.elite}`, p.level + 1, '강적 · 레벨 2부터 가끔 길을 막는다');
+    const els = (l) => l.map((x) => S.combat.elements[x]).join('·');
+    const chips = document.createElement('div');
     chips.className = 'chips2';
     const chip = (cls, t) => { const c = document.createElement('span'); c.className = `ch ${cls}`; c.textContent = t; chips.appendChild(c); };
-    if (cur.weak.length) chip('weak', `약점 ${els(cur.weak)}`);
-    if (cur.resist.length) chip('res', `저항 ${els(cur.resist)}`);
-    chip('sp', `특기 ${cur.special.name}`);
-    if (cur.drop && S.items[cur.drop]) chip('drop', `전리품 ${S.items[cur.drop].name}`);
-    const d = document.createElement('p');
-    d.textContent = cur.desc;
-    now.append(ico, k, who, chips, d);
+    if (p.weak.length) chip('weak', `약점 ${els(p.weak)}`);
+    if (p.resist.length) chip('res', `저항 ${els(p.resist)}`);
+    chip('sp', `특기 ${p.special.name}`);
+    if (p.drop && S.items[p.drop]) chip('drop', `전리품 ${S.items[p.drop].name}`);
+    mon.appendChild(chips);
+    if (corrupt) {
+      const n = document.createElement('span');
+      n.className = 'note';
+      n.textContent = '오염된 땅: 조금 더 세고, 맞을 때마다 정신도 깎인다. 강적도 더 자주 나온다.';
+      mon.appendChild(n);
+    }
+  }
+  function goPlace(id) {
+    const p = S.places[id];
+    if (S.me?.place === id) return;
+    if (placeTier(p) === 'locked') return toast(`레벨 ${p.level - S.placeRules.tooHard}부터 들어갈 수 있다.`);
+    socket.emit('place:go', { id }, (res) => {
+      if (res.error) return toast(res.error);
+      plSel = null;
+      toast(`${p.name}. ${res.result.lines[0]}`);
+    });
   }
 
   // ── 쓰러짐 · 긴 잠 · 남겨진 둥지 ──
@@ -5443,7 +5648,7 @@
       }
       const k = document.createElement('span');
       k.textContent = `${S.kinds[d.kind]?.name || ''}${d.place && S.places?.[d.place] ? ` · ${S.places[d.place].name}` : ''}`;
-      if (d.title) { const tt = document.createElement('span'); tt.className = 'ttl'; tt.textContent = d.title; nm.append(tt); }
+      if (d.title) { const tt = document.createElement('span'); tt.className = 'ttl'; tt.textContent = d.title; b.prepend(tt); }
       // 접속 상태: 접속 중 / 접속 안 함 · 마지막으로 본 때
       const st = document.createElement('span');
       st.className = `st${d.online ? ' on' : ''}`;
