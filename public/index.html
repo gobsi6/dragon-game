@@ -1178,7 +1178,13 @@
   .map .node:focus { outline: none; }
 
   .here { display: flex; flex-direction: column; gap: 14px; padding: 16px 10px 18px; border-bottom: 1px solid var(--line-in); }
-  .side .here { flex: none; max-height: 42%; overflow-y: auto; }  /* 드래곤이 많아도 이야기 칸을 밀어내지 않게 */
+  .side .here { flex: none; }
+  /* 이곳의 드래곤: 세 마리까지 보이고, 더 많으면 목록 안에서 스크롤.
+     줄 높이를 정수 px로 맞춰서 스크롤할 때 글자·그림이 위아래로 떨리지 않게 (소수점 높이 때문에 떨렸음) */
+  .here-list { display: flex; flex-direction: column; gap: 8px; max-height: calc(3 * 62px + 2 * 8px + 8px); overflow-y: auto; overflow-x: hidden; margin: 0 -6px; padding: 4px 6px; overscroll-behavior: contain; scrollbar-width: thin; transform: translateZ(0); }
+  .here-list .who.click { flex: none; height: 62px; box-sizing: border-box; margin: 0 -2px; padding: 4px 6px 4px 8px; }
+  .here-list .who .nm b { line-height: 18px; }
+  .here-list .who .nm > span { line-height: 16px; }
   .here .cnt { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; color: var(--muted); margin-bottom: -2px; }
   .here .cnt b { font-weight: 600; color: var(--ink); }
   .who { display: flex; align-items: center; gap: 12px; padding-left: 4px; }
@@ -1473,7 +1479,7 @@
       <div class="orn-h" style="padding: 0 10px"><h2>이곳의 이야기</h2></div>
       <div class="here">
         <div class="cnt"><span>이곳의 드래곤</span><b id="here-n"></b></div>
-        <div id="here" style="display: flex; flex-direction: column; gap: 14px"></div>
+        <div id="here" class="here-list"></div>
       </div>
       <div class="log" id="log" aria-live="polite"></div>
       <form class="say" id="say">
