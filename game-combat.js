@@ -86,28 +86,45 @@ function fromDragon(d, context) {
   };
 }
 // place: 장소 id (사냥터 난이도 = 사냥감 레벨). corrupted: 오염된 땅의 몬스터 (조금 더 세고, 입힌 피해만큼 정신도 깎음)
-function fromCreature(place, elite, corrupted = false) {
+// minion: 무리에 함께 나온 사냥감이면 이름 앞에 붙일 말 ('어린' 등). 체력·공격이 조금 낮음
+function fromCreature(place, elite, corrupted = false, minion = null) {
   const pl = PLACES[place];
   const cc = pl;
   const lv = pl.level + (elite ? 1 : 0);
   const K = COMBAT.creature; // 사냥터 난이도별 사냥감 세기
-  const hpMax = Math.round((K.hp[0] + lv * K.hp[1]) * (elite ? K.eliteHp : 1));
-  const name = elite ? pl.elite : pl.creature;
+  const G = COMBAT.group;
+  const hpMax = Math.round((K.hp[0] + lv * K.hp[1]) * (elite ? K.eliteHp : 1) * (minion ? G.hp : 1));
+  const name = `${minion ? `${minion} ` : ''}${elite ? pl.elite : pl.creature}`;
   return {
-    id: null, name: corrupted ? `오염된 ${name}` : name, kind: null, creature: true, region: pl.region, place, elite: !!elite, level: lv,
+    id: null, name: corrupted ? `오염된 ${name}` : name, kind: null, creature: true, region: pl.region, place, elite: !!elite, minion: !!minion, level: lv,
     corrupted, mindDrain: corrupted ? MIND.monster : 0,
     hp: hpMax, hpMax, en: 0, enMax: 0,
-    atk: (K.atk[0] + lv * K.atk[1]) * (elite ? K.eliteAtk : 1) * (corrupted ? MIND.monsterAtk : 1), def: K.def[0] + lv * K.def[1], spd: 6 + lv * 2, mag: 4 + lv * 2, maj: 6 + lv * 2,
+    atk: (K.atk[0] + lv * K.atk[1]) * (elite ? K.eliteAtk : 1) * (corrupted ? MIND.monsterAtk : 1) * (minion ? G.atk : 1), def: K.def[0] + lv * K.def[1], spd: 6 + lv * 2, mag: 4 + lv * 2, maj: 6 + lv * 2,
     taken: 1, element: cc.special.element || null,
     breath: null, skills: [], special: cc.special,
     weak: cc.weak, resist: cc.resist,
     st: {}, cd: {},
   };
 }
-function newBattle(kind, a, b) {
-  const bt = { kind, turn: 0, a, b, log: [], over: false, winner: null, fled: null };
-  for (const f of [a, b]) if (f.creature) plan(f);
+// extras: 함께 싸우는 다른 사냥감 (무리). 싸우는 상대 목록은 foes, 지금 노리는 상대는 b.b (= foes[target])
+function newBattle(kind, a, b, extras = []) {
+  const bt = { kind, turn: 0, a, b, foes: [b, ...extras], target: 0, log: [], over: false, winner: null, fled: null };
+  for (const f of [a, ...bt.foes]) if (f.creature) plan(f);
   return bt;
+}
+const alive = (f) => f.hp > 0;
+const foesOf = (b) => b.foes || [b.b];
+// 지금 노리는 상대. 쓰러졌으면 살아 있는 다음 상대로
+function targetOf(b) {
+  const foes = foesOf(b);
+  let t = foes[b.target || 0];
+  if (!t || t.hp <= 0) {
+    const i = foes.findIndex(alive);
+    b.target = i < 0 ? 0 : i;
+    t = foes[b.target];
+  }
+  b.b = t;
+  return t;
 }
 
 // ── 사냥감의 다음 행동 (화면에 미리 보여 줌) ──────
@@ -266,6 +283,10 @@ function perform(b, f, foe, act, lines) {
         if (cb) lines.push(`연계! ${cb.name}`);
         const dealt = hit(f, foe, pw, { magic: !!s.isBreath, element: s.isBreath ? s.element : null, crit: cb?.key === 'vital' }, lines, `${ga(f)} ${s.name}!`);
         if (dealt && cb) comboAfter(f, foe, cb, lines);
+        // 숨결은 무리의 다른 적에게도 번짐 (피해 일부, 상태 이상은 없음)
+        if (s.isBreath && f === b.a && foesOf(b).length > 1) {
+          for (const o of foesOf(b)) if (o !== foe && alive(o)) hit(f, o, s.power * COMBAT.group.splash, { magic: true, element: s.element }, lines, `숨결이 번져 ${o.name}에게도`);
+        }
         if (dealt) {
           if (s.drain) { const h = Math.round(dealt * s.drain); f.hp = Math.min(f.hpMax, f.hp + h); lines.push(`${ga(f)} 체력을 ${h} 되찾았다.`); }
           if (s.cleanse) { // 퍼플: 나쁜 상태 하나를 씻어 냄
@@ -278,10 +299,14 @@ function perform(b, f, foe, act, lines) {
       } else {
         lines.push(`${ga(f)} ${s.name}!`);
         if (s.debuff) {
-          const chance = s.majesty ? clamp(0.5 + (f.maj - foe.maj) * 0.04, 0.2, 0.95) : s.chance;
-          const before = lines.length;
-          applyDebuff(f, foe, s.debuff, chance, null, lines);
-          if (lines.length === before) lines.push(`${ga(foe)} 꿈쩍도 하지 않았다.`);
+          // 위엄으로 거는 것(포효)은 적이 여럿이면 모두에게
+          const targets = s.majesty && f === b.a ? foesOf(b).filter(alive) : [foe];
+          for (const t of targets) {
+            const chance = s.majesty ? clamp(0.5 + (f.maj - t.maj) * 0.04, 0.2, 0.95) : s.chance;
+            const before = lines.length;
+            applyDebuff(f, t, s.debuff, chance, null, lines);
+            if (lines.length === before) lines.push(`${ga(t)} 꿈쩍도 하지 않았다.`);
+          }
         }
         if (s.self) lines.push(...Object.keys(s.self).map((k) => `${ga(f)} ${STATUS[k]} 상태가 되었다.`));
       }
@@ -325,34 +350,46 @@ function endOfTurn(f, lines) {
   if (!f.creature) f.en = Math.min(f.enMax, f.en + COMBAT.enPerTurn);
 }
 
-// 한 턴을 치름. 빠른 쪽이 먼저 움직임
+// 쓰러진 쪽을 알리고, 싸움이 끝났는지 봄
+function checkDown(b, lines) {
+  for (const f of [b.a, ...foesOf(b)]) {
+    if (f.hp <= 0 && !f.down) { f.down = true; lines.push(`${ga(f)} 쓰러졌다.`); }
+  }
+  if (b.over) return;
+  if (b.a.hp <= 0) { b.over = true; b.winner = foesOf(b).find(alive) || b.b; }
+  else if (!foesOf(b).some(alive)) { b.over = true; b.winner = b.a; }
+}
+// 한 턴을 치름. 빠른 쪽이 먼저 움직임 (적이 여럿이면 저마다 한 번씩)
+// actA.t: 노릴 적의 순번 (무리와 싸울 때). actB: 결투 상대의 행동 (사냥감은 미리 정해 둔 행동을 씀)
 function round(b, actA, actB) {
   if (b.over) return [];
   b.turn += 1;
-  b.a.guarding = false; b.b.guarding = false; // 지난 턴의 방어는 이번 턴에 이어지지 않음
+  const foes = foesOf(b);
+  for (const f of [b.a, ...foes]) f.guarding = false; // 지난 턴의 방어는 이번 턴에 이어지지 않음
+  if (actA && Number.isInteger(actA.t) && foes[actA.t] && alive(foes[actA.t])) b.target = actA.t;
+  targetOf(b);
   const lines = [];
-  const acts = { a: actA, b: actB };
   // 방어·비늘 세우기처럼 몸을 지키는 행동은 먼저 (예고를 보고 막을 수 있게). 나머지는 빠른 쪽이 먼저
-  const guardish = (f, act) => act.type === 'guard' || (act.type === 'skill' && !blocked(f, act) && (() => { const sk = skillOf(f, act.id); return sk && sk.self && !sk.power && !sk.heal; })());
-  const pa = guardish(b.a, actA) ? 1 : 0, pb = guardish(b.b, actB) ? 1 : 0;
-  const first = pa !== pb ? (pa > pb ? ['a', 'b'] : ['b', 'a']) : spdOf(b.a) + rand(0, 3) >= spdOf(b.b) + rand(0, 3) ? ['a', 'b'] : ['b', 'a'];
-  for (const k of first) {
-    const f = b[k];
-    const foe = b[k === 'a' ? 'b' : 'a'];
+  const guardish = (f, act) => !!act && (act.type === 'guard' || (act.type === 'skill' && !blocked(f, act) && (() => { const sk = skillOf(f, act.id); return sk && sk.self && !sk.power && !sk.heal; })()));
+  const actors = [{ f: b.a, act: actA, side: 'a' }, ...foes.filter(alive).map((f) => ({ f, act: f.creature ? (f.next || { type: 'attack' }) : actB, side: 'b' }))];
+  for (const x of actors) { x.pri = guardish(x.f, x.act) ? 1 : 0; x.sp = spdOf(x.f) + rand(0, 3); }
+  actors.sort((p, q) => q.pri - p.pri || q.sp - p.sp);
+  for (const x of actors) {
+    const f = x.f;
     if (b.over || f.hp <= 0) continue;
+    const foe = x.side === 'a' ? targetOf(b) : b.a;
     f.turnNow = b.turn;
-    perform(b, f, foe, acts[k], lines);
+    perform(b, f, foe, x.act || { type: 'attack' }, lines);
     f.acted = b.turn; // 이번 턴에 이미 움직였음 (넘어뜨리기가 다음 턴까지 이어지게)
-    if (foe.hp <= 0) { b.over = true; b.winner = f; lines.push(`${ga(foe)} 쓰러졌다.`); }
+    checkDown(b, lines);
   }
   if (!b.over) {
-    endOfTurn(b.a, lines); endOfTurn(b.b, lines);
-    for (const [f, foe] of [[b.a, b.b], [b.b, b.a]]) {
-      if (!b.over && f.hp <= 0) { b.over = true; b.winner = foe; lines.push(`${ga(f)} 쓰러졌다.`); }
-    }
+    endOfTurn(b.a, lines);
+    for (const f of foes) if (alive(f)) endOfTurn(f, lines);
+    checkDown(b, lines);
   }
   // 강적의 분노: 체력이 절반 아래로 떨어지면 한 번
-  for (const f of [b.a, b.b]) {
+  for (const f of foes) {
     if (!b.over && f.creature && f.elite && !f.enraged && f.hp > 0 && f.hp <= f.hpMax * ENRAGE.below) {
       f.enraged = true;
       f.atk *= ENRAGE.atk;
@@ -360,19 +397,22 @@ function round(b, actA, actB) {
       lines.push(`${ga(f)} 분노했다! 눈빛이 붉게 타오르고, 공격이 거세진다.`);
     }
   }
-  if (!b.over) for (const f of [b.a, b.b]) if (f.creature) plan(f);
-  if (!b.over && b.turn >= COMBAT.maxTurns) {
+  if (!b.over) for (const f of [b.a, ...foes]) if (f.creature && alive(f)) plan(f);
+  const maxTurns = foes.length > 1 ? COMBAT.group.maxTurns : COMBAT.maxTurns;
+  if (!b.over && b.turn >= maxTurns) {
     b.over = true;
-    b.winner = b.a.hp / b.a.hpMax >= b.b.hp / b.b.hpMax ? b.a : b.b;
+    const sum = (k) => foes.reduce((n, f) => n + Math.max(0, f[k]), 0);
+    b.winner = b.a.hp / b.a.hpMax >= sum('hp') / sum('hpMax') ? b.a : targetOf(b);
     lines.push(`해가 기울도록 승부가 나지 않았다. 더 버틴 ${ga(b.winner)} 이겼다.`);
   }
+  targetOf(b);
   b.log.push({ turn: b.turn, lines });
   return lines;
 }
 
 // ── 자동으로 고르기 ────────────────────────────────
 // reserve: 이만큼의 기력은 남겨 둠 (자동 사냥). flee: 체력이 이 비율 아래면 물러남
-function aiPick(f, foe, { reserve = 0, flee = 0 } = {}) {
+function aiPick(f, foe, { reserve = 0, flee = 0, danger: danger0 } = {}) {
   if (f.creature) return f.next || { type: 'attack' }; // 미리 정해 둔 행동
   if (flee && f.hp < f.hpMax * flee) return { type: 'flee' };
   const can = (id) => {
@@ -381,10 +421,12 @@ function aiPick(f, foe, { reserve = 0, flee = 0 } = {}) {
   };
   const hpr = f.hp / f.hpMax;
   if (hpr < 0.4 && can('mend')) return { type: 'skill', id: 'mend' }; // 위험하면 숨결보다 치유 먼저
-  // 예고된 강한 특기: 비늘을 세우거나 방어
-  if (foe.creature && foe.next?.type === 'special' && foe.special && heavyOf(foe.special)) {
+  // 예고된 강한 특기: 비늘을 세우거나 방어 (danger: 무리 중 누군가가 준비 중)
+  const heavyNext = (x) => x.creature && x.next?.type === 'special' && x.special && heavyOf(x.special);
+  const danger = danger0 ?? (heavyNext(foe) ? foe : null);
+  if (danger) {
     if (can('harden') && !has(f, 'harden')) return { type: 'skill', id: 'harden' };
-    if (hpr < 0.8 || foe.special.hits > 1) return { type: 'guard' };
+    if (hpr < 0.8 || danger.special.hits > 1) return { type: 'guard' };
   }
   // 연계가 되는 스킬이 있으면 먼저
   for (const id of f.skills) if (can(id) && comboOf(foe, id)) return { type: 'skill', id };
@@ -404,9 +446,21 @@ function aiPick(f, foe, { reserve = 0, flee = 0 } = {}) {
   if (can('tail')) return { type: 'skill', id: 'tail' };
   return { type: 'attack' };
 }
+// 내 쪽을 자동으로: 무리면 연계가 되는 적, 아니면 가장 약해진 적을 노림
+function autoAct(b, opt = {}) {
+  const f = b.a;
+  const live = foesOf(b).filter(alive);
+  if (live.length <= 1) return aiPick(f, targetOf(b), opt);
+  const heavy = live.find((x) => x.next?.type === 'special' && x.special && heavyOf(x.special)) || null;
+  let t = live.find((x) => [...(f.breath ? ['breath'] : []), ...f.skills, 'attack'].some((id) => comboOf(x, id)))
+    || live.reduce((m, x) => (x.hp / x.hpMax < m.hp / m.hpMax ? x : m), live[0]);
+  // 여럿에게 둘러싸이면 조금 더 일찍 물러남
+  const act = aiPick(f, t, { ...opt, danger: heavy, flee: opt.flee ? opt.flee + 0.08 * (live.length - 1) : 0 });
+  return { ...act, t: foesOf(b).indexOf(t) };
+}
 function runAuto(b, optA = {}, optB = {}) {
   b.a.turnCount = 0; b.b.turnCount = 0;
-  while (!b.over) round(b, aiPick(b.a, b.b, optA), aiPick(b.b, b.a, optB));
+  while (!b.over) round(b, autoAct(b, optA), b.b.creature ? null : aiPick(b.b, b.a, optB));
   return b;
 }
 
@@ -417,7 +471,7 @@ function fighterView(f, mine) {
     hp: Math.round(f.hp), hpMax: f.hpMax, en: Math.round(f.en), enMax: f.enMax,
     st: Object.fromEntries(Object.keys(STATUS).filter((k) => f.st[k] > 0).map((k) => [k, f.st[k]])),
     weak: f.weak, resist: f.resist,
-    enraged: !!f.enraged,
+    enraged: !!f.enraged, down: f.hp <= 0, minion: !!f.minion,
   };
   if (mine) {
     v.skills = [
@@ -427,17 +481,25 @@ function fighterView(f, mine) {
   }
   return v;
 }
+const INTENT_RANK = { heavy: 4, multi: 3, debuff: 2, self: 1, attack: 0 };
 function view(b, me = 'a') {
-  const foe = me === 'a' ? 'b' : 'a';
+  const foeF = me === 'a' ? targetOf(b) : b.a;
   const mv = fighterView(b[me], true);
-  // 지금 쓰면 연계가 되는 행동
-  for (const sk of mv.skills || []) { const c = comboOf(b[foe], sk.id); if (c) sk.combo = c.name; }
-  const ac = comboOf(b[foe], 'attack');
+  // 지금 쓰면 연계가 되는 행동 (노리는 적 기준)
+  for (const sk of mv.skills || []) { const c = comboOf(foeF, sk.id); if (c) sk.combo = c.name; }
+  const ac = comboOf(foeF, 'attack');
   if (ac) mv.attackCombo = ac.name;
+  const foes = foesOf(b);
+  const multi = me === 'a' && foes.length > 1;
+  // 무리: 적마다의 모습과 다음 행동. 맨 위 예고는 가장 위험한 것
+  const list = multi ? foes.map((f, i) => ({ ...fighterView(f, false), i, intent: b.over || f.hp <= 0 ? null : intentOf(f) })) : null;
+  let intent = b.over ? null : intentOf(foeF);
+  if (multi && !b.over) intent = list.filter((x) => x.intent).map((x) => x.intent).sort((p, q) => INTENT_RANK[q.kind] - INTENT_RANK[p.kind])[0] || null;
   return {
-    kind: b.kind, turn: b.turn, maxTurns: COMBAT.maxTurns, over: b.over,
-    me: mv, foe: fighterView(b[foe], false),
-    intent: b.over ? null : intentOf(b[foe]),
+    kind: b.kind, turn: b.turn, maxTurns: foes.length > 1 ? COMBAT.group.maxTurns : COMBAT.maxTurns, over: b.over,
+    me: mv, foe: fighterView(foeF, false),
+    foes: list, target: multi ? b.target : null,
+    intent,
     won: b.over ? b.winner === b[me] : null,
     fled: b.over && b.fled ? (b.fled === b[me] ? 'me' : 'foe') : null,
     log: b.log.slice(-1)[0]?.lines || [],
@@ -474,60 +536,86 @@ function hunt(d) {
       items: [], gold: 0, xp: 0,
     };
   }
-  const foe = fromCreature(place, false, corrupted);
-  const b = runAuto(newBattle('hunt', me, foe), { reserve: Math.round(me.enMax * COMBAT.huntReserve), flee: COMBAT.fleeBelow });
-  return { ...huntReward(d, b, c), turns: b.turn };
+  // 평범한 사냥도 직접 싸움. 가끔은 무리를 만남
+  const G = COMBAT.group;
+  let n = 1;
+  if (Number.isInteger(debug.forceGroup)) n = debug.forceGroup;
+  else if (c.level >= G.from && Math.random() < G.chance) n = 2 + (c.level >= G.threeFrom && Math.random() < G.three ? 1 : 0);
+  const pre = [...G.prefixes].sort(() => Math.random() - 0.5);
+  const foes = [fromCreature(place, false, corrupted), ...Array.from({ length: n - 1 }, (_, i) => fromCreature(place, false, corrupted, pre[i % pre.length]))];
+  const b = newBattle('hunt', me, foes[0], foes.slice(1));
+  b.region = d.region;
+  b.place = place;
+  b.corrupted = corrupted;
+  b.a.turnCount = 0;
+  const lines = n > 1
+    ? [`${c.name}${josa(c.name, '이', '가')} 무리 지어 나타났다! (${n}마리)`, '노릴 적을 골라 싸운다. 숨결은 다른 적에게도 번지고, 포효는 모두에게 울린다.']
+    : [`${c.name}${josa(c.name, '을', '를')} 찾아냈다.`];
+  if (corrupted) lines.push('검붉은 기운이 머릿속을 파고든다. 맞을 때마다 정신도 깎인다.');
+  return { title: '사냥', hunt: true, battle: b, lines, items: [], gold: 0, xp: 0 };
 }
 
-// 사냥 결과: 체력·기력을 남은 만큼으로, 이기면 전리품
+// 사냥 결과: 체력·기력을 남은 만큼으로. 쓰러뜨린 사냥감마다 전리품 (무리면 함께 나온 사냥감은 조금 적게)
+// 결과의 fall: 물러나지 않고 졌음 (쓰러짐)
 function huntReward(d, b, c) {
   const me = b.a;
+  const foes = foesOf(b);
   d.hp = Math.max(1, Math.round(me.hp));
   d.en = Math.max(0, Math.round(me.en));
   const skillsUsed = [...new Set(me.used || [])].slice(0, 3);
   const win = b.winner === me;
   const lost = me.hpMax - me.hp;
+  const killed = foes.filter((f) => f.hp <= 0);
   const lines = [];
   const hostile = d.stance === 'hostile';
-  let items = [];
+  const G = COMBAT.group;
+  const ti = logic.titleMods(d);
+  const drop = PLACES[b.place]?.drop;
+  const ids = [];
   let gold = 0;
-  let xp;
+  let xp = 0;
   const how = skillsUsed.length ? ` (${skillsUsed.join(', ')})` : '';
-  if (win) {
-    lines.push(`${b.turn}턴 만에 ${c.name}${josa(c.name, '을', '를')} 쓰러뜨렸다${how}.`);
-    const ids = ['beast_hide'];
-    if (Math.random() < 0.3 + c.level * 0.05 + (hostile ? STANCE_RULES.hostile.huntFang : 0)) ids.push('sharp_fang');
+  for (const f of killed) {
+    const extra = f.minion;
+    ids.push('beast_hide');
+    if (!extra && Math.random() < 0.3 + c.level * 0.05 + (hostile ? STANCE_RULES.hostile.huntFang : 0)) ids.push('sharp_fang');
     // 장소마다 다른 사냥 전리품 (강화 음식 '행운'이면 더 잘 나옴)
-    const drop = PLACES[b.b.place]?.drop;
-    const ti = logic.titleMods(d);
-    if (drop && Math.random() < PLACE_RULES.dropChance[ITEMS[drop].rarity] + (logic.buffOf(d)?.drop || 0) + (ti.drop || 0)) ids.push(drop);
-    items = logic.bundle(ids);
-    gold = Math.round(randInt(0, 3) * c.level * (hostile ? STANCE_RULES.hostile.huntGold : 1) * (ti.huntGold || 1));
+    if (drop && Math.random() < (PLACE_RULES.dropChance[ITEMS[drop].rarity] + (logic.buffOf(d)?.drop || 0) + (ti.drop || 0)) * (extra ? G.dropChance : 1)) ids.push(drop);
+    gold += randInt(0, 3) * c.level * (hostile ? STANCE_RULES.hostile.huntGold : 1) * (ti.huntGold || 1) * (extra ? G.gold : 1);
+    xp += (12 + c.level * 6) * (extra ? G.xp : 1);
+  }
+  gold = Math.round(gold);
+  let items = logic.bundle(ids);
+  const names = (l) => { const t = l.map((f) => f.name).join(', '); return `${t}${josa(t, '을', '를')}`; };
+  if (win) {
+    lines.push(foes.length > 1 ? `${b.turn}턴 만에 ${names(killed)} 모두 쓰러뜨렸다${how}.` : `${b.turn}턴 만에 ${names(killed)} 쓰러뜨렸다${how}.`);
     // 칭호: 사냥에서 이긴 횟수 (전체와 지역별)
     logic.traitCount(d, 'huntwin');
-    logic.traitCount(d, `huntwin:${PLACES[b.b.place]?.region || d.region}`);
-    xp = 12 + c.level * 6;
+    logic.traitCount(d, `huntwin:${PLACES[b.place]?.region || d.region}`);
+  } else if (b.fled === me) {
+    lines.push(killed.length ? `${names(killed)} 쓰러뜨리고, 나머지에게 밀려 ${b.turn}턴 만에 물러났다${how}.` : `${c.name}에게 밀려 ${b.turn}턴 만에 물러났다${how}.`);
+  } else {
+    lines.push(killed.length ? `${names(killed)} 쓰러뜨렸지만, 끝내 쓰러지고 말았다${how}.` : `${c.name}에게 쓰러졌다${how}.`);
+  }
+  if (items.length || gold) {
     const got = items.map(logic.itemLabel);
     if (gold) got.push(`금화 ${gold}닢`);
     const t = got.join(', ');
     lines.push(`${t}${josa(t, '을', '를')} 얻었다.`);
-  } else {
-    lines.push(b.fled === me
-      ? `${c.name}에게 밀려 ${b.turn}턴 만에 물러났다${how}.`
-      : `${c.name}${josa(c.name, '과', '와')} 겨루다 지쳐 물러났다${how}.`);
-    xp = 4;
   }
+  if (!killed.length) xp = 4;
   lines.push(`체력을 ${Math.round(lost)} 잃었다.`);
   // 오염된 몬스터: 오염 결정이 나오기도 하고, 맞은 만큼 정신이 깎임
   if (foeCorrupt(b)) {
-    if (win && Math.random() < MIND.crystal.hunt) { items = logic.bundle([...items.flatMap((x) => Array(x.qty).fill(x.id)), 'corrupt_crystal']); lines.push('쓰러진 몸에서 오염 결정이 굴러 나왔다.'); }
+    if (killed.length && Math.random() < MIND.crystal.hunt) { items = logic.bundle([...items.flatMap((x) => Array(x.qty).fill(x.id)), 'corrupt_crystal']); lines.push('쓰러진 몸에서 오염 결정이 굴러 나왔다.'); }
     lines.push(...logic.loseMind(d, me.mindLoss || 0));
   }
   d.gold += gold;
-  xp = logic.xpOf(d, xp);
+  xp = logic.xpOf(d, Math.round(xp));
   const levelUp = logic.gainXp(d, xp);
   return {
-    title: '사냥', lines, items, gold, xp, levelUp, win,
+    title: '사냥', lines, items, gold, xp, levelUp, win, turns: b.turn,
+    fall: !win && b.fled !== me,
     wound: d.hp <= logic.hpCap(d) * 0.15,
     log: b.log.map((t) => t.lines).flat(),
     lost: Math.round(lost),
@@ -581,6 +669,6 @@ function eliteReward(d, b) {
 
 module.exports = {
   combatOf, loadout, learned, setSkills, setSettings,
-  fromDragon, fromCreature, newBattle, round, aiPick, runAuto, blocked, view, comboOf, intentOf,
+  fromDragon, fromCreature, newBattle, round, aiPick, autoAct, runAuto, blocked, view, comboOf, intentOf, targetOf,
   hunt, huntReward, eliteReward, debug,
 };

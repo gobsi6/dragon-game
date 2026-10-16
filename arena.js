@@ -35,6 +35,37 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
     sessions.set(d.id, s);
     return combat.view(b, 'a');
   }
+  // ── 사냥 (직접 싸움, 무리일 수도 있음) ─────────────
+  // c: 사냥감 이름과 사냥터 레벨, after(d, res): 끝난 뒤 서버가 할 일 (특성 횟수·이벤트·광폭화 검사)
+  function startHunt(d, b, c, after) {
+    const s = { id: nextId++, kind: 'hunt', b, c, after, ids: { a: d.id, b: null }, side: { [d.id]: 'a' } };
+    sessions.set(d.id, s);
+    return combat.view(b, 'a');
+  }
+  function finishHunt(s) {
+    cleanup(s);
+    const e = live(s.ids.a);
+    const d = load(s.ids.a);
+    if (!d) return;
+    logic.regen(d);
+    const res = combat.huntReward(d, s.b, s.c);
+    // 지면(물러나지 않고) 쓰러짐
+    const falls = res.fall && !!fallFn;
+    if (falls) res.lines.push('눈앞이 캄캄해진다. 숨이 멎어 간다…');
+    if (s.after) s.after(d, res, falls);
+    db.saveState(d, res.items);
+    if (e) {
+      sendMe(e.socket, d);
+      e.socket.emit('battle:end', { view: combat.view(s.b, 'a'), result: res });
+    }
+    if (falls) return fallFn(d, s.b.b.name);
+    checkMind(d);
+  }
+  // 나머지를 자동으로: 사냥은 지금까지처럼 기력을 조금 남기고, 체력이 낮아지면 물러남
+  function autoHunt(s) {
+    const r = combat.runAuto(s.b, { reserve: Math.round(s.b.a.enMax * COMBAT.huntReserve), flee: COMBAT.fleeBelow });
+    return r;
+  }
   // ── 광폭화 ─────────────────────────────────────────
   // 정신이 0이 되면 광폭화. 정해진 시간 안에 다른 드래곤이 싸워 진정시키지 않으면 큰 피해
   const berserkSet = new Set(db.berserkIds()); // 광폭화한 드래곤 (서버를 다시 켜도 이어짐)
@@ -347,13 +378,14 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
       const type = str(p.type);
       if (!ACTS.includes(type)) return { error: '알 수 없는 행동이다.' };
       const act = type === 'skill' ? { type, id: str(p.id) } : { type };
+      if (Number.isInteger(p.t)) act.t = p.t; // 무리와 싸울 때 노릴 적
       const k = s.side[d.id];
       const f = s.b[k];
       const why = combat.blocked(f, act);
       if (why) return { error: why };
-      if (s.kind === 'elite' || s.kind === 'calm') {
+      if (s.kind === 'elite' || s.kind === 'calm' || s.kind === 'hunt') {
         const lines = combat.round(s.b, act, combat.aiPick(s.b.b, s.b.a));
-        if (s.b.over) { (s.kind === 'calm' ? finishCalm : finishElite)(s); return { ok: true, lines, over: true }; }
+        if (s.b.over) { ({ calm: finishCalm, elite: finishElite, hunt: finishHunt })[s.kind](s); return { ok: true, lines, over: true }; }
         return { ok: true, lines, view: combat.view(s.b, 'a') };
       }
       // 결투: 상대도 고를 때까지 기다림
@@ -363,6 +395,26 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
       if (s.pending.a && s.pending.b) resolveDuel(s);
       else emitTo(other, 'battle:ready', { foe: true });
       return { ok: true, waiting: !s.b.over && !!(s.pending.a || s.pending.b) };
+    });
+
+    // 무리와 싸울 때 노릴 적 바꾸기 (턴은 지나가지 않음. 연계 표시가 그 적에 맞게 바뀜)
+    on('battle:target', (d, p) => {
+      const s = sessions.get(d.id);
+      if (!s || s.side[d.id] !== 'a' || !s.b.foes || s.b.foes.length < 2) return { error: '노릴 적을 고를 수 없다.' };
+      const t = Number(p.t);
+      if (!Number.isInteger(t) || !s.b.foes[t] || s.b.foes[t].hp <= 0) return { error: '그 적은 이미 쓰러졌다.' };
+      s.b.target = t;
+      return { ok: true, view: combat.view(s.b, 'a') };
+    });
+    // 사냥: 나머지를 자동으로 싸움
+    on('battle:auto', (d) => {
+      const s = sessions.get(d.id);
+      if (!s || s.kind !== 'hunt') return { error: '지금은 자동으로 싸울 수 없다.' };
+      const from = s.b.log.length;
+      autoHunt(s);
+      const log = s.b.log.slice(from).map((t) => ({ turn: t.turn, lines: t.lines }));
+      finishHunt(s);
+      return { ok: true, log };
     });
 
     on('rampage:list', () => ({ ok: true, list: rampages() }));
@@ -492,6 +544,7 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
     for (const [k, inv] of invites) if (inv.from === id || inv.to === id) { clearTimeout(inv.timer); invites.delete(k); }
     const s = sessions.get(id);
     if (!s) return;
+    if (s.kind === 'hunt') { autoHunt(s); return finishHunt(s); } // 사냥은 나머지를 자동으로 끝냄
     const k = s.side[id];
     s.b.over = true;
     s.b.fled = s.b[k];
@@ -502,5 +555,5 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
     finishDuel(s);
   }
 
-  return { attach, startElite, inBattle, onLeave, checkMind, rampages, endBerserk, startBerserk, setFall };
+  return { attach, startElite, startHunt, inBattle, onLeave, checkMind, rampages, endBerserk, startBerserk, setFall };
 };

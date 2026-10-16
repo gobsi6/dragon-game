@@ -806,6 +806,66 @@
   .bt-acts .btn.suggest small { color: #A63E4B; font-weight: 600; }
   .rage-b { display: inline-block; padding: 0 5px; font: 700 10.5px/16px var(--sans); color: #fff; background: #A63E4B; border-radius: 2px; vertical-align: 1px; }
   .bt-f.enraged { border-color: #E3B8BC; box-shadow: inset 0 0 0 1px #E3B8BC; }
+  /* 전투 효과 */
+  .bt-f, .bt-mini { position: relative; }
+  .bt-f.fx-hit, .bt-mini.fx-hit { animation: fx-shake .42s cubic-bezier(.36, .07, .19, .97), fx-red .75s ease-out; }
+  .bt-f.fx-crit, .bt-mini.fx-crit { animation: fx-shake-big .55s cubic-bezier(.36, .07, .19, .97), fx-red-big .9s ease-out; }
+  .bt-f.fx-heal, .bt-mini.fx-heal { animation: fx-green 1s ease-out; }
+  .bt-f.fx-combo, .bt-mini.fx-combo { animation: fx-gold .9s ease-out; }
+  .bt-mini.fx-down { animation: fx-drop .6s ease-out; }
+  @keyframes fx-shake { 10%, 90% { transform: translateX(-1px); } 20%, 80% { transform: translateX(3px); } 30%, 50%, 70% { transform: translateX(-5px); } 40%, 60% { transform: translateX(5px); } }
+  @keyframes fx-shake-big { 10%, 90% { transform: translate(-2px, 1px) rotate(-.4deg); } 20%, 80% { transform: translate(5px, -1px) rotate(.6deg); } 30%, 50%, 70% { transform: translate(-8px, 1px) rotate(-.8deg); } 40%, 60% { transform: translate(8px, -1px) rotate(.8deg); } }
+  @keyframes fx-red { 0% { box-shadow: 0 0 0 2px rgba(166, 62, 75, .7), inset 0 0 22px rgba(203, 90, 102, .4); } 100% { box-shadow: 0 0 0 0 rgba(166, 62, 75, 0), inset 0 0 0 rgba(203, 90, 102, 0); } }
+  @keyframes fx-red-big { 0% { box-shadow: 0 0 0 3px rgba(166, 62, 75, .85), 0 0 18px rgba(166, 62, 75, .45), inset 0 0 30px rgba(203, 90, 102, .5); background-color: #FBEDEF; } 100% { box-shadow: 0 0 0 0 rgba(166, 62, 75, 0), 0 0 0 rgba(166, 62, 75, 0), inset 0 0 0 rgba(203, 90, 102, 0); } }
+  @keyframes fx-green { 0% { box-shadow: 0 0 0 0 rgba(63, 122, 92, 0), 0 0 0 rgba(94, 156, 123, 0); } 25% { box-shadow: 0 0 0 2px rgba(63, 122, 92, .75), 0 0 20px rgba(94, 156, 123, .7), inset 0 0 18px rgba(94, 156, 123, .3); } 100% { box-shadow: 0 0 0 0 rgba(63, 122, 92, 0), 0 0 0 rgba(94, 156, 123, 0), inset 0 0 0 rgba(94, 156, 123, 0); } }
+  @keyframes fx-gold { 0% { box-shadow: 0 0 0 0 rgba(194, 154, 62, 0); } 25% { box-shadow: 0 0 0 2px rgba(194, 154, 62, .85), 0 0 22px rgba(232, 196, 110, .7); } 100% { box-shadow: 0 0 0 0 rgba(194, 154, 62, 0), 0 0 0 rgba(232, 196, 110, 0); } }
+  @keyframes fx-drop { 0% { transform: none; opacity: 1; } 40% { transform: translateY(3px) scale(.98); } 100% { transform: none; opacity: .5; } }
+  .bt-sides { position: relative; }
+  .fx-num { position: absolute; transform-origin: 100% 50%; translate: -100% 0; z-index: 3; font: 800 17px/1 var(--serif); pointer-events: none; text-shadow: 0 1px 0 #fff, 0 0 6px rgba(255, 255, 255, .9); animation: fx-float 1.2s ease-out both; }
+  .fx-num.dmg { color: #A63E4B; }
+  .fx-num.dmg.big { font-size: 22px; color: #8E2632; }
+  .fx-num.heal { color: #2F7A52; }
+  .fx-num.miss { color: #5F7882; font: 700 13px/1 var(--sans); }
+  .fx-num.sm { font-size: 15px; }
+  .fx-num.sm.big { font-size: 19px; }
+  @keyframes fx-float { 0% { opacity: 0; transform: translateY(6px) scale(.8); } 15% { opacity: 1; transform: translateY(0) scale(1.08); } 30% { transform: translateY(-2px) scale(1); } 100% { opacity: 0; transform: translateY(-26px); } }
+  @media (prefers-reduced-motion: reduce) {
+    .bt-f.fx-hit, .bt-mini.fx-hit { animation: fx-red .75s ease-out; }
+    .bt-f.fx-crit, .bt-mini.fx-crit { animation: fx-red-big .9s ease-out; }
+    .bt-mini.fx-down { animation: none; }
+    .fx-num { animation-name: fx-fade; }
+    @keyframes fx-fade { 0%, 60% { opacity: 1; } 100% { opacity: 0; } }
+  }
+  /* 무리: 적마다 작은 카드 */
+  .bt-f.many { padding: 8px; gap: 5px; background: #F6F6F3; }
+  .bt-many-h { font: 600 11.5px/1.3 var(--sans); color: var(--muted); padding: 0 2px; }
+  .bt-many-n { margin: 0; font-size: 11px; color: var(--muted); text-align: center; }
+  .bt-mini { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 8px; align-items: center; padding: 6px 8px 7px; text-align: left; background: #fff; border: 1px solid var(--line-in); border-radius: 3px; cursor: pointer; font: inherit; color: inherit; transition: border-color .15s; }
+  .bt-mini:not(:disabled):hover { border-color: var(--steel); }
+  .bt-mini.on { border-color: var(--steel-d); box-shadow: inset 0 0 0 1px var(--steel-d); background: #F3F6F9; cursor: default; }
+  .bt-mini.down { opacity: .5; cursor: default; }
+  .bt-mini.down .bar i { background: #B6B9B5; }
+  .bt-mini.enraged { border-color: #E3B8BC; }
+  .bt-mini:disabled { cursor: default; }
+  .bt-mini .nm { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+  .bt-mini .nm b { font: 700 13px/1.3 var(--serif); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bt-mini .nm em { font: 600 10.5px/1 var(--sans); font-style: normal; color: var(--steel-d); flex: none; }
+  .bt-mini.down .nm em { color: var(--muted); }
+  .bt-mini .num { font-size: 11px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .bt-mini .bar { grid-column: 1 / -1; display: block; height: 5px; background: #E4E6E2; border-radius: 3px; overflow: hidden; }
+  .bt-mini .bar i { display: block; height: 100%; background: linear-gradient(90deg, #8E3340, #CB5A66); transition: width .35s ease; }
+  .bt-mini .sts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 3px; }
+  .bt-mini .sts:empty { display: none; }
+  .bt-mini .sts span { padding: 0 4px; font-size: 10.5px; line-height: 15px; border-radius: 2px; background: #F1ECE1; color: #6B5320; border: 1px solid #E2D5B5; }
+  .bt-mini .sts span.bad { background: #FBF1F2; color: #A63E4B; border-color: #E6C3C7; }
+  .bt-mini .it { grid-column: 1 / -1; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bt-mini .it:empty { display: none; }
+  .bt-mini .it.heavy, .bt-mini .it.multi { color: #A63E4B; font-weight: 600; }
+  .bt-mini .it.debuff { color: #8A6516; font-weight: 600; }
+  .bt-intent small.more { display: block; margin-top: 3px; color: #A63E4B; }
+  /* 폰: 무리와 싸울 때는 나를 위에, 적 목록을 아래에 넓게 */
+  @media (max-width: 620px) { .bt-sides.multi { grid-template-columns: minmax(0, 1fr); } .bt-sides.multi .bt-vs { display: none; } }
+  .bt-acts .btn.auto { grid-column: 1 / -1; min-height: 38px; background: #F3F3F0; border-style: dashed; }
   .bt-turn { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--muted); }
   .bt-turn b { color: var(--ink); font-weight: 600; }
   .bt-log { height: 200px; overflow: auto; padding: 8px 12px; background: var(--surface-2); border: 1px solid var(--line-in); font-size: 13.5px; line-height: 1.6; }
@@ -2254,7 +2314,7 @@
     lg.querySelector('ol').replaceChildren(...(r.log || []).map((t) => { const li = document.createElement('li'); li.textContent = t; return li; }));
     $('result').hidden = false;
     if (r.event) openEvent(r.event);
-    if (r.elite && r.battle) openBattle(r.battle, { title: '강적', lines: r.lines });
+    if (r.elite && r.battle && !r.done) openBattle(r.battle, { title: '강적', lines: r.lines });
   }
 
   // ── 이벤트: 선택 창 ──
@@ -2317,6 +2377,8 @@
     b.addEventListener('click', () => {
       socket.emit('act', { type: b.dataset.act }, (res) => {
         if (res.error) return toast(res.error);
+        // 사냥은 직접 싸우는 전투 (결과는 싸움이 끝나고 창을 닫을 때 카드로)
+        if (res.result.hunt && res.result.battle) return openBattle(res.result.battle, { title: res.result.battle.foes ? `사냥 · 무리 ${res.result.battle.foes.length}마리` : '사냥', lines: res.result.lines });
         showResult(res.result);
       });
     });
@@ -4768,7 +4830,116 @@
       box.appendChild(el);
     }
   }
+  // 무리: 적마다 작은 카드. 눌러서 노릴 적을 고름
+  function btFoes(box, v) {
+    box.replaceChildren();
+    box.classList.add('many');
+    const h = document.createElement('div');
+    h.className = 'bt-many-h';
+    h.textContent = `적 ${v.foes.filter((f) => !f.down).length} / ${v.foes.length}`;
+    box.appendChild(h);
+    for (const f of v.foes) {
+      const c = document.createElement('button');
+      c.type = 'button';
+      const on = f.i === v.target && !f.down;
+      c.className = `bt-mini${on ? ' on' : ''}${f.down ? ' down' : ''}${f.enraged ? ' enraged' : ''}`;
+      c.disabled = f.down || v.over || BT.replay;
+      c.innerHTML = '<span class="nm"><b></b><em></em></span><span class="num"></span><span class="bar hp"><i></i></span><span class="sts"></span>';
+      c.querySelector('b').textContent = f.name;
+      c.querySelector('em').textContent = f.down ? '쓰러짐' : on ? '노리는 중' : '';
+      c.querySelector('.num').textContent = `${Math.max(0, f.hp)} / ${f.hpMax}`;
+      c.querySelector('.bar i').style.width = `${Math.max(0, Math.min(100, (f.hp / f.hpMax) * 100))}%`;
+      const sts = c.querySelector('.sts');
+      for (const [k, n] of Object.entries(f.st || {})) { const x = document.createElement('span'); x.className = statusBad.has(k) ? 'bad' : ''; x.textContent = `${S.combat.status[k]} ${n}`; sts.appendChild(x); }
+      c.setAttribute('aria-pressed', String(on));
+      c.setAttribute('aria-label', `${f.name}, 체력 ${Math.max(0, f.hp)} / ${f.hpMax}${f.down ? ', 쓰러짐' : on ? ', 노리는 중' : ', 눌러서 노리기'}`);
+      c.addEventListener('click', () => {
+        if (on || f.down) return;
+        socket.emit('battle:target', { t: f.i }, (res) => {
+          if (res.error) return toast(res.error);
+          BT.view = res.view;
+          renderBattle();
+        });
+      });
+      box.appendChild(c);
+    }
+    if (v.foes.length > 1 && !v.over && !BT.replay) {
+      const n = document.createElement('p');
+      n.className = 'bt-many-n';
+      n.textContent = '눌러서 노릴 적을 고른다.';
+      box.appendChild(n);
+    }
+  }
+  // ── 전투 효과: 지난 모습과 비교해 맞은 쪽은 흔들리고 붉게, 회복한 쪽은 초록 빛, 피하면 '회피' ──
+  function btFxTargets(v) {
+    const out = [{ key: 'me', f: v.me, el: $('bt-me') }];
+    if (v.foes && v.foes.length > 1) {
+      const minis = $('bt-foe').querySelectorAll('.bt-mini');
+      v.foes.forEach((f, i) => out.push({ key: `f${i}`, f, el: minis[i] }));
+    } else out.push({ key: 'foe', f: v.foe, el: $('bt-foe') });
+    return out;
+  }
+  function btPlay(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.offsetWidth; // 같은 효과를 다시 틀 수 있게
+    el.classList.add(cls);
+    el.addEventListener('animationend', (e) => { if (e.target === el) el.classList.remove(cls); }, { once: true });
+  }
+  function btFloat(el, text, cls, i = 0) {
+    if (!el) return;
+    // 숫자는 카드 밖 층에 띄움 (카드를 다시 그려도 사라지지 않게)
+    const host = $('bt-me').parentElement;
+    const hr = host.getBoundingClientRect(), r = el.getBoundingClientRect();
+    const n = document.createElement('span');
+    n.className = `fx-num ${cls}${el.classList.contains('bt-mini') ? ' sm' : ''}`;
+    n.textContent = text;
+    const mini = el.classList.contains('bt-mini');
+    n.style.left = `${r.right - hr.left - (mini ? 74 : 14) - (mini ? i * 46 : 0)}px`; // 작은 카드는 체력 숫자 왼쪽에
+    n.style.top = `${r.top - hr.top + (mini ? 4 : 10 + i * 24)}px`;          // 여러 개면 비켜서
+    n.style.animationDelay = `${i * 120}ms`;
+    host.appendChild(n);
+    setTimeout(() => n.remove(), 1400 + i * 120);
+  }
+  function btFx(v) {
+    const prev = BT.fxPrev;
+    const lines = BT.fxLines || [];
+    const now = {};
+    for (const x of btFxTargets(v)) {
+      now[x.key] = { hp: x.f.hp, name: x.f.name };
+      const p = prev?.[x.key];
+      if (!p || p.name !== x.f.name || !x.el) continue;
+      const d = x.f.hp - p.hp;
+      let k = 0;
+      // 이 턴에 피했으면
+      if (lines.some((l) => l.startsWith(x.f.name) && /날렵하게 피했다|흘려보냈다/.test(l))) btFloat(x.el, '회피', 'miss', k++);
+      // 한 턴에 맞기도 하고 회복하기도 하면 둘 다 보여 줌 ("체력을 N 되찾았다" 줄로 회복량을 앎)
+      let heal = 0;
+      for (const l of lines) { if (!l.startsWith(x.f.name)) continue; const m = /체력을 (\d+) 되찾았다/.exec(l); if (m) heal += Number(m[1]); }
+      heal = Math.min(heal, Math.max(0, x.f.hpMax - p.hp));
+      const dmg = Math.max(0, heal - d);
+      if (dmg > 0) {
+        const big = dmg >= x.f.hpMax * 0.2 || lines.some((l) => l.includes('급소를 찔렀다'));
+        btPlay(x.el, big ? 'fx-crit' : 'fx-hit');
+        btFloat(x.el, `−${dmg}`, big ? 'dmg big' : 'dmg', k++);
+      }
+      if (heal > 0 || (d > 0 && !dmg)) {
+        const h = heal || d;
+        if (dmg > 0) setTimeout(() => btPlay(x.el, 'fx-heal'), 450); else btPlay(x.el, 'fx-heal');
+        btFloat(x.el, `+${h}`, 'heal', k++);
+      }
+      if (x.f.down && p.hp > 0) btPlay(x.el, 'fx-down');
+    }
+    // 연계가 터지면 노린 적 쪽에 금빛
+    if (lines.some((l) => l.startsWith('연계!'))) {
+      const t = btFxTargets(v).find((x) => x.key === (v.foes && v.foes.length > 1 ? `f${v.target}` : 'foe'));
+      btPlay(t?.el, 'fx-combo');
+    }
+    BT.fxPrev = now;
+    BT.fxLines = [];
+  }
   function btAddLines(lines, turn) {
+    if (BT) (BT.fxLines ||= []).push(...lines);
     const log = $('bt-log');
     if (turn != null) { const t = document.createElement('div'); t.className = 't'; t.textContent = turn ? `${turn}턴` : ''; if (turn) log.appendChild(t); }
     for (const l of lines) {
@@ -4783,7 +4954,10 @@
   function renderBattle() {
     const v = BT.view;
     btFighter($('bt-me'), v.me, true);
-    btFighter($('bt-foe'), v.foe, false);
+    $('bt-foe').classList.remove('many');
+    $('bt-foe').parentElement.classList.toggle('multi', !!(v.foes && v.foes.length > 1));
+    if (v.foes && v.foes.length > 1) btFoes($('bt-foe'), v);
+    else btFighter($('bt-foe'), v.foe, false);
     // 상대가 다음 턴에 할 일 (사냥감·강적만)
     const it = $('bt-intent');
     it.hidden = !v.intent;
@@ -4792,6 +4966,25 @@
       it.innerHTML = '<span class="k">다음 턴</span><div><b></b><small></small></div>';
       it.querySelector('b').textContent = v.intent.text;
       it.querySelector('small').textContent = v.intent.hint;
+      // 무리: 같은 일을 하려는 적은 이름을 묶어 한 줄로 ("회색 늑대, 굶주린 회색 늑대가 … 기세다!")
+      if (v.foes && v.foes.length > 1) {
+        const groups = new Map();
+        for (const f of v.foes) {
+          if (!f.intent || f.down) continue;
+          const rest = f.intent.text.replace(f.name, '').replace(/^[이가] /, '');
+          if (!groups.has(rest)) groups.set(rest, { kind: f.intent.kind, names: [] });
+          groups.get(rest).names.push(f.name);
+        }
+        const R = { heavy: 4, multi: 3, debuff: 2, self: 1, attack: 0 };
+        const list = [...groups.entries()].sort((p, q) => R[q[1].kind] - R[p[1].kind]).map(([rest, g]) => {
+          const n = g.names.join(', ');
+          return `${n}${josa(n, '이', '가')} ${rest}`;
+        });
+        it.querySelector('b').textContent = list[0] || v.intent.text;
+        // 평범한 공격만 남은 줄은 굳이 덧붙이지 않음
+        const more = [...groups.entries()].sort((p, q) => R[q[1].kind] - R[p[1].kind]).slice(1).filter(([, g]) => g.kind !== 'attack');
+        if (more.length) { const m = document.createElement('small'); m.className = 'more'; m.textContent = list.slice(1, 1 + more.length).join(' '); it.querySelector('div').appendChild(m); }
+      }
     }
     // 턴과 남은 시간
     const left = v.deadline && !v.over ? Math.max(0, Math.ceil((v.deadline - Date.now()) / 1000)) : null;
@@ -4829,7 +5022,16 @@
         }
         const bigHit = v.intent && ['heavy', 'multi', 'debuff'].includes(v.intent.kind);
         add('방어', bigHit ? '특기 피해 ¼ · 반격' : '피해 절반, 기력 +3', { type: 'guard' }, { suggest: bigHit });
-        add(v.kind === 'duel' ? '항복' : '물러나기', v.kind === 'duel' ? '결투를 포기한다' : '전리품 없이 피한다', { type: 'flee' });
+        add(v.kind === 'duel' ? '항복' : '물러나기', v.kind === 'duel' ? '결투를 포기한다' : v.foes ? '쓰러뜨린 만큼만 얻는다' : '전리품 없이 피한다', { type: 'flee' });
+        // 사냥: 나머지는 예전처럼 알아서 (기력을 조금 남기고, 체력이 낮아지면 물러남)
+        if (v.kind === 'hunt') {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'btn auto';
+          b.innerHTML = '<span>나머지는 자동으로</span><small>알아서 싸우고, 위험하면 물러난다</small>';
+          b.addEventListener('click', btAuto);
+          acts.appendChild(b);
+        }
       }
     }
     // 결과
@@ -4843,13 +5045,14 @@
       for (const l of BT.result?.lines || []) { const li = document.createElement('li'); li.textContent = l; r.querySelector('ul').appendChild(li); }
       for (const it of BT.result?.items || []) { const li = document.createElement('li'); li.textContent = `${S.items[it.id]?.name} ×${it.qty}`; r.querySelector('ul').appendChild(li); }
     }
+    btFx(v);
   }
   // 이 행동으로 이을 수 있는 연계 설명 (버튼 위에 마우스를 올리면)
   function comboHints(id) {
     return Object.values(S.combat.combos || {}).filter((c) => c.skill.includes(id)).map((c) => `연계 · ${c.name}: ${c.desc}`);
   }
   function openBattle(view, { title, lines = [], log = null, result = null, replay = false } = {}) {
-    BT = { view, title, result, replay, waiting: !!view.waiting, foeReady: false };
+    BT = { view, title, result, replay, waiting: !!view.waiting, foeReady: false, fxPrev: null, fxLines: [] };
     $('battle-title').textContent = title || (view.kind === 'duel' ? '결투' : view.kind === 'elite' ? '강적' : '전투');
     $('bt-log').replaceChildren();
     if (lines.length) btAddLines(lines, null);
@@ -4862,9 +5065,10 @@
   }
   function btAct(act) {
     if (!BT || BT.view.over) return;
+    if (BT.view.foes) act = { ...act, t: BT.view.target };
     socket.emit('battle:act', act, (res) => {
       if (res.error) return toast(res.error);
-      if (BT.view.kind === 'elite') {
+      if (BT.view.kind !== 'duel') {
         if (res.over) return; // 마지막 턴은 'battle:end'가 보여 줌
         btAddLines(res.lines, res.view.turn);
         BT.view = res.view;
@@ -4872,6 +5076,17 @@
         return;
       }
       BT.waiting = !!res.waiting;
+      renderBattle();
+    });
+  }
+  function btAuto() {
+    if (!BT || BT.view.over) return;
+    BT.auto = true;
+    socket.emit('battle:auto', {}, (res) => {
+      if (res.error) { BT.auto = false; return toast(res.error); }
+      if (!BT) return;
+      for (const t of res.log || []) btAddLines(t.lines, t.turn);
+      BT.auto = false;
       renderBattle();
     });
   }
@@ -4884,7 +5099,7 @@
   }
   function onBattleEnd(e) {
     if (!BT) openBattle(e.view, {});
-    else if (e.view.log?.length) btAddLines(e.view.log, e.view.turn);
+    else if (e.view.log?.length && !BT.auto) btAddLines(e.view.log, e.view.turn); // 자동으로 끝냈으면 기록은 한꺼번에 붙임
     BT.view = e.view;
     BT.result = e.result;
     BT.waiting = false;
@@ -4892,7 +5107,13 @@
     if (e.result?.items?.length) fetchInv();
   }
   $('battle-dlg').addEventListener('cancel', (e) => { if (BT && !BT.view.over && !BT.replay) e.preventDefault(); });
-  $('battle-dlg').addEventListener('close', () => { clearInterval(btTimer); BT = null; });
+  $('battle-dlg').addEventListener('close', () => {
+    clearInterval(btTimer);
+    // 사냥·강적: 창을 닫으면 결과를 지역 카드에도 남기고, 생긴 일이 있으면 이어서 보여 줌
+    const r = BT && !BT.replay && BT.view.over && ['hunt', 'elite'].includes(BT.view.kind) ? BT.result : null;
+    BT = null;
+    if (r) showResult({ ...r, log: null, done: true });
+  });
   $('bt-close').addEventListener('click', () => $('battle-dlg').close());
   // 다시 접속했을 때 싸우던 전투가 있으면 다시 엶
   function resumeBattle() {

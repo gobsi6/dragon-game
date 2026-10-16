@@ -584,6 +584,20 @@ io.on('connection', (socket) => {
       sendMe(socket, d);
       return ack({ ok: true, result: res });
     }
+    if (res.hunt) {
+      // 사냥: 직접 싸우는 전투. 끝나면 특성 횟수·이벤트·정신을 살핌 (arena.js가 부름)
+      const place = logic.placeOf(d);
+      const c = { name: PLACES[place].creature, level: PLACES[place].level };
+      res.battle = arena.startHunt(d, res.battle, c, (dd, r) => {
+        if (logic.isCorrupted(dd.region)) r.lines.push(...logic.traitCount(dd, 'corrupt'));
+        r.lines.push(...logic.traitCount(dd, 'hunt'));
+        if (r.wound) r.lines.push(...logic.traitCount(dd, 'wound'));
+        if (!r.fall) r.event = life.rollEvent(dd, db.kinLoad(dd.id), (id) => db.itemCount(dd.id, id), 'hunt');
+      });
+      db.saveState(d);
+      sendMe(socket, d);
+      return ack({ ok: true, result: res });
+    }
     // 오염된 땅: 탐사·채집은 정신이 깎이고, 오염 결정이 나오기도 함 (사냥은 몬스터가 깎음)
     const type = str(payload?.type);
     if (logic.isCorrupted(d.region)) {

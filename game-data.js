@@ -801,6 +801,17 @@ const COMBAT = {
   xpWin: 15, xpLose: 5,
   // 사냥감 세기: [기본, 사냥터 Lv.1당]. 강적은 체력·공격에 배율
   creature: { hp: [27, 4.2], atk: [8, 0.85], def: [3.5, 0.4], eliteHp: 1.8, eliteAtk: 1.2 },
+  // 무리 조우: 사냥하다 여러 마리를 한꺼번에 만남. 함께 나온 사냥감은 조금 약하고(체력·공격 배율), 쓰러뜨린 만큼 전리품이 더 나옴
+  group: {
+    from: 2,             // 사냥터 Lv. 이만큼부터 무리가 나옴
+    chance: 0.3,         // 무리를 만날 확률
+    threeFrom: 5, three: 0.25, // 사냥터 Lv.5부터는 무리 중 이 확률로 세 마리
+    hp: 0.5, atk: 0.6,   // 함께 나온 사냥감의 세기
+    prefixes: ['어린', '굶주린', '사나운', '떠돌이'],
+    splash: 0.4,         // 숨결이 다른 적에게 번지는 피해 비율
+    xp: 0.5, gold: 0.6, dropChance: 0.5, // 함께 나온 사냥감 한 마리당 경험치·금화 배율, 전리품 확률 배율
+    maxTurns: 16,        // 무리와 싸울 때 최대 턴
+  },
 };
 // 종류마다 하나뿐인 숨결. 기력 12, 3턴마다
 const BREATHS = {
@@ -820,7 +831,7 @@ const ELEMENTS = { fire: '화염', acid: '산', ice: '얼음', lightning: '번�
 const SKILLS = {
   tail:   { name: '꼬리치기',     lv: 1, en: 4,  cd: 1, power: 1.25, desc: '꼬리를 휘둘러 묵직하게 친다. 피해 ×1.25.' },
   harden: { name: '비늘 세우기',  lv: 2, en: 5,  cd: 3, self: { harden: 2 }, desc: '비늘을 곤두세워 두 턴 동안 받는 피해가 절반이 된다.' },
-  roar:   { name: '포효',         lv: 3, en: 6,  cd: 3, debuff: { weaken: 3 }, majesty: true, desc: '세 턴 동안 상대의 공격을 30% 꺾는다. 위엄이 높을수록 잘 통한다.' },
+  roar:   { name: '포효',         lv: 3, en: 6,  cd: 3, debuff: { weaken: 3 }, majesty: true, desc: '세 턴 동안 상대의 공격을 30% 꺾는다. 위엄이 높을수록 잘 통한다. 적이 여럿이면 모두에게 울린다.' },
   mend:   { name: '치유',         lv: 4, en: 8,  cd: 4, heal: { base: 6, mag: 0.9, pct: 0.12 }, cleanse: true, desc: '상처를 핥아 체력을 되찾고 화상·중독·출혈을 씻어 낸다. 지혜가 높을수록 많이 회복한다. 쓰러진 드래곤을 일으킬 때도 더 많이 회복시킨다.' },
   gust:   { name: '날개 돌풍',    lv: 5, en: 6,  cd: 3, power: 0.8, self: { dodge: 1 }, desc: '거센 바람으로 피해 ×0.8, 다음 공격 한 번을 반드시 피한다.' },
   rend:   { name: '찢어발기기',   lv: 7, en: 8,  cd: 3, power: 1.2, debuff: { bleed: 3 }, desc: '발톱으로 깊이 찢어 피해 ×1.2, 세 턴 동안 피를 흘리게 한다.' },
