@@ -1312,6 +1312,12 @@
   .toast { width: max-content; line-height: 1.5; }
   .toast #toast-text { flex: 1 1 auto; min-width: 0; }
   .toast .btn { flex: none; white-space: nowrap; }
+  .toast { overflow: hidden; }
+  .toast #toast-btn2 { background: transparent; color: #D5DCE2; border-color: rgba(213, 220, 226, .45); margin-left: -6px; }
+  .toast #toast-btn2:hover { color: #fff; border-color: #fff; }
+  /* 저절로 사라지기까지 남은 시간 */
+  .toast .toast-time { position: absolute; left: 0; bottom: 0; height: 2px; width: 100%; background: #9DB3C6; transform-origin: left; }
+  @keyframes toast-time { from { transform: scaleX(1); } to { transform: scaleX(0); } }
   @media (max-width: 520px) { .toast { width: calc(100% - 32px); } }
   /* 업데이트 알림: 화면 위쪽 가운데 */
   .update-bar { position: fixed; left: 50%; top: calc(var(--head-h, 0px) + 10px); transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: 10px; width: max-content; max-width: calc(100vw - 24px); padding: 10px 12px 10px 14px; background: var(--steel-d); color: #E9F0F6; border-radius: 4px; box-shadow: 0 8px 24px rgba(20, 30, 40, .28); font-size: 13.5px; line-height: 1.45; animation: bt-in .3s ease-out; }
@@ -1880,7 +1886,7 @@
   <button class="btn primary" type="button" id="update-go">새로고침</button>
   <button class="x" type="button" id="update-later" aria-label="나중에">나중에</button>
 </div>
-<div class="toast" id="toast" hidden><span id="toast-text"></span><button class="btn" id="toast-btn" type="button" hidden></button></div>
+<div class="toast" id="toast" hidden><span id="toast-text"></span><button class="btn" id="toast-btn" type="button" hidden></button><button class="btn" id="toast-btn2" type="button" hidden></button><i class="toast-time" id="toast-time" hidden></i></div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
@@ -1934,14 +1940,21 @@
   }
 
   let toastTimer = null;
+  // action: { label, run, alt: { label, run }(두 번째 버튼), ttl(이 시간이 지나면 저절로 사라짐, ms) }
   function toast(text, action) {
     clearTimeout(toastTimer);
     $('toast-text').textContent = text;
-    const b = $('toast-btn');
+    const b = $('toast-btn'), b2 = $('toast-btn2'), tm = $('toast-time');
     b.hidden = !action;
     if (action) { b.textContent = action.label; b.onclick = action.run; }
+    b2.hidden = !action?.alt;
+    if (action?.alt) { b2.textContent = action.alt.label; b2.onclick = () => { hideToast(); action.alt.run?.(); }; }
+    // 남은 시간을 아래 가는 막대로 보여 줌
+    tm.hidden = !action?.ttl;
+    if (action?.ttl) { tm.style.animation = 'none'; void tm.offsetWidth; tm.style.animation = `toast-time ${action.ttl}ms linear forwards`; }
     $('toast').hidden = false;
     if (!action) toastTimer = setTimeout(() => ($('toast').hidden = true), 2600);
+    else if (action.ttl) toastTimer = setTimeout(() => ($('toast').hidden = true), action.ttl);
   }
   const hideToast = () => ($('toast').hidden = true);
   // ── 새 버전 알림 ──
@@ -3019,12 +3032,19 @@
     return card;
   }
 
+  // 둥지 정보와 소지품을 한꺼번에 받아 옴 (예전엔 하나 받고 나서 다음을 받아서 열릴 때 느렸음)
   function openNest() {
-    socket.emit('nest:get', {}, (res) => {
+    let got = null, invOk = false;
+    const ready = () => { if (got && invOk) drawNest(got); };
+    socket.emit('nest:get', {}, (res) => { got = res; ready(); });
+    fetchInv(() => { invOk = true; ready(); });
+  }
+  function drawNest(res) {
+    {
       if (res.error) return toast(res.error);
       const n = res.nest;
       const me = S.me;
-      fetchInv(() => {
+      {
         const body = $('nest-body');
         body.replaceChildren();
         const add = (html) => { const d = document.createElement('div'); d.innerHTML = html; body.appendChild(d); return d; };
@@ -3131,8 +3151,8 @@
         }
 
         openPanel('nest-dlg');
-      });
-    });
+      }
+    }
   }
 
   // ── 성향 설명: 지금 성향의 장점과 단점 ──
@@ -5231,14 +5251,17 @@
   }
 
   // ── 결투장 ──
+  // 결투장 목록과 결투 기록을 한꺼번에 받아 옴
   function openArena() {
-    socket.emit('arena:list', {}, (res) => {
-      if (res.error) return toast(res.error);
-      socket.emit('arena:history', {}, (h) => {
-        renderArena(res, h.error ? [] : h.list);
-        openPanel('arena-dlg');
-      });
-    });
+    let list = null, hist = null;
+    const ready = () => {
+      if (!list || !hist) return;
+      if (list.error) return toast(list.error);
+      renderArena(list, hist.error ? [] : hist.list);
+      openPanel('arena-dlg');
+    };
+    socket.emit('arena:list', {}, (res) => { list = res; ready(); });
+    socket.emit('arena:history', {}, (h) => { hist = h; ready(); });
   }
   // 결투 기록: 누가 걸었고 어떻게 끝났는지. 눌러서 다시 볼 수 있음
   function renderDuelHistory(body, list) {
@@ -6273,7 +6296,8 @@
     socket.on('rival:near', (x) => {
       const who = x.mutual ? '숙적' : x.mine ? '라이벌' : '나를 라이벌로 정한';
       const text = x.arrived ? `${who} ${x.name}${josa(x.name, '이', '가')} 이곳에 날아왔다!` : `${who} ${x.name}${josa(x.name, '이', '가')} 이곳에 있다!`;
-      toast(text, { label: '결투 신청', run: () => { hideToast(); challenge({ id: x.id, name: x.name }, 'live'); } });
+      // 결투 신청 / 넘어간다. 고르지 않으면 20초 뒤 저절로 사라짐
+      toast(text, { label: '결투 신청', run: () => { hideToast(); challenge({ id: x.id, name: x.name }, 'live'); }, alt: { label: '넘어간다' }, ttl: 20000 });
     });
     socket.on('gift:got', (g) => { giftQ.push(g); fetchInv(); showGift(); });
     // 다른 드래곤이 치유해 줌
