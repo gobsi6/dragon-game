@@ -480,6 +480,21 @@
   .who .rage { font-size: 11px; color: #fff; background: #A63E4B; padding: 0 6px; border-radius: 2px; margin-left: auto; margin-right: 2px; white-space: nowrap; }
   .log .sys.alarm { color: #A63E4B; font-weight: 600; font-size: 12.5px; }
 
+  /* ── 설정: 내 드래곤 · 계정 ── */
+  .bio-form { display: flex; flex-direction: column; gap: 10px; padding: 12px; background: #fff; border: 1px solid var(--line-in); }
+  .bio-g { display: flex; gap: 6px; }
+  .bio-g select { flex: none; min-height: 40px; padding: 0 8px; background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: 3px; font: inherit; }
+  .bio-g .input { flex: 1; min-width: 0; min-height: 40px; }
+  #bio-desc { min-height: 92px; padding: 10px 12px; resize: vertical; font: inherit; line-height: 1.6; }
+  .field span small { color: var(--muted); font-size: 11.5px; margin-left: 4px; }
+  .linkbtn.danger { color: #A63E4B; border-color: #E6C3C7; align-self: flex-start; }
+  .btn.danger { background: #8E3340; border-color: #6E2229; color: #FBEFF0; font-weight: 600; }
+  .leave { display: flex; flex-direction: column; gap: 10px; }
+  .leave-box { display: flex; flex-direction: column; gap: 10px; padding: 12px; background: #FBF1F2; border: 1px solid #E6C3C7; }
+  .leave-box p { margin: 0; font-size: 13px; line-height: 1.6; color: #6E2229; }
+  .pf-bio { margin: 0; padding: 10px 12px; background: var(--surface-2); border-left: 3px solid var(--line-soft); font: 400 14px/1.7 var(--serif); color: var(--ink-2); white-space: pre-line; }
+  .char-bio { margin: 0; font: 400 14px/1.7 var(--serif); color: var(--ink-2); white-space: pre-line; }
+
   /* ── 쓰러짐 · 긴 잠 · 남겨진 둥지 ── */
   .fall-lead { margin: 0; font: 400 15px/1.7 var(--serif); color: var(--ink); }
   .scar-row { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -766,7 +781,7 @@
 
   .log { flex: 1; min-height: 360px; max-height: 560px; overflow-y: auto; padding: 18px 10px; display: flex; flex-direction: column; gap: 16px; font-size: 14px; line-height: 1.55; }
   .log .msg { display: flex; flex-direction: column; gap: 3px; overflow-wrap: anywhere; }
-  .log .msg b { font: 700 13px/1.4 var(--serif); color: var(--t); }
+  .log .msg b { align-self: flex-start; padding: 1px 8px 2px; border-radius: 3px; background: var(--t); color: #fff; font: 700 12.5px/1.45 var(--serif); letter-spacing: .01em; }
   .log .sys { text-align: center; color: var(--muted); font-size: 12px; }
   .say { display: flex; gap: 8px; margin-top: auto; padding: 10px 2px 2px; border-top: 1px solid var(--line-in); }
   .say .input { flex: 1; min-width: 0; min-height: 40px; font-size: 14px; }
@@ -1250,9 +1265,32 @@
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="settings-title">설정</h2></div>
   <div class="body">
+    <h3>내 드래곤</h3>
+    <div class="bio-form">
+      <label class="field"><span>성별</span>
+        <div class="bio-g">
+          <select id="bio-gender-sel" aria-label="성별 고르기"><option value="">정하지 않음</option><option>남성</option><option>여성</option><option value="__other">직접 쓰기</option></select>
+          <input class="input" id="bio-gender" maxlength="12" placeholder="12자까지" aria-label="성별 직접 쓰기" hidden>
+        </div>
+      </label>
+      <label class="field"><span>특징 <small id="bio-count"></small></span>
+        <textarea class="input" id="bio-desc" maxlength="300" rows="4" placeholder="예: 왼쪽 뿔이 부러져 있다. 반짝이는 것을 모으는 버릇이 있고, 비 오는 날을 싫어한다."></textarea>
+      </label>
+      <div class="row"><button class="btn primary" type="button" id="bio-save">저장</button></div>
+    </div>
     <h3>결투</h3>
     <label class="setopt"><input type="checkbox" id="set-duel"><span><b>결투 신청 받기</b><small>끄면 아무도 나에게 결투를 걸 수 없고, 나도 결투를 신청할 수 없다.</small></span></label>
     <label class="setopt"><input type="checkbox" id="set-auto"><span><b>자동 결투 허용</b><small>켜 두면 내가 접속해 있지 않아도, 다른 드래곤이 내 스킬 구성대로 싸우는 자동 결투를 걸 수 있다. 결투로 다치지는 않고, 결과는 다음 접속 때 알려 준다.</small></span></label>
+    <h3>계정</h3>
+    <div class="leave">
+      <button class="linkbtn danger" type="button" id="leave-open">계정 탈퇴</button>
+      <div class="leave-box" id="leave-box" hidden>
+        <p>탈퇴하면 계정과 드래곤, 식구, 소지품, 동료 관계, 텔레파시가 모두 지워진다. <b>되돌릴 수 없다.</b></p>
+        <label class="field"><span>비밀번호 확인</span><input class="input" type="password" id="leave-pw" autocomplete="current-password"></label>
+        <p class="error" id="leave-error" role="alert"></p>
+        <div class="row"><button class="btn" type="button" id="leave-cancel">그만두기</button><button class="btn danger" type="button" id="leave-go">탈퇴하기</button></div>
+      </div>
+    </div>
     <div class="row"><button class="btn" type="button" id="settings-close">닫기</button></div>
   </div>
 </dialog>
@@ -2772,12 +2810,14 @@
     const rows = document.createElement('div');
     rows.className = 'pf-rows';
     const row = (k, v) => { const r = document.createElement('div'); r.innerHTML = '<span></span><b></b>'; r.children[0].textContent = k; r.children[1].textContent = v; rows.appendChild(r); };
+    if (p.bio?.gender) row('성별', p.bio.gender);
     row('인간을 대하는 방식', p.stanceName);
     row('용족 명성', p.fame);
     if (p.region) row('지금 있는 곳', p.online ? S.regions[p.region].name : `${S.regions[p.region].name} (마지막으로 본 곳)`);
     if (p.nest) row('둥지', S.regions[p.nest].name);
     row('둥지 식구', p.kin.length ? p.kin.map((k) => `${k.name}(${k.stage})`).join(', ') : '없음');
     if (p.lineage) row('계보', `${p.lineage}마리 독립`);
+    if (p.bio?.desc) { const bd = document.createElement('p'); bd.className = 'pf-bio'; bd.textContent = p.bio.desc; body.appendChild(bd); }
     body.appendChild(rows);
     if (p.traits?.length) {
       const h = document.createElement('div');
@@ -3133,8 +3173,11 @@
     const t = document.createElement('div');
     t.innerHTML = '<b></b><small></small>';
     t.querySelector('b').textContent = me.name;
-    t.querySelector('small').textContent = `${S.kinds[me.kind]?.name || ''} · Lv. ${me.level}${me.stanceName ? ` · ${me.stanceName}` : ''}`;
+    t.querySelector('small').textContent = `${S.kinds[me.kind]?.name || ''}${me.bio?.gender ? ` · ${me.bio.gender}` : ''} · Lv. ${me.level}${me.stanceName ? ` · ${me.stanceName}` : ''}`;
     head.appendChild(t);
+    const old = $('char-head').nextElementSibling;
+    if (old?.classList.contains('char-bio')) old.remove();
+    if (me.bio?.desc) { const bd = document.createElement('p'); bd.className = 'char-bio'; bd.textContent = me.bio.desc; $('char-head').after(bd); }
 
     const box = $('char-traits');
     box.replaceChildren();
@@ -3747,8 +3790,52 @@
   $('invite-dlg').addEventListener('cancel', (e) => { e.preventDefault(); answerInvite(false); });
 
   // ── 설정 ──
+  function fillBio() {
+    const b = S.me?.bio || { gender: '', desc: '' };
+    const preset = ['', '남성', '여성'].includes(b.gender);
+    $('bio-gender-sel').value = preset ? b.gender : '__other';
+    $('bio-gender').hidden = preset;
+    $('bio-gender').value = preset ? '' : b.gender;
+    $('bio-desc').value = b.desc;
+    $('bio-count').textContent = `${b.desc.length} / 300`;
+  }
+  $('bio-gender-sel').addEventListener('change', () => {
+    const other = $('bio-gender-sel').value === '__other';
+    $('bio-gender').hidden = !other;
+    if (other) $('bio-gender').focus();
+  });
+  $('bio-desc').addEventListener('input', () => { $('bio-count').textContent = `${$('bio-desc').value.length} / 300`; });
+  $('bio-save').addEventListener('click', () => {
+    const sel = $('bio-gender-sel').value;
+    const gender = sel === '__other' ? $('bio-gender').value.trim() : sel;
+    socket.emit('bio:set', { gender, desc: $('bio-desc').value }, (res) => {
+      if (res.error) return toast(res.error);
+      toast('드래곤의 기록을 고쳤다.');
+    });
+  });
+  function closeLeave() { $('leave-box').hidden = true; $('leave-pw').value = ''; $('leave-error').textContent = ''; }
+  $('leave-open').addEventListener('click', () => { $('leave-box').hidden = false; $('leave-pw').focus(); });
+  $('leave-cancel').addEventListener('click', closeLeave);
+  $('leave-go').addEventListener('click', () => {
+    const pw = $('leave-pw').value;
+    if (!pw) return ($('leave-error').textContent = '비밀번호를 입력해야 한다.');
+    if (!confirm('정말 탈퇴할까? 계정과 드래곤이 모두 지워지고 되돌릴 수 없다.')) return;
+    socket.emit('account:delete', { password: pw }, (res) => {
+      if (res.error) return ($('leave-error').textContent = res.error);
+      store.clear();
+      for (const dl of document.querySelectorAll('dialog[open]')) dl.close();
+      socket = null;
+      show('auth');
+      $('auth-error').textContent = '탈퇴했다. 그동안 함께해 주어 고마웠다.';
+    });
+  });
+
   function openSettings() {
     $('menu').hidden = true;
+    fillBio();
+    closeLeave();
+    $('set-duel').disabled = !S.me;
+    $('set-auto').disabled = !S.me;
     const c = S.me?.combat || {};
     $('set-duel').checked = !!c.duelOn;
     $('set-auto').checked = !!c.autoDuel;

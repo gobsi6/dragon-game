@@ -94,6 +94,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       equip: Object.entries(equip).map(([slot, item]) => ({ slot, item })),
       traits: logic.traitsOf(d).list,
       dead: !!d.dead_at,
+      bio: (() => { try { const b = typeof d.bio === 'string' ? JSON.parse(d.bio || '{}') : (d.bio || {}); const g = b.gender || ''; return { gender: ({ 수컷: '남성', 암컷: '여성' })[g] || g, desc: b.desc || '' }; } catch { return { gender: '', desc: '' }; } })(),
       online: !!e,
       away: !!d.exp_end, resting: !!d.rest_at,
       // 동료와 자기 자신에게만, 그리고 같은 지역이면 보이는 정보

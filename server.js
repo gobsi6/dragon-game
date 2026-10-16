@@ -43,6 +43,16 @@ function josa(word, withBatchim, without) {
   return (c - 0xac00) % 28 ? withBatchim : without;
 }
 
+// 성별과 특징 (설정에서 언제든 바꿈)
+// 성별: 남성·여성 또는 직접 쓰기(12자까지)
+const BIO = { genderMax: 12, descMax: 300 };
+const GENDER_OLD = { 수컷: '남성', 암컷: '여성' }; // 예전 값
+const genderOf = (g) => GENDER_OLD[g] || g || '';
+function bioOf(d) {
+  if (typeof d.bio === 'string' || !d.bio) { try { d.bio = JSON.parse(d.bio || '{}'); } catch { d.bio = {}; } }
+  return { gender: genderOf(d.bio.gender), desc: d.bio.desc || '' };
+}
+
 // ── 계정 (REST) ────────────────────────────────────
 
 app.post('/api/register', (req, res) => {
@@ -119,6 +129,7 @@ const meOf = (d) => ({
   corrupt: { region: logic.corruptedRegion(), until: logic.corruptUntil() },
   fallen: logic.isFallen(d) ? death.view(d) : null,
   scars: death.scarsOf(d),
+  bio: bioOf(d),
   statBonus: logic.bonusOf(d).stats,       // 그중 장신구 몫
   equip: logic.equipOf(d),
   stance: d.stance, stanceName: STANCES[d.stance] || '',
@@ -706,6 +717,46 @@ io.on('connection', (socket) => {
     const msg = { dragonId: d.id, name: d.name, kind: d.kind, text, at: now };
     db.addChat(d.region, msg);
     io.to(d.region).emit('chat', msg);
+  });
+
+  // 성별과 특징
+  socket.on('bio:set', (payload, ack) => {
+    if (typeof ack !== 'function') ack = () => {};
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+    const gender = str(payload?.gender).replace(/\s+/g, ' ').slice(0, BIO.genderMax);
+    const desc = (typeof payload?.desc === 'string' ? payload.desc : '').replace(/\r/g, '').replace(/\n{3,}/g, '\n\n').trim().slice(0, BIO.descMax);
+    const d = entry.dragon;
+    d.bio = { gender, desc };
+    db.setBio(d.id, d.bio);
+    sendMe(socket, d);
+    ack({ ok: true });
+  });
+
+  // 계정 탈퇴: 비밀번호를 다시 확인하고, 계정과 드래곤을 모두 지움 (되돌릴 수 없음)
+  socket.on('account:delete', (payload, ack) => {
+    if (typeof ack !== 'function') ack = () => {};
+    const u = db.getUserByName(user.username);
+    const pw = typeof payload?.password === 'string' ? payload.password : '';
+    if (!u || !pw || !bcrypt.compareSync(pw, u.pw_hash)) return ack({ error: '비밀번호가 맞지 않는다.' });
+    if (u.is_gm && db.gmCount() <= 1 && db.userCount() > 1) {
+      return ack({ error: '마지막 GM은 탈퇴할 수 없다. GM 도구에서 다른 드래곤에게 GM 권한을 준 뒤 탈퇴하자.' });
+    }
+    const entry = entryOf(socket);
+    if (entry) {
+      const d = entry.dragon;
+      social.onLeave(d.id);
+      arena.onLeave(d.id);
+      online.delete(d.id);
+      socket.leave(d.region);
+      system(d.region, `${d.name}${josa(d.name, '이', '가')} 구름 너머로 영영 떠났다.`);
+      broadcastPresence(d.region);
+      broadcastCounts();
+    }
+    db.deleteUser(u.id);
+    socket.data.kicked = true;
+    ack({ ok: true });
+    socket.disconnect(true);
   });
 
   social.attach(socket);

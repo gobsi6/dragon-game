@@ -103,7 +103,8 @@ addCol('place', 'TEXT');
 // 16단계: 쓰러짐·상흔·죽음
 addCol('fallen', 'TEXT');                           // 쓰러져 선택을 기다리면 { at, region }, 죽은 뒤에는 남긴 둥지 { region, until, closed }
 addCol('scars', "TEXT NOT NULL DEFAULT '[]'");      // 상흔이 남은 능력치
-addCol('dead_at', 'INTEGER');                       // 긴 잠에 든 시각                            // 15단계: 지역 안의 장소 (없으면 지역 입구)                          // 광폭화 중이면 { at, until, region, hp, hpMax }
+addCol('dead_at', 'INTEGER');                       // 긴 잠에 든 시각
+addCol('bio', "TEXT NOT NULL DEFAULT '{}'");        // 17단계: 성별과 특징 { gender, desc }                            // 15단계: 지역 안의 장소 (없으면 지역 입구)                          // 광폭화 중이면 { at, until, region, hp, hpMax }
 if (addCol('stat_pts', 'INTEGER NOT NULL DEFAULT 0')) {
   db.exec(`UPDATE dragons SET stat_pts = (level - 1) * ${require('./game-data').STAT_POINTS.perLevel}`);
 }
@@ -186,7 +187,7 @@ db.exec(`
 // 그림(avatar)을 뺀 드래곤 정보 열
 const DRAGON_FIELDS = `id, name, kind, region, avatar_ver, level, xp, hp, hp_max, en, en_max,
   ap, ap_max, gold, claw, scale, wing, wisdom, majesty, stance,
-  ap_at, hp_at, en_at, exp_start, exp_end, exp_region, equip, rep, stance_at, nest, rest_at, hoard_gold, fame, pending_event, traits, combat, last_seen, stat_pts, mind, mind_at, berserk, place, fallen, scars, dead_at,
+  ap_at, hp_at, en_at, exp_start, exp_end, exp_region, equip, rep, stance_at, nest, rest_at, hoard_gold, fame, pending_event, traits, combat, last_seen, stat_pts, mind, mind_at, berserk, place, fallen, scars, dead_at, bio,
   (avatar IS NOT NULL) AS has_avatar`;
 
 const q = {
@@ -280,6 +281,10 @@ const q = {
   dragonIds:    db.prepare('SELECT id FROM dragons'),
   berserkIds:   db.prepare('SELECT id FROM dragons WHERE berserk IS NOT NULL'),
   // 죽음
+  delUser:      db.prepare('DELETE FROM users WHERE id = ?'),
+  gmCount:      db.prepare("SELECT COUNT(*) AS n FROM users WHERE is_gm = 1"),
+  userCount:    db.prepare("SELECT COUNT(*) AS n FROM users WHERE username NOT LIKE '#묘비#%'"),
+  setBio:       db.prepare('UPDATE dragons SET bio = ? WHERE id = ?'),
   graveIds:     db.prepare("SELECT id FROM dragons WHERE dead_at IS NOT NULL AND fallen IS NOT NULL AND fallen NOT LIKE '%\"closed\":true%'"),
   graveUser:    db.prepare('INSERT INTO users (username, pw_hash, is_gm, created_at) VALUES (?, ?, 0, ?)'),
   setOwner:     db.prepare('UPDATE dragons SET user_id = ?, dead_at = ? WHERE id = ?'),
@@ -388,6 +393,11 @@ module.exports = {
   dragonIds: () => q.dragonIds.all().map((r) => r.id),
   berserkIds: () => q.berserkIds.all().map((r) => r.id),
   graveIds: () => q.graveIds.all().map((r) => r.id),
+  // 계정 탈퇴: 계정과 그 드래곤, 드래곤에 딸린 모든 것(식구·소지품·관계·텔레파시…)이 함께 지워짐
+  deleteUser: (userId) => q.delUser.run(userId),
+  gmCount: () => q.gmCount.get().n,
+  userCount: () => q.userCount.get().n,
+  setBio: (dragonId, bio) => q.setBio.run(JSON.stringify(bio), dragonId),
   // 긴 잠: 소지품과 금화를 둥지(보물더미)로 옮기고, 계정에서 떼어 냄 (계정은 새 드래곤을 만들 수 있게)
   bury: db.transaction((d) => {
     for (const { item, qty } of q.invList.all(d.id)) q.hoardAdd.run(d.id, item, qty);
