@@ -107,7 +107,7 @@ module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broa
     const levelUp = logic.gainXp(helper, xp);
     db.saveState(helper);
     shout(`[구조] ${ga(helper.name)} 쓰러진 ${eul(t.name)} 일으켜 세웠다.`);
-    const tl = `${ga(helper.name)} 찾아와 ${healer ? '상처를 핥아 주며 ' : ''}일으켜 주었다. 상흔 없이 다시 일어섰다. (체력 ${Math.round(hpPct * 100)}%)`;
+    const tl = `${ga(helper.name)} 찾아와 ${healer ? '치유 마법으로 상처를 아물게 하며 ' : ''}일으켜 주었다. 상흔 없이 다시 일어섰다. (체력 ${Math.round(hpPct * 100)}%)`;
     const e = live(t.id);
     if (e) { sendMe(e.socket, t); e.socket.emit('rescued', { by: helper.name, lines: [tl] }); broadcastPresence(t.region); }
     else db.noteAdd(t.id, tl);

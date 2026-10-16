@@ -9,7 +9,7 @@
 // 텔레파시  드래곤끼리 마음으로 주고받는 쪽지. 대륙 어디서든 닿고, 상대가 잠들어(접속하지 않아) 있으면
 //        마음에 남아 있다가 깨어날 때 들림. 상대가 나를 '경계'로 표시했으면 닿지 않음
 
-const { ITEMS, KINDS, REGIONS, STANCES, MIND, fameTier } = require('./game-data');
+const { ITEMS, KINDS, REGIONS, STANCES, MIND, SKILLS, HEAL_OTHER, fameTier } = require('./game-data');
 
 const TRADE_MAX_ITEMS = 6;            // 한쪽이 올려놓을 수 있는 물건 종류
 const TP_MAX = 200;                   // 텔레파시 한 번의 글자 수
@@ -28,7 +28,7 @@ const MEMO_MAX = 200;     // 관계 메모 (글자 수, 상대도 볼 수 있음
 const itemText = (items) => items.map(({ id, qty }) => `${ITEMS[id].name}${qty > 1 ? ` ${qty}개` : ''}`).join(', ');
 const giveText = (gold, items) => [gold ? `금화 ${gold}닢` : '', itemText(items)].filter(Boolean).join(', ');
 
-module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life }) {
+module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life, inBattle = () => false }) {
   const trades = new Map();   // 교환 창: id → { id, a, b, side: { [드래곤 id]: { gold, items, ready } } }
   const invites = new Map();  // 교환 요청: id → { from, to, at }
   let nextId = 1;
@@ -58,6 +58,33 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     }
     if (!t) return '동료가 아니면 같은 지역에 함께 있을 때만 할 수 있다.';
     if (!sameRegion(me.id, them)) return '동료가 아니면 같은 지역에 함께 있을 때만 할 수 있다.';
+    return null;
+  }
+
+  // ── 다른 드래곤 치유하기 ──
+  const healAmount = (healer, t) => {
+    const s = SKILLS.mend;
+    const mag = logic.statsOf(healer).wisdom;
+    return Math.round((s.heal.base + mag * s.heal.mag + logic.hpCap(t) * s.heal.pct) * HEAL_OTHER.bonus * (logic.titleMods(healer).heal || 1));
+  };
+  // 고쳐 줄 수 있는지. 안 되면 이유 (t: 받는 드래곤, 이미 회복 계산한 것)
+  function healWhy(me, t) {
+    if (!SKILLS.mend || me.level < SKILLS.mend.lv) return `치유를 배워야 한다. (레벨 ${SKILLS.mend.lv})`;
+    if (me.id === t.id) return '자기 자신은 전투에서 치유로 고친다.';
+    if (t.dead_at) return '긴 잠에 든 드래곤이다.';
+    if (logic.isFallen(t)) return '쓰러진 드래곤은 지역 카드의 \'일으켜 세우기\'로 돕는다.';
+    if (logic.berserkOf(t)) return '광폭화한 드래곤은 진정시켜야 한다.';
+    if (me.exp_end) return '원정을 떠나 있는 동안에는 할 수 없다.';
+    if (t.exp_end) return '상대가 원정을 떠나 있다.';
+    if (logic.isFallen(me) || logic.berserkOf(me)) return '지금은 할 수 없다.';
+    if (me.region !== t.region) return '같은 지역에 있어야 고쳐 줄 수 있다.';
+    if (inBattle(me.id)) return '싸우는 중이다.';
+    if (inBattle(t.id)) return '상대가 싸우는 중이다.';
+    if (t.hp >= logic.hpCap(t)) return '다친 곳이 없다.';
+    const left = (me.healAt || 0) + HEAL_OTHER.cooldown - Date.now();
+    if (left > 0) return `치유의 기운을 다시 모으는 중이다. (${Math.ceil(left / 60000)}분 뒤)`;
+    if (me.ap < HEAL_OTHER.ap) return `행동력이 모자란다. (${HEAL_OTHER.ap} 필요)`;
+    if (me.en < HEAL_OTHER.en) return `기력이 모자란다. (${HEAL_OTHER.en} 필요)`;
     return null;
   }
 
@@ -130,7 +157,9 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       can: self ? null : {
         gift: reach(viewer, d.id, { needOnline: false }),
         trade: reach(viewer, d.id, { needOnline: true }),
+        heal: (logic.regen(viewer), healWhy(viewer, d)),
       },
+      heal: self ? null : { ap: HEAL_OTHER.ap, en: HEAL_OTHER.en, amount: d.dead_at ? 0 : Math.min(healAmount(viewer, d), Math.max(0, logic.hpCap(d) - d.hp)), learned: viewer.level >= (SKILLS.mend?.lv || 99) },
     };
   }
 
@@ -338,6 +367,47 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       db.memoSet(d.id, id, text);
       relChanged(id); // 상대가 내 기록이나 동료 목록을 보고 있으면 바로 바뀌게
       return { ok: true, memo: text, lines: [text ? '메모를 남겼다. 상대도 볼 수 있다.' : '메모를 지웠다.'] };
+    });
+
+    // ── 다른 드래곤 치유하기 ──
+    on('heal:other', (d, p) => {
+      const id = target(p);
+      if (!id) return { error: '그런 드래곤은 없다.' };
+      const e = live(id);
+      const t = e ? e.dragon : db.getDragon(id);
+      logic.regen(d);
+      if (!t.dead_at) logic.regen(t);
+      const why = healWhy(d, t);
+      if (why) return { error: why };
+      const now = Date.now();
+      const amt = Math.min(healAmount(d, t), logic.hpCap(t) - t.hp);
+      logic.spendAp(d, HEAL_OTHER.ap);
+      if (d.en >= logic.enCap(d)) d.en_at = now;
+      d.en -= HEAL_OTHER.en;
+      d.healAt = now; // 다시 쓰기까지 (서버를 다시 켜면 풀림)
+      t.hp += amt;
+      if (t.hp >= logic.hpCap(t)) t.hp_at = now;
+      const lines = [`${t.name}에게 치유 마법을 펼쳤다. 상처가 빛 속에 아물었다. (${t.name} 체력 +${amt})`];
+      // 명성: 같은 드래곤을 고쳐 줄 때는 한동안 한 번만
+      d.healFame ||= {};
+      if (now - (d.healFame[t.id] || 0) >= HEAL_OTHER.fameEvery) {
+        d.healFame[t.id] = now;
+        const f = logic.addFame(d, HEAL_OTHER.fame);
+        lines.push(`용족 명성 +${HEAL_OTHER.fame}`);
+        if (f) lines.push(f);
+      }
+      const xp = logic.xpOf(d, HEAL_OTHER.xp);
+      const up = logic.gainXp(d, xp);
+      lines.push(`경험치 +${xp}${up ? ` · 레벨이 올랐다! Lv. ${d.level}` : ''}`);
+      lines.push(...logic.traitCount(d, 'healother'));
+      logic.chron(t, 'mark', `${ga(d.name)} 치유 마법으로 상처를 아물게 해 주었다.`);
+      db.saveState(d);
+      db.saveState(t);
+      const text = `${ga(d.name)} 치유 마법으로 상처를 아물게 해 주었다. (체력 +${amt})`;
+      if (e) { sendMe(e.socket, t); e.socket.emit('healed', { by: { id: d.id, name: d.name, kind: d.kind }, amount: amt, text }); }
+      else db.noteAdd(t.id, text);
+      sendMe(socket, d);
+      return { ok: true, amount: amt, lines };
     });
 
     // ── 선물 ──

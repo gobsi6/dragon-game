@@ -430,6 +430,7 @@
   .pf-acts .grp .l { width: 100%; font-size: 12px; color: var(--muted); }
   .pf-acts .btn { min-height: 34px; padding: 0 12px; font-size: 13px; }
   .pf-acts .why { width: 100%; font-size: 12px; color: #A63E4B; }
+  .pf-acts .why.ok { color: var(--muted); }
   .pf-acts .btn.busy { opacity: .6; cursor: progress; }
   /* 관계 메모 (나만 봄) */
   .rel-memo { width: 100%; display: flex; flex-direction: column; gap: 6px; margin-top: 4px; padding: 10px 12px; background: #FBF8EE; border: 1px solid #E8DDBF; border-radius: 3px; }
@@ -3678,6 +3679,15 @@
     g1.appendChild(memo);
     mark();
 
+    // 치유: '치유'를 배웠으면 같은 지역의 다친 드래곤을 고쳐 줌
+    if (p.heal?.learned && !p.dead) {
+      const gh = grp('치유');
+      const hb = btn(gh, p.heal.amount > 0 && !p.can.heal ? `치유해 주기 · 체력 +${p.heal.amount}` : '치유해 주기', () => socialAct('heal:other', { id: p.id }, refreshProfile), { disabled: !!p.can.heal, primary: !p.can.heal });
+      hb.title = `행동력 ${p.heal.ap}, 기력 ${p.heal.en}. 지혜가 높을수록 많이 고친다.`;
+      if (p.can.heal) why(gh, p.can.heal);
+      else { why(gh, `행동력 ${p.heal.ap} · 기력 ${p.heal.en} · 고쳐 주면 명성과 경험치를 얻는다`); gh.lastChild.classList.add('ok'); }
+    }
+
     // 거래
     const g2 = grp('거래');
     btn(g2, '교환하기', () => socialAct('trade:invite', { id: p.id }, refreshProfile), { disabled: !!p.can.trade });
@@ -6160,6 +6170,8 @@
       toast(text, { label: '결투 신청', run: () => { hideToast(); challenge({ id: x.id, name: x.name }, 'live'); } });
     });
     socket.on('gift:got', (g) => { giftQ.push(g); fetchInv(); showGift(); });
+    // 다른 드래곤이 치유해 줌
+    socket.on('healed', (h) => toast(h.text, { label: '고맙다고 전하기', run: () => openTp(h.by.id) }));
     socket.on('gift:inbox', (l) => { giftQ = l || []; showGift(); });
     socket.on('rescue:list', (l) => { S.rescues = l || []; renderRescues(); });
     socket.on('rescued', (r) => { if ($('fall-dlg').open) $('fall-dlg').close(); showResult({ title: '구조', lines: r.lines }); });

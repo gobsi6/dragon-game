@@ -336,7 +336,7 @@ function entryOf(socket) {
 }
 
 // 동료: 프로필, 관계, 선물, 교환 (social.js)
-const social = require('./social')({ db, online, entryOf, sendMe, logic, life });
+const social = require('./social')({ db, online, entryOf, sendMe, logic, life, inBattle: (id) => !!arena && arena.inBattle(id) });
 
 // 강적·결투장·전투 설정·광폭화 (arena.js)
 let arena = null;

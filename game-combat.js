@@ -269,7 +269,7 @@ function perform(b, f, foe, act, lines) {
         const h = healAmount(f, s);
         const before = f.hp;
         f.hp = Math.min(f.hpMax, f.hp + h);
-        lines.push(`${ga(f)} ${s.name}! 체력을 ${Math.round(f.hp - before)} 되찾았다.`);
+        lines.push(`${ga(f)} 치유 마법을 펼쳤다! 상처가 빛 속에 아물며 체력을 ${Math.round(f.hp - before)} 되찾았다.`);
         if (s.cleanse) {
           const gone = ['burn', 'poison', 'bleed'].filter((k) => has(f, k));
           for (const k of gone) f.st[k] = 0;
