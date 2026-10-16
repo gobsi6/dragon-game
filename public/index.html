@@ -571,28 +571,30 @@
   .where .at.show { display: flex; }
   .where .at svg { flex: none; }
   .where .at .sep { color: var(--orn); font-weight: 500; }
-  .pl-head { display: flex; align-items: center; gap: 10px; font: 700 13px/1.4 var(--serif); color: var(--steel-d); }
+  .pl-head { display: flex; align-items: center; gap: 10px; font: 700 13.5px/1.4 var(--serif); color: var(--steel-d); }
   .pl-head::after { content: ""; flex: 1; height: 1px; background: var(--line-soft); }
   .pl-head::before { content: ""; width: 5px; height: 5px; background: var(--orn); transform: rotate(45deg); flex: none; }
-  .pl-head small { order: 3; font: 400 11px/1 var(--sans); color: var(--muted); }
+  .pl-head small { order: 3; font: 400 11.5px/1 var(--sans); color: var(--muted); }
   /* 이곳의 장소: 왼쪽 미니맵(누르면 살펴봄), 오른쪽 위 장소 설명, 아래 사냥감 */
   .pl-wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr); gap: 10px; align-items: stretch; }
   .pl-map { position: relative; min-height: 270px; background: #ECEBE6; border: 1px solid var(--line-in); border-radius: 3px; overflow: hidden; container-type: size; }
   /* 지도 그림과 장소 버튼은 가운데 정사각형 안에 (칸 모양이 바뀌어도 길 끝에 버튼이 맞도록) */
-  .pl-map .sq { position: absolute; left: 50%; top: 50%; width: min(100cqw, 100cqh); height: min(100cqw, 100cqh); transform: translate(-50%, -50%); }
+  .pl-map .sq { position: absolute; left: 50%; top: 50%; width: 270px; height: 270px; max-width: 100%; max-height: 100%; transform: translate(-50%, -50%); }
+  @supports (width: 1cqw) { .pl-map .sq { width: min(100cqw, 100cqh); height: min(100cqw, 100cqh); } }
+  /* 크기는 화면에서도 다시 맞춤 (컨테이너 단위를 모르는 브라우저에서 지도가 0 크기로 접히던 문제) */
   .pl-map .sq > svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
   .pl-map .land-edge { fill: none; stroke: #4F4B3E; stroke-width: 1.5; stroke-linejoin: round; }
-  .pl-map .land-edge.corrupt { stroke: #4A3F78; }
-  .pl-map .rname { position: absolute; left: 10px; top: 8px; font: 700 11.5px/1.3 var(--serif); color: var(--steel-d); letter-spacing: .04em; pointer-events: none; }
-  .pl-map .rname.corrupt { color: #4A3F78; }
+  .pl-map .land-edge.corrupt { stroke: #4C4C52; }
+  .pl-map .rname { position: absolute; left: 10px; top: 8px; font: 700 12px/1.3 var(--serif); color: var(--steel-d); letter-spacing: .04em; pointer-events: none; }
+  .pl-map .rname.corrupt { color: #55555C; }
   /* 장소 핀: 끝이 그 자리를 가리키고, 이름표는 핀 아래에 */
   .pn { --tc: #7C857F; --pin: #FCFBF7; --pin-ink: #2A4256; position: absolute; transform: translate(-50%, -26px); display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 0; background: none; border: 0; cursor: pointer; }
   .pn .pin { width: 20px; height: 27px; overflow: visible; filter: drop-shadow(0 1.5px 1px rgba(42, 46, 51, .35)); transition: transform .15s; transform-origin: 50% 100%; }
   .pn .pin path { fill: var(--pin); stroke: var(--pin-ink); stroke-width: 1.8; }
   .pn .pin circle { fill: var(--tc); }
   .pn .lb { display: flex; flex-direction: column; align-items: center; padding: 1px 5px 2px; background: rgba(252, 251, 247, .9); border: 1px solid rgba(79, 75, 62, .18); border-radius: 3px; white-space: nowrap; }
-  .pn .lb b { font: 700 11px/1.25 var(--serif); color: var(--ink); }
-  .pn .lb small { font: 600 9.5px/1.2 var(--sans); color: var(--tc); }
+  .pn .lb b { font: 700 11.5px/1.25 var(--serif); color: var(--ink); }
+  .pn .lb small { font: 600 10px/1.2 var(--sans); color: var(--tc); }
   .pn.easy { --tc: #7C857F; } .pn.fit { --tc: #3F7A5C; } .pn.hard { --tc: #A87A1C; } .pn.deadly { --tc: #A63E4B; }
   .pn.locked { --tc: #A9ACA8; --pin: #EEEEEA; --pin-ink: #9EA19D; }
   .pn.locked .pin path { stroke-dasharray: 3 2; }
@@ -614,33 +616,53 @@
   @media (prefers-reduced-motion: reduce) { .pn.on::before { animation: none; opacity: .5; } }
   .pl-side { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
   .pl-box { display: flex; flex-direction: column; gap: 5px; padding: 10px 12px; background: var(--surface-2); border: 1px solid var(--line-in); border-radius: 3px; min-width: 0; }
-  .pl-box .k { font-size: 10.5px; color: var(--muted); letter-spacing: .04em; display: flex; align-items: center; gap: 6px; }
+  .pl-box .k { font-size: 11px; color: var(--muted); letter-spacing: .04em; display: flex; align-items: center; gap: 6px; }
   .pl-box .k .now { font: 700 10px/1.4 var(--sans); padding: 0 5px; border-radius: 2px; background: var(--steel-d); color: #fff; letter-spacing: 0; }
   .pl-box .k .peek { font: 600 10px/1.4 var(--sans); padding: 0 5px; border-radius: 2px; border: 1px dashed var(--steel); color: var(--steel-d); letter-spacing: 0; }
   .pl-desc { border-left: 3px solid var(--steel); }
   .pl-desc .nm { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; }
-  .pl-desc .nm b { font: 700 15px/1.3 var(--serif); color: var(--ink); }
-  .pl-desc .lv { font: 700 10px/16px var(--sans); padding: 0 6px; border-radius: 2px; color: #fff; background: var(--tc, #8A938E); }
-  .pl-desc .tr { font: 600 10.5px/1 var(--sans); color: var(--tc, #8A938E); }
-  .pl-desc p { margin: 0; font: 500 12.5px/1.6 var(--serif); color: var(--ink-2); }
+  .pl-desc .nm b { font: 700 16px/1.3 var(--serif); color: var(--ink); }
+  .pl-desc .lv { font: 700 10.5px/17px var(--sans); padding: 0 6px; border-radius: 2px; color: #fff; background: var(--tc, #8A938E); }
+  .pl-desc .tr { font: 600 11px/1 var(--sans); color: var(--tc, #8A938E); }
+  .pl-desc p { margin: 0; font: 500 13px/1.6 var(--serif); color: var(--ink-2); }
   .pl-desc .go { align-self: flex-start; margin-top: 2px; min-height: 30px; padding: 0 11px; font-size: 12px; }
-  .pl-desc .why { font-size: 11px; color: #A63E4B; }
+  .pl-desc .hint { font-size: 11.5px; color: var(--muted); }
+  .pl-desc .why { font-size: 11.5px; color: #A63E4B; }
   .pl-mon { flex: 1; }
   .pl-mon .row { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 1px 9px; align-items: center; }
   .pl-mon .ico svg { width: 15px; height: 15px; }
   .pl-mon .row + .row { padding-top: 7px; border-top: 1px dashed var(--line-in); }
   .pl-mon .ico { grid-row: span 2; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: #E7ECF1; color: var(--steel-d); }
   .pl-mon .row.elite .ico { background: #F6EDD6; color: #8C6A1E; }
-  .pl-mon .pw { font: 700 13.5px/1.3 var(--serif); color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
-  .pl-mon .pw small { font: 600 10.5px/1 var(--sans); color: var(--muted); margin-left: 6px; }
-  .pl-mon .row .s { font-size: 10.5px; color: var(--muted); }
+  .pl-mon .pw { font: 700 14px/1.3 var(--serif); color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
+  .pl-mon .pw small { font: 600 11px/1 var(--sans); color: var(--muted); margin-left: 6px; }
+  .pl-mon .row .s { font-size: 11px; color: var(--muted); }
   .pl-mon .chips2 { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
-  .pl-mon .ch { font: 600 10.5px/18px var(--sans); padding: 0 6px; border-radius: 2px; border: 1px solid; }
+  .pl-mon .ch { font: 600 11px/19px var(--sans); padding: 0 6px; border-radius: 2px; border: 1px solid; }
   .pl-mon .ch.weak { color: #2F5D45; border-color: #A9C4B2; background: #EEF4EF; }
   .pl-mon .ch.res { color: #8A2E27; border-color: #E6C3C7; background: #FBF1F2; }
   .pl-mon .ch.sp { color: #4A3F78; border-color: #C9C1E3; background: #F3F1FA; }
   .pl-mon .ch.drop { color: #5A4A12; border-color: #E2CF9E; background: #FBF6E8; }
-  .pl-mon .note { font-size: 11px; color: #4A3F78; }
+  .pl-mon .note { font-size: 11.5px; color: #4A3F78; }
+  /* 오염된 땅: 오른쪽 칸(장소 설명·사냥감)을 채도 낮은 어두운 잿빛으로 */
+  .pl-wrap.corrupt .pl-box { background: #2E2F33; border-color: #45474D; color: #E2E2E4; }
+  .pl-wrap.corrupt .pl-desc { border-left-color: #8A8790; }
+  .pl-wrap.corrupt .pl-box .k, .pl-wrap.corrupt .pl-desc .hint, .pl-wrap.corrupt .pl-mon .row .s, .pl-wrap.corrupt .pl-mon .pw small { color: #A2A3A8; }
+  .pl-wrap.corrupt .pl-desc .nm b, .pl-wrap.corrupt .pl-mon .pw { color: #F1F1F2; }
+  .pl-wrap.corrupt .pl-desc p { color: #CFCFD3; }
+  .pl-wrap.corrupt .pl-desc .tr { filter: brightness(1.7) saturate(.6); }
+  .pl-wrap.corrupt .pl-box .k .now { background: #9C99A3; color: #1F2023; }
+  .pl-wrap.corrupt .pl-box .k .peek { border-color: #8A8790; color: #CFCFD3; }
+  .pl-wrap.corrupt .pl-desc .why { color: #E0A9AF; }
+  .pl-wrap.corrupt .pl-mon .row + .row { border-top-color: #45474D; }
+  .pl-wrap.corrupt .pl-mon .ico { background: #3E3F44; color: #C9C9CE; }
+  .pl-wrap.corrupt .pl-mon .row.elite .ico { background: #45413A; color: #D8C08E; }
+  .pl-wrap.corrupt .pl-mon .ch.weak { color: #B5D2C1; border-color: #4C5F55; background: #2F3934; }
+  .pl-wrap.corrupt .pl-mon .ch.res { color: #E0B4B9; border-color: #66494E; background: #3A2F31; }
+  .pl-wrap.corrupt .pl-mon .ch.sp { color: #CCC8D6; border-color: #57545F; background: #37363C; }
+  .pl-wrap.corrupt .pl-mon .ch.drop { color: #D8C59A; border-color: #5F5641; background: #3A362D; }
+  .pl-wrap.corrupt .pl-mon .note { color: #BDB9C6; }
+  .pl-wrap.corrupt .pl-map { background: #D6D6D8; border-color: #B4B4B8; }
   /* 좁은 화면: 미니맵을 위에 넓게, 설명과 사냥감은 그 아래로 */
   @media (max-width: 620px) {
     .pl-wrap { grid-template-columns: minmax(0, 1fr); }
@@ -1316,8 +1338,8 @@
           <p class="quote" id="region-desc"></p>
         </div>
         <div class="places" id="places" hidden>
-          <div class="pl-head">이곳의 장소<small>지도에서 눌러 살펴보고 옮겨 간다</small></div>
-          <div class="pl-wrap">
+          <div class="pl-head">이곳의 장소<small>지도의 핀을 눌러 옮겨 간다</small></div>
+          <div class="pl-wrap" id="pl-wrap">
             <div class="pl-map" id="pl-map" role="group" aria-label="이곳의 장소 지도"></div>
             <div class="pl-side">
               <div class="pl-box pl-desc" id="pl-desc"></div>
@@ -4182,8 +4204,19 @@
     items.sort((p, q) => p[0] - q[0]);
     return { land: L.land, body: water + items.map((x) => x[1]).join('') };
   }
+  // 미니맵 정사각형: 지도 칸의 짧은 변에 맞춤 (칸 크기가 바뀌면 다시)
+  function fitPlMap() {
+    const map = $('pl-map'), sq = map?.querySelector('.sq');
+    if (!sq) return;
+    const w = map.clientWidth, h = map.clientHeight;
+    if (!w || !h) return; // 숨겨져 있을 때는 그대로 (보이면 ResizeObserver가 다시 맞춤)
+    const n = Math.min(w, h);
+    sq.style.width = `${n}px`;
+    sq.style.height = `${n}px`;
+  }
+  if (window.ResizeObserver) new ResizeObserver(fitPlMap).observe($('pl-map'));
+  else window.addEventListener('resize', fitPlMap);
   const PIN = '<svg class="pin" viewBox="0 0 24 32" aria-hidden="true"><path d="M12 31c-1.2-4.6-9.5-11-9.5-18.4A9.5 9.5 0 0 1 21.5 12.6C21.5 20 13.2 26.4 12 31z"/><circle cx="12" cy="12.4" r="3.6"/></svg>';
-  let plSel = null; // 지도에서 눌러 살펴보는 장소 (없으면 지금 있는 곳)
   function renderPlaces() {
     const ids = S.regionPlaces?.[S.region];
     $('places').hidden = !ids;
@@ -4191,8 +4224,7 @@
     $('region-at').classList.toggle('show', !!cur);
     $('region-at-t').textContent = cur ? `${cur.name}에 머무는 중` : '';
     if (!ids) return;
-    if (!ids.includes(plSel)) plSel = null;
-    const selId = plSel || (cur ? S.me.place : ids[0]);
+    const selId = cur ? S.me.place : ids[0];
     const corrupt = S.me?.corrupt?.region === S.region;
 
     // ── 미니맵: 손으로 그린 듯한 지형 위에 장소 핀 ──
@@ -4208,10 +4240,11 @@
       <defs><clipPath id="${clip}"><path d="${land}"/></clipPath></defs>
       <path d="${land}" transform="translate(2.5 3.5)" fill="rgba(79,75,62,.14)"/>
       <path d="${land}" fill="${t.land}"/>
-      <g clip-path="url(#${clip})">${t.body}${corrupt ? '<rect width="200" height="200" fill="#6B4E9A" opacity=".09"/>' : ''}</g>
+      <g clip-path="url(#${clip})">${t.body}${corrupt ? '<rect width="200" height="200" fill="#5A5A62" opacity=".16"/>' : ''}</g>
       <path d="${land}" class="land-edge${corrupt ? ' corrupt' : ''}"/>
     </svg>`;
     map.appendChild(sq);
+    fitPlMap();
     const rn = document.createElement('span');
     rn.className = `rname${corrupt ? ' corrupt' : ''}`;
     rn.textContent = `${S.regions[S.region].name}${corrupt ? ' · 오염됨' : ''}`;
@@ -4223,30 +4256,43 @@
       const on = S.me?.place === id;
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = `pn ${tier}${on ? ' on' : ''}${id === selId ? ' sel' : ''}`;
+      b.className = `pn ${tier}${on ? ' on' : ''}`;
+      b.dataset.id = id;
       b.style.left = `${spot.x}%`;
       b.style.top = `${spot.y}%`;
       b.innerHTML = `${PIN}<span class="lb"><b></b><small></small></span>`;
       b.querySelector('b').textContent = p.name;
       b.querySelector('small').textContent = `${on ? '현위치 · ' : ''}Lv.${p.level} · ${TIER_NAME[tier]}`;
-      b.setAttribute('aria-pressed', String(id === selId));
-      b.setAttribute('aria-label', `${p.name}, 사냥터 레벨 ${p.level}, ${TIER_NAME[tier]}${on ? ', 머무는 중' : ''}. 눌러서 살펴보기`);
-      b.addEventListener('click', () => { plSel = id; renderPlaces(); });
-      b.addEventListener('dblclick', () => goPlace(id)); // 두 번 누르면 바로 옮겨 감
+      b.setAttribute('aria-current', on ? 'location' : 'false');
+      b.setAttribute('aria-label', `${p.name}, 사냥터 레벨 ${p.level}, ${TIER_NAME[tier]}${on ? ', 머무는 중' : tier === 'locked' ? ', 아직 갈 수 없음' : '. 눌러서 옮겨 가기'}`);
+      // 누르면 바로 옮겨 감. 마우스를 올리거나 키보드로 고르면 오른쪽 칸에 미리 보여 줌
+      b.addEventListener('click', () => goPlace(id));
+      b.addEventListener('mouseenter', () => renderPlInfo(id, corrupt));
+      b.addEventListener('focus', () => renderPlInfo(id, corrupt));
+      b.addEventListener('mouseleave', () => renderPlInfo(selId, corrupt));
+      b.addEventListener('blur', () => renderPlInfo(selId, corrupt));
       sq.appendChild(b);
     });
 
+    $('pl-wrap').classList.toggle('corrupt', corrupt); // 오염된 땅이면 오른쪽 칸을 어둡게
+    renderPlInfo(selId, corrupt);
+  }
+  // 오른쪽 칸: 장소 설명과 등장하는 사냥감 (selId: 보여 줄 장소)
+  function renderPlInfo(selId, corrupt) {
+    const map = $('pl-map');
+    map.querySelectorAll('.pn').forEach((x) => x.classList.toggle('sel', x.dataset.id === selId && !x.classList.contains('on')));
     // ── 장소 설명 ──
     const p = S.places[selId];
+    if (!p) return;
     const tier = placeTier(p);
     const here = S.me?.place === selId;
-    const tc = getComputedStyle(map.querySelector('.pn.sel') || map).getPropertyValue('--tc').trim() || '#8A938E';
+    const tc = getComputedStyle(map.querySelector(`.pn[data-id="${selId}"]`) || map).getPropertyValue('--tc').trim() || '#8A938E';
     const desc = $('pl-desc');
     desc.replaceChildren();
     desc.style.setProperty('--tc', tc);
     const k = document.createElement('span');
     k.className = 'k';
-    k.innerHTML = `장소 <span class="${here ? 'now' : 'peek'}">${here ? '현위치' : '살펴보는 중'}</span>`;
+    k.innerHTML = `장소 <span class="${here ? 'now' : 'peek'}">${here ? '현위치' : '미리 보기'}</span>`;
     const nm = document.createElement('div');
     nm.className = 'nm';
     nm.innerHTML = '<b></b><span class="lv"></span><span class="tr"></span>';
@@ -4263,12 +4309,10 @@
         w.textContent = `레벨 ${p.level - S.placeRules.tooHard}부터 들어갈 수 있다.`;
         desc.appendChild(w);
       } else {
-        const go = document.createElement('button');
-        go.type = 'button';
-        go.className = 'btn primary go';
-        go.textContent = '여기로 옮겨 가기';
-        go.addEventListener('click', () => goPlace(selId));
-        desc.appendChild(go);
+        const w = document.createElement('span');
+        w.className = 'hint';
+        w.textContent = '핀을 누르면 바로 옮겨 간다.';
+        desc.appendChild(w);
       }
     }
 
@@ -4316,7 +4360,6 @@
     if (placeTier(p) === 'locked') return toast(`레벨 ${p.level - S.placeRules.tooHard}부터 들어갈 수 있다.`);
     socket.emit('place:go', { id }, (res) => {
       if (res.error) return toast(res.error);
-      plSel = null;
       toast(`${p.name}. ${res.result.lines[0]}`);
     });
   }
