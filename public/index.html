@@ -1048,9 +1048,19 @@
   .center.paneled > .panel-host { display: block; }
   .dlg.as-panel { position: relative; inset: auto; margin: 0; width: 100%; max-width: none; max-height: none; overflow: visible; padding: 20px 22px 18px; }
   .dlg.as-panel.wide { width: 100%; }
-  .dlg.as-panel[open] { display: block; animation: panel-in .18s ease-out; }
-  @keyframes panel-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-  @media (prefers-reduced-motion: reduce) { .dlg.as-panel[open] { animation: none; } }
+  /* 메뉴를 열거나 바꿀 때: 아래에서 살짝 떠오르며 나타남. 지도로 돌아올 때도 부드럽게 */
+  .dlg.as-panel[open] { display: block; animation: panel-in .34s cubic-bezier(.22, .8, .24, 1) both; }
+  .center:not(.paneled) > .region-card, .center:not(.paneled) > .map { animation: panel-back .3s ease-out both; }
+  @keyframes panel-in { from { opacity: 0; transform: translateY(14px) scale(.992); } 60% { opacity: 1; } to { opacity: 1; transform: none; } }
+  @keyframes panel-back { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  /* 팝업 창도 살짝 커지며 떠오름 */
+  .dlg:not(.as-panel)[open] { animation: dlg-in .26s cubic-bezier(.22, .8, .24, 1) both; }
+  .dlg:not(.as-panel)[open]::backdrop { animation: dlg-fade .26s ease-out both; }
+  @keyframes dlg-in { from { opacity: 0; transform: translateY(10px) scale(.97); } to { opacity: 1; transform: none; } }
+  @keyframes dlg-fade { from { opacity: 0; } to { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) {
+    .dlg.as-panel[open], .dlg:not(.as-panel)[open], .dlg:not(.as-panel)[open]::backdrop, .center:not(.paneled) > .region-card, .center:not(.paneled) > .map { animation: none; }
+  }
   /* 오른쪽 이야기 칸은 화면 높이에 맞춰 고정하고, 길어진 가운데 칸을 따라 늘어나지 않게 한다 (스크롤해도 따라옴) */
   /* 양옆 칸이 붙는 위치 = 처음 놓인 위치 (상단바 + 본문 위 여백 22px). 그래서 스크롤해도 조금도 움직이지 않는다 */
   .side { flex: 1 1 250px; max-width: 290px; align-self: flex-start; position: sticky; top: calc(var(--head-h, 0px) + 22px); height: min(780px, calc(100vh - var(--head-h, 0px) - var(--dock-h, 56px) - 44px)); display: flex; flex-direction: column; padding: 18px 8px 8px; }
@@ -6263,7 +6273,10 @@
   document.addEventListener('click', (e) => {
     const b = e.target.closest('.dtabs [data-go]');
     if (!b || b.classList.contains('on')) return;
-    b.closest('dialog').close();
+    // 가운데 칸에 펼치는 화면끼리는 지금 창을 먼저 닫지 않음 (새 창이 준비되면 openPanel이 바꿔 끼움).
+    // 먼저 닫으면 소지품을 받아 오는 동안 대륙 지도가 잠깐 비쳐 보였음
+    const cur = b.closest('dialog');
+    if (!cur.classList.contains('as-panel')) cur.close();
     TAB_OPEN[b.dataset.go]();
   });
   const dockBtns = [...document.querySelectorAll('.dock button')];
