@@ -9,7 +9,7 @@
 // 텔레파시  드래곤끼리 마음으로 주고받는 쪽지. 대륙 어디서든 닿고, 상대가 잠들어(접속하지 않아) 있으면
 //        마음에 남아 있다가 깨어날 때 들림. 상대가 나를 '경계'로 표시했으면 닿지 않음
 
-const { ITEMS, KINDS, REGIONS, STANCES, fameTier } = require('./game-data');
+const { ITEMS, KINDS, REGIONS, STANCES, MIND, fameTier } = require('./game-data');
 
 const TRADE_MAX_ITEMS = 6;            // 한쪽이 올려놓을 수 있는 물건 종류
 const TP_MAX = 200;                   // 텔레파시 한 번의 글자 수
@@ -90,7 +90,18 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     const equip = logic.equipOf(d);
     const ft = fameTier(d.fame || 0);
     const near = !!e && e.dragon.region === viewer.region;
+    // 지금의 체력·기력·정신 (접속하지 않은 동안 찬 만큼도 계산해서 보여 줌)
+    if (!d.dead_at) logic.regen(d);
+    const vitals = d.dead_at ? null : {
+      hp: d.hp, hpMax: logic.hpCap(d), en: d.en, enMax: logic.enCap(d),
+      mind: d.mind ?? MIND.max, mindMax: MIND.max,
+    };
+    // 능력치는 숫자 대신 다섯 단계로만 알려 줌 (정확한 값은 본인만 봄)
+    const tierOf = (v) => (v >= 19 ? 5 : v >= 15 ? 4 : v >= 12 ? 3 : v >= 9 ? 2 : 1);
+    const st = logic.statsOf(d);
+    const statTiers = Object.fromEntries(['claw', 'scale', 'wing', 'wisdom', 'majesty'].map((k) => [k, tierOf(st[k])]));
     return {
+      vitals, statTiers,
       id: d.id, name: d.name, kind: d.kind, kindName: KINDS[d.kind]?.name || '', level: d.level,
       av: d.has_avatar ? d.avatar_ver : 0,
       stance: d.stance, stanceName: STANCES[d.stance] || '',

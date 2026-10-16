@@ -406,6 +406,15 @@
   .pf-rows span:first-child { color: var(--ink-2); flex: none; }
   .pf-rows b { font-weight: 600; text-align: right; }
   .pf-eq { display: flex; flex-wrap: wrap; gap: 5px; }
+  .pf-attrs { margin-top: -2px; }
+  .pf-attrs .tier { display: flex; flex-direction: column; align-items: center; gap: 3px; margin: 2px 0 1px; }
+  .pf-attrs .pips { display: flex; gap: 2px; }
+  .pf-attrs .pips i { width: 6px; height: 6px; transform: rotate(45deg); border: 1px solid var(--orn); background: transparent; }
+  .pf-attrs .pips.t1 i:nth-child(-n+1), .pf-attrs .pips.t2 i:nth-child(-n+2), .pf-attrs .pips.t3 i:nth-child(-n+3),
+  .pf-attrs .pips.t4 i:nth-child(-n+4), .pf-attrs .pips.t5 i { background: var(--steel); border-color: var(--steel-d); }
+  .pf-attrs .pips.t5 i { background: #B8913A; border-color: #8C6A1E; }
+  .pf-attrs .tier .w { font: 600 12px/1.2 var(--sans); color: var(--ink); }
+  .pf-vitals { padding: 10px 12px; border: 1px solid var(--line-in); border-radius: 4px; background: var(--surface-2); gap: 9px; }
   .pf-acts { display: flex; flex-direction: column; gap: 8px; }
   .pf-acts .grp { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   .pf-acts .grp .l { width: 100%; font-size: 12px; color: var(--muted); }
@@ -3370,6 +3379,39 @@
     if (p.dead) chip('잠든 드래곤', 'relb wary');
     head.appendChild(t);
     body.appendChild(head);
+
+    // 체력·기력·정신: 내 기록 카드의 막대를 그대로 본떠 보여 줌
+    if (p.vitals) {
+      const v = document.querySelector('.profile .vitals').cloneNode(true);
+      v.classList.add('pf-vitals');
+      v.querySelectorAll('[id]').forEach((x) => x.removeAttribute('id'));
+      const set = (i, cur, max) => {
+        const row = v.children[i];
+        row.querySelector('.v').innerHTML = `<b>${cur}</b><span> / ${max}</span>`;
+        row.querySelector('.bar i').style.width = `${Math.max(0, Math.min(100, (cur / max) * 100))}%`;
+      };
+      set(0, p.vitals.hp, p.vitals.hpMax);
+      set(1, p.vitals.en, p.vitals.enMax);
+      set(2, p.vitals.mind, p.vitals.mindMax);
+      v.children[2].classList.toggle('low', p.vitals.mind <= p.vitals.mindMax * 0.25);
+      body.appendChild(v);
+    }
+    // 능력치: 숫자 없이 다섯 칸 마름모와 한 단어로
+    if (p.statTiers) {
+      const a = document.querySelector('.profile .attrs').cloneNode(true);
+      a.classList.add('pf-attrs');
+      const WORD = ['', '서툼', '보통', '능숙', '뛰어남', '압도적'];
+      const keys = ['claw', 'scale', 'wing', 'wisdom', 'majesty'];
+      [...a.children].forEach((cell, i) => {
+        const t = p.statTiers[keys[i]] || 1;
+        const b = cell.querySelector('b');
+        b.removeAttribute('id');
+        b.className = 'tier';
+        b.innerHTML = `<span class="pips t${t}">${'<i></i>'.repeat(5)}</span><span class="w">${WORD[t]}</span>`;
+        b.setAttribute('aria-label', `${cell.querySelector('span:last-child').textContent} ${WORD[t]} (5단계 중 ${t})`);
+      });
+      body.appendChild(a);
+    }
 
     const rows = document.createElement('div');
     rows.className = 'pf-rows';
