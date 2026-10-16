@@ -588,7 +588,9 @@ const SCENES = {
 
 // 시간·행동력 규칙
 const RULES = {
-  apEvery: 15 * 60 * 1000,      // 행동력 1 회복 간격 (15분)
+  apEvery: 12 * 60 * 1000,      // 행동력 1 회복 간격 (12분)
+  apBase: 12,                   // 기본 최대 행동력
+  apPerLevels: 5,               // 이 레벨마다 최대 행동력 +1 (5, 10, 15 …)
   hpEvery: 90 * 1000,           // 체력 1 회복 간격 (90초)
   enEvery: 2 * 60 * 1000,       // 기력 1 회복 간격 (2분)
   cost: { explore: 1, gather: 1, hunt: 2 },

@@ -137,7 +137,7 @@ const meOf = (d) => ({
   ...publicDragon(d),
   level: d.level, xp: d.xp, xpMax: d.level * 100,
   hp: d.hp, hpMax: logic.hpCap(d), en: d.en, enMax: logic.enCap(d),
-  ap: d.ap, apMax: d.ap_max, gold: d.gold,
+  ap: d.ap, apMax: logic.apCap(d), gold: d.gold,
   stats: logic.statsOf(d),                 // 장신구까지 더한 값
   base: { claw: d.claw, scale: d.scale, wing: d.wing, wisdom: d.wisdom, majesty: d.majesty }, // 타고난 값 (포인트를 나눈 값 포함)
   statPts: d.stat_pts || 0,                // 아직 나누지 않은 능력치 포인트

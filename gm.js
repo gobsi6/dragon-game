@@ -119,7 +119,7 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
       };
     },
     heal(d, kin, now) {
-      d.hp = logic.hpCap(d); d.en = logic.enCap(d); d.ap = d.ap_max;
+      d.hp = logic.hpCap(d); d.en = logic.enCap(d); d.ap = logic.apCap(d);
       d.hp_at = now; d.en_at = now; d.ap_at = now;
       return { log: '체력·기력·행동력 가득 채움', tell: '따스한 기운이 온몸을 채운다. 체력·기력·행동력이 가득 찼다.' };
     },

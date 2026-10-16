@@ -213,6 +213,8 @@ function statsOf(d) {
 // 비늘·지혜 장신구는 최대 체력·기력도 올림 (능력치 1당 체력 5, 기력 2)
 const hpCap = (d) => Math.max(10, d.hp_max + bonusOf(d).stats.scale * 5 + traitMods(d).hpMax);
 const enCap = (d) => Math.max(5, d.en_max + bonusOf(d).stats.wisdom * 2 + traitMods(d).enMax);
+// 최대 행동력: 기본값 + 레벨 보너스. 계산식이라 기존 캐릭터에도 바로 적용됨 (DB의 ap_max 열은 더 쓰지 않음)
+const apCap = (d) => RULES.apBase + Math.floor((d.level || 1) / RULES.apPerLevels);
 function clampVitals(d) {
   d.hp = Math.min(d.hp, hpCap(d));
   d.en = Math.min(d.en, enCap(d));
@@ -251,7 +253,7 @@ function regen(d, now = Date.now()) {
     m = { ap: base.ap * r, hp: base.hp * r, en: base.en * r };
   } else if (d.stance === 'friendly' && isTown(d.region)) m = { ap: 1, hp: SR.friendly.townHpRegen, en: 1 };
   const tm = traitMods(d); // 특성: 회복 빠르기
-  tick('ap', d.ap_max, 'ap_at', RULES.apEvery / (m.ap * tm.apRegen));
+  tick('ap', apCap(d), 'ap_at', RULES.apEvery / (m.ap * tm.apRegen));
   if (isFallen(d)) d.hp_at = now; // 쓰러져 있는 동안은 체력이 차지 않음
   else tick('hp', hpCap(d), 'hp_at', RULES.hpEvery / (m.hp * tm.hpRegen));
   tick('en', enCap(d), 'en_at', RULES.enEvery / (m.en * tm.enRegen));
@@ -337,7 +339,7 @@ function loseMind(d, n) {
 
 // 행동력을 쓸 때: 가득 차 있었다면 회복 시계를 지금부터 시작
 function spendAp(d, n, now = Date.now()) {
-  if (d.ap >= d.ap_max) d.ap_at = now;
+  if (d.ap >= apCap(d)) d.ap_at = now;
   d.ap -= n;
 }
 
@@ -403,6 +405,7 @@ function townArrows(d) {
 // ── 경험치와 레벨 ──────────────────────────────────
 function gainXp(d, xp) {
   d.xp += xp;
+  const apBefore = apCap(d);
   let up = 0;
   while (d.xp >= d.level * 100) {
     d.xp -= d.level * 100;
@@ -414,6 +417,7 @@ function gainXp(d, xp) {
   if (up) {
     chron(d, 'mark', `레벨 ${d.level}${[2, 4, 5, 9].includes(d.level % 10) ? '가' : '이'} 되었다.`);
     d.stat_pts = (d.stat_pts || 0) + STAT_POINTS.perLevel * up; // 나눌 능력치 포인트
+    if (apCap(d) > apBefore) chron(d, 'mark', `최대 행동력이 ${apCap(d)}${[0, 3, 6].includes(apCap(d) % 10) ? '으로' : '로'} 늘었다.`);
     d.hp = hpCap(d);
     d.en = enCap(d);
   }
@@ -828,7 +832,7 @@ function useItem(d, id, have) {
     return { title: it.name, lines, items: [{ id, qty: -1 }] };
   }
   // 여러 효과가 있는 물건은 하나라도 쓸모가 있으면 씀
-  const full = (u.hp == null || d.hp >= hpCap(d)) && (u.en == null || d.en >= enCap(d)) && (u.ap == null || d.ap >= d.ap_max);
+  const full = (u.hp == null || d.hp >= hpCap(d)) && (u.en == null || d.en >= enCap(d)) && (u.ap == null || d.ap >= apCap(d));
   const multi = ['hp', 'en', 'ap'].filter((k) => u[k]).length > 1;
   if (multi && full) return { error: '이미 기운이 넘친다.' };
   if (u.hp && !(multi && d.hp >= hpCap(d))) {
@@ -850,11 +854,11 @@ function useItem(d, id, have) {
     d.mind = Math.min(MIND.max, d.mind + u.mind);
     lines.push(`정신이 ${d.mind - before} 맑아졌다.`);
   }
-  if (u.ap && !(multi && d.ap >= d.ap_max)) {
-    if (d.ap >= d.ap_max) return { error: '행동력이 이미 가득 차 있다.' };
+  if (u.ap && !(multi && d.ap >= apCap(d))) {
+    if (d.ap >= apCap(d)) return { error: '행동력이 이미 가득 차 있다.' };
     const before = d.ap;
-    d.ap = Math.min(d.ap_max, d.ap + u.ap);
-    if (d.ap >= d.ap_max) d.ap_at = Date.now();
+    d.ap = Math.min(apCap(d), d.ap + u.ap);
+    if (d.ap >= apCap(d)) d.ap_at = Date.now();
     lines.push(`행동력이 ${d.ap - before} 회복되었다.`);
   }
   return { title: it.name, lines, items: [{ id, qty: -1 }] };
@@ -1264,7 +1268,7 @@ function chaseCheck(d) {
 module.exports = {
   nestInfo, nestTier, maxKinOf, expandNest, checkRaid, raidView, chaseCheck,
   regen, gather, explore, hunt, startExpedition, finishExpedition, chooseFork, forkView, expInfo,
-  craft, useItem, equip, unequip, statsOf, bonusOf, hpCap, enCap, equipOf, buffOf, giveBuff,
+  craft, useItem, equip, unequip, statsOf, bonusOf, hpCap, enCap, apCap, equipOf, buffOf, giveBuff,
   repOf, setStance, marketInfo, buy, sell, intimidate,
   buildNest, flyHome, startRest, stopRest, hoardMove, hoardValue,
   actionCost, townArrows, hasBounty, addRep, addFame, craftEn, gainXp, spendStats,

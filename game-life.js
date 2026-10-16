@@ -391,7 +391,7 @@ function train(d, kin, id, stat, now = Date.now()) {
   if (now - (k.data.lastTrain || 0) < R.trainCooldown) return { error: `${ga(k)} 지쳐 있다. 조금 쉬게 하자.` };
   if (d.ap < R.trainAp) return { error: `행동력이 모자란다. (${R.trainAp} 필요)` };
   if (d.en < R.trainEn) return { error: `기력이 모자란다. (${R.trainEn} 필요)` };
-  if (d.ap >= d.ap_max) d.ap_at = now;
+  if (d.ap >= logic.apCap(d)) d.ap_at = now;
   d.ap -= R.trainAp;
   d.en -= R.trainEn;
   k.data.stats[stat] += 1;
