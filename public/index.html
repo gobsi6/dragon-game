@@ -63,6 +63,9 @@
   .frame > .c { position: absolute; width: 8px; height: 8px; background: var(--orn); border: 1px solid var(--surface); transform: rotate(45deg); }
   .frame > .tl { top: -5px; left: -5px; } .frame > .tr { top: -5px; right: -5px; }
   .frame > .bl { bottom: -5px; left: -5px; } .frame > .br { bottom: -5px; right: -5px; }
+  /* 팝업 창은 안쪽이 스크롤되므로, 귀퉁이 장식이 밖으로 나가 가로·세로 스크롤을 만들지 않게 안쪽에 둔다 */
+  dialog.frame:not(.as-panel) > .tl { top: 2px; left: 2px; } dialog.frame:not(.as-panel) > .tr { top: 2px; right: 2px; }
+  dialog.frame:not(.as-panel) > .bl { bottom: 2px; left: 2px; } dialog.frame:not(.as-panel) > .br { bottom: 2px; right: 2px; }
   .orn-h { display: flex; align-items: center; gap: 10px; }
   .orn-h::before, .orn-h::after { content: ""; flex: 1; height: 1px; background: var(--line-soft); }
   .orn-h h2 { margin: 0; font: 700 15px/1.4 var(--serif); color: var(--steel-d); display: flex; align-items: center; gap: 10px; }
