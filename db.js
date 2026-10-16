@@ -47,6 +47,8 @@ db.exec(`
 
 // ── 2단계 열 추가: 이미 있는 데이터는 그대로 두고 빠진 열만 붙입니다 ──
 const dragonCols = db.prepare('PRAGMA table_info(dragons)').all().map((c) => c.name);
+// 계정: 먼 여행을 떠난 드래곤이 남긴 의지 (새 드래곤을 만들 때 받고 지움)
+if (!db.prepare('PRAGMA table_info(users)').all().some((c) => c.name === 'legacy')) db.exec('ALTER TABLE users ADD COLUMN legacy TEXT');
 const addCol = (name, def) => {
   if (dragonCols.includes(name)) return false;
   db.exec(`ALTER TABLE dragons ADD COLUMN ${name} ${def}`);
@@ -108,6 +110,7 @@ addCol('titles', "TEXT NOT NULL DEFAULT '{}'");
 addCol('exp_info', "TEXT NOT NULL DEFAULT '{}'");
 addCol('chron', "TEXT NOT NULL DEFAULT '[]'");      // 20단계: 지나온 이야기 [{ at, k: 'choice'|'mark', t }] (최근 150개)   // 19단계: 원정 목적·갈림길 { goal, fork: { id, at, pick, res }, last: 지난 원정 일지 }     // 18단계: 칭호 { have: [얻은 칭호 id], on: 단 칭호 id }
 addCol('nest_info', "TEXT NOT NULL DEFAULT '{}'");  // 21단계: 둥지 단계·설치한 덫과 결계·보물더미 가치·보물 도둑 { tier, wards, value, raidAt, calm, raid }
+addCol('heir', 'TEXT');                             // 22단계: 먼 여행을 떠난 드래곤에게서 의지를 이었으면 { name, kind, level, pts }
 addCol('bio', "TEXT NOT NULL DEFAULT '{}'");        // 17단계: 성별과 특징 { gender, desc }                            // 15단계: 지역 안의 장소 (없으면 지역 입구)                          // 광폭화 중이면 { at, until, region, hp, hpMax }
 if (addCol('stat_pts', 'INTEGER NOT NULL DEFAULT 0')) {
   db.exec(`UPDATE dragons SET stat_pts = (level - 1) * ${require('./game-data').STAT_POINTS.perLevel}`);
@@ -208,6 +211,16 @@ db.exec(`
 `);
 
 db.exec(`
+  CREATE TABLE IF NOT EXISTS kin_offers (      -- 둥지 식구(알·아이)를 동료에게 입양 보내자는 제안. 받는 쪽이 정할 때까지 식구는 보내는 쪽 둥지에 있음
+    id      INTEGER PRIMARY KEY,
+    kin_id  INTEGER NOT NULL UNIQUE,
+    from_id INTEGER NOT NULL,
+    to_id   INTEGER NOT NULL,
+    at      INTEGER NOT NULL
+  );
+`);
+
+db.exec(`
   CREATE TABLE IF NOT EXISTS world (           -- 대륙 전체의 상태 (대륙의 재앙 등). v는 글자(JSON)
     k TEXT PRIMARY KEY,
     v TEXT NOT NULL
@@ -235,7 +248,7 @@ db.exec(`
 // 그림(avatar)을 뺀 드래곤 정보 열
 const DRAGON_FIELDS = `id, name, kind, region, avatar_ver, level, xp, hp, hp_max, en, en_max,
   ap, ap_max, gold, claw, scale, wing, wisdom, majesty, stance,
-  ap_at, hp_at, en_at, exp_start, exp_end, exp_region, equip, rep, stance_at, nest, rest_at, hoard_gold, fame, pending_event, traits, combat, last_seen, stat_pts, mind, mind_at, berserk, place, fallen, scars, dead_at, bio, titles, exp_info, chron, nest_info,
+  ap_at, hp_at, en_at, exp_start, exp_end, exp_region, equip, rep, stance_at, nest, rest_at, hoard_gold, fame, pending_event, traits, combat, last_seen, stat_pts, mind, mind_at, berserk, place, fallen, scars, dead_at, bio, titles, exp_info, chron, nest_info, heir,
   (avatar IS NOT NULL) AS has_avatar`;
 
 const q = {
@@ -351,6 +364,13 @@ const q = {
   gmLogPrune:   db.prepare('DELETE FROM gm_log WHERE id <= (SELECT id FROM gm_log ORDER BY id DESC LIMIT 1 OFFSET 500)'),
   dragonIds:    db.prepare('SELECT id FROM dragons'),
   activeSince:  db.prepare('SELECT id, level FROM dragons WHERE dead_at IS NULL AND last_seen >= ?'),
+  offerAdd:     db.prepare('INSERT INTO kin_offers (kin_id, from_id, to_id, at) VALUES (?, ?, ?, ?)'),
+  offerGet:     db.prepare('SELECT * FROM kin_offers WHERE id = ?'),
+  offerOfKin:   db.prepare('SELECT * FROM kin_offers WHERE kin_id = ?'),
+  offersTo:     db.prepare('SELECT * FROM kin_offers WHERE to_id = ? ORDER BY at'),
+  offersFrom:   db.prepare('SELECT * FROM kin_offers WHERE from_id = ? ORDER BY at'),
+  offerDel:     db.prepare('DELETE FROM kin_offers WHERE id = ?'),
+  offersToN:    db.prepare('SELECT COUNT(*) AS n FROM kin_offers WHERE to_id = ?'),
   worldGet:     db.prepare('SELECT v FROM world WHERE k = ?'),
   worldSet:     db.prepare('INSERT INTO world (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v'),
   berserkIds:   db.prepare('SELECT id FROM dragons WHERE berserk IS NOT NULL'),
@@ -363,6 +383,9 @@ const q = {
   waitIds:      db.prepare("SELECT id FROM dragons WHERE dead_at IS NULL AND fallen LIKE '%\"wait\"%'"),
   graveUser:    db.prepare('INSERT INTO users (username, pw_hash, is_gm, created_at) VALUES (?, ?, 0, ?)'),
   setOwner:     db.prepare('UPDATE dragons SET user_id = ?, dead_at = ? WHERE id = ?'),
+  legacyGet:    db.prepare('SELECT legacy FROM users WHERE id = ?'),
+  legacySet:    db.prepare('UPDATE users SET legacy = ? WHERE id = ?'),
+  setHeir:      db.prepare('UPDATE dragons SET heir = ? WHERE id = ?'),
   invClear:     db.prepare('DELETE FROM inventory WHERE dragon_id = ?'),
   hoardSet:     db.prepare('UPDATE hoard SET qty = qty - ? WHERE dragon_id = ? AND item = ? AND qty >= ?'),
   hoardClear:   db.prepare('DELETE FROM hoard WHERE dragon_id = ?'),
@@ -494,6 +517,14 @@ module.exports = {
   gmLogList: (n = 40) => q.gmLogList.all(n),
   dragonIds: () => q.dragonIds.all().map((r) => r.id),
   activeSince: (t) => q.activeSince.all(t),        // 이 시각 뒤로 접속한 (잠들지 않은) 드래곤 [{ id, level }]
+  // 식구 입양 제안
+  offerAdd: (kinId, from, to) => Number(q.offerAdd.run(kinId, from, to, Date.now()).lastInsertRowid),
+  offerGet: (id) => q.offerGet.get(id) || null,
+  offerOfKin: (kinId) => q.offerOfKin.get(kinId) || null,
+  offersTo: (id) => q.offersTo.all(id),
+  offersFrom: (id) => q.offersFrom.all(id),
+  offerDel: (id) => q.offerDel.run(id).changes > 0,
+  offersToCount: (id) => q.offersToN.get(id).n,
   worldGet: (k, def = null) => { const r = q.worldGet.get(k); if (!r) return def; try { return JSON.parse(r.v); } catch { return def; } },
   worldSet: (k, v) => q.worldSet.run(k, JSON.stringify(v)),
   berserkIds: () => q.berserkIds.all().map((r) => r.id),
@@ -513,6 +544,14 @@ module.exports = {
     const graveId = Number(q.graveUser.run(`#묘비#${d.id}`, '!', Date.now()).lastInsertRowid);
     q.setOwner.run(graveId, Date.now(), d.id);
   }),
+  // 먼 여행: 계정에서 떼어 냄 (소지품·보물더미는 그대로 함께 떠남). 계정은 새 드래곤을 만들 수 있게
+  depart: db.transaction((d) => {
+    const id = Number(q.graveUser.run(`#여행#${d.id}`, '!', Date.now()).lastInsertRowid);
+    q.setOwner.run(id, Date.now(), d.id);
+  }),
+  legacyGet: (userId) => { const r = q.legacyGet.get(userId); try { return r?.legacy ? JSON.parse(r.legacy) : null; } catch { return null; } },
+  legacySet: (userId, v) => q.legacySet.run(v ? JSON.stringify(v) : null, userId),
+  setHeir: (dragonId, v) => q.setHeir.run(JSON.stringify(v), dragonId),
   hoardTake: (dragonId, item, qty) => q.hoardSet.run(qty, dragonId, item, qty).changes > 0,
   hoardClear: (dragonId) => { q.hoardClear.run(dragonId); q.hoardGoldSet.run(0, dragonId); },
   kinMove: (kinId, from, to) => q.kinMove.run(to, kinId, from).changes > 0,

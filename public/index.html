@@ -456,12 +456,14 @@
   .pf-acts .why.ok { color: var(--muted); }
   .pf-acts .btn.busy { opacity: .6; cursor: progress; }
   /* 관계 메모 (나만 봄) */
-  .rel-memo { width: 100%; display: flex; flex-direction: column; gap: 6px; margin-top: 4px; padding: 10px 12px; background: #FBF8EE; border: 1px solid #E8DDBF; border-radius: 3px; }
-  .rel-memo .h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 12px; color: #6B5A3A; }
+  .rel-memo { width: 100%; display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+  .rel-memo .h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted); }
   .rel-memo .h .st { font-size: 11px; color: var(--muted); }
   .rel-memo .h .st.saved { color: var(--forest); }
-  .rel-memo textarea { width: 100%; min-height: 60px; resize: vertical; font: inherit; font-size: 13px; line-height: 1.5; }
+  .rel-memo textarea { display: block; width: 100%; min-height: 64px; padding: 9px 12px; resize: vertical; font: inherit; font-size: 13px; line-height: 1.6; }
   .rel-memo .r { display: flex; justify-content: flex-end; gap: 6px; }
+  .rel-memo.view .h .linkbtn { flex: none; font-size: 12px; min-height: 0; }
+  .rel-memo.view p { margin: 0; padding: 10px 12px; background: var(--surface-2); border: 1px solid var(--line-in); border-radius: 3px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
   /* 메모 한 줄: 글은 안쪽 칸에서만 말줄임(…)되고, 앞뒤 표시는 잘리지 않게 바깥에 둠 */
   .fr-row .memo { display: flex; align-items: baseline; min-width: 0; margin-top: 2px; font-size: 12px; color: #6B5A3A; }
   .fr-row .memo .mt { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1062,6 +1064,18 @@
   .gm-kin .t small { font-size: 12px; color: var(--muted); }
   .gm-kin .num { width: 64px; }
   .gm-ta { min-height: 96px; padding: 10px 12px; resize: vertical; font: inherit; line-height: 1.6; }
+  .legacy-note { margin: 0 0 16px; padding: 12px 14px; border: 1px solid #E2CF9E; border-left: 3px solid #B8913A; background: #FBF6E8; }
+  .legacy-note b { display: block; font: 700 15px/1.4 var(--serif); color: #4E3A10; }
+  .legacy-note p { margin: 4px 0 0; font-size: 13px; line-height: 1.6; color: #6B5A3A; }
+  .heir-line { margin: 14px 0 0; font-size: 13px; color: #6B5A3A; }
+  .heir-line::before { content: "✦ "; color: #B8913A; }
+  .depart { margin-top: 18px; border-top: 1px dashed var(--line-in); padding-top: 12px; }
+  .depart summary { cursor: pointer; font-size: 13px; color: var(--muted); }
+  .depart summary:hover { color: var(--ink-2); }
+  .depart-in { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; padding: 14px; border: 1px solid var(--line-in); background: var(--surface-2); }
+  .depart-in p { margin: 0; font-size: 13px; line-height: 1.65; color: var(--ink-2); }
+  .depart-in p.warn { color: #8A2E27; }
+  .pf-depart { margin: 10px 0 0; padding: 10px 12px; border: 1px solid var(--line-in); background: var(--surface-2); font-size: 13px; line-height: 1.6; color: var(--ink-2); }
   .gm-remake { display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1px solid #E6C3C7; background: #FBF1F2; border-radius: 3px; }
   .gm-remake b { font: 700 15px/1.4 var(--serif); color: #8A2E27; }
   .gm-remake p { margin: 0; font-size: 13px; line-height: 1.6; color: var(--ink-2); }
@@ -1108,6 +1122,15 @@
   .hoard-tier b { color: #4E3A10; font-weight: 600; }
   .hoard-tier .hb { height: 6px; background: #EFE6CC; overflow: hidden; }
   .hoard-tier .hb i { display: block; height: 100%; background: #B8913A; }
+  .adopt-card { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; padding: 12px 14px; border: 1px solid #B9C7D3; background: #EEF2F6; }
+  .adopt-card b { font: 700 15px/1.45 var(--serif); color: var(--steel-d); }
+  .adopt-card p { margin: 0; font-size: 13px; line-height: 1.6; color: #3E5163; }
+  .adopt-card .row { justify-content: flex-start; flex-wrap: wrap; margin-top: 2px; }
+  .kin-adopt { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line-in); }
+  .kin-adopt .note { margin: 0 0 8px; }
+  .kin-adopt-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .kin-adopt-list .btn { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px 0 6px; font-size: 13px; }
+  .kin-adopt-list .ava { width: 22px; height: 22px; }
   .raid-card { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; padding: 12px 14px; border: 1px solid #E6C3C7; background: #FBF1F2; }
   .raid-card b { font: 700 15px/1.4 var(--serif); color: #8A2E27; }
   .raid-card p { margin: 0; font-size: 13px; line-height: 1.6; color: #5A3A38; }
@@ -1427,6 +1450,9 @@
   .toast { overflow: hidden; }
   .toast #toast-btn2 { background: transparent; color: #D5DCE2; border-color: rgba(213, 220, 226, .45); margin-left: -6px; }
   .toast #toast-btn2:hover { color: #fff; border-color: #fff; }
+  .toast .toast-x { flex: none; display: grid; place-items: center; width: 28px; height: 28px; margin: 0 -8px 0 -4px; padding: 0; background: transparent; border: 0; border-radius: 3px; color: #B9C3CC; cursor: pointer; }
+  .toast .toast-x:hover { color: #fff; background: rgba(255, 255, 255, .1); }
+  .toast .toast-x:focus-visible { outline: 2px solid #9DB3C6; outline-offset: 1px; }
   /* 저절로 사라지기까지 남은 시간 */
   .toast .toast-time { position: absolute; left: 0; bottom: 0; height: 2px; width: 100%; background: #9DB3C6; transform-origin: left; }
   @keyframes toast-time { from { transform: scaleX(1); } to { transform: scaleX(0); } }
@@ -1500,6 +1526,7 @@
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <h1>어떤 드래곤으로 태어날까</h1>
   <p class="lead">종류에 따라 처음 눈뜨는 땅과 타고난 능력이 다르다. 한 번 정하면 바꿀 수 없다.</p>
+  <div class="legacy-note" id="legacy-note" hidden></div>
   <form id="create-form">
     <div class="kinds" id="kinds" role="group" aria-label="드래곤 종류"></div>
     <section class="frame alloc" id="alloc" aria-label="능력치 나누기" hidden>
@@ -1856,6 +1883,17 @@
         <div class="reps" id="reps"></div>
         <div class="reps"><div><span>둥지</span><b id="nest-where"></b></div></div>
       </div>
+      <p class="heir-line" id="heir-line" hidden></p>
+      <details class="depart" id="depart">
+        <summary>먼 여행을 떠나기</summary>
+        <div class="depart-in">
+          <p id="depart-what"></p>
+          <p class="warn">함께 떠나는 것: 금화·소지품·보물더미·둥지와 식구. 남기고 싶은 식구는 먼저 '둥지 → 식구'에서 동료에게 입양 보내자. 되돌릴 수 없다.</p>
+          <label class="field"><span>남기는 말 (모든 지역에 전해진다, 100자까지)</span><input class="input" id="depart-words" maxlength="100" autocomplete="off" placeholder="예: 대륙의 끝을 보러 간다."></label>
+          <label class="field"><span id="depart-name-l">확인을 위해 드래곤 이름을 적자</span><input class="input" id="depart-name" maxlength="12" autocomplete="off"></label>
+          <div class="row" style="justify-content: flex-end"><button class="btn danger" type="button" id="depart-go" disabled>먼 여행을 떠난다</button></div>
+        </div>
+      </details>
     </section>
     <section class="ctab" data-ct="titles" role="tabpanel" hidden>
     <h3>칭호</h3>
@@ -2039,7 +2077,7 @@
   <button class="btn primary" type="button" id="update-go">새로고침</button>
   <button class="x" type="button" id="update-later" aria-label="나중에">나중에</button>
 </div>
-<div class="toast" id="toast" hidden><span id="toast-text"></span><button class="btn" id="toast-btn" type="button" hidden></button><button class="btn" id="toast-btn2" type="button" hidden></button><i class="toast-time" id="toast-time" hidden></i></div>
+<div class="toast" id="toast" hidden><span id="toast-text"></span><button class="btn" id="toast-btn" type="button" hidden></button><button class="btn" id="toast-btn2" type="button" hidden></button><button class="toast-x" id="toast-x" type="button" aria-label="닫기" title="닫기" hidden><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><i class="toast-time" id="toast-time" hidden></i></div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
@@ -2101,6 +2139,7 @@
     b.hidden = !action;
     if (action) { b.textContent = action.label; b.onclick = action.run; }
     b2.hidden = !action?.alt;
+    $('toast-x').hidden = !action; // 버튼이 있는 알림은 저절로 사라지지 않을 수 있으니 닫기 버튼
     if (action?.alt) { b2.textContent = action.alt.label; b2.onclick = () => { hideToast(); action.alt.run?.(); }; }
     // 남은 시간을 아래 가는 막대로 보여 줌
     tm.hidden = !action?.ttl;
@@ -2109,7 +2148,8 @@
     if (!action) toastTimer = setTimeout(() => ($('toast').hidden = true), 2600);
     else if (action.ttl) toastTimer = setTimeout(() => ($('toast').hidden = true), action.ttl);
   }
-  const hideToast = () => ($('toast').hidden = true);
+  const hideToast = () => { clearTimeout(toastTimer); $('toast').hidden = true; };
+  $('toast-x').addEventListener('click', hideToast);
   // ── 새 버전 알림 ──
   // 처음 받은 화면 버전을 기억해 두고, 다시 연결될 때(서버를 다시 켰을 때)와 몇 분마다 비교함
   let bootVersion = null, updateLater = 0;
@@ -2651,7 +2691,7 @@
   function renderRaidBar() {
     const r = S.me?.raid;
     $('raid-bar').hidden = !r;
-    $('dock-nest').classList.toggle('alert', !!r);
+    $('dock-nest').classList.toggle('alert', !!r || (S.me?.kinOffersIn || 0) > 0); // 도둑이나 받은 입양 제안
     if (r) $('raid-bar-t').textContent = `${r.name} · ${dur(r.until - Date.now())} 안에 쫓아야 한다`;
   }
   $('raid-bar-open').addEventListener('click', () => openNest());
@@ -3072,6 +3112,54 @@
   $('dock-nest').addEventListener('click', openNest);
   $('nest-close').addEventListener('click', () => $('nest-dlg').close());
 
+  // ── 식구 입양: 알이나 아이를 동료에게 ──
+  let nestOffersOut = [];
+  function adoptAnswer(o, yes) {
+    if (!yes && !confirm(`${o.from.name}의 제안을 거절할까?`)) return;
+    socket.emit('kin:offer:answer', { id: o.id, yes }, (res) => {
+      if (res.error) return toast(res.error);
+      toast(res.lines.join(' '));
+      if ($('nest-dlg').open) openNest();
+    });
+  }
+  // 식구 카드 아래에 동료 목록을 펼쳐 고르게 함
+  function adoptPicker(card, v) {
+    const old = card.querySelector('.kin-adopt');
+    if (old) { old.remove(); return; }
+    const box = document.createElement('div');
+    box.className = 'kin-adopt';
+    box.textContent = '동료 목록을 불러오는 중…';
+    card.appendChild(box);
+    socket.emit('rel:list', {}, (res) => {
+      box.replaceChildren();
+      const friends = res.list?.friends || [];
+      const p = document.createElement('p');
+      p.className = 'note';
+      p.textContent = friends.length ? `누구에게 ${v.name}${josa(v.name, '을', '를')} 맡길까? 받는 쪽 둥지에 빈자리가 있어야 한다.` : '아직 동료가 없다. 동료가 생기면 식구를 맡길 수 있다.';
+      box.appendChild(p);
+      const list = document.createElement('div');
+      list.className = 'kin-adopt-list';
+      for (const f of friends) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'btn';
+        b.append(avaEl(f, 22));
+        const t = document.createElement('span');
+        t.textContent = `${f.name} · Lv.${f.level}`;
+        b.appendChild(t);
+        b.addEventListener('click', () => {
+          if (!confirm(`${f.name}에게 ${v.name}${josa(v.name, '을', '를')} 맡아 달라고 할까? 받아들이면 ${v.name}${josa(v.name, '은', '는')} ${f.name}의 둥지로 떠난다.`)) return;
+          socket.emit('kin:offer', { kin: v.id, id: f.id }, (r) => {
+            if (r.error) return toast(r.error);
+            toast(r.lines.join(' '));
+            if ($('nest-dlg').open) openNest();
+          });
+        });
+        list.appendChild(b);
+      }
+      box.appendChild(list);
+    });
+  }
   // 둥지에 든 도둑을 쫓음: 사냥처럼 직접 싸우는 전투
   function raidChase() {
     socket.emit('raid:chase', {}, (res) => {
@@ -3246,6 +3334,15 @@
         }
       }
     }
+    // 입양: 알(식지 않은 것)이나 아직 갈 길을 정하지 않은 인간 아이
+    const canAdopt = v.status === 'egg' || (v.type === 'human' && v.status === 'home' && !v.path && !v.talent && !v.onExp);
+    const pend = nestOffersOut.find((o) => o.kin === v.id);
+    if (pend) {
+      label(`${pend.to.name}에게 입양을 제안했다. 답을 기다리는 중 (${dur(pend.until - Date.now())} 남음)`);
+      btn('제안 거두기', () => socket.emit('kin:offer:cancel', { id: pend.id }, (r) => { if (r.error) return toast(r.error); toast(r.lines.join(' ')); openNest(); }));
+    } else if (canAct && canAdopt) {
+      btn('동료에게 입양 보내기', () => adoptPicker(card, v));
+    }
     if (acts.children.length) card.appendChild(acts);
     return card;
   }
@@ -3301,6 +3398,23 @@
               if (confirm(`${S.regions[S.region].name}${ro(S.regions[S.region].name)} 둥지를 옮길까? 금화 ${S.nestRules.moveCost}닢이 들고, 보물더미도 함께 옮겨진다.${tierNote}${wardNote}`)) nestAct('nest:build');
             }, false, !!me.exp || me.gold < S.nestRules.moveCost));
           }
+        }
+
+        // 받은 입양 제안
+        nestOffersOut = n.offers?.out || [];
+        for (const o of n.offers?.in || []) {
+          const oc = add('<div class="adopt-card"><b></b><p></p><div class="row"></div></div>').firstChild;
+          const what = o.kin.egg ? `${kindName(o.kin.kind)}의 알 ${o.kin.name}` : `인간 아이 ${o.kin.name} (${o.kin.stage})`;
+          oc.querySelector('b').textContent = `${o.from.name}${josa(o.from.name, '이', '가')} ${what}${josa(o.kin.name, '을', '를')} 맡아 달라고 한다`;
+          oc.querySelector('p').textContent = !n.region ? '데려오려면 먼저 둥지가 있어야 한다.'
+            : n.kin.home.length >= (n.maxKin || S.kinRules.maxKin) ? `둥지에 빈자리가 없다. (식구 ${n.kin.home.length}/${n.maxKin || S.kinRules.maxKin})`
+            : `${o.kin.egg ? '알은 새 둥지에서 다시 품어 주어야 한다.' : '낯선 둥지에 오면 유대가 절반으로 줄어든다.'} ${dur(o.until - Date.now())} 안에 정하지 않으면 제안은 사라진다.`;
+          const row2 = oc.querySelector('.row');
+          const full = !n.region || n.kin.home.length >= (n.maxKin || S.kinRules.maxKin);
+          row2.append(
+            btn('데려온다', () => adoptAnswer(o, true), true, full),
+            btn('정중히 거절한다', () => adoptAnswer(o, false)),
+          );
         }
 
         // 둥지에 든 도둑
@@ -3996,6 +4110,7 @@
           top: body.scrollTop,
           gift: !!body.querySelector('.gift-box:not([hidden])'),
           memo: body.querySelector('.rel-memo textarea')?.dataset.dirty === '1' ? body.querySelector('.rel-memo textarea').value : null,
+          memoEdit: !!body.querySelector('.rel-memo.editing') && !!body.querySelector('.rel-memo textarea')?.value,
         } : null;
         renderProfile(res.profile, keep);
         if (keep) body.scrollTop = keep.top;
@@ -4025,7 +4140,8 @@
     else if (p.rel.mine) chip({ friend: '동료', rival: '라이벌', wary: '경계' }[p.rel.mine], `relb ${p.rel.mine}`);
     else if (p.rel.sent) chip('동료 요청함', 'relb pending');
     else if (p.rel.got) chip('동료 요청 받음', 'relb pending');
-    if (p.dead) chip('잠든 드래곤', 'relb wary');
+    if (p.departed) chip('먼 여행을 떠남', 'relb pending');
+    else if (p.dead) chip('잠든 드래곤', 'relb wary');
     // 지금 있는 곳 (같은 지역·동료·나일 때만 보임)
     if (p.region && S.regions[p.region]) {
       const w = document.createElement('span');
@@ -4086,6 +4202,13 @@
     if (p.nest) row('둥지', S.regions[p.nest].name);
     row('둥지 식구', p.kin.length ? p.kin.map((k) => `${k.name}(${k.stage})`).join(', ') : '없음');
     if (p.lineage) row('계보', `${p.lineage}마리 독립`);
+    if (p.heir) row('이어받은 의지', `${p.heir.name} (레벨 ${p.heir.level} ${p.heir.kindName})`);
+    if (p.departed) {
+      const dp = document.createElement('p');
+      dp.className = 'pf-depart';
+      dp.textContent = `${ago(p.departed.at)} 먼 여행을 떠났다.${p.departed.words ? ` 남긴 말: "${p.departed.words}"` : ''}`;
+      body.appendChild(dp);
+    }
     if (p.bio?.desc) { const bd = document.createElement('p'); bd.className = 'pf-bio'; bd.textContent = p.bio.desc; body.appendChild(bd); }
     body.appendChild(rows);
     if (p.traits?.length) {
@@ -4175,37 +4298,56 @@
       g1.appendChild(tm);
     }
     // 내가 남기는 메모: 어떤 관계든 남길 수 있고, 상대도 내 기록에서 볼 수 있음
+    // 저장된 메모는 글로만 보여 주고, '메모 수정'을 누르면 고칠 수 있음 (비어 있으면 바로 쓰는 칸)
     const memo = document.createElement('div');
     memo.className = 'rel-memo';
-    memo.innerHTML = `<div class="h"><span>메모 · ${esc(p.name)}도 볼 수 있다</span><span class="st"></span></div>
-      <textarea class="input" maxlength="200" placeholder="이 드래곤에 대해 기억해 둘 것 (200자까지)" aria-label="${esc(p.name)}에 대한 메모"></textarea>
-      <div class="r"><button class="btn" type="button">메모 저장</button></div>`;
-    const ta = memo.querySelector('textarea');
-    const st = memo.querySelector('.st');
     const saved = r.memo || '';
-    ta.value = keep?.memo ?? saved;
     // 예전에 '나만 본다'로 쓴 메모는 다시 저장하기 전까지 상대에게 보이지 않음
     const privateOld = !!saved && !r.memoShared;
-    const mark = () => {
-      const dirty = ta.value.trim() !== saved;
-      ta.dataset.dirty = dirty ? '1' : '';
-      st.textContent = dirty ? '저장하지 않음' : privateOld ? '아직 나만 본다 · 저장하면 상대도 본다' : saved ? '저장됨' : '';
-      st.classList.toggle('saved', !dirty && !!saved && !privateOld);
-      save.disabled = !dirty && !privateOld;
-    };
-    const save = memo.querySelector('.btn');
-    ta.addEventListener('input', mark);
-    save.addEventListener('click', () => {
-      save.disabled = true;
-      socket.emit('rel:memo', { id: p.id, text: ta.value }, (res) => {
-        if (res.error) { save.disabled = false; return toast(res.error); }
-        toast(res.lines.join(' '));
-        ta.dataset.dirty = '';
-        loadRel(refreshProfile);
+    const editing = !saved || keep?.memo != null || !!keep?.memoEdit;
+    if (!editing) {
+      memo.classList.add('view');
+      memo.innerHTML = `<div class="h"><span>내가 남긴 메모 · ${esc(p.name)}도 볼 수 있다</span><button class="linkbtn" type="button">메모 수정</button></div><p></p>${privateOld ? '<span class="st">아직 나만 본다 · 다시 저장하면 상대도 본다</span>' : ''}`;
+      memo.querySelector('p').textContent = saved;
+      memo.querySelector('.linkbtn').addEventListener('click', () => {
+        memo.replaceWith(memoEditor(true));
+        document.querySelector('.rel-memo textarea')?.focus();
       });
-    });
-    g1.appendChild(memo);
-    mark();
+      g1.appendChild(memo);
+    } else {
+      g1.appendChild(memoEditor(!!saved));
+    }
+    function memoEditor(canCancel) {
+      const box = document.createElement('div');
+      box.className = 'rel-memo editing';
+      box.innerHTML = `<div class="h"><span>메모 · ${esc(p.name)}도 볼 수 있다</span><span class="st"></span></div>
+        <textarea class="input" maxlength="200" placeholder="이 드래곤에 대해 기억해 둘 것 (200자까지)" aria-label="${esc(p.name)}에 대한 메모"></textarea>
+        <div class="r">${canCancel ? '<button class="btn cancel" type="button">취소</button>' : ''}<button class="btn save" type="button">메모 저장</button></div>`;
+      const ta = box.querySelector('textarea');
+      const st = box.querySelector('.st');
+      const save = box.querySelector('.save');
+      ta.value = keep?.memo ?? saved;
+      const mark = () => {
+        const dirty = ta.value.trim() !== saved;
+        ta.dataset.dirty = dirty ? '1' : '';
+        st.textContent = dirty ? '저장하지 않음' : privateOld ? '아직 나만 본다 · 저장하면 상대도 본다' : '';
+        save.disabled = !dirty && !privateOld;
+      };
+      ta.addEventListener('input', mark);
+      save.addEventListener('click', () => {
+        save.disabled = true;
+        socket.emit('rel:memo', { id: p.id, text: ta.value }, (res) => {
+          if (res.error) { save.disabled = false; return toast(res.error); }
+          toast(res.lines.join(' '));
+          ta.dataset.dirty = '';
+          box.classList.remove('editing'); // 저장하면 글로 보이게
+          loadRel(refreshProfile);
+        });
+      });
+      box.querySelector('.cancel')?.addEventListener('click', () => { ta.dataset.dirty = ''; box.classList.remove('editing'); refreshProfile(); });
+      mark();
+      return box;
+    }
 
     // 치유: '치유'를 배웠으면 같은 지역의 다친 드래곤을 고쳐 줌
     if (p.heal?.learned && !p.dead) {
@@ -4608,7 +4750,35 @@
     }
   }
 
+  // 먼 여행: 이어 줄 의지 설명, 이어받은 의지
+  function renderDepart() {
+    const me = S.me;
+    if (!me) return;
+    const R = S.departRules || { minLevel: 5, perLevel: 0.5, max: 10 };
+    const pts = Math.min(R.max, Math.floor(me.level * R.perLevel));
+    $('depart-what').textContent = me.level >= R.minLevel
+      ? `${me.name}${josa(me.name, '은', '는')} 대륙을 떠나 먼 여행길에 오른다. 같은 계정으로 새 드래곤을 만들면, 그 드래곤이 ${me.name}의 의지를 이어받아 능력치 포인트 ${pts}점과 칭호 '의지를 이은 자'를 받는다. 떠난 드래곤의 이야기는 동료들의 기록에 남는다.`
+      : `레벨 ${R.minLevel}부터 새 드래곤에게 의지를 이어 줄 수 있다. 지금 떠나면 이어 주는 것 없이 새로 시작한다.`;
+    $('depart-name-l').textContent = `확인을 위해 드래곤 이름 '${me.name}'${josa(me.name, '을', '를')} 적자`;
+    $('depart-name').placeholder = me.name;
+    $('depart-go').disabled = $('depart-name').value.trim() !== me.name;
+    const h = me.heir;
+    $('heir-line').hidden = !h;
+    if (h) $('heir-line').textContent = `먼 여행을 떠난 ${h.name}(레벨 ${h.level} ${S.kinds[h.kind]?.name || ''})의 의지를 이어받았다.`;
+  }
+  $('depart-name').addEventListener('input', () => { $('depart-go').disabled = $('depart-name').value.trim() !== S.me?.name; });
+  $('depart-go').addEventListener('click', () => {
+    const me = S.me;
+    if (!me || $('depart-name').value.trim() !== me.name) return;
+    if (!confirm(`정말 ${me.name}${josa(me.name, '을', '를')} 먼 여행에 떠나보낼까? 다시 돌아오지 않는다.`)) return;
+    $('depart-go').disabled = true;
+    socket.emit('dragon:depart', { name: $('depart-name').value.trim(), words: $('depart-words').value }, (res) => {
+      if (res.error) { $('depart-go').disabled = false; return toast(res.error); }
+      location.reload(); // 새 드래곤 만들기 화면으로
+    });
+  });
   function renderChar() {
+    renderDepart();
     const me = S.me;
     if (!me || !S.traits) return;
     renderTitles();
@@ -6925,6 +7095,7 @@
       S.shops = data.shops;
       S.trade = data.trade;
       S.nestRules = data.nestRules;
+      S.departRules = data.departRules;
       S.weathers = data.weathers || {};
       S.seasons = data.seasons || [];
       S.hoardTiers = data.hoardTiers || [];
@@ -6949,6 +7120,14 @@
         renderAlloc();
         TP.good = null; TP.bad = null;
         renderTraitPick($('trait-pick-new'));
+        // 먼 여행을 떠난 드래곤이 남긴 의지
+        const lg = data.legacy;
+        $('legacy-note').hidden = !lg;
+        if (lg) {
+          $('legacy-note').innerHTML = '<b></b><p></p>';
+          $('legacy-note').querySelector('b').textContent = `${lg.name}의 의지가 함께한다`;
+          $('legacy-note').querySelector('p').textContent = `먼 여행을 떠난 레벨 ${lg.level} ${S.kinds[lg.kind]?.name || ''} ${lg.name}${josa(lg.name, '이', '가')} 남긴 의지를 이어받는다. 태어나면 능력치 포인트 ${lg.pts}점과 칭호 '의지를 이은 자'(경험치 +5%)를 받는다.`;
+        }
         show('create');
       }
     });
@@ -6994,6 +7173,11 @@
     socket.on('rampage:list', (l) => { S.rampages = l || []; renderRampages(); renderHere(); if (S.region) renderOverlay(); });
     socket.on('rampage', onRampage);
     socket.on('boss', onBoss);
+    socket.on('kin:offer:got', (o) => {
+      toast(`${o.from.name}${josa(o.from.name, '이', '가')} ${o.kin.name}${josa(o.kin.name, '을', '를')} 맡아 달라고 한다.`, { label: '둥지 보기', run: () => { hideToast(); openNest(); }, ttl: 15000 });
+      if ($('nest-dlg').open) openNest();
+    });
+    socket.on('kin:offer:gone', () => { if ($('nest-dlg').open) openNest(); });
     socket.on('weather', onWeather);
     socket.on('grave:list', (l) => { S.graves = l || []; renderGraves(); });
     socket.on('grave', onGrave);

@@ -594,7 +594,7 @@ const SCENES = {
 // 시간·행동력 규칙
 const RULES = {
   apEvery: 10 * 60 * 1000,      // 행동력 1 회복 간격 (10분)
-  apBase: 12,                   // 기본 최대 행동력
+  apBase: 15,                   // 기본 최대 행동력
   apPerLevels: 5,               // 이 레벨마다 최대 행동력 +1 (5, 10, 15 …)
   hpEvery: 90 * 1000,           // 체력 1 회복 간격 (90초)
   enEvery: 2 * 60 * 1000,       // 기력 1 회복 간격 (2분)
@@ -744,6 +744,8 @@ const TITLES = [
   { id: 'rescuer',   name: '손을 내미는 자',   cond: { count: 'rescue', at: 3 },    mod: { helpHp: 0.15 },   eff: '일으켜 줄 때 체력 +15%' },
   { id: 'mender',    name: '치유의 손길',      cond: { count: 'healother', at: 15 }, mod: { heal: 1.1, helpHp: 0.05 }, eff: '치유 +10%, 일으켜 줄 때 체력 +5%' },
   { id: 'calmer',    name: '광기를 잠재우는 자', cond: { count: 'calm', at: 3 },     mod: { mindWard: 0.8 },  eff: '깎이는 정신 −20%' },
+  // 이어받은 의지
+  { id: 'heir',      name: '의지를 이은 자',   cond: { count: 'heir', at: 1 },      mod: { xp: 1.05 },       eff: '경험치 +5%' },
   // 대륙의 재앙
   { id: 'boss1',     name: '재앙에 맞선 자',   cond: { count: 'bosswin', at: 1 },   mod: { eliteAtk: 1.04 }, eff: '강적과 싸울 때 공격 +4%' },
   { id: 'boss2',     name: '대륙의 방패',      cond: { count: 'bosswin', at: 10 },  mod: { atk: 1.04, taken: 0.97 }, eff: '사냥 공격 +4%, 받는 피해 −3%' },
@@ -755,7 +757,7 @@ const TITLES = [
   { id: 'scarred',   name: '상흔투성이',       cond: { scars: 3 },                  mod: { taken: 0.95 },    eff: '사냥 받는 피해 −5%' },
 ];
 // 칭호 조건을 사람이 읽는 글로
-const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: '둥지에서 {n}번 쉬기', craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격' };
+const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: '둥지에서 {n}번 쉬기', craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격', heir: '먼 여행을 떠난 드래곤의 의지를 잇기' };
 
 // ── 장소와 사냥터 난이도 ───────────────────────────
 // 야생 지역마다 장소가 셋. 입구는 쉽고 안쪽일수록 사냥터 난이도(Lv.1~12)가 높다.
@@ -938,6 +940,11 @@ const COMBOS = {
 // 강적의 분노: 체력이 이 비율 아래로 떨어지면 한 번
 const ENRAGE = { below: 0.5, atk: 1.25, every: 2 };
 
+// ── 먼 여행: 지금 드래곤이 대륙을 떠나고, 같은 계정으로 새 드래곤을 만듦 ──
+// minLevel 이상이면 새 드래곤에게 의지를 이어 줌: 능력치 포인트(레벨 × perLevel, 최대 max)와 칭호 '의지를 이은 자'
+// 재산(금화·물건·보물더미)과 둥지, 식구는 함께 떠남 (남기고 싶은 식구는 먼저 동료에게 입양 보내기)
+const DEPART = { minLevel: 5, perLevel: 0.5, max: 10, wordsMax: 100 };
+
 // ── 계절과 날씨 ────────────────────────────────────
 // 계절은 대륙 전체에 같이 흐르고(SEASON_RULES.days일마다 바뀜), 날씨는 지역마다 SEASON_RULES.weatherHours시간마다 바뀐다.
 // 모두 시각으로 정해지므로 저장할 것이 없다 (서버를 다시 켜도 같은 날씨).
@@ -1063,5 +1070,5 @@ module.exports = {
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, TITLES, TITLE_COUNT_NAMES,
   SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
   DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
-  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES,
+  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, DEPART, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES,
 };

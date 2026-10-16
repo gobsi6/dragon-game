@@ -8,8 +8,12 @@
 //        동료면 어디서든, 아니면 같은 지역에 있을 때만
 // 텔레파시  드래곤끼리 마음으로 주고받는 쪽지. 대륙 어디서든 닿고, 상대가 잠들어(접속하지 않아) 있으면
 //        마음에 남아 있다가 깨어날 때 들림. 상대가 나를 '경계'로 표시했으면 닿지 않음
+// 입양   둥지의 알이나 아직 어른이 되지 않은 인간 아이를 동료에게 보내자고 제안. 받는 쪽이 데려오기로 하면
+//        그 둥지로 옮겨 감 (받는 쪽 둥지에 빈자리가 있어야 함). 정할 때까지는 보내는 쪽 둥지에 있음
 
-const { ITEMS, KINDS, REGIONS, STANCES, MIND, SKILLS, HEAL_OTHER, fameTier } = require('./game-data');
+const { ITEMS, KINDS, REGIONS, STANCES, MIND, SKILLS, HEAL_OTHER, fameTier, KIN, DAY } = require('./game-data');
+
+const ADOPT = { days: 3 };         // 입양 제안을 기다리는 날 (지나면 저절로 거둬짐)
 
 const TRADE_MAX_ITEMS = 6;            // 한쪽이 올려놓을 수 있는 물건 종류
 const TP_MAX = 200;                   // 텔레파시 한 번의 글자 수
@@ -139,6 +143,9 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       traits: logic.traitsOf(d).list,
       title: (() => { const t = logic.titleOn(d); return t ? { name: t.name, eff: t.eff } : null; })(),
       dead: !!d.dead_at,
+      // 먼 여행을 떠났으면 그때와 남긴 말, 의지를 이어받았으면 누구에게서
+      departed: (() => { if (!d.dead_at) return null; let f = d.fallen; if (typeof f === 'string') { try { f = JSON.parse(f); } catch { f = null; } } return f?.departed ? { at: f.at, words: f.words || '' } : null; })(),
+      heir: (() => { try { const h = d.heir ? JSON.parse(d.heir) : null; return h ? { name: h.name, kind: h.kind, kindName: KINDS[h.kind]?.name || '', level: h.level } : null; } catch { return null; } })(),
       bio: (() => { try { const b = typeof d.bio === 'string' ? JSON.parse(d.bio || '{}') : (d.bio || {}); const g = b.gender || ''; return { gender: ({ 수컷: '남성', 암컷: '여성' })[g] || g, desc: b.desc || '' }; } catch { return { gender: '', desc: '' }; } })(),
       online: !!e,
       away: !!d.exp_end, resting: !!d.rest_at,
@@ -243,6 +250,57 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     sendMe(A.socket, a);
     sendMe(B.socket, b);
   }
+
+  // ── 식구 입양 ─────────────────────────────────────
+  // 보낼 수 있는 식구: 알(식지 않은 것), 아직 갈 길을 정하지 않은 인간 아이 (어른이 되기 전). 원정을 따라간 식구는 안 됨
+  function adoptWhy(k, now = Date.now()) {
+    if (!k) return '그 식구는 이제 둥지에 없다.';
+    if (k.status === 'egg') return null;
+    if (k.type !== 'human' || k.status !== 'home') return '알이나 인간 아이만 입양 보낼 수 있다.';
+    if (k.data.path || (now - k.data.born) / DAY >= KIN.human.adultDay) return '이미 다 자라 제 갈 길을 정할 때가 되었다.';
+    if (k.data.onExp) return '원정에 따라가 있는 동안에는 보낼 수 없다.';
+    return null;
+  }
+  const kinWhat = (k) => (k.status === 'egg' ? `${KINDS[k.data.kind]?.name || ''}의 알 ${k.name}` : `인간 아이 ${k.name}`);
+  const kinBrief = (k, now) => ({ id: k.id, name: k.name, type: k.type, egg: k.status === 'egg', kind: k.data.kind || null, stage: life.stageOf(k, now).name });
+  const loadDragon = (id) => { const e = live(id); return e ? e.dragon : db.getDragon(id); };
+  // 식구가 바뀐 드래곤: 저장하고 식구 도움·요약을 새로
+  function kinChanged(d, kin) {
+    db.kinSaveAll(d.id, kin);
+    d.perks = life.perksOf(kin);
+    d.kinSummary = life.summary(kin, Date.now());
+    const e = live(d.id);
+    db.saveState(d);
+    if (e) sendMe(e.socket, d);
+  }
+  const adoptTell = (id, text, ev, data) => {
+    const e = live(id);
+    if (e) { e.socket.emit('notice', { title: '입양', lines: [text] }); if (ev) e.socket.emit(ev, data); sendMe(e.socket, e.dragon); }
+    else db.noteAdd(id, text);
+  };
+  // 기한이 지났거나 더는 보낼 수 없게 된 제안은 지움
+  function offerAlive(o, now = Date.now()) {
+    if (now - o.at > ADOPT.days * DAY) { db.offerDel(o.id); adoptTell(o.from_id, `입양 제안에 답이 없어 거두어들였다.`); return null; }
+    const k = db.kinLoad(o.from_id).find((x) => x.id === o.kin_id);
+    if (adoptWhy(k, now)) { db.offerDel(o.id); return null; }
+    return k;
+  }
+  // 둥지 창에 보일 제안: 받은 것과 보낸 것
+  function kinOffers(d, now = Date.now()) {
+    const inn = [], out = [];
+    for (const o of db.offersTo(d.id)) {
+      const k = offerAlive(o, now);
+      const f = k && loadDragon(o.from_id);
+      if (f) inn.push({ id: o.id, at: o.at, until: o.at + ADOPT.days * DAY, from: { id: f.id, name: f.name, kind: f.kind }, kin: kinBrief(k, now) });
+    }
+    for (const o of db.offersFrom(d.id)) {
+      const k = offerAlive(o, now);
+      const t = k && loadDragon(o.to_id);
+      if (t) out.push({ id: o.id, kin: o.kin_id, until: o.at + ADOPT.days * DAY, to: { id: t.id, name: t.name, kind: t.kind } });
+    }
+    return { in: inn, out, days: ADOPT.days };
+  }
+  const roomOf = (t) => (t.nest ? !life.homeKin(db.kinLoad(t.id), logic.maxKinOf(t)).full : false);
 
   // ── 소켓 연결마다 ─────────────────────────────────
   function attach(socket) {
@@ -409,6 +467,71 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       else db.noteAdd(t.id, text);
       sendMe(socket, d);
       return { ok: true, amount: amt, lines };
+    });
+
+    // ── 식구 입양 ──
+    on('kin:offer', (d, p) => {
+      if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
+      if (!d.nest || d.region !== d.nest) return { error: '식구는 둥지에 있을 때만 보낼 수 있다.' };
+      const kin = db.kinLoad(d.id);
+      const k = kin.find((x) => x.id === Number(p.kin) && (x.status === 'home' || x.status === 'egg'));
+      const why = adoptWhy(k);
+      if (why) return { error: why };
+      if (db.offerOfKin(k.id)) return { error: `${k.name}에게는 이미 보낼 곳을 물어 두었다.` };
+      const id = target(p);
+      if (!id || id === d.id) return { error: '그런 드래곤은 없다.' };
+      if (!isFriend(d.id, id) || !isFriend(id, d.id)) return { error: '동료에게만 입양 보낼 수 있다.' };
+      const t = loadDragon(id);
+      if (!t || t.dead_at) return { error: '그 드래곤은 지금 받을 수 없다.' };
+      if (!t.nest) return { error: `${t.name}에게는 아직 둥지가 없다.` };
+      if (!roomOf(t)) return { error: `${t.name}의 둥지에는 이미 식구가 가득하다.` };
+      const oid = db.offerAdd(k.id, d.id, t.id);
+      const what = kinWhat(k);
+      adoptTell(t.id, `동료 ${ga(d.name)} ${eul(what)} 맡아 달라고 한다. 둥지에서 데려올지 정할 수 있다. (${ADOPT.days}일 안에)`, 'kin:offer:got', { id: oid, from: { id: d.id, name: d.name }, kin: kinBrief(k, Date.now()) });
+      return { ok: true, lines: [`${t.name}에게 ${eul(what)} 맡아 달라고 했다. 답을 기다리는 동안 ${k.name}${josa(k.name, '은', '는')} 둥지에 있다.`] };
+    });
+    on('kin:offer:cancel', (d, p) => {
+      const o = db.offerGet(Number(p.id));
+      if (!o || o.from_id !== d.id) return { error: '그런 제안은 없다.' };
+      db.offerDel(o.id);
+      adoptTell(o.to_id, `${ga(d.name)} 입양 제안을 거두어들였다.`, 'kin:offer:gone', { id: o.id });
+      return { ok: true, lines: ['입양 제안을 거두어들였다.'] };
+    });
+    on('kin:offer:answer', (d, p) => {
+      const o = db.offerGet(Number(p.id));
+      if (!o || o.to_id !== d.id) return { error: '그 제안은 이미 지나갔다.' };
+      const now = Date.now();
+      const k = offerAlive(o, now);
+      const f = k && loadDragon(o.from_id);
+      // 먼 여행을 떠난 드래곤이 남기고 간 제안은 받아 줄 수 있음 (긴 잠에 든 드래곤은 안 됨)
+      const gone = f && f.dead_at && !(() => { let x = f.fallen; if (typeof x === 'string') { try { x = JSON.parse(x); } catch { x = null; } } return x?.departed; })();
+      if (!k || !f || gone) { db.offerDel(o.id); return { error: '그 식구는 이제 보낼 수 없게 되었다.' }; }
+      const what = kinWhat(k);
+      if (!p.yes) {
+        db.offerDel(o.id);
+        adoptTell(f.id, `${ga(d.name)} ${eul(what)} 맡기 어렵다고 했다.`);
+        return { ok: true, lines: [`${f.name}의 제안을 정중히 거절했다.`] };
+      }
+      if (!d.nest) return { error: '데려오려면 내 둥지가 있어야 한다.' };
+      if (!roomOf(d)) return { error: `내 둥지에는 이미 식구가 가득하다. (최대 ${logic.maxKinOf(d)})` };
+      if (!db.kinMove(k.id, f.id, d.id)) { db.offerDel(o.id); return { error: '그 식구는 이미 떠났다.' }; }
+      db.offerDel(o.id);
+      // 새 둥지에서: 아이는 낯을 가려 유대가 줄고, 알은 다시 품어야 함 (식기까지의 날은 새로)
+      const mine = db.kinLoad(d.id);
+      const m = mine.find((x) => x.id === k.id);
+      if (m) {
+        m.data.adoptedFrom = f.name;
+        if (m.status === 'egg') { m.data.incubateAt = null; m.data.found = now; }
+        else { m.data.bond = Math.max(KIN.human.startBond, Math.round((m.data.bond || 0) * 0.5)); m.data.lastCare = now - KIN.human.careCooldown; m.data.onExp = false; }
+      }
+      kinChanged(d, mine);
+      kinChanged(f, db.kinLoad(f.id));
+      logic.chron(d, 'choice', `동료 ${f.name}에게서 ${eul(what)} 맡아 왔다.`);
+      logic.chron(f, 'choice', `${what}${josa(what, '을', '를')} 동료 ${d.name}에게 입양 보냈다.`);
+      db.saveState(d); db.saveState(f);
+      adoptTell(f.id, `${ga(d.name)} ${eul(what)} 데려갔다. 새 둥지에서 잘 자랄 것이다.`, 'kin:offer:gone', { id: o.id });
+      sendMe(socket, d);
+      return { ok: true, lines: [`${f.name}에게서 ${eul(what)} 맡아 왔다.`, m && m.status === 'egg' ? '새 둥지에서 다시 품어 주어야 한다.' : `${k.name}${josa(k.name, '이', '가')} 낯선 둥지를 두리번거린다. 유대를 다시 쌓아야 한다.`] };
     });
 
     // ── 선물 ──
@@ -582,5 +705,5 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     }
   }
 
-  return { attach, onEnter, onLeave, onMove, relIncoming: (id) => db.reqInCount(id), tellRival, refreshRivals };
+  return { attach, onEnter, onLeave, onMove, relIncoming: (id) => db.reqInCount(id), tellRival, refreshRivals, kinOffers };
 };
