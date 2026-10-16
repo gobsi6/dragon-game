@@ -126,6 +126,7 @@ function tick(d, kin, now = Date.now()) {
         k.data.bond = clamp(k.data.bond - n);
         k.data.decayed = idle;
         out.lines.push(`${ga(k)} 외로워한다. 한동안 돌봐 주지 못했다. (유대 −${n})`);
+        out.lines.push(...logic.traitCount(d, 'neglect')); // 특성: 냉담
       }
       const st = stageOf(k, now);
       if (st.i > (k.data.stage || 0)) {
@@ -308,7 +309,8 @@ function care(d, kin, id, item, have, now = Date.now()) {
   if (!c) return { error: '그 물건으로는 돌볼 수 없다.' };
   if (have(item) < 1) return { error: '가지고 있지 않다.' };
   if (now - k.data.lastCare < H.careCooldown) return { error: `${ga(k)} 아직 배부르다. 조금 뒤에 다시 돌보자.` };
-  k.data.bond = clamp(k.data.bond + c.bond);
+  const gain = Math.max(1, c.bond + logic.traitMods(d).bond); // 특성: 다정한 발톱·냉담
+  k.data.bond = clamp(k.data.bond + gain);
   if (!k.data.talent) k.data.lean[c.talent] += 1;
   k.data.lastCare = now;
   k.data.decayed = 0;
@@ -318,7 +320,7 @@ function care(d, kin, id, item, have, now = Date.now()) {
     smith: '반짝이는 걸 쥐고 이리저리 두드려 본다.',
     guard: '꼭 쥐고 드래곤 흉내를 내며 으르렁거린다.',
   }[c.talent];
-  return { title: k.name, lines: [`${k.name}에게 ${name}${josa(name, '을', '를')} 건넸다. ${react}`, `유대 +${c.bond}`], items: [{ id: item, qty: -1 }] };
+  return { title: k.name, lines: [`${k.name}에게 ${name}${josa(name, '을', '를')} 건넸다. ${react}`, `유대 +${gain}`, ...logic.traitCount(d, 'care')], items: [{ id: item, qty: -1 }] };
 }
 
 function rename(kin, id, name) {
@@ -519,6 +521,20 @@ function rollEvent(d, kin, have, trigger, now = Date.now(), force = false) {
   return eventView(e, c, vars);
 }
 
+// GM: 고른 이벤트를 바로 일으킴. ignoreCond면 조건이 맞지 않아도 (문장을 만들 수 있을 때만)
+function forceEvent(d, kin, have, id, ignoreCond, now = Date.now()) {
+  const e = EVENTS.find((x) => x.id === id);
+  if (!e) return { error: '그런 이벤트는 없다.' };
+  const c = ctxOf(d, kin, have, e.when[0], now);
+  if (!ignoreCond && !safe(() => e.cond(c))) return { error: '지금은 이 이벤트의 조건이 맞지 않는다. (조건 무시를 켜면 일으킬 수 있다)' };
+  let vars;
+  try { vars = e.setup ? e.setup(c) : {}; e.text(c, vars); } catch {
+    return { error: '이 이벤트에 필요한 것이 없어 일으킬 수 없다. (예: 식구가 있어야 하는 이벤트)' };
+  }
+  d.pending_event = JSON.stringify({ id: e.id, vars, at: now, region: d.region, trigger: e.when[0] });
+  return { ok: true, title: e.title };
+}
+
 // 기다리는 이벤트. 사정이 바뀌어 더는 일어날 수 없으면 조용히 지나감
 function currentEvent(d, kin, have, now = Date.now()) {
   const p = pending(d);
@@ -585,6 +601,6 @@ module.exports = {
   tick, perksOf, summary, views, homeKin, stageOf,
   care, rename, choosePath, incubate, train, release,
   expStart, expFinish, companions, restTogether,
-  rollEvent, getEvent, chooseEvent,
+  rollEvent, getEvent, chooseEvent, forceEvent,
   newHuman, newEgg, // 시험용
 };

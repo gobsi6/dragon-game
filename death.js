@@ -1,0 +1,239 @@
+// 쓰러짐과 죽음
+// - 직접 싸우는 강적 전투에서 지면 체력 0으로 쓰러진다 (fall). 선택하기 전까지는 아무것도 할 수 없다.
+// - 상흔을 입고 일어선다: 상흔이 없는 능력치 하나가 영구히 −1. 다섯 능력치에 모두 상흔이 생기면 더는 일어설 수 없다.
+// - 긴 잠에 든다: 드래곤은 '잠든 드래곤'으로 기록에 남고, 계정은 새 드래곤을 만들 수 있다.
+//   독립한 새끼들이 추모하러 오고, 둥지에 남은 식구와 재산은 정해진 날 동안 다른 드래곤이 거둘 수 있다.
+//   그동안 아무도 거두지 않은 식구는 실종되고, 재산은 흩어진다.
+const { DEATH, STATS, REGIONS, ITEMS, KINDS, DAY, KIN } = require('./game-data');
+
+const str = (v) => (typeof v === 'string' ? v.trim() : '');
+function josa(word, a, b) {
+  const c = word.charCodeAt(word.length - 1) - 0xac00;
+  if (c < 0 || c > 11171) return `${a}(${b})`;
+  return c % 28 ? a : b;
+}
+const ga = (n) => `${n}${josa(n, '이', '가')}`;
+const eul = (n) => `${n}${josa(n, '을', '를')}`;
+const parse = (v, def) => { if (v && typeof v === 'object') return v; try { return v ? JSON.parse(v) : def; } catch { return def; } };
+
+module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broadcastPresence }) {
+  const shout = (text) => io.emit('system', { text, at: Date.now() });
+  const live = (id) => online.get(id) || null;
+  const load = (id) => { const e = live(id); return e ? e.dragon : db.getDragon(id); };
+
+  const fallenOf = (d) => (d.dead_at ? null : (d.fallen = parse(d.fallen, null)));
+  const scarsOf = (d) => (d.scars = parse(d.scars, []));
+  const canRevive = (d) => scarsOf(d).length < STATS.length;
+
+  // 강적에게 져서 쓰러짐
+  function fall(d) {
+    if (fallenOf(d)) return;
+    d.hp = 0;
+    d.hp_at = Date.now();
+    d.rest_at = null;
+    d.fallen = { at: Date.now(), region: d.region };
+    db.saveState(d);
+    const e = live(d.id);
+    if (e) { sendMe(e.socket, d); e.socket.emit('fallen', view(d)); }
+  }
+  function view(d) {
+    return { scars: scarsOf(d), canRevive: canRevive(d), kin: (d.kinSummary?.home || []).length };
+  }
+
+  // 상흔을 입고 일어섬
+  function revive(d) {
+    if (!fallenOf(d)) return { error: '쓰러져 있지 않다.' };
+    if (!canRevive(d)) return { error: '온몸에 상흔이 가득해 더는 일어설 수 없다.' };
+    const scars = scarsOf(d);
+    const free = STATS.filter((s) => !scars.includes(s.key));
+    const st = free[Math.floor(Math.random() * free.length)];
+    d[st.key] = Math.max(1, d[st.key] - 1);
+    if (st.key === 'scale') d.hp_max -= 5;     // 비늘 1 = 최대 체력 5
+    if (st.key === 'wisdom') d.en_max -= 2;    // 지혜 1 = 최대 기력 2
+    scars.push(st.key);
+    d.fallen = null;
+    d.hp = Math.max(1, Math.round(logic.hpCap(d) * DEATH.reviveHp));
+    d.hp_at = Date.now();
+    d.en = Math.min(d.en, logic.enCap(d));
+    const left = STATS.length - scars.length;
+    return { title: '상흔', lines: [
+      `떨리는 다리로 다시 일어섰다. ${st.name}에 깊은 상흔이 남았다. (${st.name} 영구 −1)`,
+      left ? `상흔이 없는 능력치가 ${left}개 남았다.` : '이제 온몸에 상흔이 가득하다. 다시 쓰러지면 일어설 수 없다.',
+    ] };
+  }
+
+  // 긴 잠에 듦
+  function die(d) {
+    if (!fallenOf(d)) return { error: '쓰러져 있지 않다.' };
+    const now = Date.now();
+    const graveRegion = d.nest || d.region;
+    const kin = db.kinLoad(d.id);
+    const home = kin.filter((k) => k.status === 'home' || k.status === 'egg');
+    const grown = kin.filter((k) => k.type === 'drake' && k.status === 'independent');
+    life.views(kin, now, d); // 남길 식구 모습을 미리 만들어 봄 (문제가 있으면 여기서 멈추고 아무것도 바꾸지 않음)
+    // 금화는 남긴 재산으로
+    d.hoard_gold = (d.hoard_gold || 0) + d.gold;
+    d.gold = 0;
+    d.rest_at = null; d.exp_end = null; d.exp_start = null; d.exp_region = null;
+    d.berserk = null; d.pending_event = null;
+    d.fallen = { region: graveRegion, until: now + DEATH.graveDays * DAY, at: now };
+    db.saveState(d);
+    db.bury(d);
+    d.dead_at = now;
+    const where = REGIONS[graveRegion].name;
+    const lines = [`${ga(d.name)} 긴 잠에 들었다.`];
+    const kn = KINDS[d.kind].name;
+    shout(`[부고] ${ga(d.name)} 긴 잠에 들었다. 레벨 ${d.level}의 ${kn}${josa(kn, '이었다', '였다')}.`);
+    // 독립한 새끼들이 추모하러 옴
+    for (const k of grown) {
+      const t = `[부고] 독립한 ${ga(k.name)} 먼 하늘에서 날아와, ${d.name}의 곁에서 오래도록 울었다.`;
+      shout(t);
+      lines.push(t.replace('[부고] ', ''));
+    }
+    const hasHoard = (d.hoard_gold || 0) > 0 || db.hoard(d.id).length > 0;
+    if (home.length || hasHoard) {
+      shout(`[부고] ${where}에 ${d.name}의 둥지가 남았다.${home.length ? ` 남은 식구들이 기다린다. (${home.length})` : ''} ${DEATH.graveDays}일 안에 누군가 거두지 않으면 ${home.length ? '실종되고' : ''} 남은 것들은 흩어진다.`);
+      io.emit('grave', graveInfo(d.id));
+    }
+    // 동료들에게 (접속하지 않았으면 다음 접속 때)
+    for (const r of db.relList(d.id)) {
+      if (r.kind !== 'friend') continue;
+      const text = `동료 ${ga(d.name)} 긴 잠에 들었다.${home.length || hasHoard ? ` ${where}에 남긴 둥지를 ${DEATH.graveDays}일 안에 거둘 수 있다.` : ''}`;
+      const e = live(r.id);
+      if (e) e.socket.emit('notice', { title: '부고', lines: [text] });
+      else db.noteAdd(r.id, text);
+    }
+    return { ok: true, died: { name: d.name, level: d.level, kind: d.kind, lines, mourners: grown.map((k) => k.name), lineage: grown.length } };
+  }
+
+  // ── 남긴 둥지 ──────────────────────────────────────
+  function graveInfo(id) {
+    const d = db.getDragon(id);
+    if (!d || !d.dead_at) return null;
+    const g = parse(d.fallen, null);
+    if (!g || g.closed) return null;
+    const kin = db.kinLoad(id).filter((k) => k.status === 'home' || k.status === 'egg');
+    return {
+      id, name: d.name, kind: d.kind, level: d.level, region: g.region, until: g.until,
+      gold: d.hoard_gold || 0, items: db.hoard(id).filter((x) => x.qty > 0),
+      kin: life.views(kin, Date.now(), d).home.map((k) => ({ id: k.id, name: k.name, type: k.type, stage: k.stage, egg: k.status === 'egg', kind: k.kind || null })),
+    };
+  }
+  const graves = () => db.graveIds().map(graveInfo).filter(Boolean);
+  // 정해진 날이 지나면: 식구는 실종, 재산은 흩어짐
+  function closeGrave(id) {
+    const d = db.getDragon(id);
+    const g = d && parse(d.fallen, null);
+    if (!g || g.closed) return;
+    const kin = db.kinLoad(id);
+    let lost = 0;
+    for (const k of kin) if (k.status === 'home' || k.status === 'egg') { k.status = 'lost'; k.data.ended = Date.now(); lost++; }
+    db.kinSaveAll(id, kin);
+    db.hoardClear(id);
+    d.hoard_gold = 0;
+    d.fallen = { ...g, closed: true };
+    db.saveState(d);
+    if (lost) shout(`[부고] 아무도 찾아오지 않은 ${d.name}의 둥지에서, 남아 있던 식구들이 어디론가 사라졌다. (${lost})`);
+    io.emit('grave:end', { id });
+  }
+  const ticker = setInterval(() => {
+    const now = Date.now();
+    for (const id of db.graveIds()) {
+      const g = parse(db.getDragon(id)?.fallen, null);
+      if (g && !g.closed && now >= g.until) closeGrave(id);
+    }
+  }, 60000);
+  ticker.unref?.();
+
+  function attach(socket) {
+    const me = () => { const e = online.get(socket.data.dragonId); return e && e.socket === socket ? e.dragon : null; };
+    const on = (ev, fn) => socket.on(ev, (p, ack) => {
+      if (typeof ack !== 'function') ack = () => {};
+      const d = me();
+      if (!d) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+      try { ack(fn(d, p || {}) || { ok: true }); } catch (e) { console.error('[죽음]', ev, e); ack({ error: '처리하다 문제가 생겼다.' }); }
+    });
+
+    on('fallen:revive', (d) => {
+      const r = revive(d);
+      if (r.error) return r;
+      db.saveState(d);
+      sendMe(socket, d);
+      broadcastPresence(d.region);
+      return { ok: true, result: r };
+    });
+    on('fallen:die', (d) => {
+      const r = die(d);
+      if (r.error) return r;
+      // 이 접속에서 드래곤을 떼어 냄. 화면은 추모 창을 보여 준 뒤 새로 접속해 드래곤을 만듦
+      online.delete(d.id);
+      socket.leave(d.region);
+      socket.data.dragonId = null;
+      broadcastPresence(d.region);
+      return r;
+    });
+
+    on('grave:list', () => ({ ok: true, list: graves() }));
+    on('grave:get', (d, p) => {
+      const g = graveInfo(Number(p.id));
+      return g ? { ok: true, grave: g } : { error: '그 둥지에는 이제 아무것도 남지 않았다.' };
+    });
+    // 남긴 것 가져가기: what = 'gold' 또는 물건 id (그 물건을 모두)
+    on('grave:take', (d, p) => {
+      const id = Number(p.id);
+      const g = graveInfo(id);
+      if (!g) return { error: '그 둥지에는 이제 아무것도 남지 않았다.' };
+      if (d.region !== g.region) return { error: `${REGIONS[g.region].name}에 가야 가져올 수 있다.` };
+      if (logic.berserkOf(d) || fallenOf(d)) return { error: '지금은 할 수 없다.' };
+      const what = str(p.what);
+      let line;
+      if (what === 'gold') {
+        if (!g.gold) return { error: '남은 금화가 없다.' };
+        const o = db.getDragon(id);
+        o.hoard_gold = 0;
+        db.saveState(o);
+        d.gold += g.gold;
+        db.saveState(d);
+        line = `${g.name}의 둥지에서 금화 ${g.gold}닢을 거두었다.`;
+      } else {
+        const it = g.items.find((x) => x.item === what);
+        if (!it) return { error: '그 물건은 남아 있지 않다.' };
+        if (!db.hoardTake(id, what, it.qty)) return { error: '이미 누군가 가져갔다.' };
+        db.saveState(d, [{ id: what, qty: it.qty }]);
+        line = `${ITEMS[what].name} ${it.qty}개를 거두었다.`;
+      }
+      sendMe(socket, d);
+      io.emit('grave', graveInfo(id));
+      return { ok: true, line, grave: graveInfo(id) };
+    });
+    // 남은 식구 거두기: 둥지가 있고 자리가 있어야 함
+    on('grave:adopt', (d, p) => {
+      const id = Number(p.id);
+      const g = graveInfo(id);
+      if (!g) return { error: '그 둥지에는 이제 아무것도 남지 않았다.' };
+      if (d.region !== g.region) return { error: `${REGIONS[g.region].name}에 가야 거둘 수 있다.` };
+      if (!d.nest) return { error: '거두려면 내 둥지가 있어야 한다.' };
+      if (logic.berserkOf(d) || fallenOf(d)) return { error: '지금은 할 수 없다.' };
+      const mine = db.kinLoad(d.id);
+      if (life.homeKin(mine).full) return { error: `내 둥지에는 이미 식구가 가득하다. (최대 ${KIN.maxKin})` };
+      const k = g.kin.find((x) => x.id === Number(p.kin));
+      if (!k) return { error: '그 식구는 이미 떠났다.' };
+      if (!db.kinMove(k.id, id, d.id)) return { error: '이미 누군가 거두었다.' };
+      const kinNow = db.kinLoad(d.id);
+      const moved = kinNow.find((x) => x.id === k.id);
+      if (moved && moved.type === 'human') { moved.data.lastCare = Date.now() - KIN.human.careCooldown; db.kinSaveAll(d.id, kinNow); }
+      d.perks = life.perksOf(kinNow);
+      d.kinSummary = life.summary(kinNow, Date.now());
+      const line = k.egg ? `${d.name}의 둥지에 남은 알을 품에 안았다. 이제 내 둥지의 식구다.` : `${eul(k.name)} 거두었다. 낯선 냄새에 잠시 떨더니, 곧 곁에 몸을 붙인다.`;
+      shout(`[부고] ${ga(d.name)} ${g.name}의 둥지에 남은 ${k.egg ? '알' : k.name}${josa(k.egg ? '알' : k.name, '을', '를')} 거두었다.`);
+      sendMe(socket, d);
+      io.emit('grave', graveInfo(id));
+      return { ok: true, line, grave: graveInfo(id) };
+    });
+  }
+
+  // 쓰러진 동안·죽은 뒤에는 아무것도 할 수 없음
+  const blocked = (d) => (fallenOf(d) ? '쓰러져 있다. 일어설지, 긴 잠에 들지 먼저 정해야 한다.' : null);
+
+  return { attach, fall, blocked, fallenOf, scarsOf, canRevive, graves, view, closeGrave };
+};

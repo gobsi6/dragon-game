@@ -11,6 +11,9 @@ const STATS = [
 ];
 
 // 처음 만들 때 나눠 주는 자유 포인트
+// 레벨이 오를 때마다 받는 능력치 포인트 (드래곤 기록 칸에서 직접 나눔)
+const STAT_POINTS = { perLevel: 1 };
+
 const CREATION = {
   points: 10,   // 모두 써야 시작할 수 있음
   perStat: 5,   // 한 능력치에 넣을 수 있는 최대치
@@ -145,12 +148,14 @@ const ITEMS = {
   fire_crystal: { name: '불의 결정',        rarity: 'rare',     desc: '안에서 작은 불꽃이 흔들린다.' },
   beast_hide:   { name: '짐승 가죽',        rarity: 'common',   desc: '질기고 두꺼운 가죽이다.' },
   sharp_fang:   { name: '날카로운 송곳니',  rarity: 'uncommon', desc: '사냥한 짐승에게서 얻었다.' },
+  corrupt_crystal:{ name: '오염 결정',      rarity: 'rare', value: 35, desc: '오염된 땅에서만 맺히는 검붉은 결정. 오래 쥐고 있으면 머릿속이 웅웅거린다.' },
 
   // ── 만든 물건: 회복약 (use: 사용 효과) ──
   honey_salve:  { name: '꿀 고약',          rarity: 'common',   type: 'use', use: { hp: 30 },  desc: '상처에 바르면 금세 아문다.' },
   moss_salve:   { name: '이끼 고약',        rarity: 'uncommon', type: 'use', use: { hp: 70 },  desc: '빛나는 이끼가 상처를 차갑게 덮는다.' },
   ember_tea:    { name: '불씨 차',          rarity: 'common',   type: 'use', use: { en: 25 },  desc: '마시면 속이 뜨거워지고 기운이 돈다.' },
   sun_breath:   { name: '태양의 숨결',      rarity: 'rare',     type: 'use', use: { ap: 4 },   desc: '한 모금 들이켜면 날개에 힘이 솟는다.' },
+  calm_incense: { name: '진정의 향',        rarity: 'uncommon', type: 'use', use: { mind: 40 }, desc: '빛나는 이끼와 꿀을 태운 연기가 흐려진 정신을 맑게 한다.' },
 
   // ── 만든 물건: 장신구 (slot: 착용 자리, bonus: 능력치, expRare: 원정 귀한 물건 확률) ──
   frost_plume:  { name: '서리 깃장식',      rarity: 'uncommon', type: 'equip', slot: 'head',  bonus: { wing: 2 },             desc: '얼음 결정을 엮은 머리 장식이다.' },
@@ -164,9 +169,12 @@ const ITEMS = {
   clover_charm: { name: '은빛 토끼풀 부적', rarity: 'rare',     type: 'equip', slot: 'charm', bonus: { majesty: 1 }, expRare: 0.03, desc: '먼 길에 행운을 불러온다.' },
   scout_knot:   { name: '탐험가의 매듭',    rarity: 'common',   type: 'equip', slot: 'charm', bonus: {}, expRare: 0.02,           desc: '길을 잃지 않게 해 준다는 매듭이다.' },
   ancient_charm:{ name: '고대의 부적',      rarity: 'rare',     type: 'equip', slot: 'charm', bonus: { claw: 1, scale: 1, wing: 1, wisdom: 1, majesty: 1 }, desc: '오래전 드래곤이 지녔던 부적이다.' },
+  void_claw:    { name: '오염된 발톱덮개',  rarity: 'rare',     type: 'equip', slot: 'claw',  bonus: { claw: 3, wing: 1 },    desc: '오염 결정을 박아 넣은 발톱덮개. 강하지만 만질 때마다 섬뜩하다.' },
+  pure_amulet:  { name: '정화의 부적',      rarity: 'rare',     type: 'equip', slot: 'charm', bonus: { wisdom: 1 }, mindWard: 0.5, desc: '오염 결정을 룬으로 묶어 오히려 오염을 막는다. 깎이는 정신이 절반으로 준다.' },
   silver_pendant:{ name: '은 펜던트',       rarity: 'uncommon', type: 'equip', slot: 'neck',  bonus: { majesty: 3 },          desc: '인간의 세공 솜씨가 빛나는 펜던트다.' },
 
   // ── 인간의 시장에서 파는 물건 (value: 기준 값) ──
+  holy_water:   { name: '성수',             rarity: 'uncommon', type: 'use', use: { mind: 30 }, value: 30, desc: '왕도 성당에서 축복한 물. 흐려진 정신을 맑게 한다.' },
   herbal_ointment:{ name: '약초상 연고',    rarity: 'common',   type: 'use', use: { hp: 50 }, value: 18, desc: '왕도 약초상이 파는 쓴 냄새의 연고다.' },
   strong_wine:  { name: '진한 포도주',      rarity: 'common',   type: 'use', use: { en: 40 }, value: 20, desc: '한 통을 비우면 기운이 끓어오른다.' },
   salted_fish:  { name: '절인 생선',        rarity: 'common',   type: 'use', use: { ap: 2 },  value: 25, desc: '어촌에서 말린 짭짤한 생선이다.' },
@@ -216,6 +224,9 @@ const RECIPES = [
   { out: 'fire_crown',    needs: { fire_crystal: 1, gold_ore: 2 },                     en: 14, wis: 12 },
   { out: 'ancient_charm', needs: { ancient_relic: 1, eternal_ice: 1, heartwood: 1 },   en: 18, wis: 14 },
   { out: 'silver_pendant',needs: { silver_chain: 2, amber: 1 },                        en: 10, wis: 9 },
+  { out: 'calm_incense',  needs: { glow_moss: 1, wild_honey: 1 },                      en: 5,  wis: 8 },
+  { out: 'void_claw',     needs: { corrupt_crystal: 3, obsidian: 1 },                  en: 14, wis: 11 },
+  { out: 'pure_amulet',   needs: { corrupt_crystal: 2, rune_stone: 2, silver_clover: 1 }, en: 14, wis: 12 },
 ];
 for (const r of RECIPES) {
   const it = ITEMS[r.out];
@@ -229,7 +240,7 @@ for (const it of Object.values(ITEMS)) if (it.value == null) it.value = RARITY_V
 // ── 인간 마을 ──────────────────────────────────────
 // 시장이 있는 지역과 파는 물건
 const SHOPS = {
-  capital: ['herbal_ointment', 'strong_wine', 'silver_chain', 'travel_map'],
+  capital: ['herbal_ointment', 'strong_wine', 'silver_chain', 'travel_map', 'holy_water'],
   coast:   ['herbal_ointment', 'salted_fish', 'silver_chain', 'sea_compass'],
 };
 
@@ -419,8 +430,213 @@ const RULES = {
   expeditionMinutes: [30, 60, 120, 180],
 };
 
+// ── 특성 ───────────────────────────────────────────
+// 처음 만들 때 긍정 하나·부정 하나를 고르고, 플레이하다 보면 새로 생기거나 사라진다.
+// mod: 효과. 곱하는 값(Regen·Dmg·buy·sell·Gold·Gain·xp·expRolls)은 1이 기준, 더하는 값(stats·hpMax·enMax·huntClaw·gatherExtra·exploreFind·bond)은 0이 기준
+const TRAITS = {
+  // 긍정
+  steel_scale: { good: true, name: '강철 비늘', desc: '사냥에서 받는 피해가 25% 줄어든다.', mod: { huntDmg: 0.75 } },
+  born_hunter: { good: true, name: '타고난 사냥꾼', desc: '사냥할 때 발톱 +3.', mod: { huntClaw: 3 } },
+  hawk_eye:    { good: true, name: '매의 눈', desc: '채집에서 물건을 하나 더 찾을 때가 많고, 탐사에서 물건을 더 잘 발견한다.', mod: { gatherExtra: 0.2, exploreFind: 0.1 } },
+  tireless:    { good: true, name: '지칠 줄 모름', desc: '행동력이 20% 빨리 찬다.', mod: { apRegen: 1.2 } },
+  deep_breath: { good: true, name: '깊은 숨', desc: '최대 기력 +10, 기력이 20% 빨리 찬다.', mod: { enMax: 10, enRegen: 1.2 } },
+  fast_healer: { good: true, name: '빠른 회복', desc: '체력이 30% 빨리 찬다.', mod: { hpRegen: 1.3 } },
+  haggler:     { good: true, name: '흥정꾼', desc: '시장에서 10% 싸게 사고 10% 비싸게 판다.', mod: { buy: 0.9, sell: 1.1 } },
+  imposing:    { good: true, name: '위압', desc: '위엄 +2. 위협해서 받는 공물 +20%.', mod: { stats: { majesty: 2 }, intimidateGold: 1.2 } },
+  gentle:      { good: true, name: '다정한 발톱', desc: '식구를 돌볼 때 유대가 2 더 오른다.', mod: { bond: 2 } },
+  scholar:     { good: true, name: '학구열', desc: '얻는 경험치 +15%.', mod: { xp: 1.15 } },
+  wanderer:    { good: true, name: '길잡이', desc: '원정에서 찾는 물건 +15%.', mod: { expRolls: 1.15 } },
+  // 부정
+  thin_scale:  { good: false, name: '얇은 비늘', desc: '사냥에서 받는 피해가 20% 늘어난다.', mod: { huntDmg: 1.2 } },
+  sleepy:      { good: false, name: '잠꾸러기', desc: '행동력이 15% 느리게 찬다.', mod: { apRegen: 0.85 } },
+  frail:       { good: false, name: '허약', desc: '최대 체력 −15.', mod: { hpMax: -15 } },
+  greedy:      { good: false, name: '탐욕', desc: '탐내는 눈빛을 상인들이 알아채, 시장에서 15% 비싸게 산다.', mod: { buy: 1.15 } },
+  clumsy:      { good: false, name: '서투른 발톱', desc: '채집에서 물건을 하나 더 찾는 일이 드물다.', mod: { gatherExtra: -0.2 } },
+  notorious:   { good: false, name: '악명', desc: '마을 평판이 오를 때 25% 덜 오른다.', mod: { repGain: 0.75 } },
+  arrogant:    { good: false, name: '오만', desc: '드래곤들이 거만함을 꺼려 용족 명성이 25% 덜 오른다.', mod: { fameGain: 0.75 } },
+  cold_heart:  { good: false, name: '냉담', desc: '식구를 돌볼 때 유대가 2 덜 오른다 (최소 1).', mod: { bond: -2 } },
+  restless:    { good: false, name: '산만', desc: '얻는 경험치 −10%.', mod: { xp: 0.9 } },
+  iron_will:   { good: true, name: '강인한 정신', desc: '오염으로 깎이는 정신이 40% 줄어든다.', mod: { mindDrain: 0.6 } },
+  unstable:    { good: false, name: '불안정', desc: '오염으로 깎이는 정신이 30% 늘어난다.', mod: { mindDrain: 1.3 } },
+  lost_way:    { good: false, name: '길치', desc: '원정에서 찾는 물건 −15%.', mod: { expRolls: 0.85 } },
+};
+
+// 플레이로 생기고 사라지는 특성. count: 세는 행동, at: 이만큼 하면 한 번 일어남
+// gain: 생기는 특성, lose: 사라지는 특성, line: 그때 보여 줄 문장
+const TRAIT_EARN = [
+  { id: 'hunt50', count: 'hunt', at: 50, gain: ['born_hunter'], line: '수없이 사냥한 끝에 발톱이 사냥감을 기억한다.' },
+  { id: 'wound5', count: 'wound', at: 5, gain: ['thin_scale'], line: '쓰러지기 직전까지 몰린 상처가 쌓여 비늘이 얇아졌다.' },
+  { id: 'gather50', count: 'gather', at: 50, gain: ['hawk_eye'], lose: ['clumsy'], line: '수없이 땅을 뒤진 끝에 작은 것도 놓치지 않게 되었다.' },
+  { id: 'explore60', count: 'explore', at: 60, gain: ['scholar'], lose: ['restless'], line: '대륙 곳곳을 누비며 보고 들은 것이 쌓였다.' },
+  { id: 'exp15', count: 'expedition', at: 15, gain: ['wanderer'], lose: ['lost_way'], line: '먼 길을 거듭 오가며 바람의 길을 익혔다.' },
+  { id: 'intim20', count: 'intimidate', at: 20, gain: ['imposing', 'notorious'], line: '인간들은 이제 그림자만 보아도 떤다. 그만큼 이름도 더럽혀졌다.' },
+  { id: 'trade30', count: 'trade', at: 30, gain: ['haggler'], lose: ['greedy'], line: '시장을 드나들며 값을 읽는 눈이 생겼다.' },
+  { id: 'care25', count: 'care', at: 25, gain: ['gentle'], lose: ['cold_heart'], line: '작은 것들을 돌보는 사이 발톱 끝이 부드러워졌다.' },
+  { id: 'neglect3', count: 'neglect', at: 3, gain: ['cold_heart'], line: '돌보지 못한 날들이 쌓여 마음 한쪽이 식었다.' },
+  { id: 'rest15', count: 'rest', at: 15, gain: ['fast_healer'], lose: ['sleepy'], line: '둥지에서 쉬는 법을 익혀 몸이 빨리 회복된다.' },
+  { id: 'corrupt40', count: 'corrupt', at: 40, gain: ['iron_will'], lose: ['unstable'], line: '오염된 땅을 수없이 견뎌 낸 끝에 정신이 단단해졌다.' },
+  { id: 'berserk1', count: 'berserk', at: 1, gain: ['unstable'], line: '한 번 무너진 정신에는 금이 남았다.' },
+  { id: 'rest40', count: 'rest', at: 40, lose: ['thin_scale'], line: '오랜 휴식 끝에 묵은 상처가 아물었다.' },
+];
+// 화면에 보여 줄 행동 이름
+const TRAIT_COUNTS = {
+  hunt: '사냥', wound: '큰 상처', gather: '채집', explore: '탐사', expedition: '원정', intimidate: '위협',
+  trade: '시장 거래', care: '식구 돌보기', neglect: '식구를 외롭게 함', rest: '둥지에서 쉬기',
+  corrupt: '오염된 땅에서 행동', berserk: '광폭화',
+};
+
+// ── 장소와 사냥터 난이도 ───────────────────────────
+// 야생 지역마다 장소가 셋. 입구는 쉽고 안쪽일수록 사냥터 난이도(Lv.1~12)가 높다.
+// 지역으로 날아오면 첫 장소(입구)에 내려앉고, 같은 지역 안에서는 행동력 없이 옮겨 다닌다.
+// creature: 사냥감, elite: 강적, weak/resist: 약점·저항 속성, special: 특기 (power 피해 배율, hits 연타, debuff 상태 이상, self 자기 강화)
+const PLACES = {
+  plains_field:  { region: 'plains',  name: '풀밭',         level: 1,  creature: '들소 떼',       elite: '뿔 꺾인 들소왕',     weak: [], resist: [], special: { name: '돌진', power: 1.6 },
+    desc: '바람에 눕는 풀이 끝없이 이어진다. 들소 떼가 느긋하게 풀을 뜯는다.' },
+  plains_hill:   { region: 'plains',  name: '바람 언덕',    level: 2,  creature: '회색 늑대',     elite: '외눈 늑대왕',        weak: ['fire'], resist: [], special: { name: '무리 사냥', power: 0.65, hits: 2 },
+    desc: '언덕 꼭대기에서 바람이 울부짖는다. 바위 그늘마다 늑대의 눈이 번뜩인다.' },
+  plains_war:    { region: 'plains',  name: '옛 전장',      level: 3,  creature: '떠도는 망령',   elite: '녹슨 기사의 망령',   weak: ['fire', 'lightning'], resist: ['poison'], special: { name: '저주', power: 0.6, debuff: { weaken: 2 } },
+    desc: '부러진 창과 녹슨 투구가 풀숲에 묻혀 있다. 해가 지면 무언가가 일어선다.' },
+  forest_edge:   { region: 'forest',  name: '숲 가장자리',  level: 2,  creature: '거대 거미',     elite: '여왕 거미',          weak: ['fire'], resist: ['poison'], special: { name: '거미줄', power: 0.5, debuff: { stun: 1 }, chance: 0.45 },
+    desc: '나무 사이로 끈적한 거미줄이 햇빛에 반짝인다.' },
+  forest_valley: { region: 'forest',  name: '독안개 골짜기', level: 4, creature: '독두꺼비',      elite: '부풀어 오른 두꺼비왕', weak: ['fire', 'ice'], resist: ['poison'], special: { name: '독액', power: 0.8, debuff: { poison: 3 } },
+    desc: '초록 안개가 낮게 깔린 골짜기. 숨을 들이쉴 때마다 목이 따끔하다.' },
+  forest_heart:  { region: 'forest',  name: '고목의 심장',  level: 6,  creature: '나무 수호자',   elite: '천 년 고목의 정령',  weak: ['fire', 'acid'], resist: ['poison', 'lightning'], special: { name: '뿌리 감기', power: 0.7, debuff: { stun: 1 }, chance: 0.5 },
+    desc: '숲 한가운데 하늘을 가린 고목이 있다. 뿌리가 숨을 쉬듯 꿈틀거린다.' },
+  swamp_reeds:   { region: 'swamp',   name: '갈대밭',       level: 3,  creature: '늪 악어',       elite: '늪의 늙은 악어',     weak: ['lightning'], resist: ['poison', 'acid'], special: { name: '물어 끌기', power: 1.5 },
+    desc: '검은 갈대가 사람 키보다 높이 자랐다. 물속에서 커다란 눈이 떠올랐다 가라앉는다.' },
+  swamp_village: { region: 'swamp',   name: '가라앉은 마을', level: 5, creature: '늪 망령',       elite: '물에 잠긴 촌장의 망령', weak: ['fire', 'lightning'], resist: ['poison', 'ice'], special: { name: '울부짖음', power: 0.5, debuff: { weaken: 3 } },
+    desc: '지붕만 남은 집들이 늪 위로 솟아 있다. 밤마다 종소리가 들린다고 한다.' },
+  swamp_mire:    { region: 'swamp',   name: '검은 수렁',    level: 7,  creature: '어린 히드라',   elite: '머리 셋 달린 히드라', weak: ['fire'], resist: ['poison', 'acid'], special: { name: '세 머리 물기', power: 0.55, hits: 3 },
+    desc: '빠지면 다시는 올라오지 못한다는 수렁. 거품 사이로 비늘 덮인 목들이 솟는다.' },
+  snow_field:    { region: 'snow',    name: '눈벌판',       level: 2,  creature: '설원 늑대',     elite: '서리 늑대 우두머리', weak: ['fire'], resist: ['ice'], special: { name: '무리 사냥', power: 0.65, hits: 2 },
+    desc: '눈보라가 지나간 뒤 세상이 고요하다. 눈 위에 발자국이 어지럽게 찍혀 있다.' },
+  snow_cave:     { region: 'snow',    name: '얼음 동굴',    level: 5,  creature: '얼음 트롤',     elite: '서리 트롤 족장',     weak: ['fire', 'lightning'], resist: ['ice'], special: { name: '얼음 몽둥이', power: 1.4, debuff: { freeze: 1 }, chance: 0.3, element: 'ice' },
+    desc: '푸른 얼음벽이 끝없이 이어진다. 안쪽에서 무언가 얼음을 깨무는 소리가 난다.' },
+  snow_peak:     { region: 'snow',    name: '오로라 봉우리', level: 9, creature: '서리 와이번',   elite: '오로라를 삼킨 와이번', weak: ['fire'], resist: ['ice', 'mist'], special: { name: '서리 숨결', power: 1.1, debuff: { freeze: 1 }, chance: 0.4, element: 'ice' },
+    desc: '하늘과 가장 가까운 봉우리. 초록빛 커튼 아래로 날개 달린 그림자가 맴돈다.' },
+  ruins_hall:    { region: 'ruins',   name: '무너진 회랑',  level: 4,  creature: '돌 파수꾼',     elite: '깨어난 수호 골렘',   weak: ['acid'], resist: ['lightning', 'fire'], special: { name: '돌 피부', self: { harden: 2 } },
+    desc: '무너진 석주 사이로 바람이 운다. 벽의 드래곤 그림이 이쪽을 내려다본다.' },
+  ruins_crypt:   { region: 'ruins',   name: '지하 묘실',    level: 7,  creature: '해골 기사',     elite: '이름 잃은 왕의 기사', weak: ['fire', 'lightning'], resist: ['poison', 'ice'], special: { name: '저주받은 검', power: 1.2, debuff: { bleed: 3 } },
+    desc: '계단이 땅속 깊이 이어진다. 관 뚜껑마다 긁힌 자국이 남아 있다.' },
+  ruins_altar:   { region: 'ruins',   name: '봉인된 제단',  level: 11, creature: '고대 골렘',     elite: '봉인의 거신',        weak: ['acid'], resist: ['lightning', 'fire', 'poison'], special: { name: '대지 강타', power: 1.7 },
+    desc: '룬이 새겨진 제단이 희미하게 빛난다. 봉인이 조금씩 풀리고 있다.' },
+  canyon_path:   { region: 'canyon',  name: '붉은 바위길',  level: 3,  creature: '사막 전갈',     elite: '황금 꼬리 전갈',     weak: ['ice'], resist: ['fire'], special: { name: '독침', power: 0.8, debuff: { poison: 3 } },
+    desc: '붉은 바위벽이 한낮의 열기를 뿜는다. 바위틈에서 집게발이 딸깍거린다.' },
+  canyon_storm:  { region: 'canyon',  name: '모래 폭풍 지대', level: 6, creature: '모래 벌레',    elite: '협곡을 삼키는 벌레', weak: ['ice'], resist: ['fire', 'mist'], special: { name: '모래 삼키기', power: 1.5 },
+    desc: '모래바람이 시야를 가린다. 발밑의 모래가 거대한 숨을 쉬듯 꺼졌다 솟는다.' },
+  canyon_cliff:  { region: 'canyon',  name: '황금 절벽',    level: 10, creature: '그리핀',        elite: '태양을 등진 그리핀왕', weak: ['ice', 'lightning'], resist: ['fire'], special: { name: '급강하', power: 1.6 },
+    desc: '절벽 꼭대기 둥지에 금빛 깃털이 흩날린다. 드래곤에게도 물러서지 않는 짐승이 산다.' },
+  volcano_slope: { region: 'volcano', name: '잿빛 비탈',    level: 4,  creature: '화염 도마뱀',   elite: '용암 도롱뇽 군주',   weak: ['ice'], resist: ['fire'], special: { name: '불 뿜기', power: 0.9, debuff: { burn: 3 }, element: 'fire' },
+    desc: '잿가루가 눈처럼 날린다. 굳은 용암 사이로 도마뱀들이 빠르게 숨는다.' },
+  volcano_cave:  { region: 'volcano', name: '용암 동굴',    level: 8,  creature: '용암 골렘',     elite: '녹아내린 대장장이의 골렘', weak: ['ice'], resist: ['fire', 'poison'], special: { name: '용암 주먹', power: 1.3, debuff: { burn: 3 }, element: 'fire' },
+    desc: '붉은 빛이 동굴 벽을 핥는다. 땅 밑에서 무언가 거대한 것이 걸어 다닌다.' },
+  volcano_crater:{ region: 'volcano', name: '분화구',       level: 12, creature: '화염 거인',     elite: '잠든 화룡의 망령',   weak: ['ice'], resist: ['fire', 'poison'], special: { name: '화산 강타', power: 1.8, debuff: { burn: 3 }, element: 'fire' },
+    desc: '대륙에서 가장 뜨거운 곳. 끓는 용암 위로 오래전 쓰러진 드래곤의 뼈가 보인다.' },
+};
+for (const [id, p] of Object.entries(PLACES)) p.id = id;
+// 지역별 장소 (입구 → 안쪽)
+const REGION_PLACES = {};
+for (const p of Object.values(PLACES)) (REGION_PLACES[p.region] ||= []).push(p.id);
+for (const ids of Object.values(REGION_PLACES)) ids.sort((a, b) => PLACES[a].level - PLACES[b].level);
+const PLACE_RULES = {
+  tooHard: 3,          // 내 레벨 + 이만큼보다 어려운 장소에는 들어갈 수 없음
+  moveCooldown: 1200,  // 장소를 옮기는 간격 (ms)
+  lootPerLevel: { uncommon: 0.012, rare: 0.005 }, // 깊은 장소일수록 귀한 재료가 잘 나옴 (사냥터 Lv.1당)
+};
+
+// ── 쓰러짐과 죽음 ──────────────────────────────────
+// 직접 싸우는 강적 전투에서 지면 체력이 0이 되어 쓰러진다. 상흔을 입고 일어서거나, 긴 잠에 든다.
+const DEATH = {
+  reviveHp: 0.3,               // 상흔을 입고 일어설 때 체력 (최대치 비율)
+  graveDays: 3,                // 남긴 둥지(식구·재산)를 거둘 수 있는 날 수. 지나면 식구는 실종, 재산은 흩어짐
+};
+
+// ── 정신과 오염 ────────────────────────────────────
+// 오염된 땅(야생 지역 하나, 이틀마다 옮겨 감)과 오염된 몬스터가 정신을 깎는다. 정신이 0이 되면 광폭화
+const MIND = {
+  max: 100,
+  regenEvery: 3 * 60 * 1000,   // 정신 1이 차는 간격 (둥지에서 쉬면 3배, 은둔이면 1.3배 빠름)
+  restMult: 3, hermitMult: 1.3,
+  rotateMs: 2 * DAY,           // 오염된 땅이 옮겨 가는 간격
+  drain: { explore: 5, gather: 4, hunt: 0, expedition: 2 }, // 오염된 땅에서 행동할 때 깎이는 정신 (원정은 10분마다). 사냥은 몬스터가 깎음
+  monster: 0.5,                // 오염된 몬스터가 입힌 피해의 이만큼 정신도 깎임
+  monsterAtk: 1.15,            // 오염된 몬스터는 조금 더 셈
+  eliteChance: 0.25,           // 오염된 땅에서 강적이 나올 확률
+  crystal: { explore: 0.25, gather: 0.2, hunt: 0.3, elite: 2 }, // 오염 결정이 나올 확률 (강적은 개수)
+  warnAt: 10,                  // 이 아래로 떨어지면 경고
+  berserkMinutes: 30,          // 광폭화를 저지해야 하는 시간 (다른 드래곤이 아무도 없으면 2배)
+  berserkAtk: 1.3,             // 광폭화한 드래곤의 공격력
+  timeoutHpLoss: 0.5,          // 저지되지 않으면 잃는 체력 비율
+  timeoutRep: -20,             // 가까운 마을 평판
+  timeoutFame: -3,
+  kinGuard: 0.5,               // 용기사나 유대 60 이상인 인간 식구가 곁에 있으면 피해가 이만큼으로 줆
+  afterTimeout: 30,            // 광폭화가 끝난 뒤 정신
+  afterCalm: 50,
+  calmFame: 4, calmXp: 30,     // 진정시킨 드래곤이 받는 것
+};
+
+// ── 전투 ───────────────────────────────────────────
+// 사냥은 자동 전투로 한 번에 끝나고, 가끔 나타나는 강적과 결투장은 직접 턴을 고른다.
+const COMBAT = {
+  maxTurns: 12,            // 이만큼 지나면 남은 체력 비율로 판정
+  enPerTurn: 2,            // 턴마다 차는 기력
+  huntReserve: 0.25,       // 자동 사냥은 기력을 이만큼(최대치 비율) 남겨 둠 (제작할 몫)
+  fleeBelow: 0.2,          // 자동 사냥은 체력이 이 아래면 물러남
+  eliteChance: 0.12,       // 사냥하다 강적을 만날 확률 (레벨 2부터)
+  eliteFrom: 2,
+  maxSkills: 3,            // 숨결 말고 들고 갈 수 있는 스킬 수
+  turnSeconds: 30,         // 실시간 결투에서 한 턴을 고르는 시간. 넘기면 자동으로 고름
+  inviteSeconds: 30,       // 결투 신청을 기다리는 시간
+  autoCooldown: 10 * 60 * 1000, // 같은 상대에게 자동 결투를 다시 걸 수 있는 간격
+  fameWin: 3, fameRival: 2, fameLose: -1,
+  xpWin: 15, xpLose: 5,
+  // 사냥감 세기: [기본, 사냥터 Lv.1당]. 강적은 체력·공격에 배율
+  creature: { hp: [27, 4.2], atk: [8, 0.85], def: [3.5, 0.4], eliteHp: 1.8, eliteAtk: 1.2 },
+};
+// 종류마다 하나뿐인 숨결. 기력 12, 3턴마다
+const BREATHS = {
+  red:    { name: '화염 숨결',   element: 'fire',      power: 1.35, debuff: { burn: 3 }, desc: '불길을 쏟아 큰 피해를 주고, 세 턴 동안 불태운다.' },
+  black:  { name: '산 숨결',     element: 'acid',      power: 1.1,  debuff: { acid: 3 }, desc: '비늘을 녹여 세 턴 동안 상대의 방어를 절반으로 만든다.' },
+  white:  { name: '눈보라 숨결', element: 'ice',       power: 1.0,  debuff: { freeze: 1 }, chance: 0.7, desc: '얼음 폭풍으로 피해를 주고, 높은 확률로 한 턴 얼려 움직이지 못하게 한다.' },
+  gold:   { name: '번개 숨결',   element: 'lightning', power: 1.7,  debuff: { stun: 1 }, chance: 0.3, desc: '가장 강한 한 방. 가끔 상대를 마비시켜 한 턴 쉬게 한다.' },
+  green:  { name: '독 숨결',     element: 'poison',    power: 0.75, debuff: { poison: 4 }, desc: '짙은 독안개로 네 턴 동안 중독시킨다.' },
+  silver: { name: '안개 숨결',   element: 'mist',      power: 0.6,  self: { evade: 3 }, desc: '은빛 안개에 몸을 숨겨, 세 턴 동안 공격을 잘 피한다.' },
+};
+const BREATH_COST = { en: 12, cd: 3 };
+const ELEMENTS = { fire: '화염', acid: '산', ice: '얼음', lightning: '번개', poison: '독', mist: '안개' };
+// 레벨이 오르면 배우는 스킬
+const SKILLS = {
+  tail:   { name: '꼬리치기',     lv: 1, en: 4,  cd: 1, power: 1.25, desc: '꼬리를 휘둘러 묵직하게 친다. 피해 ×1.25.' },
+  harden: { name: '비늘 세우기',  lv: 2, en: 5,  cd: 3, self: { harden: 2 }, desc: '비늘을 곤두세워 두 턴 동안 받는 피해가 절반이 된다.' },
+  roar:   { name: '포효',         lv: 3, en: 6,  cd: 3, debuff: { weaken: 3 }, majesty: true, desc: '세 턴 동안 상대의 공격을 30% 꺾는다. 위엄이 높을수록 잘 통한다.' },
+  gust:   { name: '날개 돌풍',    lv: 5, en: 6,  cd: 3, power: 0.8, self: { dodge: 1 }, desc: '거센 바람으로 피해 ×0.8, 다음 공격 한 번을 반드시 피한다.' },
+  rend:   { name: '찢어발기기',   lv: 7, en: 8,  cd: 3, power: 1.2, debuff: { bleed: 3 }, desc: '발톱으로 깊이 찢어 피해 ×1.2, 세 턴 동안 피를 흘리게 한다.' },
+  devour: { name: '포식',         lv: 9, en: 10, cd: 4, power: 1.0, drain: 0.5, desc: '물어뜯어 입힌 피해의 절반만큼 체력을 되찾는다.' },
+};
+// 상태 이름 (화면 표시용)
+const STATUS = {
+  burn: '화상', poison: '중독', bleed: '출혈', acid: '비늘 녹음', freeze: '얼어붙음', stun: '마비',
+  weaken: '움츠러듦', harden: '비늘 세움', evade: '안개', dodge: '돌풍',
+};
+// 사냥감의 전투 성질: 약점(피해 ×1.5)과 저항(피해 ×0.5, 상태 이상이 통하지 않음), 특기
+const CREATURE_COMBAT = {
+  plains:  { weak: [],            resist: [],                    special: { name: '돌진', power: 1.6 } },
+  snow:    { weak: ['fire'],      resist: ['ice'],               special: { name: '무리 사냥', power: 0.65, hits: 2 } },
+  forest:  { weak: ['fire'],      resist: ['poison'],            special: { name: '거미줄', power: 0.5, debuff: { stun: 1 }, chance: 0.45 } },
+  swamp:   { weak: ['lightning'], resist: ['poison', 'acid'],    special: { name: '물어 끌기', power: 1.5 } },
+  ruins:   { weak: ['acid'],      resist: ['lightning', 'fire'], special: { name: '돌 피부', self: { harden: 2 } } },
+  canyon:  { weak: ['ice'],       resist: ['fire'],              special: { name: '독침', power: 0.8, debuff: { poison: 3 } } },
+  volcano: { weak: ['ice'],       resist: ['fire'],              special: { name: '불 뿜기', power: 0.9, debuff: { burn: 3 }, element: 'fire' } },
+};
+// 강적: 레벨 +2, 체력 1.6배. 이기면 귀한 물건과 금화, 용족 명성
+const ELITES = {
+  plains: '뿔 꺾인 들소왕', snow: '서리 늑대 우두머리', forest: '여왕 거미', swamp: '늪의 늙은 악어',
+  ruins: '깨어난 수호 골렘', canyon: '황금 꼬리 전갈', volcano: '용암 도롱뇽 군주',
+};
+
 module.exports = {
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES,
   SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, NEST, STANCE_RULES, FAME_TIERS, fameTier,
-  DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, EVENT_RULES,
+  DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
+  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, STATUS, CREATURE_COMBAT, ELITES,
 };

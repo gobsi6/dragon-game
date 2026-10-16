@@ -92,6 +92,8 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       lineage: kin?.lineage || 0,
       kin: (kin?.home || []).map((k) => ({ name: k.name, type: k.type, stage: k.stage })),
       equip: Object.entries(equip).map(([slot, item]) => ({ slot, item })),
+      traits: logic.traitsOf(d).list,
+      dead: !!d.dead_at,
       online: !!e,
       away: !!d.exp_end, resting: !!d.rest_at,
       // 동료와 자기 자신에게만, 그리고 같은 지역이면 보이는 정보
@@ -332,6 +334,8 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       if (now - (socket.data.lastTp || 0) < TP_COOLDOWN) return { error: '생각을 가다듬는 중이다.' };
       socket.data.lastTp = now;
       const o = db.getDragon(id);
+      if (!o) return { error: '그런 드래곤은 없다.' };
+      if (o.dead_at) return { error: `${o.name}${josa(o.name, '은', '는')} 긴 잠에 들었다. 생각이 더는 닿지 않는다.` };
       // 상대가 나를 경계하면 마음이 닫혀 있어 닿지 않음
       if (db.relGet(id, d.id) === 'wary') return { error: `${o.name}의 마음이 굳게 닫혀 있다. 텔레파시가 닿지 않는다.` };
       const mid = db.tpSend(d.id, id, text);

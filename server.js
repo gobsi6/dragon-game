@@ -10,10 +10,12 @@ const { Server } = require('socket.io');
 const db = require('./db');
 const {
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, CREATURES, RULES, SLOTS, RECIPES, SHOPS, repTier, TRADE, NEST,
-  STANCE_RULES, FAME_TIERS, fameTier, KIN, TALENTS,
+  STANCE_RULES, FAME_TIERS, fameTier, KIN, TALENTS, TRAITS, TRAIT_EARN, TRAIT_COUNTS,
+  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, STATUS, CREATURE_COMBAT, MIND, PLACES, REGION_PLACES, PLACE_RULES,
 } = require('./game-data');
 const logic = require('./game-logic');
 const life = require('./game-life');
+const combat = require('./game-combat');
 
 const PORT = process.env.PORT || 3000;
 const MOVE_COOLDOWN = 1500; // ms, 연속 이동 방지
@@ -99,6 +101,8 @@ const online = new Map();
 // away: 원정을 떠나 자리를 비운 상태
 const publicDragon = (d) => ({
   id: d.id, name: d.name, kind: d.kind, av: d.has_avatar ? d.avatar_ver : 0, away: !!d.exp_end, resting: !!d.rest_at,
+  berserk: !!logic.berserkOf(d),
+  place: logic.placeOf(d),
 });
 
 // 내 드래곤의 전체 정보 (나에게만 보냄)
@@ -108,6 +112,13 @@ const meOf = (d) => ({
   hp: d.hp, hpMax: logic.hpCap(d), en: d.en, enMax: logic.enCap(d),
   ap: d.ap, apMax: d.ap_max, gold: d.gold,
   stats: logic.statsOf(d),                 // 장신구까지 더한 값
+  base: { claw: d.claw, scale: d.scale, wing: d.wing, wisdom: d.wisdom, majesty: d.majesty }, // 타고난 값 (포인트를 나눈 값 포함)
+  statPts: d.stat_pts || 0,                // 아직 나누지 않은 능력치 포인트
+  mind: d.mind ?? MIND.max, mindMax: MIND.max, mindAt: d.mind_at || 0, mindEvery: MIND.regenEvery,
+  berserkInfo: (() => { const b = logic.berserkOf(d); return b ? { until: b.until, region: b.region, hp: b.hp, hpMax: b.hpMax } : null; })(),
+  corrupt: { region: logic.corruptedRegion(), until: logic.corruptUntil() },
+  fallen: logic.isFallen(d) ? death.view(d) : null,
+  scars: death.scarsOf(d),
   statBonus: logic.bonusOf(d).stats,       // 그중 장신구 몫
   equip: logic.equipOf(d),
   stance: d.stance, stanceName: STANCES[d.stance] || '',
@@ -127,6 +138,9 @@ const meOf = (d) => ({
   relIn: db.reqInCount(d.id),         // 받은 동료 요청 수
   tpUnread: db.tpUnread(d.id),        // 아직 듣지 않은 텔레파시 수
   kin: d.kinSummary || { home: [], lineage: 0 },
+  traits: (() => { const t = logic.traitsOf(d); return { list: t.list, chosen: !!t.chosen, counts: t.counts, done: t.done }; })(),
+  combat: (() => { const c = combat.combatOf(d); return { skills: combat.loadout(d), w: c.w, l: c.l, duelOn: c.duelOn, autoDuel: c.autoDuel }; })(),
+  battle: arena ? arena.inBattle(d.id) : false,
   perks: d.perks || {},
   cost: { explore: logic.actionCost(d, 'explore'), gather: logic.actionCost(d, 'gather'), hunt: logic.actionCost(d, 'hunt') },
   exp: d.exp_end ? { region: d.exp_region, start: d.exp_start, end: d.exp_end } : null,
@@ -233,6 +247,40 @@ function entryOf(socket) {
 // 동료: 프로필, 관계, 선물, 교환 (social.js)
 const social = require('./social')({ db, online, entryOf, sendMe, logic, life });
 
+// 강적·결투장·전투 설정·광폭화 (arena.js)
+let arena = null;
+arena = require('./arena')({ io, db, online, logic, combat, life, sendMe, broadcastPresence });
+const BERSERK = '광폭화한 몸이 제멋대로 날뛴다. 누군가 진정시켜 주기를 기다려야 한다.';
+
+// 쓰러짐·상흔·죽음·남긴 둥지 (death.js)
+const death = require('./death')({ io, db, online, logic, life, sendMe, broadcastPresence });
+arena.setFall(death.fall);
+const FALLEN = '쓰러져 있다. 일어설지, 긴 잠에 들지 먼저 정해야 한다.';
+
+// GM 도구 (gm.js)
+const gm = require('./gm')({
+  io, db, online, logic, life, meOf, sendMe, refreshKin, arena,
+  // 순간이동: d.region은 이미 바뀐 상태. 접속 중이면 방을 옮기고 양쪽에 알림
+  teleport(d, from) {
+    const entry = online.get(d.id);
+    if (!entry) return;
+    const ga = josa(d.name, '이', '가');
+    entry.socket.leave(from);
+    system(from, `${d.name}${ga} 거센 바람에 휩쓸려 사라졌다.`);
+    entry.socket.join(d.region);
+    system(d.region, `${d.name}${ga} 바람을 타고 나타났다.`, entry.socket);
+    broadcastPresence(from);
+    broadcastPresence(d.region);
+    broadcastCounts();
+    sendRegionState(entry.socket, d);
+    social.onMove(d.id);
+  },
+  kick(sock) {
+    sock.emit('gm:kicked');
+    sock.disconnect(true);
+  },
+});
+
 // ── 실시간 (Socket.IO) ─────────────────────────────
 
 io.use((socket, next) => {
@@ -264,8 +312,15 @@ io.on('connection', (socket) => {
     nestRules: NEST,
     stanceRules: STANCE_RULES,
     fameTiers: FAME_TIERS,
+    traits: TRAITS, traitEarn: TRAIT_EARN, traitCounts: TRAIT_COUNTS,
+    statPerLevel: require('./game-data').STAT_POINTS.perLevel,
+    places: PLACES, regionPlaces: REGION_PLACES, placeRules: PLACE_RULES,
+    combat: { breaths: BREATHS, breathCost: BREATH_COST, elements: ELEMENTS, skills: SKILLS, status: STATUS, maxSkills: COMBAT.maxSkills, turnSeconds: COMBAT.turnSeconds,
+      creatures: Object.fromEntries(Object.entries(CREATURE_COMBAT).map(([r, c]) => [r, { weak: c.weak, resist: c.resist, special: c.special.name }])) },
   });
   if (dragon) enterWorld(socket, dragon);
+  socket.emit('rampage:list', arena.rampages());
+  socket.emit('grave:list', death.graves());
 
   socket.on('dragon:create', (payload, ack) => {
     if (typeof ack !== 'function') return;
@@ -295,8 +350,16 @@ io.on('connection', (socket) => {
       return ack({ error: `능력치 포인트 ${CREATION.points}점을 모두 나눠야 한다.` });
     }
 
+    const good = str(payload?.traits?.good);
+    const bad = str(payload?.traits?.bad);
+    if (!TRAITS[good]?.good) return ack({ error: '긍정 특성을 하나 골라야 한다.' });
+    if (!TRAITS[bad] || TRAITS[bad].good) return ack({ error: '부정 특성을 하나 골라야 한다.' });
+
     const { hpMax, enMax } = derive(final);
     const created = db.createDragon(user.id, name, kind, KINDS[kind].home, final, hpMax, enMax);
+    logic.chooseTraits(created, good, bad);
+    created.hp = logic.hpCap(created); created.en = logic.enCap(created);
+    db.saveState(created);
     ack({ ok: true, dragon: meOf(created) });
     enterWorld(socket, created);
   });
@@ -308,6 +371,9 @@ io.on('connection', (socket) => {
 
     const d = entry.dragon;
     if (d.exp_end) return ack({ error: '원정을 떠나 있는 동안에는 날아갈 수 없다.' });
+    if (arena.inBattle(d.id)) return ack({ error: '싸우는 중에는 날아갈 수 없다.' });
+    if (logic.berserkOf(d)) return ack({ error: BERSERK });
+    if (logic.isFallen(d)) return ack({ error: FALLEN });
     if (d.rest_at) return ack({ error: '둥지에서 쉬는 중이다. 먼저 깨어나야 한다.' });
     const from = d.region;
     const to = str(payload?.to);
@@ -324,6 +390,7 @@ io.on('connection', (socket) => {
     logic.regen(d, now);
     socket.leave(from);
     d.region = to;
+    d.place = REGION_PLACES[to]?.[0] || null; // 새 지역에서는 입구에 내려앉음
     db.setRegion(d.id, to);
     const arrows = logic.townArrows(d); // 적대 드래곤이 인간 마을에 날아들면
     system(from, `${d.name}${ga} ${REGIONS[to].name} 쪽으로 날아갔다.`);
@@ -380,7 +447,7 @@ io.on('connection', (socket) => {
   });
 
   // ── 단발 행동: 탐사·채집·사냥 ──
-  const ACTIONS = { explore: logic.explore, gather: logic.gather, hunt: logic.hunt };
+  const ACTIONS = { explore: logic.explore, gather: logic.gather, hunt: combat.hunt }; // 사냥은 자동 전투 (game-combat.js)
   socket.on('act', (payload, ack) => {
     if (typeof ack !== 'function') return;
     const entry = entryOf(socket);
@@ -393,14 +460,37 @@ io.on('connection', (socket) => {
     socket.data.lastAct = now;
 
     const d = entry.dragon;
+    if (arena.inBattle(d.id)) return ack({ error: '싸우는 중이다. 먼저 싸움을 끝내자.' });
+    if (logic.berserkOf(d)) return ack({ error: BERSERK });
+    if (logic.isFallen(d)) return ack({ error: FALLEN });
     logic.regen(d, now);
     const kin = syncKin(socket, d, now);
     const res = fn(d);
     if (res.error) return ack(res);
+    if (res.elite) {
+      // 강적: 직접 싸우는 전투를 열고, 결과는 싸움이 끝날 때 줌
+      res.battle = arena.startElite(d, res.battle);
+      db.saveState(d);
+      sendMe(socket, d);
+      return ack({ ok: true, result: res });
+    }
+    // 오염된 땅: 탐사·채집은 정신이 깎이고, 오염 결정이 나오기도 함 (사냥은 몬스터가 깎음)
+    const type = str(payload?.type);
+    if (logic.isCorrupted(d.region)) {
+      if (type !== 'hunt') {
+        if (Math.random() < MIND.crystal[type]) { res.items = [...(res.items || []), { id: 'corrupt_crystal', qty: 1 }]; res.lines.push('검붉게 빛나는 오염 결정을 주웠다.'); }
+        res.lines.push(...logic.loseMind(d, MIND.drain[type]));
+      }
+      res.lines.push(...logic.traitCount(d, 'corrupt'));
+    }
+    // 특성: 행동을 세고, 쓰러지기 직전까지 몰린 사냥은 상처로 셈
+    res.lines.push(...logic.traitCount(d, type));
+    if (res.wound) res.lines.push(...logic.traitCount(d, 'wound'));
     res.event = life.rollEvent(d, kin, (id) => db.itemCount(d.id, id), str(payload?.type), now);
     db.saveState(d, res.items);
     sendMe(socket, d);
     ack({ ok: true, result: res });
+    arena.checkMind(d); // 정신이 다 깎였으면 광폭화
   });
 
   // ── 원정 ──
@@ -410,6 +500,8 @@ io.on('connection', (socket) => {
     if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
     const d = entry.dragon;
     logic.regen(d);
+    if (logic.berserkOf(d)) return ack({ error: BERSERK });
+    if (logic.isFallen(d)) return ack({ error: FALLEN });
     const kin = syncKin(socket, d);
     const res = logic.startExpedition(d, Number(payload?.minutes));
     if (res.error) return ack(res);
@@ -430,9 +522,14 @@ io.on('connection', (socket) => {
     const d = entry.dragon;
     logic.regen(d);
     const kin = syncKin(socket, d);
+    const expRegion = d.exp_region;
     const res = logic.finishExpedition(d, Date.now(), life.companions(kin));
     if (res.error) return ack(res);
+    if (expRegion && logic.isCorrupted(expRegion) && res.minutes >= 10) {
+      res.lines.push('오염된 땅을 오래 헤맨 탓에 머릿속이 무겁다.', ...logic.loseMind(d, MIND.drain.expedition * Math.floor(res.minutes / 10)));
+    }
     res.lines.push(...life.expFinish(kin, res.minutes));
+    if (res.minutes >= 10) res.lines.push(...logic.traitCount(d, 'expedition'));
     if (res.minutes >= 10) res.event = life.rollEvent(d, kin, (id) => db.itemCount(d.id, id), 'expedition');
     refreshKin(d, kin);
     db.saveState(d, res.items);
@@ -440,6 +537,7 @@ io.on('connection', (socket) => {
     broadcastPresence(d.region);
     system(d.region, `${d.name}${josa(d.name, '이', '가')} 원정에서 돌아왔다.`, socket);
     ack({ ok: true, result: res });
+    arena.checkMind(d);
   });
 
   socket.on('inv:get', (payload, ack) => {
@@ -461,6 +559,8 @@ io.on('connection', (socket) => {
       if (now - (socket.data.lastItem || 0) < 300) return ack({ error: '숨을 고르는 중이다.' });
       socket.data.lastItem = now;
       const d = entry.dragon;
+      if (logic.berserkOf(d)) return ack({ error: BERSERK });
+    if (logic.isFallen(d)) return ack({ error: FALLEN });
       logic.regen(d, now);
       const kin = syncKin(socket, d, now);
       const have = (id) => db.itemCount(d.id, id);
@@ -482,9 +582,13 @@ io.on('connection', (socket) => {
 
   // ── 인간 마을 ──
   itemAction('stance:set', (d, p) => logic.setStance(d, str(p.stance)));
-  itemAction('market:buy', (d, p, have) => logic.buy(d, str(p.item), Number(p.qty), have));
-  itemAction('market:sell', (d, p, have) => logic.sell(d, str(p.item), Number(p.qty), have));
-  itemAction('intimidate', (d) => logic.intimidate(d), null, (res) => (res.gold > 0 ? 'intimidate' : null));
+  // 결과가 성공이면 특성 횟수를 셈
+  const counted = (key, fn) => (...a) => { const r = fn(...a); if (!r.error) r.lines.push(...logic.traitCount(a[0], key)); return r; };
+  itemAction('market:buy', counted('trade', (d, p, have) => logic.buy(d, str(p.item), Number(p.qty), have)));
+  itemAction('market:sell', counted('trade', (d, p, have) => logic.sell(d, str(p.item), Number(p.qty), have)));
+  itemAction('intimidate', counted('intimidate', (d) => logic.intimidate(d)), null, (res) => (res.gold > 0 ? 'intimidate' : null));
+  itemAction('traits:choose', (d, p) => logic.chooseTraits(d, str(p.good), str(p.bad)));
+  itemAction('stats:spend', (d, p) => logic.spendStats(d, p.alloc));
   // ── 둥지 ──
   const presenceAfter = (d) => broadcastPresence(d.region);
   itemAction('nest:build', (d) => logic.buildNest(d));
@@ -492,7 +596,10 @@ io.on('connection', (socket) => {
   itemAction('rest:stop', (d, p, have, kin) => {
     const mins = d.rest_at ? (Date.now() - d.rest_at) / 60000 : 0;
     const res = logic.stopRest(d);
-    if (!res.error) { const l = life.restTogether(kin, mins); if (l) res.lines.push(l); }
+    if (!res.error) {
+      const l = life.restTogether(kin, mins); if (l) res.lines.push(l);
+      if (mins >= 10) res.lines.push(...logic.traitCount(d, 'rest')); // 10분 넘게 쉬어야 셈
+    }
     return res;
   }, presenceAfter, () => 'wake');
   itemAction('hoard:put', (d, p, have) => logic.hoardMove(d, 'put', str(p.what), Number(p.qty), have, () => 0));
@@ -510,6 +617,26 @@ io.on('connection', (socket) => {
     sendRegionState(socket, d);
     social.onMove(d.id);
   });
+  // ── 장소: 같은 지역 안에서 옮기기 (행동력 없음) ──
+  socket.on('place:go', (payload, ack) => {
+    if (typeof ack !== 'function') ack = () => {};
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+    const d = entry.dragon;
+    if (logic.berserkOf(d)) return ack({ error: BERSERK });
+    if (logic.isFallen(d)) return ack({ error: FALLEN });
+    if (arena.inBattle(d.id)) return ack({ error: '싸우는 중에는 옮길 수 없다.' });
+    const now = Date.now();
+    if (now - (socket.data.lastPlace || 0) < PLACE_RULES.moveCooldown) return ack({ error: '날개를 잠깐 쉬고 다시 움직이자.' });
+    socket.data.lastPlace = now;
+    const res = logic.goPlace(d, str(payload?.id));
+    if (res.error) return ack(res);
+    db.saveState(d);
+    sendMe(socket, d);
+    broadcastPresence(d.region);
+    ack({ ok: true, result: res });
+  });
+
   // ── 둥지 식구 ──
   itemAction('kin:care', (d, p, have, kin) => life.care(d, kin, p.id, str(p.item), have));
   itemAction('kin:rename', (d, p, have, kin) => life.rename(kin, p.id, str(p.name)));
@@ -582,11 +709,15 @@ io.on('connection', (socket) => {
   });
 
   social.attach(socket);
+  gm.attach(socket);
+  arena.attach(socket);
+  death.attach(socket);
 
   socket.on('disconnect', () => {
     const entry = entryOf(socket);
     if (!entry) return;
     social.onLeave(entry.dragon.id);
+    arena.onLeave(entry.dragon.id);
     online.delete(entry.dragon.id);
     logic.regen(entry.dragon);
     db.saveState(entry.dragon);

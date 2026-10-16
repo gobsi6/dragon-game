@@ -48,7 +48,9 @@ db.exec(`
 // ── 2단계 열 추가: 이미 있는 데이터는 그대로 두고 빠진 열만 붙입니다 ──
 const dragonCols = db.prepare('PRAGMA table_info(dragons)').all().map((c) => c.name);
 const addCol = (name, def) => {
-  if (!dragonCols.includes(name)) db.exec(`ALTER TABLE dragons ADD COLUMN ${name} ${def}`);
+  if (dragonCols.includes(name)) return false;
+  db.exec(`ALTER TABLE dragons ADD COLUMN ${name} ${def}`);
+  return true;
 };
 addCol('avatar', 'BLOB');
 addCol('avatar_type', 'TEXT');
@@ -88,6 +90,23 @@ addCol('hoard_gold', 'INTEGER NOT NULL DEFAULT 0'); // 보물더미에 쌓은 �
 addCol('fame', 'INTEGER NOT NULL DEFAULT 0');      // 드래곤들 사이의 명성 (-100~100)
 // 8단계: 이벤트와 둥지 식구
 addCol('pending_event', 'TEXT');                   // 선택을 기다리는 이벤트 (없으면 NULL)
+// 11단계: 특성
+addCol('traits', "TEXT NOT NULL DEFAULT '{}'");     // { list, chosen, counts, done }
+// 12단계: 전투
+addCol('combat', "TEXT NOT NULL DEFAULT '{}'");     // { skills, w, l, duelOn, autoDuel, lastAuto, lastWin }
+// 13단계: 레벨이 오르면 받는 능력치 포인트. 처음 생길 때 이미 오른 레벨만큼 채워 줌
+// 14단계: 정신과 광폭화
+addCol('mind', 'INTEGER NOT NULL DEFAULT 100');
+addCol('mind_at', 'INTEGER NOT NULL DEFAULT 0');
+addCol('berserk', 'TEXT');
+addCol('place', 'TEXT');
+// 16단계: 쓰러짐·상흔·죽음
+addCol('fallen', 'TEXT');                           // 쓰러져 선택을 기다리면 { at, region }, 죽은 뒤에는 남긴 둥지 { region, until, closed }
+addCol('scars', "TEXT NOT NULL DEFAULT '[]'");      // 상흔이 남은 능력치
+addCol('dead_at', 'INTEGER');                       // 긴 잠에 든 시각                            // 15단계: 지역 안의 장소 (없으면 지역 입구)                          // 광폭화 중이면 { at, until, region, hp, hpMax }
+if (addCol('stat_pts', 'INTEGER NOT NULL DEFAULT 0')) {
+  db.exec(`UPDATE dragons SET stat_pts = (level - 1) * ${require('./game-data').STAT_POINTS.perLevel}`);
+}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS kin (
@@ -135,6 +154,17 @@ db.exec(`
   );
 `);
 
+// 10단계: GM 기록 (누가 언제 누구에게 무엇을 했는지)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS gm_log (
+    id      INTEGER PRIMARY KEY,
+    gm      TEXT NOT NULL,       -- GM 아이디
+    target  TEXT,                -- 대상 드래곤 이름 (공지는 NULL)
+    text    TEXT NOT NULL,
+    at      INTEGER NOT NULL
+  );
+`);
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS hoard (
     dragon_id INTEGER NOT NULL REFERENCES dragons(id) ON DELETE CASCADE,
@@ -156,7 +186,7 @@ db.exec(`
 // 그림(avatar)을 뺀 드래곤 정보 열
 const DRAGON_FIELDS = `id, name, kind, region, avatar_ver, level, xp, hp, hp_max, en, en_max,
   ap, ap_max, gold, claw, scale, wing, wisdom, majesty, stance,
-  ap_at, hp_at, en_at, exp_start, exp_end, exp_region, equip, rep, stance_at, nest, rest_at, hoard_gold, fame, pending_event,
+  ap_at, hp_at, en_at, exp_start, exp_end, exp_region, equip, rep, stance_at, nest, rest_at, hoard_gold, fame, pending_event, traits, combat, last_seen, stat_pts, mind, mind_at, berserk, place, fallen, scars, dead_at,
   (avatar IS NOT NULL) AS has_avatar`;
 
 const q = {
@@ -180,7 +210,10 @@ const q = {
                               en_at = @en_at, exp_start = @exp_start, exp_end = @exp_end, exp_region = @exp_region,
                               equip = @equip, rep = @rep, stance = @stance, stance_at = @stance_at,
                               region = @region, nest = @nest, rest_at = @rest_at, hoard_gold = @hoard_gold, fame = @fame,
-                              pending_event = @pending_event
+                              pending_event = @pending_event, traits = @traits, combat = @combat,
+                              claw = @claw, scale = @scale, wing = @wing, wisdom = @wisdom, majesty = @majesty, stat_pts = @stat_pts,
+                              mind = @mind, mind_at = @mind_at, berserk = @berserk, place = @place,
+                              fallen = @fallen, scars = @scars
                             WHERE id = @id`),
   invCount:     db.prepare('SELECT qty FROM inventory WHERE dragon_id = ? AND item = ?'),
   hoardAdd:     db.prepare(`INSERT INTO hoard (dragon_id, item, qty) VALUES (?, ?, ?)
@@ -234,6 +267,30 @@ const q = {
   noteAdd:      db.prepare('INSERT INTO notes (dragon_id, text, at) VALUES (?, ?, ?)'),
   noteList:     db.prepare('SELECT text FROM notes WHERE dragon_id = ? ORDER BY id'),
   noteClear:    db.prepare('DELETE FROM notes WHERE dragon_id = ?'),
+  // GM
+  gmList:       db.prepare(`SELECT d.id, d.name, d.kind, d.level, d.region, d.gold, d.last_seen AS lastSeen, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar,
+                                   u.username, u.is_gm AS isGm
+                            FROM dragons d JOIN users u ON u.id = d.user_id
+                            WHERE d.name LIKE @q OR u.username LIKE @q ORDER BY d.last_seen DESC LIMIT 100`),
+  gmUserOf:     db.prepare('SELECT u.id, u.username, u.is_gm FROM dragons d JOIN users u ON u.id = d.user_id WHERE d.id = ?'),
+  gmSetRole:    db.prepare('UPDATE users SET is_gm = ? WHERE id = ?'),
+  gmLogAdd:     db.prepare('INSERT INTO gm_log (gm, target, text, at) VALUES (?, ?, ?, ?)'),
+  gmLogList:    db.prepare('SELECT gm, target, text, at FROM gm_log ORDER BY id DESC LIMIT ?'),
+  gmLogPrune:   db.prepare('DELETE FROM gm_log WHERE id <= (SELECT id FROM gm_log ORDER BY id DESC LIMIT 1 OFFSET 500)'),
+  dragonIds:    db.prepare('SELECT id FROM dragons'),
+  berserkIds:   db.prepare('SELECT id FROM dragons WHERE berserk IS NOT NULL'),
+  // 죽음
+  graveIds:     db.prepare("SELECT id FROM dragons WHERE dead_at IS NOT NULL AND fallen IS NOT NULL AND fallen NOT LIKE '%\"closed\":true%'"),
+  graveUser:    db.prepare('INSERT INTO users (username, pw_hash, is_gm, created_at) VALUES (?, ?, 0, ?)'),
+  setOwner:     db.prepare('UPDATE dragons SET user_id = ?, dead_at = ? WHERE id = ?'),
+  invClear:     db.prepare('DELETE FROM inventory WHERE dragon_id = ?'),
+  hoardSet:     db.prepare('UPDATE hoard SET qty = qty - ? WHERE dragon_id = ? AND item = ? AND qty >= ?'),
+  hoardClear:   db.prepare('DELETE FROM hoard WHERE dragon_id = ?'),
+  hoardGoldSet: db.prepare('UPDATE dragons SET hoard_gold = ? WHERE id = ?'),
+  kinMove:      db.prepare('UPDATE kin SET dragon_id = ? WHERE id = ? AND dragon_id = ?'),
+  arenaList:    db.prepare(`SELECT id, name, kind, level, combat, last_seen AS lastSeen, avatar_ver, (avatar IS NOT NULL) AS has_avatar
+                            FROM dragons WHERE id != ? AND dead_at IS NULL ORDER BY last_seen DESC LIMIT 60`),
+  kinDel:       db.prepare('DELETE FROM kin WHERE id = ? AND dragon_id = ?'),
   pruneChat:    db.prepare('DELETE FROM chat WHERE region = ? AND id <= (SELECT id FROM chat WHERE region = ? ORDER BY id DESC LIMIT 1 OFFSET 200)'),
 };
 
@@ -248,6 +305,13 @@ function saveStateRaw(d, items = [], hoardItems = []) {
     stance: d.stance, stance_at: d.stance_at || 0,
     region: d.region, nest: d.nest ?? null, rest_at: d.rest_at ?? null, hoard_gold: d.hoard_gold || 0,
     fame: d.fame || 0, pending_event: d.pending_event ?? null,
+    traits: typeof d.traits === 'string' ? d.traits : JSON.stringify(d.traits || {}),
+    combat: typeof d.combat === 'string' ? d.combat : JSON.stringify(d.combat || {}),
+    claw: d.claw, scale: d.scale, wing: d.wing, wisdom: d.wisdom, majesty: d.majesty, stat_pts: d.stat_pts || 0,
+    mind: d.mind ?? 100, mind_at: d.mind_at || 0, place: d.place ?? null,
+    fallen: d.fallen ? (typeof d.fallen === 'string' ? d.fallen : JSON.stringify(d.fallen)) : null,
+    scars: typeof d.scars === 'string' ? d.scars : JSON.stringify(d.scars || []),
+    berserk: d.berserk ? (typeof d.berserk === 'string' ? d.berserk : JSON.stringify(d.berserk)) : null,
   });
 
   for (const { id, qty } of items) q.invAdd.run(d.id, id, qty);
@@ -315,6 +379,27 @@ module.exports = {
   tpThreads: (me) => q.tpThreads.all({ me }),
   noteAdd: (id, text) => q.noteAdd.run(id, text, Date.now()),
   notesTake: db.transaction((id) => { const l = q.noteList.all(id).map((r) => r.text); q.noteClear.run(id); return l; }),
+  // GM
+  gmList: (text) => q.gmList.all({ q: `%${String(text || '').replace(/[%_]/g, '')}%` }),
+  gmUserOf: (dragonId) => q.gmUserOf.get(dragonId),
+  gmSetRole: (userId, on) => q.gmSetRole.run(on ? 1 : 0, userId),
+  gmLog: (gm, target, text) => { q.gmLogAdd.run(gm, target ?? null, text, Date.now()); q.gmLogPrune.run(); },
+  gmLogList: (n = 40) => q.gmLogList.all(n),
+  dragonIds: () => q.dragonIds.all().map((r) => r.id),
+  berserkIds: () => q.berserkIds.all().map((r) => r.id),
+  graveIds: () => q.graveIds.all().map((r) => r.id),
+  // 긴 잠: 소지품과 금화를 둥지(보물더미)로 옮기고, 계정에서 떼어 냄 (계정은 새 드래곤을 만들 수 있게)
+  bury: db.transaction((d) => {
+    for (const { item, qty } of q.invList.all(d.id)) q.hoardAdd.run(d.id, item, qty);
+    q.invClear.run(d.id);
+    const graveId = Number(q.graveUser.run(`#묘비#${d.id}`, '!', Date.now()).lastInsertRowid);
+    q.setOwner.run(graveId, Date.now(), d.id);
+  }),
+  hoardTake: (dragonId, item, qty) => q.hoardSet.run(qty, dragonId, item, qty).changes > 0,
+  hoardClear: (dragonId) => { q.hoardClear.run(dragonId); q.hoardGoldSet.run(0, dragonId); },
+  kinMove: (kinId, from, to) => q.kinMove.run(to, kinId, from).changes > 0,
+  arenaList: (me) => q.arenaList.all(me),
+  kinDelete: (kinId, dragonId) => q.kinDel.run(kinId, dragonId),
   inventory: (dragonId) => q.invList.all(dragonId),
   itemCount: (dragonId, item) => q.invCount.get(dragonId, item)?.qty || 0,
   hoard: (dragonId) => q.hoardList.all(dragonId),
