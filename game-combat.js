@@ -3,7 +3,7 @@
 // - 강적·결투장: 매 턴 직접 고름 (실시간 결투에서 시간을 넘기면 자동으로 고름)
 // 전투 하나 = battle { kind, turn, a, b, log, over, winner }. a·b는 싸우는 쪽(fighter)
 const {
-  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, STATUS, CREATURE_COMBAT, ELITES, CREATURES, ITEMS, RULES, STANCE_RULES, KINDS, MIND, PLACES, PLACE_RULES, COMBOS, ENRAGE, RAID,
+  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, STATUS, CREATURE_COMBAT, ELITES, CREATURES, ITEMS, RULES, STANCE_RULES, KINDS, MIND, PLACES, PLACE_RULES, COMBOS, ENRAGE, RAID, BOSSES, BOSS,
 } = require('./game-data');
 const logic = require('./game-logic');
 
@@ -399,8 +399,14 @@ function round(b, actA, actB) {
     }
   }
   if (!b.over) for (const f of [b.a, ...foes]) if (f.creature && alive(f)) plan(f);
-  const maxTurns = foes.length > 1 ? COMBAT.group.maxTurns : COMBAT.maxTurns;
-  if (!b.over && b.turn >= maxTurns) {
+  const maxTurns = b.maxTurns || (foes.length > 1 ? COMBAT.group.maxTurns : COMBAT.maxTurns);
+  if (!b.over && b.turn >= maxTurns && b.boss) {
+    // 재앙: 정해진 턴만큼 싸우면 물러남 (입힌 피해는 모두의 몫으로 남음)
+    b.over = true;
+    b.fled = b.a;
+    b.winner = targetOf(b);
+    lines.push(`${ga(b.winner)} 크게 포효하며 날개를 펼쳤다. 숨을 고르러 물러난다. 입힌 상처는 그대로 남는다.`);
+  } else if (!b.over && b.turn >= maxTurns) {
     b.over = true;
     const sum = (k) => foes.reduce((n, f) => n + Math.max(0, f[k]), 0);
     b.winner = b.a.hp / b.a.hpMax >= sum('hp') / sum('hpMax') ? b.a : targetOf(b);
@@ -497,7 +503,7 @@ function view(b, me = 'a') {
   let intent = b.over ? null : intentOf(foeF);
   if (multi && !b.over) intent = list.filter((x) => x.intent).map((x) => x.intent).sort((p, q) => INTENT_RANK[q.kind] - INTENT_RANK[p.kind])[0] || null;
   return {
-    kind: b.kind, turn: b.turn, maxTurns: foes.length > 1 ? COMBAT.group.maxTurns : COMBAT.maxTurns, over: b.over,
+    kind: b.kind, turn: b.turn, maxTurns: b.maxTurns || (foes.length > 1 ? COMBAT.group.maxTurns : COMBAT.maxTurns), over: b.over, boss: !!b.boss,
     me: mv, foe: fighterView(foeF, false),
     foes: list, target: multi ? b.target : null,
     intent,
@@ -685,6 +691,35 @@ function fromThief(T, lv, name, minion, trapped) {
     st: {}, cd: {},
   };
 }
+// ── 대륙의 재앙 ────────────────────────────────────
+// 모두가 함께 깎는 체력: 싸움을 시작할 때의 남은 체력(hp)과 전체 체력(hpMax)으로 만듦. 절반 아래면 처음부터 분노
+function fromBoss(key, lv, hp, hpMax) {
+  const T = BOSSES[key];
+  const K = COMBAT.creature;
+  const enraged = hp <= hpMax * ENRAGE.below;
+  return {
+    id: null, name: T.name, kind: null, creature: true, region: key, place: null, elite: true, boss: true, level: lv, type: T.type,
+    corrupted: false, mindDrain: 0,
+    hp, hpMax, en: 0, enMax: 0,
+    atk: (K.atk[0] + lv * K.atk[1]) * BOSS.atk * (enraged ? ENRAGE.atk : 1), def: (K.def[0] + lv * K.def[1]) * BOSS.def, spd: 6 + lv * 2, mag: 4 + lv * 2, maj: 8 + lv * 2,
+    taken: 1, element: T.special.element || null, breath: null, skills: [], special: T.special,
+    weak: T.weak, resist: T.resist, enraged,
+    st: {}, cd: {},
+  };
+}
+function bossBattle(d, st) {
+  const me = fromDragon(d, 'hunt');
+  me.atk *= logic.titleMods(d).eliteAtk || 1; // 칭호: 강적 사냥꾼
+  const foe = fromBoss(st.key, st.lv, st.hp, st.hpMax);
+  const b = newBattle('hunt', me, foe);
+  b.boss = true;
+  b.maxTurns = BOSS.turns;
+  b.region = d.region;
+  b.a.turnCount = 0;
+  b.startHp = foe.hp;
+  return b;
+}
+
 function raidBattle(d, raid) {
   const T = RAID.thieves[raid.thief];
   const me = fromDragon(d, 'hunt');
@@ -749,5 +784,5 @@ function raidReward(d, b, c, raid) {
 module.exports = {
   combatOf, loadout, learned, setSkills, setSettings,
   fromDragon, fromCreature, newBattle, round, aiPick, autoAct, runAuto, blocked, view, comboOf, intentOf, targetOf,
-  hunt, huntReward, eliteReward, raidBattle, raidReward, debug,
+  hunt, huntReward, eliteReward, raidBattle, raidReward, fromBoss, bossBattle, debug,
 };

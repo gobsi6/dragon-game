@@ -4,7 +4,7 @@
 // 저장은 부르는 쪽(server.js)이 db.saveState(d, items)로 합니다.
 
 const {
-  REGIONS, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, RECIPES, SLOTS, STANCES, SHOPS, repTier, TRADE, NEST, hoardTier, RAID,
+  REGIONS, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, RECIPES, SLOTS, STANCES, SHOPS, repTier, TRADE, NEST, hoardTier, RAID, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, ELEMENTS,
   SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES,
 } = require('./game-data');
 
@@ -232,6 +232,124 @@ function josa(word, a, b) {
   return c % 28 ? a : b;
 }
 
+// ── 계절과 날씨 ────────────────────────────────────
+// 시각으로 정해짐 (저장하지 않음). 같은 지역·같은 때면 누구에게나 같은 날씨
+const SEASON_MS = SEASON_RULES.days * 24 * 3600000;
+const SLOT_MS = SEASON_RULES.weatherHours * 3600000;
+const seasonIndex = (now) => Math.floor(now / SEASON_MS) % SEASONS.length;
+function seasonAt(now = Date.now()) {
+  const s = SEASONS[seasonIndex(now)];
+  return { id: s.id, name: s.name, desc: s.desc, fx: s.fx, until: (Math.floor(now / SEASON_MS) + 1) * SEASON_MS };
+}
+// 글자 하나로 0~1 사이 수 (같은 글자면 늘 같은 수)
+function hash01(str) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+  // 잘 섞기 (murmur3 마무리)
+  h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+const weatherDebug = {}; // 시험·GM: { 지역: { id, until } } 이 시각까지 이 날씨로
+function weatherIdAt(region, now = Date.now()) {
+  const dbg = weatherDebug[region];
+  if (dbg && dbg.until > now) return dbg.id;
+  const slot = Math.floor(now / SLOT_MS);
+  const season = SEASONS[seasonIndex(slot * SLOT_MS)].id;
+  const w = { ...W_BASE[season] };
+  const R = W_REGION[region] || {};
+  for (const [k, v] of Object.entries(R.add || {})) w[k] = (w[k] || 0) + v;
+  for (const [k, v] of Object.entries(R.mul || {})) if (w[k] != null) w[k] *= v;
+  const list = Object.entries(w).filter(([k, v]) => v > 0 && WEATHERS[k]);
+  const total = list.reduce((a, [, v]) => a + v, 0);
+  let r = hash01(`${region}:${slot}`) * total;
+  for (const [k, v] of list) { r -= v; if (r < 0) return k; }
+  return list[list.length - 1][0];
+}
+// 지역의 지금 날씨와 다음 날씨
+function weatherOf(region, now = Date.now()) {
+  const id = weatherIdAt(region, now);
+  const dbg = weatherDebug[region];
+  const until = dbg && dbg.until > now ? dbg.until : (Math.floor(now / SLOT_MS) + 1) * SLOT_MS;
+  return { id, name: WEATHERS[id].name, until, next: weatherIdAt(region, until) };
+}
+// 계절과 날씨의 효과를 하나로 합침
+const FX_MUL = ['exploreGold', 'huntGold', 'hpRegen', 'enRegen', 'apRegen', 'mindRegen', 'restRegen', 'taken', 'foeAtk', 'foeHp'];
+const FX_ADD = ['gatherExtra', 'findRare', 'exploreFind', 'drop', 'spd', 'foeSpd'];
+function weatherFx(region, now = Date.now()) {
+  const out = { ap: {}, elem: {} };
+  for (const k of FX_MUL) out[k] = 1;
+  for (const k of FX_ADD) out[k] = 0;
+  if (!region) return out;
+  for (const fx of [seasonAt(now).fx, WEATHERS[weatherIdAt(region, now)].fx]) {
+    for (const k of FX_MUL) if (fx[k] != null) out[k] *= fx[k];
+    for (const k of FX_ADD) if (fx[k] != null) out[k] += fx[k];
+    for (const [k, v] of Object.entries(fx.ap || {})) out.ap[k] = (out.ap[k] || 0) + v;
+    for (const [k, v] of Object.entries(fx.elem || {})) out.elem[k] = (out.elem[k] || 1) * v;
+  }
+  return out;
+}
+// 효과를 사람이 읽는 글로: 좋은 점, 나쁜 점, 속성 (속성은 나와 사냥감 모두에게)
+const pctOf = (x) => `${x > 0 ? '+' : '−'}${Math.round(Math.abs(x) * 100)}%`;
+function fxText(fx) {
+  const pros = [], cons = [];
+  const put = (good, t) => (good ? pros : cons).push(t);
+  const mul = (k, label, goodUp = true) => { if (fx[k] != null && fx[k] !== 1) put((fx[k] > 1) === goodUp, `${label} ${pctOf(fx[k] - 1)}`); };
+  const add = (k, label, goodUp = true, unit = 'p') => { if (fx[k]) put((fx[k] > 0) === goodUp, `${label} ${unit === 'p' ? `${fx[k] > 0 ? '+' : '−'}${Math.round(Math.abs(fx[k]) * 100)}%` : `${fx[k] > 0 ? '+' : '−'}${Math.abs(fx[k])}`}`); };
+  add('gatherExtra', '채집');
+  add('findRare', '귀한 물건');
+  add('exploreFind', '탐사 발견');
+  mul('exploreGold', '탐사 금화');
+  mul('huntGold', '사냥 금화');
+  add('drop', '전리품');
+  mul('hpRegen', '체력 회복');
+  mul('enRegen', '기력 회복');
+  mul('apRegen', '행동력 회복');
+  mul('mindRegen', '정신 회복');
+  mul('restRegen', '둥지 휴식');
+  add('spd', '날개', true, 'n');
+  mul('taken', '받는 피해', false);
+  mul('foeAtk', '사냥감 공격', false);
+  mul('foeHp', '사냥감 체력', false);
+  add('foeSpd', '사냥감 날개', false, 'n');
+  const names = { explore: '탐사', gather: '채집', hunt: '사냥' };
+  for (const [k, v] of Object.entries(fx.ap || {})) if (v) put(v < 0, `${names[k] || k} 행동력 ${v > 0 ? '+' : '−'}${Math.abs(v)}`);
+  // 속성 피해: 세지면 좋은 점, 약해지면 나쁜 점으로 (나와 사냥감 모두에게 똑같이)
+  for (const [k, v] of Object.entries(fx.elem || {})) if (v !== 1) put(v > 1, `${ELEMENTS[k] || k}${k === 'mist' ? ' 속성' : ''} ${pctOf(v - 1)}`);
+  return { pros, cons };
+}
+
+// 효과를 숫자 없이 한 문장으로 (계절 설명). 같은 쪽으로 바뀌는 것끼리 묶음
+// 예: '사냥 금화와 전리품을 얻을 확률이 늘고, 탐사에서 줍는 금화가 줄어든다.'
+const PROSE = {
+  gatherExtra: '채집에서 얻는 물건', findRare: '귀한 물건을 찾을 확률', exploreFind: '탐사에서 무언가 찾을 확률',
+  exploreGold: '탐사에서 줍는 금화', huntGold: '사냥 금화', drop: '전리품을 얻을 확률',
+  hpRegen: '체력 회복', enRegen: '기력 회복', apRegen: '행동력 회복', mindRegen: '정신 회복', restRegen: '둥지에서 쉴 때 회복',
+  spd: '날개', taken: '받는 피해', foeAtk: '사냥감의 공격', foeHp: '사냥감의 체력', foeSpd: '사냥감의 날개',
+};
+const VERB = { up: ['늘고', '늘어난다'], down: ['줄고', '줄어든다'], fast: ['빨라지고', '빨라진다'], slow: ['느려지고', '느려진다'], strong: ['세지고', '세진다'], weak: ['약해지고', '약해진다'] };
+const BAD_UP = ['taken', 'foeAtk', 'foeHp', 'foeSpd']; // 늘면 나쁜 것
+function fxProse(fx) {
+  const groups = [];
+  const addTo = (dir, good, noun) => { let g = groups.find((x) => x.dir === dir && x.good === good); if (!g) groups.push(g = { dir, good, nouns: [] }); g.nouns.push(noun); };
+  for (const k of Object.keys(PROSE)) {
+    const v = fx[k];
+    if (v == null) continue;
+    const isMul = FX_MUL.includes(k);
+    if (isMul ? v === 1 : v === 0) continue;
+    const up = isMul ? v > 1 : v > 0;
+    const dir = /Regen$/.test(k) ? (up ? 'fast' : 'slow') : k === 'foeAtk' ? (up ? 'strong' : 'weak') : (up ? 'up' : 'down');
+    addTo(dir, BAD_UP.includes(k) ? !up : up, PROSE[k]);
+  }
+  if (!groups.length) return '';
+  groups.sort((a, b) => Number(b.good) - Number(a.good)); // 좋은 것 먼저
+  const parts = groups.map((g, i) => {
+    const last = g.nouns[g.nouns.length - 1];
+    const list = g.nouns.slice(0, -1).map((n) => `${n}${josa(n, '과', '와')} `).join('') + `${last}${josa(last, '이', '가')}`;
+    return `${list} ${VERB[g.dir][i === groups.length - 1 ? 1 : 0]}`;
+  });
+  return `${parts.join(', ')}.`;
+}
+
 // ── 회복 ───────────────────────────────────────────
 // 시간이 지난 만큼 행동력·체력을 채움. 접속하지 않은 동안에도 계산됨.
 function regen(d, now = Date.now()) {
@@ -253,6 +371,11 @@ function regen(d, now = Date.now()) {
     m = { ap: base.ap * r, hp: base.hp * r, en: base.en * r };
   } else if (d.stance === 'friendly' && isTown(d.region)) m = { ap: 1, hp: SR.friendly.townHpRegen, en: 1 };
   const tm = traitMods(d); // 특성: 회복 빠르기
+  // 계절과 날씨. 둥지에서 쉬는 동안에는 궂은 날씨를 피함 (느려지는 효과는 없고, 겨울에는 둥지 온기로 더 빨라짐)
+  const wx = weatherFx(d.region, now);
+  const shelter = (v) => (d.rest_at ? Math.max(1, v) : v);
+  const rr = d.rest_at ? wx.restRegen : 1;
+  m = { ap: m.ap * shelter(wx.apRegen) * rr, hp: m.hp * shelter(wx.hpRegen) * rr, en: m.en * shelter(wx.enRegen) * rr };
   tick('ap', apCap(d), 'ap_at', RULES.apEvery / (m.ap * tm.apRegen));
   if (isFallen(d)) d.hp_at = now; // 쓰러져 있는 동안은 체력이 차지 않음
   else tick('hp', hpCap(d), 'hp_at', RULES.hpEvery / (m.hp * tm.hpRegen));
@@ -260,7 +383,7 @@ function regen(d, now = Date.now()) {
   // 정신: 광폭화 중에는 차지 않음. 둥지에서 쉬면 빨리, 은둔이면 조금 더 빨리
   if (d.mind == null) d.mind = MIND.max;
   if (berserkOf(d)) d.mind_at = now;
-  else tick('mind', MIND.max, 'mind_at', MIND.regenEvery / ((d.rest_at ? MIND.restMult * (hoardTier(nestInfo(d).value || 0)?.mind || 1) : 1) * (d.stance === 'hermit' ? MIND.hermitMult : 1)));
+  else tick('mind', MIND.max, 'mind_at', MIND.regenEvery / ((d.rest_at ? MIND.restMult * (hoardTier(nestInfo(d).value || 0)?.mind || 1) : 1) * (d.stance === 'hermit' ? MIND.hermitMult : 1) * shelter(wx.mindRegen)));
 }
 
 // ── 장소 ───────────────────────────────────────────
@@ -347,7 +470,8 @@ function spendAp(d, n, now = Date.now()) {
 function actionCost(d, type) {
   let c = RULES.cost[type];
   if (d.stance === 'hermit' && isTown(d.region) && (type === 'explore' || type === 'gather')) c += SR.hermit.townApExtra;
-  return c;
+  c += weatherFx(d.region).ap[type] || 0; // 날씨: 뇌우에는 사냥이 힘듦
+  return Math.max(1, c);
 }
 
 // ── 용족 명성 ──────────────────────────────────────
@@ -483,11 +607,12 @@ function gather(d) {
   spendAp(d, actionCost(d, 'gather'));
   const st = statsOf(d);
 
-  const n = Math.random() < 0.35 + st.wisdom * 0.01 + traitMods(d).gatherExtra ? 2 : 1;
+  const wx = weatherFx(d.region);
+  const n = Math.random() < 0.35 + st.wisdom * 0.01 + traitMods(d).gatherExtra + wx.gatherExtra ? 2 : 1;
   const ids = [];
   for (let i = 0; i < n; i++) {
     const pl = placeLoot(d);
-    ids.push(rollItem(d.region, { uncommon: 0.12 + st.wisdom * 0.006 + pl.uncommon, rare: 0.01 + st.wisdom * 0.001 + pl.rare }));
+    ids.push(rollItem(d.region, { uncommon: 0.12 + st.wisdom * 0.006 + pl.uncommon, rare: Math.max(0, 0.01 + st.wisdom * 0.001 + pl.rare + wx.findRare) }));
   }
   const items = bundle(ids);
   let xp = 3;
@@ -512,14 +637,16 @@ function explore(d) {
   let items = [];
   let gold = 0;
   const r = Math.random();
-  if (r < 0.4 + traitMods(d).exploreFind) {
+  const wx = weatherFx(d.region); // 계절과 날씨
+  const find = traitMods(d).exploreFind + wx.exploreFind;
+  if (r < 0.4 + find) {
     // 귀한 물건이 잘 나오는 탐사
     const pl = placeLoot(d);
-    const id = rollItem(d.region, { uncommon: 0.4 + st.wisdom * 0.01 + pl.uncommon, rare: 0.06 + st.wisdom * 0.003 + pl.rare });
+    const id = rollItem(d.region, { uncommon: 0.4 + st.wisdom * 0.01 + pl.uncommon, rare: Math.max(0, 0.06 + st.wisdom * 0.003 + pl.rare + wx.findRare) });
     items = [{ id, qty: 1 }];
     lines.push(`${ITEMS[id].name}${josa(ITEMS[id].name, '을', '를')} 발견했다.`);
-  } else if (r < 0.75 + traitMods(d).exploreFind) {
-    gold = randInt(4, 12) + Math.floor(st.majesty / 3);
+  } else if (r < 0.75 + find) {
+    gold = Math.max(1, Math.round((randInt(4, 12) + Math.floor(st.majesty / 3)) * wx.exploreGold));
     lines.push(`누군가 흘리고 간 금화 ${gold}닢을 주웠다.`);
   } else {
     lines.push('특별한 것은 찾지 못했지만, 이곳 지리를 조금 더 알게 되었다.');
@@ -1266,6 +1393,7 @@ function chaseCheck(d) {
 }
 
 module.exports = {
+  seasonAt, weatherOf, weatherIdAt, weatherFx, fxText, fxProse, weatherDebug, SLOT_MS,
   nestInfo, nestTier, maxKinOf, expandNest, checkRaid, raidView, chaseCheck,
   regen, gather, explore, hunt, startExpedition, finishExpedition, chooseFork, forkView, expInfo,
   craft, useItem, equip, unequip, statsOf, bonusOf, hpCap, enCap, apCap, equipOf, buffOf, giveBuff,

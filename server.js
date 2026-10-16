@@ -11,7 +11,7 @@ const db = require('./db');
 const {
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, CREATURES, RULES, SLOTS, RECIPES, SHOPS, repTier, TRADE, NEST,
   STANCE_RULES, FAME_TIERS, fameTier, KIN, TALENTS, TRAITS, TRAIT_EARN, TRAIT_COUNTS,
-  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, STATUS, CREATURE_COMBAT, MIND, PLACES, REGION_PLACES, PLACE_RULES, HOARD_TIERS, RAID,
+  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, STATUS, CREATURE_COMBAT, MIND, PLACES, REGION_PLACES, PLACE_RULES, HOARD_TIERS, RAID, SEASONS, WEATHERS,
 } = require('./game-data');
 const logic = require('./game-logic');
 const life = require('./game-life');
@@ -365,6 +365,34 @@ const BERSERK = '광폭화한 몸이 제멋대로 날뛴다. 누군가 진정시
 
 // 쓰러짐·상흔·죽음·남긴 둥지 (death.js)
 const death = require('./death')({ io, db, online, logic, life, sendMe, broadcastPresence });
+// ── 계절과 날씨: 시각으로 정해짐. 바뀌면 모두에게 알리고, 그 지역 이야기 창에도 한 줄 ──
+function weatherAll(now = Date.now()) {
+  const se = logic.seasonAt(now);
+  return {
+    season: { id: se.id, name: se.name, until: se.until },
+    regions: Object.fromEntries(Object.keys(REGIONS).map((r) => [r, logic.weatherOf(r, now)])),
+  };
+}
+let wxLast = weatherAll();
+const wxTicker = setInterval(() => {
+  const cur = weatherAll();
+  if (cur.season.id !== wxLast.season.id) {
+    const se = SEASONS.find((x) => x.id === cur.season.id);
+    io.emit('system', { text: `[계절] ${se.name}${josa(se.name, '이', '가')} 왔다. ${se.desc}`, at: Date.now() });
+  }
+  let changed = cur.season.id !== wxLast.season.id;
+  for (const [r, w] of Object.entries(cur.regions)) {
+    const prev = wxLast.regions[r];
+    if (prev.id !== w.id || prev.until !== w.until) changed = true;
+    if (prev.id !== w.id) system(r, `하늘이 바뀌었다: ${WEATHERS[prev.id].name} → ${WEATHERS[w.id].name}. ${WEATHERS[w.id].desc}`);
+  }
+  wxLast = cur;
+  if (changed) io.emit('weather', cur);
+}, 20000);
+wxTicker.unref?.();
+
+// 대륙의 재앙: 모두가 함께 맞서는 거대한 적 (boss.js)
+const boss = require('./boss')({ io, db, online, logic, combat, arena, sendMe });
 arena.setFall(death.fall);
 const FALLEN = '쓰러져 있다. 일어설지, 긴 잠에 들지 먼저 정해야 한다.';
 
@@ -438,6 +466,8 @@ io.on('connection', (socket) => {
     shops: Object.keys(SHOPS),
     trade: TRADE,
     nestRules: NEST, hoardTiers: HOARD_TIERS,
+    seasons: SEASONS.map((x) => ({ id: x.id, name: x.name, desc: x.desc, prose: logic.fxProse(x.fx), ...logic.fxText(x.fx) })),
+    weathers: Object.fromEntries(Object.entries(WEATHERS).map(([id, w]) => [id, { name: w.name, desc: w.desc, ...logic.fxText(w.fx) }])),
     raidRules: { minValue: RAID.minValue, chaseAp: RAID.chaseAp, chaseFor: RAID.chaseFor, guard: RAID.guard, trap: RAID.trap },
     stanceRules: STANCE_RULES,
     fameTiers: FAME_TIERS,
@@ -449,6 +479,8 @@ io.on('connection', (socket) => {
   });
   if (dragon) enterWorld(socket, dragon);
   socket.emit('rampage:list', arena.rampages());
+  socket.emit('boss', boss.view());
+  socket.emit('weather', weatherAll());
   socket.emit('grave:list', death.graves());
   socket.emit('rescue:list', death.rescues());
 
@@ -879,6 +911,28 @@ io.on('connection', (socket) => {
     ack({ ok: true, result: { title: '도둑 추격', hunt: true, raid: true, battle: view, lines, items: [], gold: 0, xp: 0 } });
   });
 
+  socket.on('weather:get', (p, ack) => { if (typeof ack === 'function') ack({ ok: true, weather: weatherAll() }); });
+
+  // GM: 한 지역의 날씨를 정해진 시간 동안 바꿈 (id가 비면 원래대로)
+  socket.on('gm:weather', (p, ack) => {
+    if (typeof ack !== 'function') return;
+    if (!socket.data.user?.is_gm) return ack({ error: 'GM만 쓸 수 있다.' });
+    const r = str(p?.region);
+    if (!REGIONS[r]) return ack({ error: '그런 지역은 없다.' });
+    const id = str(p?.id);
+    if (!id) delete logic.weatherDebug[r];
+    else {
+      if (!WEATHERS[id]) return ack({ error: '그런 날씨는 없다.' });
+      const h = Math.max(0.1, Math.min(48, Number(p?.hours) || 3));
+      logic.weatherDebug[r] = { id, until: Date.now() + h * 3600000 };
+    }
+    db.gmLog(socket.data.user.username, null, id ? `${REGIONS[r].name}의 날씨를 ${WEATHERS[id].name}${josa(WEATHERS[id].name, '으로', '로')} 바꿈` : `${REGIONS[r].name}의 날씨를 원래대로`);
+    const cur = weatherAll();
+    wxLast = cur;
+    io.emit('weather', cur);
+    ack({ ok: true, weather: cur, log: db.gmLogList(40) });
+  });
+
   socket.on('market:get', (payload, ack) => {
     if (typeof ack !== 'function') return;
     const entry = entryOf(socket);
@@ -993,6 +1047,7 @@ io.on('connection', (socket) => {
   gm.attach(socket);
   arena.attach(socket);
   death.attach(socket);
+  boss.attach(socket);
 
   socket.on('disconnect', () => {
     const entry = entryOf(socket);

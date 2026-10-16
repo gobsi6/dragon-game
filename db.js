@@ -208,6 +208,13 @@ db.exec(`
 `);
 
 db.exec(`
+  CREATE TABLE IF NOT EXISTS world (           -- 대륙 전체의 상태 (대륙의 재앙 등). v는 글자(JSON)
+    k TEXT PRIMARY KEY,
+    v TEXT NOT NULL
+  );
+`);
+
+db.exec(`
   CREATE TABLE IF NOT EXISTS hoard (
     dragon_id INTEGER NOT NULL REFERENCES dragons(id) ON DELETE CASCADE,
     item      TEXT NOT NULL,
@@ -343,6 +350,9 @@ const q = {
   gmLogList:    db.prepare('SELECT gm, target, text, at FROM gm_log ORDER BY id DESC LIMIT ?'),
   gmLogPrune:   db.prepare('DELETE FROM gm_log WHERE id <= (SELECT id FROM gm_log ORDER BY id DESC LIMIT 1 OFFSET 500)'),
   dragonIds:    db.prepare('SELECT id FROM dragons'),
+  activeSince:  db.prepare('SELECT id, level FROM dragons WHERE dead_at IS NULL AND last_seen >= ?'),
+  worldGet:     db.prepare('SELECT v FROM world WHERE k = ?'),
+  worldSet:     db.prepare('INSERT INTO world (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v'),
   berserkIds:   db.prepare('SELECT id FROM dragons WHERE berserk IS NOT NULL'),
   // 죽음
   delUser:      db.prepare('DELETE FROM users WHERE id = ?'),
@@ -483,6 +493,9 @@ module.exports = {
   gmLog: (gm, target, text) => { q.gmLogAdd.run(gm, target ?? null, text, Date.now()); q.gmLogPrune.run(); },
   gmLogList: (n = 40) => q.gmLogList.all(n),
   dragonIds: () => q.dragonIds.all().map((r) => r.id),
+  activeSince: (t) => q.activeSince.all(t),        // 이 시각 뒤로 접속한 (잠들지 않은) 드래곤 [{ id, level }]
+  worldGet: (k, def = null) => { const r = q.worldGet.get(k); if (!r) return def; try { return JSON.parse(r.v); } catch { return def; } },
+  worldSet: (k, v) => q.worldSet.run(k, JSON.stringify(v)),
   berserkIds: () => q.berserkIds.all().map((r) => r.id),
   graveIds: () => q.graveIds.all().map((r) => r.id),
   waitIds: () => q.waitIds.all().map((r) => r.id),       // 쓰러져 도움을 기다리는 (또는 기다렸던) 드래곤

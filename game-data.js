@@ -245,6 +245,10 @@ const ITEMS = {
   bark_tailwrap:{ name: '고목 껍질 꼬리감개', rarity: 'uncommon', type: 'equip', slot: 'tail', bonus: { scale: 1, wisdom: 1 },  desc: '살아 있는 껍질이 꼬리를 감싸 상처를 보듬는다.' },
   magma_tail:   { name: '용암 심장 꼬리날', rarity: 'rare',     type: 'equip', slot: 'tail',  bonus: { claw: 2, majesty: 1 },   desc: '꼬리 끝에서 용암이 끓는다.' },
 
+  // 대륙의 재앙을 쓰러뜨리면 나오는 것
+  calamity_core:{ name: '재앙의 핵',        rarity: 'rare',     cat: 'trophy', value: 120, desc: '쓰러진 재앙의 가슴에서 꺼낸, 아직 고동치는 검붉은 핵. 대륙에 몇 개 없는 물건이다.' },
+  calamity_charm:{ name: '재앙을 이긴 증표', rarity: 'rare',    type: 'equip', slot: 'charm', bonus: { claw: 2, scale: 2, wing: 1, wisdom: 1, majesty: 2 }, desc: '재앙의 핵을 고대의 유물에 박아 넣었다. 지닌 드래곤의 이름이 대륙에 울린다.' },
+
   // ── 둥지에 설치하는 것: 쓰면 둥지에 놓임 (보물 도둑을 막음) ──
   thorn_trap:   { name: '가시 덫',          rarity: 'common',   type: 'use', use: { nestWard: 'trap' },  desc: '둥지 입구에 숨겨 두는 덫. 도둑이 들면 가져가는 양이 절반으로 줄고, 다친 채로 달아난다. 한 번 쓰면 망가진다.' },
   ward_stone:   { name: '수호 결계석',      rarity: 'rare',     type: 'use', use: { nestWard: 'stone' }, desc: '룬을 새긴 결계석. 도둑을 한 번 통째로 쫓아내고 부서진다.' },
@@ -299,6 +303,7 @@ const BUFFS = {
 // 제작법. needs: 재료와 개수, en: 쓰는 기력, wis: 필요한 지혜
 const RECIPES = [
   { out: 'honey_salve',   needs: { wild_honey: 1, grass_seed: 2 },                     en: 4,  wis: 0 },
+  { out: 'calamity_charm',needs: { calamity_core: 2, ancient_relic: 1 },                en: 16, wis: 13 },
   { out: 'thorn_trap',    needs: { beast_hide: 2, sharp_fang: 2 },                     en: 5,  wis: 0 },
   { out: 'ward_stone',    needs: { rune_stone: 3, old_scroll: 1, sun_stone: 1 },       en: 12, wis: 12 },
   { out: 'ember_tea',     needs: { volcanic_ash: 2, wild_honey: 1 },                   en: 3,  wis: 0 },
@@ -739,6 +744,10 @@ const TITLES = [
   { id: 'rescuer',   name: '손을 내미는 자',   cond: { count: 'rescue', at: 3 },    mod: { helpHp: 0.15 },   eff: '일으켜 줄 때 체력 +15%' },
   { id: 'mender',    name: '치유의 손길',      cond: { count: 'healother', at: 15 }, mod: { heal: 1.1, helpHp: 0.05 }, eff: '치유 +10%, 일으켜 줄 때 체력 +5%' },
   { id: 'calmer',    name: '광기를 잠재우는 자', cond: { count: 'calm', at: 3 },     mod: { mindWard: 0.8 },  eff: '깎이는 정신 −20%' },
+  // 대륙의 재앙
+  { id: 'boss1',     name: '재앙에 맞선 자',   cond: { count: 'bosswin', at: 1 },   mod: { eliteAtk: 1.04 }, eff: '강적과 싸울 때 공격 +4%' },
+  { id: 'boss2',     name: '대륙의 방패',      cond: { count: 'bosswin', at: 10 },  mod: { atk: 1.04, taken: 0.97 }, eff: '사냥 공격 +4%, 받는 피해 −3%' },
+  { id: 'bosslast',  name: '재앙을 끝낸 자',   cond: { count: 'bosslast', at: 1 },  mod: { eliteAtk: 1.06 }, eff: '강적과 싸울 때 공격 +6%' },
   // 보물더미
   { id: 'hoard1',    name: '보물을 품은 자',   cond: { hoard: 2000 },               mod: { mindWard: 0.9 },  eff: '깎이는 정신 −10%' },
   { id: 'hoard2',    name: '황금 산의 주인',   cond: { hoard: 5000 },               mod: { huntGold: 1.1, mindWard: 0.9 }, eff: '사냥 금화 +10%, 깎이는 정신 −10%' },
@@ -746,7 +755,7 @@ const TITLES = [
   { id: 'scarred',   name: '상흔투성이',       cond: { scars: 3 },                  mod: { taken: 0.95 },    eff: '사냥 받는 피해 −5%' },
 ];
 // 칭호 조건을 사람이 읽는 글로
-const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: '둥지에서 {n}번 쉬기', craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기' };
+const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: '둥지에서 {n}번 쉬기', craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격' };
 
 // ── 장소와 사냥터 난이도 ───────────────────────────
 // 야생 지역마다 장소가 셋. 입구는 쉽고 안쪽일수록 사냥터 난이도(Lv.1~12)가 높다.
@@ -928,6 +937,50 @@ const COMBOS = {
 };
 // 강적의 분노: 체력이 이 비율 아래로 떨어지면 한 번
 const ENRAGE = { below: 0.5, atk: 1.25, every: 2 };
+
+// ── 대륙의 재앙: 모든 드래곤이 함께 맞서는 거대한 적 ──
+// 가끔 야생 지역 하나에 나타남. 체력은 모두가 함께 깎고, 한 번 맞설 때마다 정해진 턴만큼 싸운 뒤 물러남.
+// 쓰러뜨리면 입힌 피해 비율에 따라 모두에게 보상. 시간 안에 쓰러뜨리지 못하면 떠나 버림
+const BOSSES = {
+  plains:  { name: '대지를 가르는 거수', type: 'beast',   weak: ['fire', 'lightning'], resist: ['earth'],
+    special: { name: '대지 짓밟기', power: 1.5, debuff: { stun: 1 }, chance: 0.35 },
+    desc: '평원 한가운데 언덕만 한 짐승이 몸을 일으켰다. 발을 구를 때마다 땅이 갈라진다.' },
+  snow:    { name: '서리 거신 이미르', type: 'giant',   weak: ['fire'], resist: ['ice', 'water'],
+    special: { name: '빙하 내려찍기', power: 1.4, debuff: { freeze: 1 }, chance: 0.4 },
+    desc: '설원의 빙하가 갈라지며 얼음으로 된 거인이 걸어 나왔다. 숨결마다 눈보라가 인다.' },
+  ruins:   { name: '봉인에서 풀린 고대 거신', type: 'construct', weak: ['acid'], resist: ['lightning', 'fire', 'earth'],
+    special: { name: '룬 붕괴', power: 1.7 },
+    desc: '유적 깊은 곳의 봉인이 깨졌다. 온몸에 룬이 타오르는 거신이 하늘을 올려다본다.' },
+  forest:  { name: '썩어 가는 천 년 고목', type: 'spirit',  weak: ['fire', 'acid'], resist: ['poison', 'lightning'],
+    special: { name: '독 포자 폭발', power: 0.9, debuff: { poison: 3 } },
+    desc: '숲의 가장 오래된 나무가 병들어 일어섰다. 가지마다 검은 포자가 흩날린다.' },
+  swamp:   { name: '아홉 머리 히드라', type: 'reptile', weak: ['fire'], resist: ['poison', 'acid', 'water'],
+    special: { name: '아홉 머리 물기', power: 0.4, hits: 4 },
+    desc: '검은 늪이 끓어오르더니, 머리 아홉 달린 히드라가 솟아올랐다.' },
+  canyon:  { name: '폭풍을 부르는 괴조', type: 'bird',    weak: ['ice', 'earth'], resist: ['fire', 'lightning'],
+    special: { name: '번개 날개', power: 1.3, debuff: { stun: 1 }, chance: 0.3, element: 'lightning' },
+    desc: '협곡 하늘이 시커멓게 물들었다. 날개를 펼치면 해가 가려지는 괴조가 번개를 몰고 왔다.' },
+  volcano: { name: '깨어난 고룡 바르가스', type: 'flyer',  weak: ['ice', 'water'], resist: ['fire', 'poison'],
+    special: { name: '멸망의 화염', power: 1.6, debuff: { burn: 3 }, element: 'fire' },
+    desc: '천 년을 잠들어 있던 고룡이 분화구에서 깨어났다. 대륙의 모든 드래곤이 그 울음을 들었다.' },
+};
+const BOSS = {
+  gapHours: [10, 20],      // 재앙이 사라진 뒤 다음 재앙까지 (시간, 이 사이에서 무작위)
+  lastsHours: 18,          // 나타난 뒤 이 시간 안에 쓰러뜨려야 함
+  ap: 3,                   // 한 번 맞서는 데 드는 행동력
+  turns: 8,                // 한 번 맞서면 이만큼 싸우고 물러남
+  activeDays: 2,           // 최근 이 기간에 접속한 드래곤 수로 체력을 정함
+  minActive: 2,
+  triesPerActive: 4,       // 드래곤 하나가 평균 이만큼 맞서면 쓰러지도록
+  lvAdd: 1,                // 최근 접속한 드래곤들의 평균 레벨 + 이만큼
+  lvMin: 2, lvMax: 14,
+  atk: 1.3, def: 1.2,      // 같은 레벨 사냥감보다 이만큼 셈
+  // 한 번 맞설 때마다: 입힌 피해에 따라 경험치·금화
+  xpBase: 10, xpPerDmg: 0.12, goldPerDmg: 0.04,
+  // 쓰러뜨렸을 때: 금화 = 레벨 × (goldBase + goldShare × 내 몫), 재앙의 핵, 명성
+  goldBase: 15, goldShare: 120, core: 1, topCore: 1, top: 3, fame: 2, lastFame: 3,
+  news: [0.5, 0.25],       // 체력이 이만큼 아래로 떨어지면 대륙에 알림
+};
 // 사냥감의 전투 성질: 약점(피해 ×1.5)과 저항(피해 ×0.5, 상태 이상이 통하지 않음), 특기
 const CREATURE_COMBAT = {
   plains:  { weak: [],            resist: [],                    special: { name: '돌진', power: 1.6 } },
@@ -950,5 +1003,5 @@ module.exports = {
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, TITLES, TITLE_COUNT_NAMES,
   SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
   DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
-  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES,
+  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES,
 };
