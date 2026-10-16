@@ -3,7 +3,7 @@
 //
 // 접속 중인 드래곤은 서버가 들고 있는 그 객체를 고쳐야 함
 // (DB만 고치면 그 드래곤이 다음에 저장할 때 옛 값으로 덮어씀)
-const { REGIONS, ITEMS, STANCES, KINDS, KIN, DAY, TRAITS } = require('./game-data');
+const { REGIONS, ITEMS, STANCES, KINDS, KIN, DAY, TRAITS, STATS } = require('./game-data');
 const EVENTS = require('./game-events');
 
 const str = (v) => (typeof v === 'string' ? v.trim() : '');
@@ -17,7 +17,7 @@ function josa(word, a, b) {
 const ORIGINS = { abandoned: '버려진 아기', lost: '길 잃은 아이', tribute: '공물로 바쳐진 아이' };
 const ANNOUNCE_MAX = 300;
 
-module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, refreshKin, teleport, kick, arena }) {
+module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, refreshKin, teleport, kick, arena, presence }) {
   // 대상 드래곤을 불러 고치고 저장. 접속 중이면 화면도 새로 고침
   // fn(d, kin, now) → { error } 또는 { log, tell, items, kinChanged }
   function withTarget(id, notify, fn) {
@@ -163,6 +163,41 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
       const r = logic.repOf(d);
       r[region] = clamp(v, -100, 100);
       return { log: `${REGIONS[region].name} 평판 → ${r[region]}` };
+    },
+    // 이름 바꾸기: 드래곤 만들 때와 같은 규칙 (한글·영문·숫자 2~12자, 겹치는 이름 안 됨)
+    rename(d, kin, now, p) {
+      const name = str(p.name);
+      if (!/^[가-힣A-Za-z0-9]{2,12}$/.test(name)) return { error: '이름은 한글, 영문, 숫자로 2~12자까지 쓸 수 있다.' };
+      if (name === d.name) return { error: '지금 이름과 같다.' };
+      const owner = db.dragonNameOwner(name);
+      if (owner && owner !== d.id) return { error: '이미 대륙에 같은 이름의 드래곤이 있다.' };
+      const old = d.name;
+      d.name = name;
+      db.setNameKind(d.id, d.name, d.kind);
+      logic.chron(d, 'mark', `이름이 '${old}'에서 '${name}'${josa(name, '으로', '로')} 바뀌었다.`);
+      return { log: `이름: ${old} → ${name}`, tell: `이제부터 '${name}'${josa(name, '이라', '라')} 불린다.`, after: presence };
+    },
+    // 종족 바꾸기. restat이면 타고난 능력치도 새 종족에 맞게 (두 종족 기본값의 차이만큼, 나눈 포인트·상흔은 그대로)
+    kind(d, kin, now, p) {
+      const k = str(p.kind);
+      if (!KINDS[k]) return { error: '없는 종족이다.' };
+      if (k === d.kind) return { error: '지금 종족과 같다.' };
+      const old = d.kind;
+      const out = [];
+      if (p.restat) {
+        const a = KINDS[old].stats, b = KINDS[k].stats;
+        const before = { scale: d.scale, wisdom: d.wisdom };
+        for (const { key } of STATS) d[key] = Math.max(1, d[key] + (b[key] - a[key]));
+        d.hp_max = Math.max(10, d.hp_max + (d.scale - before.scale) * 5); // 비늘 1 = 최대 체력 5
+        d.en_max = Math.max(5, d.en_max + (d.wisdom - before.wisdom) * 2); // 지혜 1 = 최대 기력 2
+        d.hp = Math.min(d.hp, logic.hpCap(d));
+        d.en = Math.min(d.en, logic.enCap(d));
+        out.push('능력치도 새 종족에 맞게');
+      }
+      d.kind = k;
+      db.setNameKind(d.id, d.name, d.kind);
+      logic.chron(d, 'mark', `${KINDS[old].name}에서 ${KINDS[k].name}${josa(KINDS[k].name, '으로', '로')} 다시 태어났다.`);
+      return { log: `종족: ${KINDS[old].name} → ${KINDS[k].name}${out.length ? ` (${out.join(', ')})` : ''}`, tell: `비늘 색이 바뀌고 숨결이 달라졌다. 이제 ${KINDS[k].name}이다.`, after: presence };
     },
     stance(d, kin, now, p) {
       const s = str(p.stance);

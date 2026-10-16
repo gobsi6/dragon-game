@@ -29,6 +29,21 @@ const app = express();
 app.use(express.json({ limit: '10kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// 화면 파일(public/index.html)의 버전: 내용이 바뀌면 값이 바뀜. 열려 있는 창은 이 값으로 새 버전을 알아챔
+const INDEX_FILE = path.join(__dirname, 'public', 'index.html');
+let verCache = { mtime: -1, v: '' };
+function clientVersion() {
+  try {
+    const st = require('fs').statSync(INDEX_FILE);
+    if (st.mtimeMs !== verCache.mtime) verCache = { mtime: st.mtimeMs, v: crypto.createHash('sha1').update(require('fs').readFileSync(INDEX_FILE)).digest('hex').slice(0, 12) };
+  } catch { /* 파일이 없으면 그대로 */ }
+  return verCache.v;
+}
+app.get('/api/version', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({ v: clientVersion() });
+});
+
 const server = http.createServer(app);
 const io = new Server(server);
 
@@ -296,6 +311,7 @@ const FALLEN = '쓰러져 있다. 일어설지, 긴 잠에 들지 먼저 정해�
 // GM 도구 (gm.js)
 const gm = require('./gm')({
   io, db, online, logic, life, meOf, sendMe, refreshKin, arena,
+  presence: (d) => broadcastPresence(d.region), // 이름·종족이 바뀌면 이곳의 드래곤 목록을 다시 보냄
   // 순간이동: d.region은 이미 바뀐 상태. 접속 중이면 방을 옮기고 양쪽에 알림
   teleport(d, from) {
     const entry = online.get(d.id);
@@ -345,6 +361,7 @@ io.on('connection', (socket) => {
   socket.emit('init', {
     me: { username: user.username, isGm: !!user.is_gm },
     dragon: dragon ? (logic.regen(dragon), meOf(dragon)) : null,
+    version: clientVersion(),
     kinds: KINDS,
     regions: REGIONS,
     stats: STATS,
@@ -836,6 +853,31 @@ io.on('connection', (socket) => {
     socket.data.kicked = true;
     ack({ ok: true });
     socket.disconnect(true);
+  });
+
+  // GM: 내 드래곤을 정리하고 같은 계정으로 처음부터 다시 만들기 (GM 권한은 그대로)
+  socket.on('gm:remake', (payload, ack) => {
+    if (typeof ack !== 'function') ack = () => {};
+    const u = db.getUserByName(user.username);
+    if (!u || !u.is_gm) return ack({ error: 'GM만 할 수 있다.' });
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '정리할 드래곤이 없다.' });
+    const d = entry.dragon;
+    if (str(payload?.name) !== d.name) return ack({ error: `확인을 위해 드래곤 이름 '${d.name}'을 그대로 적어야 한다.` });
+    if (arena.inBattle(d.id)) return ack({ error: '싸우는 중에는 할 수 없다. 싸움을 끝낸 뒤 다시 하자.' });
+    if (logic.berserkOf(d)) return ack({ error: '광폭화 중에는 할 수 없다.' });
+    social.onLeave(d.id);
+    arena.onLeave(d.id);
+    online.delete(d.id);
+    socket.leave(d.region);
+    socket.data.dragonId = null;
+    system(d.region, `${d.name}${josa(d.name, '이', '가')} 바람 속으로 흩어져 사라졌다.`);
+    broadcastPresence(d.region);
+    broadcastCounts();
+    db.gmLog(user.username, d.name, '내 드래곤을 정리하고 새로 만들기');
+    db.deleteDragon(d.id);
+    io.emit('rescue:list', death.rescues());
+    ack({ ok: true });
   });
 
   social.attach(socket);

@@ -29,6 +29,9 @@
     --k-green: #5E8A55;  --t-green: #3B5E33;
     --k-red: #B5473F;    --t-red: #8A2E27;
     --k-silver: #8C9AA6; --t-silver: #46525C;
+    --k-blue: #3F72A8;   --t-blue: #234A72;
+    --k-purple: #9459AE; --t-purple: #5E3570;
+    --k-bronze: #A3723F; --t-bronze: #6A4522;
 
     --serif: 'Noto Serif KR', 'AppleMyungjo', 'Batang', serif;
     --sans: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
@@ -114,6 +117,8 @@
     background: var(--surface-2); border: 1px solid var(--line-in); border-radius: 3px;
   }
   .kind .emblem { margin: 2px 0 6px; }
+  /* 좁은 화면: 첫 화면·만들기 화면 테두리 장식이 화면 밖으로 삐져나가지 않게 안쪽에 둠 */
+  @media (max-width: 520px) { .gate > .tl { top: 2px; left: 2px; } .gate > .tr { top: 2px; right: 2px; } .gate > .bl { bottom: 2px; left: 2px; } .gate > .br { bottom: 2px; right: 2px; } }
   .kind strong { font: 700 17px/1.3 var(--serif); }
   .kind small { color: var(--muted); font-size: 13px; line-height: 1.5; }
   .kind .strong { color: var(--steel-d); font-weight: 500; }
@@ -737,7 +742,7 @@
 
   /* ── GM 도구 ── */
   .dlg.gm-dlg { width: min(760px, calc(100% - 32px)); }
-  .gm-tabs { margin-top: 12px; }
+  .gm-tabs { margin-top: 12px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .gm-sec { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--surface-2); border: 1px solid var(--line-in); }
   .gm-r { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   .gm-r .lbl { min-width: 70px; font-size: 13px; color: var(--muted); }
@@ -770,6 +775,11 @@
   .gm-kin .t small { font-size: 12px; color: var(--muted); }
   .gm-kin .num { width: 64px; }
   .gm-ta { min-height: 96px; padding: 10px 12px; resize: vertical; font: inherit; line-height: 1.6; }
+  .gm-remake { display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1px solid #E6C3C7; background: #FBF1F2; border-radius: 3px; }
+  .gm-remake b { font: 700 15px/1.4 var(--serif); color: #8A2E27; }
+  .gm-remake p { margin: 0; font-size: 13px; line-height: 1.6; color: var(--ink-2); }
+  .gm-remake p.warn { color: #8A2E27; }
+  .gm-remake .gm-confirm { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--ink-2); }
   .gm-log { margin: 0; padding: 0; list-style: none; font-size: 13px; line-height: 1.55; }
   .gm-log li { padding: 6px 2px; border-bottom: 1px solid var(--line-in); }
   .gm-log time { display: inline-block; min-width: 64px; color: var(--muted); font-size: 12px; }
@@ -897,6 +907,36 @@
   .attr + .attr { border-left: 1px solid var(--line-in); }
   .attr b { font: 700 19px/1.2 var(--serif); }
   .attr span { font-size: 12px; color: var(--muted); }
+  /* 폰·좁은 화면: 가로로 긴 기록 — 동그란 그림 옆에 이름·레벨·체력/기력/정신, 아래에 능력치 */
+  @media (max-width: 860px) {
+    .profile { display: grid; grid-template-columns: 92px minmax(0, 1fr); column-gap: 14px; row-gap: 10px; padding: 14px 14px 14px; align-items: start; }
+    .profile > .orn-h { grid-column: 1 / -1; }
+    .profile > .orn-h h2 { font-size: 14px; }
+    .profile > .pf-top { display: contents; }
+    .portrait { grid-column: 1; grid-row: 2 / span 2; width: 92px; height: 92px; border-radius: 50%; align-self: center; box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px #CDCFCB; }
+    .portrait img { inset: 4px; width: calc(100% - 8px); height: calc(100% - 8px); border-radius: 50%; }
+    .portrait #portrait-ph svg { width: 64px; height: 64px; }
+    .portrait .hint { display: none; }
+    .portrait .over { bottom: 50%; transform: translate(-50%, 50%); font-size: 11px; padding: 3px 8px; }
+    .portrait.empty::after { content: "+"; position: absolute; right: 9px; bottom: 9px; width: 22px; height: 22px; border-radius: 50%; background: var(--steel); color: #fff; font: 700 16px/22px var(--sans); text-align: center; box-shadow: 0 0 0 2px var(--surface); }
+    .pmenu { top: 130px; left: 14px; transform: none; }
+    .nameplate { grid-column: 2; grid-row: 2; margin: 0; padding: 0; background: none; border: 0; box-shadow: none; align-items: flex-start; text-align: left; gap: 2px; min-width: 0; }
+    .nameplate .ttl { justify-content: flex-start; font-size: 11.5px; }
+    .nameplate .n { font-size: 20px; }
+    .nameplate .sub { font-size: 12px; gap: 6px; }
+    .nameplate .xp { margin-top: 4px; }
+    .profile > .vitals { grid-column: 2; grid-row: 3; gap: 6px; }
+    .vital { gap: 3px; }
+    .vital .h { font-size: 12px; gap: 5px; }
+    .vital .h svg { width: 13px; height: 13px; }
+    .vital .bar { height: 5px; }
+    .profile > .attrs, .profile > .buff-row, .profile > .pts-row, .profile > .more-char { grid-column: 1 / -1; }
+    .profile > .attrs { padding: 8px 0 6px; }
+    .attr { flex-direction: row; justify-content: center; gap: 5px; flex-wrap: wrap; }
+    .attr svg { width: 16px; height: 16px; }
+    .attr b { font-size: 16px; }
+    .attr span { font-size: 11.5px; width: 100%; text-align: center; }
+  }
   .stance { display: flex; flex-direction: column; gap: 6px; }
   .stance .l { font-size: 12px; color: var(--muted); }
   .seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid #B6B9B5; font-size: 13px; }
@@ -1017,6 +1057,13 @@
     display: flex; gap: 12px; align-items: center;
   }
   .toast .btn { min-height: 32px; padding: 0 10px; font-size: 13px; }
+  /* 업데이트 알림: 화면 위쪽 가운데 */
+  .update-bar { position: fixed; left: 50%; top: calc(var(--head-h, 0px) + 10px); transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: 10px; width: max-content; max-width: calc(100vw - 24px); padding: 10px 12px 10px 14px; background: var(--steel-d); color: #E9F0F6; border-radius: 4px; box-shadow: 0 8px 24px rgba(20, 30, 40, .28); font-size: 13.5px; line-height: 1.45; animation: bt-in .3s ease-out; }
+  .update-bar b { color: #fff; }
+  .update-bar svg { flex: none; color: #9DB3C6; }
+  .update-bar .btn { flex: none; min-height: 34px; padding: 0 12px; font-size: 13px; background: #fff; color: var(--steel-d); border-color: #fff; }
+  .update-bar .x { flex: none; background: none; border: 0; color: #C9D7E3; font-size: 12.5px; padding: 4px; cursor: pointer; }
+  @media (max-width: 520px) { .update-bar { top: auto; bottom: calc(var(--dock-h, 56px) + 10px); flex-wrap: wrap; row-gap: 8px; } .update-bar span { flex: 1 1 calc(100% - 30px); } .update-bar .x { order: 2; margin-left: 20px; } .update-bar .btn { order: 3; margin-left: auto; } }
 
   @media (max-width: 860px) {
     .profile, .side { max-width: none; }
@@ -1105,7 +1152,7 @@
     <section class="frame profile" aria-label="드래곤 기록">
       <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
       <div class="orn-h"><h2>드래곤 기록</h2></div>
-      <div style="position: relative">
+      <div class="pf-top" style="position: relative">
         <button class="portrait empty" id="portrait" type="button" aria-label="드래곤 그림 올리기" aria-haspopup="true">
           <span id="portrait-ph"></span>
           <span class="hint">눌러서 그림 올리기</span>
@@ -1352,7 +1399,7 @@
 <dialog class="frame dlg wide gm-dlg" id="gm-dlg" aria-labelledby="gm-dlg-title">
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="gm-dlg-title">GM 도구</h2></div>
-  <div class="seg gm-tabs" id="gm-tabs" role="group" aria-label="GM 도구 메뉴"><button type="button" data-t="dragons" class="on">드래곤</button><button type="button" data-t="announce">공지</button><button type="button" data-t="log">기록</button></div>
+  <div class="seg gm-tabs" id="gm-tabs" role="group" aria-label="GM 도구 메뉴"><button type="button" data-t="dragons" class="on">드래곤</button><button type="button" data-t="announce">공지</button><button type="button" data-t="log">기록</button><button type="button" data-t="me">내 드래곤</button></div>
   <div class="body" id="gm-body"></div>
   <div class="row" style="margin-top: 12px"><button class="btn" type="button" id="gm-close">닫기</button></div>
 </dialog>
@@ -1543,6 +1590,12 @@
   </div>
 </dialog>
 
+<div class="update-bar" id="update-bar" role="status" hidden>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>
+  <span><b>새 버전이 나왔다.</b> 새로고침하면 바로 적용된다.</span>
+  <button class="btn primary" type="button" id="update-go">새로고침</button>
+  <button class="x" type="button" id="update-later" aria-label="나중에">나중에</button>
+</div>
 <div class="toast" id="toast" hidden><span id="toast-text"></span><button class="btn" id="toast-btn" type="button" hidden></button></div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -1583,6 +1636,12 @@
     green: '<path d="M27 73c0-28 18-45 46-47-1 28-19 47-46 47z" fill="#F7F7F5"/><path class="vein" d="M30 70L60 40M45 55l-3-10M52 48l9 2"/>',
     red: '<path d="M50 17c7 15 21 22 21 41a21 21 0 0 1-42 0c0-10 5-17 12-21 0 8 3 12 8 14-2-12 1-22 1-34z" fill="#F7F7F5"/><path class="h" d="M50 50c3 6 8 9 8 15a8 8 0 0 1-16 0c0-6 5-9 8-15z"/>',
     silver: '<path class="s" d="M22 37q7-6 14 0t14 0 14 0 14 0"/><path class="s" d="M22 50q7-6 14 0t14 0 14 0 14 0"/><path class="s" d="M22 63q7-6 14 0t14 0 14 0 14 0"/>',
+    // 블루: 물결이 비치는 물방울 (블랙의 산 방울과 달리 안에 물결)
+    blue: '<path d="M50 18c-6 14-20 26-20 42a20 20 0 0 0 40 0c0-16-14-28-20-42z" fill="#F7F7F5"/><path class="vein" d="M38 62q6-5 12 0t12 0"/>',
+    // 퍼플: 자수정 결정 하나
+    purple: '<path d="M50 16l16 18v30L50 84 34 64V34z" fill="#F7F7F5"/><path class="vein" d="M50 16v68M34 34l16 10 16-10"/>',
+    // 브론즈: 눈 덮인 봉우리
+    bronze: '<path d="M20 68l26-38 26 38z" fill="#F7F7F5"/><path d="M58 68l11-17 13 17z" fill="#F7F7F5"/><path class="vein" d="M38 42l8 6 8-6"/>',
   };
   const emblem = (kind, size) => `<svg class="emblem" width="${size}" height="${size}" viewBox="0 0 100 100" aria-hidden="true" style="--c: var(--k-${kind})"><circle class="bg" cx="50" cy="50" r="48"/><circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.5"/>${EMBLEM[kind] || ''}</svg>`;
 
@@ -1601,6 +1660,21 @@
     if (!action) toastTimer = setTimeout(() => ($('toast').hidden = true), 2600);
   }
   const hideToast = () => ($('toast').hidden = true);
+  // ── 새 버전 알림 ──
+  // 처음 받은 화면 버전을 기억해 두고, 다시 연결될 때(서버를 다시 켰을 때)와 몇 분마다 비교함
+  let bootVersion = null, updateLater = 0;
+  function checkVersion(v) {
+    if (!v) return;
+    if (!bootVersion) { bootVersion = v; return; }
+    if (v !== bootVersion && Date.now() > updateLater) $('update-bar').hidden = false;
+  }
+  function pollVersion() {
+    fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()).then((j) => checkVersion(j.v)).catch(() => {});
+  }
+  setInterval(pollVersion, 3 * 60 * 1000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pollVersion(); });
+  $('update-go').addEventListener('click', () => location.reload());
+  $('update-later').addEventListener('click', () => { $('update-bar').hidden = true; updateLater = Date.now() + 10 * 60 * 1000; }); // 10분 뒤에 다시 알림
 
   // ── 로그인 ──
   $('auth-form').addEventListener('submit', async (e) => {
@@ -4166,7 +4240,7 @@
   // BT: 지금 보여 주는 전투. replay면 이미 끝난 자동 결투를 다시 보여 주는 중
   let BT = null;
   let btTimer = null;
-  const statusBad = new Set(['burn', 'poison', 'bleed', 'acid', 'freeze', 'stun', 'weaken', 'brittle', 'dazed']);
+  const statusBad = new Set(['burn', 'poison', 'bleed', 'acid', 'freeze', 'stun', 'weaken', 'brittle', 'dazed', 'soak']);
   function btFighter(box, f, mine) {
     box.replaceChildren();
     const who = document.createElement('div');
@@ -4625,6 +4699,7 @@
     body.replaceChildren();
     if (GM.tab === 'announce') return renderGmAnnounce(body);
     if (GM.tab === 'log') return renderGmLog(body);
+    if (GM.tab === 'me') return renderGmMe(body);
     if (GM.d) return renderGmDragon(body, GM.d);
     renderGmList(body);
   }
@@ -4732,6 +4807,33 @@
     r = gmRow(s, '순간이동');
     const reg = gSelect(r, '보낼 곳', Object.entries(S.regions).map(([id, x]) => [id, x.name]), d.region);
     gBtn(r, '보내기', () => gmDo('teleport', { region: reg.value }, `${S.regions[reg.value].name}${josa(S.regions[reg.value].name, '으로', '로')} 보냈다.`));
+
+    // 이름·종족
+    s = gmSection(body, '이름 · 종족', '종족을 바꾸면 비늘 색·문양·숨결이 바뀐다. 능력치는 그대로 두거나, 두 종족 기본 능력치의 차이만큼 함께 바꿀 수 있다.');
+    r = gmRow(s, '이름');
+    const nameIn = gEl('input', 'input');
+    nameIn.value = d.name; nameIn.maxLength = 12; nameIn.placeholder = '한글·영문·숫자 2~12자'; nameIn.setAttribute('aria-label', '새 이름');
+    nameIn.style.flex = '1'; nameIn.style.minWidth = '140px';
+    r.appendChild(nameIn);
+    gBtn(r, '바꾸기', () => {
+      const n = nameIn.value.trim();
+      if (n === d.name) return toast('지금 이름과 같다.');
+      if (confirm(`'${d.name}'의 이름을 '${n}'${josa(n, '으로', '로')} 바꿀까?`)) gmDo('rename', { name: n }, `이름을 '${n}'${josa(n, '으로', '로')} 바꿨다.`);
+    });
+    r = gmRow(s, '종족');
+    const kindSel = gSelect(r, '종족', Object.entries(S.kinds).map(([id, k]) => [id, k.name]), d.kind);
+    const rs = gEl('label', 'gm-check');
+    const rsCb = gEl('input'); rsCb.type = 'checkbox';
+    rs.append(rsCb, '능력치도 새 종족에 맞게');
+    r.appendChild(rs);
+    gBtn(r, '바꾸기', () => {
+      const k = kindSel.value;
+      if (k === d.kind) return toast('지금 종족과 같다.');
+      const kn = S.kinds[k].name;
+      if (confirm(`${d.name}${josa(d.name, '을', '를')} ${kn}${josa(kn, '으로', '로')} 바꿀까?${rsCb.checked ? ' 능력치도 함께 바뀐다.' : ''}`)) gmDo('kind', { kind: k, restat: rsCb.checked }, `${kn}${josa(kn, '으로', '로')} 바꿨다.`);
+    });
+    const kd = S.kinds[d.kind];
+    s.appendChild(gEl('small', 'note', `지금: ${kd?.name || d.kind} · ${kd ? `${S.combat.breaths[d.kind]?.name || ''}` : ''}`));
 
     // 금화·경험치·물건
     s = gmSection(body, '금화 · 경험치 · 물건');
@@ -4878,6 +4980,34 @@
       gmCall('gm:announce', { text: ta.value }, () => { GM.draft = ''; toast('공지를 보냈다.'); });
     }, 'primary');
     body.appendChild(r);
+  }
+
+  // 내 드래곤 새로 만들기: 지금 드래곤을 정리하고 같은 계정(GM 권한 유지)으로 처음부터
+  function renderGmMe(body) {
+    const me = S.me;
+    body.appendChild(gEl('p', 'note', `지금 GM 드래곤: ${me.name} (레벨 ${me.level} ${S.kinds[me.kind]?.name || ''})`));
+    const box = gEl('div', 'gm-remake');
+    box.appendChild(gEl('b', null, '새로 만들기'));
+    box.appendChild(gEl('p', null, '지금 드래곤을 완전히 지우고, 같은 계정으로 드래곤 만들기 화면부터 다시 시작한다. GM 권한은 그대로 남는다.'));
+    box.appendChild(gEl('p', 'warn', '함께 사라지는 것: 레벨·능력치·소지품·보물더미·둥지의 식구·동료 관계·텔레파시·칭호·지나온 이야기. 되돌릴 수 없다.'));
+    const lab = gEl('label', 'gm-confirm', `확인을 위해 드래곤 이름 '${me.name}'을 적자`);
+    const inp = gEl('input', 'input');
+    inp.maxLength = 12; inp.autocomplete = 'off'; inp.placeholder = me.name;
+    lab.appendChild(inp);
+    box.appendChild(lab);
+    const r = gEl('div', 'gm-r');
+    const go = gBtn(r, '지우고 새로 만들기', () => {
+      if (inp.value.trim() !== me.name) return toast('이름이 맞지 않는다.');
+      if (!confirm(`${me.name}${josa(me.name, '을', '를')} 정말 지우고 새로 만들까? 되돌릴 수 없다.`)) return;
+      socket.emit('gm:remake', { name: inp.value.trim() }, (res) => {
+        if (res.error) return toast(res.error);
+        location.reload();
+      });
+    }, 'danger');
+    inp.addEventListener('input', () => { if (go) go.disabled = inp.value.trim() !== me.name; });
+    if (go) go.disabled = true;
+    box.appendChild(r);
+    body.appendChild(box);
   }
 
   function renderGmLog(body) {
@@ -5153,6 +5283,7 @@
     });
 
     socket.on('init', (data) => {
+      checkVersion(data.version);
       S.kinds = data.kinds;
       S.regions = data.regions;
       S.stats = data.stats;

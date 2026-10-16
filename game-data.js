@@ -69,6 +69,27 @@ const KINDS = {
     desc: '인간의 성벽 가까이에 둥지를 튼 드래곤. 은빛 안개로 정체를 감추고, 때로 사람의 모습으로 거리를 걷는다.',
     stats: { claw: 7, scale: 9, wing: 8, wisdom: 10, majesty: 11 },
   },
+  blue: {
+    name: '블루 드래곤',
+    breath: '해일',
+    home: 'coast',
+    desc: '바다와 폭풍을 다스리는 드래곤. 파도 소리를 사랑하고, 뱃사람들 사이에서는 바다의 수호자로 전해진다.',
+    stats: { claw: 9, scale: 10, wing: 10, wisdom: 8, majesty: 8 },
+  },
+  purple: {
+    name: '퍼플 드래곤',
+    breath: '자수정',
+    home: 'ruins',
+    desc: '고대 유적의 자수정 동굴에 사는 드래곤. 상처를 어루만지는 힘이 있어, 다친 짐승들이 곁으로 모여든다.',
+    stats: { claw: 7, scale: 9, wing: 8, wisdom: 12, majesty: 9 },
+  },
+  bronze: {
+    name: '브론즈 드래곤',
+    breath: '모래 폭풍',
+    home: 'plains',
+    desc: '대지의 숨결을 품은 드래곤. 바위처럼 묵직하고 참을성이 많으며, 한번 지키기로 한 것은 끝까지 지킨다.',
+    stats: { claw: 10, scale: 12, wing: 6, wisdom: 8, majesty: 9 },
+  },
 };
 
 // x, y는 지도(가로 1000 × 세로 640, public/map-terrain.svg) 위의 위치.
@@ -400,7 +421,7 @@ const KIN = {
     giftFrom: 3,                      // 최근 독립한 몇 마리까지 선물을 보내는지
   },
   // 알을 품는 데 드는 재료 (종류별)
-  eggNeeds: { red: 'fire_crystal', white: 'eternal_ice', green: 'heartwood', black: 'bog_pearl', gold: 'sun_stone', silver: 'deep_pearl' },
+  eggNeeds: { red: 'fire_crystal', white: 'eternal_ice', green: 'heartwood', black: 'bog_pearl', gold: 'sun_stone', silver: 'deep_pearl', blue: 'deep_pearl', purple: 'ancient_relic', bronze: 'silver_clover' },
   // 돌보기에 쓰는 물건: 유대가 얼마나 오르는지, 어떤 재주 쪽으로 기우는지
   care: {
     grass_seed: { bond: 2, talent: 'herbalist' }, wild_honey: { bond: 6, talent: 'herbalist' },
@@ -670,9 +691,9 @@ const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '�
 const PLACES = {
   plains_field:  { region: 'plains',  name: '풀밭',         level: 1,  creature: '들소 떼',       elite: '뿔 꺾인 들소왕',     weak: [], resist: [], special: { name: '돌진', power: 1.6 },
     desc: '바람에 눕는 풀이 끝없이 이어진다. 들소 떼가 느긋하게 풀을 뜯는다.' },
-  plains_hill:   { region: 'plains',  name: '바람 언덕',    level: 2,  creature: '회색 늑대',     elite: '외눈 늑대왕',        weak: ['fire'], resist: [], special: { name: '무리 사냥', power: 0.65, hits: 2 },
+  plains_hill:   { region: 'plains',  name: '바람 언덕',    level: 2,  creature: '회색 늑대',     elite: '외눈 늑대왕',        weak: ['fire', 'earth'], resist: [], special: { name: '무리 사냥', power: 0.65, hits: 2 },
     desc: '언덕 꼭대기에서 바람이 울부짖는다. 바위 그늘마다 늑대의 눈이 번뜩인다.' },
-  plains_war:    { region: 'plains',  name: '옛 전장',      level: 3,  creature: '떠도는 망령',   elite: '녹슨 기사의 망령',   weak: ['fire', 'lightning'], resist: ['poison'], special: { name: '저주', power: 0.6, debuff: { weaken: 2 } },
+  plains_war:    { region: 'plains',  name: '옛 전장',      level: 3,  creature: '떠도는 망령',   elite: '녹슨 기사의 망령',   weak: ['fire', 'lightning', 'spirit'], resist: ['poison'], special: { name: '저주', power: 0.6, debuff: { weaken: 2 } },
     desc: '부러진 창과 녹슨 투구가 풀숲에 묻혀 있다. 해가 지면 무언가가 일어선다.' },
   forest_edge:   { region: 'forest',  name: '숲 가장자리',  level: 2,  creature: '거대 거미',     elite: '여왕 거미',          weak: ['fire'], resist: ['poison'], special: { name: '거미줄', power: 0.5, debuff: { stun: 1 }, chance: 0.45 },
     desc: '나무 사이로 끈적한 거미줄이 햇빛에 반짝인다.' },
@@ -680,35 +701,35 @@ const PLACES = {
     desc: '초록 안개가 낮게 깔린 골짜기. 숨을 들이쉴 때마다 목이 따끔하다.' },
   forest_heart:  { region: 'forest',  name: '고목의 심장',  level: 6,  creature: '나무 수호자',   elite: '천 년 고목의 정령',  weak: ['fire', 'acid'], resist: ['poison', 'lightning'], special: { name: '뿌리 감기', power: 0.7, debuff: { stun: 1 }, chance: 0.5 },
     desc: '숲 한가운데 하늘을 가린 고목이 있다. 뿌리가 숨을 쉬듯 꿈틀거린다.' },
-  swamp_reeds:   { region: 'swamp',   name: '갈대밭',       level: 3,  creature: '늪 악어',       elite: '늪의 늙은 악어',     weak: ['lightning'], resist: ['poison', 'acid'], special: { name: '물어 끌기', power: 1.5 },
+  swamp_reeds:   { region: 'swamp',   name: '갈대밭',       level: 3,  creature: '늪 악어',       elite: '늪의 늙은 악어',     weak: ['lightning'], resist: ['poison', 'acid', 'water'], special: { name: '물어 끌기', power: 1.5 },
     desc: '검은 갈대가 사람 키보다 높이 자랐다. 물속에서 커다란 눈이 떠올랐다 가라앉는다.' },
-  swamp_village: { region: 'swamp',   name: '가라앉은 마을', level: 5, creature: '늪 망령',       elite: '물에 잠긴 촌장의 망령', weak: ['fire', 'lightning'], resist: ['poison', 'ice'], special: { name: '울부짖음', power: 0.5, debuff: { weaken: 3 } },
+  swamp_village: { region: 'swamp',   name: '가라앉은 마을', level: 5, creature: '늪 망령',       elite: '물에 잠긴 촌장의 망령', weak: ['fire', 'lightning', 'spirit'], resist: ['poison', 'ice'], special: { name: '울부짖음', power: 0.5, debuff: { weaken: 3 } },
     desc: '지붕만 남은 집들이 늪 위로 솟아 있다. 밤마다 종소리가 들린다고 한다.' },
-  swamp_mire:    { region: 'swamp',   name: '검은 수렁',    level: 7,  creature: '어린 히드라',   elite: '머리 셋 달린 히드라', weak: ['fire'], resist: ['poison', 'acid'], special: { name: '세 머리 물기', power: 0.55, hits: 3 },
+  swamp_mire:    { region: 'swamp',   name: '검은 수렁',    level: 7,  creature: '어린 히드라',   elite: '머리 셋 달린 히드라', weak: ['fire'], resist: ['poison', 'acid', 'water'], special: { name: '세 머리 물기', power: 0.55, hits: 3 },
     desc: '빠지면 다시는 올라오지 못한다는 수렁. 거품 사이로 비늘 덮인 목들이 솟는다.' },
   snow_field:    { region: 'snow',    name: '눈벌판',       level: 2,  creature: '설원 늑대',     elite: '서리 늑대 우두머리', weak: ['fire'], resist: ['ice'], special: { name: '무리 사냥', power: 0.65, hits: 2 },
     desc: '눈보라가 지나간 뒤 세상이 고요하다. 눈 위에 발자국이 어지럽게 찍혀 있다.' },
-  snow_cave:     { region: 'snow',    name: '얼음 동굴',    level: 5,  creature: '얼음 트롤',     elite: '서리 트롤 족장',     weak: ['fire', 'lightning'], resist: ['ice'], special: { name: '얼음 몽둥이', power: 1.4, debuff: { freeze: 1 }, chance: 0.3, element: 'ice' },
+  snow_cave:     { region: 'snow',    name: '얼음 동굴',    level: 5,  creature: '얼음 트롤',     elite: '서리 트롤 족장',     weak: ['fire', 'lightning'], resist: ['ice', 'water'], special: { name: '얼음 몽둥이', power: 1.4, debuff: { freeze: 1 }, chance: 0.3, element: 'ice' },
     desc: '푸른 얼음벽이 끝없이 이어진다. 안쪽에서 무언가 얼음을 깨무는 소리가 난다.' },
-  snow_peak:     { region: 'snow',    name: '오로라 봉우리', level: 9, creature: '서리 와이번',   elite: '오로라를 삼킨 와이번', weak: ['fire'], resist: ['ice', 'mist'], special: { name: '서리 숨결', power: 1.1, debuff: { freeze: 1 }, chance: 0.4, element: 'ice' },
+  snow_peak:     { region: 'snow',    name: '오로라 봉우리', level: 9, creature: '서리 와이번',   elite: '오로라를 삼킨 와이번', weak: ['fire', 'earth'], resist: ['ice', 'mist'], special: { name: '서리 숨결', power: 1.1, debuff: { freeze: 1 }, chance: 0.4, element: 'ice' },
     desc: '하늘과 가장 가까운 봉우리. 초록빛 커튼 아래로 날개 달린 그림자가 맴돈다.' },
-  ruins_hall:    { region: 'ruins',   name: '무너진 회랑',  level: 4,  creature: '돌 파수꾼',     elite: '깨어난 수호 골렘',   weak: ['acid'], resist: ['lightning', 'fire'], special: { name: '돌 피부', self: { harden: 2 } },
+  ruins_hall:    { region: 'ruins',   name: '무너진 회랑',  level: 4,  creature: '돌 파수꾼',     elite: '깨어난 수호 골렘',   weak: ['acid'], resist: ['lightning', 'fire', 'earth'], special: { name: '돌 피부', self: { harden: 2 } },
     desc: '무너진 석주 사이로 바람이 운다. 벽의 드래곤 그림이 이쪽을 내려다본다.' },
-  ruins_crypt:   { region: 'ruins',   name: '지하 묘실',    level: 7,  creature: '해골 기사',     elite: '이름 잃은 왕의 기사', weak: ['fire', 'lightning'], resist: ['poison', 'ice'], special: { name: '저주받은 검', power: 1.2, debuff: { bleed: 3 } },
+  ruins_crypt:   { region: 'ruins',   name: '지하 묘실',    level: 7,  creature: '해골 기사',     elite: '이름 잃은 왕의 기사', weak: ['fire', 'lightning', 'earth'], resist: ['poison', 'ice'], special: { name: '저주받은 검', power: 1.2, debuff: { bleed: 3 } },
     desc: '계단이 땅속 깊이 이어진다. 관 뚜껑마다 긁힌 자국이 남아 있다.' },
-  ruins_altar:   { region: 'ruins',   name: '봉인된 제단',  level: 11, creature: '고대 골렘',     elite: '봉인의 거신',        weak: ['acid'], resist: ['lightning', 'fire', 'poison'], special: { name: '대지 강타', power: 1.7 },
+  ruins_altar:   { region: 'ruins',   name: '봉인된 제단',  level: 11, creature: '고대 골렘',     elite: '봉인의 거신',        weak: ['acid'], resist: ['lightning', 'fire', 'poison', 'earth'], special: { name: '대지 강타', power: 1.7 },
     desc: '룬이 새겨진 제단이 희미하게 빛난다. 봉인이 조금씩 풀리고 있다.' },
-  canyon_path:   { region: 'canyon',  name: '붉은 바위길',  level: 3,  creature: '사막 전갈',     elite: '황금 꼬리 전갈',     weak: ['ice'], resist: ['fire'], special: { name: '독침', power: 0.8, debuff: { poison: 3 } },
+  canyon_path:   { region: 'canyon',  name: '붉은 바위길',  level: 3,  creature: '사막 전갈',     elite: '황금 꼬리 전갈',     weak: ['ice', 'water'], resist: ['fire'], special: { name: '독침', power: 0.8, debuff: { poison: 3 } },
     desc: '붉은 바위벽이 한낮의 열기를 뿜는다. 바위틈에서 집게발이 딸깍거린다.' },
-  canyon_storm:  { region: 'canyon',  name: '모래 폭풍 지대', level: 6, creature: '모래 벌레',    elite: '협곡을 삼키는 벌레', weak: ['ice'], resist: ['fire', 'mist'], special: { name: '모래 삼키기', power: 1.5 },
+  canyon_storm:  { region: 'canyon',  name: '모래 폭풍 지대', level: 6, creature: '모래 벌레',    elite: '협곡을 삼키는 벌레', weak: ['ice', 'water'], resist: ['fire', 'mist', 'earth'], special: { name: '모래 삼키기', power: 1.5 },
     desc: '모래바람이 시야를 가린다. 발밑의 모래가 거대한 숨을 쉬듯 꺼졌다 솟는다.' },
-  canyon_cliff:  { region: 'canyon',  name: '황금 절벽',    level: 10, creature: '그리핀',        elite: '태양을 등진 그리핀왕', weak: ['ice', 'lightning'], resist: ['fire'], special: { name: '급강하', power: 1.6 },
+  canyon_cliff:  { region: 'canyon',  name: '황금 절벽',    level: 10, creature: '그리핀',        elite: '태양을 등진 그리핀왕', weak: ['ice', 'lightning', 'earth'], resist: ['fire'], special: { name: '급강하', power: 1.6 },
     desc: '절벽 꼭대기 둥지에 금빛 깃털이 흩날린다. 드래곤에게도 물러서지 않는 짐승이 산다.' },
-  volcano_slope: { region: 'volcano', name: '잿빛 비탈',    level: 4,  creature: '화염 도마뱀',   elite: '용암 도롱뇽 군주',   weak: ['ice'], resist: ['fire'], special: { name: '불 뿜기', power: 0.9, debuff: { burn: 3 }, element: 'fire' },
+  volcano_slope: { region: 'volcano', name: '잿빛 비탈',    level: 4,  creature: '화염 도마뱀',   elite: '용암 도롱뇽 군주',   weak: ['ice', 'water'], resist: ['fire'], special: { name: '불 뿜기', power: 0.9, debuff: { burn: 3 }, element: 'fire' },
     desc: '잿가루가 눈처럼 날린다. 굳은 용암 사이로 도마뱀들이 빠르게 숨는다.' },
-  volcano_cave:  { region: 'volcano', name: '용암 동굴',    level: 8,  creature: '용암 골렘',     elite: '녹아내린 대장장이의 골렘', weak: ['ice'], resist: ['fire', 'poison'], special: { name: '용암 주먹', power: 1.3, debuff: { burn: 3 }, element: 'fire' },
+  volcano_cave:  { region: 'volcano', name: '용암 동굴',    level: 8,  creature: '용암 골렘',     elite: '녹아내린 대장장이의 골렘', weak: ['ice', 'water'], resist: ['fire', 'poison'], special: { name: '용암 주먹', power: 1.3, debuff: { burn: 3 }, element: 'fire' },
     desc: '붉은 빛이 동굴 벽을 핥는다. 땅 밑에서 무언가 거대한 것이 걸어 다닌다.' },
-  volcano_crater:{ region: 'volcano', name: '분화구',       level: 12, creature: '화염 거인',     elite: '잠든 화룡의 망령',   weak: ['ice'], resist: ['fire', 'poison'], special: { name: '화산 강타', power: 1.8, debuff: { burn: 3 }, element: 'fire' },
+  volcano_crater:{ region: 'volcano', name: '분화구',       level: 12, creature: '화염 거인',     elite: '잠든 화룡의 망령',   weak: ['ice', 'water'], resist: ['fire', 'poison'], special: { name: '화산 강타', power: 1.8, debuff: { burn: 3 }, element: 'fire' },
     desc: '대륙에서 가장 뜨거운 곳. 끓는 용암 위로 오래전 쓰러진 드래곤의 뼈가 보인다.' },
 };
 // 장소별 사냥 전리품
@@ -787,9 +808,12 @@ const BREATHS = {
   gold:   { name: '번개 숨결',   element: 'lightning', power: 1.7,  debuff: { stun: 1 }, chance: 0.3, desc: '가장 강한 한 방. 가끔 상대를 마비시켜 한 턴 쉬게 한다.' },
   green:  { name: '독 숨결',     element: 'poison',    power: 0.75, debuff: { poison: 4 }, desc: '짙은 독안개로 네 턴 동안 중독시킨다.' },
   silver: { name: '안개 숨결',   element: 'mist',      power: 0.6,  self: { evade: 3 }, desc: '은빛 안개에 몸을 숨겨, 세 턴 동안 공격을 잘 피한다.' },
+  blue:   { name: '해일 숨결',   element: 'water',     power: 1.05, debuff: { soak: 2 }, desc: '거센 물살로 피해를 주고, 두 턴 동안 흠뻑 젖게 해 굼뜨게 만든다 (속도 −30%, 잘 피하지 못함). 젖은 적에게 꼬리치기를 하면 넘어뜨린다.' },
+  purple: { name: '자수정 숨결', element: 'spirit',    power: 0.95, drain: 0.4, cleanse: 1, desc: '보랏빛 결정을 쏟아 피해를 주고, 입힌 피해의 40%만큼 체력을 되찾으며 나쁜 상태 하나를 씻어 낸다.' },
+  bronze: { name: '모래 폭풍 숨결', element: 'earth',  power: 1.0,  self: { stone: 2 }, desc: '모래와 돌 조각을 쏟아 피해를 주고, 두 턴 동안 비늘이 돌처럼 굳어 받는 피해가 30% 준다.' },
 };
 const BREATH_COST = { en: 12, cd: 3 };
-const ELEMENTS = { fire: '화염', acid: '산', ice: '얼음', lightning: '번개', poison: '독', mist: '안개' };
+const ELEMENTS = { fire: '화염', acid: '산', ice: '얼음', lightning: '번개', poison: '독', mist: '안개', water: '물', spirit: '정화', earth: '대지' };
 // 레벨이 오르면 배우는 스킬
 const SKILLS = {
   tail:   { name: '꼬리치기',     lv: 1, en: 4,  cd: 1, power: 1.25, desc: '꼬리를 휘둘러 묵직하게 친다. 피해 ×1.25.' },
@@ -805,6 +829,7 @@ const STATUS = {
   burn: '화상', poison: '중독', bleed: '출혈', acid: '비늘 녹음', freeze: '얼어붙음', stun: '마비',
   weaken: '움츠러듦', harden: '비늘 세움', evade: '안개', dodge: '돌풍',
   brittle: '얼음 금', dazed: '휘청임', opening: '반격 기회',
+  soak: '흠뻑 젖음', stone: '돌 비늘',
 };
 // 연계: 상대의 상태에 맞는 스킬을 쓰면 추가 효과
 // (얼어붙음·마비가 풀린 다음 턴에도 '얼음 금'·'휘청임'이 남아 연계를 이을 수 있다)
@@ -813,6 +838,7 @@ const COMBOS = {
   vital:    { name: '급소 찌르기',   skill: ['attack', 'rend'],        when: ['stun', 'dazed'],     desc: '마비된 적에게 할퀴기·찢어발기기: 반드시 급소' },
   wildfire: { name: '불길 번짐',     skill: ['gust'],                  when: ['burn'],              desc: '불타는 적에게 날개 돌풍: 화상 피해를 바로 한 번 더, 화상 3턴 연장' },
   flay:     { name: '녹은 비늘 찢기', skill: ['rend'],                 when: ['acid'],              desc: '비늘이 녹은 적에게 찢어발기기: 출혈 피해 ×2' },
+  surge:    { name: '물살 휩쓸기',   skill: ['tail'],                  when: ['soak'],              desc: '흠뻑 젖은 적에게 꼬리치기: 미끄러져 한 턴 마비 (급소 찌르기로 이어짐)' },
   spread:   { name: '독 퍼뜨리기',   skill: ['tail', 'devour'],        when: ['poison'],            desc: '중독된 적에게 꼬리치기·포식: 독 피해 +50%, 중독 2턴 연장' },
 };
 // 강적의 분노: 체력이 이 비율 아래로 떨어지면 한 번

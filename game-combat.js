@@ -155,6 +155,8 @@ function blocked(f, act) {
   return null;
 }
 const has = (f, k) => (f.st[k] || 0) > 0;
+// 흠뻑 젖으면 굼떠짐 (속도 −30%: 늦게 움직이고, 잘 못 피하고, 급소를 잘 맞음)
+const spdOf = (f) => f.spd * (has(f, 'soak') ? 0.7 : 1);
 
 // 치유: 지혜(마력)가 높을수록, 최대 체력이 클수록 많이
 const healAmount = (f, s) => Math.round((s.heal.base + f.mag * s.heal.mag + f.hpMax * s.heal.pct) * (f.healMult || 1));
@@ -170,17 +172,18 @@ function damage(att, def, power, opt = {}) {
   let note = '';
   if (element && def.weak.includes(element)) { raw *= 1.5; note = ' 약점을 찔렀다!'; }
   if (element && def.resist.includes(element)) { raw *= 0.5; note = ' 잘 통하지 않는다.'; }
-  const crit = !magic && (opt.crit || Math.random() < 0.06 + Math.max(0, att.spd - def.spd) * 0.005);
+  const crit = !magic && (opt.crit || Math.random() < 0.06 + Math.max(0, spdOf(att) - spdOf(def)) * 0.005);
   if (crit) { raw *= 1.5; note += ' 급소를 찔렀다!'; }
   if (def.guarding) raw *= opt.special ? 0.25 : 0.5; // 예고된 특기를 방어하면 4분의 1
   if (has(def, 'harden')) raw *= 0.5;
+  if (has(def, 'stone')) raw *= 0.7; // 브론즈: 돌 비늘
   raw *= def.taken;
   return { dmg: Math.max(1, Math.round(raw)), note };
 }
 // 피하기: 날개(속도) 차이와 안개·돌풍
 function dodged(att, def, lines) {
   if (has(def, 'dodge')) { def.st.dodge = 0; lines.push(`${ga(def)} 돌풍을 타고 공격을 흘려보냈다.`); return true; }
-  const p = clamp(0.05 + (def.spd - att.spd) * 0.015, 0.03, 0.3) + (has(def, 'evade') ? 0.4 : 0);
+  const p = has(def, 'soak') ? 0.02 : clamp(0.05 + (spdOf(def) - spdOf(att)) * 0.015, 0.03, 0.3) + (has(def, 'evade') ? 0.4 : 0);
   if (Math.random() < p) { lines.push(`${ga(def)} 날렵하게 피했다.`); return true; }
   return false;
 }
@@ -265,6 +268,10 @@ function perform(b, f, foe, act, lines) {
         if (dealt && cb) comboAfter(f, foe, cb, lines);
         if (dealt) {
           if (s.drain) { const h = Math.round(dealt * s.drain); f.hp = Math.min(f.hpMax, f.hp + h); lines.push(`${ga(f)} 체력을 ${h} 되찾았다.`); }
+          if (s.cleanse) { // 퍼플: 나쁜 상태 하나를 씻어 냄
+            const bad = ['burn', 'poison', 'bleed', 'weaken', 'acid', 'soak'].find((k) => has(f, k));
+            if (bad) { f.st[bad] = 0; lines.push(`보랏빛 결정이 ${STATUS[bad]}${josa(STATUS[bad], '을', '를')} 씻어 냈다.`); }
+          }
           const chance = s.majesty ? clamp(0.5 + (f.maj - foe.maj) * 0.04, 0.2, 0.95) : s.chance;
           applyDebuff(f, foe, s.debuff, chance, s.isBreath ? s.element : null, lines);
         }
@@ -290,6 +297,7 @@ function perform(b, f, foe, act, lines) {
 function comboAfter(f, foe, cb, lines) {
   if (cb.key === 'shatter') { foe.st.freeze = 0; foe.st.brittle = 0; lines.push(`${foe.name}의 몸을 덮은 얼음이 산산조각 났다!`); }
   if (cb.key === 'vital') { foe.st.dazed = 0; }
+  if (cb.key === 'surge' && foe.hp > 0) { foe.st.stun = Math.max(foe.st.stun || 0, foe.acted === f.turnNow ? 2 : 1); foe.st.soak = 0; lines.push(`${ga(foe)} 젖은 몸으로 미끄러져 넘어졌다! (한 턴 마비)`); }
   if (cb.key === 'wildfire' && foe.hp > 0) {
     const n = foe.st.burnDmg || 3;
     foe.hp = Math.max(0, foe.hp - n);
@@ -327,12 +335,14 @@ function round(b, actA, actB) {
   // 방어·비늘 세우기처럼 몸을 지키는 행동은 먼저 (예고를 보고 막을 수 있게). 나머지는 빠른 쪽이 먼저
   const guardish = (f, act) => act.type === 'guard' || (act.type === 'skill' && !blocked(f, act) && (() => { const sk = skillOf(f, act.id); return sk && sk.self && !sk.power && !sk.heal; })());
   const pa = guardish(b.a, actA) ? 1 : 0, pb = guardish(b.b, actB) ? 1 : 0;
-  const first = pa !== pb ? (pa > pb ? ['a', 'b'] : ['b', 'a']) : b.a.spd + rand(0, 3) >= b.b.spd + rand(0, 3) ? ['a', 'b'] : ['b', 'a'];
+  const first = pa !== pb ? (pa > pb ? ['a', 'b'] : ['b', 'a']) : spdOf(b.a) + rand(0, 3) >= spdOf(b.b) + rand(0, 3) ? ['a', 'b'] : ['b', 'a'];
   for (const k of first) {
     const f = b[k];
     const foe = b[k === 'a' ? 'b' : 'a'];
     if (b.over || f.hp <= 0) continue;
+    f.turnNow = b.turn;
     perform(b, f, foe, acts[k], lines);
+    f.acted = b.turn; // 이번 턴에 이미 움직였음 (넘어뜨리기가 다음 턴까지 이어지게)
     if (foe.hp <= 0) { b.over = true; b.winner = f; lines.push(`${ga(foe)} 쓰러졌다.`); }
   }
   if (!b.over) {

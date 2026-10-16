@@ -202,6 +202,7 @@ const q = {
   deleteSess:   db.prepare('DELETE FROM sessions WHERE token = ?'),
   dragonByUser: db.prepare(`SELECT ${DRAGON_FIELDS} FROM dragons WHERE user_id = ?`),
   dragonByName: db.prepare('SELECT id FROM dragons WHERE name = ?'),
+  setNameKind:  db.prepare('UPDATE dragons SET name = ?, kind = ? WHERE id = ?'),
   createDragon: db.prepare(`INSERT INTO dragons (user_id, name, kind, region, created_at, last_seen,
                               claw, scale, wing, wisdom, majesty, hp, hp_max, en, en_max)
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
@@ -341,6 +342,8 @@ module.exports = {
   deleteSession: (token) => q.deleteSess.run(token),
   getDragonByUser: (userId) => q.dragonByUser.get(userId),
   dragonNameTaken: (name) => !!q.dragonByName.get(name),
+  dragonNameOwner: (name) => q.dragonByName.get(name)?.id ?? null,
+  setNameKind: (id, name, kind) => q.setNameKind.run(name, kind, id),     // GM: 이름·종족 바꾸기
   createDragon: (userId, name, kind, region, st, hpMax, enMax) => {
     const now = Date.now();
     q.createDragon.run(userId, name, kind, region, now, now,
@@ -405,6 +408,8 @@ module.exports = {
   waitIds: () => q.waitIds.all().map((r) => r.id),       // 쓰러져 도움을 기다리는 (또는 기다렸던) 드래곤
   // 계정 탈퇴: 계정과 그 드래곤, 드래곤에 딸린 모든 것(식구·소지품·관계·텔레파시…)이 함께 지워짐
   deleteUser: (userId) => q.delUser.run(userId),
+  // 드래곤만 지움 (계정은 남음). 식구·소지품·관계·텔레파시 등 딸린 것도 함께 지워짐
+  deleteDragon: (id) => db.prepare('DELETE FROM dragons WHERE id = ?').run(id),
   gmCount: () => q.gmCount.get().n,
   userCount: () => q.userCount.get().n,
   setBio: (dragonId, bio) => q.setBio.run(JSON.stringify(bio), dragonId),
