@@ -1181,8 +1181,17 @@
   .side .here { flex: none; }
   /* 이곳의 드래곤: 세 마리까지 보이고, 더 많으면 목록 안에서 스크롤.
      줄 높이를 정수 px로 맞춰서 스크롤할 때 글자·그림이 위아래로 떨리지 않게 (소수점 높이 때문에 떨렸음) */
-  .here-list { display: flex; flex-direction: column; gap: 8px; max-height: calc(3 * 62px + 2 * 8px + 8px); overflow-y: auto; overflow-x: hidden; margin: 0 -6px; padding: 4px 6px; overscroll-behavior: contain; scrollbar-width: thin; transform: translateZ(0); }
-  .here-list .who.click { flex: none; height: 62px; box-sizing: border-box; margin: 0 -2px; padding: 4px 6px 4px 8px; }
+  .here-list { display: flex; flex-direction: column; gap: 4px; max-height: calc(3 * 52px + 2 * 4px); overflow-y: auto; overflow-x: hidden; margin: 0 -6px; overscroll-behavior: contain; scrollbar-width: thin; transform: translateZ(0); }
+  .here-list:empty { display: none; }
+  .here-list .who.click { flex: none; height: 52px; box-sizing: border-box; margin: 0; padding: 7px 8px 7px 10px; border-radius: 3px; }
+  .here-list .who.click:hover, .here-list .who.click:focus-visible { background: #ECEEEC; }
+  .here-list .who.click:focus-visible { outline: 2px solid var(--steel); outline-offset: -2px; }
+  /* 프로필 사진의 접속 불 */
+  .who .ava-w { position: relative; flex: none; display: inline-flex; }
+  .who .on-dot { position: absolute; right: -2px; bottom: -1px; width: 11px; height: 11px; border-radius: 50%; background: #3FA36A; box-shadow: 0 0 0 2px var(--surface); }
+  .who .on-dot::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: #3FA36A; animation: on-pulse 2.4s ease-out infinite; }
+  @keyframes on-pulse { 0% { transform: scale(1); opacity: .55; } 70%, 100% { transform: scale(2.1); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .who .on-dot::after { animation: none; display: none; } }
   .here-list .who .nm b { line-height: 18px; }
   .here-list .who .nm > span { line-height: 16px; }
   .here .cnt { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; color: var(--muted); margin-bottom: -2px; }
@@ -5921,12 +5930,16 @@
       const k = document.createElement('span');
       k.textContent = `${S.kinds[d.kind]?.name || ''}${d.place && S.places?.[d.place] ? ` · ${S.places[d.place].name}` : ''}`;
       if (d.title) { const tt = document.createElement('span'); tt.className = 'ttl'; tt.textContent = d.title; b.prepend(tt); }
-      // 접속 상태: 접속 중 / 접속 안 함 · 마지막으로 본 때
-      const st = document.createElement('span');
-      st.className = `st${d.online ? ' on' : ''}`;
-      st.textContent = d.online ? '접속 중' : `접속 안 함${d.lastSeen ? ` · ${ago(d.lastSeen)}` : ''}`;
-      nm.append(b, k, st);
-      row.append(ava, nm);
+      // 접속 상태: 접속 중이면 프로필 사진에 초록 불. 접속 안 함은 사진이 흐려지고, 마지막으로 본 때는 마우스를 올리면
+      const state = d.online ? '접속 중' : `접속 안 함${d.lastSeen ? ` · ${ago(d.lastSeen)}` : ''}`;
+      const aw = document.createElement('span');
+      aw.className = 'ava-w';
+      aw.appendChild(ava);
+      if (d.online) { const dot = document.createElement('i'); dot.className = 'on-dot'; aw.appendChild(dot); }
+      row.title = state;
+      row.setAttribute('aria-label', `${d.name}, ${state}. 기록 보기`);
+      nm.append(b, k);
+      row.append(aw, nm);
       if (d.away) {
         const a = document.createElement('span');
         a.className = 'away';
