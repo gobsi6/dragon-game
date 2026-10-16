@@ -133,6 +133,7 @@ const publicDragon = (d) => ({
 
 // 내 드래곤의 전체 정보 (나에게만 보냄)
 const meOf = (d) => ({
+  duelUnseen: db.duelUnseen(d.id),       // 아직 확인하지 않은, 받은 자동 결투 수
   ...publicDragon(d),
   level: d.level, xp: d.xp, xpMax: d.level * 100,
   hp: d.hp, hpMax: logic.hpCap(d), en: d.en, enMax: logic.enCap(d),

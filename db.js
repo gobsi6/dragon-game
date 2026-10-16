@@ -140,6 +140,19 @@ db.exec(`
     at      INTEGER NOT NULL,
     PRIMARY KEY (from_id, to_id)
   );
+  CREATE TABLE IF NOT EXISTS duels (           -- 결투 기록 (누가 걸었고 누가 이겼는지, 다시 보기용 기록)
+    id        INTEGER PRIMARY KEY,
+    at        INTEGER NOT NULL,
+    mode      TEXT NOT NULL,                     -- auto(자동 결투) / live(실시간 결투)
+    from_id   INTEGER NOT NULL REFERENCES dragons(id) ON DELETE CASCADE,   -- 건 쪽
+    to_id     INTEGER NOT NULL REFERENCES dragons(id) ON DELETE CASCADE,   -- 받은 쪽
+    winner_id INTEGER NOT NULL,
+    turns     INTEGER NOT NULL,
+    data      TEXT NOT NULL,                     -- 양쪽에서 본 마지막 모습, 턴 기록, 각자의 결과
+    seen      INTEGER NOT NULL DEFAULT 1         -- 받은 쪽이 확인했는지 (자동 결투는 0으로 시작)
+  );
+  CREATE INDEX IF NOT EXISTS duels_from ON duels(from_id, id);
+  CREATE INDEX IF NOT EXISTS duels_to ON duels(to_id, id);
   CREATE TABLE IF NOT EXISTS rel_memos (       -- 상대에 대해 나만 보는 메모
     from_id INTEGER NOT NULL REFERENCES dragons(id) ON DELETE CASCADE,
     to_id   INTEGER NOT NULL REFERENCES dragons(id) ON DELETE CASCADE,
@@ -268,6 +281,15 @@ const q = {
   relSet:       db.prepare(`INSERT INTO relations (from_id, to_id, kind, at) VALUES (?, ?, ?, ?)
                             ON CONFLICT(from_id, to_id) DO UPDATE SET kind = excluded.kind, at = excluded.at`),
   relDel:       db.prepare('DELETE FROM relations WHERE from_id = ? AND to_id = ?'),
+  duelAdd:      db.prepare('INSERT INTO duels (at, mode, from_id, to_id, winner_id, turns, data, seen) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'),
+  duelPrune:    db.prepare('DELETE FROM duels WHERE at < ?'),
+  duelList:     db.prepare(`SELECT x.id, x.at, x.mode, x.from_id, x.to_id, x.winner_id, x.turns, x.seen,
+                              o.id AS oid, o.name AS oname, o.kind AS okind, o.avatar_ver AS oav, (o.avatar IS NOT NULL) AS ohas
+                            FROM duels x JOIN dragons o ON o.id = CASE WHEN x.from_id = @me THEN x.to_id ELSE x.from_id END
+                            WHERE x.from_id = @me OR x.to_id = @me ORDER BY x.id DESC LIMIT @n`),
+  duelGet:      db.prepare('SELECT * FROM duels WHERE id = ?'),
+  duelUnseen:   db.prepare("SELECT COUNT(*) AS n FROM duels WHERE to_id = ? AND seen = 0"),
+  duelSeenAll:  db.prepare('UPDATE duels SET seen = 1 WHERE to_id = ? AND seen = 0'),
   memoGet:      db.prepare('SELECT text, shared FROM rel_memos WHERE from_id = ? AND to_id = ?'),
   memoSet:      db.prepare(`INSERT INTO rel_memos (from_id, to_id, text, at, shared) VALUES (?, ?, ?, ?, 1)
                             ON CONFLICT(from_id, to_id) DO UPDATE SET text = excluded.text, at = excluded.at, shared = 1`),
@@ -403,6 +425,15 @@ module.exports = {
     for (const { id, qty } of items) q.invAdd.run(toId, id, qty);
   }),
   getDragon: (id) => q.dragonById.get(id),
+  // 결투 기록 (30일이 지난 것은 지움)
+  duelAdd: (r) => {
+    q.duelPrune.run(Date.now() - 30 * 86400000);
+    return Number(q.duelAdd.run(Date.now(), r.mode, r.from, r.to, r.winner, r.turns, JSON.stringify(r.data), r.seen ? 1 : 0).lastInsertRowid);
+  },
+  duelList: (me, n = 30) => q.duelList.all({ me, n }),
+  duelGet: (id) => { const r = q.duelGet.get(id); if (r) { try { r.data = JSON.parse(r.data); } catch { r.data = {}; } } return r; },
+  duelUnseen: (id) => q.duelUnseen.get(id).n,
+  duelSeenAll: (id) => q.duelSeenAll.run(id),
   dragonsIn: (region) => q.dragonsIn.all(region),   // 이 지역에 머무는 드래곤 (접속하지 않은 드래곤 포함, 긴 잠에 든 드래곤 제외)
   relGet: (a, b) => q.relGet.get(a, b)?.kind || null,
   relSet: (a, b, kind) => q.relSet.run(a, b, kind, Date.now()),

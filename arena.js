@@ -222,7 +222,8 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
     return { id: nextId++, kind, b, ids: { a: da.id, b: db2.id }, side: { [da.id]: 'a', [db2.id]: 'b' }, pending: { a: null, b: null } };
   }
   // 결투가 끝나면: 전적, 명성(같은 상대에게는 한동안 한 번만), 경험치. 다친 것은 없음
-  function settleDuel(b, idA, idB) {
+  // idA가 결투를 건 쪽. 결과는 결투 기록에 남겨서 나중에 누가 걸었고 어떻게 끝났는지 다시 볼 수 있게 함
+  function settleDuel(b, idA, idB, mode = 'live') {
     const da = load(idA);
     const dbb = load(idB);
     const winA = b.winner === b.a;
@@ -250,6 +251,11 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
     } else {
       lines[w.id].push('같은 상대와 연달아 겨뤄 명성과 경험치는 오르지 않았다.');
     }
+    db.duelAdd({
+      mode, from: idA, to: idB, winner: w.id, turns: b.turn,
+      data: { view: { a: combat.view(b, 'a'), b: combat.view(b, 'b') }, log: b.log.map((t) => ({ turn: t.turn, lines: t.lines })), lines },
+      seen: mode !== 'auto',   // 자동 결투는 받은 쪽이 결투장에서 확인할 때까지 '새 기록'
+    });
     for (const d of [w, l]) {
       logic.regen(d);
       db.saveState(d);
@@ -391,13 +397,14 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
         combat.combatOf(d).lastAuto[o.id] = Date.now();
         logic.regen(o);
         const b = combat.runAuto(combat.newBattle('duel', combat.fromDragon(d, 'duel'), combat.fromDragon(o, 'duel')));
-        const st = settleDuel(b, d.id, o.id);
+        const st = settleDuel(b, d.id, o.id, 'auto');
         const won = st.winner.id === d.id;
         // 상대에게 알림 (접속하지 않았으면 다음 접속 때)
         const tell = `${d.name}${josa(d.name, '이', '가')} 자동 결투를 걸어 왔다. ${won ? `${o.name}${josa(o.name, '이', '가')} 졌다.` : `${o.name}${josa(o.name, '이', '가')} 이겼다!`} (${b.turn}턴)`;
+        const hint = '결투장의 결투 기록에서 다시 볼 수 있다.';
         const oe = live(o.id);
-        if (oe) oe.socket.emit('notice', { title: '결투', lines: [tell, ...st.lines[o.id]] });
-        else db.noteAdd(o.id, tell);
+        if (oe) oe.socket.emit('notice', { title: '결투', lines: [tell, ...st.lines[o.id], hint] });
+        else db.noteAdd(o.id, `${tell} ${hint}`);
         return {
           ok: true, auto: true, view: combat.view(b, 'a'), log: b.log.map((t) => ({ turn: t.turn, lines: t.lines })),
           result: { title: '자동 결투', lines: [won ? '결투에서 이겼다!' : '결투에서 졌다.', ...st.lines[d.id]] },
@@ -418,6 +425,39 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
       invites.set(inv.id, inv);
       emitTo(o.id, 'arena:invite', { id: inv.id, from: { id: d.id, name: d.name, kind: d.kind, level: d.level }, seconds: COMBAT.inviteSeconds });
       return { ok: true, sent: true };
+    });
+
+    // 결투 기록: 내가 건 것과 받은 것. 열어 보면 받은 자동 결투는 확인한 것으로
+    on('arena:history', (d) => {
+      const list = db.duelList(d.id).map((r) => ({
+        id: r.id, at: r.at, mode: r.mode, turns: r.turns,
+        mine: r.from_id === d.id,                // 내가 건 결투인지
+        won: r.winner_id === d.id,
+        fresh: r.to_id === d.id && !r.seen,      // 아직 확인하지 않은, 받은 자동 결투
+        other: { id: r.oid, name: r.oname, kind: r.okind, av: r.ohas ? r.oav : 0 },
+      }));
+      if (list.some((x) => x.fresh)) { db.duelSeenAll(d.id); sendMe(socket, d); }
+      return { ok: true, list };
+    });
+    // 결투 다시 보기: 내 쪽에서 본 모습으로
+    on('arena:replay', (d, p) => {
+      const r = db.duelGet(Number(p.id));
+      if (!r || (r.from_id !== d.id && r.to_id !== d.id)) return { error: '그 결투 기록은 없다.' };
+      const side = r.from_id === d.id ? 'a' : 'b';
+      const other = db.getDragon(side === 'a' ? r.to_id : r.from_id);
+      const won = r.winner_id === d.id;
+      const how = r.mode === 'auto' ? (side === 'a' ? '자동 결투를 걸었다' : '자동 결투를 걸어 왔다') : '결투';
+      return {
+        ok: true,
+        view: r.data.view?.[side],
+        log: r.data.log || [],
+        title: `${r.mode === 'auto' ? '자동 결투' : '결투'} · ${other?.name || ''}`,
+        result: { title: '결투 기록', lines: [
+          side === 'a' ? `${other?.name || '상대'}에게 ${how}.` : r.mode === 'auto' ? `${other?.name || '상대'}${josa(other?.name || '상대', '이', '가')} ${how}.` : `${other?.name || '상대'}${josa(other?.name || '상대', '과', '와')} 결투했다.`,
+          won ? '결투에서 이겼다!' : '결투에서 졌다.',
+          ...(r.data.lines?.[d.id] || []),
+        ] },
+      };
     });
 
     on('arena:answer', (d, p) => {
