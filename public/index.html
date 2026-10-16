@@ -414,6 +414,12 @@
   .pf-attrs .pips.t4 i:nth-child(-n+4), .pf-attrs .pips.t5 i { background: var(--steel); border-color: var(--steel-d); }
   .pf-attrs .pips.t5 i { background: #B8913A; border-color: #8C6A1E; }
   .pf-attrs .tier .w { font: 600 12px/1.2 var(--sans); color: var(--ink); }
+  /* 폰에서도 그림 · 마름모 · 단계 · 이름을 위아래로 (내 기록 카드의 가로 배치를 따르지 않음) */
+  @media (max-width: 860px) {
+    .pf-attrs .attr { flex-direction: column; gap: 2px; }
+    .pf-attrs .attr svg { width: 15px; height: 15px; }
+    .pf-attrs .tier .w { font-size: 11.5px; }
+  }
   .pf-vitals { padding: 10px 12px; border: 1px solid var(--line-in); border-radius: 4px; background: var(--surface-2); gap: 9px; }
   .pf-acts { display: flex; flex-direction: column; gap: 8px; }
   .pf-acts .grp { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
@@ -3385,6 +3391,8 @@
       const v = document.querySelector('.profile .vitals').cloneNode(true);
       v.classList.add('pf-vitals');
       v.querySelectorAll('[id]').forEach((x) => x.removeAttribute('id'));
+      // 내 기록 카드에 붙어 있던 표시(광폭화·마우스 설명)는 떼어 냄
+      for (const row of v.children) { row.classList.remove('low', 'zero'); row.removeAttribute('title'); }
       const set = (i, cur, max) => {
         const row = v.children[i];
         row.querySelector('.v').innerHTML = `<b>${cur}</b><span> / ${max}</span>`;
@@ -3404,6 +3412,9 @@
       const keys = ['claw', 'scale', 'wing', 'wisdom', 'majesty'];
       [...a.children].forEach((cell, i) => {
         const t = p.statTiers[keys[i]] || 1;
+        // 내 기록 카드에서 복사해 온 상흔 표시와 '타고난 값 …' 설명(내 정확한 숫자)은 떼어 냄
+        cell.classList.remove('scar');
+        cell.removeAttribute('title');
         const b = cell.querySelector('b');
         b.removeAttribute('id');
         b.className = 'tier';
