@@ -656,10 +656,11 @@
   .pl-desc .why { font-size: 11.5px; color: #A63E4B; }
   .pl-mon { flex: 1; }
   .pl-mon .row { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 1px 9px; align-items: center; }
-  .pl-mon .ico svg { width: 15px; height: 15px; }
+  .pl-mon .ico .cre svg { width: 60%; height: 60%; }
   .pl-mon .row + .row { padding-top: 7px; border-top: 1px dashed var(--line-in); }
-  .pl-mon .ico { grid-row: span 2; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: #E7ECF1; color: var(--steel-d); }
-  .pl-mon .row.elite .ico { background: #F6EDD6; color: #8C6A1E; }
+  .pl-mon .ico { grid-row: span 2; width: 28px; height: 28px; display: grid; place-items: center; }
+  .pl-mon .ico .cre { width: 28px; height: 28px; }
+  .pl-mon .ico .cre.elite::after { width: 7px; height: 7px; margin-left: -3.5px; top: -4px; }
   .pl-mon .pw { font: 700 14px/1.3 var(--serif); color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
   .pl-mon .pw small { font: 600 11px/1 var(--sans); color: var(--muted); margin-left: 6px; }
   .pl-mon .row .s { font-size: 11px; color: var(--muted); }
@@ -812,8 +813,11 @@
   .bt-f .sts span { padding: 0 5px; font-size: 11px; line-height: 17px; border-radius: 2px; background: #F1ECE1; color: #6B5320; border: 1px solid #E2D5B5; }
   .bt-f .sts span.bad { background: #FBF1F2; color: #A63E4B; border-color: #E6C3C7; }
   .bt-f .el { font-size: 11px; color: var(--muted); }
-  .cre { width: 36px; height: 36px; flex: none; border-radius: 50%; display: grid; place-items: center; background: #5B4A3A; color: #F3EBDD; font: 700 15px/1 var(--serif); }
-  .cre.elite { background: #7A2E35; box-shadow: 0 0 0 2px #E6C3C7; }
+  /* 사냥감 표시: 계통 아이콘 + 지역색 바탕. 강적은 금테와 머리 위 금빛 마름모 */
+  .cre { position: relative; width: 36px; height: 36px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--cre-c, #5B4A3A); color: #F6F4EE; font: 700 15px/1 var(--serif); }
+  .cre svg { width: 58%; height: 58%; }
+  .cre.elite { box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px #B8913A; }
+  .cre.elite::after { content: ""; position: absolute; top: -5px; left: 50%; width: 8px; height: 8px; margin-left: -4px; transform: rotate(45deg); background: #D4AE52; border: 1.5px solid #8C6A1E; box-shadow: 0 0 0 1.5px var(--surface); }
   .bt-intent { display: flex; gap: 10px; align-items: flex-start; padding: 9px 12px; border: 1px solid var(--line-in); border-left: 3px solid var(--steel); background: var(--surface-2); border-radius: 3px; animation: bt-in .3s ease-out; }
   .bt-intent .k { flex: none; font: 700 11px/18px var(--sans); color: #fff; background: var(--steel); padding: 0 6px; border-radius: 2px; margin-top: 1px; }
   .bt-intent b { display: block; font: 700 14px/1.45 var(--serif); color: var(--ink); }
@@ -1029,6 +1033,11 @@
 
   /* ── 둥지 ── */
   .restcard .clock { font-size: 34px; }
+  /* 둥지 탭: 이름 아래에 요약(단계·식구 수·보물 가치)을 작게 */
+  .seg.ctabs.nest-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 16px 0 6px; }
+  .seg.ctabs.nest-tabs button { display: flex; flex-direction: column; align-items: center; gap: 1px; min-height: 48px; padding: 6px 4px; }
+  .nest-tabs button small { font: 500 11.5px/1.3 var(--sans); letter-spacing: 0; opacity: .78; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .nest-pane > h3:first-child, .nest-pane > div:first-child > h3:first-child { margin-top: 4px; }
   .nest-state { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
   .nest-state .where { font: 700 18px/1.3 var(--serif); }
   .nest-state .row { flex-wrap: wrap; }
@@ -3198,6 +3207,7 @@
   }
 
   // 둥지 정보와 소지품을 한꺼번에 받아 옴 (예전엔 하나 받고 나서 다음을 받아서 열릴 때 느렸음)
+  let NEST_TAB = 'nest'; // 둥지 창에서 마지막으로 본 탭 (다시 그려도 유지)
   function openNest() {
     let got = null, invOk = false;
     const ready = () => { if (got && invOk) drawNest(got); };
@@ -3212,7 +3222,8 @@
       {
         const body = $('nest-body');
         body.replaceChildren();
-        const add = (html) => { const d = document.createElement('div'); d.innerHTML = html; body.appendChild(d); return d; };
+        let host = body; // 지금 내용을 넣을 곳 (탭이 생기면 그 탭 칸)
+        const add = (html) => { const d = document.createElement('div'); d.innerHTML = html; host.appendChild(d); return d; };
         const btn = (text, fn, primary, disabled) => {
           const b = document.createElement('button');
           b.type = 'button';
@@ -3261,13 +3272,57 @@
           else row2.appendChild(btn(`둥지로 날아가기 −${S.nestRules.homeFlightAp}`, () => nestAct('nest:home'), true, !!me.exp || !!me.restAt || me.ap < S.nestRules.homeFlightAp));
         }
 
+        // 탭: 둥지(단계·넓히기·지키기) / 식구 / 보물더미. 탭 이름 아래에 요약을 작게
+        let P = null;
+        if (n.region) {
+          const T0 = S.nestRules.tiers;
+          const defs = [
+            ['nest', '둥지', `${T0[n.tier || 0].name} · ${(n.tier || 0) + 1}/${T0.length}단계`],
+            ['kin', '식구', `${n.kin.home.length}/${n.maxKin || S.kinRules.maxKin}`],
+            ['hoard', '보물더미', `가치 ${n.value.toLocaleString()}`],
+          ];
+          if (!defs.some((x) => x[0] === NEST_TAB)) NEST_TAB = 'nest';
+          const tabs = document.createElement('div');
+          tabs.className = 'seg ctabs nest-tabs';
+          tabs.setAttribute('role', 'tablist');
+          tabs.setAttribute('aria-label', '둥지 메뉴');
+          body.appendChild(tabs);
+          P = {};
+          for (const [key, label, sub] of defs) {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.setAttribute('role', 'tab');
+            b.dataset.nt = key;
+            const t = document.createElement('span');
+            t.textContent = label;
+            const sm = document.createElement('small');
+            sm.textContent = sub;
+            b.append(t, sm);
+            tabs.appendChild(b);
+            const pane = document.createElement('section');
+            pane.className = 'ctab nest-pane';
+            pane.setAttribute('role', 'tabpanel');
+            pane.dataset.nt = key;
+            body.appendChild(pane);
+            P[key] = pane;
+          }
+          const show = (key) => {
+            NEST_TAB = key;
+            for (const b of tabs.children) { const on = b.dataset.nt === key; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); }
+            for (const [k, pane] of Object.entries(P)) pane.hidden = k !== key;
+          };
+          tabs.addEventListener('click', (e) => { const b = e.target.closest('[data-nt]'); if (b && !b.classList.contains('on')) show(b.dataset.nt); });
+          show(NEST_TAB);
+        }
+
         // 둥지 단계
         if (n.region) {
+          host = P.nest;
           const T = S.nestRules.tiers;
           const cur = T[n.tier || 0];
           const h = document.createElement('h3');
           h.textContent = `둥지 단계 · ${cur.name} (${(n.tier || 0) + 1}/${T.length})`;
-          body.appendChild(h);
+          host.appendChild(h);
           const tw = add('<ol class="nest-tiers"></ol><p class="nest-eff"></p>');
           const track = tw.querySelector('.nest-tiers');
           T.forEach((t, i) => {
@@ -3297,7 +3352,7 @@
             const gain = [`식구 ${next.kin}명`, `쉬는 회복 ×${next.rest}`];
             if (next.raidLoss < 1) gain.push(`도둑 피해 −${Math.round((1 - next.raidLoss) * 100)}%`);
             p2.textContent = `${next.name}${ro(next.name)} 넓히면: ${gain.join(' · ')}`;
-            body.appendChild(p2);
+            host.appendChild(p2);
             const cl = document.createElement('div');
             cl.className = 'cost-list';
             const goldHave = me.gold + (n.gold || 0);
@@ -3309,7 +3364,7 @@
               if (have < q) ready = false;
               chip(`${S.items[id]?.name || id} ${have}/${q}`, have >= q);
             }
-            body.appendChild(cl);
+            host.appendChild(cl);
             if (n.here) {
               const b2 = btn(`${next.name}${ro(next.name)} 넓히기`, () => {
                 if (confirm(`둥지를 넓혀 ${next.name}${ro(next.name)} 만들까? 금화 ${c.gold}닢과 재료가 든다. (모자란 금화는 보물더미에서 꺼내 쓴다)`)) nestAct('nest:expand');
@@ -3318,24 +3373,25 @@
               wrap.className = 'row';
               wrap.style.justifyContent = 'flex-start';
               wrap.appendChild(b2);
-              body.appendChild(wrap);
+              host.appendChild(wrap);
             } else {
               const p3 = document.createElement('p');
               p3.className = 'note';
               p3.textContent = '둥지를 넓히려면 둥지에 있어야 한다.';
-              body.appendChild(p3);
+              host.appendChild(p3);
             }
           }
         }
 
         // 둥지 식구
-        body.appendChild(kinSection(n));
+        (P ? P.kin : body).appendChild(kinSection(n));
 
         // 보물더미
         if (n.region) {
+          host = P.hoard;
           const h = document.createElement('h3');
           h.textContent = '보물더미';
-          body.appendChild(h);
+          host.appendChild(h);
           const sum = add('<div class="hoard-sum"><span class="v"></span><span class="l"></span></div>');
           sum.querySelector('.v').textContent = n.value.toLocaleString();
           sum.querySelector('.l').textContent = `보물더미 가치 (금화 ${n.gold.toLocaleString()}닢과 물건)`;
@@ -3365,10 +3421,11 @@
           }
           sum.firstChild.appendChild(tierBox);
 
-          // 둥지 지키기: 덫·결계석, 도둑이 들 수 있는지
+          // 둥지 지키기: 덫·결계석, 도둑이 들 수 있는지 (둥지 탭에)
+          host = P.nest;
           const h4 = document.createElement('h3');
           h4.textContent = '둥지 지키기';
-          body.appendChild(h4);
+          host.appendChild(h4);
           const risk = document.createElement('p');
           risk.className = 'note';
           risk.style.margin = '0 0 8px';
@@ -3376,7 +3433,7 @@
           risk.textContent = n.value < rr.minValue
             ? `보물더미가 아직 작아서 도둑이 노리지 않는다. (가치 ${rr.minValue} 이상부터)`
             : `둥지를 비운 동안 보물 도둑이 들 수 있다. 보물이 많을수록 잘 든다.${n.guard ? ` 파수꾼 ${n.guard} 덕에 절반으로 준다.` : ''}`;
-          body.appendChild(risk);
+          host.appendChild(risk);
           const wl = document.createElement('div');
           wl.className = 'inv';
           for (const [key, id] of [['trap', 'thorn_trap'], ['stone', 'ward_stone']]) {
@@ -3391,15 +3448,16 @@
             if (n.here && own > 0) r4.querySelector('.acts').append(btn('설치하기', () => nestAct('item:use', { item: id }), false, (n.wards?.[key] || 0) >= S.nestRules.wardMax));
             wl.appendChild(r4);
           }
-          body.appendChild(wl);
+          host.appendChild(wl);
+          host = P.hoard;
           const h5 = document.createElement('h3');
           h5.textContent = '보물 넣고 꺼내기';
-          body.appendChild(h5);
+          host.appendChild(h5);
           if (!n.here) {
             const p = document.createElement('p');
             p.className = 'note';
             p.textContent = '보물더미는 둥지에 있을 때만 넣고 꺼낼 수 있다.';
-            body.appendChild(p);
+            host.appendChild(p);
           } else {
             const gm = add('<div class="gold-move"><label class="sr" for="hoard-gold">금화 수</label><input class="input" id="hoard-gold" type="number" min="1" inputmode="numeric" placeholder="금화"></div>');
             const box = gm.querySelector('.gold-move');
@@ -3423,10 +3481,10 @@
               if (x.qty > 1) r2.querySelector('.acts').append(btn('모두 꺼내기', () => nestAct('hoard:take', { what: x.item, qty: x.qty })));
               list.appendChild(r2);
             }
-            body.appendChild(list);
+            host.appendChild(list);
             const h2 = document.createElement('h3');
             h2.textContent = '소지품에서 쌓기';
-            body.appendChild(h2);
+            host.appendChild(h2);
             const inv = document.createElement('div');
             inv.className = 'inv';
             const own = Object.entries(invCache).filter(([id, q]) => S.items[id] && q > 0)
@@ -3449,7 +3507,7 @@
               if (q > 1) r3.querySelector('.acts').append(btn('모두 쌓기', () => nestAct('hoard:put', { what: id, qty: q })));
               inv.appendChild(r3);
             }
-            body.appendChild(inv);
+            host.appendChild(inv);
           }
         }
 
@@ -4807,20 +4865,19 @@
     mk.textContent = '등장하는 사냥감';
     mon.appendChild(mk);
     const pre = corrupt ? '오염된 ' : '';
-    const SVG_PAW = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19L19 5"/><path d="M14 5h5v5"/><path d="M4 15l5 5"/></svg>';
-    const SVG_CROWN = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 17l-1-10 5 4 4-6 4 6 5-4-1 10z"/><path d="M4 20h16"/></svg>';
     const row = (cls, ico, name, lv, sub) => {
       const r = document.createElement('div');
       r.className = `row ${cls}`;
-      r.innerHTML = `<span class="ico">${ico}</span><span class="pw"></span><span class="s"></span>`;
+      r.innerHTML = '<span class="ico"></span><span class="pw"></span><span class="s"></span>';
+      r.querySelector('.ico').appendChild(ico);
       r.querySelector('.pw').textContent = name;
       const sm = document.createElement('small'); sm.textContent = `Lv.${lv}`; r.querySelector('.pw').appendChild(sm);
       r.querySelector('.s').textContent = sub;
       mon.appendChild(r);
       return r;
     };
-    row('', SVG_PAW, `${pre}${p.creature}`, p.level, '사냥하면 만난다');
-    row('elite', SVG_CROWN, `${pre}${p.elite}`, p.level + 1, '강적 · 레벨 2부터 가끔 길을 막는다');
+    row('', creEl(p.type, p.region, false, p.creature), `${pre}${p.creature}`, p.level, '사냥하면 만난다');
+    row('elite', creEl(p.eliteType || p.type, p.region, true, p.elite), `${pre}${p.elite}`, p.level + 1, '강적 · 레벨 2부터 가끔 길을 막는다');
     const els = (l) => l.map((x) => S.combat.elements[x]).join('·');
     const chips = document.createElement('div');
     chips.className = 'chips2';
@@ -5207,6 +5264,32 @@
     });
   });
 
+  // ── 사냥감 배지: 계통 아이콘 + 지역색 ──
+  const CRE_TYPES = {
+    beast:     ['짐승',   '<ellipse cx="12" cy="15.5" rx="4" ry="3.6"/><circle cx="6.3" cy="10.6" r="1.7"/><circle cx="9.6" cy="6.9" r="1.7"/><circle cx="14.4" cy="6.9" r="1.7"/><circle cx="17.7" cy="10.6" r="1.7"/>'],
+    bug:       ['벌레',   '<ellipse cx="12" cy="14" rx="3" ry="4.2"/><circle cx="12" cy="7.6" r="1.9"/><path d="M9.2 11.5L4.5 8.5M9 14H3.8M9.4 16.5l-4.4 3.3M14.8 11.5l4.7-3M15 14h5.2M14.6 16.5l4.4 3.3"/>'],
+    reptile:   ['파충류', '<path d="M3 9.5h11.5L21 12l-6.5 2.5H3"/><path d="M5.5 9.5l1 1.6 1-1.6 1 1.6 1-1.6 1 1.6 1-1.6M5.5 14.5l1-1.6 1 1.6 1-1.6 1 1.6 1-1.6 1 1.6"/><circle cx="15.5" cy="7.2" r="1.3"/>'],
+    ghost:     ['망령',   '<path d="M6 20.5V11a6 6 0 0 1 12 0v9.5l-2-1.6-2 1.6-2-1.6-2 1.6-2-1.6z"/><path d="M9.6 11v1.2M14.4 11v1.2"/>'],
+    construct: ['골렘',   '<rect x="8.2" y="3.5" width="7.6" height="5.6" rx="1"/><path d="M5 11h14v6.5H5z"/><path d="M8 17.5v3M16 17.5v3M10.5 6.3h.01M13.5 6.3h.01"/>'],
+    giant:     ['거인',   '<path d="M4.5 19.5l8.2-8.2"/><circle cx="15.5" cy="8.5" r="4"/><path d="M15.5 2.8v1.7M21.2 8.5h-1.7M19.6 4.4l-1.2 1.2"/>'],
+    flyer:     ['날짐승', '<path d="M12 9C10 6 7 4.5 3 4.5c1 3 2.5 5.5 5 6.5-1.5.5-2.5 1.5-3 3 2.5 0 4.6-.6 7-2 2.4 1.4 4.5 2 7 2-.5-1.5-1.5-2.5-3-3 2.5-1 4-3.5 5-6.5-4 0-7 1.5-9 4.5z"/><path d="M12 12.5v6.5"/>'],
+    bird:      ['새',     '<path d="M4.5 21C4.5 12.5 6.3 6.2 11.7 4.6c2.7-.8 5.6-.1 7.4 1.7 1.9 1.9 2.6 4.4 1.9 7.4-.5-1.4-1.5-2.4-2.9-2.8-1.5-.4-3 .1-3.9 1.2-.9 3.1-1.9 6-2.6 8.9"/><path d="M14.4 8.3c1.4-.5 3-.2 4.1.8"/><circle cx="12.3" cy="8.2" r="1.05" fill="currentColor" stroke="none"/>'],
+    spirit:    ['정령',   '<path d="M5 19.5c0-8.5 5-13.5 14-14.5-1 9-6 14.5-14 14.5z"/><path d="M5 19.5l8.5-8.5M10 14.5h3.5M12 12.5V9"/>'],
+    thief:     ['도둑',   '<path d="M12 3.2c-3.5 0-6 3-6 7.3V20.5h12V10.5c0-4.3-2.5-7.3-6-7.3z"/><path d="M9.3 11.2c.8-1.7 4.6-1.7 5.4 0 0 1.9-1.1 3.2-2.7 3.2s-2.7-1.3-2.7-3.2z"/>'],
+  };
+  const CRE_COLORS = { plains: '#7A6A2E', forest: '#3B5E33', swamp: '#3E5C57', snow: '#3F6A88', ruins: '#5E5868', canyon: '#9A5228', volcano: '#8A3A22' };
+  function creEl(type, region, elite, name) {
+    const c = document.createElement('span');
+    c.className = `cre${elite ? ' elite' : ''}`;
+    c.style.setProperty('--cre-c', CRE_COLORS[region] || '#4E5358');
+    const t = CRE_TYPES[type];
+    if (t) {
+      c.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${t[1]}</svg>`;
+      c.title = `${t[0]}${elite ? ' · 강적' : ''}`;
+    } else c.textContent = (name || '?').slice(0, 1); // 계통을 모르면 예전처럼 첫 글자
+    return c;
+  }
+
   // ── 전투 창 (강적, 결투) ──
   // BT: 지금 보여 주는 전투. replay면 이미 끝난 자동 결투를 다시 보여 주는 중
   let BT = null;
@@ -5217,10 +5300,7 @@
     const who = document.createElement('div');
     who.className = 'bt-who';
     if (f.creature) {
-      const c = document.createElement('span');
-      c.className = `cre${f.elite ? ' elite' : ''}`;
-      c.textContent = f.name.slice(0, 1);
-      who.appendChild(c);
+      who.appendChild(creEl(f.type, f.region, f.elite, f.name));
     } else who.appendChild(avaEl({ id: f.id, kind: f.kind, av: f.id === S.me?.id ? S.me.av : 0 }, 36));
     const t = document.createElement('div');
     t.style.minWidth = '0';

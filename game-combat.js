@@ -97,6 +97,7 @@ function fromCreature(place, elite, corrupted = false, minion = null) {
   const name = `${minion ? `${minion} ` : ''}${elite ? pl.elite : pl.creature}`;
   return {
     id: null, name: corrupted ? `오염된 ${name}` : name, kind: null, creature: true, region: pl.region, place, elite: !!elite, minion: !!minion, level: lv,
+    type: (elite && pl.eliteType) || pl.type || null, // 화면 아이콘 계통
     corrupted, mindDrain: corrupted ? MIND.monster : 0,
     hp: hpMax, hpMax, en: 0, enMax: 0,
     atk: (K.atk[0] + lv * K.atk[1]) * (elite ? K.eliteAtk : 1) * (corrupted ? MIND.monsterAtk : 1) * (minion ? G.atk : 1), def: K.def[0] + lv * K.def[1], spd: 6 + lv * 2, mag: 4 + lv * 2, maj: 6 + lv * 2,
@@ -467,7 +468,7 @@ function runAuto(b, optA = {}, optB = {}) {
 // 화면에 보낼 모습. me: 내 쪽('a'/'b'). 상대의 스킬 구성은 보이지 않음
 function fighterView(f, mine) {
   const v = {
-    name: f.name, kind: f.kind, creature: f.creature, elite: !!f.elite, id: f.id,
+    name: f.name, kind: f.kind, creature: f.creature, elite: !!f.elite, id: f.id, type: f.type || null, region: f.region || null,
     hp: Math.round(f.hp), hpMax: f.hpMax, en: Math.round(f.en), enMax: f.enMax,
     st: Object.fromEntries(Object.keys(STATUS).filter((k) => f.st[k] > 0).map((k) => [k, f.st[k]])),
     weak: f.weak, resist: f.resist,
@@ -674,7 +675,7 @@ function fromThief(T, lv, name, minion, trapped) {
   const G = COMBAT.group;
   const hpMax = Math.round((K.hp[0] + lv * K.hp[1]) * (minion ? G.hp : 1));
   return {
-    id: null, name, kind: null, creature: true, region: null, place: null, elite: false, minion, level: lv,
+    id: null, name, kind: null, creature: true, region: null, place: null, elite: false, minion, level: lv, type: 'thief',
     corrupted: false, mindDrain: 0,
     hp: Math.round(hpMax * (trapped ? RAID.trapHp : 1)), hpMax, en: 0, enMax: 0,
     atk: (K.atk[0] + lv * K.atk[1]) * (minion ? G.atk : 1), def: K.def[0] + lv * K.def[1], spd: 6 + lv * 2, mag: 4 + lv * 2, maj: 6 + lv * 2,
