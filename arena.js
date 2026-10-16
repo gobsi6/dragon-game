@@ -275,7 +275,10 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
       lines[l.id].push(`용족 명성 ${COMBAT.fameLose}`);
       const f1 = logic.addFame(w, fame); if (f1) lines[w.id].push(f1);
       const f2 = logic.addFame(l, COMBAT.fameLose); if (f2) lines[l.id].push(f2);
-      for (const [d, xp] of [[w, COMBAT.xpWin], [l, COMBAT.xpLose]]) {
+      // 상대 레벨이 높을수록 더 많이 오름
+      const xpWin = COMBAT.xpWin + l.level * (COMBAT.xpWinPerLv || 0);
+      const xpLose = COMBAT.xpLose + w.level * (COMBAT.xpLosePerLv || 0);
+      for (const [d, xp] of [[w, xpWin], [l, xpLose]]) {
         const x = logic.xpOf(d, xp);
         const up = logic.gainXp(d, x);
         lines[d.id].push(`경험치 +${x}${up ? ` · 레벨이 올랐다! Lv. ${d.level}` : ''}`);

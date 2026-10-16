@@ -462,10 +462,15 @@
   .rel-memo .h .st.saved { color: var(--forest); }
   .rel-memo textarea { width: 100%; min-height: 60px; resize: vertical; font: inherit; font-size: 13px; line-height: 1.5; }
   .rel-memo .r { display: flex; justify-content: flex-end; gap: 6px; }
-  .fr-row .memo { display: block; margin-top: 2px; font-size: 12px; color: #6B5A3A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .fr-row .memo::before { content: "✎ "; color: #A8936A; }
+  /* 메모 한 줄: 글은 안쪽 칸에서만 말줄임(…)되고, 앞뒤 표시는 잘리지 않게 바깥에 둠 */
+  .fr-row .memo { display: flex; align-items: baseline; min-width: 0; margin-top: 2px; font-size: 12px; color: #6B5A3A; }
+  .fr-row .memo .mt { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fr-row .memo::before { content: "✎"; flex: none; margin-right: 4px; color: #A8936A; }
   .fr-row .memo.theirs { color: #2E4A60; }
-  .fr-row .memo.theirs::before { content: "❝ "; color: #7E97AC; }
+  .fr-row .memo.theirs::before { content: "❝"; margin-right: 2px; color: #7E97AC; }
+  .fr-row .memo.theirs::after { content: "❞"; flex: none; margin-left: 2px; color: #7E97AC; }
+  .fr-row > div:nth-child(2) { min-width: 0; }
+
   .their-memo { width: 100%; padding: 10px 12px; background: #F2F6F9; border: 1px solid #C9D6E1; border-radius: 3px; display: flex; flex-direction: column; gap: 4px; }
   .their-memo .h { font-size: 12px; color: #2E4A60; }
   .their-memo p { margin: 0; font-size: 13px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -4268,7 +4273,10 @@
           if (!text) continue;
           const m = document.createElement('span');
           m.className = cls;
-          m.textContent = text.replace(/\s+/g, ' ');
+          const mt = document.createElement('span');
+          mt.className = 'mt';
+          mt.textContent = text.replace(/\s+/g, ' ');
+          m.appendChild(mt);
           m.title = `${who}: ${text}`;
           t.appendChild(m);
         }

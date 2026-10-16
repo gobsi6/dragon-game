@@ -860,7 +860,9 @@ const COMBAT = {
   inviteSeconds: 30,       // 결투 신청을 기다리는 시간
   autoCooldown: 10 * 60 * 1000, // 같은 상대에게 자동 결투를 다시 걸 수 있는 간격
   fameWin: 3, fameRival: 2, fameLose: -1,
-  xpWin: 15, xpLose: 5,
+  // 결투 경험치 = 기본 + 상대 레벨 × 레벨당 (예: 상대가 Lv.5면 이기면 20+5×4=40, 지면 8+5×2=18)
+  xpWin: 20, xpLose: 8,
+  xpWinPerLv: 4, xpLosePerLv: 2,
   // 사냥감 세기: [기본, 사냥터 Lv.1당]. 강적은 체력·공격에 배율
   creature: { hp: [27, 4.2], atk: [8, 0.85], def: [3.5, 0.4], eliteHp: 1.8, eliteAtk: 1.2 },
   // 무리 조우: 사냥하다 여러 마리를 한꺼번에 만남. 함께 나온 사냥감은 조금 약하고(체력·공격 배율), 쓰러뜨린 만큼 전리품이 더 나옴
