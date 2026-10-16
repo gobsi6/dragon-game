@@ -673,6 +673,15 @@
   .main { width: 100%; max-width: 1280px; margin: 0 auto; padding: 22px 24px; display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; }
   .profile { flex: 1 1 270px; max-width: 300px; padding: 18px 18px 20px; display: flex; flex-direction: column; gap: 16px; }
   .center { flex: 999 1 540px; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+  /* 하단 메뉴 화면은 팝업 대신 가운데 칸(지역·지도 자리)에 펼친다 */
+  .center.paneled > .region-card, .center.paneled > .map, .center.paneled > .expcard { display: none !important; }
+  .panel-host { display: none; }
+  .center.paneled > .panel-host { display: block; }
+  .dlg.as-panel { position: static; inset: auto; margin: 0; width: 100%; max-width: none; max-height: none; overflow: visible; padding: 20px 22px 18px; }
+  .dlg.as-panel.wide { width: 100%; }
+  .dlg.as-panel[open] { display: block; animation: panel-in .18s ease-out; }
+  @keyframes panel-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .dlg.as-panel[open] { animation: none; } }
   .side { flex: 1 1 250px; max-width: 290px; align-self: stretch; display: flex; flex-direction: column; padding: 18px 8px 8px; }
 
   .portrait {
@@ -1028,6 +1037,7 @@
         <div class="routes" id="routes"><span class="l">날아갈 수 있는 곳</span><span class="hint" id="routes-hint">지도에서 <i></i>표시를 눌러 날아간다.</span></div>
         <svg viewBox="0 0 1000 640" role="img" aria-label="대륙 지도" id="map-svg"><g id="terrain"></g><g id="overlay"></g></svg>
       </section>
+      <div class="panel-host" id="panel-host"></div>
     </div>
 
     <aside class="frame side" aria-label="이곳의 드래곤과 이야기">
@@ -2122,7 +2132,7 @@
       box.appendChild(row);
     }
   }
-  function openInv() { fetchInv(() => { renderInv(); if (!$('inv-dlg').open) $('inv-dlg').showModal(); }); }
+  function openInv() { fetchInv(() => { renderInv(); openPanel('inv-dlg'); }); }
   $('inv-open').addEventListener('click', openInv);
 
   // ── 둥지 ──
@@ -2423,7 +2433,7 @@
           }
         }
 
-        if (!$('nest-dlg').open) $('nest-dlg').showModal();
+        openPanel('nest-dlg');
       });
     });
   }
@@ -2597,7 +2607,7 @@
       }
     }
   }
-  function openCraft() { fetchInv(() => { renderCraft(); if (!$('craft-dlg').open) $('craft-dlg').showModal(); }); }
+  function openCraft() { fetchInv(() => { renderCraft(); openPanel('craft-dlg'); }); }
   $('craft-close').addEventListener('click', () => $('craft-dlg').close());
 
   $('inv-close').addEventListener('click', () => $('inv-dlg').close());
@@ -2942,7 +2952,7 @@
   $('profile-close').addEventListener('click', () => $('profile-dlg').close());
 
   // ── 동료 메뉴 ──
-  function openFriends() { loadRel(() => { renderFriends(); if (!$('friends-dlg').open) $('friends-dlg').showModal(); }); }
+  function openFriends() { loadRel(() => { renderFriends(); openPanel('friends-dlg'); }); }
   function renderFriends() {
     const l = S.relList;
     const body = $('friends-body');
@@ -3042,7 +3052,7 @@
         r.addEventListener('click', () => openTp(t.id));
         box.appendChild(r);
       }
-      if (!$('tp-dlg').open) $('tp-dlg').showModal();
+      openPanel('tp-dlg');
     });
   }
   function tpBubble(m, isNew) {
@@ -3088,7 +3098,7 @@
       box.scrollTop = box.scrollHeight;
       $('tp-closed').hidden = !w.blocked;
       $('tp-closed').textContent = `${w.name}의 마음이 굳게 닫혀 있다. 지금은 텔레파시가 닿지 않는다.`;
-      if (!$('tp-dlg').open) $('tp-dlg').showModal();
+      openPanel('tp-dlg');
       $('tp-input').focus();
     });
   }
@@ -3222,7 +3232,7 @@
     if (!road.children.length) road.innerHTML = '<p class="note">지금은 기다리는 변화가 없다.</p>';
     renderSkills();
   }
-  function openChar() { renderChar(); if (!$('char-dlg').open) $('char-dlg').showModal(); }
+  function openChar() { renderChar(); openPanel('char-dlg'); }
   $('dock-char').addEventListener('click', openChar);
   $('char-more').addEventListener('click', openChar);
   $('char-close').addEventListener('click', () => $('char-dlg').close());
@@ -3405,6 +3415,31 @@
     if (!g.kin.length && !g.gold && !g.items.length) { const p = document.createElement('p'); p.className = 'note'; p.textContent = '이제 아무것도 남지 않았다.'; body.appendChild(p); }
   }
   $('grave-close').addEventListener('click', () => $('grave-dlg').close());
+
+  // ── 하단 메뉴 화면: 가운데 칸에 펼치기 ──
+  // 팝업(모달) 대신 지역 카드와 지도 자리에 보여 준다. 다른 메뉴를 열면 바뀌고, '대륙'이나 닫기로 돌아간다
+  const PANELS = ['char-dlg', 'nest-dlg', 'inv-dlg', 'craft-dlg', 'friends-dlg', 'tp-dlg', 'arena-dlg'];
+  function openPanel(id) {
+    const dlg = $(id);
+    if (dlg.open) return;
+    for (const other of PANELS) if (other !== id && $(other).open) $(other).close();
+    if (dlg.parentElement !== $('panel-host')) { $('panel-host').appendChild(dlg); dlg.classList.add('as-panel'); }
+    dlg.show();
+    document.querySelector('.center').classList.add('paneled');
+    const top = document.querySelector('.center').getBoundingClientRect().top;
+    if (top < 0 || window.innerWidth <= 860) document.querySelector('.center').scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+  for (const id of PANELS) {
+    $(id).addEventListener('close', () => {
+      if (!PANELS.some((x) => $(x).open)) document.querySelector('.center').classList.remove('paneled');
+    });
+  }
+  // 펼친 화면은 Esc로도 닫힘 (모달 창이 위에 떠 있으면 그쪽이 먼저)
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || document.querySelector('dialog[open]:modal')) return;
+    const open = PANELS.find((x) => $(x).open);
+    if (open) $(open).close();
+  });
 
   // ── 정신 · 오염 · 광폭화 ──
   S.rampages = [];
@@ -3709,7 +3744,7 @@
     socket.emit('arena:list', {}, (res) => {
       if (res.error) return toast(res.error);
       renderArena(res);
-      if (!$('arena-dlg').open) $('arena-dlg').showModal();
+      openPanel('arena-dlg');
     });
   }
   function renderArena(res) {
