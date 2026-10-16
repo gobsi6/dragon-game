@@ -443,22 +443,59 @@
   #char-dlg .gear, #char-dlg .stance { margin-top: -4px; }
 
   /* ── 장소와 사냥터 난이도 ── */
-  .places { display: flex; flex-direction: column; gap: 8px; }
-  .pl-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-  @media (max-width: 520px) { .pl { padding: 7px 8px; } .pl b { font-size: 13px; } .pl .lv { font-size: 10.5px; padding: 0 4px; } }
-  .pl { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 10px; text-align: left; background: #fff; border: 1px solid var(--line-in); border-radius: 3px; min-width: 0; }
-  .pl b { font: 700 14px/1.3 var(--serif); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-  .pl .lv { font: 600 11px/16px var(--sans); padding: 0 6px; border-radius: 2px; border: 1px solid; }
-  .pl.easy .lv { color: #5E6B63; border-color: #CBD3CE; background: #F2F4F2; }
-  .pl.fit .lv  { color: #2F5D45; border-color: #A9C4B2; background: #EEF4EF; }
-  .pl.hard .lv { color: #7A5A16; border-color: #E2CF9E; background: #FBF6E8; }
-  .pl.deadly .lv { color: #8A2E27; border-color: #E6C3C7; background: #FBF1F2; }
-  .pl.locked { opacity: .55; }
-  .pl.on { border-color: var(--steel-d); box-shadow: inset 0 0 0 1px var(--steel-d); background: #EEF2F6; }
-  .pl:not(.on):not(:disabled):hover { border-color: var(--steel); }
-  .pl-now { font-size: 13px; line-height: 1.55; color: var(--ink-2); padding: 0 2px; }
-  .pl-now b { font-weight: 600; color: var(--ink); }
-  .pl-now .el { color: var(--muted); }
+  .places { display: flex; flex-direction: column; gap: 10px; }
+  .where .at { display: none; align-items: center; gap: 6px; margin-top: 6px; font: 700 17px/1.3 var(--serif); color: var(--steel-d); }
+  .where .at.show { display: flex; }
+  .where .at svg { flex: none; }
+  .where .at .sep { color: var(--orn); font-weight: 500; }
+  .pl-head { display: flex; align-items: center; gap: 10px; font: 700 14px/1.4 var(--serif); color: var(--steel-d); }
+  .pl-head::after { content: ""; flex: 1; height: 1px; background: var(--line-soft); }
+  .pl-head::before { content: ""; width: 5px; height: 5px; background: var(--orn); transform: rotate(45deg); flex: none; }
+  .pl-head small { order: 3; font: 400 12px/1 var(--sans); color: var(--muted); }
+  .pl-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .pl { --tc: #9AA29D; position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; padding: 10px 12px 10px 15px; text-align: left; background: #fff; border: 1px solid var(--line-in); border-radius: 3px; min-width: 0; overflow: hidden; transition: border-color .15s, background .15s, transform .15s; }
+  .pl::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--tc); }
+  .pl b { font: 700 15px/1.3 var(--serif); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .pl .meta { display: flex; align-items: center; gap: 6px; max-width: 100%; }
+  .pl .lv { font: 700 11px/18px var(--sans); padding: 0 6px; border-radius: 2px; color: #fff; background: var(--tc); flex: none; }
+  .pl .pl-tr { font: 600 11.5px/1 var(--sans); color: var(--tc); white-space: nowrap; }
+  .pl .pl-tag { position: absolute; top: 0; right: 0; padding: 2px 7px 3px 8px; font: 700 10.5px/1.3 var(--sans); color: #fff; background: var(--steel-d); border-bottom-left-radius: 3px; display: none; }
+  .pl.easy { --tc: #8A938E; }
+  .pl.fit { --tc: #3F7A5C; }
+  .pl.hard { --tc: #A87A1C; }
+  .pl.deadly { --tc: #A63E4B; }
+  .pl.locked { --tc: #B5B8B4; background: #F3F3F1; }
+  .pl.locked b { color: var(--muted); }
+  .pl.on { border-color: var(--steel-d); box-shadow: inset 0 0 0 1px var(--steel-d), 0 2px 8px rgba(42,66,86,.14); background: #EEF2F6; }
+  .pl.on .pl-tag { display: block; }
+  .pl.on b { padding-right: 46px; }
+  .pl:not(.on):not(.locked):hover { border-color: var(--steel); transform: translateY(-1px); }
+  .pl-now { position: relative; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; padding: 12px 14px; background: var(--surface-2); border: 1px solid var(--line-in); border-left: 3px solid var(--steel); border-radius: 3px; }
+  .pl-now:empty { display: none; }
+  .pl-now .ico { grid-row: span 3; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: #E7ECF1; color: var(--steel-d); align-self: start; }
+  .pl-now .k { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; }
+  .pl-now .pw { font: 700 16px/1.35 var(--serif); color: var(--ink); }
+  .pl-now .pw small { font: 600 12px/1 var(--sans); color: var(--muted); margin-left: 6px; }
+  .pl-now .chips2 { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
+  .pl-now .ch { font: 600 11.5px/20px var(--sans); padding: 0 7px; border-radius: 2px; border: 1px solid; }
+  .pl-now .ch.weak { color: #2F5D45; border-color: #A9C4B2; background: #EEF4EF; }
+  .pl-now .ch.res { color: #8A2E27; border-color: #E6C3C7; background: #FBF1F2; }
+  .pl-now .ch.sp { color: #4A3F78; border-color: #C9C1E3; background: #F3F1FA; }
+  .pl-now p { grid-column: 1 / -1; margin: 6px 0 0; padding-top: 8px; border-top: 1px dashed var(--line-in); font: 500 13.5px/1.65 var(--serif); color: var(--ink-2); }
+  @media (max-width: 520px) {
+    .pl-list { gap: 6px; }
+    .pl { padding: 8px 8px 8px 11px; gap: 4px; }
+    .pl b { font-size: 13.5px; }
+    .pl .meta { flex-direction: column; align-items: flex-start; gap: 3px; }
+    .pl .lv { font-size: 10.5px; line-height: 16px; padding: 0 5px; }
+    .pl .pl-tr { font-size: 10.5px; }
+    .pl .pl-tag { font-size: 9.5px; padding: 1px 5px 2px 6px; }
+    .pl.on b { padding-right: 0; }
+    .pl .pl-tag { top: auto; bottom: 0; border-bottom-left-radius: 0; border-top-left-radius: 3px; }
+    .pl.on { padding-bottom: 20px; }
+    .pl-head small { display: none; }
+    .where .at { font-size: 15.5px; }
+  }
 
   /* ── 정신 · 오염 · 광폭화 ── */
   .vital.mind.low .bar i { animation: mind-pulse 1.2s ease-in-out infinite; }
@@ -517,6 +554,28 @@
   .rip .sub { font-size: 13px; color: var(--muted); margin: 4px 0 12px; }
   .rip p { margin: 4px 0; font: 400 14px/1.7 var(--serif); color: var(--ink-2); }
   .rampage.grave { background: #F2F1EE; border-color: #CFCBC2; color: #4E4A42; }
+  .rampage.rescue { background: #EEF3F7; border-color: #B9C7D3; color: #2A4256; }
+  .rampage.rescue.me { background: #2A4256; border-color: #1C2F3F; color: #E9F0F6; }
+  .rampage.rescue.me b { color: #fff; } .rampage.rescue.me small { color: #C9D7E3; }
+  .rampage.rescue b { color: var(--steel-d); } .rampage.rescue small { color: #4E6578; }
+  .rampage.rescue::before { background: #3C5A73; box-shadow: 0 0 0 3px rgba(60, 90, 115, .25); }
+  .rampage.rescue.me::before { background: #9DB3C6; box-shadow: 0 0 0 3px rgba(157, 179, 198, .3); }
+  .fall-opt.wait b { color: var(--steel-d); }
+  .fall-opts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  @media (max-width: 720px) { .fall-opts { grid-template-columns: 1fr; } }
+  .buff-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 6px 10px; font-size: 12.5px; color: #5A4A12; background: #FBF6E8; border: 1px solid #E2CF9E; border-radius: 3px; }
+  .buff-row b { font-weight: 700; }
+  .buff-row svg { color: #A87A1C; flex: none; }
+  .buff-now { padding: 8px 12px; font-size: 13px; color: #5A4A12; background: #FBF6E8; border: 1px solid #E2CF9E; border-radius: 3px; margin-bottom: 4px; }
+  .inv-h { margin: 14px 0 4px; font: 700 13px/1.4 var(--serif); color: var(--steel-d); display: flex; align-items: center; gap: 8px; grid-column: 1 / -1; }
+  .inv-h::after { content: ""; flex: 1; height: 1px; background: var(--line-in); }
+  .inv-h:first-child, .buff-now + .inv-h { margin-top: 2px; }
+  .craft-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 2px 0 6px; }
+  .chipbtn { min-height: 32px; padding: 0 12px; font-size: 13px; border: 1px solid var(--line-soft); background: #fff; border-radius: 16px; color: var(--ink-2); }
+  .chipbtn.on { background: var(--steel-d); border-color: var(--steel-d); color: #fff; }
+  .craft-can { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); cursor: pointer; }
+  @media (max-width: 520px) { .craft-can { margin-left: 0; width: 100%; } }
+  .pl-now .ch.drop { color: #5A4A12; border-color: #E2CF9E; background: #FBF6E8; }
   .rampage.grave b { color: #34312B; } .rampage.grave small { color: #6E6A60; }
   .rampage.grave::before { background: #8C877C; box-shadow: none; animation: none; }
   .gr-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 2px; border-top: 1px solid var(--line-in); font-size: 14px; }
@@ -1014,6 +1073,7 @@
         <div class="attr"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3C5A73" stroke-width="1.5" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="2.5"/></svg><b id="st-wisdom"></b><span>지혜</span></div>
         <div class="attr"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3C5A73" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M4 17l-1-10 5 4 4-6 4 6 5-4-1 10z"/><path d="M4 20h16"/></svg><b id="st-majesty"></b><span>위엄</span></div>
       </div>
+      <div class="buff-row" id="buff-row" hidden></div>
       <div class="pts-row" id="pts-row" hidden><span>나눌 능력치 포인트 <b id="pts-n"></b></span><button class="btn primary" type="button" id="pts-open">나누기</button></div>
       <button type="button" class="linkbtn more-char" id="char-more">특성 · 장신구 · 성향 자세히 보기</button>
     </section>
@@ -1024,14 +1084,17 @@
         <div class="where">
           <span class="k">지금 머무는 곳</span>
           <div class="title"><h1 id="region-name"></h1><span class="tag" id="region-tag"></span></div>
+          <div class="at" id="region-at"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg><span id="region-at-t"></span></div>
           <p class="quote" id="region-desc"></p>
         </div>
         <div class="places" id="places" hidden>
+          <div class="pl-head">이곳의 장소<small>눌러서 옮겨 간다</small></div>
           <div class="pl-list" id="pl-list" role="group" aria-label="이곳의 장소"></div>
           <div class="pl-now" id="pl-now"></div>
         </div>
         <div class="rampage-bars" id="rampage-bars"></div>
         <div class="rampage-bars" id="grave-bars"></div>
+        <div class="rampage-bars" id="rescue-bars"></div>
         <div class="corrupt-note" id="corrupt-note" hidden></div>
         <div class="event-bar" id="event-bar" hidden><span>일이 생겼다. <b id="event-bar-title"></b></span><button class="btn primary" type="button" id="event-bar-open">살펴보기</button></div>
         <div class="actions" id="actions">
@@ -1265,6 +1328,7 @@
     <div class="scar-row" id="fall-scars"></div>
     <div class="fall-opts">
       <button type="button" class="fall-opt" id="fall-revive"><b>상흔을 입고 일어선다</b><small id="fall-revive-desc"></small></button>
+      <button type="button" class="fall-opt wait" id="fall-wait"><b>도움을 기다린다</b><small id="fall-wait-desc"></small></button>
       <button type="button" class="fall-opt die" id="fall-die"><b>긴 잠에 든다</b><small>이 드래곤은 영원히 잠든다. 독립한 새끼들이 추모하러 오고, 둥지에 남은 식구와 금화·물건은 3일 동안 다른 드래곤이 거둘 수 있다. 아무도 거두지 않은 식구는 실종된다. 같은 계정으로 새 드래곤을 만들 수 있다.</small></button>
     </div>
   </div>
@@ -1615,9 +1679,11 @@
     $('mind-vital').title = me.berserkInfo ? '광폭화 중' : `3분마다 1씩 찬다 (둥지에서 쉬면 더 빨리)`;
     renderRampages();
     renderGraves();
+    renderRescues();
     if (S.region) { renderCorrupt(); renderPlaces(); }
     checkFallen();
     for (const k of ['claw', 'scale', 'wing', 'wisdom', 'majesty']) { const on = (me.scars || []).includes(k); const p2 = $(`st-${k}`).parentElement; p2.classList.toggle('scar', on); if (on) p2.title = '상흔이 남았다 (영구 −1)'; }
+    renderBuff();
     $('pts-row').hidden = !me.statPts;
     $('pts-n').textContent = me.statPts || 0;
     renderGear();
@@ -2065,18 +2131,32 @@
   function effectText(it) {
     if (it.type === 'use') {
       const u = it.use, out = [];
+      if (u.buff) { const B = S.buffs?.[u.buff]; return B ? `${S.buffs.minutes || 60}분 동안 ${B.name}: ${B.desc} (사냥·강적 전투)` : ''; }
       if (u.hp) out.push(`체력 +${u.hp}`);
       if (u.en) out.push(`기력 +${u.en}`);
       if (u.ap) out.push(`행동력 +${u.ap}`);
+      if (u.mind) out.push(`정신 +${u.mind}`);
       return out.join(', ');
     }
     if (it.type === 'equip') {
       const out = Object.entries(it.bonus || {}).map(([k, v]) => `${statName(k)} +${v}`);
       if (it.expRare) out.push(`원정 귀한 물건 +${Math.round(it.expRare * 100)}%`);
+      if (it.mindWard) out.push(`깎이는 정신 −${Math.round((1 - it.mindWard) * 100)}%`);
       return `${slotName(it.slot)} 장신구. ${out.join(', ')}`;
+    }
+    if (it.cat === 'trophy') {
+      const where = dropPlaces(it.id);
+      return where ? `사냥 전리품 · ${where}` : '사냥 전리품';
     }
     return '';
   }
+
+  // 이 전리품이 나오는 장소
+  function dropPlaces(id) {
+    if (!S.places) return '';
+    return Object.values(S.places).filter((p) => p.drop === id).map((p) => `${p.name}(${S.regions[p.region]?.name || ''})`).join(', ');
+  }
+  const itemCat = (it) => (it.type === 'equip' ? 'equip' : it.type === 'use' ? (it.use?.buff ? 'buff' : 'use') : it.cat === 'trophy' ? 'trophy' : 'mat');
 
   // 프로필 카드의 장신구 자리
   function renderGear() {
@@ -2096,6 +2176,19 @@
       box.appendChild(b);
     }
   }
+
+  // 강화 음식 효과 (왼쪽 칸)
+  function renderBuff() {
+    const b = S.me?.buff;
+    const B = b && b.until > Date.now() ? S.buffs?.[b.id] : null;
+    $('buff-row').hidden = !B;
+    if (!B) return;
+    $('buff-row').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6-4.5-4.2 6.1-.7z"/></svg><b></b><span></span>';
+    $('buff-row').querySelector('b').textContent = B.name;
+    $('buff-row').querySelector('span').textContent = `${B.desc} · ${leftMin(b.until)}분`;
+    $('buff-row').title = '강화 음식 효과. 사냥과 강적 전투에서만 (결투장 제외)';
+  }
+  setInterval(() => { if (S.me) renderBuff(); }, 30000);
 
   // ── 소지품 ──
   let invCache = {};
@@ -2135,14 +2228,23 @@
     }
 
     const order = { rare: 0, uncommon: 1, common: 2 };
-    const typeOrder = (it) => (it.type === 'equip' ? 0 : it.type === 'use' ? 1 : 2);
+    const CATS = ['equip', 'use', 'buff', 'trophy', 'mat'];
+    const CAT_NAME = { equip: '장신구', use: '회복약', buff: '강화 음식', trophy: '사냥 전리품', mat: '재료' };
     const list = Object.entries(invCache)
       .filter(([id, q]) => S.items[id] && q > 0)
-      .sort(([a], [b]) => typeOrder(S.items[a]) - typeOrder(S.items[b])
+      .sort(([a], [b]) => CATS.indexOf(itemCat(S.items[a])) - CATS.indexOf(itemCat(S.items[b]))
         || order[S.items[a].rarity] - order[S.items[b].rarity]
         || S.items[a].name.localeCompare(S.items[b].name, 'ko'));
     const box = $('inv-list');
     box.replaceChildren();
+    const buf = S.me.buff && S.me.buff.until > Date.now() ? S.buffs?.[S.me.buff.id] : null;
+    if (buf) {
+      const n = document.createElement('div');
+      n.className = 'buff-now';
+      n.textContent = `지금 ${buf.name} 상태 · ${buf.desc} · ${leftMin(S.me.buff.until)}분 남음`;
+      box.appendChild(n);
+    }
+    let lastCat = null;
     if (!list.length) {
       const p = document.createElement('div');
       p.className = 'empty';
@@ -2151,12 +2253,26 @@
     }
     for (const [id, qty] of list) {
       const it = S.items[id];
+      const cat = itemCat(it);
+      if (cat !== lastCat) {
+        lastCat = cat;
+        const h = document.createElement('h3');
+        h.className = 'inv-h';
+        h.textContent = CAT_NAME[cat];
+        box.appendChild(h);
+      }
       const row = document.createElement('div');
       row.className = `it ${it.rarity}`;
       row.innerHTML = '<b></b><span class="q"></span><small></small>';
       row.querySelector('b').textContent = it.name;
       row.querySelector('.q').textContent = `×${qty}`;
       row.querySelector('small').textContent = it.desc;
+      if (it.cat === 'trophy') {
+        const eff = document.createElement('span');
+        eff.className = 'eff';
+        eff.textContent = effectText(it);
+        row.appendChild(eff);
+      }
       if (it.type) {
         const eff = document.createElement('span');
         eff.className = 'eff';
@@ -2624,12 +2740,43 @@
     $('craft-status').textContent = `기력 ${me.en} / ${me.enMax}, 지혜 ${me.stats.wisdom}. 기력은 2분마다 1씩 찬다.`;
     const box = $('craft-list');
     box.replaceChildren();
-    const groups = [['회복약', (it) => it.type === 'use'], ['장신구', (it) => it.type === 'equip']];
-    for (const [title, test] of groups) {
+    // 위쪽 고르기: 종류별로 나눠 보기, 재료가 다 있는 것만 보기
+    const bar = document.createElement('div');
+    bar.className = 'craft-bar';
+    const TABS = [['all', '전체'], ['use', '회복약'], ['buff', '강화 음식'], ['equip', '장신구']];
+    for (const [k, label] of TABS) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `chipbtn${craftTab === k ? ' on' : ''}`;
+      b.setAttribute('aria-pressed', String(craftTab === k));
+      b.textContent = label;
+      b.addEventListener('click', () => { craftTab = k; renderCraft(); });
+      bar.appendChild(b);
+    }
+    const lab = document.createElement('label');
+    lab.className = 'craft-can';
+    lab.innerHTML = '<input type="checkbox"> 재료가 다 있는 것만';
+    const cb = lab.querySelector('input');
+    cb.checked = craftCan;
+    cb.addEventListener('change', () => { craftCan = cb.checked; renderCraft(); });
+    bar.appendChild(lab);
+    box.appendChild(bar);
+    const hasAll = (r) => Object.entries(r.needs).every(([id, n]) => (invCache[id] || 0) >= n);
+    const groups = [
+      ['회복약', (it) => itemCat(it) === 'use', 'use'],
+      ['강화 음식', (it) => itemCat(it) === 'buff', 'buff'],
+      ...S.slots.map((sl) => [`장신구 · ${sl.name}`, (it) => it.type === 'equip' && it.slot === sl.key, 'equip']),
+    ];
+    let shown = 0;
+    for (const [title, test, tab] of groups) {
+      if (craftTab !== 'all' && craftTab !== tab) continue;
+      const rs = S.recipes.filter((x) => test(S.items[x.out]) && (!craftCan || hasAll(x)));
+      if (!rs.length) continue;
+      shown += rs.length;
       const h = document.createElement('h3');
       h.textContent = title;
       box.appendChild(h);
-      for (const r of S.recipes.filter((x) => test(S.items[x.out]))) {
+      for (const r of rs) {
         const it = S.items[r.out];
         const row = document.createElement('div');
         row.className = `recipe ${it.rarity}`;
@@ -2639,7 +2786,10 @@
         const needs = row.querySelector('.needs');
         let ok = true;
         const add = (text, lack) => { const n = document.createElement('span'); n.className = `need${lack ? ' lack' : ''}`; n.textContent = text; needs.appendChild(n); if (lack) ok = false; };
-        for (const [id, n] of Object.entries(r.needs)) add(`${S.items[id].name} ${invCache[id] || 0}/${n}`, (invCache[id] || 0) < n);
+        for (const [id, n] of Object.entries(r.needs)) {
+          add(`${S.items[id].name} ${invCache[id] || 0}/${n}`, (invCache[id] || 0) < n);
+          if (S.items[id].cat === 'trophy') needs.lastChild.title = effectText(S.items[id]);
+        }
         const en = me.perks?.smith ? Math.ceil(r.en * 0.7) : r.en; // 둥지의 대장장이
         add(`기력 ${en}${en < r.en ? ` (${me.perks.smith} 덕분에 −${r.en - en})` : ''}`, me.en < en);
         if (r.wis) add(`지혜 ${r.wis} 이상`, me.stats.wisdom < r.wis);
@@ -2649,7 +2799,14 @@
         box.appendChild(row);
       }
     }
+    if (!shown) {
+      const p = document.createElement('p');
+      p.className = 'note';
+      p.textContent = craftCan ? '지금 가진 재료로 만들 수 있는 것이 없다. 사냥 전리품을 모아 보자.' : '이 종류의 제작법이 없다.';
+      box.appendChild(p);
+    }
   }
+  let craftTab = 'all', craftCan = false;
   function openCraft() { fetchInv(() => { renderCraft(); openPanel('craft-dlg'); }); }
   $('craft-close').addEventListener('click', () => $('craft-dlg').close());
 
@@ -2666,6 +2823,7 @@
     renderCorrupt();
     renderPlaces();
     renderGraves();
+    renderRescues();
 
     renderOverlay();
     renderActions();
@@ -3301,22 +3459,29 @@
   function renderPlaces() {
     const ids = S.regionPlaces?.[S.region];
     $('places').hidden = !ids;
+    const cur = ids && ids.includes(S.me?.place) ? S.places[S.me.place] : null;
+    $('region-at').classList.toggle('show', !!cur);
+    $('region-at-t').textContent = cur ? `${cur.name}에 머무는 중` : '';
     if (!ids) return;
     const box = $('pl-list');
     box.replaceChildren();
     for (const id of ids) {
       const p = S.places[id];
       const tier = placeTier(p);
+      const on = S.me?.place === id;
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = `pl ${tier}${S.me?.place === id ? ' on' : ''}${tier === 'locked' ? ' locked' : ''}`;
-      b.innerHTML = '<b></b><span class="lv"></span>';
+      b.className = `pl ${tier}${on ? ' on' : ''}`;
+      b.innerHTML = '<span class="pl-tag">현위치</span><b></b><span class="meta"><span class="lv"></span><span class="pl-tr"></span></span>';
       b.querySelector('b').textContent = p.name;
-      b.querySelector('.lv').textContent = `Lv.${p.level} · ${TIER_NAME[tier]}`;
-      b.setAttribute('aria-pressed', String(S.me?.place === id));
+      b.querySelector('.lv').textContent = `Lv.${p.level}`;
+      b.querySelector('.pl-tr').textContent = TIER_NAME[tier];
+      b.setAttribute('aria-pressed', String(on));
+      b.setAttribute('aria-label', `${p.name}, 사냥터 레벨 ${p.level}, ${TIER_NAME[tier]}${on ? ', 머무는 중' : ''}`);
       b.title = tier === 'locked' ? `레벨 ${p.level - S.placeRules.tooHard}부터 들어갈 수 있다` : p.desc;
       b.addEventListener('click', () => {
-        if (S.me?.place === id) return;
+        if (on) return;
+        if (tier === 'locked') return toast(`레벨 ${p.level - S.placeRules.tooHard}부터 들어갈 수 있다.`);
         socket.emit('place:go', { id }, (res) => {
           if (res.error) return toast(res.error);
           toast(`${p.name}. ${res.result.lines[0]}`);
@@ -3324,23 +3489,32 @@
       });
       box.appendChild(b);
     }
-    const cur = S.places[S.me?.place];
     const now = $('pl-now');
     now.replaceChildren();
     if (!cur) return;
     const els = (l) => l.map((x) => S.combat.elements[x]).join('·');
-    const b = document.createElement('b');
-    b.textContent = `${cur.name} · 사냥터 Lv.${cur.level} · ${cur.creature}`;
-    now.appendChild(b);
-    const parts = [];
-    if (cur.weak.length) parts.push(`약점 ${els(cur.weak)}`);
-    if (cur.resist.length) parts.push(`저항 ${els(cur.resist)}`);
-    parts.push(`특기 ${cur.special.name}`);
-    const e = document.createElement('span');
-    e.className = 'el';
-    e.textContent = ` (${parts.join(', ')})`;
-    now.appendChild(e);
-    now.append(document.createElement('br'), cur.desc);
+    const ico = document.createElement('span');
+    ico.className = 'ico';
+    ico.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19L19 5"/><path d="M14 5h5v5"/><path d="M4 15l5 5"/></svg>';
+    const k = document.createElement('span');
+    k.className = 'k';
+    k.textContent = `${cur.name}의 사냥감`;
+    const who = document.createElement('span');
+    who.className = 'pw';
+    who.textContent = cur.creature;
+    const sm = document.createElement('small');
+    sm.textContent = `Lv.${cur.level}`;
+    who.appendChild(sm);
+    const chips = document.createElement('span');
+    chips.className = 'chips2';
+    const chip = (cls, t) => { const c = document.createElement('span'); c.className = `ch ${cls}`; c.textContent = t; chips.appendChild(c); };
+    if (cur.weak.length) chip('weak', `약점 ${els(cur.weak)}`);
+    if (cur.resist.length) chip('res', `저항 ${els(cur.resist)}`);
+    chip('sp', `특기 ${cur.special.name}`);
+    if (cur.drop && S.items[cur.drop]) chip('drop', `전리품 ${S.items[cur.drop].name}`);
+    const d = document.createElement('p');
+    d.textContent = cur.desc;
+    now.append(ico, k, who, chips, d);
   }
 
   // ── 쓰러짐 · 긴 잠 · 남겨진 둥지 ──
@@ -3356,6 +3530,18 @@
       c.textContent = on ? `${st.name} · 상흔` : st.name;
       box.appendChild(c);
     }
+    // 도움을 기다리는 중이면 창을 닫고 지역 카드에 표시 (채팅·텔레파시로 도움을 청할 수 있게)
+    if (f.waiting && f.waiting > Date.now() && !S.fallOpenAnyway && !$('fall-dlg').open) { renderRescues(); return; }
+    S.fallOpenAnyway = false;
+    const waitH = Math.round(S.deathCfg.waitMs / 3600000);
+    const waiting = f.waiting && f.waiting > Date.now();
+    $('fall-wait').disabled = f.waited && !waiting;
+    $('fall-wait').querySelector('b').textContent = waiting ? '계속 기다린다' : '도움을 기다린다';
+    $('fall-wait-desc').textContent = waiting
+      ? `도움을 기다리는 중이다. 남은 시간 ${fmtLeft(f.waiting)}.`
+      : f.waited
+        ? '이미 기다려 보았지만 아무도 오지 않았다. 이제 스스로 정해야 한다.'
+        : `${waitH}시간 동안 다른 드래곤이 와서 일으켜 주기를 기다린다. 누군가 이곳에 와 주면 상흔 없이 일어선다. 오지 않으면 그때 다시 고른다. (쓰러질 때마다 한 번)`;
     $('fall-revive').disabled = !f.canRevive;
     $('fall-revive-desc').textContent = f.canRevive
       ? `상흔이 없는 능력치 하나가 무작위로 영구히 1 줄어든다. 체력 30%로 일어난다. (상흔 ${f.scars.length} / ${S.stats.length})`
@@ -3366,6 +3552,16 @@
     }
   }
   $('fall-dlg').addEventListener('cancel', (e) => e.preventDefault());
+  const fmtLeft = (t) => { const m = Math.max(1, Math.ceil((t - Date.now()) / 60000)); return m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m}분`; };
+  $('fall-wait').addEventListener('click', () => {
+    const f = S.me?.fallen;
+    if (f?.waiting && f.waiting > Date.now()) { $('fall-dlg').close(); renderRescues(); return; }
+    socket.emit('fallen:wait', {}, (res) => {
+      if (res.error) return toast(res.error);
+      $('fall-dlg').close();
+      toast(res.lines.join(' '));
+    });
+  });
   $('fall-revive').addEventListener('click', () => {
     socket.emit('fallen:revive', {}, (res) => {
       if (res.error) return toast(res.error);
@@ -3390,6 +3586,58 @@
   });
   $('rip-dlg').addEventListener('cancel', (e) => e.preventDefault());
   $('rip-new').addEventListener('click', () => location.reload());
+
+  // ── 쓰러져 도움을 기다리는 드래곤 ──
+  S.rescues = [];
+  function renderRescues() {
+    const box = $('rescue-bars');
+    if (!box) return;
+    box.replaceChildren();
+    const mf = S.me?.fallen;
+    if (mf && mf.waiting && mf.waiting > Date.now()) {
+      const row = document.createElement('div');
+      row.className = 'rampage rescue me';
+      const t = document.createElement('div');
+      t.className = 't';
+      t.innerHTML = '<b>쓰러져 도움을 기다리는 중</b><small></small>';
+      t.querySelector('small').textContent = `${S.regions[S.region]?.name || ''}에 다른 드래곤이 와서 일으켜 주어야 한다. 남은 시간 ${fmtLeft(mf.waiting)}`;
+      row.appendChild(t);
+      const b1 = document.createElement('button');
+      b1.type = 'button'; b1.className = 'btn'; b1.textContent = '텔레파시로 도움 청하기';
+      b1.addEventListener('click', openTpList);
+      const b2 = document.createElement('button');
+      b2.type = 'button'; b2.className = 'btn'; b2.textContent = '직접 정하기';
+      b2.addEventListener('click', () => { S.fallOpenAnyway = true; checkFallen(); });
+      row.append(b1, b2);
+      box.appendChild(row);
+    }
+    for (const r of S.rescues) {
+      if (r.id === S.me?.id || r.until <= Date.now()) continue;
+      const here = r.region === S.region;
+      const row = document.createElement('div');
+      row.className = 'rampage rescue';
+      const t = document.createElement('div');
+      t.className = 't';
+      t.innerHTML = '<b></b><small></small>';
+      t.querySelector('b').textContent = `${r.name}${josa(r.name, '이', '가')} 쓰러져 도움을 기다린다`;
+      t.querySelector('small').textContent = `${S.regions[r.region]?.name || ''} · 레벨 ${r.level} · 남은 시간 ${fmtLeft(r.until)}${here ? ` · 행동력 ${S.deathCfg.helpAp}, 기력 ${S.deathCfg.helpEn}` : ''}`;
+      row.appendChild(t);
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = here ? 'btn primary' : 'btn';
+      b.textContent = here ? '일으켜 세우기' : `${S.regions[r.region]?.name || ''}에 있다`;
+      b.disabled = !here || !!S.me?.fallen;
+      if (here) b.addEventListener('click', () => {
+        socket.emit('fallen:help', { id: r.id }, (res) => {
+          if (res.error) return toast(res.error);
+          showResult(res.result);
+        });
+      });
+      row.appendChild(b);
+      box.appendChild(row);
+    }
+  }
+  setInterval(() => { if (S.me) renderRescues(); }, 30000);
 
   S.graves = [];
   function renderGraves() {
@@ -4602,7 +4850,10 @@
       S.rules = data.rules;
       S.huntable = data.huntable;
       S.slots = data.slots;
+      for (const [k, v] of Object.entries(S.items || {})) v.id = k;
       S.recipes = data.recipes;
+      S.buffs = data.buffs || {};
+      S.deathCfg = data.death || { waitMs: 3 * 3600000, helpAp: 2, helpEn: 8 };
       S.shops = data.shops;
       S.trade = data.trade;
       S.nestRules = data.nestRules;
@@ -4655,7 +4906,7 @@
     socket.on('chat:deleted', onChatDeleted);
     socket.on('notice', (r) => {
       // 동료·선물·교환 소식은 바로 알림으로, 둥지 소식은 소식 카드로
-      if (['동료', '동료 요청', '선물', '교환', '결투', '부고'].includes(r.title)) { toast(r.lines.join(' ')); if (r.items?.length) fetchInv(); }
+      if (['동료', '동료 요청', '선물', '교환', '결투', '부고', '구조 요청'].includes(r.title)) { toast(r.lines.join(' ')); if (r.items?.length) fetchInv(); }
       else addNews(r);
     });
     socket.on('rel:changed', () => { loadRel(); refreshProfile(); });
@@ -4674,6 +4925,8 @@
     socket.on('grave', onGrave);
     socket.on('grave:end', (x) => { S.graves = S.graves.filter((g) => g.id !== x.id); renderGraves(); });
     socket.on('fallen', () => checkFallen());
+    socket.on('rescue:list', (l) => { S.rescues = l || []; renderRescues(); });
+    socket.on('rescued', (r) => { if ($('fall-dlg').open) $('fall-dlg').close(); showResult({ title: '구조', lines: r.lines }); });
     socket.on('rampage:end', onRampageEnd);
     socket.on('battle:start', (s2) => { if ($('arena-dlg').open) $('arena-dlg').close(); openBattle(s2.view, { lines: s2.lines }); });
     socket.on('battle:update', onBattleUpdate);

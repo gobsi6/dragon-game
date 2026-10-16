@@ -5,7 +5,7 @@
 
 const {
   REGIONS, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, RECIPES, SLOTS, STANCES, SHOPS, repTier, TRADE, NEST,
-  SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES,
+  SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS,
 } = require('./game-data');
 
 const SR = STANCE_RULES;
@@ -567,6 +567,20 @@ function craft(d, outId, have) {
   return { title: '제작', lines: [`${name}${josa(name, '을', '를')} 만들었다.`], items, made: [{ id: r.out, qty: 1 }], gold: 0, xp, levelUp };
 }
 
+// ── 강화 음식 ──────────────────────────────────────
+// 전투 설정(combat JSON)에 { buff: { id, until } }로 저장. 한 번에 하나만 효과가 있음
+function combatJson(d) {
+  if (typeof d.combat === 'string' || !d.combat) {
+    try { d.combat = JSON.parse(d.combat || '{}'); } catch { d.combat = {}; }
+  }
+  return d.combat;
+}
+function buffOf(d, now = Date.now()) {
+  const b = combatJson(d).buff;
+  if (!b || !BUFFS[b.id] || b.until <= now) return null;
+  return { id: b.id, until: b.until, ...BUFFS[b.id] };
+}
+
 // ── 회복약 사용 ────────────────────────────────────
 function useItem(d, id, have) {
   if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
@@ -575,13 +589,25 @@ function useItem(d, id, have) {
   if (have(id) < 1) return { error: '가지고 있지 않다.' };
   const u = it.use;
   const lines = [];
-  if (u.hp) {
+  if (u.buff) {
+    const B = BUFFS[u.buff];
+    const old = buffOf(d);
+    combatJson(d).buff = { id: u.buff, until: Date.now() + BUFFS.minutes * 60000 };
+    lines.push(`${BUFFS.minutes}분 동안 ${B.name} 상태가 된다. (사냥·강적 전투에서 ${B.desc})`);
+    if (old && old.id !== u.buff) lines.push(`먼저 있던 ${old.name}의 효과는 사라졌다.`);
+    return { title: it.name, lines, items: [{ id, qty: -1 }] };
+  }
+  // 여러 효과가 있는 물건은 하나라도 쓸모가 있으면 씀
+  const full = (u.hp == null || d.hp >= hpCap(d)) && (u.en == null || d.en >= enCap(d)) && (u.ap == null || d.ap >= d.ap_max);
+  const multi = ['hp', 'en', 'ap'].filter((k) => u[k]).length > 1;
+  if (multi && full) return { error: '이미 기운이 넘친다.' };
+  if (u.hp && !(multi && d.hp >= hpCap(d))) {
     if (d.hp >= hpCap(d)) return { error: '체력이 이미 가득 차 있다.' };
     const before = d.hp;
     d.hp = Math.min(hpCap(d), d.hp + u.hp);
     lines.push(`체력이 ${d.hp - before} 회복되었다.`);
   }
-  if (u.en) {
+  if (u.en && !(multi && d.en >= enCap(d))) {
     if (d.en >= enCap(d)) return { error: '기력이 이미 가득 차 있다.' };
     const before = d.en;
     d.en = Math.min(enCap(d), d.en + u.en);
@@ -594,7 +620,7 @@ function useItem(d, id, have) {
     d.mind = Math.min(MIND.max, d.mind + u.mind);
     lines.push(`정신이 ${d.mind - before} 맑아졌다.`);
   }
-  if (u.ap) {
+  if (u.ap && !(multi && d.ap >= d.ap_max)) {
     if (d.ap >= d.ap_max) return { error: '행동력이 이미 가득 차 있다.' };
     const before = d.ap;
     d.ap = Math.min(d.ap_max, d.ap + u.ap);
@@ -887,7 +913,7 @@ function hoardValue(gold, items) {
 
 module.exports = {
   regen, gather, explore, hunt, startExpedition, finishExpedition,
-  craft, useItem, equip, unequip, statsOf, bonusOf, hpCap, enCap, equipOf,
+  craft, useItem, equip, unequip, statsOf, bonusOf, hpCap, enCap, equipOf, buffOf,
   repOf, setStance, marketInfo, buy, sell, intimidate,
   buildNest, flyHome, startRest, stopRest, hoardMove, hoardValue,
   actionCost, townArrows, hasBounty, addRep, addFame, craftEn, gainXp, spendStats,

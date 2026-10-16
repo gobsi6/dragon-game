@@ -128,6 +128,7 @@ const meOf = (d) => ({
   berserkInfo: (() => { const b = logic.berserkOf(d); return b ? { until: b.until, region: b.region, hp: b.hp, hpMax: b.hpMax } : null; })(),
   corrupt: { region: logic.corruptedRegion(), until: logic.corruptUntil() },
   fallen: logic.isFallen(d) ? death.view(d) : null,
+  buff: (() => { const b = logic.buffOf(d); return b ? { id: b.id, until: b.until } : null; })(),
   scars: death.scarsOf(d),
   bio: bioOf(d),
   statBonus: logic.bonusOf(d).stats,       // 그중 장신구 몫
@@ -318,6 +319,8 @@ io.on('connection', (socket) => {
     rules: { cost: RULES.cost, apEvery: RULES.apEvery, enEvery: RULES.enEvery, expeditionMinutes: RULES.expeditionMinutes },
     slots: SLOTS,
     recipes: RECIPES,
+    buffs: require('./game-data').BUFFS,
+    death: { waitMs: require('./game-data').DEATH.waitMs, helpAp: require('./game-data').DEATH.helpAp, helpEn: require('./game-data').DEATH.helpEn },
     shops: Object.keys(SHOPS),
     trade: TRADE,
     nestRules: NEST,
@@ -332,6 +335,7 @@ io.on('connection', (socket) => {
   if (dragon) enterWorld(socket, dragon);
   socket.emit('rampage:list', arena.rampages());
   socket.emit('grave:list', death.graves());
+  socket.emit('rescue:list', death.rescues());
 
   socket.on('dragon:create', (payload, ack) => {
     if (typeof ack !== 'function') return;

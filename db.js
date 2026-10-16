@@ -288,6 +288,7 @@ const q = {
   userCount:    db.prepare("SELECT COUNT(*) AS n FROM users WHERE username NOT LIKE '#묘비#%'"),
   setBio:       db.prepare('UPDATE dragons SET bio = ? WHERE id = ?'),
   graveIds:     db.prepare("SELECT id FROM dragons WHERE dead_at IS NOT NULL AND fallen IS NOT NULL AND fallen NOT LIKE '%\"closed\":true%'"),
+  waitIds:      db.prepare("SELECT id FROM dragons WHERE dead_at IS NULL AND fallen LIKE '%\"wait\"%'"),
   graveUser:    db.prepare('INSERT INTO users (username, pw_hash, is_gm, created_at) VALUES (?, ?, 0, ?)'),
   setOwner:     db.prepare('UPDATE dragons SET user_id = ?, dead_at = ? WHERE id = ?'),
   invClear:     db.prepare('DELETE FROM inventory WHERE dragon_id = ?'),
@@ -395,6 +396,7 @@ module.exports = {
   dragonIds: () => q.dragonIds.all().map((r) => r.id),
   berserkIds: () => q.berserkIds.all().map((r) => r.id),
   graveIds: () => q.graveIds.all().map((r) => r.id),
+  waitIds: () => q.waitIds.all().map((r) => r.id),       // 쓰러져 도움을 기다리는 (또는 기다렸던) 드래곤
   // 계정 탈퇴: 계정과 그 드래곤, 드래곤에 딸린 모든 것(식구·소지품·관계·텔레파시…)이 함께 지워짐
   deleteUser: (userId) => q.delUser.run(userId),
   gmCount: () => q.gmCount.get().n,

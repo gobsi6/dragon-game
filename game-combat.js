@@ -3,7 +3,7 @@
 // - 강적·결투장: 매 턴 직접 고름 (실시간 결투에서 시간을 넘기면 자동으로 고름)
 // 전투 하나 = battle { kind, turn, a, b, log, over, winner }. a·b는 싸우는 쪽(fighter)
 const {
-  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, STATUS, CREATURE_COMBAT, ELITES, CREATURES, ITEMS, RULES, STANCE_RULES, KINDS, MIND, PLACES,
+  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, STATUS, CREATURE_COMBAT, ELITES, CREATURES, ITEMS, RULES, STANCE_RULES, KINDS, MIND, PLACES, PLACE_RULES,
 } = require('./game-data');
 const logic = require('./game-logic');
 
@@ -68,11 +68,14 @@ function fromDragon(d, context) {
   }
   const hpMax = logic.hpCap(d);
   const enMax = logic.enCap(d);
+  // 강화 음식: 사냥·강적 전투에서만 (결투장에는 적용되지 않음)
+  const bf = hunt ? logic.buffOf(d) : null;
   return {
     id: d.id, name: d.name, kind: d.kind, creature: false,
     hp: hunt ? d.hp : hpMax, hpMax, en: hunt ? d.en : enMax, enMax,
-    atk, def: st.scale, spd: st.wing, mag: st.wisdom, maj: st.majesty,
-    taken: hunt ? tm.huntDmg * (d.perks?.knight ? 0.7 : 1) : 1, // 받는 피해 배율
+    atk: atk * (bf?.atk || 1), def: st.scale, spd: st.wing + (bf?.spd || 0), mag: st.wisdom * (bf?.mag || 1), maj: st.majesty,
+    taken: (hunt ? tm.huntDmg * (d.perks?.knight ? 0.7 : 1) : 1) * (bf?.taken || 1), // 받는 피해 배율
+    buff: bf?.id || null,
     element: BREATHS[d.kind]?.element || null,
     breath: BREATHS[d.kind] ? d.kind : null,
     skills: loadout(d),
@@ -119,6 +122,10 @@ function blocked(f, act) {
   return null;
 }
 const has = (f, k) => (f.st[k] || 0) > 0;
+
+// 치유: 지혜(마력)가 높을수록, 최대 체력이 클수록 많이
+const healAmount = (f, s) => Math.round(s.heal.base + f.mag * s.heal.mag + f.hpMax * s.heal.pct);
+const STATUS_LIST = (ks) => ks.map((k) => STATUS[k]).join('·');
 
 // 피해 계산. magic: 숨결처럼 비늘을 덜 타는 공격
 function damage(att, def, power, { magic = false, element = null } = {}) {
@@ -198,6 +205,18 @@ function perform(b, f, foe, act, lines) {
       (f.used ||= []).push(s.name);
       f.cd[act.id] = s.cd + 1; // 이번 턴 끝에 하나 줄어듦
       if (s.self) for (const [k, n] of Object.entries(s.self)) f.st[k] = n;
+      if (s.heal) {
+        const h = healAmount(f, s);
+        const before = f.hp;
+        f.hp = Math.min(f.hpMax, f.hp + h);
+        lines.push(`${ga(f)} ${s.name}! 체력을 ${Math.round(f.hp - before)} 되찾았다.`);
+        if (s.cleanse) {
+          const gone = ['burn', 'poison', 'bleed'].filter((k) => has(f, k));
+          for (const k of gone) f.st[k] = 0;
+          if (gone.length) lines.push(`${STATUS_LIST(gone)}${josa(STATUS[gone[gone.length - 1]], '이', '가')} 씻겨 나갔다.`);
+        }
+        return;
+      }
       if (s.power) {
         const dealt = hit(f, foe, s.power, { magic: !!s.isBreath, element: s.isBreath ? s.element : null }, lines, `${ga(f)} ${s.name}!`);
         if (dealt) {
@@ -277,11 +296,14 @@ function aiPick(f, foe, { reserve = 0, flee = 0 } = {}) {
     return s && !(f.cd[id] > 0) && f.en - s.en >= reserve;
   };
   const hpr = f.hp / f.hpMax;
+  if (hpr < 0.4 && can('mend')) return { type: 'skill', id: 'mend' }; // 위험하면 숨결보다 치유 먼저
   const br = f.breath && BREATHS[f.breath];
   if (br && can('breath') && !foe.resist.includes(br.element)) {
     const debuffKey = br.debuff && Object.keys(br.debuff)[0];
     if (!debuffKey || !has(foe, debuffKey) || br.power >= 1.3) return { type: 'skill', id: 'breath' };
   }
+  const hurt = ['burn', 'poison', 'bleed'].some((k) => has(f, k));
+  if (can('mend') && (hpr < 0.5 || (hurt && hpr < 0.75))) return { type: 'skill', id: 'mend' };
   if (hpr < 0.45 && can('harden') && !has(f, 'harden')) return { type: 'skill', id: 'harden' };
   if (hpr < 0.6 && can('devour')) return { type: 'skill', id: 'devour' };
   if (can('roar') && !has(foe, 'weaken')) return { type: 'skill', id: 'roar' };
@@ -375,6 +397,9 @@ function huntReward(d, b, c) {
     lines.push(`${b.turn}턴 만에 ${c.name}${josa(c.name, '을', '를')} 쓰러뜨렸다${how}.`);
     const ids = ['beast_hide'];
     if (Math.random() < 0.3 + c.level * 0.05 + (hostile ? STANCE_RULES.hostile.huntFang : 0)) ids.push('sharp_fang');
+    // 장소마다 다른 사냥 전리품 (강화 음식 '행운'이면 더 잘 나옴)
+    const drop = PLACES[b.b.place]?.drop;
+    if (drop && Math.random() < PLACE_RULES.dropChance[ITEMS[drop].rarity] + (logic.buffOf(d)?.drop || 0)) ids.push(drop);
     items = logic.bundle(ids);
     gold = Math.round(randInt(0, 3) * c.level * (hostile ? STANCE_RULES.hostile.huntGold : 1));
     xp = 12 + c.level * 6;
@@ -419,7 +444,8 @@ function eliteReward(d, b) {
   let gold = 0;
   let xp;
   if (b.winner === me) {
-    const ids = ['beast_hide', 'beast_hide', 'sharp_fang',
+    const drop = PLACES[b.place]?.drop;
+    const ids = ['beast_hide', 'beast_hide', 'sharp_fang', ...(drop ? [drop, drop] : []),
       logic.rollItem(b.region, { uncommon: 0.6, rare: 0.3 + lv * 0.02 }), logic.rollItem(b.region, { uncommon: 0.6, rare: 0.15 + lv * 0.02 })];
     items = logic.bundle(ids);
     gold = randInt(20, 40) * lv;

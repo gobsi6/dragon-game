@@ -1,10 +1,12 @@
 // 쓰러짐과 죽음
 // - 직접 싸우는 강적 전투에서 지면 체력 0으로 쓰러진다 (fall). 선택하기 전까지는 아무것도 할 수 없다.
 // - 상흔을 입고 일어선다: 상흔이 없는 능력치 하나가 영구히 −1. 다섯 능력치에 모두 상흔이 생기면 더는 일어설 수 없다.
+// - 도움을 기다린다: 쓰러질 때마다 한 번, 3시간 동안 다른 드래곤이 와서 일으켜 주기를 기다린다.
+//   누군가 같은 지역에 와서 일으켜 주면 상흔 없이 일어선다. 시간이 지나면 다시 둘 중 하나를 골라야 한다.
 // - 긴 잠에 든다: 드래곤은 '잠든 드래곤'으로 기록에 남고, 계정은 새 드래곤을 만들 수 있다.
 //   독립한 새끼들이 추모하러 오고, 둥지에 남은 식구와 재산은 정해진 날 동안 다른 드래곤이 거둘 수 있다.
 //   그동안 아무도 거두지 않은 식구는 실종되고, 재산은 흩어진다.
-const { DEATH, STATS, REGIONS, ITEMS, KINDS, DAY, KIN } = require('./game-data');
+const { DEATH, STATS, REGIONS, ITEMS, KINDS, DAY, KIN, SKILLS } = require('./game-data');
 
 const str = (v) => (typeof v === 'string' ? v.trim() : '');
 function josa(word, a, b) {
@@ -37,7 +39,76 @@ module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broa
     if (e) { sendMe(e.socket, d); e.socket.emit('fallen', view(d)); }
   }
   function view(d) {
-    return { scars: scarsOf(d), canRevive: canRevive(d), kin: (d.kinSummary?.home || []).length };
+    const f = fallenOf(d) || {};
+    return {
+      scars: scarsOf(d), canRevive: canRevive(d), kin: (d.kinSummary?.home || []).length,
+      waiting: waitingOf(d) ? f.wait.until : null, // 도움을 기다리는 중이면 끝나는 시각
+      waited: !!f.waited,                         // 이번에 쓰러져서 이미 기다려 봤는지
+    };
+  }
+
+  // ── 도움을 기다림 ──────────────────────────────────
+  const waitingOf = (d) => { const f = fallenOf(d); return f && f.wait && f.wait.until > Date.now() ? f.wait : null; };
+  function rescueInfo(d) {
+    const w = waitingOf(d);
+    return w ? { id: d.id, name: d.name, kind: d.kind, level: d.level, region: d.fallen.region || d.region, until: w.until } : null;
+  }
+  const rescues = () => db.waitIds().map((id) => rescueInfo(load(id))).filter(Boolean);
+  const pushRescues = () => io.emit('rescue:list', rescues());
+  function wait(d) {
+    const f = fallenOf(d);
+    if (!f) return { error: '쓰러져 있지 않다.' };
+    if (waitingOf(d)) return { error: '이미 도움을 기다리고 있다.' };
+    if (f.waited) return { error: '이번에는 이미 기다려 보았다. 이제 스스로 정해야 한다.' };
+    const until = Date.now() + DEATH.waitMs;
+    d.fallen = { ...f, region: f.region || d.region, wait: { until }, waited: true };
+    db.saveState(d);
+    const where = REGIONS[d.fallen.region].name;
+    const h = Math.round(DEATH.waitMs / 3600000);
+    shout(`[구조 요청] ${ga(d.name)} ${where}에서 쓰러져 도움을 기다린다. ${h}시간 안에 누군가 ${where}에 가서 일으켜 줄 수 있다.`);
+    for (const r of db.relList(d.id)) {
+      if (r.kind !== 'friend') continue;
+      const text = `동료 ${ga(d.name)} ${where}에서 쓰러져 도움을 기다린다. ${h}시간 안에 가서 일으켜 줄 수 있다.`;
+      const e = live(r.id);
+      if (e) e.socket.emit('notice', { title: '구조 요청', lines: [text] });
+      else db.noteAdd(r.id, text);
+    }
+    pushRescues();
+    return { ok: true, until, lines: [`${where}에 몸을 누이고 도움을 기다린다. ${h}시간 안에 누군가 와 주지 않으면, 그때는 스스로 정해야 한다.`] };
+  }
+  // 다른 드래곤을 일으켜 세움 (helper: 돕는 드래곤, id: 쓰러진 드래곤)
+  function help(helper, id) {
+    if (helper.id === id) return { error: '스스로를 일으킬 수는 없다.' };
+    const t = load(id);
+    if (!t || t.dead_at || !waitingOf(t)) return { error: '그 드래곤은 이제 도움을 기다리고 있지 않다.' };
+    const where = t.fallen.region || t.region;
+    if (helper.region !== where) return { error: `${REGIONS[where].name}에 가야 일으켜 줄 수 있다.` };
+    if (fallenOf(helper) || logic.berserkOf(helper)) return { error: '지금은 할 수 없다.' };
+    if (helper.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
+    if (helper.ap < DEATH.helpAp) return { error: `행동력이 모자란다. (${DEATH.helpAp} 필요)` };
+    if (helper.en < DEATH.helpEn) return { error: `기력이 모자란다. (${DEATH.helpEn} 필요)` };
+    logic.spendAp(helper, DEATH.helpAp);
+    if (helper.en >= logic.enCap(helper)) helper.en_at = Date.now();
+    helper.en -= DEATH.helpEn;
+    // 치유를 배운 드래곤이 도우면 더 많이 회복
+    const healer = SKILLS.mend && helper.level >= SKILLS.mend.lv;
+    t.fallen = null;
+    t.hp = Math.max(1, Math.round(logic.hpCap(t) * (healer ? DEATH.healHp : DEATH.helpHp)));
+    t.hp_at = Date.now();
+    db.saveState(t);
+    const fame = logic.addFame(helper, DEATH.helpFame);
+    const xp = logic.xpOf(helper, DEATH.helpXp);
+    const levelUp = logic.gainXp(helper, xp);
+    db.saveState(helper);
+    shout(`[구조] ${ga(helper.name)} 쓰러진 ${eul(t.name)} 일으켜 세웠다.`);
+    const tl = `${ga(helper.name)} 찾아와 ${healer ? '상처를 핥아 주며 ' : ''}일으켜 주었다. 상흔 없이 다시 일어섰다. (체력 ${Math.round((healer ? DEATH.healHp : DEATH.helpHp) * 100)}%)`;
+    const e = live(t.id);
+    if (e) { sendMe(e.socket, t); e.socket.emit('rescued', { by: helper.name, lines: [tl] }); broadcastPresence(t.region); }
+    else db.noteAdd(t.id, tl);
+    pushRescues();
+    const lines = [`쓰러진 ${t.name}에게 다가가 ${healer ? '치유의 힘으로 상처를 덮고 ' : ''}일으켜 세웠다.`];
+    if (fame) lines.push(fame);
+    return { title: '구조', lines, xp, levelUp, items: [], gold: 0 };
   }
 
   // 상흔을 입고 일어섬
@@ -51,7 +122,9 @@ module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broa
     if (st.key === 'scale') d.hp_max -= 5;     // 비늘 1 = 최대 체력 5
     if (st.key === 'wisdom') d.en_max -= 2;    // 지혜 1 = 최대 기력 2
     scars.push(st.key);
+    const wasWaiting = !!waitingOf(d);
     d.fallen = null;
+    if (wasWaiting) setImmediate(pushRescues);
     d.hp = Math.max(1, Math.round(logic.hpCap(d) * DEATH.reviveHp));
     d.hp_at = Date.now();
     d.en = Math.min(d.en, logic.enCap(d));
@@ -66,6 +139,7 @@ module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broa
   function die(d) {
     if (!fallenOf(d)) return { error: '쓰러져 있지 않다.' };
     const now = Date.now();
+    if (waitingOf(d)) setImmediate(pushRescues);
     const graveRegion = d.nest || d.region;
     const kin = db.kinLoad(d.id);
     const home = kin.filter((k) => k.status === 'home' || k.status === 'egg');
@@ -138,6 +212,19 @@ module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broa
   }
   const ticker = setInterval(() => {
     const now = Date.now();
+    // 기다림이 끝난 드래곤: 접속해 있으면 다시 고르게 함
+    let changed = false;
+    for (const id of db.waitIds()) {
+      const d = load(id);
+      const f = d && fallenOf(d);
+      if (!f || !f.wait || f.wait.until > now) continue;
+      d.fallen = { ...f, wait: null };
+      db.saveState(d);
+      changed = true;
+      const e = live(id);
+      if (e) { sendMe(e.socket, d); e.socket.emit('fallen', view(d)); e.socket.emit('notice', { title: '기다림의 끝', lines: ['아무도 오지 않았다. 이제 스스로 정해야 한다.'] }); }
+    }
+    if (changed) pushRescues();
     for (const id of db.graveIds()) {
       const g = parse(db.getDragon(id)?.fallen, null);
       if (g && !g.closed && now >= g.until) closeGrave(id);
@@ -173,6 +260,25 @@ module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broa
       return r;
     });
 
+    on('fallen:wait', (d) => {
+      const r = wait(d);
+      if (r.error) return r;
+      sendMe(socket, d);
+      return r;
+    });
+    socket.on('fallen:help', (p, ack) => {
+      if (typeof ack !== 'function') ack = () => {};
+      const d = me();
+      if (!d) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+      try {
+        logic.regen(d);
+        const r = help(d, Number(p?.id));
+        if (r.error) return ack(r);
+        sendMe(socket, d);
+        ack({ ok: true, result: r });
+      } catch (e) { console.error('[죽음] fallen:help', e); ack({ error: '처리하다 문제가 생겼다.' }); }
+    });
+    on('rescue:list', () => ({ ok: true, list: rescues() }));
     on('grave:list', () => ({ ok: true, list: graves() }));
     on('grave:get', (d, p) => {
       const g = graveInfo(Number(p.id));
@@ -233,7 +339,7 @@ module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broa
   }
 
   // 쓰러진 동안·죽은 뒤에는 아무것도 할 수 없음
-  const blocked = (d) => (fallenOf(d) ? '쓰러져 있다. 일어설지, 긴 잠에 들지 먼저 정해야 한다.' : null);
+  const blocked = (d) => (fallenOf(d) ? (waitingOf(d) ? '쓰러져 도움을 기다리는 중이다.' : '쓰러져 있다. 일어설지, 긴 잠에 들지 먼저 정해야 한다.') : null);
 
-  return { attach, fall, blocked, fallenOf, scarsOf, canRevive, graves, view, closeGrave };
+  return { attach, fall, blocked, fallenOf, scarsOf, canRevive, graves, view, closeGrave, rescues, wait, help, waitingOf };
 };

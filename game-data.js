@@ -150,12 +150,45 @@ const ITEMS = {
   sharp_fang:   { name: '날카로운 송곳니',  rarity: 'uncommon', desc: '사냥한 짐승에게서 얻었다.' },
   corrupt_crystal:{ name: '오염 결정',      rarity: 'rare', value: 35, desc: '오염된 땅에서만 맺히는 검붉은 결정. 오래 쥐고 있으면 머릿속이 웅웅거린다.' },
 
+
+  // ── 사냥 전리품: 장소마다 사냥감에게서 얻는 재료 (cat: 'trophy') ──
+  bison_horn:     { name: '들소 뿔',           rarity: 'common',   cat: 'trophy', desc: '굵고 휘어진 뿔. 들소 떼의 우두머리일수록 크다.' },
+  wolf_pelt:      { name: '늑대 털가죽',       rarity: 'common',   cat: 'trophy', desc: '바람을 막아 주는 두툼한 회색 털이다.' },
+  ghost_ash:      { name: '망령의 재',         rarity: 'uncommon', cat: 'trophy', desc: '흩어진 망령이 남긴 차가운 잿가루. 손에 쥐면 속삭임이 들린다.' },
+  spider_silk:    { name: '거미줄 실',         rarity: 'common',   cat: 'trophy', desc: '가늘지만 쇠줄보다 질기다.' },
+  toad_gland:     { name: '두꺼비 독샘',       rarity: 'uncommon', cat: 'trophy', desc: '짜내면 초록 독이 맺힌다. 조금만 섞으면 피가 끓는다.' },
+  living_bark:    { name: '살아 있는 나무껍질', rarity: 'uncommon', cat: 'trophy', desc: '떼어 낸 뒤에도 천천히 숨을 쉰다.' },
+  croc_scale:     { name: '악어 비늘',         rarity: 'common',   cat: 'trophy', desc: '울퉁불퉁하고 단단한 늪 악어의 등비늘이다.' },
+  hydra_blood:    { name: '히드라의 피',       rarity: 'uncommon', cat: 'trophy', value: 18, desc: '잘린 목이 다시 자라게 하는 피. 상처에 닿으면 살이 차오른다.' },
+  troll_tusk:     { name: '트롤 엄니',         rarity: 'uncommon', cat: 'trophy', desc: '얼음을 깨물던 커다란 엄니다.' },
+  wyvern_membrane:{ name: '와이번 날개막',     rarity: 'rare',     cat: 'trophy', desc: '오로라 빛이 스며든 얇고 질긴 막이다.' },
+  stone_heart:    { name: '파수꾼의 돌심장',   rarity: 'uncommon', cat: 'trophy', desc: '쓰러진 파수꾼의 가슴에서 꺼낸, 아직 따뜻한 돌이다.' },
+  cursed_steel:   { name: '저주받은 강철',     rarity: 'uncommon', cat: 'trophy', value: 14, desc: '해골 기사의 검에서 떼어 낸 쇳조각. 녹이 슬지 않는다.' },
+  seal_core:      { name: '봉인의 핵',         rarity: 'rare',     cat: 'trophy', desc: '고대 골렘을 움직이던 룬이 새겨진 핵이다.' },
+  scorpion_stinger:{ name: '전갈 독침',        rarity: 'common',   cat: 'trophy', desc: '끝이 바늘처럼 뾰족하다. 아직 독이 남아 있다.' },
+  sandworm_tooth: { name: '모래 벌레 이빨',    rarity: 'uncommon', cat: 'trophy', desc: '바위도 갈아 버리는 톱날 같은 이빨이다.' },
+  griffin_feather:{ name: '그리핀 깃털',       rarity: 'rare',     cat: 'trophy', desc: '햇빛을 받으면 금빛으로 타오르는 깃털이다.' },
+  salamander_tail:{ name: '불도마뱀 꼬리',     rarity: 'common',   cat: 'trophy', desc: '잘려도 한참 동안 뜨겁게 꿈틀거린다.' },
+  magma_core:     { name: '용암 심장',         rarity: 'rare',     cat: 'trophy', desc: '용암 골렘의 가슴에서 아직도 끓고 있는 돌이다.' },
+  giant_ember:    { name: '거인의 불씨',       rarity: 'rare',     cat: 'trophy', value: 55, desc: '화염 거인이 쓰러지며 남긴 꺼지지 않는 불씨다.' },
+
   // ── 만든 물건: 회복약 (use: 사용 효과) ──
   honey_salve:  { name: '꿀 고약',          rarity: 'common',   type: 'use', use: { hp: 30 },  desc: '상처에 바르면 금세 아문다.' },
   moss_salve:   { name: '이끼 고약',        rarity: 'uncommon', type: 'use', use: { hp: 70 },  desc: '빛나는 이끼가 상처를 차갑게 덮는다.' },
   ember_tea:    { name: '불씨 차',          rarity: 'common',   type: 'use', use: { en: 25 },  desc: '마시면 속이 뜨거워지고 기운이 돈다.' },
   sun_breath:   { name: '태양의 숨결',      rarity: 'rare',     type: 'use', use: { ap: 4 },   desc: '한 모금 들이켜면 날개에 힘이 솟는다.' },
   calm_incense: { name: '진정의 향',        rarity: 'uncommon', type: 'use', use: { mind: 40 }, desc: '빛나는 이끼와 꿀을 태운 연기가 흐려진 정신을 맑게 한다.' },
+
+  hunter_stew:  { name: '사냥꾼의 스튜',    rarity: 'common',   type: 'use', use: { hp: 45, en: 15 }, desc: '불도마뱀 꼬리를 푹 고아 낸 뜨끈한 스튜다.' },
+  hydra_tonic:  { name: '히드라 강장제',    rarity: 'rare',     type: 'use', use: { hp: 150 }, desc: '한 모금이면 찢긴 비늘 아래로 새살이 돋는다.' },
+  ember_elixir: { name: '불씨 영약',        rarity: 'rare',     type: 'use', use: { en: 60, ap: 2 }, desc: '거인의 불씨를 녹인 영약. 몸속에서 불이 타오른다.' },
+
+  // ── 만든 물건: 강화 음식 (buff: 한 시간 동안 사냥·강적 전투에서 힘이 됨. 하나만 효과가 있음) ──
+  war_paint:    { name: '전쟁 물감',        rarity: 'uncommon', type: 'use', use: { buff: 'might' }, desc: '독샘을 섞은 붉은 물감을 비늘에 바르면 피가 끓어오른다.' },
+  scale_oil:    { name: '비늘 기름',        rarity: 'common',   type: 'use', use: { buff: 'iron' },  desc: '악어 비늘을 짜낸 기름. 바르면 비늘이 돌처럼 단단해진다.' },
+  wind_mead:    { name: '바람 꿀술',        rarity: 'common',   type: 'use', use: { buff: 'swift' }, desc: '마시면 날개가 깃털처럼 가벼워진다.' },
+  sage_tea:     { name: '현자의 차',        rarity: 'uncommon', type: 'use', use: { buff: 'focus' }, desc: '머리가 맑아져 숨결과 치유가 한층 강해진다.' },
+  hunt_incense: { name: '사냥꾼의 향',      rarity: 'uncommon', type: 'use', use: { buff: 'lucky' }, desc: '망령의 재를 태운 연기가 사냥감의 숨은 보물을 드러낸다.' },
 
   // ── 만든 물건: 장신구 (slot: 착용 자리, bonus: 능력치, expRare: 원정 귀한 물건 확률) ──
   frost_plume:  { name: '서리 깃장식',      rarity: 'uncommon', type: 'equip', slot: 'head',  bonus: { wing: 2 },             desc: '얼음 결정을 엮은 머리 장식이다.' },
@@ -172,6 +205,24 @@ const ITEMS = {
   void_claw:    { name: '오염된 발톱덮개',  rarity: 'rare',     type: 'equip', slot: 'claw',  bonus: { claw: 3, wing: 1 },    desc: '오염 결정을 박아 넣은 발톱덮개. 강하지만 만질 때마다 섬뜩하다.' },
   pure_amulet:  { name: '정화의 부적',      rarity: 'rare',     type: 'equip', slot: 'charm', bonus: { wisdom: 1 }, mindWard: 0.5, desc: '오염 결정을 룬으로 묶어 오히려 오염을 막는다. 깎이는 정신이 절반으로 준다.' },
   silver_pendant:{ name: '은 펜던트',       rarity: 'uncommon', type: 'equip', slot: 'neck',  bonus: { majesty: 3 },          desc: '인간의 세공 솜씨가 빛나는 펜던트다.' },
+
+  // 사냥 전리품으로 만드는 장신구
+  troll_helm:   { name: '트롤 엄니 투구',   rarity: 'uncommon', type: 'equip', slot: 'head',  bonus: { scale: 2, majesty: 1 },  desc: '엄니 두 개가 뿔처럼 솟은 투구다.' },
+  griffin_crest:{ name: '그리핀 깃 관',     rarity: 'rare',     type: 'equip', slot: 'head',  bonus: { wing: 2, majesty: 2 },   desc: '금빛 깃털이 왕관처럼 머리를 두른다.' },
+  ghost_lantern:{ name: '망령 등불 목걸이', rarity: 'uncommon', type: 'equip', slot: 'neck',  bonus: { wisdom: 2 }, mindWard: 0.8, desc: '망령의 재를 담은 작은 등불. 깎이는 정신이 조금 준다.' },
+  stinger_claw: { name: '독침 발톱덮개',    rarity: 'common',   type: 'equip', slot: 'claw',  bonus: { claw: 2 },               desc: '전갈 독침을 발톱 끝에 덧댔다.' },
+  sandworm_claw:{ name: '모래 벌레 이빨 덮개', rarity: 'uncommon', type: 'equip', slot: 'claw', bonus: { claw: 2, scale: 1 }, desc: '톱날 이빨이 발톱을 따라 늘어서 있다.' },
+  cursed_blade: { name: '저주받은 강철 발톱', rarity: 'rare',   type: 'equip', slot: 'claw',  bonus: { claw: 3, majesty: 1 },   desc: '녹슬지 않는 강철 발톱. 상대가 움찔한다.' },
+  guardian_charm:{ name: '파수꾼의 돌 부적', rarity: 'uncommon', type: 'equip', slot: 'charm', bonus: { scale: 2, wisdom: 1 },  desc: '돌심장이 천천히 고동친다.' },
+  seal_charm:   { name: '봉인의 부적',      rarity: 'rare',     type: 'equip', slot: 'charm', bonus: { wisdom: 3, scale: 1 },   desc: '고대의 룬이 머릿속에 길을 낸다.' },
+  giant_heart:  { name: '거인의 심장',      rarity: 'rare',     type: 'equip', slot: 'charm', bonus: { claw: 1, scale: 1, majesty: 2 }, desc: '용암 심장에 거인의 불씨를 넣어 깨웠다.' },
+  silk_wingband:{ name: '거미줄 날개띠',    rarity: 'common',   type: 'equip', slot: 'wing',  bonus: { wing: 1 },               desc: '날개 뼈를 따라 질긴 실을 감았다.' },
+  wolf_cloak:   { name: '늑대 털 날개덮개', rarity: 'uncommon', type: 'equip', slot: 'wing',  bonus: { wing: 1, scale: 1 },     desc: '추운 하늘에서도 날개가 굳지 않는다.' },
+  wyvern_guard: { name: '와이번 날개막 덮개', rarity: 'rare',   type: 'equip', slot: 'wing',  bonus: { wing: 3, scale: 1 },     desc: '오로라 빛이 도는 막이 바람을 붙잡는다.' },
+  horn_tailring:{ name: '들소 뿔 꼬리고리', rarity: 'common',   type: 'equip', slot: 'tail',  bonus: { claw: 1 },               desc: '꼬리를 휘두를 때마다 묵직하게 울린다.' },
+  croc_tailguard:{ name: '악어 비늘 꼬리갑', rarity: 'uncommon', type: 'equip', slot: 'tail', bonus: { scale: 2 },              desc: '꼬리 끝까지 비늘 갑옷을 덧댔다.' },
+  bark_tailwrap:{ name: '고목 껍질 꼬리감개', rarity: 'uncommon', type: 'equip', slot: 'tail', bonus: { scale: 1, wisdom: 1 },  desc: '살아 있는 껍질이 꼬리를 감싸 상처를 보듬는다.' },
+  magma_tail:   { name: '용암 심장 꼬리날', rarity: 'rare',     type: 'equip', slot: 'tail',  bonus: { claw: 2, majesty: 1 },   desc: '꼬리 끝에서 용암이 끓는다.' },
 
   // ── 인간의 시장에서 파는 물건 (value: 기준 값) ──
   holy_water:   { name: '성수',             rarity: 'uncommon', type: 'use', use: { mind: 30 }, value: 30, desc: '왕도 성당에서 축복한 물. 흐려진 정신을 맑게 한다.' },
@@ -204,7 +255,19 @@ const SLOTS = [
   { key: 'neck',  name: '목' },
   { key: 'claw',  name: '발톱' },
   { key: 'charm', name: '부적' },
+  { key: 'wing',  name: '날개' },
+  { key: 'tail',  name: '꼬리' },
 ];
+
+// 강화 음식의 효과: 한 시간 동안 사냥과 강적 전투에서 (결투장에는 적용되지 않음)
+const BUFFS = {
+  minutes: 60,
+  might: { name: '투지',   desc: '공격 +15%',          atk: 1.15 },
+  iron:  { name: '단단함', desc: '받는 피해 −15%',     taken: 0.85 },
+  swift: { name: '날렵함', desc: '날개(속도) +4',      spd: 4 },
+  focus: { name: '집중',   desc: '숨결·치유 +20%',     mag: 1.2 },
+  lucky: { name: '행운',   desc: '사냥 전리품 확률 +25%', drop: 0.25 },
+};
 
 // 제작법. needs: 재료와 개수, en: 쓰는 기력, wis: 필요한 지혜
 const RECIPES = [
@@ -227,6 +290,31 @@ const RECIPES = [
   { out: 'calm_incense',  needs: { glow_moss: 1, wild_honey: 1 },                      en: 5,  wis: 8 },
   { out: 'void_claw',     needs: { corrupt_crystal: 3, obsidian: 1 },                  en: 14, wis: 11 },
   { out: 'pure_amulet',   needs: { corrupt_crystal: 2, rune_stone: 2, silver_clover: 1 }, en: 14, wis: 12 },
+  // 사냥 전리품으로 만드는 것
+  { out: 'hunter_stew',   needs: { salamander_tail: 1, grass_seed: 2 },                en: 4,  wis: 0 },
+  { out: 'hydra_tonic',   needs: { hydra_blood: 2, glow_moss: 1 },                     en: 9,  wis: 11 },
+  { out: 'ember_elixir',  needs: { giant_ember: 1, wild_honey: 2 },                    en: 12, wis: 13 },
+  { out: 'scale_oil',     needs: { croc_scale: 2, black_reed: 1 },                     en: 4,  wis: 0 },
+  { out: 'wind_mead',     needs: { wild_honey: 1, spider_silk: 1 },                    en: 4,  wis: 0 },
+  { out: 'war_paint',     needs: { red_clay: 2, toad_gland: 1 },                       en: 5,  wis: 6 },
+  { out: 'sage_tea',      needs: { frost_lichen: 1, glow_moss: 1, old_scroll: 1 },     en: 6,  wis: 9 },
+  { out: 'hunt_incense',  needs: { ghost_ash: 1, rune_stone: 2 },                      en: 5,  wis: 7 },
+  { out: 'horn_tailring', needs: { bison_horn: 2, red_clay: 1 },                       en: 5,  wis: 0 },
+  { out: 'silk_wingband', needs: { spider_silk: 3 },                                   en: 5,  wis: 0 },
+  { out: 'stinger_claw',  needs: { scorpion_stinger: 3, beast_hide: 1 },               en: 6,  wis: 0 },
+  { out: 'wolf_cloak',    needs: { wolf_pelt: 3, spider_silk: 1 },                     en: 7,  wis: 6 },
+  { out: 'croc_tailguard',needs: { croc_scale: 3, bog_iron: 1 },                       en: 8,  wis: 7 },
+  { out: 'bark_tailwrap', needs: { living_bark: 2, frost_lichen: 1 },                  en: 8,  wis: 8 },
+  { out: 'ghost_lantern', needs: { ghost_ash: 2, silver_chain: 1 },                    en: 8,  wis: 9 },
+  { out: 'troll_helm',    needs: { troll_tusk: 2, bog_iron: 1 },                       en: 9,  wis: 8 },
+  { out: 'sandworm_claw', needs: { sandworm_tooth: 2, beast_hide: 1 },                 en: 9,  wis: 8 },
+  { out: 'guardian_charm',needs: { stone_heart: 1, rune_stone: 2 },                    en: 9,  wis: 9 },
+  { out: 'cursed_blade',  needs: { cursed_steel: 2, obsidian: 1 },                     en: 12, wis: 10 },
+  { out: 'wyvern_guard',  needs: { wyvern_membrane: 2, spider_silk: 2 },               en: 13, wis: 11 },
+  { out: 'griffin_crest', needs: { griffin_feather: 2, gold_ore: 1 },                  en: 13, wis: 11 },
+  { out: 'magma_tail',    needs: { magma_core: 1, obsidian: 2 },                       en: 14, wis: 12 },
+  { out: 'seal_charm',    needs: { seal_core: 1, rune_stone: 2, old_scroll: 1 },       en: 15, wis: 13 },
+  { out: 'giant_heart',   needs: { giant_ember: 1, magma_core: 1 },                    en: 18, wis: 14 },
 ];
 for (const r of RECIPES) {
   const it = ITEMS[r.out];
@@ -533,7 +621,9 @@ const PLACES = {
   volcano_crater:{ region: 'volcano', name: '분화구',       level: 12, creature: '화염 거인',     elite: '잠든 화룡의 망령',   weak: ['ice'], resist: ['fire', 'poison'], special: { name: '화산 강타', power: 1.8, debuff: { burn: 3 }, element: 'fire' },
     desc: '대륙에서 가장 뜨거운 곳. 끓는 용암 위로 오래전 쓰러진 드래곤의 뼈가 보인다.' },
 };
-for (const [id, p] of Object.entries(PLACES)) p.id = id;
+// 장소별 사냥 전리품
+const PLACE_DROPS = {'plains_field': 'bison_horn', 'plains_hill': 'wolf_pelt', 'plains_war': 'ghost_ash', 'forest_edge': 'spider_silk', 'forest_valley': 'toad_gland', 'forest_heart': 'living_bark', 'swamp_reeds': 'croc_scale', 'swamp_village': 'ghost_ash', 'swamp_mire': 'hydra_blood', 'snow_field': 'wolf_pelt', 'snow_cave': 'troll_tusk', 'snow_peak': 'wyvern_membrane', 'ruins_hall': 'stone_heart', 'ruins_crypt': 'cursed_steel', 'ruins_altar': 'seal_core', 'canyon_path': 'scorpion_stinger', 'canyon_storm': 'sandworm_tooth', 'canyon_cliff': 'griffin_feather', 'volcano_slope': 'salamander_tail', 'volcano_cave': 'magma_core', 'volcano_crater': 'giant_ember'};
+for (const [id, p] of Object.entries(PLACES)) { p.id = id; p.drop = PLACE_DROPS[id]; }
 // 지역별 장소 (입구 → 안쪽)
 const REGION_PLACES = {};
 for (const p of Object.values(PLACES)) (REGION_PLACES[p.region] ||= []).push(p.id);
@@ -542,6 +632,7 @@ const PLACE_RULES = {
   tooHard: 3,          // 내 레벨 + 이만큼보다 어려운 장소에는 들어갈 수 없음
   moveCooldown: 1200,  // 장소를 옮기는 간격 (ms)
   lootPerLevel: { uncommon: 0.012, rare: 0.005 }, // 깊은 장소일수록 귀한 재료가 잘 나옴 (사냥터 Lv.1당)
+  dropChance: { common: 0.6, uncommon: 0.45, rare: 0.3 }, // 사냥에 이기면 그 장소의 전리품이 나올 확률 (강적은 2개 확정)
 };
 
 // ── 쓰러짐과 죽음 ──────────────────────────────────
@@ -549,6 +640,11 @@ const PLACE_RULES = {
 const DEATH = {
   reviveHp: 0.3,               // 상흔을 입고 일어설 때 체력 (최대치 비율)
   graveDays: 3,                // 남긴 둥지(식구·재산)를 거둘 수 있는 날 수. 지나면 식구는 실종, 재산은 흩어짐
+  waitMs: 3 * 60 * 60 * 1000,  // 다른 드래곤의 도움을 기다릴 수 있는 시간 (쓰러질 때마다 한 번)
+  helpAp: 2, helpEn: 8,        // 일으켜 세우는 쪽이 쓰는 행동력·기력
+  helpHp: 0.3,                 // 도움으로 일어설 때 체력 (상흔 없음). 돕는 쪽이 '치유'를 배웠으면 healHp
+  healHp: 0.5,
+  helpFame: 2, helpXp: 25,     // 돕는 쪽이 받는 것
 };
 
 // ── 정신과 오염 ────────────────────────────────────
@@ -609,6 +705,7 @@ const SKILLS = {
   tail:   { name: '꼬리치기',     lv: 1, en: 4,  cd: 1, power: 1.25, desc: '꼬리를 휘둘러 묵직하게 친다. 피해 ×1.25.' },
   harden: { name: '비늘 세우기',  lv: 2, en: 5,  cd: 3, self: { harden: 2 }, desc: '비늘을 곤두세워 두 턴 동안 받는 피해가 절반이 된다.' },
   roar:   { name: '포효',         lv: 3, en: 6,  cd: 3, debuff: { weaken: 3 }, majesty: true, desc: '세 턴 동안 상대의 공격을 30% 꺾는다. 위엄이 높을수록 잘 통한다.' },
+  mend:   { name: '치유',         lv: 4, en: 8,  cd: 4, heal: { base: 6, mag: 0.9, pct: 0.12 }, cleanse: true, desc: '상처를 핥아 체력을 되찾고 화상·중독·출혈을 씻어 낸다. 지혜가 높을수록 많이 회복한다. 쓰러진 드래곤을 일으킬 때도 더 많이 회복시킨다.' },
   gust:   { name: '날개 돌풍',    lv: 5, en: 6,  cd: 3, power: 0.8, self: { dodge: 1 }, desc: '거센 바람으로 피해 ×0.8, 다음 공격 한 번을 반드시 피한다.' },
   rend:   { name: '찢어발기기',   lv: 7, en: 8,  cd: 3, power: 1.2, debuff: { bleed: 3 }, desc: '발톱으로 깊이 찢어 피해 ×1.2, 세 턴 동안 피를 흘리게 한다.' },
   devour: { name: '포식',         lv: 9, en: 10, cd: 4, power: 1.0, drain: 0.5, desc: '물어뜯어 입힌 피해의 절반만큼 체력을 되찾는다.' },
@@ -635,7 +732,7 @@ const ELITES = {
 };
 
 module.exports = {
-  KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES,
+  KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS,
   SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, NEST, STANCE_RULES, FAME_TIERS, fameTier,
   DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
   COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, STATUS, CREATURE_COMBAT, ELITES,
