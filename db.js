@@ -140,6 +140,13 @@ db.exec(`
     at      INTEGER NOT NULL,
     PRIMARY KEY (from_id, to_id)
   );
+  CREATE TABLE IF NOT EXISTS rel_memos (       -- 상대에 대해 나만 보는 메모
+    from_id INTEGER NOT NULL REFERENCES dragons(id) ON DELETE CASCADE,
+    to_id   INTEGER NOT NULL REFERENCES dragons(id) ON DELETE CASCADE,
+    text    TEXT NOT NULL,
+    at      INTEGER NOT NULL,
+    PRIMARY KEY (from_id, to_id)
+  );
   CREATE TABLE IF NOT EXISTS telepathy (       -- 텔레파시 (드래곤끼리의 쪽지)
     id      INTEGER PRIMARY KEY,
     from_id INTEGER NOT NULL REFERENCES dragons(id) ON DELETE CASCADE,
@@ -156,7 +163,24 @@ db.exec(`
     text      TEXT NOT NULL,
     at        INTEGER NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS gift_inbox (      -- 받은 선물: 받은 쪽이 '확인'을 누를 때까지 남음
+    id        INTEGER PRIMARY KEY,
+    to_id     INTEGER NOT NULL REFERENCES dragons(id) ON DELETE CASCADE,
+    from_id   INTEGER,
+    from_name TEXT NOT NULL,
+    from_kind TEXT,
+    gold      INTEGER NOT NULL DEFAULT 0,
+    items     TEXT NOT NULL DEFAULT '[]',
+    msg       TEXT NOT NULL DEFAULT '',
+    at        INTEGER NOT NULL
+  );
 `);
+// 관계 메모를 상대도 볼 수 있게 됨. 예전에 '나만 본다'로 쓴 메모는 그대로 비공개(0)로 두고,
+// 새로 저장하는 메모부터 공개(1)로 함
+if (!db.prepare('PRAGMA table_info(rel_memos)').all().some((c) => c.name === 'shared')) {
+  db.exec('ALTER TABLE rel_memos ADD COLUMN shared INTEGER NOT NULL DEFAULT 0');
+}
+
 
 // 10단계: GM 기록 (누가 언제 누구에게 무엇을 했는지)
 db.exec(`
@@ -238,11 +262,18 @@ const q = {
   kinAdd:       db.prepare('INSERT INTO kin (dragon_id, type, status, name, data, created_at) VALUES (?, ?, ?, ?, ?, ?)'),
   kinSave:      db.prepare('UPDATE kin SET status = ?, name = ?, data = ? WHERE id = ? AND dragon_id = ?'),
   dragonById:   db.prepare(`SELECT ${DRAGON_FIELDS} FROM dragons WHERE id = ?`),
+  dragonsIn:    db.prepare(`SELECT ${DRAGON_FIELDS} FROM dragons WHERE region = ? AND dead_at IS NULL ORDER BY last_seen DESC`),
   addGold:      db.prepare('UPDATE dragons SET gold = gold + ? WHERE id = ?'),
   relGet:       db.prepare('SELECT kind FROM relations WHERE from_id = ? AND to_id = ?'),
   relSet:       db.prepare(`INSERT INTO relations (from_id, to_id, kind, at) VALUES (?, ?, ?, ?)
                             ON CONFLICT(from_id, to_id) DO UPDATE SET kind = excluded.kind, at = excluded.at`),
   relDel:       db.prepare('DELETE FROM relations WHERE from_id = ? AND to_id = ?'),
+  memoGet:      db.prepare('SELECT text, shared FROM rel_memos WHERE from_id = ? AND to_id = ?'),
+  memoSet:      db.prepare(`INSERT INTO rel_memos (from_id, to_id, text, at, shared) VALUES (?, ?, ?, ?, 1)
+                            ON CONFLICT(from_id, to_id) DO UPDATE SET text = excluded.text, at = excluded.at, shared = 1`),
+  memoDel:      db.prepare('DELETE FROM rel_memos WHERE from_id = ? AND to_id = ?'),
+  memoAll:      db.prepare('SELECT to_id AS id, text FROM rel_memos WHERE from_id = ?'),
+  memoAbout:    db.prepare('SELECT from_id AS id, text FROM rel_memos WHERE to_id = ? AND shared = 1'),
   rivalFans:    db.prepare("SELECT from_id AS id FROM relations WHERE to_id = ? AND kind = 'rival'"),
   relList:      db.prepare(`SELECT r.to_id AS id, r.kind, d.name, d.kind AS dkind, d.level, d.region, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar
                             FROM relations r JOIN dragons d ON d.id = r.to_id WHERE r.from_id = ? ORDER BY d.name`),
@@ -273,6 +304,9 @@ const q = {
                             AND id <= (SELECT id FROM telepathy WHERE (from_id = @a AND to_id = @b) OR (from_id = @b AND to_id = @a)
                                        ORDER BY id DESC LIMIT 1 OFFSET 200)`),
   noteAdd:      db.prepare('INSERT INTO notes (dragon_id, text, at) VALUES (?, ?, ?)'),
+  giftIn:       db.prepare('INSERT INTO gift_inbox (to_id, from_id, from_name, from_kind, gold, items, msg, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'),
+  giftList:     db.prepare('SELECT * FROM gift_inbox WHERE to_id = ? ORDER BY id'),
+  giftSeen:     db.prepare('DELETE FROM gift_inbox WHERE id = ? AND to_id = ?'),
   noteList:     db.prepare('SELECT text FROM notes WHERE dragon_id = ? ORDER BY id'),
   noteClear:    db.prepare('DELETE FROM notes WHERE dragon_id = ?'),
   // GM
@@ -369,10 +403,17 @@ module.exports = {
     for (const { id, qty } of items) q.invAdd.run(toId, id, qty);
   }),
   getDragon: (id) => q.dragonById.get(id),
+  dragonsIn: (region) => q.dragonsIn.all(region),   // 이 지역에 머무는 드래곤 (접속하지 않은 드래곤 포함, 긴 잠에 든 드래곤 제외)
   relGet: (a, b) => q.relGet.get(a, b)?.kind || null,
   relSet: (a, b, kind) => q.relSet.run(a, b, kind, Date.now()),
   relDel: (a, b) => q.relDel.run(a, b),
   relList: (id) => q.relList.all(id),
+  // 관계 메모: a가 b에 대해 쓴 글. 상대(b)도 볼 수 있음 (예전에 쓴 비공개 메모는 다시 저장하기 전까지 a만 봄). 비우면 지워짐
+  memoGet: (a, b) => { const r = q.memoGet.get(a, b); return { text: r?.text || '', shared: !!r?.shared }; },
+  memoShared: (a, b) => { const r = q.memoGet.get(a, b); return r?.shared ? r.text : ''; },   // b가 볼 수 있는 a의 메모
+  memoAboutMap: (b) => new Map(q.memoAbout.all(b).map((r) => [r.id, r.text])),               // b에 대해 남긴 공개 메모들
+  memoSet: (a, b, text) => (text ? q.memoSet.run(a, b, text, Date.now()) : q.memoDel.run(a, b)),
+  memoMap: (a) => new Map(q.memoAll.all(a).map((r) => [r.id, r.text])),
   rivalFans: (id) => q.rivalFans.all(id).map((r) => r.id),      // 이 드래곤을 라이벌로 정한 드래곤들
   reqGet: (a, b) => !!q.reqGet.get(a, b),
   reqAdd: (a, b) => q.reqAdd.run(a, b, Date.now()),
@@ -397,6 +438,10 @@ module.exports = {
   tpUnread: (me) => q.tpUnread.get(me).n,
   tpThreads: (me) => q.tpThreads.all({ me }),
   noteAdd: (id, text) => q.noteAdd.run(id, text, Date.now()),
+  // 받은 선물 상자 (확인할 때까지 남는 알림)
+  giftIn: (to, from, gold, items, msg) => Number(q.giftIn.run(to, from.id, from.name, from.kind, gold, JSON.stringify(items), msg, Date.now()).lastInsertRowid),
+  giftList: (to) => q.giftList.all(to).map((r) => ({ id: r.id, from: { id: r.from_id, name: r.from_name, kind: r.from_kind }, gold: r.gold, items: JSON.parse(r.items || '[]'), msg: r.msg, at: r.at })),
+  giftSeen: (id, to) => q.giftSeen.run(id, to).changes > 0,
   notesTake: db.transaction((id) => { const l = q.noteList.all(id).map((r) => r.text); q.noteClear.run(id); return l; }),
   // GM
   gmList: (text) => q.gmList.all({ q: `%${String(text || '').replace(/[%_]/g, '')}%` }),

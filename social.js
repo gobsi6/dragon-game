@@ -23,6 +23,8 @@ function josa(word, a, b) {
   return c % 28 ? a : b;
 }
 const ga = (n) => `${n}${josa(n, '이', '가')}`;
+const GIFT_MSG_MAX = 100; // 선물과 함께 보내는 말 (글자 수)
+const MEMO_MAX = 200;     // 관계 메모 (글자 수, 상대도 볼 수 있음)
 const itemText = (items) => items.map(({ id, qty }) => `${ITEMS[id].name}${qty > 1 ? ` ${qty}개` : ''}`).join(', ');
 const giveText = (gold, items) => [gold ? `금화 ${gold}닢` : '', itemText(items)].filter(Boolean).join(', ');
 
@@ -110,6 +112,9 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
         mine: db.relGet(viewer.id, d.id),                 // friend / rival / wary / null
         sent: db.reqGet(viewer.id, d.id),                 // 내가 보낸 동료 요청
         got: db.reqGet(d.id, viewer.id),                  // 상대가 보낸 동료 요청
+        memo: db.memoGet(viewer.id, d.id).text,           // 내가 이 드래곤에 대해 남긴 메모
+        memoShared: db.memoGet(viewer.id, d.id).shared,   // 상대도 볼 수 있는지 (예전 비공개 메모면 false)
+        theirMemo: db.memoShared(d.id, viewer.id),        // 이 드래곤이 나에 대해 남긴 메모
       },
       can: self ? null : {
         gift: reach(viewer, d.id, { needOnline: false }),
@@ -137,6 +142,10 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     const mine = new Set(out.rivals.map((x) => x.id));
     out.rivalsIn = db.rivalFans(me.id).filter((id) => !mine.has(id)).map((id) => db.getDragon(id)).filter((x) => x && !x.dead_at).map(view);
     out.outgoing = db.reqOut(me.id).map(view);
+    // 내가 남긴 메모와 상대가 나에게 남긴 메모를 각 줄에 붙임
+    const memos = db.memoMap(me.id);
+    const about = db.memoAboutMap(me.id);
+    for (const list of Object.values(out)) for (const x of list) { x.memo = memos.get(x.id) || ''; x.theirMemo = about.get(x.id) || ''; }
     return out;
   }
 
@@ -197,13 +206,18 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
   // ── 소켓 연결마다 ─────────────────────────────────
   function attach(socket) {
     const me = () => entryOf(socket)?.dragon || null;
+    // 보기만 하는 요청(목록·프로필 읽기)은 간격 제한을 두지 않음.
+    // 관계를 바꾼 직후 화면이 목록과 프로필을 다시 불러오는데, 여기에 걸리면 화면이 바뀌지 않고 멈춰 있었음
+    const READ_ONLY = new Set(['dragon:profile', 'rel:list', 'gift:inbox', 'gift:seen', 'tp:threads', 'tp:open', 'tp:heard']);
     const on = (event, fn) => socket.on(event, (payload, ack) => {
       if (typeof ack !== 'function') ack = () => {};
       const d = me();
       if (!d) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
       const now = Date.now();
-      if (now - (socket.data.lastSocial || 0) < 250) return ack({ error: '숨을 고르는 중이다.' });
-      socket.data.lastSocial = now;
+      if (!READ_ONLY.has(event)) {
+        if (now - (socket.data.lastSocial || 0) < 250) return ack({ error: '숨을 고르는 중이다.' });
+        socket.data.lastSocial = now;
+      }
       try { ack(fn(d, payload || {})); } catch (err) { console.error(err); ack({ error: '잠시 뒤에 다시 해 보자.' }); }
     });
     const target = (p) => {
@@ -305,6 +319,16 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       return { ok: true, lines: [`${name}${josa(name, '을', '를')} ${kind === 'rival' ? '라이벌로' : '경계할 드래곤으로'} 표시했다.`] };
     });
 
+    // 관계 메모: 상대가 누구든 남길 수 있고, 상대도 그 드래곤의 기록에서 볼 수 있음. 빈 글이면 지움
+    on('rel:memo', (d, p) => {
+      const id = target(p);
+      if (!id || id === d.id) return { error: '그런 드래곤은 없다.' };
+      const text = (typeof p.text === 'string' ? p.text : '').replace(/\r\n?/g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, MEMO_MAX);
+      db.memoSet(d.id, id, text);
+      relChanged(id); // 상대가 내 기록이나 동료 목록을 보고 있으면 바로 바뀌게
+      return { ok: true, memo: text, lines: [text ? '메모를 남겼다. 상대도 볼 수 있다.' : '메모를 지웠다.'] };
+    });
+
     // ── 선물 ──
     on('gift:send', (d, p) => {
       const id = target(p);
@@ -313,6 +337,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       if (why) return { error: why };
       const gold = Math.floor(Number(p.gold) || 0);
       const items = cleanItems(p.items);
+      const msg = (typeof p.msg === 'string' ? p.msg : '').replace(/\s+/g, ' ').trim().slice(0, GIFT_MSG_MAX); // 함께 보내는 말
       if (!gold && !items.length) return { error: '보낼 것을 골라야 한다.' };
       const bad = checkOffer(d, gold, items);
       if (bad) return { error: bad };
@@ -323,16 +348,23 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       if (t) {
         t.dragon.gold += gold;
         db.saveMany([[d, items.map((x) => ({ id: x.id, qty: -x.qty }))], [t.dragon, items]]);
-        t.socket.emit('notice', { title: '선물', lines: [`${ga(d.name)} ${what}${josa(what, '을', '를')} 보내왔다.`], items });
-        sendMe(t.socket, t.dragon);
       } else {
         db.saveState(d, items.map((x) => ({ id: x.id, qty: -x.qty })));
         db.giftOffline(id, gold, items);
-        db.noteAdd(id, `자리를 비운 사이 ${ga(d.name)} ${what}${josa(what, '을', '를')} 보내왔다.`);
+      }
+      // 받은 선물 상자에 넣음: 받은 쪽이 '확인'을 누를 때까지 남는 알림 (접속하지 않았으면 다음 접속 때)
+      const gid = db.giftIn(id, d, gold, items, msg);
+      if (t) {
+        t.socket.emit('gift:got', { id: gid, from: { id: d.id, name: d.name, kind: d.kind }, gold, items, msg, at: Date.now() });
+        sendMe(t.socket, t.dragon);
       }
       sendMe(socket, d);
-      return { ok: true, lines: [`${name}에게 ${what}${josa(what, '을', '를')} 보냈다.`] };
+      return { ok: true, lines: [`${name}에게 ${what}${josa(what, '을', '를')} 보냈다.${msg ? ' 함께 적은 말도 전해진다.' : ''}`] };
     });
+
+    // 받은 선물 확인 (상자에서 지움)
+    on('gift:seen', (d, p) => ({ ok: db.giftSeen(Number(p.id), d.id) }));
+    on('gift:inbox', (d) => ({ ok: true, list: db.giftList(d.id) }));
 
     // ── 텔레파시 ──
     on('tp:threads', (d) => ({
@@ -447,6 +479,8 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
   // 접속할 때: 자리를 비운 동안 온 소식
   function onEnter(socket, d) {
     refreshRivals(d);
+    const gifts = db.giftList(d.id);
+    if (gifts.length) socket.emit('gift:inbox', gifts); // 확인하지 않은 선물
     const notes = db.notesTake(d.id);
     const tp = db.tpUnread(d.id);
     if (tp) notes.push(`잠든 사이 마음에 남겨진 텔레파시가 ${tp}개 있다.`);

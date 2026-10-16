@@ -258,16 +258,22 @@ function withTitles(list) {
     if (!m.dragonId) return m;
     if (!cache.has(m.dragonId)) {
       const d = online.get(m.dragonId)?.dragon || db.getDragon(m.dragonId);
-      cache.set(m.dragonId, d ? logic.titleName(d) : null);
+      cache.set(m.dragonId, d ? { title: logic.titleName(d), av: d.has_avatar ? d.avatar_ver : 0 } : { title: null, av: 0 });
     }
-    return { ...m, title: cache.get(m.dragonId) };
+    return { ...m, ...cache.get(m.dragonId) };   // 칭호와 지금의 프로필 사진
   });
 }
 
+// 이 지역에 머무는 드래곤: 접속 중인 드래곤이 먼저, 그다음 접속하지 않은 드래곤(마지막으로 본 순서)
+// 창을 내리거나 닫아도 목록에서 사라지지 않고 '접속 안 함'으로 남음
 function occupants(region) {
   const list = [];
   for (const { dragon } of online.values()) {
-    if (dragon.region === region) list.push(publicDragon(dragon));
+    if (dragon.region === region) list.push({ ...publicDragon(dragon), online: true });
+  }
+  for (const d of db.dragonsIn(region)) {
+    if (online.has(d.id)) continue;
+    list.push({ ...publicDragon(d), online: false, lastSeen: d.last_seen || 0 });
   }
   return list;
 }
@@ -836,7 +842,7 @@ io.on('connection', (socket) => {
     const d = entry.dragon;
     const msg = { dragonId: d.id, name: d.name, kind: d.kind, text, at: now };
     msg.id = db.addChat(d.region, msg);
-    io.to(d.region).emit('chat', { ...msg, title: logic.titleName(d) });
+    io.to(d.region).emit('chat', { ...msg, title: logic.titleName(d), av: d.has_avatar ? d.avatar_ver : 0 });
   });
 
   // 내가 한 말 지우기 (GM은 누구의 말이든)

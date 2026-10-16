@@ -207,6 +207,14 @@
   .dlg { max-height: calc(100vh - var(--dock-h, 56px) - 32px); }
   .dlg::backdrop { background: rgba(31, 35, 38, .55); }
   .dlg .body { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+  /* 팝업: 팝업 자체는 스크롤하지 않고 내용(.body)만 스크롤. 그래야 모서리 장식이 늘 팝업의 진짜 모서리에 붙어 있고,
+     제목·탭·아래 버튼(닫기 등)도 늘 보인다 */
+  .dlg:not(.as-panel)[open] { display: flex; flex-direction: column; overflow: hidden; }
+  .dlg:not(.as-panel) > .orn-h, .dlg:not(.as-panel) > .dtabs, .dlg:not(.as-panel) > .gm-tabs, .dlg:not(.as-panel) > .row { flex: none; }
+  .dlg:not(.as-panel) > .body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; margin: 8px -10px -4px -6px; padding: 4px 10px 4px 6px; scrollbar-width: thin; scrollbar-color: #C9CCC8 transparent; }
+  .dlg:not(.as-panel) > .body::-webkit-scrollbar { width: 6px; }
+  .dlg:not(.as-panel) > .body::-webkit-scrollbar-thumb { background: #C9CCC8; border-radius: 3px; }
+  .dlg:not(.as-panel) > .row { margin-top: 12px; }
   .dlg .note { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.6; }
   .opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .exp-h { margin: 6px 0 0; font: 700 14px/1.4 var(--serif); color: var(--steel-d); }
@@ -403,6 +411,33 @@
   .pf-acts .grp .l { width: 100%; font-size: 12px; color: var(--muted); }
   .pf-acts .btn { min-height: 34px; padding: 0 12px; font-size: 13px; }
   .pf-acts .why { width: 100%; font-size: 12px; color: #A63E4B; }
+  .pf-acts .btn.busy { opacity: .6; cursor: progress; }
+  /* 관계 메모 (나만 봄) */
+  .rel-memo { width: 100%; display: flex; flex-direction: column; gap: 6px; margin-top: 4px; padding: 10px 12px; background: #FBF8EE; border: 1px solid #E8DDBF; border-radius: 3px; }
+  .rel-memo .h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 12px; color: #6B5A3A; }
+  .rel-memo .h .st { font-size: 11px; color: var(--muted); }
+  .rel-memo .h .st.saved { color: var(--forest); }
+  .rel-memo textarea { width: 100%; min-height: 60px; resize: vertical; font: inherit; font-size: 13px; line-height: 1.5; }
+  .rel-memo .r { display: flex; justify-content: flex-end; gap: 6px; }
+  .fr-row .memo { display: block; margin-top: 2px; font-size: 12px; color: #6B5A3A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fr-row .memo::before { content: "✎ "; color: #A8936A; }
+  .fr-row .memo.theirs { color: #2E4A60; }
+  .fr-row .memo.theirs::before { content: "❝ "; color: #7E97AC; }
+  .their-memo { width: 100%; padding: 10px 12px; background: #F2F6F9; border: 1px solid #C9D6E1; border-radius: 3px; display: flex; flex-direction: column; gap: 4px; }
+  .their-memo .h { font-size: 12px; color: #2E4A60; }
+  .their-memo p { margin: 0; font-size: 13px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+  /* 채팅: 말한 드래곤의 작은 프로필 사진 */
+  /* 이곳의 드래곤: 접속하지 않은 드래곤도 흐리게 남김 */
+  .who .st { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--muted); }
+  .who .st::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #B6B9B5; }
+  .who .st.on { color: #2F6B4A; }
+  .who .st.on::before { background: #3A8A5C; box-shadow: 0 0 0 2px rgba(58, 138, 92, .18); }
+  .who.off .ava { filter: grayscale(.6); opacity: .65; }
+  .who.off .nm b { color: var(--ink-2); }
+  #log .mh .ava { flex: none; width: 22px; height: 22px; cursor: pointer; box-shadow: 0 0 0 1.5px var(--surface), 0 0 0 2.5px var(--c); }
+  #log .mh .ava .emblem { width: 22px; height: 22px; }
+  #log .msg .ml { margin-left: 26px; }   /* 말은 이름 아래에 맞춰 들여 씀 (사진 22px + 간격) */
   .gift-box { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--surface-2); border: 1px solid var(--line-in); }
   .gift-box .r { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   .gift-box select, .gift-box .input { min-height: 36px; }
@@ -610,6 +645,12 @@
   .rip .sub { font-size: 13px; color: var(--muted); margin: 4px 0 12px; }
   .rip p { margin: 4px 0; font: 400 14px/1.7 var(--serif); color: var(--ink-2); }
   .rampage.grave { background: #F2F1EE; border-color: #CFCBC2; color: #4E4A42; }
+  .gift-from { display: flex; align-items: center; gap: 12px; }
+  .gift-from b { display: block; font: 700 16px/1.35 var(--serif); }
+  .gift-from small { font-size: 12px; color: var(--muted); }
+  .gift-items { display: flex; flex-wrap: wrap; gap: 6px; }
+  .gift-msg { margin: 0; padding: 12px 14px 12px 16px; background: #FBF6E8; border-left: 3px solid #C29A3E; font: 500 15px/1.75 var(--serif); color: #3B3326; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .gift-box textarea.msg { width: 100%; resize: vertical; min-height: 54px; font: 400 14px/1.5 var(--sans); padding: 8px 10px; }
   .rampage.rescue { background: #EEF3F7; border-color: #B9C7D3; color: #2A4256; }
   .rampage.rescue.me { background: #2A4256; border-color: #1C2F3F; color: #E9F0F6; }
   .rampage.rescue.me b { color: #fff; } .rampage.rescue.me small { color: #C9D7E3; }
@@ -1472,6 +1513,13 @@
       <button type="button" class="fall-opt die" id="fall-die"><b>긴 잠에 든다</b><small>이 드래곤은 영원히 잠든다. 독립한 새끼들이 추모하러 오고, 둥지에 남은 식구와 금화·물건은 3일 동안 다른 드래곤이 거둘 수 있다. 아무도 거두지 않은 식구는 실종된다. 같은 계정으로 새 드래곤을 만들 수 있다.</small></button>
     </div>
   </div>
+</dialog>
+
+<dialog class="frame dlg" id="gift-dlg" aria-labelledby="gift-title">
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="gift-title">선물이 도착했다</h2></div>
+  <div class="body" id="gift-body"></div>
+  <div class="row"><button class="btn" type="button" id="gift-thanks">답장 보내기</button><button class="btn primary" type="button" id="gift-ok">확인</button></div>
 </dialog>
 
 <dialog class="frame dlg" id="rip-dlg" aria-labelledby="rip-title">
@@ -3201,7 +3249,7 @@
   S.rel = {};
   function loadRel(done) {
     socket.emit('rel:list', {}, (res) => {
-      if (res.error) return;
+      if (res.error) return done && done();
       const l = res.list;
       S.relList = l;
       S.rel = {};
@@ -3253,7 +3301,8 @@
   };
   const socialAct = (event, payload, after) => {
     socket.emit(event, payload, (res) => {
-      if (res.error) return toast(res.error);
+      // 안 되었을 때도 화면을 다시 그려서 잠가 둔 버튼을 풀어 줌
+      if (res.error) { toast(res.error); return after && after(); }
       if (res.lines) toast(res.lines.join(' '));
       loadRel(after);
     });
@@ -3261,19 +3310,28 @@
 
   // ── 다른 드래곤의 기록 (프로필) ──
   let profileId = null;
+  // 프로필은 동료 목록 위에 겹쳐 뜸. 닫으면 보던 목록이 그대로 남아 있음
+  // 같은 프로필을 다시 그릴 때(관계를 바꾼 뒤 등)는 스크롤 위치와 열어 둔 선물 칸·쓰던 메모를 그대로 둠
   function openProfile(id) {
     socket.emit('dragon:profile', { id }, (res) => {
       if (res.error) return toast(res.error);
+      const same = $('profile-dlg').open && profileId === id;
       profileId = id;
       fetchInv(() => {
-        renderProfile(res.profile);
-        if ($('friends-dlg').open) $('friends-dlg').close();
+        const body = $('profile-body');
+        const keep = same ? {
+          top: body.scrollTop,
+          gift: !!body.querySelector('.gift-box:not([hidden])'),
+          memo: body.querySelector('.rel-memo textarea')?.dataset.dirty === '1' ? body.querySelector('.rel-memo textarea').value : null,
+        } : null;
+        renderProfile(res.profile, keep);
+        if (keep) body.scrollTop = keep.top;
         if (!$('profile-dlg').open) $('profile-dlg').showModal();
       });
     });
   }
   const refreshProfile = () => { if ($('profile-dlg').open && profileId) openProfile(profileId); };
-  function renderProfile(p) {
+  function renderProfile(p, keep) {
     const body = $('profile-body');
     body.replaceChildren();
     const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -3351,7 +3409,12 @@
       b.className = `btn${opt.primary ? ' primary' : ''}`;
       b.textContent = text;
       b.disabled = !!opt.disabled;
-      b.addEventListener('click', fn);
+      b.addEventListener('click', () => {
+        if (opt.instant) return fn();
+        for (const x of acts.querySelectorAll('.grp > .btn')) x.disabled = true;
+        b.classList.add('busy');
+        fn();
+      });
       g.appendChild(b);
       return b;
     };
@@ -3359,13 +3422,13 @@
 
     // 텔레파시: 대륙 어디서든
     const g0 = grp('텔레파시');
-    btn(g0, '생각 보내기', () => { $('profile-dlg').close(); openTp(p.id); });
+    btn(g0, '생각 보내기', () => { $('profile-dlg').close(); openTp(p.id); }, { instant: true });
 
     // 관계
     const r = p.rel;
     const g1 = grp('관계');
     if (r.mine === 'friend') {
-      btn(g1, '동료 끊기', () => { if (confirm(`${p.name}${josa(p.name, '과', '와')}의 동료 관계를 끊을까? 양쪽 모두에서 사라진다.`)) socialAct('rel:unfriend', { id: p.id }, refreshProfile); });
+      btn(g1, '동료 끊기', () => { if (confirm(`${p.name}${josa(p.name, '과', '와')}의 동료 관계를 끊을까? 양쪽 모두에서 사라진다.`)) socialAct('rel:unfriend', { id: p.id }, refreshProfile); }, { instant: true });
     } else {
       if (r.got) {
         btn(g1, '동료 요청 받아들이기', () => socialAct('rel:accept', { id: p.id }, refreshProfile), { primary: true });
@@ -3382,18 +3445,60 @@
       n.textContent = '동료는 상대가 받아들여야 맺어진다. 라이벌·경계 표시는 나만 본다.';
       g1.appendChild(n);
     }
+    // 이 드래곤이 나에 대해 남긴 메모
+    if (r.theirMemo) {
+      const tm = document.createElement('div');
+      tm.className = 'their-memo';
+      tm.innerHTML = '<span class="h"></span><p></p>';
+      tm.querySelector('.h').textContent = `${p.name}${josa(p.name, '이', '가')} 나에 대해 남긴 메모`;
+      tm.querySelector('p').textContent = r.theirMemo;
+      g1.appendChild(tm);
+    }
+    // 내가 남기는 메모: 어떤 관계든 남길 수 있고, 상대도 내 기록에서 볼 수 있음
+    const memo = document.createElement('div');
+    memo.className = 'rel-memo';
+    memo.innerHTML = `<div class="h"><span>메모 · ${esc(p.name)}도 볼 수 있다</span><span class="st"></span></div>
+      <textarea class="input" maxlength="200" placeholder="이 드래곤에 대해 기억해 둘 것 (200자까지)" aria-label="${esc(p.name)}에 대한 메모"></textarea>
+      <div class="r"><button class="btn" type="button">메모 저장</button></div>`;
+    const ta = memo.querySelector('textarea');
+    const st = memo.querySelector('.st');
+    const saved = r.memo || '';
+    ta.value = keep?.memo ?? saved;
+    // 예전에 '나만 본다'로 쓴 메모는 다시 저장하기 전까지 상대에게 보이지 않음
+    const privateOld = !!saved && !r.memoShared;
+    const mark = () => {
+      const dirty = ta.value.trim() !== saved;
+      ta.dataset.dirty = dirty ? '1' : '';
+      st.textContent = dirty ? '저장하지 않음' : privateOld ? '아직 나만 본다 · 저장하면 상대도 본다' : saved ? '저장됨' : '';
+      st.classList.toggle('saved', !dirty && !!saved && !privateOld);
+      save.disabled = !dirty && !privateOld;
+    };
+    const save = memo.querySelector('.btn');
+    ta.addEventListener('input', mark);
+    save.addEventListener('click', () => {
+      save.disabled = true;
+      socket.emit('rel:memo', { id: p.id, text: ta.value }, (res) => {
+        if (res.error) { save.disabled = false; return toast(res.error); }
+        toast(res.lines.join(' '));
+        ta.dataset.dirty = '';
+        loadRel(refreshProfile);
+      });
+    });
+    g1.appendChild(memo);
+    mark();
 
     // 거래
     const g2 = grp('거래');
-    btn(g2, '교환하기', () => socialAct('trade:invite', { id: p.id }), { disabled: !!p.can.trade });
-    const giftBtn = btn(g2, '선물 보내기', () => { gift.hidden = !gift.hidden; }, { disabled: !!p.can.gift });
+    btn(g2, '교환하기', () => socialAct('trade:invite', { id: p.id }, refreshProfile), { disabled: !!p.can.trade });
+    const giftBtn = btn(g2, '선물 보내기', () => { gift.hidden = !gift.hidden; }, { disabled: !!p.can.gift, instant: true });
     why(g2, p.can.trade && p.can.gift ? p.can.gift : p.can.trade ? `교환: ${p.can.trade}` : '');
     const gift = document.createElement('div');
     gift.className = 'gift-box';
-    gift.hidden = true;
+    gift.hidden = !keep?.gift;
     const own = Object.entries(invCache).filter(([id, q]) => S.items[id] && q > 0);
     gift.innerHTML = `<div class="r"><select aria-label="보낼 물건"><option value="">물건 없이</option></select><input class="input num" type="number" min="1" value="1" aria-label="개수"></div>
       <div class="r"><span style="font-size: 13px">금화</span><input class="input num gold" type="number" min="0" value="0" aria-label="금화"><span class="note">가진 금화 ${S.me.gold}</span></div>
+      <div class="r"><textarea class="input msg" rows="2" maxlength="100" placeholder="함께 보낼 말 (적지 않아도 된다, 100자까지)" aria-label="함께 보낼 말"></textarea></div>
       <div class="r"><button class="btn primary" type="button">보내기</button></div>`;
     const sel = gift.querySelector('select');
     for (const [id, q] of own.sort(([a], [b]) => S.items[a].name.localeCompare(S.items[b].name, 'ko'))) {
@@ -3407,7 +3512,8 @@
       const qty = Number(gift.querySelector('.num').value) || 0;
       const gold = Number(gift.querySelector('.gold').value) || 0;
       const items = id && qty > 0 ? [{ id, qty }] : [];
-      socket.emit('gift:send', { id: p.id, gold, items }, (res) => {
+      const msg = gift.querySelector('.msg').value.trim();
+      socket.emit('gift:send', { id: p.id, gold, items, msg }, (res) => {
         if (res.error) return toast(res.error);
         toast(res.lines.join(' '));
         fetchInv(refreshProfile);
@@ -3418,6 +3524,56 @@
     if (giftBtn.disabled) gift.remove();
   }
   $('profile-close').addEventListener('click', () => $('profile-dlg').close());
+
+  // ── 받은 선물: '확인'을 누를 때까지 남는 알림 ──
+  let giftQ = [];
+  function showGift() {
+    const g = giftQ[0];
+    if (!g) { if ($('gift-dlg').open) $('gift-dlg').close(); return; }
+    $('gift-title').textContent = giftQ.length > 1 ? `선물이 도착했다 (${giftQ.length}개)` : '선물이 도착했다';
+    const body = $('gift-body');
+    body.replaceChildren();
+    const head = document.createElement('div');
+    head.className = 'gift-from';
+    head.appendChild(avaEl({ id: g.from.id, kind: g.from.kind || 'silver', av: 0 }, 44));
+    const t = document.createElement('div');
+    t.innerHTML = '<b></b><small></small>';
+    t.querySelector('b').textContent = `${g.from.name}${josa(g.from.name, '이', '가')} 보내온 선물`;
+    t.querySelector('small').textContent = chronDate(g.at);
+    head.appendChild(t);
+    body.appendChild(head);
+    const chips = document.createElement('div');
+    chips.className = 'gift-items';
+    for (const it of g.items) { const c = document.createElement('span'); c.className = `gain ${S.items[it.id]?.rarity || 'common'}`; c.textContent = `${S.items[it.id]?.name || it.id} ×${it.qty}`; chips.appendChild(c); }
+    if (g.gold) { const c = document.createElement('span'); c.className = 'gain common'; c.textContent = `금화 ${g.gold}닢`; chips.appendChild(c); }
+    body.appendChild(chips);
+    if (g.msg) {
+      const m = document.createElement('blockquote');
+      m.className = 'gift-msg';
+      m.textContent = g.msg;
+      body.appendChild(m);
+    } else {
+      const n = document.createElement('p');
+      n.className = 'note';
+      n.textContent = '함께 적은 말은 없다.';
+      body.appendChild(n);
+    }
+    const n2 = document.createElement('p');
+    n2.className = 'note';
+    n2.textContent = '받은 것은 이미 소지품과 금화에 들어 있다.';
+    body.appendChild(n2);
+    $('gift-thanks').hidden = !g.from.id || g.from.id === S.me?.id;
+    if (!$('gift-dlg').open) $('gift-dlg').showModal();
+  }
+  function seeGift(then) {
+    const g = giftQ.shift();
+    if (g) socket.emit('gift:seen', { id: g.id }, () => {});
+    showGift();
+    if (then && g) then(g);
+  }
+  $('gift-ok').addEventListener('click', () => seeGift());
+  $('gift-thanks').addEventListener('click', () => seeGift((g) => { if ($('gift-dlg').open) $('gift-dlg').close(); openTp(g.from.id); }));
+  $('gift-dlg').addEventListener('cancel', (e) => e.preventDefault()); // Esc로 닫지 않음 (확인을 눌러야 사라짐)
 
   // ── 동료 메뉴 ──
   function openFriends() { loadRel(() => { renderFriends(); openPanel('friends-dlg'); }); }
@@ -3439,6 +3595,14 @@
         t.innerHTML = '<b></b><small></small>';
         t.querySelector('b').textContent = x.name;
         t.querySelector('small').innerHTML = sub(x);
+        for (const [text, cls, who] of [[x.memo, 'memo', '내 메모'], [x.theirMemo, 'memo theirs', `${x.name}의 메모`]]) {
+          if (!text) continue;
+          const m = document.createElement('span');
+          m.className = cls;
+          m.textContent = text.replace(/\s+/g, ' ');
+          m.title = `${who}: ${text}`;
+          t.appendChild(m);
+        }
         r.appendChild(t);
         const a = document.createElement('div');
         a.className = 'acts';
@@ -5111,12 +5275,13 @@
 
   // ── 이곳의 드래곤 ──
   function renderHere() {
-    $('here-n').textContent = S.occupants.length;
+    const onN = S.occupants.filter((d) => d.online).length;
+    $('here-n').textContent = onN === S.occupants.length ? `${onN}` : `접속 ${onN} · ${S.occupants.length}`;
     const box = $('here');
     box.replaceChildren();
     for (const d of S.occupants) {
       const row = document.createElement('div');
-      row.className = 'who click';
+      row.className = `who click${d.online ? '' : ' off'}`;
       row.tabIndex = 0;
       row.setAttribute('role', 'button');
       row.setAttribute('aria-label', `${d.name}의 기록 보기`);
@@ -5148,7 +5313,11 @@
       const k = document.createElement('span');
       k.textContent = `${S.kinds[d.kind]?.name || ''}${d.place && S.places?.[d.place] ? ` · ${S.places[d.place].name}` : ''}`;
       if (d.title) { const tt = document.createElement('span'); tt.className = 'ttl'; tt.textContent = d.title; nm.append(tt); }
-      nm.append(b, k);
+      // 접속 상태: 접속 중 / 접속 안 함 · 마지막으로 본 때
+      const st = document.createElement('span');
+      st.className = `st${d.online ? ' on' : ''}`;
+      st.textContent = d.online ? '접속 중' : `접속 안 함${d.lastSeen ? ` · ${ago(d.lastSeen)}` : ''}`;
+      nm.append(b, k, st);
       row.append(ava, nm);
       if (d.away) {
         const a = document.createElement('span');
@@ -5239,15 +5408,23 @@
     // 칭호는 이름 앞에
     if (m.title) { const tt = document.createElement('span'); tt.className = 'ttl'; tt.textContent = m.title; head.append(tt); }
     head.append(nm, tm);
+    // 작은 프로필 사진을 이름 바로 왼쪽에 (없으면 종류 문양). 눌러도 기록이 열림
+    if (m.dragonId) {
+      const ava = avaEl({ id: m.dragonId, kind: m.kind, av: m.av }, 22);
+      ava.setAttribute('role', 'button');
+      ava.title = nm.title;
+      ava.addEventListener('click', () => openProfile(m.dragonId));
+      head.prepend(ava);
+    }
     p.append(head, line);
     addLine(p);
   }
   function onChatDeleted({ id }) {
     const line = document.querySelector(`#log .ml[data-id="${id}"]`);
     if (!line) return;
-    const group = line.parentElement;
+    const group = line.closest('.msg');
     line.remove();
-    if (!group.querySelector('.ml')) group.remove();
+    if (group && !group.querySelector('.ml')) group.remove();
   }
   function addSystem(text) {
     const p = document.createElement('div');
@@ -5390,6 +5567,8 @@
       const text = x.arrived ? `${who} ${x.name}${josa(x.name, '이', '가')} 이곳에 날아왔다!` : `${who} ${x.name}${josa(x.name, '이', '가')} 이곳에 있다!`;
       toast(text, { label: '결투 신청', run: () => { hideToast(); challenge({ id: x.id, name: x.name }, 'live'); } });
     });
+    socket.on('gift:got', (g) => { giftQ.push(g); fetchInv(); showGift(); });
+    socket.on('gift:inbox', (l) => { giftQ = l || []; showGift(); });
     socket.on('rescue:list', (l) => { S.rescues = l || []; renderRescues(); });
     socket.on('rescued', (r) => { if ($('fall-dlg').open) $('fall-dlg').close(); showResult({ title: '구조', lines: r.lines }); });
     socket.on('rampage:end', onRampageEnd);
