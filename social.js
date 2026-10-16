@@ -116,7 +116,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     const kin = e ? d.kinSummary : life.summary(db.kinLoad(d.id), Date.now());
     const equip = logic.equipOf(d);
     const ft = fameTier(d.fame || 0);
-    const near = !!e && e.dragon.region === viewer.region;
+    const near = !d.dead_at && d.region === viewer.region; // 같은 지역에 머무는 드래곤 (접속하지 않았어도 이곳의 드래곤 목록에 보이므로)
     // 지금의 체력·기력·정신 (접속하지 않은 동안 찬 만큼도 계산해서 보여 줌)
     if (!d.dead_at) logic.regen(d);
     const vitals = d.dead_at ? null : {
@@ -144,6 +144,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       away: !!d.exp_end, resting: !!d.rest_at,
       // 동료와 자기 자신에게만, 그리고 같은 지역이면 보이는 정보
       region: friend || self || near ? d.region : null,
+      place: friend || self || near ? logic.placeOf(d) : null,   // 지역 안의 장소
       nest: friend || self ? d.nest || null : null,
       self,
       rel: self ? null : {

@@ -356,7 +356,7 @@
   /* ── 동료: 프로필 · 동료 목록 · 교환 ── */
   .who.click { cursor: pointer; border-radius: 3px; margin: -4px -6px; padding: 4px 6px 4px 10px; }
   .who.click:hover, .who.click:focus-visible { background: #ECEEEC; }
-  .who .relb { font-size: 11px; padding: 0 6px; border-radius: 2px; border: 1px solid; white-space: nowrap; line-height: 18px; }
+  .relb, .who .relb { display: inline-block; font: 600 11px/18px var(--sans); padding: 0 6px; border-radius: 2px; border: 1px solid; white-space: nowrap; }
   .relb.friend { color: #2F5D45; border-color: #A9C4B2; background: #EEF4EF; }
   .relb.rival { color: #8A2E27; border-color: #E6C3C7; background: #FBF1F2; }
   .relb.wary { color: #6B4E12; border-color: #E2CF9E; background: #FBF6E8; }
@@ -399,8 +399,11 @@
   .pf-head { display: flex; gap: 14px; align-items: center; }
   .pf-head .ava { width: 64px; height: 64px; }
   .pf-head .t { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-  .pf-head .t b { font: 700 22px/1.2 var(--serif); overflow-wrap: anywhere; }
-  .pf-head .t span { font-size: 13px; color: var(--ink-2); }
+  .pf-head .t b { font: 700 18px/1.25 var(--serif); overflow-wrap: anywhere; }
+  .pf-head .t > span { font-size: 13px; color: var(--ink-2); }
+  .pf-head .t .where-now { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; color: var(--steel-d); font-weight: 600; }
+  .pf-head .t .where-now svg { flex: none; }
+  .pf-head .t .where-now.off { color: var(--muted); font-weight: 500; }
   .pf-head .t .nrow .ttl { font-size: 11px; color: #3C5A73; }
   .pf-head .chips2 { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
   .st-chip { font-size: 11px; padding: 0 7px; line-height: 19px; border-radius: 2px; border: 1px solid var(--line-soft); color: var(--muted); background: var(--surface-2); }
@@ -3529,6 +3532,16 @@
     else if (p.rel.sent) chip('동료 요청함', 'relb pending');
     else if (p.rel.got) chip('동료 요청 받음', 'relb pending');
     if (p.dead) chip('잠든 드래곤', 'relb wary');
+    // 지금 있는 곳 (같은 지역·동료·나일 때만 보임)
+    if (p.region && S.regions[p.region]) {
+      const w = document.createElement('span');
+      w.className = `where-now${p.online ? '' : ' off'}`;
+      const pl = p.place && S.places?.[p.place] ? ` · ${S.places[p.place].name}` : '';
+      w.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg><em></em>';
+      w.querySelector('em').style.fontStyle = 'normal';
+      w.querySelector('em').textContent = `${S.regions[p.region].name}${pl}${p.online ? '' : ' (마지막으로 본 곳)'}`;
+      t.insertBefore(w, chips);
+    }
     head.appendChild(t);
     body.appendChild(head);
 
@@ -3576,7 +3589,6 @@
     if (p.bio?.gender) row('성별', p.bio.gender);
     row('인간을 대하는 방식', p.stanceName);
     row('용족 명성', p.fame);
-    if (p.region) row('지금 있는 곳', p.online ? S.regions[p.region].name : `${S.regions[p.region].name} (마지막으로 본 곳)`);
     if (p.nest) row('둥지', S.regions[p.nest].name);
     row('둥지 식구', p.kin.length ? p.kin.map((k) => `${k.name}(${k.stage})`).join(', ') : '없음');
     if (p.lineage) row('계보', `${p.lineage}마리 독립`);
