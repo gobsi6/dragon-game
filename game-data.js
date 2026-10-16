@@ -573,6 +573,96 @@ const TRAIT_COUNTS = {
   corrupt: '오염된 땅에서 행동', berserk: '광폭화',
 };
 
+// ── 원정: 목적과 갈림길 ────────────────────────────
+// '~으로/로' (받침 없거나 ㄹ 받침이면 '로')
+const ro = (w) => { const c = w.charCodeAt(w.length - 1) - 0xac00; return `${w}${c < 0 || c > 11171 || c % 28 === 0 || c % 28 === 8 ? '로' : '으로'}`; };
+// 목적: rolls(찾는 횟수 배율), uncommon·rare(확률 배율), gold·xp(배율), trophy(사냥 전리품을 20분마다 몇 번), hurt(30분마다 잃는 체력 비율),
+//       miss(헛걸음 확률: 찾는 횟수 절반), fame(2시간 이상이면 명성)
+const EXP_GOALS = {
+  gather:   { name: '채집',     desc: '풀숲과 바위틈을 뒤진다. 재료를 많이 찾는다.', eff: '찾는 횟수 +40%, 금화 −30%', rolls: 1.4, uncommon: 1, rare: 1, gold: 0.7, xp: 1,
+    open: (w) => `${w}의 풀숲과 바위틈을 살피러 떠났다.` },
+  hunt:     { name: '사냥',     desc: '사냥감을 쫓는다. 사냥 전리품과 금화를 얻지만 다칠 수 있다.', eff: '사냥 전리품, 금화 +50%, 경험 +20%, 찾는 횟수 −30%, 체력이 깎임', rolls: 0.7, uncommon: 1, rare: 1, gold: 1.5, xp: 1.2, trophy: 1, hurt: 0.04, wild: true,
+    open: (w) => `${ro(w)} 사냥감을 쫓아 떠났다.` },
+  treasure: { name: '보물찾기', desc: '숨은 보물을 찾는다. 귀한 물건이 잘 나오지만 헛걸음할 수도 있다.', eff: '귀한 물건 ×4, 드문 물건 ×1.8, 찾는 횟수 −40%, 헛걸음 20%', rolls: 0.6, uncommon: 1.8, rare: 4, gold: 1, xp: 1, miss: 0.2,
+    open: (w) => `${w} 어딘가에 숨은 보물을 찾아 떠났다.` },
+  scout:    { name: '정찰',     desc: '하늘 높이 날아 땅을 살핀다. 물건은 적지만 많이 배운다.', eff: '경험 +60%, 2시간 이상이면 명성 +1, 찾는 횟수 −50%', rolls: 0.5, uncommon: 1, rare: 1, gold: 0.8, xp: 1.6, fame: 1,
+    open: (w) => `${w}의 하늘 높이 날아올라 땅을 살폈다.` },
+};
+// 갈림길: 원정 중간에 한 번 고른다. 고르지 않고 돌아오면 성향에 맞게 저절로 고른다.
+// tone: bold(대담) / careful(신중) / kind(다정) / cruel(거침) — 적대는 대담·거침, 은둔은 신중·다정, 우호는 다정·신중 순으로 고름
+// 결과(ok/bad): rolls(찾는 횟수 배율), rare(귀한 물건 확률 +), gold(금화 +), xp(경험 배율), hurt(체력 비율 −), mind(정신 ±), rep(가까운 마을 평판), item(확정으로 얻는 물건), loot(지역 재료 n개 더)
+const EXP_FORKS = [
+  { id: 'storm', text: '하늘이 시커멓게 물들고, 폭풍이 몰려온다.',
+    a: { label: '동굴로 피한다', tone: 'careful', ok: { rolls: 0.85, loot: 1, text: '동굴에서 비를 피했다. 시간은 흘렀지만, 바위틈에서 무언가를 주웠다.' } },
+    b: { label: '폭풍을 뚫고 날아간다', tone: 'bold', chance: 0.6, ok: { rolls: 1.25, text: '번개 사이를 가르며 날았다. 폭풍 너머에 아무도 밟지 않은 땅이 펼쳐졌다.' }, bad: { hurt: 0.15, text: '거센 바람에 날개가 꺾여 바위에 부딪혔다.' } } },
+  { id: 'tracks', text: '진흙 위로 집채만 한 발자국이 이어져 있다.', wild: true,
+    a: { label: '발자국을 따라간다', tone: 'bold', chance: 0.55, ok: { trophy: 2, gold: 25, text: '발자국 끝에서 늙은 짐승의 굴을 찾았다. 싸움 끝에 전리품을 챙겼다.' }, bad: { hurt: 0.2, text: '굴의 주인은 생각보다 컸다. 겨우 빠져나왔다.' } },
+    b: { label: '조용히 돌아간다', tone: 'careful', ok: { rolls: 1.1, text: '괜한 싸움을 피하고 갈 길을 서둘렀다.' } } },
+  { id: 'caravan', text: '인간 상단의 수레바퀴가 진흙에 빠져, 상인들이 쩔쩔매고 있다.',
+    a: { label: '수레를 들어 올려 준다', tone: 'kind', ok: { rep: 6, gold: 15, text: '수레를 번쩍 들어 올려 주었다. 상인들이 놀라더니 감사의 표시로 금화를 건넸다.' } },
+    b: { label: '겁을 줘 짐을 빼앗는다', tone: 'cruel', ok: { rep: -10, gold: 60, text: '포효 한 번에 상인들이 짐을 버리고 달아났다.' } } },
+  { id: 'glow', text: '바위틈에서 검붉은 빛이 새어 나온다. 손끝이 저릿하다.',
+    a: { label: '파고든다', tone: 'bold', chance: 0.5, ok: { rare: 0.25, loot: 1, text: '빛의 근원에서 귀한 것을 캐냈다.' }, bad: { mind: -12, text: '빛이 머릿속을 파고들었다. 한참 동안 귀가 울렸다.' } },
+    b: { label: '지나친다', tone: 'careful', ok: { rolls: 1.1, text: '불길한 빛을 멀리하고 날개를 돌렸다.' } } },
+  { id: 'cub', text: '다리를 다친 어린 짐승이 덤불 아래 웅크려 떨고 있다.', wild: true,
+    a: { label: '상처를 핥아 준다', tone: 'kind', ok: { mind: 15, xp: 1.2, text: '상처를 핥아 주자 어린 짐승이 비틀비틀 숲으로 돌아갔다. 마음이 따뜻해졌다.' } },
+    b: { label: '먹이로 삼는다', tone: 'cruel', ok: { hurt: -0.15, text: '배를 채우고 나니 힘이 솟았다.' } } },
+  { id: 'stairs', text: '무너진 탑 아래, 땅속으로 이어진 계단이 보인다.',
+    a: { label: '계단을 내려간다', tone: 'bold', chance: 0.45, ok: { item: 'ancient_relic', text: '어둠 속 제단 위에 고대의 유물이 놓여 있었다.' }, bad: { rolls: 0.75, text: '끝없는 통로에서 한참을 헤매다 겨우 빠져나왔다.' } },
+    b: { label: '위에서 둘러본다', tone: 'careful', ok: { item: 'rune_stone', loot: 1, text: '무너진 돌 사이에서 룬이 새겨진 돌을 골라냈다.' } } },
+  { id: 'river', text: '불어난 강물이 길을 막았다.',
+    a: { label: '헤엄쳐 건넌다', tone: 'bold', ok: { rolls: 1.15, hurt: 0.08, text: '거센 물살에 휩쓸릴 뻔했지만 건너편에 닿았다.' } },
+    b: { label: '물이 빠질 때까지 기다린다', tone: 'careful', ok: { rolls: 0.9, xp: 1.15, text: '강가에 앉아 물살을 바라보며 많은 것을 생각했다.' } } },
+  { id: 'rival', text: '낯선 드래곤 한 마리가 먼저 와서 이 땅을 뒤지고 있다.',
+    a: { label: '위협해 쫓아낸다', tone: 'cruel', chance: 0.6, ok: { rolls: 1.3, text: '이빨을 드러내자 낯선 드래곤이 물러났다. 이 땅은 이제 나의 것이다.' }, bad: { hurt: 0.15, rolls: 0.9, text: '상대도 만만치 않았다. 서로 상처만 남기고 갈라섰다.' } },
+    b: { label: '함께 뒤지자고 청한다', tone: 'kind', ok: { loot: 1, xp: 1.1, text: '둘이 함께 뒤지니 더 많은 것이 보였다. 헤어질 때 서로 고개를 끄덕였다.' } } },
+];
+const EXP_RULES = { forkFrom: 0.35, forkTo: 0.6, stanceTone: { hostile: ['bold', 'cruel', 'careful', 'kind'], hermit: ['careful', 'kind', 'bold', 'cruel'], friendly: ['kind', 'careful', 'bold', 'cruel'] } };
+
+// ── 칭호 ───────────────────────────────────────────
+// 업적을 이루면 저절로 얻고, 하나를 골라 단다. 단 칭호는 이름 옆에 보이고 작은 효과가 있다 (결투장에는 효과 없음).
+// cond: { count: 셈 이름, at } (특성 횟수와 같은 곳에 셈) / { level } / { duel: 결투 승리 } / { scars: 상흔 수 }
+// mod: atk·taken(사냥·강적 전투 공격·받는 피해 배율, region이 있으면 그 지역에서만), eliteAtk(강적 공격), xp(경험치), huntGold(사냥 금화),
+//      drop(사냥 전리품 확률 +), craftEn(제작 기력 배율), mindWard(깎이는 정신 배율), heal(치유 배율), helpHp(일으켜 줄 때 체력 +), expRare(원정 귀한 물건 +)
+const TITLES = [
+  // 사냥
+  { id: 'hunter1',   name: '풋내기 사냥꾼',     cond: { count: 'huntwin', at: 10 },  mod: { huntGold: 1.1 },  eff: '사냥 금화 +10%' },
+  { id: 'hunter2',   name: '노련한 사냥꾼',     cond: { count: 'huntwin', at: 100 }, mod: { atk: 1.04 },      eff: '사냥 공격 +4%' },
+  { id: 'hunter3',   name: '대륙의 포식자',     cond: { count: 'huntwin', at: 400 }, mod: { atk: 1.07, taken: 0.97 }, eff: '사냥 공격 +7%, 받는 피해 −3%' },
+  // 지역의 주인: 그 지역에서 사냥 30번 이기기
+  { id: 'lord_plains',  name: '평원의 주인',     cond: { count: 'huntwin:plains', at: 30 },  mod: { region: 'plains',  atk: 1.08, taken: 0.92 }, eff: '중앙 평원에서 공격 +8%, 받는 피해 −8%' },
+  { id: 'lord_forest',  name: '숲의 그림자',     cond: { count: 'huntwin:forest', at: 30 },  mod: { region: 'forest',  atk: 1.08, taken: 0.92 }, eff: '독안개 숲에서 공격 +8%, 받는 피해 −8%' },
+  { id: 'lord_swamp',   name: '늪의 군주',       cond: { count: 'huntwin:swamp', at: 30 },   mod: { region: 'swamp',   atk: 1.08, taken: 0.92 }, eff: '검은 늪에서 공격 +8%, 받는 피해 −8%' },
+  { id: 'lord_snow',    name: '설원의 방랑자',   cond: { count: 'huntwin:snow', at: 30 },    mod: { region: 'snow',    atk: 1.08, taken: 0.92 }, eff: '북부 설원에서 공격 +8%, 받는 피해 −8%' },
+  { id: 'lord_ruins',   name: '폐허의 파수꾼',   cond: { count: 'huntwin:ruins', at: 30 },   mod: { region: 'ruins',   atk: 1.08, taken: 0.92 }, eff: '고대 유적에서 공격 +8%, 받는 피해 −8%' },
+  { id: 'lord_canyon',  name: '협곡의 맹금',     cond: { count: 'huntwin:canyon', at: 30 },  mod: { region: 'canyon',  atk: 1.08, taken: 0.92 }, eff: '태양 협곡에서 공격 +8%, 받는 피해 −8%' },
+  { id: 'lord_volcano', name: '불꽃을 걷는 자',  cond: { count: 'huntwin:volcano', at: 30 }, mod: { region: 'volcano', atk: 1.08, taken: 0.92 }, eff: '잿빛 화산에서 공격 +8%, 받는 피해 −8%' },
+  // 강적
+  { id: 'elite1',    name: '강적 사냥꾼',       cond: { count: 'elite', at: 5 },     mod: { eliteAtk: 1.06 }, eff: '강적과 싸울 때 공격 +6%' },
+  { id: 'elite2',    name: '전설을 쓰러뜨린 자', cond: { count: 'elite', at: 30 },   mod: { eliteAtk: 1.1, drop: 0.05 }, eff: '강적과 싸울 때 공격 +10%, 전리품 +5%' },
+  // 모으기·떠돌기
+  { id: 'gatherer',  name: '약초를 아는 발톱', cond: { count: 'gather', at: 60 },   mod: { heal: 1.15 },     eff: '치유 +15%' },
+  { id: 'explorer',  name: '길 찾는 자',       cond: { count: 'explore', at: 60 },  mod: { drop: 0.05 },     eff: '사냥 전리품 +5%' },
+  { id: 'wanderer',  name: '먼 길의 나그네',   cond: { count: 'expedition', at: 20 }, mod: { expRare: 0.03 }, eff: '원정 귀한 물건 +3%' },
+  { id: 'trader',    name: '흥정꾼',           cond: { count: 'trade', at: 30 },    mod: { huntGold: 1.15 }, eff: '사냥 금화 +15%' },
+  { id: 'sleeper',   name: '깊은 잠의 용',     cond: { count: 'rest', at: 40 },     mod: { mindWard: 0.85 }, eff: '깎이는 정신 −15%' },
+  // 만들기
+  { id: 'crafter1',  name: '솜씨 좋은 발톱',   cond: { count: 'craft', at: 20 },    mod: { craftEn: 0.85 },  eff: '제작 기력 −15%' },
+  { id: 'crafter2',  name: '용의 장인',        cond: { count: 'craft', at: 100 },   mod: { craftEn: 0.75 },  eff: '제작 기력 −25%' },
+  // 자라기
+  { id: 'lv5',       name: '날개를 편 자',     cond: { level: 5 },                  mod: { xp: 1.03 },       eff: '경험치 +3%' },
+  { id: 'lv10',      name: '하늘의 주인',      cond: { level: 10 },                 mod: { xp: 1.06 },       eff: '경험치 +6%' },
+  // 결투장
+  { id: 'duel1',     name: '결투장의 신예',    cond: { duel: 10 },                  mod: { atk: 1.03 },      eff: '사냥 공격 +3%' },
+  { id: 'duel2',     name: '결투장의 왕',      cond: { duel: 50 },                  mod: { atk: 1.05, eliteAtk: 1.03 }, eff: '사냥 공격 +5%, 강적 공격 +3%' },
+  // 서로 돕기·정신
+  { id: 'rescuer',   name: '손을 내미는 자',   cond: { count: 'rescue', at: 3 },    mod: { helpHp: 0.15 },   eff: '일으켜 줄 때 체력 +15%' },
+  { id: 'calmer',    name: '광기를 잠재우는 자', cond: { count: 'calm', at: 3 },     mod: { mindWard: 0.8 },  eff: '깎이는 정신 −20%' },
+  { id: 'scarred',   name: '상흔투성이',       cond: { scars: 3 },                  mod: { taken: 0.95 },    eff: '사냥 받는 피해 −5%' },
+];
+// 칭호 조건을 사람이 읽는 글로
+const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: '둥지에서 {n}번 쉬기', craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', calm: '광폭화 {n}번 진정시키기' };
+
 // ── 장소와 사냥터 난이도 ───────────────────────────
 // 야생 지역마다 장소가 셋. 입구는 쉽고 안쪽일수록 사냥터 난이도(Lv.1~12)가 높다.
 // 지역으로 날아오면 첫 장소(입구)에 내려앉고, 같은 지역 안에서는 행동력 없이 옮겨 다닌다.
@@ -714,7 +804,19 @@ const SKILLS = {
 const STATUS = {
   burn: '화상', poison: '중독', bleed: '출혈', acid: '비늘 녹음', freeze: '얼어붙음', stun: '마비',
   weaken: '움츠러듦', harden: '비늘 세움', evade: '안개', dodge: '돌풍',
+  brittle: '얼음 금', dazed: '휘청임', opening: '반격 기회',
 };
+// 연계: 상대의 상태에 맞는 스킬을 쓰면 추가 효과
+// (얼어붙음·마비가 풀린 다음 턴에도 '얼음 금'·'휘청임'이 남아 연계를 이을 수 있다)
+const COMBOS = {
+  shatter:  { name: '얼음 깨기',     skill: ['tail'],                  when: ['freeze', 'brittle'], desc: '얼어붙은 적에게 꼬리치기: 피해 ×2' },
+  vital:    { name: '급소 찌르기',   skill: ['attack', 'rend'],        when: ['stun', 'dazed'],     desc: '마비된 적에게 할퀴기·찢어발기기: 반드시 급소' },
+  wildfire: { name: '불길 번짐',     skill: ['gust'],                  when: ['burn'],              desc: '불타는 적에게 날개 돌풍: 화상 피해를 바로 한 번 더, 화상 3턴 연장' },
+  flay:     { name: '녹은 비늘 찢기', skill: ['rend'],                 when: ['acid'],              desc: '비늘이 녹은 적에게 찢어발기기: 출혈 피해 ×2' },
+  spread:   { name: '독 퍼뜨리기',   skill: ['tail', 'devour'],        when: ['poison'],            desc: '중독된 적에게 꼬리치기·포식: 독 피해 +50%, 중독 2턴 연장' },
+};
+// 강적의 분노: 체력이 이 비율 아래로 떨어지면 한 번
+const ENRAGE = { below: 0.5, atk: 1.25, every: 2 };
 // 사냥감의 전투 성질: 약점(피해 ×1.5)과 저항(피해 ×0.5, 상태 이상이 통하지 않음), 특기
 const CREATURE_COMBAT = {
   plains:  { weak: [],            resist: [],                    special: { name: '돌진', power: 1.6 } },
@@ -732,8 +834,8 @@ const ELITES = {
 };
 
 module.exports = {
-  KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS,
+  KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, TITLES, TITLE_COUNT_NAMES,
   SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, NEST, STANCE_RULES, FAME_TIERS, fameTier,
   DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
-  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, STATUS, CREATURE_COMBAT, ELITES,
+  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES,
 };

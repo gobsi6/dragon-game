@@ -57,6 +57,7 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
     const hpMax = Math.round(logic.hpCap(d) * 1.2);
     d.berserk = { at: now, until: now + mins * 60000, region: d.region, hp: hpMax, hpMax };
     d.rest_at = null;
+    logic.chron(d, 'mark', `${REGIONS[d.region].name}에서 정신을 잃고 광폭화했다.`);
     db.saveState(d);
     berserkSet.add(d.id);
     const where = REGIONS[d.region].name;
@@ -167,6 +168,8 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
     const res = { title: '진정시키기', lines: [], items: [] };
     if (bz && b.winner === b.a) {
       res.lines.push(`${eul(t.name)} 쓰러뜨려 진정시켰다!`);
+      logic.traitCount(d, 'calm');
+      logic.chron(d, 'mark', `광폭화한 ${eul(t.name)} 쓰러뜨려 진정시켰다.`);
       const f = logic.addFame(d, MIND.calmFame);
       res.lines.push(`용족 명성 +${MIND.calmFame}`);
       if (f) res.lines.push(f);
@@ -208,7 +211,7 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
       sendMe(e.socket, d);
       e.socket.emit('battle:end', { view: combat.view(s.b, 'a'), result: res });
     }
-    if (falls) return fallFn(d);
+    if (falls) return fallFn(d, s.b.b.name);
     checkMind(d); // 오염된 강적에게 정신이 다 깎였으면 광폭화
   }
 

@@ -594,7 +594,8 @@ function chooseEvent(d, kin, have, idx, now = Date.now()) {
   };
   ch.run(h, c, vars);
   d.pending_event = null;
-  return { title: e.title, lines: out.lines, items: out.items, gold: out.gold };
+  const label = typeof ch.label === 'function' ? ch.label(c, vars) : ch.label;
+  return { title: e.title, lines: out.lines, items: out.items, gold: out.gold, choice: label };
 }
 
 module.exports = {

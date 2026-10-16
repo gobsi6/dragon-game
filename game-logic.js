@@ -5,7 +5,7 @@
 
 const {
   REGIONS, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, RECIPES, SLOTS, STANCES, SHOPS, repTier, TRADE, NEST,
-  SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS,
+  SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES,
 } = require('./game-data');
 
 const SR = STANCE_RULES;
@@ -69,8 +69,114 @@ function traitCount(d, key, n = 1) {
   if (lines.length) clampVitals(d);
   return lines;
 }
-// 특성이 반영된 경험치
-const xpOf = (d, xp) => (xp > 0 ? Math.max(1, Math.round(xp * traitMods(d).xp)) : 0);
+// 특성과 칭호가 반영된 경험치
+const xpOf = (d, xp) => (xp > 0 ? Math.max(1, Math.round(xp * traitMods(d).xp * (titleMods(d).xp || 1))) : 0);
+
+// ── 지나온 이야기 ──────────────────────────────────
+// 선택(choice)과 큰 사건(mark)을 한 줄씩 남김. 최근 CHRON_MAX개만
+const CHRON_MAX = 150;
+function chronOf(d) {
+  if (typeof d.chron === 'string' || !Array.isArray(d.chron)) {
+    try { d.chron = JSON.parse(d.chron || '[]'); } catch { d.chron = []; }
+    if (!Array.isArray(d.chron)) d.chron = [];
+  }
+  return d.chron;
+}
+function chron(d, k, t, now = Date.now()) {
+  const l = chronOf(d);
+  l.push({ at: now, k, t });
+  if (l.length > CHRON_MAX) l.splice(0, l.length - CHRON_MAX);
+}
+
+// ── 칭호 ───────────────────────────────────────────
+// 저장 공간에는 글자(JSON)로: { have: [얻은 칭호 id], on: 단 칭호 id }. 업적 횟수는 특성 횟수(traits.counts)에 함께 셈
+const TITLE_BY_ID = Object.fromEntries(TITLES.map((t) => [t.id, t]));
+function titlesOf(d) {
+  if (typeof d.titles === 'string' || !d.titles) {
+    try { d.titles = JSON.parse(d.titles || '{}'); } catch { d.titles = {}; }
+  }
+  const t = d.titles;
+  if (!Array.isArray(t.have)) t.have = [];
+  // 칭호가 생기기 전의 사냥 횟수를 '이긴 횟수'로 한 번 옮겨 줌
+  if (!t.seeded) {
+    const c = traitsOf(d).counts;
+    c.huntwin = Math.max(c.huntwin || 0, c.hunt || 0);
+    t.seeded = true;
+  }
+  if (t.on && !t.have.includes(t.on)) t.on = null;
+  return t;
+}
+const titleOn = (d) => TITLE_BY_ID[titlesOf(d).on] || null;
+const titleName = (d) => titleOn(d)?.name || null;
+// 단 칭호의 효과. 지역 칭호는 그 지역에 있을 때만 공격·받는 피해가 바뀜
+function titleMods(d) {
+  const t = titleOn(d);
+  if (!t) return {};
+  const m = { ...t.mod };
+  if (m.region && m.region !== d.region) { delete m.atk; delete m.taken; }
+  return m;
+}
+// 칭호 조건: 지금 값과 목표
+function titleProgress(d, t) {
+  const c = t.cond;
+  if (c.count) return [traitsOf(d).counts[c.count] || 0, c.at];
+  if (c.level) return [d.level, c.level];
+  if (c.duel) {
+    let cb = d.combat;
+    if (typeof cb === 'string') { try { cb = JSON.parse(cb || '{}'); } catch { cb = {}; } }
+    return [cb?.w || 0, c.duel];
+  }
+  if (c.scars) {
+    let sc = d.scars;
+    if (typeof sc === 'string') { try { sc = JSON.parse(sc || '[]'); } catch { sc = []; } }
+    return [(sc || []).length, c.scars];
+  }
+  return [0, 1];
+}
+function titleCondText(t) {
+  const c = t.cond;
+  if (c.count) {
+    const [k, r] = c.count.split(':');
+    const text = (TITLE_COUNT_NAMES[k] || `${k} {n}번`).replace('{n}', c.at);
+    return r ? `${REGIONS[r].name}에서 ${text.replace('사냥에서 ', '사냥 ').replace('번 이기기', '번 이기기')}` : text;
+  }
+  if (c.level) return `레벨 ${c.level}`;
+  if (c.duel) return `결투에서 ${c.duel}번 이기기`;
+  if (c.scars) return `상흔 ${c.scars}개를 안고 살아남기`;
+  return '';
+}
+// 새로 이룬 칭호를 얻음. 얻은 칭호 이름 목록을 돌려줌 (처음 얻으면 바로 달아 줌)
+function checkTitles(d) {
+  if (d.dead_at) return [];
+  const t = titlesOf(d);
+  const got = [];
+  for (const ti of TITLES) {
+    if (t.have.includes(ti.id)) continue;
+    const [cur, at] = titleProgress(d, ti);
+    if (cur >= at) { t.have.push(ti.id); got.push(ti); chron(d, 'mark', `칭호 '${ti.name}'${josa(ti.name, '을', '를')} 얻었다.`); }
+  }
+  if (got.length && !t.on) t.on = got[got.length - 1].id;
+  return got;
+}
+function setTitle(d, id) {
+  const t = titlesOf(d);
+  if (!id) { t.on = null; return { ok: true, lines: ['칭호를 떼었다.'] }; }
+  if (!TITLE_BY_ID[id]) return { error: '없는 칭호다.' };
+  if (!t.have.includes(id)) return { error: '아직 얻지 못한 칭호다.' };
+  t.on = id;
+  return { ok: true, lines: [`이제 '${TITLE_BY_ID[id].name}'${josa(TITLE_BY_ID[id].name, '으로', '로')} 불린다. (${TITLE_BY_ID[id].eff})`] };
+}
+// 화면에 보낼 칭호 목록
+function titlesView(d) {
+  const t = titlesOf(d);
+  return {
+    on: t.on || null,
+    list: TITLES.map((ti) => {
+      const [cur, at] = titleProgress(d, ti);
+      return { id: ti.id, name: ti.name, eff: ti.eff, cond: titleCondText(ti), have: t.have.includes(ti.id), cur: Math.min(cur, at), at };
+    }),
+  };
+}
 
 // ── 장신구와 실제 능력치 ───────────────────────────
 // 저장 공간에는 글자(JSON)로 들어 있으니 객체로 바꿔 둠
@@ -205,7 +311,7 @@ function nearestTown(region) {
 function mindWard(d) {
   let w = 1;
   for (const id of Object.values(equipOf(d))) if (ITEMS[id]?.mindWard) w *= ITEMS[id].mindWard;
-  return w;
+  return w * (titleMods(d).mindWard || 1);
 }
 // 정신을 깎음. 알려 줄 문장을 돌려줌 (경고 문턱을 넘으면 경고도)
 function loseMind(d, n) {
@@ -299,6 +405,7 @@ function gainXp(d, xp) {
     up += 1;
   }
   if (up) {
+    chron(d, 'mark', `레벨 ${d.level}${[2, 4, 5, 9].includes(d.level % 10) ? '가' : '이'} 되었다.`);
     d.stat_pts = (d.stat_pts || 0) + STAT_POINTS.perLevel * up; // 나눌 능력치 포인트
     d.hp = hpCap(d);
     d.en = enCap(d);
@@ -480,14 +587,67 @@ function hunt(d) {
 }
 
 // ── 원정 ───────────────────────────────────────────
-function startExpedition(d, minutes, now = Date.now()) {
+// 원정의 목적·갈림길·지난 일지 (저장 공간에는 글자(JSON)로)
+function expInfo(d) {
+  if (typeof d.exp_info === 'string' || !d.exp_info) {
+    try { d.exp_info = JSON.parse(d.exp_info || '{}'); } catch { d.exp_info = {}; }
+  }
+  return d.exp_info;
+}
+function startExpedition(d, minutes, goal = 'gather', now = Date.now()) {
   if (d.exp_end) return { error: '이미 원정을 떠나 있다.' };
   if (d.rest_at) return { error: RESTING };
   if (!RULES.expeditionMinutes.includes(minutes)) return { error: '고를 수 없는 원정 시간이다.' };
+  const G = EXP_GOALS[goal];
+  if (!G) return { error: '알 수 없는 원정 목적이다.' };
+  if (G.wild && isTown(d.region)) return { error: '인간의 땅에서는 사냥 원정을 떠날 수 없다.' };
   d.exp_start = now;
   d.exp_end = now + minutes * 60 * 1000;
   d.exp_region = d.region;
+  // 갈림길: 원정 중간쯤 한 번
+  const forks = EXP_FORKS.filter((f) => !f.wild || !isTown(d.region));
+  const at = Math.round(now + minutes * 60000 * rand(EXP_RULES.forkFrom, EXP_RULES.forkTo));
+  d.exp_info = { goal, fork: { id: pick(forks).id, at, pick: null }, last: expInfo(d).last || null };
   return { ok: true };
+}
+// 갈림길을 고름 (key: 'a'/'b'). auto: 돌아올 때까지 고르지 않아 저절로 고름
+function resolveFork(d, key, auto = false) {
+  const f = expInfo(d).fork;
+  const F = EXP_FORKS.find((x) => x.id === f.id);
+  const opt = F[key];
+  const ok = opt.chance == null || Math.random() < opt.chance;
+  f.pick = key;
+  f.auto = auto;
+  f.res = { ...(ok ? opt.ok : opt.bad), good: ok };
+  return f.res;
+}
+// 성향에 맞는 쪽 (적대: 대담·거침, 은둔: 신중, 우호: 다정·신중)
+function autoForkKey(d) {
+  const f = expInfo(d).fork;
+  const F = EXP_FORKS.find((x) => x.id === f.id);
+  for (const tone of EXP_RULES.stanceTone[d.stance] || EXP_RULES.stanceTone.hermit) {
+    for (const k of ['a', 'b']) if (F[k].tone === tone) return k;
+  }
+  return 'b';
+}
+function chooseFork(d, key, now = Date.now()) {
+  if (!d.exp_end) return { error: '원정을 떠나 있지 않다.' };
+  const f = expInfo(d).fork;
+  if (!f || now < f.at) return { error: '아직 갈림길에 닿지 않았다.' };
+  if (f.pick) return { error: '이미 길을 골랐다.' };
+  if (key !== 'a' && key !== 'b') return { error: '고를 수 없는 길이다.' };
+  const res = resolveFork(d, key);
+  return { ok: true, lines: [res.text] };
+}
+// 화면에 보낼 갈림길 (닿았을 때만)
+function forkView(d, now = Date.now()) {
+  if (!d.exp_end) return null;
+  const f = expInfo(d).fork;
+  if (!f || now < f.at) return f ? { at: f.at } : null;
+  const F = EXP_FORKS.find((x) => x.id === f.id);
+  if (!F) return null;
+  if (f.pick) return { at: f.at, text: F.text, picked: F[f.pick].label, outcome: f.res?.text || '', good: !!f.res?.good };
+  return { at: f.at, text: F.text, options: ['a', 'b'].map((k) => ({ key: k, label: F[k].label, risky: F[k].chance != null })) };
 }
 
 // 도착했거나 일찍 불러들였을 때. 지난 시간만큼 보상
@@ -495,7 +655,7 @@ function startExpedition(d, minutes, now = Date.now()) {
 function finishExpedition(d, now = Date.now(), companions = 0) {
   if (!d.exp_end) return { error: '원정을 떠나 있지 않다.' };
   const st = statsOf(d);
-  const extra = bonusOf(d).expRare;
+  const extra = bonusOf(d).expRare + (titleMods(d).expRare || 0);
   const hermit = d.stance === 'hermit'; // 은둔: 홀로 깊은 곳을 누비는 데 익숙함
   const planned = (d.exp_end - d.exp_start) / 60000;
   const done = Math.max(0, Math.min(planned, (now - d.exp_start) / 60000));
@@ -503,47 +663,95 @@ function finishExpedition(d, now = Date.now(), companions = 0) {
   const region = d.exp_region || d.region;
   const where = REGIONS[region].name;
 
-  const rolls = Math.floor(done / 10 * (1 + companions * KIN.companionBonus) * traitMods(d).expRolls);
+  const info = expInfo(d);
+  const G = EXP_GOALS[info.goal] || EXP_GOALS.gather;
+  // 갈림길에 닿았으면 (고르지 않았으면 성향대로 저절로)
+  let fr = null, F = null;
+  if (info.fork && now >= info.fork.at) {
+    F = EXP_FORKS.find((x) => x.id === info.fork.id);
+    if (F) { if (!info.fork.pick) resolveFork(d, autoForkKey(d), true); fr = info.fork.res; }
+  }
+  const journal = [G.open(where)];
+  const lines = [];
+
+  let rolls = Math.floor(done / 10 * (1 + companions * KIN.companionBonus) * traitMods(d).expRolls * G.rolls * (fr?.rolls || 1));
+  let missed = false;
+  if (G.miss && rolls > 0 && Math.random() < G.miss) { rolls = Math.floor(rolls / 2); missed = true; }
   const hours = planned / 60;
   const ids = [];
   for (let i = 0; i < rolls; i++) {
     ids.push(rollItem(region, {
-      uncommon: 0.16 + hours * 0.03 + st.wisdom * 0.004 + (hermit ? SR.hermit.expUncommon : 0),
-      rare: 0.015 + hours * 0.012 + st.wisdom * 0.001 + extra + (hermit ? SR.hermit.expRare : 0),
+      uncommon: (0.16 + hours * 0.03 + st.wisdom * 0.004 + (hermit ? SR.hermit.expUncommon : 0)) * G.uncommon,
+      rare: (0.015 + hours * 0.012 + st.wisdom * 0.001 + extra + (hermit ? SR.hermit.expRare : 0)) * G.rare + (fr?.rare || 0),
     }));
   }
+  // 갈림길에서 얻은 것
+  for (let i = 0; i < (fr?.loot || 0); i++) ids.push(rollItem(region, { uncommon: 0.5, rare: 0.12 + (fr?.rare || 0) }));
+  if (fr?.item) ids.push(fr.item);
+  // 사냥 원정·갈림길의 사냥: 그 지역 장소의 전리품 (갈 수 있는 장소에서)
+  const trophyN = Math.floor(done / 20) * (G.trophy || 0) + (fr?.trophy || 0);
+  const huntable = (REGION_PLACES[region] || []).filter((id) => PLACES[id].level <= d.level + PLACE_RULES.tooHard);
+  for (let i = 0; i < trophyN && huntable.length; i++) ids.push(PLACES[pick(huntable)].drop);
   const items = bundle(ids);
-  const gold = Math.round(done * rand(0.4, 0.8)) + (rolls ? Math.floor(st.majesty / 2) : 0);
-  let xp = Math.round(done * 0.8);
+  let gold = Math.round((Math.round(done * rand(0.4, 0.8)) + (rolls ? Math.floor(st.majesty / 2) : 0)) * G.gold) + (fr?.gold || 0);
+  let xp = Math.round(done * 0.8 * G.xp * (fr?.xp || 1));
 
-  const lines = [`${where} 깊은 곳으로 떠났다.`];
-  if (rolls === 0) {
-    lines.push('멀리 가지 못하고 금세 돌아왔다.');
+  if (rolls === 0 && !ids.length) {
+    journal.push('멀리 가지 못하고 금세 돌아왔다.');
   } else {
     const nScenes = Math.min(3, 1 + Math.floor(done / 60));
-    lines.push(...shuffle(SCENES[region]).slice(0, nScenes));
+    const scenes = shuffle(SCENES[region]).slice(0, nScenes);
+    journal.push(scenes[0]);
+    if (F && fr) {
+      journal.push(F.text);
+      journal.push(`— ${F[info.fork.pick].label}${info.fork.auto ? ' (돌아오기 전에 고르지 않아, 몸이 가는 대로 했다)' : ''}.`);
+      journal.push(fr.text);
+    }
+    journal.push(...scenes.slice(1));
+    if (missed) journal.push('짚이는 곳을 몇 군데나 파헤쳤지만, 대부분 헛걸음이었다.');
+    if (trophyN && huntable.length) journal.push('사냥감을 몰아 몇 마리를 쓰러뜨리고 전리품을 챙겼다.');
     const rare = items.find((it) => ITEMS[it.id].rarity === 'rare');
-    if (rare) lines.push(`그리고 ${ITEMS[rare.id].name}${josa(ITEMS[rare.id].name, '을', '를')} 손에 넣었다.`);
-    lines.push(early ? '부름을 받고 서둘러 돌아왔다.' : '긴 여정을 마치고 돌아왔다.');
+    if (rare) journal.push(`그리고 ${ITEMS[rare.id].name}${josa(ITEMS[rare.id].name, '을', '를')} 손에 넣었다.`);
+    journal.push(early ? '부름을 받고 서둘러 돌아왔다.' : '긴 여정을 마치고 돌아왔다.');
   }
+
+  // 몸과 마음에 남은 것
+  const cap = hpCap(d);
+  const hurt = (G.hurt || 0) * (done / 30) + (fr?.hurt || 0);
+  if (hurt > 0) {
+    const before = d.hp;
+    d.hp = Math.max(1, Math.round(d.hp - cap * hurt));
+    if (before - d.hp > 0) lines.push(`체력 −${before - d.hp}`);
+  } else if (hurt < 0) {
+    const before = d.hp;
+    d.hp = Math.min(cap, Math.round(d.hp - cap * hurt));
+    if (d.hp > before) lines.push(`체력 +${d.hp - before}`);
+  }
+  if (fr?.mind < 0) lines.push(...loseMind(d, -fr.mind));
+  if (fr?.mind > 0 && !berserkOf(d)) { const b0 = d.mind ?? MIND.max; d.mind = Math.min(MIND.max, b0 + fr.mind); if (d.mind > b0) lines.push(`정신 +${d.mind - b0}`); }
+  if (fr?.rep) { const town = nearestTown(region); addRep(d, town, fr.rep); lines.push(`${REGIONS[town].name} 평판 ${fr.rep > 0 ? '+' : ''}${fr.rep}`); }
+  if (G.fame && !early && planned >= 120) { const f = addFame(d, G.fame); lines.push(f || `용족 명성 +${G.fame}`); }
 
   d.gold += gold;
   let net = gold;
   if (rolls > 0 && !isTown(region)) {
     const a = ambush(d, SR.hostile.ambush.expedition);
-    if (a) { lines.splice(lines.length - 1, 0, ...a.lines); net -= a.lost; }
+    if (a) { journal.splice(journal.length - 1, 0, ...a.lines); net -= a.lost; }
   }
   xp = xpOf(d, xp);
   const levelUp = gainXp(d, xp);
   d.exp_start = null;
   d.exp_end = null;
   d.exp_region = null;
-  return { title: early ? '원정 (일찍 돌아옴)' : '원정', lines, items, gold: net, xp, levelUp, minutes: Math.round(done) };
+  const title = `${G.name} 원정${early ? ' (일찍 돌아옴)' : ''}`;
+  d.exp_info = { last: { title, region, goal: info.goal || 'gather', journal, at: now } };
+  if (F && fr) chron(d, 'choice', `${where} ${title}의 갈림길에서 '${F[info.fork.pick].label}'${info.fork.auto ? ' (저절로)' : ''} — ${fr.good ? '잘 풀렸다' : '일이 꼬였다'}.`, now);
+  return { title, journal, lines, items, gold: net, xp, levelUp, minutes: Math.round(done) };
 }
 
 // ── 제작 ───────────────────────────────────────────
 // 둥지의 대장장이가 있으면 기력이 30% 덜 듦
-const craftEn = (d, r) => (d.perks?.smith ? Math.ceil(r.en * 0.7) : r.en);
+const craftEn = (d, r) => Math.ceil(r.en * (d.perks?.smith ? 0.7 : 1) * (titleMods(d).craftEn || 1) - 1e-9);
 // have(id): 지금 가진 개수를 알려주는 함수 (저장 공간에서 읽음)
 function craft(d, outId, have) {
   if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
@@ -560,6 +768,7 @@ function craft(d, outId, have) {
   d.en -= en;
   const items = Object.entries(r.needs).map(([id, n]) => ({ id, qty: -n }));
   items.push({ id: r.out, qty: 1 });
+  traitCount(d, 'craft'); // 칭호: 제작 횟수
   let xp = 4 + Math.floor(r.en / 2);
   xp = xpOf(d, xp);
   const levelUp = gainXp(d, xp);
@@ -912,7 +1121,7 @@ function hoardValue(gold, items) {
 }
 
 module.exports = {
-  regen, gather, explore, hunt, startExpedition, finishExpedition,
+  regen, gather, explore, hunt, startExpedition, finishExpedition, chooseFork, forkView, expInfo,
   craft, useItem, equip, unequip, statsOf, bonusOf, hpCap, enCap, equipOf, buffOf,
   repOf, setStance, marketInfo, buy, sell, intimidate,
   buildNest, flyHome, startRest, stopRest, hoardMove, hoardValue,
@@ -920,5 +1129,6 @@ module.exports = {
   traitsOf, traitMods, hasTrait, chooseTraits, traitCount,
   check, spendAp, rollItem, bundle, itemLabel, xpOf, isTown, // 전투(game-combat.js)가 씀
   corruptedRegion, corruptUntil, isCorrupted, berserkOf, loseMind, nearestTown,
-  placeOf, goPlace, isFallen,
+  placeOf, goPlace, isFallen, chron, chronOf,
+  titlesOf, titleOn, titleName, titleMods, checkTitles, setTitle, titlesView,
 };

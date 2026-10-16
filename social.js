@@ -93,6 +93,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       kin: (kin?.home || []).map((k) => ({ name: k.name, type: k.type, stage: k.stage })),
       equip: Object.entries(equip).map(([slot, item]) => ({ slot, item })),
       traits: logic.traitsOf(d).list,
+      title: (() => { const t = logic.titleOn(d); return t ? { name: t.name, eff: t.eff } : null; })(),
       dead: !!d.dead_at,
       bio: (() => { try { const b = typeof d.bio === 'string' ? JSON.parse(d.bio || '{}') : (d.bio || {}); const g = b.gender || ''; return { gender: ({ 수컷: '남성', 암컷: '여성' })[g] || g, desc: b.desc || '' }; } catch { return { gender: '', desc: '' }; } })(),
       online: !!e,

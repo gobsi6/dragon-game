@@ -204,6 +204,26 @@
   .dlg .body { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
   .dlg .note { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.6; }
   .opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .exp-h { margin: 6px 0 0; font: 700 14px/1.4 var(--serif); color: var(--steel-d); }
+  .opts.goals .opt b { font-size: 16px; }
+  .opts.goals .opt .d { font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
+  .opts.goals .opt .e { font-size: 11.5px; color: var(--steel); line-height: 1.5; margin-top: 2px; }
+  .opts.goals .opt:disabled { opacity: .5; }
+  .fork { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; background: #FBF6E8; border: 1px solid #E2CF9E; border-left: 3px solid #A87A1C; border-radius: 3px; animation: bt-in .35s ease-out; }
+  .fork .k { font: 700 11.5px/1 var(--sans); color: #8A6516; letter-spacing: .04em; }
+  .fork .ft { margin: 0; font: 600 15px/1.6 var(--serif); color: var(--ink); }
+  .fork .fo { margin: 0; font: 500 14px/1.6 var(--serif); color: #2F5D45; }
+  .fork .fo.bad { color: #8A2E27; }
+  .fork .fr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .fork .fr .btn { flex-direction: column; gap: 1px; min-height: 48px; line-height: 1.25; }
+  .fork .fr .btn small { font-size: 11px; color: var(--muted); font-weight: 400; }
+  .fork .fn { font-size: 11.5px; color: var(--muted); }
+  .fork .fr .btn { padding: 6px 10px; }
+  @media (max-width: 520px) { .fork .fr { grid-template-columns: 1fr; } }
+  .result .journal { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; background: var(--surface-2); border-left: 2px solid #B6B9B5; }
+  .result .journal p { margin: 0; font: 500 14.5px/1.75 var(--serif); color: #30353A; }
+  .result .journal p.pick { color: #8A6516; font-weight: 700; }
+  .result .journal + .lines:empty { display: none; }
   .opt { text-align: left; padding: 12px 14px; background: var(--surface-2); border: 1px solid var(--line-in); border-radius: 3px; display: flex; flex-direction: column; gap: 2px; }
   .opt b { font: 700 18px/1.3 var(--serif); }
   .opt span { font-size: 12px; color: var(--muted); }
@@ -329,6 +349,37 @@
   .relb.wary { color: #6B4E12; border-color: #E2CF9E; background: #FBF6E8; }
   .relb.pending { color: #2E4A60; border-color: #B9C7D3; background: #EEF2F6; }
   .who .nm b .relb { margin-left: 6px; vertical-align: 1px; font: 600 11px/18px var(--sans); }
+  /* 칭호: 이름 옆·위에 붙는 작은 금빛 글씨 */
+  .ttl { display: inline-flex; align-items: center; gap: 4px; font: 600 11.5px/1.4 var(--sans); color: #3C5A73; letter-spacing: .01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .ttl::before { content: ""; width: 5px; height: 5px; background: #6F93B2; transform: rotate(45deg); flex: none; }
+  .nameplate .ttl { font-size: 12.5px; justify-content: center; }
+  .log .mh .ttl { font-size: 11px; }
+  .who .nm .ttl { font-size: 11px; color: #3C5A73; }
+  .pf-head .t .ttl { font-size: 12.5px; }
+  .tt-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  @media (max-width: 520px) { .tt-list { grid-template-columns: 1fr; } }
+  .tt { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; padding: 9px 11px; background: #fff; border: 1px solid var(--line-in); border-radius: 3px; text-align: left; }
+  .tt b { font: 700 14px/1.35 var(--serif); color: var(--ink); }
+  .tt .e { grid-column: 1; font-size: 12px; color: var(--steel-d); }
+  .tt .c { grid-column: 1 / -1; font-size: 11.5px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  .tt .c .bar { flex: 1; height: 4px; background: #E4E6E2; border-radius: 2px; overflow: hidden; max-width: 120px; }
+  .tt .c .bar i { display: block; height: 100%; background: #5E84A3; }
+  .tt .btn { grid-column: 2; grid-row: 1 / span 2; min-height: 32px; padding: 0 12px; font-size: 13px; }
+  .tt.locked { background: var(--surface-2); }
+  .tt.locked b { color: var(--muted); }
+  .tt.locked .e { color: #8A9096; }
+  .tt.on { border-color: var(--steel); box-shadow: inset 0 0 0 1px var(--steel); background: #EEF2F6; }
+  .tt-filter { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
+  .chron { list-style: none; margin: 0; padding: 0 0 0 14px; border-left: 2px solid var(--line-in); display: flex; flex-direction: column; gap: 2px; }
+  .chron li { position: relative; display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 10px; padding: 6px 0; font-size: 13.5px; line-height: 1.55; color: var(--ink-2); }
+  .chron li::before { content: ""; position: absolute; left: -19px; top: 12px; width: 8px; height: 8px; border-radius: 50%; background: #B6B9B5; box-shadow: 0 0 0 3px var(--surface); }
+  .chron li.choice::before { background: #C29A3E; transform: rotate(45deg); border-radius: 1px; }
+  .chron li.choice span { color: var(--ink); font-weight: 600; }
+  .chron li.mark::before { background: var(--steel); }
+  .chron li time { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; padding-top: 1px; }
+  .chron li.empty { display: block; color: var(--muted); }
+  .chron li.empty::before { display: none; }
+  @media (max-width: 520px) { .chron li { grid-template-columns: 1fr; gap: 0; } }
   .pf-head { display: flex; gap: 14px; align-items: center; }
   .pf-head .ava { width: 64px; height: 64px; }
   .pf-head .t { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
@@ -609,12 +660,32 @@
   .bt-f .el { font-size: 11px; color: var(--muted); }
   .cre { width: 36px; height: 36px; flex: none; border-radius: 50%; display: grid; place-items: center; background: #5B4A3A; color: #F3EBDD; font: 700 15px/1 var(--serif); }
   .cre.elite { background: #7A2E35; box-shadow: 0 0 0 2px #E6C3C7; }
+  .bt-intent { display: flex; gap: 10px; align-items: flex-start; padding: 9px 12px; border: 1px solid var(--line-in); border-left: 3px solid var(--steel); background: var(--surface-2); border-radius: 3px; animation: bt-in .3s ease-out; }
+  .bt-intent .k { flex: none; font: 700 11px/18px var(--sans); color: #fff; background: var(--steel); padding: 0 6px; border-radius: 2px; margin-top: 1px; }
+  .bt-intent b { display: block; font: 700 14px/1.45 var(--serif); color: var(--ink); }
+  .bt-intent small { display: block; font-size: 12px; color: var(--ink-2); line-height: 1.5; }
+  .bt-intent.heavy, .bt-intent.multi { border-left-color: #A63E4B; background: #FBF1F2; border-color: #E6C3C7; }
+  .bt-intent.heavy .k, .bt-intent.multi .k { background: #A63E4B; }
+  .bt-intent.debuff { border-left-color: #6B4FA0; background: #F3F1FA; border-color: #D5CCEA; }
+  .bt-intent.debuff .k { background: #6B4FA0; }
+  .bt-intent.self { border-left-color: #A87A1C; background: #FBF6E8; border-color: #E2CF9E; }
+  .bt-intent.self .k { background: #A87A1C; }
+  .bt-acts .btn.combo { border-color: #C29A3E; box-shadow: inset 0 0 0 1px #C29A3E, 0 0 0 3px rgba(194, 154, 62, .18); background: #FFFBF0; }
+  .bt-acts .btn.combo small { color: #8A6516; font-weight: 700; }
+  .bt-acts .btn.primary.combo { background: var(--steel-d); }
+  .bt-acts .btn.primary.combo small { color: #F2D58A; }
+  .bt-acts .btn.suggest { border-color: #A63E4B; box-shadow: inset 0 0 0 1px #A63E4B; }
+  .bt-acts .btn.suggest small { color: #A63E4B; font-weight: 600; }
+  .rage-b { display: inline-block; padding: 0 5px; font: 700 10.5px/16px var(--sans); color: #fff; background: #A63E4B; border-radius: 2px; vertical-align: 1px; }
+  .bt-f.enraged { border-color: #E3B8BC; box-shadow: inset 0 0 0 1px #E3B8BC; }
   .bt-turn { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--muted); }
   .bt-turn b { color: var(--ink); font-weight: 600; }
   .bt-log { height: 200px; overflow: auto; padding: 8px 12px; background: var(--surface-2); border: 1px solid var(--line-in); font-size: 13.5px; line-height: 1.6; }
   .bt-log .t { margin: 8px 0 2px; font: 600 11.5px/1 var(--sans); color: var(--muted); }
   .bt-log .t:first-child { margin-top: 0; }
   .bt-log p { margin: 0; }
+  .bt-log p.combo { font-weight: 700; color: #8A6516; }
+  .bt-log p.key { font-weight: 600; color: #8A2E27; }
   .bt-log p.new { animation: bt-in .35s ease-out; }
   @keyframes bt-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
   @media (prefers-reduced-motion: reduce) { .bt-log p.new { animation: none; } }
@@ -1047,6 +1118,7 @@
           <button type="button" data-a="delete">그림 지우기</button>
         </div>
         <div class="nameplate">
+          <span class="ttl" id="me-title" hidden></span>
           <span class="n" id="me-name"></span>
           <div class="sub"><span class="lv" id="me-lv"></span><span id="me-kind"></span></div>
           <div class="xp"><div class="bar"><i id="xp-bar"></i></div><div class="t"><span>경험</span><span id="xp-t"></span></div></div>
@@ -1115,6 +1187,7 @@
         <div class="clock" id="exp-clock"></div>
         <div class="bar"><i id="exp-bar"></i></div>
         <p class="note" id="exp-note" style="margin: 0; font-size: 13px; color: var(--muted)"></p>
+        <div class="fork" id="exp-fork" hidden></div>
         <div class="row">
           <button class="btn primary" type="button" id="exp-claim" hidden>결과 받기</button>
           <button class="btn" type="button" id="exp-recall">일찍 불러들이기</button>
@@ -1136,6 +1209,7 @@
       <section class="frame result" id="result" aria-live="polite" hidden>
         <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
         <div class="rt"><b id="result-title"></b><button class="x" type="button" id="result-close">닫기</button></div>
+        <div class="journal" id="result-journal" hidden></div>
         <ul class="lines" id="result-lines"></ul>
         <div class="gains" id="result-gains"></div>
         <details class="result-log" id="result-log" hidden><summary>전투 기록</summary><ol></ol></details>
@@ -1192,8 +1266,12 @@
   <div class="orn-h"><h2 id="exp-dlg-title">원정 보내기</h2></div>
   <div class="body">
     <p class="note" id="exp-dlg-where"></p>
+    <h3 class="exp-h">무엇을 하러 갈까</h3>
+    <div class="opts goals" id="exp-goals" role="group" aria-label="원정 목적"></div>
+    <h3 class="exp-h">얼마나 오래</h3>
     <div class="opts" id="exp-opts" role="group" aria-label="원정 시간"></div>
-    <p class="note">길게 보낼수록 드문 물건을 찾을 가능성이 커진다. 떠난 동안에는 채팅만 할 수 있고, 브라우저를 닫아도 원정은 계속된다.</p>
+    <p class="note">길게 보낼수록 드문 물건을 찾을 가능성이 커진다. 가는 길에 한 번 갈림길을 만나는데, 그때 고르지 않으면 성향대로 저절로 고른다. 떠난 동안에는 채팅만 할 수 있고, 브라우저를 닫아도 원정은 계속된다.</p>
+    <button type="button" class="linkbtn" id="exp-last" hidden>지난 원정 일지 다시 보기</button>
     <label class="check"><input type="checkbox" id="exp-notify"> 돌아오면 알림 받기 (이 창이 열려 있을 때)</label>
     <div class="row"><button class="btn" type="button" id="exp-cancel">취소</button><button class="btn primary" type="button" id="exp-go">떠나기</button></div>
   </div>
@@ -1291,6 +1369,10 @@
       <p class="note">같은 일을 거듭하면 새 특성이 생기거나 있던 특성이 사라진다.</p>
       <div id="char-road"></div>
     </details>
+    <h3>칭호</h3>
+    <p class="note" id="char-title-note"></p>
+    <div class="tt-filter" id="char-title-filter"></div>
+    <div class="tt-list" id="char-titles"></div>
     <h3>전투 스킬</h3>
     <p class="note" id="char-skill-note"></p>
     <div class="traits" id="char-skills"></div>
@@ -1305,6 +1387,10 @@
         <div class="reps" id="reps"></div>
         <div class="reps"><div><span>둥지</span><b id="nest-where"></b></div></div>
       </div>
+    <h3>지나온 이야기</h3>
+    <div class="tt-filter" id="chron-filter"></div>
+    <ol class="chron" id="chron-list"></ol>
+    <button type="button" class="linkbtn" id="chron-more" hidden>더 보기</button>
     <div class="row"><button class="btn" type="button" id="char-close">닫기</button></div>
   </div>
 </dialog>
@@ -1366,6 +1452,7 @@
   <div class="orn-h"><h2 id="battle-title">전투</h2></div>
   <div class="body">
     <div class="bt-sides"><div class="bt-f" id="bt-me"></div><div class="bt-vs">VS</div><div class="bt-f foe" id="bt-foe"></div></div>
+    <div class="bt-intent" id="bt-intent" hidden></div>
     <div class="bt-turn" id="bt-turn"></div>
     <div class="bt-log" id="bt-log" aria-live="polite"></div>
     <div class="bt-acts" id="bt-acts"></div>
@@ -1657,6 +1744,8 @@
     S.me = me;
     const pct = (a, b) => `${Math.max(0, Math.min(100, (a / b) * 100))}%`;
     $('me-name').textContent = me.name;
+    $('me-title').hidden = !me.title;
+    $('me-title').textContent = me.title || '';
     $('me-lv').textContent = `Lv. ${me.level}`;
     $('me-kind').textContent = S.kinds[me.kind]?.name || '';
     $('xp-bar').style.width = pct(me.xp, me.xpMax);
@@ -1922,6 +2011,9 @@
   }
   function showResult(r) {
     $('result-title').textContent = r.title;
+    const jr = $('result-journal');
+    jr.hidden = !r.journal?.length;
+    jr.replaceChildren(...(r.journal || []).map((t) => { const p = document.createElement('p'); p.textContent = t; if (t.startsWith('— ')) p.className = 'pick'; return p; }));
     const ul = $('result-lines');
     ul.replaceChildren(...r.lines.map((t) => { const li = document.createElement('li'); li.textContent = t; return li; }));
     const g = $('result-gains');
@@ -2013,6 +2105,26 @@
 
   // ── 원정 ──
   let expPick = null;
+  let expGoal = 'gather';
+  function renderExpGoals() {
+    const box = $('exp-goals');
+    box.replaceChildren();
+    const town = S.regions[S.region]?.tag !== '야생';
+    for (const [k, g] of Object.entries(S.expGoals || {})) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'opt goal';
+      const no = g.wild && town;
+      b.disabled = no;
+      b.setAttribute('aria-pressed', String(expGoal === k));
+      b.innerHTML = '<b></b><span class="d"></span><span class="e"></span>';
+      b.querySelector('b').textContent = g.name;
+      b.querySelector('.d').textContent = no ? '인간의 땅에서는 할 수 없다.' : g.desc;
+      b.querySelector('.e').textContent = g.eff;
+      b.addEventListener('click', () => { expGoal = k; renderExpGoals(); });
+      box.appendChild(b);
+    }
+  }
   function renderExpOpts() {
     const box = $('exp-opts');
     box.replaceChildren();
@@ -2033,8 +2145,17 @@
     expPick = expPick || S.rules.expeditionMinutes[0];
     $('exp-dlg-where').textContent = `${S.regions[S.region].name} 깊은 곳으로 떠난다.`;
     try { $('exp-notify').checked = localStorage.getItem('exp-notify') === '1'; } catch {}
+    if (S.expGoals?.[expGoal]?.wild && S.regions[S.region]?.tag !== '야생') expGoal = 'gather';
+    renderExpGoals();
     renderExpOpts();
+    $('exp-last').hidden = !S.me?.expLast;
     $('exp-dlg').showModal();
+  });
+  $('exp-last').addEventListener('click', () => {
+    const l = S.me?.expLast;
+    if (!l) return;
+    $('exp-dlg').close();
+    showResult({ title: `지난 원정 · ${l.title}`, journal: l.journal, lines: [] });
   });
   $('exp-cancel').addEventListener('click', () => $('exp-dlg').close());
   $('exp-go').addEventListener('click', async () => {
@@ -2043,7 +2164,7 @@
     if (want && 'Notification' in window && Notification.permission === 'default') {
       try { await Notification.requestPermission(); } catch {}
     }
-    socket.emit('exp:start', { minutes: expPick }, (res) => {
+    socket.emit('exp:start', { minutes: expPick, goal: expGoal }, (res) => {
       if (res.error) return toast(res.error);
       $('exp-dlg').close();
       $('result').hidden = true;
@@ -2057,12 +2178,68 @@
     const now = Date.now();
     const done = now >= e.end;
     $('exp-k').textContent = done ? '원정에서 돌아왔다' : '원정 중';
-    $('exp-where').textContent = `${S.regions[e.region].name} 깊은 곳`;
+    $('exp-where').textContent = `${S.regions[e.region].name} · ${S.expGoals?.[e.goal]?.name || ''} 원정`;
+    renderFork(e);
     $('exp-clock').textContent = done ? '도착' : fmt(e.end - now);
     $('exp-bar').style.width = `${Math.min(100, ((now - e.start) / (e.end - e.start)) * 100)}%`;
     $('exp-note').textContent = done ? '결과를 받으면 다시 움직일 수 있다.' : '떠난 동안에는 채팅만 할 수 있다.';
     $('exp-claim').hidden = !done;
     $('exp-recall').hidden = done;
+  }
+  // 갈림길: 닿으면 고르기, 고른 뒤에는 결과 한 줄
+  let forkSeen = null;
+  function renderFork(e) {
+    const box = $('exp-fork');
+    const f = e.fork;
+    const reached = f && f.text;
+    // 아직 안 닿았는데 시각이 지났으면 새 정보를 받아 옴
+    if (f && !reached && Date.now() >= f.at && forkSeen !== `wait-${f.at}`) { forkSeen = `wait-${f.at}`; socket.emit('me:sync'); }
+    box.hidden = !reached;
+    if (!reached) return;
+    if (box.dataset.state === `${f.at}-${f.picked || ''}`) return; // 그대로면 다시 그리지 않음 (매초 갱신)
+    box.dataset.state = `${f.at}-${f.picked || ''}`;
+    box.replaceChildren();
+    const k = document.createElement('span');
+    k.className = 'k';
+    k.textContent = f.picked ? '갈림길에서' : '갈림길에 닿았다';
+    const t = document.createElement('p');
+    t.className = 'ft';
+    t.textContent = f.text;
+    box.append(k, t);
+    if (f.picked) {
+      const p = document.createElement('p');
+      p.className = `fo${f.good ? '' : ' bad'}`;
+      p.textContent = `${f.picked} — ${f.outcome}`;
+      box.appendChild(p);
+      return;
+    }
+    const row = document.createElement('div');
+    row.className = 'fr';
+    for (const o of f.options) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn';
+      b.innerHTML = '<span></span><small></small>';
+      b.querySelector('span').textContent = o.label;
+      b.querySelector('small').textContent = o.risky ? '운에 맡긴다' : '확실하다';
+      b.addEventListener('click', () => socket.emit('exp:fork', { pick: o.key }, (res) => { if (res.error) toast(res.error); }));
+      row.appendChild(b);
+    }
+    box.appendChild(row);
+    const n = document.createElement('small');
+    n.className = 'fn';
+    n.textContent = '고르지 않고 돌아오면 성향대로 저절로 고른다.';
+    box.appendChild(n);
+    if (forkSeen !== f.at) { forkSeen = f.at; forkAlert(); }
+  }
+  function forkAlert() {
+    let on = false;
+    try { on = localStorage.getItem('exp-notify') === '1'; } catch {}
+    if (!on) return;
+    chime();
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try { new Notification('용의 대륙', { body: `${S.me.name}${josa(S.me.name, '이', '가')} 원정 중에 갈림길을 만났다.` }); } catch {}
+    }
   }
   function finishExp() {
     socket.emit('exp:finish', {}, (res) => {
@@ -2790,8 +2967,9 @@
           add(`${S.items[id].name} ${invCache[id] || 0}/${n}`, (invCache[id] || 0) < n);
           if (S.items[id].cat === 'trophy') needs.lastChild.title = effectText(S.items[id]);
         }
-        const en = me.perks?.smith ? Math.ceil(r.en * 0.7) : r.en; // 둥지의 대장장이
-        add(`기력 ${en}${en < r.en ? ` (${me.perks.smith} 덕분에 −${r.en - en})` : ''}`, me.en < en);
+        const en = Math.ceil(r.en * (me.perks?.smith ? 0.7 : 1) * (me.craftMult || 1) - 1e-9); // 둥지의 대장장이, 칭호
+        const why = [me.perks?.smith, me.craftMult < 1 ? '칭호' : null].filter(Boolean).join('·');
+        add(`기력 ${en}${en < r.en ? ` (${why} 덕분에 −${r.en - en})` : ''}`, me.en < en);
         if (r.wis) add(`지혜 ${r.wis} 이상`, me.stats.wisdom < r.wis);
         const b = row.querySelector('.btn');
         b.disabled = !ok || !!me.exp;
@@ -3027,6 +3205,7 @@
     t.innerHTML = `<b id="profile-name"></b><span></span><div class="chips2"></div>`;
     t.querySelector('b').textContent = p.name;
     t.querySelector('span').textContent = `${p.kindName} · Lv. ${p.level}`;
+    if (p.title) { const tt = document.createElement('span'); tt.className = 'ttl'; tt.textContent = p.title.name; tt.title = p.title.eff; t.prepend(tt); }
     const chips = t.querySelector('.chips2');
     const chip = (text, cls) => { const c = document.createElement('span'); c.className = cls; c.textContent = text; chips.appendChild(c); };
     chip(p.away ? '원정 중' : p.resting ? '둥지에서 쉬는 중' : p.online ? '접속 중' : '접속 안 함', `st-chip${p.online && !p.away ? ' on' : ''}`);
@@ -3396,15 +3575,72 @@
   });
 
   // ── 드래곤 창: 특성, 변화의 흔적, 장신구, 성향 ──
+  // 칭호 목록 (상태 화면)
+  let titleView = 'all';
+  function renderTitles() {
+    const me = S.me;
+    const T = me.titles;
+    if (!T) return;
+    const have = T.list.filter((t) => t.have).length;
+    const on = T.list.find((t) => t.id === T.on);
+    $('char-title-note').textContent = on
+      ? `지금 '${on.name}' 칭호를 달고 있다. (${on.eff}) · 얻은 칭호 ${have} / ${T.list.length}. 효과는 사냥·강적 전투 등에만 있고 결투장에는 없다.`
+      : `단 칭호가 없다. 얻은 칭호 ${have} / ${T.list.length}. 하나를 골라 달면 이름 옆에 보이고 작은 효과가 생긴다.`;
+    const f = $('char-title-filter');
+    f.replaceChildren();
+    for (const [k, label] of [['all', '전체'], ['have', '얻은 칭호'], ['todo', '아직 못 얻음']]) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `chipbtn${titleView === k ? ' on' : ''}`;
+      b.setAttribute('aria-pressed', String(titleView === k));
+      b.textContent = label;
+      b.addEventListener('click', () => { titleView = k; renderTitles(); });
+      f.appendChild(b);
+    }
+    const box = $('char-titles');
+    box.replaceChildren();
+    // 단 칭호 → 얻은 칭호 → 거의 다 된 칭호 순
+    const list = T.list.filter((t) => titleView === 'all' || (titleView === 'have' ? t.have : !t.have))
+      .sort((a, b) => (b.id === T.on) - (a.id === T.on) || b.have - a.have || (b.cur / b.at) - (a.cur / a.at));
+    for (const t of list) {
+      const row = document.createElement('div');
+      row.className = `tt${t.have ? '' : ' locked'}${t.id === T.on ? ' on' : ''}`;
+      row.innerHTML = '<b></b><span class="e"></span><span class="c"></span>';
+      row.querySelector('b').textContent = t.name;
+      row.querySelector('.e').textContent = t.eff;
+      const c = row.querySelector('.c');
+      if (t.have) c.textContent = `${t.cond} · 이룸`;
+      else {
+        c.textContent = `${t.cond} · ${t.cur} / ${t.at}`;
+        const bar = document.createElement('span');
+        bar.className = 'bar';
+        bar.innerHTML = '<i></i>';
+        bar.firstChild.style.width = `${Math.round((t.cur / t.at) * 100)}%`;
+        c.appendChild(bar);
+      }
+      if (t.have) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = t.id === T.on ? 'btn' : 'btn primary';
+        b.textContent = t.id === T.on ? '떼기' : '달기';
+        b.addEventListener('click', () => itemAct('title:set', { id: t.id === T.on ? '' : t.id }));
+        row.appendChild(b);
+      }
+      box.appendChild(row);
+    }
+  }
+
   function renderChar() {
     const me = S.me;
     if (!me || !S.traits) return;
+    renderTitles();
     const head = $('char-head');
     head.replaceChildren(avaEl(me, 48));
     const t = document.createElement('div');
     t.innerHTML = '<b></b><small></small>';
     t.querySelector('b').textContent = me.name;
     t.querySelector('small').textContent = `${S.kinds[me.kind]?.name || ''}${me.bio?.gender ? ` · ${me.bio.gender}` : ''} · Lv. ${me.level}${me.stanceName ? ` · ${me.stanceName}` : ''}`;
+    if (me.title) { const tt = document.createElement('span'); tt.className = 'ttl'; tt.textContent = me.title; t.prepend(tt); }
     head.appendChild(t);
     const old = $('char-head').nextElementSibling;
     if (old?.classList.contains('char-bio')) old.remove();
@@ -3440,7 +3676,56 @@
     if (!road.children.length) road.innerHTML = '<p class="note">지금은 기다리는 변화가 없다.</p>';
     renderSkills();
   }
-  function openChar() { renderChar(); openPanel('char-dlg'); }
+  function openChar() { renderChar(); openPanel('char-dlg'); loadChron(); }
+
+  // ── 지나온 이야기 (선택과 큰 사건) ──
+  let chronList = [], chronView = 'all', chronShow = 15;
+  function loadChron() {
+    socket.emit('chron:get', {}, (res) => {
+      if (res.error) return;
+      chronList = res.list || [];
+      chronShow = 15;
+      renderChron();
+    });
+  }
+  function chronDate(t) {
+    const d = new Date(t), n = new Date();
+    const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    return d.toDateString() === n.toDateString() ? `오늘 ${hm}` : `${d.getMonth() + 1}/${d.getDate()} ${hm}`;
+  }
+  function renderChron() {
+    const f = $('chron-filter');
+    f.replaceChildren();
+    for (const [k, label] of [['all', '전체'], ['choice', '선택만'], ['mark', '사건만']]) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `chipbtn${chronView === k ? ' on' : ''}`;
+      b.setAttribute('aria-pressed', String(chronView === k));
+      b.textContent = label;
+      b.addEventListener('click', () => { chronView = k; chronShow = 15; renderChron(); });
+      f.appendChild(b);
+    }
+    const list = chronList.filter((x) => chronView === 'all' || x.k === chronView);
+    const box = $('chron-list');
+    box.replaceChildren();
+    if (!list.length) {
+      const li = document.createElement('li');
+      li.className = 'empty';
+      li.textContent = chronList.length ? '이 종류의 기록이 아직 없다.' : '아직 남은 기록이 없다. 이벤트에서 고르거나 원정의 갈림길을 지나면 여기에 쌓인다.';
+      box.appendChild(li);
+    }
+    for (const x of list.slice(0, chronShow)) {
+      const li = document.createElement('li');
+      li.className = x.k;
+      li.innerHTML = '<time></time><span></span>';
+      li.querySelector('time').textContent = chronDate(x.at);
+      li.querySelector('span').textContent = x.t;
+      box.appendChild(li);
+    }
+    $('chron-more').hidden = list.length <= chronShow;
+    $('chron-more').textContent = `더 보기 (${list.length - chronShow})`;
+  }
+  $('chron-more').addEventListener('click', () => { chronShow += 30; renderChron(); });
   $('dock-char').addEventListener('click', openChar);
   $('char-more').addEventListener('click', openChar);
   $('char-close').addEventListener('click', () => $('char-dlg').close());
@@ -3881,7 +4166,7 @@
   // BT: 지금 보여 주는 전투. replay면 이미 끝난 자동 결투를 다시 보여 주는 중
   let BT = null;
   let btTimer = null;
-  const statusBad = new Set(['burn', 'poison', 'bleed', 'acid', 'freeze', 'stun', 'weaken']);
+  const statusBad = new Set(['burn', 'poison', 'bleed', 'acid', 'freeze', 'stun', 'weaken', 'brittle', 'dazed']);
   function btFighter(box, f, mine) {
     box.replaceChildren();
     const who = document.createElement('div');
@@ -3897,7 +4182,9 @@
     t.innerHTML = '<b></b><small></small>';
     t.querySelector('b').textContent = f.name;
     t.querySelector('small').textContent = f.creature ? (f.elite ? '강적' : '사냥감') : `${S.kinds[f.kind]?.name || ''}${mine ? ' · 나' : ''}`;
+    if (f.enraged) { const r = document.createElement('span'); r.className = 'rage-b'; r.textContent = '분노'; t.querySelector('small').append(' ', r); }
     who.appendChild(t);
+    box.classList.toggle('enraged', !!f.enraged);
     box.appendChild(who);
     const bar = (cls, v, m, label) => {
       const n = document.createElement('div');
@@ -3931,13 +4218,28 @@
   function btAddLines(lines, turn) {
     const log = $('bt-log');
     if (turn != null) { const t = document.createElement('div'); t.className = 't'; t.textContent = turn ? `${turn}턴` : ''; if (turn) log.appendChild(t); }
-    for (const l of lines) { const p = document.createElement('p'); p.className = 'new'; p.textContent = l; log.appendChild(p); }
+    for (const l of lines) {
+      const p = document.createElement('p');
+      // 연계·분노·반격은 눈에 띄게
+      p.className = `new${l.startsWith('연계!') ? ' combo' : /분노했다|틈을 보았다|틈을 찔렀다/.test(l) ? ' key' : ''}`;
+      p.textContent = l;
+      log.appendChild(p);
+    }
     log.scrollTop = log.scrollHeight;
   }
   function renderBattle() {
     const v = BT.view;
     btFighter($('bt-me'), v.me, true);
     btFighter($('bt-foe'), v.foe, false);
+    // 상대가 다음 턴에 할 일 (사냥감·강적만)
+    const it = $('bt-intent');
+    it.hidden = !v.intent;
+    if (v.intent) {
+      it.className = `bt-intent ${v.intent.kind}`;
+      it.innerHTML = '<span class="k">다음 턴</span><div><b></b><small></small></div>';
+      it.querySelector('b').textContent = v.intent.text;
+      it.querySelector('small').textContent = v.intent.hint;
+    }
     // 턴과 남은 시간
     const left = v.deadline && !v.over ? Math.max(0, Math.ceil((v.deadline - Date.now()) / 1000)) : null;
     $('bt-turn').innerHTML = `<span>${v.over ? '전투 끝' : `<b>${v.turn + 1}턴</b> / ${v.maxTurns}`}</span><span>${left != null ? `남은 시간 ${left}초 · 시간이 다 되면 자동으로 고른다` : ''}</span>`;
@@ -3956,7 +4258,7 @@
         const add = (label, sub, act, opts = {}) => {
           const b = document.createElement('button');
           b.type = 'button';
-          b.className = `btn${opts.primary ? ' primary' : ''}`;
+          b.className = `btn${opts.primary ? ' primary' : ''}${opts.combo ? ' combo' : ''}${opts.suggest ? ' suggest' : ''}`;
           b.innerHTML = `<span></span><small></small>`;
           b.querySelector('span').textContent = label;
           b.querySelector('small').textContent = sub;
@@ -3965,13 +4267,15 @@
           b.addEventListener('click', () => btAct(act));
           acts.appendChild(b);
         };
-        add('할퀴기', frozen ? '이번 턴은 움직일 수 없다' : '기본 공격', { type: 'attack' }, { primary: true });
+        add('할퀴기', frozen ? '이번 턴은 움직일 수 없다' : v.me.attackCombo ? `연계! ${v.me.attackCombo}` : '기본 공격', { type: 'attack' }, { primary: true, combo: !!v.me.attackCombo });
         for (const sk of v.me.skills || []) {
           const why = sk.cd > 0 ? `${sk.cd}턴 뒤` : v.me.en < sk.en ? '기력 부족' : '';
           const def = sk.id === 'breath' ? S.combat.breaths[S.me.kind] : S.combat.skills[sk.id];
-          add(sk.name, why || `기력 ${sk.en}`, { type: 'skill', id: sk.id }, { disabled: !!why, title: def?.desc || '' });
+          const cb = !why && sk.combo;
+          add(sk.name, why || (cb ? `연계! ${sk.combo}` : `기력 ${sk.en}`), { type: 'skill', id: sk.id }, { disabled: !!why, title: [def?.desc, ...comboHints(sk.id)].filter(Boolean).join('\n'), combo: !!cb });
         }
-        add('방어', '피해 절반, 기력 +3', { type: 'guard' });
+        const bigHit = v.intent && ['heavy', 'multi', 'debuff'].includes(v.intent.kind);
+        add('방어', bigHit ? '특기 피해 ¼ · 반격' : '피해 절반, 기력 +3', { type: 'guard' }, { suggest: bigHit });
         add(v.kind === 'duel' ? '항복' : '물러나기', v.kind === 'duel' ? '결투를 포기한다' : '전리품 없이 피한다', { type: 'flee' });
       }
     }
@@ -3986,6 +4290,10 @@
       for (const l of BT.result?.lines || []) { const li = document.createElement('li'); li.textContent = l; r.querySelector('ul').appendChild(li); }
       for (const it of BT.result?.items || []) { const li = document.createElement('li'); li.textContent = `${S.items[it.id]?.name} ×${it.qty}`; r.querySelector('ul').appendChild(li); }
     }
+  }
+  // 이 행동으로 이을 수 있는 연계 설명 (버튼 위에 마우스를 올리면)
+  function comboHints(id) {
+    return Object.values(S.combat.combos || {}).filter((c) => c.skill.includes(id)).map((c) => `연계 · ${c.name}: ${c.desc}`);
   }
   function openBattle(view, { title, lines = [], log = null, result = null, replay = false } = {}) {
     BT = { view, title, result, replay, waiting: !!view.waiting, foeReady: false };
@@ -4701,6 +5009,7 @@
       }
       const k = document.createElement('span');
       k.textContent = `${S.kinds[d.kind]?.name || ''}${d.place && S.places?.[d.place] ? ` · ${S.places[d.place].name}` : ''}`;
+      if (d.title) { const tt = document.createElement('span'); tt.className = 'ttl'; tt.textContent = d.title; nm.append(tt); }
       nm.append(b, k);
       row.append(ava, nm);
       if (d.away) {
@@ -4789,6 +5098,8 @@
     nm.addEventListener('click', () => openProfile(m.dragonId));
     const tm = document.createElement('time');
     tm.textContent = chatTime(m.at);
+    // 칭호는 이름 앞에
+    if (m.title) { const tt = document.createElement('span'); tt.className = 'ttl'; tt.textContent = m.title; head.append(tt); }
     head.append(nm, tm);
     p.append(head, line);
     addLine(p);
@@ -4853,6 +5164,7 @@
       for (const [k, v] of Object.entries(S.items || {})) v.id = k;
       S.recipes = data.recipes;
       S.buffs = data.buffs || {};
+      S.expGoals = data.expGoals || {};
       S.deathCfg = data.death || { waitMs: 3 * 3600000, helpAp: 2, helpEn: 8 };
       S.shops = data.shops;
       S.trade = data.trade;
@@ -4906,7 +5218,7 @@
     socket.on('chat:deleted', onChatDeleted);
     socket.on('notice', (r) => {
       // 동료·선물·교환 소식은 바로 알림으로, 둥지 소식은 소식 카드로
-      if (['동료', '동료 요청', '선물', '교환', '결투', '부고', '구조 요청'].includes(r.title)) { toast(r.lines.join(' ')); if (r.items?.length) fetchInv(); }
+      if (['동료', '동료 요청', '선물', '교환', '결투', '부고', '구조 요청', '칭호'].includes(r.title)) { toast(r.lines.join(' ')); if (r.items?.length) fetchInv(); }
       else addNews(r);
     });
     socket.on('rel:changed', () => { loadRel(); refreshProfile(); });

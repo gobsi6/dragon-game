@@ -3,7 +3,7 @@
 // - 강적·결투장: 매 턴 직접 고름 (실시간 결투에서 시간을 넘기면 자동으로 고름)
 // 전투 하나 = battle { kind, turn, a, b, log, over, winner }. a·b는 싸우는 쪽(fighter)
 const {
-  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, STATUS, CREATURE_COMBAT, ELITES, CREATURES, ITEMS, RULES, STANCE_RULES, KINDS, MIND, PLACES, PLACE_RULES,
+  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, STATUS, CREATURE_COMBAT, ELITES, CREATURES, ITEMS, RULES, STANCE_RULES, KINDS, MIND, PLACES, PLACE_RULES, COMBOS, ENRAGE,
 } = require('./game-data');
 const logic = require('./game-logic');
 
@@ -70,11 +70,13 @@ function fromDragon(d, context) {
   const enMax = logic.enCap(d);
   // 강화 음식: 사냥·강적 전투에서만 (결투장에는 적용되지 않음)
   const bf = hunt ? logic.buffOf(d) : null;
+  const ti = hunt ? logic.titleMods(d) : {}; // 칭호 효과 (결투장에는 없음)
   return {
     id: d.id, name: d.name, kind: d.kind, creature: false,
     hp: hunt ? d.hp : hpMax, hpMax, en: hunt ? d.en : enMax, enMax,
-    atk: atk * (bf?.atk || 1), def: st.scale, spd: st.wing + (bf?.spd || 0), mag: st.wisdom * (bf?.mag || 1), maj: st.majesty,
-    taken: (hunt ? tm.huntDmg * (d.perks?.knight ? 0.7 : 1) : 1) * (bf?.taken || 1), // 받는 피해 배율
+    atk: atk * (bf?.atk || 1) * (ti.atk || 1), def: st.scale, spd: st.wing + (bf?.spd || 0), mag: st.wisdom * (bf?.mag || 1), maj: st.majesty,
+    taken: (hunt ? tm.huntDmg * (d.perks?.knight ? 0.7 : 1) : 1) * (bf?.taken || 1) * (ti.taken || 1), // 받는 피해 배율
+    healMult: ti.heal || 1,
     buff: bf?.id || null,
     element: BREATHS[d.kind]?.element || null,
     breath: BREATHS[d.kind] ? d.kind : null,
@@ -103,7 +105,38 @@ function fromCreature(place, elite, corrupted = false) {
   };
 }
 function newBattle(kind, a, b) {
-  return { kind, turn: 0, a, b, log: [], over: false, winner: null, fled: null };
+  const bt = { kind, turn: 0, a, b, log: [], over: false, winner: null, fled: null };
+  for (const f of [a, b]) if (f.creature) plan(f);
+  return bt;
+}
+
+// ── 사냥감의 다음 행동 (화면에 미리 보여 줌) ──────
+// 특기는 세 턴마다 (분노하면 두 턴마다). 다음 턴에 무엇을 할지 미리 정해 둔다
+function plan(f) {
+  const every = f.enraged ? ENRAGE.every : 3;
+  f.since = f.since ?? 0;
+  if (f.special && f.since >= every - 1) { f.next = { type: 'special' }; f.since = 0; }
+  else { f.next = { type: 'attack' }; f.since += 1; }
+}
+const heavyOf = (s) => !s.self && (s.power || 0) * (s.hits || 1) >= 1.2;
+// 미리 보이는 의도: kind(heavy·multi·debuff·self·attack), text, hint
+function intentOf(f) {
+  if (!f.creature || !f.next) return null;
+  if (f.next.type !== 'special') return { kind: 'attack', text: `${ga(f)} 틈을 노리고 있다.`, hint: '평범한 공격이 온다.' };
+  const s = f.special;
+  if (s.self) return { kind: 'self', text: `${ga(f)} ${s.name}${josa(s.name, '으로', '로')} 몸을 굳히려 한다.`, hint: '다음 턴엔 공격이 덜 통한다. 지금 상태 이상을 걸어 두거나 기력을 아끼자.' };
+  if (s.hits > 1) return { kind: 'multi', text: `${ga(f)} ${s.name}${josa(s.name, '으로', '로')} 연달아 덤벼들 기세다!`, hint: '방어하면 크게 줄이고 반격 기회를 얻는다. 돌풍으로 피해도 좋다.' };
+  if (heavyOf(s)) return { kind: 'heavy', text: `${ga(f)} ${s.name}${josa(s.name, '을', '를')} 준비한다! 강한 한 방이 온다.`, hint: '방어하면 피해가 4분의 1로 줄고 반격 기회를 얻는다.' };
+  return { kind: 'debuff', text: `${ga(f)} ${s.name}${josa(s.name, '을', '를')} 쓰려 한다.`, hint: '상태 이상이 따라온다. 방어하면 피해를 줄이고 반격 기회를 얻는다.' };
+}
+
+// ── 연계 ───────────────────────────────────────────
+// 행동 id('attack' 또는 스킬 id)와 상대 상태로 연계가 되는지
+function comboOf(foe, id) {
+  for (const [key, c] of Object.entries(COMBOS)) {
+    if (c.skill.includes(id) && c.when.some((k) => has(foe, k))) return { key, ...c };
+  }
+  return null;
 }
 
 // ── 한 턴 ──────────────────────────────────────────
@@ -124,11 +157,12 @@ function blocked(f, act) {
 const has = (f, k) => (f.st[k] || 0) > 0;
 
 // 치유: 지혜(마력)가 높을수록, 최대 체력이 클수록 많이
-const healAmount = (f, s) => Math.round(s.heal.base + f.mag * s.heal.mag + f.hpMax * s.heal.pct);
+const healAmount = (f, s) => Math.round((s.heal.base + f.mag * s.heal.mag + f.hpMax * s.heal.pct) * (f.healMult || 1));
 const STATUS_LIST = (ks) => ks.map((k) => STATUS[k]).join('·');
 
 // 피해 계산. magic: 숨결처럼 비늘을 덜 타는 공격
-function damage(att, def, power, { magic = false, element = null } = {}) {
+function damage(att, def, power, opt = {}) {
+  const { magic = false, element = null } = opt;
   let atk = att.atk * (has(att, 'weaken') ? 0.7 : 1);
   let armor = def.def * (has(def, 'acid') ? 0.5 : 1);
   let raw = magic ? (att.mag * 1.0 + atk * 0.5) * power - armor * 0.25 : atk * power - armor * 0.5;
@@ -136,9 +170,9 @@ function damage(att, def, power, { magic = false, element = null } = {}) {
   let note = '';
   if (element && def.weak.includes(element)) { raw *= 1.5; note = ' 약점을 찔렀다!'; }
   if (element && def.resist.includes(element)) { raw *= 0.5; note = ' 잘 통하지 않는다.'; }
-  const crit = !magic && Math.random() < 0.06 + Math.max(0, att.spd - def.spd) * 0.005;
+  const crit = !magic && (opt.crit || Math.random() < 0.06 + Math.max(0, att.spd - def.spd) * 0.005);
   if (crit) { raw *= 1.5; note += ' 급소를 찔렀다!'; }
-  if (def.guarding) raw *= 0.5;
+  if (def.guarding) raw *= opt.special ? 0.25 : 0.5; // 예고된 특기를 방어하면 4분의 1
   if (has(def, 'harden')) raw *= 0.5;
   raw *= def.taken;
   return { dmg: Math.max(1, Math.round(raw)), note };
@@ -166,9 +200,15 @@ function applyDebuff(att, def, debuff, chance, element, lines) {
 }
 function hit(att, def, power, opt, lines, verb) {
   if (dodged(att, def, lines)) return 0;
+  let extra = '';
+  if (has(att, 'opening')) { power *= 1.5; att.st.opening = 0; extra = ' 틈을 찔렀다!'; } // 방어로 얻은 반격 기회
   const { dmg, note } = damage(att, def, power, opt);
   def.hp = Math.max(0, def.hp - dmg);
-  lines.push(`${verb} ${dmg}의 피해를 입혔다.${note}`);
+  lines.push(`${verb} ${dmg}의 피해를 입혔다.${extra}${note}`);
+  if (opt.special && def.guarding && def.hp > 0 && !def.creature) {
+    def.st.opening = 2;
+    lines.push(`${ga(def)} 공격을 받아 내고 틈을 보았다! (다음 공격 ×1.5)`);
+  }
   if (att.mindDrain && !def.creature) def.mindLoss = (def.mindLoss || 0) + dmg * att.mindDrain; // 오염된 몬스터
   return dmg;
 }
@@ -192,7 +232,7 @@ function perform(b, f, foe, act, lines) {
     const s = f.special;
     if (s.self) { for (const [k, n] of Object.entries(s.self)) f.st[k] = n; lines.push(`${ga(f)} ${s.name}${josa(s.name, '으로', '로')} 몸을 단단히 했다.`); return; }
     let dealt = 0;
-    for (let i = 0; i < (s.hits || 1); i++) dealt += hit(f, foe, s.power, { element: s.element }, lines, `${ga(f)} ${s.name}!`);
+    for (let i = 0; i < (s.hits || 1); i++) dealt += hit(f, foe, s.power, { element: s.element, special: true }, lines, `${ga(f)} ${s.name}!`);
     if (dealt) applyDebuff(f, foe, s.debuff, s.chance, s.element, lines);
     return;
   }
@@ -218,7 +258,11 @@ function perform(b, f, foe, act, lines) {
         return;
       }
       if (s.power) {
-        const dealt = hit(f, foe, s.power, { magic: !!s.isBreath, element: s.isBreath ? s.element : null }, lines, `${ga(f)} ${s.name}!`);
+        const cb = comboOf(foe, act.id);
+        const pw = s.power * (cb?.key === 'shatter' ? 2 : 1);
+        if (cb) lines.push(`연계! ${cb.name}`);
+        const dealt = hit(f, foe, pw, { magic: !!s.isBreath, element: s.isBreath ? s.element : null, crit: cb?.key === 'vital' }, lines, `${ga(f)} ${s.name}!`);
+        if (dealt && cb) comboAfter(f, foe, cb, lines);
         if (dealt) {
           if (s.drain) { const h = Math.round(dealt * s.drain); f.hp = Math.min(f.hpMax, f.hp + h); lines.push(`${ga(f)} 체력을 ${h} 되찾았다.`); }
           const chance = s.majesty ? clamp(0.5 + (f.maj - foe.maj) * 0.04, 0.2, 0.95) : s.chance;
@@ -237,7 +281,23 @@ function perform(b, f, foe, act, lines) {
       return;
     }
   }
-  hit(f, foe, 1, {}, lines, `${ga(f)} 할퀴어`);
+  const cb = f.creature ? null : comboOf(foe, 'attack');
+  if (cb) lines.push(`연계! ${cb.name}`);
+  const dealt = hit(f, foe, 1, { crit: cb?.key === 'vital' }, lines, `${ga(f)} 할퀴어`);
+  if (dealt && cb) comboAfter(f, foe, cb, lines);
+}
+// 연계의 뒤따르는 효과
+function comboAfter(f, foe, cb, lines) {
+  if (cb.key === 'shatter') { foe.st.freeze = 0; foe.st.brittle = 0; lines.push(`${foe.name}의 몸을 덮은 얼음이 산산조각 났다!`); }
+  if (cb.key === 'vital') { foe.st.dazed = 0; }
+  if (cb.key === 'wildfire' && foe.hp > 0) {
+    const n = foe.st.burnDmg || 3;
+    foe.hp = Math.max(0, foe.hp - n);
+    foe.st.burn = (foe.st.burn || 0) + 3;
+    lines.push(`불길이 번져 ${ga(foe)} ${n}의 화상 피해를 더 입었다. (화상 3턴 연장)`);
+  }
+  if (cb.key === 'flay') { foe.st.bleedDmg = (foe.st.bleedDmg || 3) * 2; foe.st.bleed = Math.max(foe.st.bleed || 0, 3); lines.push(`녹은 비늘 사이로 상처가 깊게 벌어졌다. (출혈 피해 ×2)`); }
+  if (cb.key === 'spread') { foe.st.poisonDmg = Math.round((foe.st.poisonDmg || 3) * 1.5); foe.st.poison = (foe.st.poison || 0) + 2; lines.push(`독이 온몸으로 퍼졌다. (독 피해 +50%, 중독 2턴 연장)`); }
 }
 
 // 턴 끝: 지속 피해, 상태와 재사용 대기 줄이기, 기력 조금 회복
@@ -249,6 +309,9 @@ function endOfTurn(f, lines) {
       lines.push(`${ga(f)} ${label}에 ${n}의 피해를 입었다.`);
     }
   }
+  // 얼어붙음·마비가 풀리는 턴: 다음 턴까지 '얼음 금'·'휘청임'이 남아 연계를 이을 수 있음
+  if (f.st.freeze === 1 && f.hp > 0) f.st.brittle = 2;
+  if (f.st.stun === 1 && f.hp > 0) f.st.dazed = 2;
   for (const k of Object.keys(STATUS)) if (f.st[k] > 0 && k !== 'dodge') f.st[k] -= 1;
   for (const k of Object.keys(f.cd)) if (f.cd[k] > 0) f.cd[k] -= 1;
   if (!f.creature) f.en = Math.min(f.enMax, f.en + COMBAT.enPerTurn);
@@ -258,9 +321,13 @@ function endOfTurn(f, lines) {
 function round(b, actA, actB) {
   if (b.over) return [];
   b.turn += 1;
+  b.a.guarding = false; b.b.guarding = false; // 지난 턴의 방어는 이번 턴에 이어지지 않음
   const lines = [];
-  const first = b.a.spd + rand(0, 3) >= b.b.spd + rand(0, 3) ? ['a', 'b'] : ['b', 'a'];
   const acts = { a: actA, b: actB };
+  // 방어·비늘 세우기처럼 몸을 지키는 행동은 먼저 (예고를 보고 막을 수 있게). 나머지는 빠른 쪽이 먼저
+  const guardish = (f, act) => act.type === 'guard' || (act.type === 'skill' && !blocked(f, act) && (() => { const sk = skillOf(f, act.id); return sk && sk.self && !sk.power && !sk.heal; })());
+  const pa = guardish(b.a, actA) ? 1 : 0, pb = guardish(b.b, actB) ? 1 : 0;
+  const first = pa !== pb ? (pa > pb ? ['a', 'b'] : ['b', 'a']) : b.a.spd + rand(0, 3) >= b.b.spd + rand(0, 3) ? ['a', 'b'] : ['b', 'a'];
   for (const k of first) {
     const f = b[k];
     const foe = b[k === 'a' ? 'b' : 'a'];
@@ -274,6 +341,16 @@ function round(b, actA, actB) {
       if (!b.over && f.hp <= 0) { b.over = true; b.winner = foe; lines.push(`${ga(f)} 쓰러졌다.`); }
     }
   }
+  // 강적의 분노: 체력이 절반 아래로 떨어지면 한 번
+  for (const f of [b.a, b.b]) {
+    if (!b.over && f.creature && f.elite && !f.enraged && f.hp > 0 && f.hp <= f.hpMax * ENRAGE.below) {
+      f.enraged = true;
+      f.atk *= ENRAGE.atk;
+      f.since = Math.max(f.since || 0, ENRAGE.every - 1); // 곧바로 특기를 노림
+      lines.push(`${ga(f)} 분노했다! 눈빛이 붉게 타오르고, 공격이 거세진다.`);
+    }
+  }
+  if (!b.over) for (const f of [b.a, b.b]) if (f.creature) plan(f);
   if (!b.over && b.turn >= COMBAT.maxTurns) {
     b.over = true;
     b.winner = b.a.hp / b.a.hpMax >= b.b.hp / b.b.hpMax ? b.a : b.b;
@@ -286,10 +363,7 @@ function round(b, actA, actB) {
 // ── 자동으로 고르기 ────────────────────────────────
 // reserve: 이만큼의 기력은 남겨 둠 (자동 사냥). flee: 체력이 이 비율 아래면 물러남
 function aiPick(f, foe, { reserve = 0, flee = 0 } = {}) {
-  if (f.creature) {
-    if (f.special && f.turnCount++ % 3 === 2) return { type: 'special' };
-    return { type: 'attack' };
-  }
+  if (f.creature) return f.next || { type: 'attack' }; // 미리 정해 둔 행동
   if (flee && f.hp < f.hpMax * flee) return { type: 'flee' };
   const can = (id) => {
     const s = skillOf(f, id);
@@ -297,6 +371,14 @@ function aiPick(f, foe, { reserve = 0, flee = 0 } = {}) {
   };
   const hpr = f.hp / f.hpMax;
   if (hpr < 0.4 && can('mend')) return { type: 'skill', id: 'mend' }; // 위험하면 숨결보다 치유 먼저
+  // 예고된 강한 특기: 비늘을 세우거나 방어
+  if (foe.creature && foe.next?.type === 'special' && foe.special && heavyOf(foe.special)) {
+    if (can('harden') && !has(f, 'harden')) return { type: 'skill', id: 'harden' };
+    if (hpr < 0.8 || foe.special.hits > 1) return { type: 'guard' };
+  }
+  // 연계가 되는 스킬이 있으면 먼저
+  for (const id of f.skills) if (can(id) && comboOf(foe, id)) return { type: 'skill', id };
+  if (comboOf(foe, 'attack')?.key === 'vital' && has(foe, 'stun')) return { type: 'attack' };
   const br = f.breath && BREATHS[f.breath];
   if (br && can('breath') && !foe.resist.includes(br.element)) {
     const debuffKey = br.debuff && Object.keys(br.debuff)[0];
@@ -325,6 +407,7 @@ function fighterView(f, mine) {
     hp: Math.round(f.hp), hpMax: f.hpMax, en: Math.round(f.en), enMax: f.enMax,
     st: Object.fromEntries(Object.keys(STATUS).filter((k) => f.st[k] > 0).map((k) => [k, f.st[k]])),
     weak: f.weak, resist: f.resist,
+    enraged: !!f.enraged,
   };
   if (mine) {
     v.skills = [
@@ -336,9 +419,15 @@ function fighterView(f, mine) {
 }
 function view(b, me = 'a') {
   const foe = me === 'a' ? 'b' : 'a';
+  const mv = fighterView(b[me], true);
+  // 지금 쓰면 연계가 되는 행동
+  for (const sk of mv.skills || []) { const c = comboOf(b[foe], sk.id); if (c) sk.combo = c.name; }
+  const ac = comboOf(b[foe], 'attack');
+  if (ac) mv.attackCombo = ac.name;
   return {
     kind: b.kind, turn: b.turn, maxTurns: COMBAT.maxTurns, over: b.over,
-    me: fighterView(b[me], true), foe: fighterView(b[foe], false),
+    me: mv, foe: fighterView(b[foe], false),
+    intent: b.over ? null : intentOf(b[foe]),
     won: b.over ? b.winner === b[me] : null,
     fled: b.over && b.fled ? (b.fled === b[me] ? 'me' : 'foe') : null,
     log: b.log.slice(-1)[0]?.lines || [],
@@ -363,6 +452,7 @@ function hunt(d) {
   const me = fromDragon(d, 'hunt');
   if (eliteRoll) {
     const foe = fromCreature(place, true, corrupted);
+    me.atk *= logic.titleMods(d).eliteAtk || 1; // 칭호: 강적 사냥꾼
     const b = newBattle('elite', me, foe);
     b.region = d.region;
     b.place = place;
@@ -399,9 +489,13 @@ function huntReward(d, b, c) {
     if (Math.random() < 0.3 + c.level * 0.05 + (hostile ? STANCE_RULES.hostile.huntFang : 0)) ids.push('sharp_fang');
     // 장소마다 다른 사냥 전리품 (강화 음식 '행운'이면 더 잘 나옴)
     const drop = PLACES[b.b.place]?.drop;
-    if (drop && Math.random() < PLACE_RULES.dropChance[ITEMS[drop].rarity] + (logic.buffOf(d)?.drop || 0)) ids.push(drop);
+    const ti = logic.titleMods(d);
+    if (drop && Math.random() < PLACE_RULES.dropChance[ITEMS[drop].rarity] + (logic.buffOf(d)?.drop || 0) + (ti.drop || 0)) ids.push(drop);
     items = logic.bundle(ids);
-    gold = Math.round(randInt(0, 3) * c.level * (hostile ? STANCE_RULES.hostile.huntGold : 1));
+    gold = Math.round(randInt(0, 3) * c.level * (hostile ? STANCE_RULES.hostile.huntGold : 1) * (ti.huntGold || 1));
+    // 칭호: 사냥에서 이긴 횟수 (전체와 지역별)
+    logic.traitCount(d, 'huntwin');
+    logic.traitCount(d, `huntwin:${PLACES[b.b.place]?.region || d.region}`);
     xp = 12 + c.level * 6;
     const got = items.map(logic.itemLabel);
     if (gold) got.push(`금화 ${gold}닢`);
@@ -448,13 +542,17 @@ function eliteReward(d, b) {
     const ids = ['beast_hide', 'beast_hide', 'sharp_fang', ...(drop ? [drop, drop] : []),
       logic.rollItem(b.region, { uncommon: 0.6, rare: 0.3 + lv * 0.02 }), logic.rollItem(b.region, { uncommon: 0.6, rare: 0.15 + lv * 0.02 })];
     items = logic.bundle(ids);
-    gold = randInt(20, 40) * lv;
+    gold = Math.round(randInt(20, 40) * lv * (logic.titleMods(d).huntGold || 1));
     xp = (12 + lv * 6) * 3;
+    logic.traitCount(d, 'elite');
+    logic.traitCount(d, 'huntwin');
+    logic.traitCount(d, `huntwin:${PLACES[b.place]?.region || d.region}`);
     d.gold += gold;
     const t = [...items.map(logic.itemLabel), `금화 ${gold}닢`].join(', ');
     lines.push(`${eul(foe)} 쓰러뜨렸다! ${t}${josa(t, '을', '를')} 얻었다.`);
     const f = logic.addFame(d, 2);
     lines.push(f || '강적을 쓰러뜨렸다는 소문이 드래곤들 사이에 퍼진다.');
+    logic.chron(d, 'mark', `${PLACES[b.place]?.name || ''}에서 강적 ${eul(foe)} 쓰러뜨렸다.`);
   } else if (b.fled === me) {
     lines.push(`${foe.name}에게서 물러났다. 다음을 기약하자.`);
     xp = 4;
@@ -473,6 +571,6 @@ function eliteReward(d, b) {
 
 module.exports = {
   combatOf, loadout, learned, setSkills, setSettings,
-  fromDragon, fromCreature, newBattle, round, aiPick, runAuto, blocked, view,
+  fromDragon, fromCreature, newBattle, round, aiPick, runAuto, blocked, view, comboOf, intentOf,
   hunt, huntReward, eliteReward, debug,
 };

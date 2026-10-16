@@ -28,12 +28,13 @@ module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broa
   const canRevive = (d) => scarsOf(d).length < STATS.length;
 
   // 강적에게 져서 쓰러짐
-  function fall(d) {
+  function fall(d, by = null) {
     if (fallenOf(d)) return;
     d.hp = 0;
     d.hp_at = Date.now();
     d.rest_at = null;
     d.fallen = { at: Date.now(), region: d.region };
+    logic.chron(d, 'mark', `${REGIONS[d.region].name}에서 ${by ? `${by}에게 ` : ''}쓰러졌다.`);
     db.saveState(d);
     const e = live(d.id);
     if (e) { sendMe(e.socket, d); e.socket.emit('fallen', view(d)); }
@@ -62,6 +63,7 @@ module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broa
     if (f.waited) return { error: '이번에는 이미 기다려 보았다. 이제 스스로 정해야 한다.' };
     const until = Date.now() + DEATH.waitMs;
     d.fallen = { ...f, region: f.region || d.region, wait: { until }, waited: true };
+    logic.chron(d, 'choice', '쓰러진 채 다른 드래곤의 도움을 기다리기로 했다.');
     db.saveState(d);
     const where = REGIONS[d.fallen.region].name;
     const h = Math.round(DEATH.waitMs / 3600000);
@@ -92,16 +94,20 @@ module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broa
     helper.en -= DEATH.helpEn;
     // 치유를 배운 드래곤이 도우면 더 많이 회복
     const healer = SKILLS.mend && helper.level >= SKILLS.mend.lv;
+    const hpPct = Math.min(1, (healer ? DEATH.healHp : DEATH.helpHp) + (logic.titleMods(helper).helpHp || 0)); // 칭호: 손을 내미는 자
     t.fallen = null;
-    t.hp = Math.max(1, Math.round(logic.hpCap(t) * (healer ? DEATH.healHp : DEATH.helpHp)));
+    t.hp = Math.max(1, Math.round(logic.hpCap(t) * hpPct));
+    logic.chron(t, 'mark', `${ga(helper.name)} 찾아와 일으켜 주었다. 상흔 없이 다시 일어섰다.`);
+    logic.chron(helper, 'mark', `쓰러진 ${eul(t.name)} 일으켜 세웠다.`);
     t.hp_at = Date.now();
     db.saveState(t);
+    logic.traitCount(helper, 'rescue');
     const fame = logic.addFame(helper, DEATH.helpFame);
     const xp = logic.xpOf(helper, DEATH.helpXp);
     const levelUp = logic.gainXp(helper, xp);
     db.saveState(helper);
     shout(`[구조] ${ga(helper.name)} 쓰러진 ${eul(t.name)} 일으켜 세웠다.`);
-    const tl = `${ga(helper.name)} 찾아와 ${healer ? '상처를 핥아 주며 ' : ''}일으켜 주었다. 상흔 없이 다시 일어섰다. (체력 ${Math.round((healer ? DEATH.healHp : DEATH.helpHp) * 100)}%)`;
+    const tl = `${ga(helper.name)} 찾아와 ${healer ? '상처를 핥아 주며 ' : ''}일으켜 주었다. 상흔 없이 다시 일어섰다. (체력 ${Math.round(hpPct * 100)}%)`;
     const e = live(t.id);
     if (e) { sendMe(e.socket, t); e.socket.emit('rescued', { by: helper.name, lines: [tl] }); broadcastPresence(t.region); }
     else db.noteAdd(t.id, tl);
@@ -122,6 +128,7 @@ module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broa
     if (st.key === 'scale') d.hp_max -= 5;     // 비늘 1 = 최대 체력 5
     if (st.key === 'wisdom') d.en_max -= 2;    // 지혜 1 = 최대 기력 2
     scars.push(st.key);
+    logic.chron(d, 'choice', `쓰러졌다가 상흔을 입고 일어섰다. (${st.name} 영구 −1)`);
     const wasWaiting = !!waitingOf(d);
     d.fallen = null;
     if (wasWaiting) setImmediate(pushRescues);
@@ -219,6 +226,7 @@ module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broa
       const f = d && fallenOf(d);
       if (!f || !f.wait || f.wait.until > now) continue;
       d.fallen = { ...f, wait: null };
+      logic.chron(d, 'mark', '아무도 오지 않았다.');
       db.saveState(d);
       changed = true;
       const e = live(id);
