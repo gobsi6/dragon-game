@@ -938,6 +938,66 @@ const COMBOS = {
 // 강적의 분노: 체력이 이 비율 아래로 떨어지면 한 번
 const ENRAGE = { below: 0.5, atk: 1.25, every: 2 };
 
+// ── 계절과 날씨 ────────────────────────────────────
+// 계절은 대륙 전체에 같이 흐르고(SEASON_RULES.days일마다 바뀜), 날씨는 지역마다 SEASON_RULES.weatherHours시간마다 바뀐다.
+// 모두 시각으로 정해지므로 저장할 것이 없다 (서버를 다시 켜도 같은 날씨).
+// fx(효과) 이름: (배율은 1이 기준, 더하기는 0이 기준)
+//   ap: { explore, gather, hunt } 드는 행동력 +   gatherExtra: 채집에서 하나 더 나올 확률 +   findRare: 탐사·채집 귀한 물건 확률 +
+//   exploreFind: 탐사에서 무언가 찾을 확률 +   exploreGold·huntGold: 금화 배율   drop: 사냥 전리품 확률 +
+//   hpRegen·enRegen·apRegen·mindRegen: 회복 빠르기 배율   restRegen: 둥지에서 쉴 때 회복 배율
+//   spd: 싸울 때 내 날개 +   taken: 사냥·전투에서 받는 피해 배율   foeAtk·foeHp: 사냥감 공격·체력 배율   foeSpd: 사냥감 날개 +
+//   elem: { 속성: 피해 배율 } (나와 사냥감 모두에게 똑같이)
+const SEASON_RULES = { days: 4, weatherHours: 3 };
+const SEASONS = [
+  { id: 'spring', name: '봄',   desc: '눈이 녹고 새싹이 돋는다. 짐승들은 새끼를 지키느라 사납다.',
+    fx: { gatherExtra: 0.1, foeAtk: 1.05 } },
+  { id: 'summer', name: '여름', desc: '해가 길어 날개가 가볍지만, 더위에 기운이 쉽게 빠진다.',
+    fx: { apRegen: 1.1, enRegen: 0.9 } },
+  { id: 'autumn', name: '가을', desc: '짐승들이 살이 오르는 수확의 계절. 해가 짧아 길에서 줍는 것은 적다.',
+    fx: { huntGold: 1.1, drop: 0.05, exploreGold: 0.85 } },
+  { id: 'winter', name: '겨울', desc: '긴 밤이 이어진다. 둥지의 온기가 더없이 반갑지만, 바깥은 혹독하다.',
+    fx: { restRegen: 1.2, hpRegen: 0.85, foeHp: 1.1 } },
+];
+const WEATHERS = {
+  clear:  { name: '맑음',     desc: '구름 한 점 없는 하늘. 멀리까지 내다보인다.',
+    fx: { findRare: 0.03, exploreGold: 1.2, enRegen: 0.85 } },
+  rain:   { name: '비',       desc: '빗줄기가 땅을 적신다. 풀과 이끼가 쑥쑥 자란다.',
+    fx: { gatherExtra: 0.2, hpRegen: 1.1, elem: { fire: 0.7, lightning: 1.25 } } },
+  storm:  { name: '뇌우',     desc: '천둥이 하늘을 가른다. 날기 힘들지만, 쓰러진 나무 아래 무언가 드러난다.',
+    fx: { drop: 0.1, ap: { hunt: 1 }, spd: -3, elem: { lightning: 1.4, fire: 0.8 } } },
+  fog:    { name: '안개',     desc: '짙은 안개가 깔렸다. 사냥감도 나를 잘 보지 못하지만, 길을 잃기 쉽다.',
+    fx: { taken: 0.9, exploreFind: -0.1, elem: { mist: 1.3 } } },
+  snow:   { name: '눈',       desc: '함박눈이 쌓인다. 사냥감은 느려지고, 몸은 차갑게 식는다.',
+    fx: { foeSpd: -3, hpRegen: 0.75, elem: { ice: 1.3, fire: 0.85 } } },
+  heat:   { name: '불볕더위', desc: '땅이 달아올라 아지랑이가 피어오른다. 불길은 거세지고 기운은 빠진다.',
+    fx: { huntGold: 1.15, enRegen: 0.7, gatherExtra: -0.15, elem: { fire: 1.3, ice: 0.8 } } },
+  wind:   { name: '강풍',     desc: '거센 바람이 분다. 날개에 바람이 실리지만, 독과 안개는 흩어진다.',
+    fx: { spd: 3, exploreFind: 0.05, elem: { poison: 0.7, mist: 0.7 } } },
+  aurora: { name: '오로라',   desc: '밤하늘에 빛의 장막이 흔들린다. 마음이 맑아지지만, 짐승들도 들떠 있다.',
+    fx: { mindRegen: 2, findRare: 0.04, foeAtk: 1.1 } },
+  ash:    { name: '잿비',     desc: '화산재가 비처럼 내린다. 귀한 광물이 드러나지만, 숨이 막힌다.',
+    fx: { findRare: 0.03, mindRegen: 0.5, hpRegen: 0.9, elem: { earth: 1.2 } } },
+};
+// 계절마다 지역마다 날씨가 나올 무게 (적힌 것만 나옴)
+const W_BASE = {
+  spring: { clear: 4, rain: 4, fog: 2, wind: 2, storm: 1 },
+  summer: { clear: 4, heat: 3, storm: 2, rain: 2, wind: 1 },
+  autumn: { clear: 4, wind: 3, fog: 2, rain: 2 },
+  winter: { clear: 3, snow: 4, wind: 2, fog: 1 },
+};
+// 지역 성질: 무게에 곱함 (0이면 나오지 않음). add: 그 지역에서 더해지는 날씨
+const W_REGION = {
+  snow:    { mul: { rain: 0, heat: 0, storm: 0.3 }, add: { snow: 5, aurora: 2 } },
+  volcano: { mul: { snow: 0.2, rain: 0.5 }, add: { ash: 4, heat: 2 } },
+  swamp:   { mul: { heat: 0.6 }, add: { fog: 3, rain: 2 } },
+  forest:  { add: { rain: 2, fog: 2 } },
+  canyon:  { mul: { rain: 0.4, snow: 0.3, fog: 0.4 }, add: { heat: 3, wind: 2 } },
+  ruins:   { add: { fog: 2, aurora: 1, wind: 1 } },
+  plains:  { add: { wind: 1, storm: 1 } },
+  capital: { add: { rain: 1 } },
+  coast:   { add: { fog: 2, wind: 2, storm: 1 } },
+};
+
 // ── 대륙의 재앙: 모든 드래곤이 함께 맞서는 거대한 적 ──
 // 가끔 야생 지역 하나에 나타남. 체력은 모두가 함께 깎고, 한 번 맞설 때마다 정해진 턴만큼 싸운 뒤 물러남.
 // 쓰러뜨리면 입힌 피해 비율에 따라 모두에게 보상. 시간 안에 쓰러뜨리지 못하면 떠나 버림
@@ -1003,5 +1063,5 @@ module.exports = {
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, TITLES, TITLE_COUNT_NAMES,
   SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
   DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
-  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES,
+  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES,
 };

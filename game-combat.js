@@ -107,6 +107,23 @@ function fromCreature(place, elite, corrupted = false, minion = null) {
     st: {}, cd: {},
   };
 }
+// 계절과 날씨: 그 지역의 날씨가 싸움에 끼치는 효과 (사냥·강적·재앙·도둑 쫓기. 결투장에는 없음)
+// noHp: 사냥감 체력은 바꾸지 않음 (재앙은 모두가 함께 깎는 체력이라)
+function weatherize(b, region, noHp = false) {
+  const fx = logic.weatherFx(region);
+  const w = logic.weatherOf(region);
+  b.wx = { id: w.id, name: w.name };
+  b.a.spd = Math.max(1, b.a.spd + fx.spd);
+  b.a.taken *= fx.taken;
+  b.a.elemW = fx.elem;
+  for (const f of foesOf(b)) {
+    f.atk *= fx.foeAtk;
+    f.spd = Math.max(1, f.spd + fx.foeSpd);
+    if (!noHp && fx.foeHp !== 1) { f.hpMax = Math.round(f.hpMax * fx.foeHp); f.hp = Math.round(f.hp * fx.foeHp); }
+    f.elemW = fx.elem;
+  }
+  return b;
+}
 // extras: 함께 싸우는 다른 사냥감 (무리). 싸우는 상대 목록은 foes, 지금 노리는 상대는 b.b (= foes[target])
 function newBattle(kind, a, b, extras = []) {
   const bt = { kind, turn: 0, a, b, foes: [b, ...extras], target: 0, log: [], over: false, winner: null, fled: null };
@@ -188,6 +205,7 @@ function damage(att, def, power, opt = {}) {
   let raw = magic ? (att.mag * 1.0 + atk * 0.5) * power - armor * 0.25 : atk * power - armor * 0.5;
   raw *= rand(0.85, 1.15);
   let note = '';
+  if (element && att.elemW?.[element]) raw *= att.elemW[element]; // 날씨: 비에는 불이 약해지고 번개가 세짐
   if (element && def.weak.includes(element)) { raw *= 1.5; note = ' 약점을 찔렀다!'; }
   if (element && def.resist.includes(element)) { raw *= 0.5; note = ' 잘 통하지 않는다.'; }
   const crit = !magic && (opt.crit || Math.random() < 0.06 + Math.max(0, spdOf(att) - spdOf(def)) * 0.005);
@@ -503,7 +521,7 @@ function view(b, me = 'a') {
   let intent = b.over ? null : intentOf(foeF);
   if (multi && !b.over) intent = list.filter((x) => x.intent).map((x) => x.intent).sort((p, q) => INTENT_RANK[q.kind] - INTENT_RANK[p.kind])[0] || null;
   return {
-    kind: b.kind, turn: b.turn, maxTurns: b.maxTurns || (foes.length > 1 ? COMBAT.group.maxTurns : COMBAT.maxTurns), over: b.over, boss: !!b.boss,
+    kind: b.kind, turn: b.turn, maxTurns: b.maxTurns || (foes.length > 1 ? COMBAT.group.maxTurns : COMBAT.maxTurns), over: b.over, boss: !!b.boss, weather: b.wx || null,
     me: mv, foe: fighterView(foeF, false),
     foes: list, target: multi ? b.target : null,
     intent,
@@ -523,7 +541,7 @@ function hunt(d) {
   if (!place) return { error: '인간의 땅에서는 사냥할 수 없다.' };
   const c = { name: PLACES[place].creature, level: PLACES[place].level };
   if (d.hp < RULES.huntMinHp) return { error: '기운이 없어 사냥에 나설 수 없다. 조금 쉬어야 한다.' };
-  logic.spendAp(d, RULES.cost.hunt);
+  logic.spendAp(d, logic.actionCost(d, 'hunt'));
 
   const corrupted = logic.isCorrupted(d.region);
   const chance = corrupted ? MIND.eliteChance : COMBAT.eliteChance;
@@ -534,6 +552,7 @@ function hunt(d) {
     me.atk *= logic.titleMods(d).eliteAtk || 1; // 칭호: 강적 사냥꾼
     const b = newBattle('elite', me, foe);
     b.region = d.region;
+    weatherize(b, d.region);
     b.place = place;
     b.corrupted = corrupted;
     b.a.turnCount = 0; b.b.turnCount = 0;
@@ -552,6 +571,7 @@ function hunt(d) {
   const foes = [fromCreature(place, false, corrupted), ...Array.from({ length: n - 1 }, (_, i) => fromCreature(place, false, corrupted, pre[i % pre.length]))];
   const b = newBattle('hunt', me, foes[0], foes.slice(1));
   b.region = d.region;
+  weatherize(b, d.region);
   b.place = place;
   b.corrupted = corrupted;
   b.a.turnCount = 0;
@@ -578,6 +598,7 @@ function huntReward(d, b, c) {
   const G = COMBAT.group;
   const ti = logic.titleMods(d);
   const drop = PLACES[b.place]?.drop;
+  const wx = logic.weatherFx(b.region); // 계절과 날씨: 금화·전리품
   const ids = [];
   let gold = 0;
   let xp = 0;
@@ -587,8 +608,8 @@ function huntReward(d, b, c) {
     ids.push('beast_hide');
     if (!extra && Math.random() < 0.3 + c.level * 0.05 + (hostile ? STANCE_RULES.hostile.huntFang : 0)) ids.push('sharp_fang');
     // 장소마다 다른 사냥 전리품 (강화 음식 '행운'이면 더 잘 나옴)
-    if (drop && Math.random() < (PLACE_RULES.dropChance[ITEMS[drop].rarity] + (logic.buffOf(d)?.drop || 0) + (ti.drop || 0)) * (extra ? G.dropChance : 1)) ids.push(drop);
-    gold += randInt(0, 3) * c.level * (hostile ? STANCE_RULES.hostile.huntGold : 1) * (ti.huntGold || 1) * (extra ? G.gold : 1);
+    if (drop && Math.random() < (PLACE_RULES.dropChance[ITEMS[drop].rarity] + (logic.buffOf(d)?.drop || 0) + (ti.drop || 0) + wx.drop) * (extra ? G.dropChance : 1)) ids.push(drop);
+    gold += randInt(0, 3) * c.level * (hostile ? STANCE_RULES.hostile.huntGold : 1) * (ti.huntGold || 1) * wx.huntGold * (extra ? G.gold : 1);
     xp += (12 + c.level * 6) * (extra ? G.xp : 1);
   }
   gold = Math.round(gold);
@@ -647,7 +668,7 @@ function eliteReward(d, b) {
     const ids = ['beast_hide', 'beast_hide', 'sharp_fang', ...(drop ? [drop, drop] : []),
       logic.rollItem(b.region, { uncommon: 0.6, rare: 0.3 + lv * 0.02 }), logic.rollItem(b.region, { uncommon: 0.6, rare: 0.15 + lv * 0.02 })];
     items = logic.bundle(ids);
-    gold = Math.round(randInt(20, 40) * lv * (logic.titleMods(d).huntGold || 1));
+    gold = Math.round(randInt(20, 40) * lv * (logic.titleMods(d).huntGold || 1) * logic.weatherFx(b.region).huntGold);
     xp = (12 + lv * 6) * 3;
     logic.traitCount(d, 'elite');
     logic.traitCount(d, 'huntwin');
@@ -716,6 +737,7 @@ function bossBattle(d, st) {
   b.maxTurns = BOSS.turns;
   b.region = d.region;
   b.a.turnCount = 0;
+  weatherize(b, d.region, true);
   b.startHp = foe.hp;
   return b;
 }
@@ -727,6 +749,7 @@ function raidBattle(d, raid) {
   const b = newBattle('hunt', me, foes[0], foes.slice(1));
   b.raid = true;
   b.region = d.region;
+  weatherize(b, d.region);
   b.a.turnCount = 0;
   const lines = [`도둑들의 발자국을 따라 날았다. 바위 그늘에 ${T.name} 무리가 보물을 나누고 있다! (${foes.length}명)`];
   if (raid.trapped) lines.push('가시 덫에 다친 도둑들이 절뚝거린다.');
@@ -784,5 +807,5 @@ function raidReward(d, b, c, raid) {
 module.exports = {
   combatOf, loadout, learned, setSkills, setSettings,
   fromDragon, fromCreature, newBattle, round, aiPick, autoAct, runAuto, blocked, view, comboOf, intentOf, targetOf,
-  hunt, huntReward, eliteReward, raidBattle, raidReward, fromBoss, bossBattle, debug,
+  hunt, huntReward, eliteReward, raidBattle, raidReward, fromBoss, bossBattle, weatherize, debug,
 };

@@ -1,5 +1,5 @@
 // GM 도구: 드래곤 찾기·살펴보기, 금화·물건 주고 빼기, 회복, 수치 고치기, 순간이동,
-// 이벤트 일으키기, 둥지 식구 손보기, 공지, GM 권한, 접속 끊기, GM 기록
+// 이벤트 일으키기, 둥지 식구 손보기, 공지, 일괄 지급, GM 권한, 접속 끊기, GM 기록
 //
 // 접속 중인 드래곤은 서버가 들고 있는 그 객체를 고쳐야 함
 // (DB만 고치면 그 드래곤이 다음에 저장할 때 옛 값으로 덮어씀)
@@ -16,6 +16,7 @@ function josa(word, a, b) {
 }
 const ORIGINS = { abandoned: '버려진 아기', lost: '길 잃은 아이', tribute: '공물로 바쳐진 아이' };
 const ANNOUNCE_MAX = 300;
+const GIVE = { maxKinds: 20, maxQty: 9999, msgMax: 100 }; // 일괄 지급: 한 번에 고를 수 있는 물건 종류, 종류당 개수, 함께 보낼 말
 
 module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, refreshKin, teleport, kick, arena, presence, nestSync }) {
   // 대상 드래곤을 불러 고치고 저장. 접속 중이면 화면도 새로 고침
@@ -383,6 +384,43 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
       for (const id of db.dragonIds()) if (!online.has(id)) db.noteAdd(id, `[공지] ${text}`);
       db.gmLog(gmName(), null, `공지: ${text}`);
       return { ok: true, log: db.gmLogList(40) };
+    });
+
+    // 일괄 지급: 여러 드래곤에게 같은 물건 묶음을 한 번에. 긴 잠에 든 드래곤은 건너뜀
+    // p: { items: [{ id, qty }], mode: 'all' | 'online' | 'pick', ids: [드래곤 id], msg }
+    on('gm:give', (p) => {
+      const sum = new Map();
+      for (const x of Array.isArray(p.items) ? p.items : []) {
+        const id = str(x?.id);
+        const n = int(x?.qty);
+        if (!ITEMS[id]) return { error: '그런 물건은 없다.' };
+        if (!(n > 0) || n > GIVE.maxQty) return { error: `개수는 1에서 ${GIVE.maxQty} 사이로 적자.` };
+        sum.set(id, Math.min(GIVE.maxQty, (sum.get(id) || 0) + n));
+      }
+      if (!sum.size) return { error: '줄 물건을 고르자.' };
+      if (sum.size > GIVE.maxKinds) return { error: `물건은 한 번에 ${GIVE.maxKinds}종류까지 줄 수 있다.` };
+      const items = [...sum].map(([id, qty]) => ({ id, qty }));
+      const list = items.map((x) => `${ITEMS[x.id].name} ${x.qty}개`).join(', ');
+
+      const mode = str(p.mode);
+      let ids;
+      if (mode === 'all') ids = db.dragonIds();
+      else if (mode === 'online') ids = [...online.keys()];
+      else if (mode === 'pick') ids = [...new Set((Array.isArray(p.ids) ? p.ids : []).map(int).filter((n) => n > 0))];
+      else return { error: '받을 드래곤을 고르자.' };
+      if (!ids.length) return { error: mode === 'online' ? '지금 접속한 드래곤이 없다.' : '받을 드래곤을 고르자.' };
+
+      const msg = str(p.msg).replace(/\s+/g, ' ').slice(0, GIVE.msgMax);
+      const tell = msg ? `${msg} (받은 물건: ${list})` : `하늘에서 ${list}가 내려왔다.`;
+      let given = 0, skipped = 0;
+      for (const id of ids) {
+        const r = withTarget(id, true, (d) => (d.dead_at ? { error: 'dead' } : { items: items.map((x) => ({ ...x })), tell }));
+        if (r.error) skipped += 1; else given += 1;
+      }
+      if (!given) return { error: '받을 수 있는 드래곤이 없었다.' };
+      const who = mode === 'all' ? '모두' : mode === 'online' ? '접속 중' : '고른 드래곤';
+      db.gmLog(gmName(), null, `일괄 지급(${who} ${given}마리): ${list}${msg ? ` — ${msg}` : ''}`);
+      return { ok: true, given, skipped, log: db.gmLogList(40) };
     });
 
     // GM 권한 주기·거두기 (자기 자신은 거둘 수 없음)
