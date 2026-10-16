@@ -319,6 +319,9 @@
   .event-bar b { font: 700 14px/1.3 var(--serif); color: #4E3A10; }
   .event-bar .btn { margin-left: auto; min-height: 32px; padding: 0 12px; font-size: 13px; flex: none; }
   .event-bar::before { content: ""; width: 7px; height: 7px; transform: rotate(45deg); background: #B8913A; flex: none; }
+  .raid-bar { background: #FBF1F2; border-color: #E6C3C7; color: #7A2E2A; }
+  .raid-bar b { color: #8A2E27; }
+  .raid-bar::before { background: #A63E4B; }
   .ev-lines { margin: 0; padding: 12px 14px; list-style: none; font: 500 15px/1.8 var(--serif); color: #30353A; background: var(--surface-2); border-left: 2px solid #B6B9B5; }
   .ev-choices { display: flex; flex-direction: column; gap: 6px; }
   .ev-choice { text-align: left; padding: 10px 14px; min-height: 44px; background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: 3px; font: 500 14px/1.4 var(--serif); display: flex; flex-direction: column; gap: 2px; }
@@ -540,6 +543,8 @@
   .tp-form .btn { background: var(--tp); border-color: #45446E; color: #F4F3FA; box-shadow: inset 0 0 0 1px #A9A7D4; font-weight: 600; }
   .tp-closed { padding: 10px 12px; font-size: 13px; color: #A63E4B; background: #FBF1F2; border: 1px solid #E6C3C7; }
   .dock .badge.tp { background: var(--tp); }
+  /* 둥지에 도둑이 들면 메뉴에 붉은 점 (넓은 화면: 이름 옆, 좁은 화면: 아이콘 위) */
+  #dock-nest.alert .lbl::after { content: ""; display: inline-block; width: 7px; height: 7px; margin-left: 5px; border-radius: 50%; background: #A63E4B; vertical-align: 2px; }
 
   /* ── 특성 · 드래곤 창 ── */
   .more-char { align-self: stretch; }
@@ -1009,6 +1014,22 @@
   .hoard-sum { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; padding: 12px 14px; background: #FBF6E8; border: 1px solid #E2CF9E; }
   .hoard-sum .v { font: 700 26px/1 var(--serif); color: #6B4E12; font-variant-numeric: tabular-nums; }
   .hoard-sum .l { font-size: 13px; color: #6B5A3A; }
+  .nest-tiers { display: flex; gap: 6px; margin: 2px 0 8px; }
+  .nest-tiers span { flex: 1; min-width: 0; text-align: center; padding: 7px 4px; border: 1px solid var(--line-in); background: var(--surface-2); font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nest-tiers span.done { color: var(--ink-2); border-color: var(--line-soft); }
+  .nest-tiers span.on { color: var(--steel-d); border-color: var(--steel-d); background: #EEF2F6; font-weight: 600; }
+  .nest-eff { margin: 0; font-size: 13px; line-height: 1.6; color: var(--ink-2); }
+  .cost-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 10px; }
+  .cost-list span { font-size: 12.5px; padding: 3px 8px; border: 1px solid var(--line-in); background: #fff; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .cost-list span.lack { color: #8A2E27; border-color: #E6C3C7; background: #FBF1F2; }
+  .hoard-tier { flex-basis: 100%; display: flex; flex-direction: column; gap: 6px; margin-top: 4px; font-size: 13px; color: #6B5A3A; }
+  .hoard-tier b { color: #4E3A10; font-weight: 600; }
+  .hoard-tier .hb { height: 6px; background: #EFE6CC; overflow: hidden; }
+  .hoard-tier .hb i { display: block; height: 100%; background: #B8913A; }
+  .raid-card { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; padding: 12px 14px; border: 1px solid #E6C3C7; background: #FBF1F2; }
+  .raid-card b { font: 700 15px/1.4 var(--serif); color: #8A2E27; }
+  .raid-card p { margin: 0; font-size: 13px; line-height: 1.6; color: #5A3A38; }
+  .raid-card .row { justify-content: flex-start; flex-wrap: wrap; margin-top: 4px; }
   .gold-move { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
   .gold-move .input { width: 110px; min-height: 36px; }
   .gold-move .btn { min-height: 36px; padding: 0 12px; font-size: 13px; }
@@ -1299,6 +1320,8 @@
     .dock .in { padding: 2px 4px; gap: 0; }
     .dock button { flex-direction: column; gap: 3px; min-height: 52px; padding: 4px 0 2px; font-size: 11px; }
     .dock .ico { display: inline-flex; position: relative; }   /* 좁은 화면: 숫자는 아이콘 오른쪽 위 */
+    #dock-nest.alert .lbl::after { content: none; }
+    #dock-nest.alert .ico::after { content: ""; position: absolute; top: -3px; right: -5px; width: 8px; height: 8px; border-radius: 50%; background: #A63E4B; box-shadow: 0 0 0 2px #FAFAF9; }
     .dock .badge { position: absolute; top: -7px; left: 11px; margin: 0; }
   }
   .dock button[aria-current="page"] {
@@ -1487,6 +1510,7 @@
         <div class="rampage-bars" id="grave-bars"></div>
         <div class="rampage-bars" id="rescue-bars"></div>
         <div class="corrupt-note" id="corrupt-note" hidden></div>
+        <div class="event-bar raid-bar" id="raid-bar" hidden><span>둥지에 도둑이 들었다. <b id="raid-bar-t"></b></span><button class="btn primary" type="button" id="raid-bar-open">둥지 보기</button></div>
         <div class="event-bar" id="event-bar" hidden><span>일이 생겼다. <b id="event-bar-title"></b></span><button class="btn primary" type="button" id="event-bar-open">살펴보기</button></div>
         <div class="actions" id="actions">
           <button class="btn primary" type="button" data-act="explore"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>탐사<span class="cost">−1</span></button>
@@ -2200,6 +2224,7 @@
     }
     renderStanceNote();
     renderEventBar();
+    renderRaidBar();
     renderFriendsBadge(me.relIn || 0);
     renderTpBadge(me.tpUnread || 0);
     $('ap').textContent = `${me.ap} / ${me.apMax}`;
@@ -2451,6 +2476,14 @@
     if (!$('event-dlg').open) $('event-dlg').showModal();
     renderEventBar();
   }
+  // 둥지에 든 도둑: 쫓을 수 있는 동안 화면 위에 띄움
+  function renderRaidBar() {
+    const r = S.me?.raid;
+    $('raid-bar').hidden = !r;
+    $('dock-nest').classList.toggle('alert', !!r);
+    if (r) $('raid-bar-t').textContent = `${r.name} · ${dur(r.until - Date.now())} 안에 쫓아야 한다`;
+  }
+  $('raid-bar-open').addEventListener('click', () => openNest());
   function renderEventBar() {
     const has = !!S.me?.event && !$('event-dlg').open;
     $('event-bar').hidden = !has;
@@ -2858,7 +2891,9 @@
     const r = me.stance === 'hermit' ? S.stanceRules.hermit.rest : S.nestRules.rest;
     $('rest-where').textContent = `${S.regions[me.nest].name}의 둥지`;
     $('rest-clock').textContent = fmt(Date.now() - me.restAt);
-    $('rest-note').textContent = `쉬는 동안 체력·기력은 ${r.hp}배, 행동력은 ${r.ap}배 빨리 찬다. 브라우저를 닫아도 계속 쉰다.`;
+    const tr = S.nestRules.tiers?.[me.nestTier || 0]?.rest || 1;
+    const x = (v) => +(v * tr).toFixed(2);
+    $('rest-note').textContent = `쉬는 동안 체력·기력은 ${x(r.hp)}배, 행동력은 ${x(r.ap)}배 빨리 찬다. 브라우저를 닫아도 계속 쉰다.`;
   }
   $('rest-stop').addEventListener('click', () => nestAct('rest:stop'));
   $('rest-nest').addEventListener('click', openNest);
@@ -2866,6 +2901,14 @@
   $('dock-nest').addEventListener('click', openNest);
   $('nest-close').addEventListener('click', () => $('nest-dlg').close());
 
+  // 둥지에 든 도둑을 쫓음: 사냥처럼 직접 싸우는 전투
+  function raidChase() {
+    socket.emit('raid:chase', {}, (res) => {
+      if (res.error) return toast(res.error);
+      const b = res.result.battle;
+      openBattle(b, { title: `도둑 추격 · ${b.foes ? b.foes.length : 1}명`, lines: res.result.lines });
+    });
+  }
   function nestAct(event, payload = {}, big) {
     socket.emit(event, payload, (res) => {
       if (res.error) return toast(res.error);
@@ -2887,7 +2930,7 @@
     const wrap = document.createElement('div');
     wrap.style.cssText = 'display: flex; flex-direction: column; gap: 10px';
     const h = document.createElement('h3');
-    h.textContent = `둥지 식구 · ${n.kin.home.length}/${S.kinRules.maxKin}`;
+    h.textContent = `둥지 식구 · ${n.kin.home.length}/${n.maxKin || S.kinRules.maxKin}`;
     wrap.appendChild(h);
     const note = (t) => { const p = document.createElement('p'); p.className = 'note'; p.textContent = t; wrap.appendChild(p); };
     const k = n.kin;
@@ -3080,8 +3123,83 @@
             note.textContent = `어디서든 둥지로 곧장 날아갈 수 있다. 행동력 ${S.nestRules.homeFlightAp}이 든다.`;
             row.appendChild(btn(`둥지로 날아가기 −${S.nestRules.homeFlightAp}`, () => { nestAct('nest:home'); }, true, !!me.exp || !!me.restAt || me.ap < S.nestRules.homeFlightAp));
             if (!town) row.appendChild(btn(`여기로 둥지 옮기기 (금화 ${S.nestRules.moveCost})`, () => {
-              if (confirm(`${S.regions[S.region].name}${ro(S.regions[S.region].name)} 둥지를 옮길까? 금화 ${S.nestRules.moveCost}닢이 들고, 보물더미도 함께 옮겨진다.`)) nestAct('nest:build');
+              const tierNote = (n.tier || 0) > 0 ? ` 넓혀 둔 둥지는 한 단계 낮아져 ${S.nestRules.tiers[n.tier - 1].name}${ro(S.nestRules.tiers[n.tier - 1].name)} 된다.` : '';
+              const wardNote = n.wards && (n.wards.trap || n.wards.stone) ? ' 설치한 덫과 결계는 두고 간다.' : '';
+              if (confirm(`${S.regions[S.region].name}${ro(S.regions[S.region].name)} 둥지를 옮길까? 금화 ${S.nestRules.moveCost}닢이 들고, 보물더미도 함께 옮겨진다.${tierNote}${wardNote}`)) nestAct('nest:build');
             }, false, !!me.exp || me.gold < S.nestRules.moveCost));
+          }
+        }
+
+        // 둥지에 든 도둑
+        if (n.raid) {
+          const rc = add('<div class="raid-card"><b></b><p class="what"></p><p class="when"></p><div class="row"></div></div>').firstChild;
+          const r = n.raid;
+          rc.querySelector('b').textContent = `${r.name} 무리가 보물을 훔쳐 달아났다`;
+          const lost = [...(r.gold ? [`금화 ${r.gold}닢`] : []), ...r.items.map((x) => `${S.items[x.id]?.name || x.id}${x.qty > 1 ? ` ${x.qty}개` : ''}`)];
+          rc.querySelector('.what').textContent = `빼앗긴 것: ${lost.join(', ')}. 도둑 ${r.minions + 1}명, Lv.${r.lv}${r.trapped ? ' · 덫에 다쳐 있다' : ''}.`;
+          rc.querySelector('.when').textContent = `${dur(r.until - Date.now())} 안에 쫓아가 이기면 모두 되찾는다. 지면 쓰러지고, 물러나면 다시 쫓을 수 있다.`;
+          const row2 = rc.querySelector('.row');
+          if (n.here) row2.appendChild(btn(`도둑 쫓기 −${S.raidRules.chaseAp}`, raidChase, true, !!me.exp || !!me.restAt || me.ap < S.raidRules.chaseAp));
+          else row2.appendChild(btn(`둥지로 날아가기 −${S.nestRules.homeFlightAp}`, () => nestAct('nest:home'), true, !!me.exp || !!me.restAt || me.ap < S.nestRules.homeFlightAp));
+        }
+
+        // 둥지 단계
+        if (n.region) {
+          const T = S.nestRules.tiers;
+          const cur = T[n.tier || 0];
+          const h = document.createElement('h3');
+          h.textContent = `둥지 단계 · ${cur.name}`;
+          body.appendChild(h);
+          const tw = add('<div class="nest-tiers"></div><p class="nest-eff"></p>');
+          const track = tw.querySelector('.nest-tiers');
+          T.forEach((t, i) => {
+            const sp = document.createElement('span');
+            sp.textContent = t.name;
+            if (i === (n.tier || 0)) sp.className = 'on';
+            else if (i < (n.tier || 0)) sp.className = 'done';
+            track.appendChild(sp);
+          });
+          const eff = [`식구 ${cur.kin}명`];
+          if (cur.rest > 1) eff.push(`쉬는 회복 ×${cur.rest}`);
+          if (cur.raidLoss < 1) eff.push(`도둑이 가져가는 양 −${Math.round((1 - cur.raidLoss) * 100)}%`);
+          tw.querySelector('.nest-eff').textContent = `${cur.desc} ${eff.join(' · ')}`;
+          const next = T[(n.tier || 0) + 1];
+          if (next) {
+            const c = next.cost;
+            const p2 = document.createElement('p');
+            p2.className = 'note';
+            p2.style.margin = '10px 0 0';
+            const gain = [`식구 ${next.kin}명`, `쉬는 회복 ×${next.rest}`];
+            if (next.raidLoss < 1) gain.push(`도둑 피해 −${Math.round((1 - next.raidLoss) * 100)}%`);
+            p2.textContent = `${next.name}${ro(next.name)} 넓히면: ${gain.join(' · ')}`;
+            body.appendChild(p2);
+            const cl = document.createElement('div');
+            cl.className = 'cost-list';
+            const goldHave = me.gold + (n.gold || 0);
+            const chip = (text, okk) => { const sp = document.createElement('span'); sp.textContent = text; if (!okk) sp.className = 'lack'; cl.appendChild(sp); };
+            chip(`금화 ${goldHave.toLocaleString()}/${c.gold.toLocaleString()}`, goldHave >= c.gold);
+            let ready = goldHave >= c.gold;
+            for (const [id, q] of Object.entries(c.items)) {
+              const have = invCache[id] || 0;
+              if (have < q) ready = false;
+              chip(`${S.items[id]?.name || id} ${have}/${q}`, have >= q);
+            }
+            body.appendChild(cl);
+            if (n.here) {
+              const b2 = btn(`${next.name}${ro(next.name)} 넓히기`, () => {
+                if (confirm(`둥지를 넓혀 ${next.name}${ro(next.name)} 만들까? 금화 ${c.gold}닢과 재료가 든다. (모자란 금화는 보물더미에서 꺼내 쓴다)`)) nestAct('nest:expand');
+              }, ready, !!me.exp || !!me.restAt || !ready);
+              const wrap = document.createElement('div');
+              wrap.className = 'row';
+              wrap.style.justifyContent = 'flex-start';
+              wrap.appendChild(b2);
+              body.appendChild(wrap);
+            } else {
+              const p3 = document.createElement('p');
+              p3.className = 'note';
+              p3.textContent = '둥지를 넓히려면 둥지에 있어야 한다.';
+              body.appendChild(p3);
+            }
           }
         }
 
@@ -3096,6 +3214,62 @@
           const sum = add('<div class="hoard-sum"><span class="v"></span><span class="l"></span></div>');
           sum.querySelector('.v').textContent = n.value.toLocaleString();
           sum.querySelector('.l').textContent = `보물더미 가치 (금화 ${n.gold.toLocaleString()}닢과 물건)`;
+          // 보물더미의 이로움: 가치에 따라 위엄과 쉴 때 정신 회복
+          const HT = S.hoardTiers || [];
+          const ht = [...HT].reverse().find((t) => n.value >= t.at) || null;
+          const nt = HT.find((t) => n.value < t.at) || null;
+          const tierBox = document.createElement('div');
+          tierBox.className = 'hoard-tier';
+          const line = document.createElement('div');
+          if (ht) {
+            const b3 = document.createElement('b');
+            b3.textContent = ht.name;
+            line.append(b3, ` · 위엄 +${ht.majesty} · 둥지에서 쉴 때 정신 회복 ×${ht.mind}`);
+          } else line.textContent = `가치가 ${HT[0]?.at.toLocaleString()}을 넘으면 위엄이 오르고, 쉴 때 정신이 빨리 맑아진다.`;
+          tierBox.appendChild(line);
+          if (nt) {
+            const from = ht ? ht.at : 0;
+            const bar = document.createElement('div');
+            bar.className = 'hb';
+            const fill = document.createElement('i');
+            fill.style.width = `${Math.max(0, Math.min(100, ((n.value - from) / (nt.at - from)) * 100))}%`;
+            bar.appendChild(fill);
+            const nx = document.createElement('small');
+            nx.textContent = `다음: ${nt.name}까지 ${(nt.at - n.value).toLocaleString()} (위엄 +${nt.majesty})`;
+            tierBox.append(bar, nx);
+          }
+          sum.firstChild.appendChild(tierBox);
+
+          // 둥지 지키기: 덫·결계석, 도둑이 들 수 있는지
+          const h4 = document.createElement('h3');
+          h4.textContent = '둥지 지키기';
+          body.appendChild(h4);
+          const risk = document.createElement('p');
+          risk.className = 'note';
+          risk.style.margin = '0 0 8px';
+          const rr = S.raidRules;
+          risk.textContent = n.value < rr.minValue
+            ? `보물더미가 아직 작아서 도둑이 노리지 않는다. (가치 ${rr.minValue} 이상부터)`
+            : `둥지를 비운 동안 보물 도둑이 들 수 있다. 보물이 많을수록 잘 든다.${n.guard ? ` 파수꾼 ${n.guard} 덕에 절반으로 준다.` : ''}`;
+          body.appendChild(risk);
+          const wl = document.createElement('div');
+          wl.className = 'inv';
+          for (const [key, id] of [['trap', 'thorn_trap'], ['stone', 'ward_stone']]) {
+            const it = S.items[id];
+            const r4 = document.createElement('div');
+            r4.className = `it ${it.rarity}`;
+            r4.innerHTML = '<b></b><span class="q"></span><small></small><div class="acts"></div>';
+            r4.querySelector('b').textContent = it.name;
+            r4.querySelector('.q').textContent = `${n.wards?.[key] || 0}/${S.nestRules.wardMax}`;
+            const own = invCache[id] || 0;
+            r4.querySelector('small').textContent = `${it.desc} 제작에서 만들 수 있다.${own ? ` (가진 것 ${own})` : ''}`;
+            if (n.here && own > 0) r4.querySelector('.acts').append(btn('설치하기', () => nestAct('item:use', { item: id }), false, (n.wards?.[key] || 0) >= S.nestRules.wardMax));
+            wl.appendChild(r4);
+          }
+          body.appendChild(wl);
+          const h5 = document.createElement('h3');
+          h5.textContent = '보물 넣고 꺼내기';
+          body.appendChild(h5);
           if (!n.here) {
             const p = document.createElement('p');
             p.className = 'note';
@@ -5244,6 +5418,7 @@
     const r = BT && !BT.replay && BT.view.over && ['hunt', 'elite'].includes(BT.view.kind) ? BT.result : null;
     BT = null;
     if (r) showResult({ ...r, log: null, done: true });
+    if (r && $('nest-dlg').open) openNest(); // 도둑을 쫓고 돌아오면 둥지 화면을 새로
   });
   $('bt-close').addEventListener('click', () => $('battle-dlg').close());
   // 다시 접속했을 때 싸우던 전투가 있으면 다시 엶
@@ -5818,7 +5993,19 @@
     gBtn(r, '일으키기', () => gmDo('event', { event: ev.value, ignoreCond: igc.checked }, '이벤트를 일으켰다. 화면의 \'일이 생겼다\'에 뜬다.'));
 
     // 둥지 식구
-    s = gmSection(body, '둥지 식구', d.nest ? `함께 살 수 있는 식구는 최대 ${S.kinRules.maxKin}. 시간을 앞당기면 성장·부화·노화가 바로 계산된다.` : '둥지가 없어서 식구를 들일 수 없다.');
+    // 둥지 단계·보물 도둑
+    if (d.nest) {
+      s = gmSection(body, '둥지', `${S.nestRules.tiers[d.nestTier || 0].name} · 보물더미 금화 ${d.hoardGold}`);
+      r = gmRow(s, '둥지 단계');
+      const ts = gSelect(r, '단계', S.nestRules.tiers.map((t, i) => [String(i), `${i + 1}. ${t.name} (식구 ${t.kin})`]), String(d.nestTier || 0));
+      gBtn(r, '정하기', () => gmDo('nestTier', { tier: +ts.value }));
+      r = gmRow(s, '보물 도둑');
+      r.appendChild(gEl('span', 'gm-val', d.raid ? `${d.raid.name} (금화 ${d.raid.gold}${d.raid.items.length ? ` 외 ${d.raid.items.length}종` : ''})` : '없음'));
+      if (!d.raid) gBtn(r, '도둑 보내기', () => gmDo('raid', {}, '도둑을 보냈다. 덫·결계가 있으면 그대로 작동한다.'));
+      gBtn(r, '도둑 일 지우기', () => gmDo('raidClear', {}, '도둑 일과 쉬는 시간을 지웠다.'), 'warn');
+    }
+
+    s = gmSection(body, '둥지 식구', d.nest ? `함께 살 수 있는 식구는 최대 ${d.maxKin || S.kinRules.maxKin}. 시간을 앞당기면 성장·부화·노화가 바로 계산된다.` : '둥지가 없어서 식구를 들일 수 없다.');
     for (const k of d.kinAll) {
       const row = gEl('div', 'gm-kin');
       const t = gEl('div', 't');
@@ -6220,6 +6407,8 @@
       S.shops = data.shops;
       S.trade = data.trade;
       S.nestRules = data.nestRules;
+      S.hoardTiers = data.hoardTiers || [];
+      S.raidRules = data.raidRules || { minValue: 300, chaseAp: 2 };
       S.kinRules = data.kinRules;
       S.talents = data.talents;
       S.stanceRules = data.stanceRules;

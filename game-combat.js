@@ -3,7 +3,7 @@
 // - 강적·결투장: 매 턴 직접 고름 (실시간 결투에서 시간을 넘기면 자동으로 고름)
 // 전투 하나 = battle { kind, turn, a, b, log, over, winner }. a·b는 싸우는 쪽(fighter)
 const {
-  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, STATUS, CREATURE_COMBAT, ELITES, CREATURES, ITEMS, RULES, STANCE_RULES, KINDS, MIND, PLACES, PLACE_RULES, COMBOS, ENRAGE,
+  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, STATUS, CREATURE_COMBAT, ELITES, CREATURES, ITEMS, RULES, STANCE_RULES, KINDS, MIND, PLACES, PLACE_RULES, COMBOS, ENRAGE, RAID,
 } = require('./game-data');
 const logic = require('./game-logic');
 
@@ -667,8 +667,86 @@ function eliteReward(d, b) {
   return { title: '강적', lines, items, gold, xp, levelUp, win: b.winner === me, wound: d.hp <= logic.hpCap(d) * 0.15 };
 }
 
+// ── 보물 도둑 쫓기 ─────────────────────────────────
+// 둥지에서 도둑의 흔적을 쫓아 무리와 싸움 (사냥처럼 직접 싸우고, 자동으로 끝낼 수도 있음)
+function fromThief(T, lv, name, minion, trapped) {
+  const K = COMBAT.creature;
+  const G = COMBAT.group;
+  const hpMax = Math.round((K.hp[0] + lv * K.hp[1]) * (minion ? G.hp : 1));
+  return {
+    id: null, name, kind: null, creature: true, region: null, place: null, elite: false, minion, level: lv,
+    corrupted: false, mindDrain: 0,
+    hp: Math.round(hpMax * (trapped ? RAID.trapHp : 1)), hpMax, en: 0, enMax: 0,
+    atk: (K.atk[0] + lv * K.atk[1]) * (minion ? G.atk : 1), def: K.def[0] + lv * K.def[1], spd: 6 + lv * 2, mag: 4 + lv * 2, maj: 6 + lv * 2,
+    taken: 1, element: null, breath: null, skills: [],
+    special: T.special,
+    weak: T.weak, resist: T.resist,
+    st: {}, cd: {},
+  };
+}
+function raidBattle(d, raid) {
+  const T = RAID.thieves[raid.thief];
+  const me = fromDragon(d, 'hunt');
+  const foes = [fromThief(T, raid.lv, T.name, false, raid.trapped), ...T.minions.map((n) => fromThief(T, raid.lv, n, true, raid.trapped))];
+  const b = newBattle('hunt', me, foes[0], foes.slice(1));
+  b.raid = true;
+  b.region = d.region;
+  b.a.turnCount = 0;
+  const lines = [`도둑들의 발자국을 따라 날았다. 바위 그늘에 ${T.name} 무리가 보물을 나누고 있다! (${foes.length}명)`];
+  if (raid.trapped) lines.push('가시 덫에 다친 도둑들이 절뚝거린다.');
+  return { battle: b, lines, c: { name: T.name, level: raid.lv } };
+}
+// 쫓은 결과: 이기면 훔쳐 간 것을 모두 보물더미로 되찾고, 도둑이 지닌 금화도 얻음
+function raidReward(d, b, c, raid) {
+  const me = b.a;
+  const foes = foesOf(b);
+  d.hp = Math.max(1, Math.round(me.hp));
+  d.en = Math.max(0, Math.round(me.en));
+  const win = b.winner === me;
+  const fled = b.fled === me;
+  const lost = Math.round(me.hpMax - me.hp);
+  const killed = foes.filter((f) => f.hp <= 0);
+  const lines = [];
+  let gold = 0;
+  let xp = 0;
+  let hoardItems = [];
+  let back = 0;
+  if (win) {
+    back = raid.gold;
+    hoardItems = raid.items.map((x) => ({ id: x.id, qty: x.qty }));
+    d.hoard_gold = (d.hoard_gold || 0) + back;
+    gold = randInt(...RAID.bounty) * c.level;
+    d.gold += gold;
+    const got = [...(back ? [`금화 ${back}닢`] : []), ...raid.items.map(logic.itemLabel)].join(', ');
+    lines.push(`${b.turn}턴 만에 ${c.name} 무리를 모두 쓰러뜨렸다!`);
+    if (got) lines.push(`${got}${josa(got, '을', '를')} 되찾아 보물더미에 돌려놓았다.`);
+    lines.push(`도둑들이 지니고 있던 금화 ${gold}닢도 챙겼다.`);
+    const f = logic.addFame(d, RAID.fame);
+    lines.push(f || '보물을 지켜 낸 이야기가 드래곤들 사이에 퍼진다.');
+    lines.push(...logic.traitCount(d, 'raidwin'));
+    logic.chron(d, 'mark', `${c.name} 무리를 쫓아가 보물을 되찾았다.`);
+    xp = (12 + c.level * 6) * foes.length * RAID.xp;
+  } else if (fled) {
+    lines.push(`${c.name} 무리에게 밀려 ${b.turn}턴 만에 물러났다. 흔적이 남아 있는 동안 다시 쫓을 수 있다.`);
+    xp = 4 + killed.length * 6;
+  } else {
+    lines.push(`${c.name} 무리에게 쓰러졌다. 도둑들은 보물을 챙겨 멀리 달아났다.`);
+    logic.chron(d, 'mark', `${c.name} 무리를 쫓다가 쓰러졌다.`);
+    xp = 6;
+  }
+  lines.push(`체력을 ${lost} 잃었다.`);
+  xp = logic.xpOf(d, Math.round(xp));
+  const levelUp = logic.gainXp(d, xp);
+  return {
+    title: '도둑 추격', lines, items: [], hoardItems, gold, xp, levelUp, win, turns: b.turn,
+    fall: !win && !fled, settled: win || !fled,
+    wound: d.hp <= logic.hpCap(d) * 0.15,
+    lost,
+  };
+}
+
 module.exports = {
   combatOf, loadout, learned, setSkills, setSettings,
   fromDragon, fromCreature, newBattle, round, aiPick, autoAct, runAuto, blocked, view, comboOf, intentOf, targetOf,
-  hunt, huntReward, eliteReward, debug,
+  hunt, huntReward, eliteReward, raidBattle, raidReward, debug,
 };

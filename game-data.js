@@ -245,6 +245,10 @@ const ITEMS = {
   bark_tailwrap:{ name: '고목 껍질 꼬리감개', rarity: 'uncommon', type: 'equip', slot: 'tail', bonus: { scale: 1, wisdom: 1 },  desc: '살아 있는 껍질이 꼬리를 감싸 상처를 보듬는다.' },
   magma_tail:   { name: '용암 심장 꼬리날', rarity: 'rare',     type: 'equip', slot: 'tail',  bonus: { claw: 2, majesty: 1 },   desc: '꼬리 끝에서 용암이 끓는다.' },
 
+  // ── 둥지에 설치하는 것: 쓰면 둥지에 놓임 (보물 도둑을 막음) ──
+  thorn_trap:   { name: '가시 덫',          rarity: 'common',   type: 'use', use: { nestWard: 'trap' },  desc: '둥지 입구에 숨겨 두는 덫. 도둑이 들면 가져가는 양이 절반으로 줄고, 다친 채로 달아난다. 한 번 쓰면 망가진다.' },
+  ward_stone:   { name: '수호 결계석',      rarity: 'rare',     type: 'use', use: { nestWard: 'stone' }, desc: '룬을 새긴 결계석. 도둑을 한 번 통째로 쫓아내고 부서진다.' },
+
   // ── 인간의 시장에서 파는 물건 (value: 기준 값) ──
   holy_water:   { name: '성수',             rarity: 'uncommon', type: 'use', use: { mind: 30 }, value: 30, desc: '왕도 성당에서 축복한 물. 흐려진 정신을 맑게 한다.' },
   herbal_ointment:{ name: '약초상 연고',    rarity: 'common',   type: 'use', use: { hp: 50 }, value: 18, desc: '왕도 약초상이 파는 쓴 냄새의 연고다.' },
@@ -295,6 +299,8 @@ const BUFFS = {
 // 제작법. needs: 재료와 개수, en: 쓰는 기력, wis: 필요한 지혜
 const RECIPES = [
   { out: 'honey_salve',   needs: { wild_honey: 1, grass_seed: 2 },                     en: 4,  wis: 0 },
+  { out: 'thorn_trap',    needs: { beast_hide: 2, sharp_fang: 2 },                     en: 5,  wis: 0 },
+  { out: 'ward_stone',    needs: { rune_stone: 3, old_scroll: 1, sun_stone: 1 },       en: 12, wis: 12 },
   { out: 'ember_tea',     needs: { volcanic_ash: 2, wild_honey: 1 },                   en: 3,  wis: 0 },
   { out: 'moss_salve',    needs: { glow_moss: 1, frost_lichen: 1 },                    en: 6,  wis: 10 },
   { out: 'sun_breath',    needs: { sun_stone: 1, red_clay: 2 },                        en: 10, wis: 12 },
@@ -376,6 +382,55 @@ const NEST = {
   moveCost: 30,                     // 둥지를 옮길 때 드는 금화 (처음 틀 때는 무료)
   homeFlightAp: 1,                  // 어디서든 둥지로 곧장 날아갈 때 드는 행동력
   rest: { hp: 4, en: 4, ap: 2 },    // 쉬는 동안 회복이 몇 배 빨라지는지
+  // 둥지 단계: 넓힐수록 식구가 늘고 쉬는 회복이 빨라짐. 둥지를 옮기면 한 단계 낮아짐 (설치한 덫·결계도 남겨 두고 감)
+  // kin: 함께 살 식구 수, rest: 쉬는 회복 배율(위 rest에 곱함), raidLoss: 도둑이 들었을 때 잃는 양 배율, cost: 넓히는 데 드는 것
+  tiers: [
+    { name: '보금자리', kin: 2, rest: 1,    raidLoss: 1,   desc: '바위 틈에 마련한 아늑한 잠자리.' },
+    { name: '넓은 동굴', kin: 3, rest: 1.25, raidLoss: 1,   desc: '안쪽까지 깊게 판 동굴. 식구 하나가 더 지낼 수 있다.',
+      cost: { gold: 300, items: { beast_hide: 6, red_clay: 6, bog_iron: 3 } } },
+    { name: '용의 성채', kin: 4, rest: 1.5,  raidLoss: 0.6, desc: '흑요석과 룬으로 다진 요새. 도둑이 들어도 많이 가져가지 못한다.',
+      cost: { gold: 900, items: { obsidian: 4, rune_stone: 6, stone_heart: 2, sun_stone: 1 } } },
+  ],
+  wardMax: 3,                       // 덫과 결계석은 종류마다 이만큼까지 설치
+};
+
+// 보물더미의 이로움: 가치가 이만큼 넘으면 위엄이 오르고, 둥지에서 쉴 때 정신이 빨리 맑아짐
+const HOARD_TIERS = [
+  { at: 500,  name: '작은 보물더미',   majesty: 1, mind: 1.25 },
+  { at: 2000, name: '빛나는 보물더미', majesty: 2, mind: 1.5 },
+  { at: 5000, name: '황금 산',         majesty: 3, mind: 1.75 },
+];
+const hoardTier = (v) => [...HOARD_TIERS].reverse().find((t) => v >= t.at) || null;
+
+// 보물 도둑: 둥지를 비운 동안 보물더미를 노림 (드래곤끼리 빼앗는 일은 없음)
+// 한 시간 비울 때마다 chance 확률. 보물이 많을수록 잘 듦. 파수꾼 식구가 있으면 절반
+const HOUR = 60 * 60 * 1000;
+const RAID = {
+  minValue: 300,                    // 보물더미 가치가 이보다 낮으면 오지 않음
+  chance: { base: 0.015, per1000: 0.01, max: 0.06 },
+  guard: 0.5,                       // 파수꾼 식구가 있으면 들 확률 배율
+  maxHours: 48,                     // 한 번에 셈하는 비운 시간의 최대
+  calm: 12 * HOUR,                  // 도둑 일이 끝난 뒤 다음 도둑까지 쉬는 시간
+  chaseFor: 24 * HOUR,              // 이 안에 쫓아가면 되찾을 수 있음
+  chaseAp: 2,
+  gold: [0.1, 0.2],                 // 쌓인 금화 중 가져가는 비율
+  goldMax: [300, 500, 800],         // 도둑 무리마다 가져가는 금화의 최대
+  stacks: [1, 2],                   // 손대는 물건 종류 수
+  itemPart: [0.2, 0.4],             // 그 물건 중 가져가는 비율 (적어도 1개)
+  trap: 0.5,                        // 가시 덫: 잃는 양 배율, 도둑이 다친 채로 달아남 (체력 배율 trapHp)
+  trapHp: 0.75,
+  xp: 1.3,                          // 쫓아가 이기면 사냥보다 조금 더 많은 경험치
+  fame: 2,
+  bounty: [6, 14],                  // 이기면 도둑이 지닌 금화 (× 레벨)
+  // 보물더미 가치에 따라 오는 도둑 무리. lv: 내 레벨에 더함
+  thieves: [
+    { upTo: 1500,     name: '좀도둑 고블린', minions: ['고블린 망꾼'], lv: -1,
+      special: { name: '모래 뿌리기', power: 0.5, debuff: { weaken: 2 } }, weak: ['fire'], resist: [] },
+    { upTo: 4000,     name: '보물 사냥꾼', minions: ['사냥꾼 패거리', '짐꾼'], lv: -1,
+      special: { name: '쇠뇌 연사', power: 0.6, hits: 2 }, weak: ['lightning'], resist: [] },
+    { upTo: Infinity, name: '용 사냥 용병대장', minions: ['용병 창잡이', '용병 궁수'], lv: -1,
+      special: { name: '작살 투척', power: 1.7 }, weak: ['poison'], resist: ['fire'] },
+  ],
 };
 
 const TRADE = {
@@ -388,7 +443,7 @@ const TRADE = {
 // 나이와 기간은 '일' 단위 (실제 시간). 어린 시절은 짧게, 도움을 주는 어른·노년은 2주
 const DAY = 24 * 60 * 60 * 1000;
 const KIN = {
-  maxKin: 2,                          // 둥지에 함께 살 수 있는 식구 수 (인간·알·새끼 드래곤 상관없이)
+  maxKin: 2,                          // 둥지에 함께 살 수 있는 식구 수 (인간·알·새끼 드래곤 상관없이). 둥지를 넓히면 늘어남 (NEST.tiers)
   human: {
     stages: [
       { name: '아기', from: 0 }, { name: '아이', from: 1 }, { name: '소년', from: 2 },
@@ -644,7 +699,7 @@ const EXP_RULES = { forkFrom: 0.35, forkTo: 0.6, stanceTone: { hostile: ['bold',
 
 // ── 칭호 ───────────────────────────────────────────
 // 업적을 이루면 저절로 얻고, 하나를 골라 단다. 단 칭호는 이름 옆에 보이고 작은 효과가 있다 (결투장에는 효과 없음).
-// cond: { count: 셈 이름, at } (특성 횟수와 같은 곳에 셈) / { level } / { duel: 결투 승리 } / { scars: 상흔 수 }
+// cond: { count: 셈 이름, at } (특성 횟수와 같은 곳에 셈) / { level } / { duel: 결투 승리 } / { scars: 상흔 수 } / { hoard: 보물더미 가치 }
 // mod: atk·taken(사냥·강적 전투 공격·받는 피해 배율, region이 있으면 그 지역에서만), eliteAtk(강적 공격), xp(경험치), huntGold(사냥 금화),
 //      drop(사냥 전리품 확률 +), craftEn(제작 기력 배율), mindWard(깎이는 정신 배율), heal(치유 배율), helpHp(일으켜 줄 때 체력 +), expRare(원정 귀한 물건 +)
 const TITLES = [
@@ -682,10 +737,14 @@ const TITLES = [
   { id: 'rescuer',   name: '손을 내미는 자',   cond: { count: 'rescue', at: 3 },    mod: { helpHp: 0.15 },   eff: '일으켜 줄 때 체력 +15%' },
   { id: 'mender',    name: '치유의 손길',      cond: { count: 'healother', at: 15 }, mod: { heal: 1.1, helpHp: 0.05 }, eff: '치유 +10%, 일으켜 줄 때 체력 +5%' },
   { id: 'calmer',    name: '광기를 잠재우는 자', cond: { count: 'calm', at: 3 },     mod: { mindWard: 0.8 },  eff: '깎이는 정신 −20%' },
+  // 보물더미
+  { id: 'hoard1',    name: '보물을 품은 자',   cond: { hoard: 2000 },               mod: { mindWard: 0.9 },  eff: '깎이는 정신 −10%' },
+  { id: 'hoard2',    name: '황금 산의 주인',   cond: { hoard: 5000 },               mod: { huntGold: 1.1, mindWard: 0.9 }, eff: '사냥 금화 +10%, 깎이는 정신 −10%' },
+  { id: 'keeper',    name: '보물 지킴이',      cond: { count: 'raidwin', at: 3 },   mod: { atk: 1.03 },      eff: '사냥 공격 +3%' },
   { id: 'scarred',   name: '상흔투성이',       cond: { scars: 3 },                  mod: { taken: 0.95 },    eff: '사냥 받는 피해 −5%' },
 ];
 // 칭호 조건을 사람이 읽는 글로
-const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: '둥지에서 {n}번 쉬기', craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기' };
+const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: '둥지에서 {n}번 쉬기', craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기' };
 
 // ── 장소와 사냥터 난이도 ───────────────────────────
 // 야생 지역마다 장소가 셋. 입구는 쉽고 안쪽일수록 사냥터 난이도(Lv.1~12)가 높다.
@@ -883,7 +942,7 @@ const ELITES = {
 
 module.exports = {
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, TITLES, TITLE_COUNT_NAMES,
-  SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, NEST, STANCE_RULES, FAME_TIERS, fameTier,
+  SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
   DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
   COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES,
 };

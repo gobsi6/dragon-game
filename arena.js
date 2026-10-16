@@ -37,8 +37,9 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
   }
   // ── 사냥 (직접 싸움, 무리일 수도 있음) ─────────────
   // c: 사냥감 이름과 사냥터 레벨, after(d, res): 끝난 뒤 서버가 할 일 (특성 횟수·이벤트·광폭화 검사)
-  function startHunt(d, b, c, after) {
-    const s = { id: nextId++, kind: 'hunt', b, c, after, ids: { a: d.id, b: null }, side: { [d.id]: 'a' } };
+  // reward(d, b, c): 결과를 정하는 함수 (없으면 사냥 결과. 보물 도둑 쫓기는 따로)
+  function startHunt(d, b, c, after, reward) {
+    const s = { id: nextId++, kind: 'hunt', b, c, after, reward, ids: { a: d.id, b: null }, side: { [d.id]: 'a' } };
     sessions.set(d.id, s);
     return combat.view(b, 'a');
   }
@@ -48,12 +49,12 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
     const d = load(s.ids.a);
     if (!d) return;
     logic.regen(d);
-    const res = combat.huntReward(d, s.b, s.c);
+    const res = (s.reward || combat.huntReward)(d, s.b, s.c);
     // 지면(물러나지 않고) 쓰러짐
     const falls = res.fall && !!fallFn;
     if (falls) res.lines.push('눈앞이 캄캄해진다. 숨이 멎어 간다…');
     if (s.after) s.after(d, res, falls);
-    db.saveState(d, res.items);
+    db.saveState(d, res.items, res.hoardItems || []);
     if (e) {
       sendMe(e.socket, d);
       e.socket.emit('battle:end', { view: combat.view(s.b, 'a'), result: res });

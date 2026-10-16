@@ -107,6 +107,7 @@ addCol('dead_at', 'INTEGER');                       // 긴 잠에 든 시각
 addCol('titles', "TEXT NOT NULL DEFAULT '{}'");
 addCol('exp_info', "TEXT NOT NULL DEFAULT '{}'");
 addCol('chron', "TEXT NOT NULL DEFAULT '[]'");      // 20단계: 지나온 이야기 [{ at, k: 'choice'|'mark', t }] (최근 150개)   // 19단계: 원정 목적·갈림길 { goal, fork: { id, at, pick, res }, last: 지난 원정 일지 }     // 18단계: 칭호 { have: [얻은 칭호 id], on: 단 칭호 id }
+addCol('nest_info', "TEXT NOT NULL DEFAULT '{}'");  // 21단계: 둥지 단계·설치한 덫과 결계·보물더미 가치·보물 도둑 { tier, wards, value, raidAt, calm, raid }
 addCol('bio', "TEXT NOT NULL DEFAULT '{}'");        // 17단계: 성별과 특징 { gender, desc }                            // 15단계: 지역 안의 장소 (없으면 지역 입구)                          // 광폭화 중이면 { at, until, region, hp, hpMax }
 if (addCol('stat_pts', 'INTEGER NOT NULL DEFAULT 0')) {
   db.exec(`UPDATE dragons SET stat_pts = (level - 1) * ${require('./game-data').STAT_POINTS.perLevel}`);
@@ -227,7 +228,7 @@ db.exec(`
 // 그림(avatar)을 뺀 드래곤 정보 열
 const DRAGON_FIELDS = `id, name, kind, region, avatar_ver, level, xp, hp, hp_max, en, en_max,
   ap, ap_max, gold, claw, scale, wing, wisdom, majesty, stance,
-  ap_at, hp_at, en_at, exp_start, exp_end, exp_region, equip, rep, stance_at, nest, rest_at, hoard_gold, fame, pending_event, traits, combat, last_seen, stat_pts, mind, mind_at, berserk, place, fallen, scars, dead_at, bio, titles, exp_info, chron,
+  ap_at, hp_at, en_at, exp_start, exp_end, exp_region, equip, rep, stance_at, nest, rest_at, hoard_gold, fame, pending_event, traits, combat, last_seen, stat_pts, mind, mind_at, berserk, place, fallen, scars, dead_at, bio, titles, exp_info, chron, nest_info,
   (avatar IS NOT NULL) AS has_avatar`;
 
 const q = {
@@ -255,7 +256,7 @@ const q = {
                               pending_event = @pending_event, traits = @traits, combat = @combat,
                               claw = @claw, scale = @scale, wing = @wing, wisdom = @wisdom, majesty = @majesty, stat_pts = @stat_pts,
                               mind = @mind, mind_at = @mind_at, berserk = @berserk, place = @place,
-                              fallen = @fallen, scars = @scars, titles = @titles, exp_info = @exp_info, chron = @chron
+                              fallen = @fallen, scars = @scars, titles = @titles, exp_info = @exp_info, chron = @chron, nest_info = @nest_info
                             WHERE id = @id`),
   invCount:     db.prepare('SELECT qty FROM inventory WHERE dragon_id = ? AND item = ?'),
   hoardAdd:     db.prepare(`INSERT INTO hoard (dragon_id, item, qty) VALUES (?, ?, ?)
@@ -383,6 +384,7 @@ function saveStateRaw(d, items = [], hoardItems = []) {
     titles: typeof d.titles === 'string' ? d.titles : JSON.stringify(d.titles || {}),
     exp_info: typeof d.exp_info === 'string' ? d.exp_info : JSON.stringify(d.exp_info || {}),
     chron: typeof d.chron === 'string' ? d.chron : JSON.stringify(d.chron || []),
+    nest_info: typeof d.nest_info === 'string' ? d.nest_info : JSON.stringify(d.nest_info || {}),
     berserk: d.berserk ? (typeof d.berserk === 'string' ? d.berserk : JSON.stringify(d.berserk)) : null,
   });
 

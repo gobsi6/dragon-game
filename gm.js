@@ -3,7 +3,7 @@
 //
 // 접속 중인 드래곤은 서버가 들고 있는 그 객체를 고쳐야 함
 // (DB만 고치면 그 드래곤이 다음에 저장할 때 옛 값으로 덮어씀)
-const { REGIONS, ITEMS, STANCES, KINDS, KIN, DAY, TRAITS, STATS } = require('./game-data');
+const { REGIONS, ITEMS, STANCES, KINDS, KIN, DAY, TRAITS, STATS, NEST } = require('./game-data');
 const EVENTS = require('./game-events');
 
 const str = (v) => (typeof v === 'string' ? v.trim() : '');
@@ -17,7 +17,7 @@ function josa(word, a, b) {
 const ORIGINS = { abandoned: '버려진 아기', lost: '길 잃은 아이', tribute: '공물로 바쳐진 아이' };
 const ANNOUNCE_MAX = 300;
 
-module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, refreshKin, teleport, kick, arena, presence }) {
+module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, refreshKin, teleport, kick, arena, presence, nestSync }) {
   // 대상 드래곤을 불러 고치고 저장. 접속 중이면 화면도 새로 고침
   // fn(d, kin, now) → { error } 또는 { log, tell, items, kinChanged }
   function withTarget(id, notify, fn) {
@@ -32,6 +32,7 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
     if (r.error) return r;
     refreshKin(d, kin);
     db.saveState(d, [...before.items, ...(r.items || [])], before.hoardItems);
+    if (!entry && d._forceRaid && nestSync) nestSync(null, d); // 접속하지 않은 드래곤의 둥지에도 도둑을 보냄
     // 식구를 손봤으면 바뀐 나이대로 한 번 더 흘려서 성장·부화 소식을 바로 만듦
     let lines = before.lines;
     if (r.kinChanged) {
@@ -281,9 +282,30 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
       k.data.bond = clamp(v, 0, 100);
       return { log: `${k.name} 유대 → ${k.data.bond}` };
     },
+    nestTier(d, kin, now, p) {
+      if (!d.nest) return { error: '둥지가 없는 드래곤이다.' };
+      const t = int(p.tier);
+      if (!NEST.tiers[t]) return { error: '그런 둥지 단계는 없다.' };
+      logic.nestInfo(d).tier = t;
+      return { log: `둥지 단계 → ${NEST.tiers[t].name}` };
+    },
+    raid(d) {
+      if (!d.nest) return { error: '둥지가 없는 드래곤이다.' };
+      const ni = logic.nestInfo(d);
+      if (ni.raid) return { error: '이미 도둑이 들어 있다.' };
+      if (!(d.hoard_gold > 0) && !db.hoard(d.id).length) return { error: '보물더미가 비어 있다.' };
+      ni.calm = 0;
+      d._forceRaid = true; // 다음 내 정보 계산 때 바로 도둑이 듦 (덫·결계는 그대로 작동)
+      return { log: '보물 도둑을 보냄' };
+    },
+    raidClear(d) {
+      const ni = logic.nestInfo(d);
+      ni.raid = null; ni.calm = 0; ni.raidAt = Date.now();
+      return { log: '도둑 일과 쉬는 시간을 지움' };
+    },
     kinAdd(d, kin, now, p) {
       if (!d.nest) return { error: '둥지가 없는 드래곤이다.' };
-      if (life.homeKin(kin).full) return { error: `식구가 가득하다 (최대 ${KIN.maxKin}).` };
+      if (life.homeKin(kin, logic.maxKinOf(d)).full) return { error: `식구가 가득하다 (최대 ${logic.maxKinOf(d)}).` };
       let k;
       if (str(p.type) === 'human') {
         const origin = ORIGINS[str(p.origin)] ? str(p.origin) : 'abandoned';

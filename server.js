@@ -11,7 +11,7 @@ const db = require('./db');
 const {
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, CREATURES, RULES, SLOTS, RECIPES, SHOPS, repTier, TRADE, NEST,
   STANCE_RULES, FAME_TIERS, fameTier, KIN, TALENTS, TRAITS, TRAIT_EARN, TRAIT_COUNTS,
-  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, STATUS, CREATURE_COMBAT, MIND, PLACES, REGION_PLACES, PLACE_RULES,
+  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, STATUS, CREATURE_COMBAT, MIND, PLACES, REGION_PLACES, PLACE_RULES, HOARD_TIERS, RAID,
 } = require('./game-data');
 const logic = require('./game-logic');
 const life = require('./game-life');
@@ -163,6 +163,9 @@ const meOf = (d) => ({
   nest: d.nest || null,
   restAt: d.rest_at || null,
   hoardGold: d.hoard_gold || 0,
+  nestTier: d.nest ? logic.nestInfo(d).tier : 0,
+  maxKin: logic.maxKinOf(d),
+  raid: logic.raidView(d),                 // 보물 도둑 (쫓을 수 있는 동안)
   fame: { value: d.fame || 0, name: fameTier(d.fame || 0).name, majesty: fameTier(d.fame || 0).majesty },
   bounty: logic.hasBounty(d),
   event: pendingId(d),                // 선택을 기다리는 이벤트가 있는지
@@ -207,9 +210,26 @@ function refreshKin(d, kin) {
   d.kinSummary = life.summary(kin, Date.now());
 }
 
+// 보물더미 가치를 새로 셈(위엄·칭호에 씀)하고, 둥지를 비운 동안 도둑이 들었는지 굴림
+function nestSync(socket, d, now = Date.now()) {
+  if (!d.nest || d.dead_at) return;
+  const ni = logic.nestInfo(d);
+  let hoard = db.hoard(d.id);
+  ni.value = logic.hoardValue(d.hoard_gold || 0, hoard);
+  const r = logic.checkRaid(d, hoard, now, !!d._forceRaid);
+  delete d._forceRaid;
+  if (!r) return;
+  db.saveState(d, [], r.hoardItems || []);
+  hoard = db.hoard(d.id);
+  ni.value = logic.hoardValue(d.hoard_gold || 0, hoard);
+  if (socket) socket.emit('notice', { title: r.kind === 'blocked' ? '둥지를 지켜 냈다' : '보물 도둑', lines: r.lines, raid: r.kind === 'raid' });
+  else for (const l of r.lines) db.noteAdd(d.id, l);
+}
+
 // 회복을 계산한 뒤 내 정보를 보냄
 function sendMe(socket, d) {
   logic.regen(d);
+  nestSync(socket, d);
   // 새로 이룬 칭호가 있으면 얻고 알림 (단 칭호가 바뀌면 같은 지역에도 알림)
   const before = logic.titleName(d);
   const got = logic.checkTitles(d);
@@ -350,7 +370,7 @@ const FALLEN = '쓰러져 있다. 일어설지, 긴 잠에 들지 먼저 정해�
 
 // GM 도구 (gm.js)
 const gm = require('./gm')({
-  io, db, online, logic, life, meOf, sendMe, refreshKin, arena,
+  io, db, online, logic, life, meOf, sendMe, refreshKin, arena, nestSync,
   presence: (d) => broadcastPresence(d.region), // 이름·종족이 바뀌면 이곳의 드래곤 목록을 다시 보냄
   // 순간이동: d.region은 이미 바뀐 상태. 접속 중이면 방을 옮기고 양쪽에 알림
   teleport(d, from) {
@@ -417,7 +437,8 @@ io.on('connection', (socket) => {
     death: { waitMs: require('./game-data').DEATH.waitMs, helpAp: require('./game-data').DEATH.helpAp, helpEn: require('./game-data').DEATH.helpEn },
     shops: Object.keys(SHOPS),
     trade: TRADE,
-    nestRules: NEST,
+    nestRules: NEST, hoardTiers: HOARD_TIERS,
+    raidRules: { minValue: RAID.minValue, chaseAp: RAID.chaseAp, chaseFor: RAID.chaseFor, guard: RAID.guard, trap: RAID.trap },
     stanceRules: STANCE_RULES,
     fameTiers: FAME_TIERS,
     traits: TRAITS, traitEarn: TRAIT_EARN, traitCounts: TRAIT_COUNTS,
@@ -744,6 +765,7 @@ io.on('connection', (socket) => {
   // ── 둥지 ──
   const presenceAfter = (d) => broadcastPresence(d.region);
   itemAction('nest:build', (d) => logic.buildNest(d));
+  itemAction('nest:expand', (d, p, have) => logic.expandNest(d, have));
   itemAction('rest:start', (d) => logic.startRest(d), presenceAfter);
   itemAction('rest:stop', (d, p, have, kin) => {
     const mins = d.rest_at ? (Date.now() - d.rest_at) / 60000 : 0;
@@ -824,8 +846,37 @@ io.on('connection', (socket) => {
         region: d.nest, here: !!d.nest && d.region === d.nest,
         gold: d.hoard_gold || 0, items, value: logic.hoardValue(d.hoard_gold || 0, items),
         kin: life.views(kin, Date.now(), d),
+        tier: logic.nestInfo(d).tier, maxKin: logic.maxKinOf(d),
+        wards: { trap: logic.nestInfo(d).wards.trap || 0, stone: logic.nestInfo(d).wards.stone || 0 },
+        raid: logic.raidView(d),
+        guard: d.perks?.guard || null,
       },
     });
+  });
+
+  // ── 보물 도둑 쫓기: 사냥처럼 직접 싸움. 이기면 훔쳐 간 것을 되찾음 ──
+  socket.on('raid:chase', (payload, ack) => {
+    if (typeof ack !== 'function') return;
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+    const d = entry.dragon;
+    if (logic.berserkOf(d)) return ack({ error: BERSERK });
+    if (logic.isFallen(d)) return ack({ error: FALLEN });
+    if (arena.inBattle(d.id)) return ack({ error: '이미 싸우는 중이다.' });
+    logic.regen(d);
+    const why = logic.chaseCheck(d);
+    if (why) return ack(why);
+    const raid = logic.nestInfo(d).raid;
+    logic.spendAp(d, RAID.chaseAp);
+    const { battle, lines, c } = combat.raidBattle(d, raid);
+    const view = arena.startHunt(d, battle, c, (dd, r) => {
+      // 이기거나 쓰러지면 도둑 일은 끝남 (물러나면 흔적이 남은 동안 다시 쫓을 수 있음)
+      if (r.settled) { const ni = logic.nestInfo(dd); ni.raid = null; ni.calm = Date.now() + RAID.calm; ni.raidAt = Date.now(); }
+      if (r.wound) r.lines.push(...logic.traitCount(dd, 'wound'));
+    }, (dd, b, cc) => combat.raidReward(dd, b, cc, raid));
+    db.saveState(d);
+    sendMe(socket, d);
+    ack({ ok: true, result: { title: '도둑 추격', hunt: true, raid: true, battle: view, lines, items: [], gold: 0, xp: 0 } });
   });
 
   socket.on('market:get', (payload, ack) => {

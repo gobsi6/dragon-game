@@ -329,7 +329,7 @@ module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broa
       if (!d.nest) return { error: '거두려면 내 둥지가 있어야 한다.' };
       if (logic.berserkOf(d) || fallenOf(d)) return { error: '지금은 할 수 없다.' };
       const mine = db.kinLoad(d.id);
-      if (life.homeKin(mine).full) return { error: `내 둥지에는 이미 식구가 가득하다. (최대 ${KIN.maxKin})` };
+      if (life.homeKin(mine, logic.maxKinOf(d)).full) return { error: `내 둥지에는 이미 식구가 가득하다. (최대 ${logic.maxKinOf(d)})` };
       const k = g.kin.find((x) => x.id === Number(p.kin));
       if (!k) return { error: '그 식구는 이미 떠났다.' };
       if (!db.kinMove(k.id, id, d.id)) return { error: '이미 누군가 거두었다.' };

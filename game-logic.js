@@ -4,7 +4,7 @@
 // 저장은 부르는 쪽(server.js)이 db.saveState(d, items)로 합니다.
 
 const {
-  REGIONS, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, RECIPES, SLOTS, STANCES, SHOPS, repTier, TRADE, NEST,
+  REGIONS, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, RECIPES, SLOTS, STANCES, SHOPS, repTier, TRADE, NEST, hoardTier, RAID,
   SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES,
 } = require('./game-data');
 
@@ -127,6 +127,7 @@ function titleProgress(d, t) {
     if (typeof cb === 'string') { try { cb = JSON.parse(cb || '{}'); } catch { cb = {}; } }
     return [cb?.w || 0, c.duel];
   }
+  if (c.hoard) return [d.nest ? nestInfo(d).value || 0 : 0, c.hoard];
   if (c.scars) {
     let sc = d.scars;
     if (typeof sc === 'string') { try { sc = JSON.parse(sc || '[]'); } catch { sc = []; } }
@@ -144,6 +145,7 @@ function titleCondText(t) {
   if (c.level) return `레벨 ${c.level}`;
   if (c.duel) return `결투에서 ${c.duel}번 이기기`;
   if (c.scars) return `상흔 ${c.scars}개를 안고 살아남기`;
+  if (c.hoard) return `보물더미 가치 ${c.hoard.toLocaleString()} 모으기`;
   return '';
 }
 // 새로 이룬 칭호를 얻음. 얻은 칭호 이름 목록을 돌려줌 (처음 얻으면 바로 달아 줌)
@@ -199,6 +201,7 @@ function bonusOf(d) {
     expRare += it.expRare || 0;
   }
   b.majesty += fameTier(d.fame || 0).majesty; // 용족 명성
+  if (d.nest) b.majesty += hoardTier(nestInfo(d).value || 0)?.majesty || 0; // 보물더미
   for (const [k, v] of Object.entries(traitMods(d).stats)) b[k] += v; // 특성
   return { stats: b, expRare };
 }
@@ -242,8 +245,11 @@ function regen(d, now = Date.now()) {
   };
   // 둥지에서 쉬면 더 빨리 참 (은둔은 더욱). 우호는 인간 마을에서 치료사 덕에 체력이 빨리 참
   let m = { ap: 1, hp: 1, en: 1 };
-  if (d.rest_at) m = d.stance === 'hermit' ? SR.hermit.rest : NEST.rest;
-  else if (d.stance === 'friendly' && isTown(d.region)) m = { ap: 1, hp: SR.friendly.townHpRegen, en: 1 };
+  if (d.rest_at) {
+    const base = d.stance === 'hermit' ? SR.hermit.rest : NEST.rest;
+    const r = nestTier(d).rest; // 넓힌 둥지일수록 더 빨리
+    m = { ap: base.ap * r, hp: base.hp * r, en: base.en * r };
+  } else if (d.stance === 'friendly' && isTown(d.region)) m = { ap: 1, hp: SR.friendly.townHpRegen, en: 1 };
   const tm = traitMods(d); // 특성: 회복 빠르기
   tick('ap', d.ap_max, 'ap_at', RULES.apEvery / (m.ap * tm.apRegen));
   if (isFallen(d)) d.hp_at = now; // 쓰러져 있는 동안은 체력이 차지 않음
@@ -252,7 +258,7 @@ function regen(d, now = Date.now()) {
   // 정신: 광폭화 중에는 차지 않음. 둥지에서 쉬면 빨리, 은둔이면 조금 더 빨리
   if (d.mind == null) d.mind = MIND.max;
   if (berserkOf(d)) d.mind_at = now;
-  else tick('mind', MIND.max, 'mind_at', MIND.regenEvery / ((d.rest_at ? MIND.restMult : 1) * (d.stance === 'hermit' ? MIND.hermitMult : 1)));
+  else tick('mind', MIND.max, 'mind_at', MIND.regenEvery / ((d.rest_at ? MIND.restMult * (hoardTier(nestInfo(d).value || 0)?.mind || 1) : 1) * (d.stance === 'hermit' ? MIND.hermitMult : 1)));
 }
 
 // ── 장소 ───────────────────────────────────────────
@@ -804,6 +810,15 @@ function useItem(d, id, have) {
   if (have(id) < 1) return { error: '가지고 있지 않다.' };
   const u = it.use;
   const lines = [];
+  if (u.nestWard) {
+    if (!d.nest || d.region !== d.nest) return { error: '둥지에 있을 때만 설치할 수 있다.' };
+    const w = nestInfo(d).wards;
+    if ((w[u.nestWard] || 0) >= NEST.wardMax) return { error: `${it.name}${josa(it.name, '은', '는')} 이미 ${NEST.wardMax}개 설치해 두었다.` };
+    w[u.nestWard] = (w[u.nestWard] || 0) + 1;
+    lines.push(u.nestWard === 'trap' ? '둥지 입구 바위틈에 가시 덫을 숨겨 두었다.' : '둥지 둘레에 결계석을 묻자, 룬이 희미하게 빛나기 시작했다.');
+    lines.push(`설치한 ${it.name}: ${w[u.nestWard]}/${NEST.wardMax}`);
+    return { title: it.name, lines, items: [{ id, qty: -1 }] };
+  }
   if (u.buff) {
     const B = BUFFS[u.buff];
     const old = buffOf(d);
@@ -1057,9 +1072,16 @@ function buildNest(d) {
   const from = d.nest;
   d.nest = d.region;
   const where = REGIONS[d.region].name;
+  const ni = nestInfo(d);
   const lines = moving
     ? [`${REGIONS[from].name}의 둥지를 버리고 ${where}에 새 둥지를 틀었다.`, '보물더미도 하나도 빠짐없이 옮겨 왔다.']
     : [`${where}에 둥지를 틀었다.`, '이제 이곳에서 쉬고, 보물을 쌓을 수 있다.'];
+  if (moving) {
+    // 넓혀 둔 둥지는 한 단계 낮아지고, 설치한 덫·결계는 두고 옴
+    if (ni.tier > 0) { ni.tier -= 1; lines.push(`새 둥지는 아직 ${NEST.tiers[ni.tier].name} 정도다.`); }
+    if (ni.wards.trap || ni.wards.stone) lines.push('설치해 둔 덫과 결계는 옛 둥지에 남았다.');
+    ni.wards = {};
+  }
   return { title: '둥지', lines, gold: moving ? -NEST.moveCost : 0 };
 }
 
@@ -1126,7 +1148,121 @@ function hoardValue(gold, items) {
   return gold + items.reduce((a, x) => a + (ITEMS[x.item]?.value || 0) * x.qty, 0);
 }
 
+// ── 둥지 단계·보물 도둑 ────────────────────────────
+// 저장 공간에는 글자(JSON)로: { tier, wards: {trap, stone}, value: 보물더미 가치(서버가 갱신), raidAt: 도둑을 마지막으로 셈한 시각, calm: 이때까지 도둑이 오지 않음, raid }
+function nestInfo(d) {
+  if (typeof d.nest_info === 'string' || !d.nest_info) {
+    try { d.nest_info = JSON.parse(d.nest_info || '{}'); } catch { d.nest_info = {}; }
+  }
+  const n = d.nest_info;
+  if (!Number.isInteger(n.tier) || !NEST.tiers[n.tier]) n.tier = 0;
+  if (!n.wards || typeof n.wards !== 'object') n.wards = {};
+  return n;
+}
+const nestTier = (d) => NEST.tiers[d.nest ? nestInfo(d).tier : 0];
+const maxKinOf = (d) => nestTier(d).kin;
+
+// 둥지 넓히기: 금화는 가진 것에서 먼저, 모자라면 보물더미에서
+function expandNest(d, have) {
+  if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
+  if (d.rest_at) return { error: RESTING };
+  if (!d.nest || d.region !== d.nest) return { error: '둥지에 있을 때만 넓힐 수 있다.' };
+  const ni = nestInfo(d);
+  const next = NEST.tiers[ni.tier + 1];
+  if (!next) return { error: '더는 넓힐 수 없다.' };
+  const c = next.cost;
+  const missing = Object.entries(c.items).filter(([id, n]) => have(id) < n).map(([id, n]) => `${ITEMS[id].name} ${n - have(id)}개`);
+  if (missing.length) return { error: `재료가 모자란다: ${missing.join(', ')}` };
+  if (d.gold + (d.hoard_gold || 0) < c.gold) return { error: `금화가 모자란다. (가진 금화와 보물더미를 합쳐 ${c.gold}닢 필요)` };
+  const fromHand = Math.min(d.gold, c.gold);
+  d.gold -= fromHand;
+  d.hoard_gold -= c.gold - fromHand;
+  ni.tier += 1;
+  const lines = [`둥지를 넓혀 ${next.name}${josa(next.name, '을', '를')} 만들었다!`, next.desc, `이제 식구 ${next.kin}명이 함께 지낼 수 있고, 쉴 때 회복이 더 빨라진다.`];
+  if (c.gold > fromHand) lines.push(`모자란 금화 ${c.gold - fromHand}닢은 보물더미에서 꺼내 썼다.`);
+  chron(d, 'mark', `둥지를 넓혀 ${next.name}${josa(next.name, '을', '를')} 만들었다.`);
+  return { title: '둥지', lines, gold: -fromHand, items: Object.entries(c.items).map(([id, n]) => ({ id, qty: -n })) };
+}
+
+const awayFromNest = (d) => !d.nest || d.region !== d.nest || !!d.exp_end;
+const thiefOf = (value) => RAID.thieves.findIndex((t) => value <= t.upTo);
+// 보물 도둑이 드는지 셈. 둥지를 비운 시간만큼 굴림. hoard: 보물더미 물건 [{item, qty}]
+// 돌려주는 것: null(아무 일 없음) 또는 { kind: 'raid'|'blocked'|'expired', lines, hoardItems, gold }
+function checkRaid(d, hoard, now = Date.now(), force = false) {
+  if (!d.nest || d.dead_at || isFallen(d)) return null;
+  const ni = nestInfo(d);
+  // 쫓지 못한 도둑은 멀리 달아남
+  if (ni.raid && ni.raid.until <= now) {
+    const r = ni.raid;
+    ni.raid = null;
+    ni.calm = now + RAID.calm;
+    ni.raidAt = now;
+    chron(d, 'mark', `${r.name} 무리를 끝내 쫓지 못했다.`);
+    return { kind: 'expired', lines: [`${r.name} 무리는 끝내 멀리 달아났다. 빼앗긴 보물은 돌아오지 않는다.`] };
+  }
+  if (ni.raid) return null;
+  if (!force && !awayFromNest(d)) { ni.raidAt = now; return null; }
+  if (!ni.raidAt) ni.raidAt = now;
+  const value = ni.value || 0;
+  if (!force && (value < RAID.minValue || (ni.calm || 0) > now)) { ni.raidAt = now; return null; }
+  let chance = 1;
+  if (!force) {
+    const hours = Math.min(RAID.maxHours, Math.floor((now - ni.raidAt) / 3600000));
+    if (hours < 1) return null;
+    ni.raidAt += hours * 3600000;
+    if (ni.raidAt < now - 3600000) ni.raidAt = now;
+    const C = RAID.chance;
+    const p = Math.min(C.max, C.base + C.per1000 * (value / 1000)) * (d.perks?.guard ? RAID.guard : 1);
+    chance = 1 - (1 - p) ** hours;
+  }
+  if (Math.random() >= chance) return null;
+  const ti = Math.max(0, thiefOf(value));
+  const T = RAID.thieves[ti];
+  const where = REGIONS[d.nest].name;
+  // 결계석: 통째로 막음
+  if (ni.wards.stone > 0) {
+    ni.wards.stone -= 1;
+    ni.calm = now + RAID.calm;
+    chron(d, 'mark', `둥지에 든 ${T.name}${josa(T.name, '을', '를')} 결계석이 쫓아냈다.`);
+    return { kind: 'blocked', lines: [`${where}의 둥지에 ${T.name} 무리가 숨어들었지만, 수호 결계석이 번쩍이며 쫓아냈다.`, `결계석 하나가 부서졌다. (남은 결계석 ${ni.wards.stone})`] };
+  }
+  const trapped = ni.wards.trap > 0;
+  if (trapped) ni.wards.trap -= 1;
+  const mult = nestTier(d).raidLoss * (trapped ? RAID.trap : 1);
+  const gold = Math.min(RAID.goldMax[ti], Math.floor((d.hoard_gold || 0) * rand(...RAID.gold) * mult));
+  const stacks = shuffle(hoard.filter((x) => x.qty > 0 && ITEMS[x.item])).slice(0, randInt(...RAID.stacks));
+  const items = stacks.map((x) => ({ id: x.item, qty: Math.min(x.qty, Math.max(1, Math.round(x.qty * rand(...RAID.itemPart) * mult))) }));
+  if (!gold && !items.length) { ni.calm = now + RAID.calm; return null; }
+  d.hoard_gold -= gold;
+  const lv = Math.max(1, Math.min(14, d.level + T.lv));
+  ni.raid = { at: now, until: now + RAID.chaseFor, thief: ti, name: T.name, lv, gold, items, trapped };
+  const got = [...(gold ? [`금화 ${gold}닢`] : []), ...items.map(itemLabel)].join(', ');
+  const lines = [`${where}의 둥지에 ${T.name} 무리가 숨어들었다!`, `보물더미에서 ${got}${josa(got, '을', '를')} 훔쳐 달아났다.`];
+  if (trapped) lines.push(`가시 덫에 걸린 도둑들이 피를 흘리며 반쯤만 챙겨 갔다. (남은 덫 ${ni.wards.trap})`);
+  lines.push(`${Math.round(RAID.chaseFor / 3600000)}시간 안에 둥지에서 뒤쫓으면 되찾을 수 있다.`);
+  chron(d, 'mark', `${T.name} 무리에게 보물을 도둑맞았다.`);
+  return { kind: 'raid', lines, gold: -gold, hoardItems: items.map((x) => ({ id: x.id, qty: -x.qty })) };
+}
+// 둥지 창·내 정보에 보일 도둑 소식
+function raidView(d) {
+  const r = d.nest && nestInfo(d).raid;
+  if (!r) return null;
+  return { name: r.name, until: r.until, gold: r.gold, items: r.items, lv: r.lv, trapped: !!r.trapped, minions: RAID.thieves[r.thief].minions.length };
+}
+// 쫓아갈 수 있는지
+function chaseCheck(d) {
+  const r = d.nest && nestInfo(d).raid;
+  if (!r) return { error: '쫓을 도둑이 없다.' };
+  if (d.region !== d.nest) return { error: '둥지에 가야 도둑의 흔적을 쫓을 수 있다.' };
+  if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
+  if (d.rest_at) return { error: RESTING };
+  if (d.ap < RAID.chaseAp) return { error: `행동력이 모자란다. (${RAID.chaseAp} 필요)` };
+  if (d.hp < RULES.huntMinHp) return { error: '기운이 없어 쫓아갈 수 없다. 조금 쉬어야 한다.' };
+  return null;
+}
+
 module.exports = {
+  nestInfo, nestTier, maxKinOf, expandNest, checkRaid, raidView, chaseCheck,
   regen, gather, explore, hunt, startExpedition, finishExpedition, chooseFork, forkView, expInfo,
   craft, useItem, equip, unequip, statsOf, bonusOf, hpCap, enCap, equipOf, buffOf, giveBuff,
   repOf, setStance, marketInfo, buy, sell, intimidate,

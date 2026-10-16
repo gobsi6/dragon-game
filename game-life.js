@@ -38,14 +38,15 @@ function stageOf(k, now) {
   return { i, name: list[i].name, next: list[i + 1] ? list[i + 1].from : null };
 }
 // 함께 사는 식구들: 인간, 깨어난 새끼, 알
-function homeKin(kin) {
+function homeKin(kin, max = KIN.maxKin) {
   const home = kin.filter(isHome);
   return {
     home,
     humans: home.filter((k) => k.type === 'human'),
     drakes: home.filter((k) => k.type === 'drake' && k.status === 'home'),
     eggs: home.filter((k) => k.status === 'egg'),
-    full: home.length >= KIN.maxKin,
+    full: home.length >= max,
+    max,
   };
 }
 const findKin = (kin, id) => kin.find((k) => k.id === Number(id) && isHome(k));
@@ -472,7 +473,7 @@ function restTogether(kin, minutes) {
 
 // ── 이벤트 엔진 ────────────────────────────────────
 function ctxOf(d, kin, have, trigger, now, region = d.region) {
-  const hk = homeKin(kin);
+  const hk = homeKin(kin, logic.maxKinOf(d));
   return {
     d, now, trigger, region, town: !!SHOPS[region],
     rep: logic.repOf(d)[region] || 0, fame: d.fame || 0, stance: d.stance, nest: d.nest,
@@ -577,14 +578,14 @@ function chooseEvent(d, kin, have, idx, now = Date.now()) {
     // 새끼의 성격을 한쪽으로 기울임 (그 성향 밑에서 며칠 더 자란 것처럼)
     nudge: (k, stance, days) => { if (k && k.data.stanceMs) k.data.stanceMs[stance] = (k.data.stanceMs[stance] || 0) + days * DAY; },
     adopt: (origin) => {
-      if (homeKin(kin).full) return out.lines.push('둥지에는 이미 식구가 가득해 더 데려갈 수 없었다.');
+      if (homeKin(kin, logic.maxKinOf(d)).full) return out.lines.push('둥지에는 이미 식구가 가득해 더 데려갈 수 없었다.');
       const k = newHuman(origin, now, origin === 'lost' ? nearestTown(c.region) : town);
       k.name = freshName(kin, HUMAN_NAMES);
       kin.push(k);
       out.lines.push(`아이에게 '${k.name}'${josa(k.name, '이라는', '라는')} 이름을 붙여 주었다.`);
     },
     egg: (kind) => {
-      if (homeKin(kin).full) return out.lines.push('둥지에는 이미 식구가 가득해 알을 둘 자리가 없었다.');
+      if (homeKin(kin, logic.maxKinOf(d)).full) return out.lines.push('둥지에는 이미 식구가 가득해 알을 둘 자리가 없었다.');
       const k = newEgg(kind, now);
       k.name = freshName(kin, DRAKE_NAMES);
       kin.push(k);
