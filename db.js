@@ -227,7 +227,9 @@ const q = {
   setRegion:    db.prepare('UPDATE dragons SET region = ? WHERE id = ?'),
   touch:        db.prepare('UPDATE dragons SET last_seen = ? WHERE id = ?'),
   addChat:      db.prepare('INSERT INTO chat (region, dragon_id, name, kind, text, at) VALUES (?, ?, ?, ?, ?, ?)'),
-  recentChat:   db.prepare('SELECT dragon_id AS dragonId, name, kind, text, at FROM chat WHERE region = ? ORDER BY id DESC LIMIT ?'),
+  recentChat:   db.prepare('SELECT id, dragon_id AS dragonId, name, kind, text, at FROM chat WHERE region = ? ORDER BY id DESC LIMIT ?'),
+  chatGet:      db.prepare('SELECT id, region, dragon_id AS dragonId FROM chat WHERE id = ?'),
+  chatDel:      db.prepare('DELETE FROM chat WHERE id = ?'),
   kinList:      db.prepare('SELECT id, type, status, name, data FROM kin WHERE dragon_id = ? ORDER BY id'),
   kinAdd:       db.prepare('INSERT INTO kin (dragon_id, type, status, name, data, created_at) VALUES (?, ?, ?, ?, ?, ?)'),
   kinSave:      db.prepare('UPDATE kin SET status = ?, name = ?, data = ? WHERE id = ? AND dragon_id = ?'),
@@ -417,10 +419,13 @@ module.exports = {
   setRegion: (dragonId, region) => q.setRegion.run(region, dragonId),
   touch: (dragonId) => q.touch.run(Date.now(), dragonId),
   addChat: (region, m) => {
-    q.addChat.run(region, m.dragonId, m.name, m.kind, m.text, m.at);
+    const id = Number(q.addChat.run(region, m.dragonId, m.name, m.kind, m.text, m.at).lastInsertRowid);
     q.pruneChat.run(region, region); // 지역별 최근 200개만 보관
+    return id;
   },
   recentChat: (region, limit) => q.recentChat.all(region, limit).reverse(),
+  chatGet: (id) => q.chatGet.get(id),
+  chatDel: (id) => q.chatDel.run(id),
   // 둥지 식구: 불러오기와, 바뀐 것만 저장하기 (새 식구는 id가 없음)
   kinLoad: (dragonId) => q.kinList.all(dragonId).map((r) => {
     let data = {};

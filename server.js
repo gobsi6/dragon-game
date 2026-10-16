@@ -715,8 +715,21 @@ io.on('connection', (socket) => {
 
     const d = entry.dragon;
     const msg = { dragonId: d.id, name: d.name, kind: d.kind, text, at: now };
-    db.addChat(d.region, msg);
+    msg.id = db.addChat(d.region, msg);
     io.to(d.region).emit('chat', msg);
+  });
+
+  // 내가 한 말 지우기 (GM은 누구의 말이든)
+  socket.on('chat:delete', (payload, ack) => {
+    if (typeof ack !== 'function') ack = () => {};
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+    const row = db.chatGet(Number(payload?.id));
+    if (!row) return ack({ error: '이미 지워진 말이다.' });
+    if (row.dragonId !== entry.dragon.id && !socket.data.user.is_gm) return ack({ error: '내가 한 말만 지울 수 있다.' });
+    db.chatDel(row.id);
+    io.to(row.region).emit('chat:deleted', { id: row.id });
+    ack({ ok: true });
   });
 
   // 성별과 특징
