@@ -922,9 +922,33 @@
   }
 
   /* 한 메뉴 안의 탭 (소지품·제작, 동료·텔레파시) */
-  .seg.dtabs { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 12px; }
+  .seg.dtabs { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 12px; margin-bottom: 4px; }
+  .seg.ctabs { grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 14px 0 8px; }
+  .seg.ctabs button { padding: 6px 4px; line-height: 1.25; word-break: keep-all; }
+  .ctab[hidden] { display: none; }
+  @media (max-width: 520px) { .seg.ctabs .lg { display: none; } }
+  .ctab:not([hidden]) { animation: ctab-in .35s cubic-bezier(.16, 1, .3, 1) both; }
+  @keyframes ctab-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .ctab:not([hidden]) { animation: none; } }
   .dtabs button { display: flex; align-items: center; justify-content: center; gap: 6px; }
   .seg .tabn { padding: 0 4px; color: #fff; }
+  /* 메뉴 안의 탭(상태: 기본·칭호·스킬·지나온 이야기 / 소지품: 소지품·제작): 칸마다 따로 나뉜 작은 액자 */
+  .seg.ctabs, .seg.dtabs { border: 0; gap: 6px; background: none; }
+  .seg.ctabs button, .seg.dtabs button {
+    position: relative; min-height: 38px; padding: 7px 6px; border: 1px solid #C9CCC8; border-radius: 3px;
+    background: var(--surface-2); color: var(--ink-2); font: 600 13px/1.25 var(--serif); letter-spacing: .02em;
+    box-shadow: inset 0 0 0 2px var(--surface-2), inset 0 0 0 3px #E2E4E0;
+    transition: background .2s, color .2s, box-shadow .2s, transform .2s, border-color .2s;
+  }
+  .seg.ctabs button + button, .seg.dtabs button + button { border-left: 1px solid #C9CCC8; }
+  .seg.ctabs button:not(.on):hover, .seg.dtabs button:not(.on):hover { background: #fff; border-color: var(--steel); color: var(--steel-d); transform: translateY(-1px); box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 3px #DCE3E9, 0 2px 6px rgba(42, 66, 86, .1); }
+  .seg.ctabs button.on, .seg.dtabs button.on {
+    background: var(--steel-d); border-color: #1E3242; color: #F4F7FA; font-weight: 700;
+    box-shadow: inset 0 0 0 2px var(--steel-d), inset 0 0 0 3px rgba(244, 247, 250, .4), 0 2px 6px rgba(30, 50, 66, .22);
+  }
+  /* 고른 칸 아래의 작은 마름모 */
+  .seg.ctabs button:focus-visible, .seg.dtabs button:focus-visible { outline: 2px solid var(--steel); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .seg.ctabs button, .seg.dtabs button { transition: none; } .seg.ctabs button:hover, .seg.dtabs button:hover { transform: none; } }
   .tabn { min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: #A63E4B; color: #fff; font: 600 10.5px/17px var(--sans); text-align: center; }
   .tabn.tp { background: var(--tp); }
 
@@ -1048,14 +1072,18 @@
   .center.paneled > .panel-host { display: block; }
   .dlg.as-panel { position: relative; inset: auto; margin: 0; width: 100%; max-width: none; max-height: none; overflow: visible; padding: 20px 22px 18px; }
   .dlg.as-panel.wide { width: 100%; }
-  /* 메뉴를 열거나 바꿀 때: 아래에서 살짝 떠오르며 나타남. 지도로 돌아올 때도 부드럽게 */
-  .dlg.as-panel[open] { display: block; animation: panel-in .34s cubic-bezier(.22, .8, .24, 1) both; }
-  .center:not(.paneled) > .region-card, .center:not(.paneled) > .map { animation: panel-back .3s ease-out both; }
-  @keyframes panel-in { from { opacity: 0; transform: translateY(14px) scale(.992); } 60% { opacity: 1; } to { opacity: 1; transform: none; } }
-  @keyframes panel-back { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  /* 세로 스크롤바 자리를 늘 비워 둠: 긴 메뉴(스크롤바 생김)와 짧은 메뉴(둥지·동료) 사이를 오갈 때 화면 전체가 옆으로 밀리지 않게 */
+  html { scrollbar-gutter: stable; }
+  @supports not (scrollbar-gutter: stable) { html { overflow-y: scroll; } }
+  /* 메뉴를 열거나 바꿀 때: 아래에서 천천히 떠오르며 나타남. 지도로 돌아올 때도 부드럽게 */
+  .dlg.as-panel[open] { display: block; animation: panel-in .6s cubic-bezier(.16, 1, .3, 1) both; }
+  .center:not(.paneled) > .region-card, .center:not(.paneled) > .map { animation: panel-back .5s cubic-bezier(.16, 1, .3, 1) both; }
+  .center:not(.paneled) > .map { animation-delay: .06s; }
+  @keyframes panel-in { from { opacity: 0; transform: translateY(22px); } 45% { opacity: 1; } to { opacity: 1; transform: none; } }
+  @keyframes panel-back { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
   /* 팝업 창도 살짝 커지며 떠오름 */
-  .dlg:not(.as-panel)[open] { animation: dlg-in .26s cubic-bezier(.22, .8, .24, 1) both; }
-  .dlg:not(.as-panel)[open]::backdrop { animation: dlg-fade .26s ease-out both; }
+  .dlg:not(.as-panel)[open] { animation: dlg-in .42s cubic-bezier(.16, 1, .3, 1) both; }
+  .dlg:not(.as-panel)[open]::backdrop { animation: dlg-fade .35s ease-out both; }
   @keyframes dlg-in { from { opacity: 0; transform: translateY(10px) scale(.97); } to { opacity: 1; transform: none; } }
   @keyframes dlg-fade { from { opacity: 0; } to { opacity: 1; } }
   @media (prefers-reduced-motion: reduce) {
@@ -1643,6 +1671,14 @@
   <div class="orn-h"><h2 id="char-dlg-title">상태</h2></div>
   <div class="body">
     <div class="char-head" id="char-head"></div>
+    <!-- 상태 안의 메뉴: 기본(특성·장신구·성향) / 칭호 / 스킬 / 지나온 이야기 -->
+    <div class="seg ctabs" id="char-tabs" role="tablist" aria-label="상태 메뉴">
+      <button type="button" role="tab" data-ct="base" class="on">기본</button>
+      <button type="button" role="tab" data-ct="titles">칭호</button>
+      <button type="button" role="tab" data-ct="skills">스킬</button>
+      <button type="button" role="tab" data-ct="chron" aria-label="지나온 이야기"><span class="lg">지나온 </span>이야기</button>
+    </div>
+    <section class="ctab" data-ct="base" role="tabpanel">
     <h3>특성</h3>
     <div class="traits" id="char-traits"></div>
     <details class="trait-road">
@@ -1650,13 +1686,6 @@
       <p class="note">같은 일을 거듭하면 새 특성이 생기거나 있던 특성이 사라진다.</p>
       <div id="char-road"></div>
     </details>
-    <h3>칭호</h3>
-    <p class="note" id="char-title-note"></p>
-    <div class="tt-filter" id="char-title-filter"></div>
-    <div class="tt-list" id="char-titles"></div>
-    <h3>전투 스킬</h3>
-    <p class="note" id="char-skill-note"></p>
-    <div class="traits" id="char-skills"></div>
       <h3>장신구</h3>
       <div class="gear">
         <div class="gear-grid" id="gear"></div>
@@ -1668,10 +1697,24 @@
         <div class="reps" id="reps"></div>
         <div class="reps"><div><span>둥지</span><b id="nest-where"></b></div></div>
       </div>
+    </section>
+    <section class="ctab" data-ct="titles" role="tabpanel" hidden>
+    <h3>칭호</h3>
+    <p class="note" id="char-title-note"></p>
+    <div class="tt-filter" id="char-title-filter"></div>
+    <div class="tt-list" id="char-titles"></div>
+    </section>
+    <section class="ctab" data-ct="skills" role="tabpanel" hidden>
+    <h3>전투 스킬</h3>
+    <p class="note" id="char-skill-note"></p>
+    <div class="traits" id="char-skills"></div>
+    </section>
+    <section class="ctab" data-ct="chron" role="tabpanel" hidden>
     <h3>지나온 이야기</h3>
     <div class="tt-filter" id="chron-filter"></div>
     <ol class="chron" id="chron-list"></ol>
     <button type="button" class="linkbtn" id="chron-more" hidden>더 보기</button>
+    </section>
     <div class="row"><button class="btn" type="button" id="char-close">닫기</button></div>
   </div>
 </dialog>
@@ -4167,7 +4210,16 @@
     if (!road.children.length) road.innerHTML = '<p class="note">지금은 기다리는 변화가 없다.</p>';
     renderSkills();
   }
-  function openChar() { renderChar(); openPanel('char-dlg'); loadChron(); }
+  // 상태 안의 메뉴 (마지막으로 본 메뉴를 기억)
+  let charTab = 'base';
+  function showCharTab(t) {
+    charTab = t;
+    for (const b of document.querySelectorAll('#char-tabs [data-ct]')) { const on = b.dataset.ct === t; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); }
+    for (const sec of document.querySelectorAll('#char-dlg .ctab')) sec.hidden = sec.dataset.ct !== t;
+    if (t === 'chron') loadChron();
+  }
+  $('char-tabs').addEventListener('click', (e) => { const b = e.target.closest('[data-ct]'); if (b && !b.classList.contains('on')) showCharTab(b.dataset.ct); });
+  function openChar() { renderChar(); showCharTab(charTab); openPanel('char-dlg'); if (charTab !== 'chron') loadChron(); }
 
   // ── 지나온 이야기 (선택과 큰 사건) ──
   let chronList = [], chronView = 'all', chronShow = 15;
@@ -4218,7 +4270,7 @@
   }
   $('chron-more').addEventListener('click', () => { chronShow += 30; renderChron(); });
   $('dock-char').addEventListener('click', openChar);
-  $('char-more').addEventListener('click', openChar);
+  $('char-more').addEventListener('click', () => { charTab = 'base'; openChar(); }); // '특성 · 장신구 · 성향 자세히 보기'는 기본 메뉴로
   $('char-close').addEventListener('click', () => $('char-dlg').close());
 
   // ── 장소 ──
