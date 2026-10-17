@@ -1518,6 +1518,12 @@
   .log .mh .nm:hover { filter: brightness(1.15); }
   .log .mh .nm:focus-visible { outline: 2px solid var(--t); outline-offset: 2px; }
   .log .mh time { font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  /* 이름 머리줄: 줄임 없이 다 보여 줌. 한 줄에 다 들어가지 않으면 칭호·이름·시각이 통째로 다음 줄로 넘어감 (이름 칩 안에서는 꺾이지 않음) */
+  .log .mh { align-items: flex-start; }
+  .log .mh .mhx { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; min-height: 22px; }
+  .log .mh .ttl { overflow: visible; max-width: none; }
+  .log .mh .nm { white-space: nowrap; }
+  .log .mh time { white-space: nowrap; }
   .log .ml { position: relative; display: flex; align-items: flex-start; gap: 4px; padding: 0 2px; margin: 0 -2px; border-radius: 3px; color: var(--ink); }
   .log .ml .tx { flex: 1; min-width: 0; white-space: pre-wrap; }
   .log .ml .del { flex: none; width: 18px; height: 18px; margin-top: 1px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font-size: 13px; line-height: 18px; opacity: 0; cursor: pointer; }
@@ -7534,8 +7540,11 @@
     const tm = document.createElement('time');
     tm.textContent = chatTime(m.at);
     // 칭호는 이름 앞에
-    if (m.title) { const tt = document.createElement('span'); tt.className = 'ttl'; tt.textContent = m.title; head.append(tt); }
-    head.append(nm, tm);
+    const hx = document.createElement('span');
+    hx.className = 'mhx';
+    if (m.title) { const tt = document.createElement('span'); tt.className = 'ttl'; tt.textContent = m.title; hx.append(tt); }
+    hx.append(nm, tm);
+    head.append(hx);
     // 작은 프로필 사진을 이름 바로 왼쪽에 (없으면 종류 문양). 눌러도 기록이 열림
     if (m.dragonId) {
       const ava = avaEl({ id: m.dragonId, kind: m.kind, av: m.av }, 22);
