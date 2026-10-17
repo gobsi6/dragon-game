@@ -1323,10 +1323,10 @@ function marketInfo(d, invList) {
     })(),
     closed: closed ? closed.error : null,
     proxy: d.stance === 'hostile' ? d.perks?.trader || null : null, // 대신 흥정하는 둥지 사람
-    buy: shop.map((id) => ({ id, price: buyPrice(d, id) })),
+    buy: shop.map((id) => ({ id, price: buyPrice(d, id), limit: TRADE.dailyBuy[id] || null, left: buyLeft(d, id) })),
     // 우호일 때만 보임. 평판이 모자라면 잠겨 있음
     special: d.stance === 'friendly'
-      ? (SHOPS_SPECIAL[d.region] || []).map((id) => ({ id, price: buyPrice(d, id), locked: !specialOpen(d) }))
+      ? (SHOPS_SPECIAL[d.region] || []).map((id) => ({ id, price: buyPrice(d, id), locked: !specialOpen(d), limit: TRADE.dailyBuy[id] || null, left: buyLeft(d, id) }))
       : [],
     specialFrom: repTier(SR.friendly.specialFrom),
     sell: invList.filter((x) => ITEMS[x.item]).map((x) => ({ id: x.item, qty: x.qty, price: sellPrice(d, x.item) })),
@@ -1341,6 +1341,15 @@ function friendlyTrade(d, lines) {
   if (f) lines.push(f);
 }
 
+// 오늘 시장에서 산 개수 (전투 설정 JSON의 buys에 { day, n: { 물건: 개수 } }, 날이 바뀌면 비움)
+function buyBook(d) {
+  const c = combatJson(d);
+  const day = dayIdx();
+  if (!c.buys || c.buys.day !== day) c.buys = { day, n: {} };
+  return c.buys;
+}
+const buyLeft = (d, id) => (TRADE.dailyBuy[id] ? Math.max(0, TRADE.dailyBuy[id] - (buyBook(d).n[id] || 0)) : null);
+
 function buy(d, id, qty, have) {
   const err = marketCheck(d);
   if (err) return err;
@@ -1348,9 +1357,14 @@ function buy(d, id, qty, have) {
   if (!SHOPS[d.region].includes(id) && !special) return { error: '이 시장에서는 팔지 않는 물건이다.' };
   if (special && !specialOpen(d)) return { error: '이 물건은 마을과 더 친해져야 살 수 있다.' };
   qty = Math.max(1, Math.min(20, Math.floor(qty) || 1));
+  const left = buyLeft(d, id);
+  const name0 = ITEMS[id].name;
+  if (left === 0) return { error: `${name0}${josa(name0, '은', '는')} 오늘 더 살 수 없다. (하루 ${TRADE.dailyBuy[id]}개까지)` };
+  if (left != null && qty > left) return { error: `${name0}${josa(name0, '은', '는')} 오늘 ${left}개까지만 더 살 수 있다.` };
   const cost = buyPrice(d, id) * qty;
   if (d.gold < cost) return { error: `금화가 모자란다. (${cost}닢 필요)` };
   d.gold -= cost;
+  if (left != null) { const b = buyBook(d); b.n[id] = (b.n[id] || 0) + qty; }
   const name = ITEMS[id].name;
   const lines = [`금화 ${cost}닢을 내고 ${name}${qty > 1 ? ` ${qty}개` : ''}${josa(qty > 1 ? '개' : name, '을', '를')} 샀다.`];
   friendlyTrade(d, lines);

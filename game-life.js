@@ -78,6 +78,7 @@ function rollLooks(k) {
   const got = [];
   while (got.length < TR.count && pool.length) got.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
   k.data.traits = got;
+  if (k.type === 'human' && !k.data.favFood) k.data.favFood = pick(KIN.hunger.meals); // 가장 좋아하는 요리 (먹여 보면 알게 됨)
   // 타고난 기울기 (아직 재주가 정해지지 않은 아이만)
   if (k.type === 'human' && k.data.lean && !k.data.talent) {
     if (hasT(k, 'brave')) k.data.lean.guard += 1;
@@ -96,6 +97,30 @@ function introOf(k) {
   return `${who}${josa(who, '이다', '다')}. ${look}. ${traitNames(k).map((n) => `'${n}'`).join(', ')} 성격이다.`;
 }
 
+// ── 포만감 (인간 식구) ─────────────────────────────
+const HG = KIN.hunger;
+const isFood = (item) => (KIN.care[item]?.sat || 0) > 0;
+// 지금 포만감으로 맞추고, 배부른 동안 쌓인 유대를 돌려줌. keeper: 둥지에 남은 약초꾼 어른이 돌봐 주는지
+function satUpdate(k, now, keeper) {
+  if (k.data.sat == null) { k.data.sat = HG.start; k.data.satAt = now; }
+  const s0 = k.data.sat;
+  const hours = Math.max(0, (now - (k.data.satAt || now)) / 3600000);
+  let s = s0 - hours * HG.perHour;
+  if (keeper) s = Math.max(s, Math.min(s0, HG.keeperFloor));
+  s = Math.max(0, s);
+  // 배부름(full 위)에 머문 시간만큼 유대
+  const fullMs = s0 > HG.full ? Math.min(hours, (s0 - HG.full) / HG.perHour) * 3600000 : 0;
+  k.data.fullAcc = (k.data.fullAcc || 0) + fullMs;
+  let up = 0;
+  while (k.data.fullAcc >= HG.fullBondEvery) { k.data.fullAcc -= HG.fullBondEvery; up++; }
+  if (up) k.data.bond = clamp(k.data.bond + up);
+  k.data.sat = Math.round(s * 10) / 10;
+  k.data.satAt = now;
+  return up;
+}
+const satWord = (s) => (s >= HG.full ? '배부름' : s >= 50 ? '든든함' : s >= HG.hungry ? '출출함' : '배고픔');
+const hasKeeper = (kin, k) => kin.some((x) => x !== k && x.type === 'human' && x.status === 'home' && x.data.path === 'stay' && x.data.talent === 'herbalist');
+
 // ── 새 식구 ────────────────────────────────────────
 // 함께 사는 식구와 겹치지 않는 이름 (다 겹치면 아무거나)
 function freshName(kin, names) {
@@ -111,7 +136,7 @@ function newHuman(origin, now, town) {
   const k = {
     id: null, type: 'human', status: 'home', name: pick(HUMAN_NAMES),
     // lastCare를 돌보기 간격만큼 앞당겨 둬서, 데려오자마자 처음 돌보기를 할 수 있음
-    data: { born: now, origin, town: town || null, bond: H.startBond, lean, trips: 0, lastCare: now - H.careCooldown, decayed: 0, stage: 0 },
+    data: { born: now, origin, town: town || null, bond: H.startBond, lean, trips: 0, lastCare: now - H.careCooldown, decayed: 0, stage: 0, sat: KIN.hunger.start, satAt: now },
   };
   rollLooks(k);
   return k;
@@ -161,6 +186,10 @@ function tick(d, kin, now = Date.now()) {
     if (k.status === 'home' && rollLooks(k)) out.lines.push(`${k.name}${josa(k.name, '을', '를')} 다시 찬찬히 들여다보았다. ${introOf(k)}`);
     if (k.type === 'human' && k.status === 'home') {
       const a = ageOf(k, now);
+      if (!k.data.favFood) k.data.favFood = pick(HG.meals);
+      const wasHungry = k.data.sat != null && k.data.sat < HG.hungry;
+      satUpdate(k, now, hasKeeper(kin, k));
+      if (!wasHungry && k.data.sat < HG.hungry) out.lines.push(`${ga(k)} 배가 고픈지 자꾸 둥지 입구를 기웃거린다.`);
       // 오래 돌보지 않으면 유대가 줄어듦 (외로움을 타는: 하루 일찍 · 의젓한: 절반만)
       const idle = Math.floor((now - k.data.lastCare) / DAY) - (H.neglectAfter - (hasT(k, 'lonely') ? 1 : 0));
       if (idle > (k.data.decayed || 0)) {
@@ -311,6 +340,15 @@ function view(k, now, d) {
   const a = ageOf(k, isHome(k) ? now : k.data.ended || now); // 떠난 식구는 떠난 날의 나이
   v.age = Math.floor(a);
   v.bond = Math.round(k.data.bond);
+  // 포만감과 기분 (인간 식구)
+  if (k.type === 'human' && k.status === 'home' && k.data.sat != null) {
+    const hrs = Math.max(0, (now - (k.data.satAt || now)) / 3600000);
+    const s = Math.max(0, k.data.sat - hrs * HG.perHour);
+    v.sat = Math.round(s);
+    v.satWord = satWord(s);
+    v.mood = s < HG.hungry ? 'hungry' : s >= HG.full && k.data.bond >= 60 ? 'happy' : 'calm';
+    if (k.data.favKnown && k.data.favFood) v.favFood = k.data.favFood;
+  }
   // 짝과 자녀 (식구 이벤트로 생김)
   if (k.data.mate) v.mate = { name: k.data.mate.name, kind: k.data.mate.kind || null };
   if (k.data.kids?.length) v.kids = k.data.kids.slice();
@@ -362,14 +400,21 @@ function care(d, kin, id, item, have, now = Date.now(), opt = {}) {
   if (!c) return { error: '그 물건으로는 돌볼 수 없다.' };
   if (have(item) < 1) return { error: '가지고 있지 않다.' };
   if (now - k.data.lastCare < H.careCooldown) return { error: `${ga(k)} 아직 배부르다. 조금 뒤에 다시 돌보자.` };
-  // 특성: 다정한 발톱·냉담 / 아이의 성격: 다정한·먹보·수줍은
+  satUpdate(k, now, hasKeeper(kin, k));
+  const food = isFood(item);
+  const hungry = k.data.sat < HG.hungry;
+  const fav = item === k.data.favFood;
+  // 특성: 다정한 발톱·냉담 / 아이의 성격: 다정한·먹보·수줍은 / 가장 좋아하는 요리
   let mood = 0;
   if (hasT(k, 'gentle')) mood += 1;
-  if (hasT(k, 'glutton') && TR.food.includes(item)) mood += 2;
+  if (hasT(k, 'glutton') && food) mood += 2;
   if (hasT(k, 'shy')) mood += k.data.bond < 40 ? -1 : 2;
-  const gain = Math.max(1, c.bond + logic.traitMods(d).bond + mood);
+  if (fav) mood += HG.favBond;
+  let gain = Math.max(1, c.bond + logic.traitMods(d).bond + mood);
+  if (hungry && !food) gain = Math.max(1, Math.round(gain * HG.hungryGift)); // 배고프면 장난감에 마음이 덜 감
   k.data.bond = clamp(k.data.bond + gain);
-  if (!k.data.talent) k.data.lean[c.talent] += 1;
+  if (food) k.data.sat = Math.min(100, k.data.sat + c.sat * (hasT(k, 'glutton') ? 1.2 : 1));
+  if (!k.data.talent && c.talent) k.data.lean[c.talent] += 1;
   k.data.lastCare = now;
   k.data.decayed = 0;
   const name = ITEMS[item].name;
@@ -378,8 +423,13 @@ function care(d, kin, id, item, have, now = Date.now(), opt = {}) {
     smith: '반짝이는 걸 쥐고 이리저리 두드려 본다.',
     guard: '꼭 쥐고 드래곤 흉내를 내며 으르렁거린다.',
   }[c.talent];
-  const lines = [`${k.name}에게 ${name}${josa(name, '을', '를')} 건넸다. ${react}`];
-  if (hasT(k, 'glutton') && TR.food.includes(item)) lines.push(`먹보 ${k.name}${josa(k.name, '은', '는')} 눈 깜짝할 새 먹어 치우고 입맛을 다신다.`);
+  const lines = [`${k.name}에게 ${name}${josa(name, '을', '를')} 건넸다. ${c.eat || (hungry && food ? '배가 고팠는지 허겁지겁 먹는다.' : react)}`];
+  if (hungry && !food) lines.push(`${ga(k)} 배가 고파서인지 금방 내려놓고 둥지 입구만 바라본다.`);
+  if (fav) {
+    if (!k.data.favKnown) { k.data.favKnown = true; lines.push(`${ga(k)} 눈을 반짝였다. ${k.name}${josa(k.name, '은', '는')} ${name}${josa(name, '을', '를')} 가장 좋아하는 것 같다!`); }
+    else lines.push(`가장 좋아하는 ${name}이다. ${ga(k)} 몸을 흔들며 좋아한다.`);
+  }
+  if (hasT(k, 'glutton') && food) lines.push(`먹보 ${k.name}${josa(k.name, '은', '는')} 눈 깜짝할 새 먹어 치우고 입맛을 다신다.`);
   else if (hasT(k, 'shy')) lines.push(k.data.bond - gain < 40 ? `수줍은 ${k.name}${josa(k.name, '은', '는')} 받아 들고 슬그머니 등을 돌린다.` : `${k.name}${josa(k.name, '이', '가')} 이제는 수줍게 웃으며 다가온다.`);
   const items = [{ id: item, qty: -1 }];
   if (hasT(k, 'prankster') && Math.random() < TR.pranksterChance) {
@@ -388,7 +438,7 @@ function care(d, kin, id, item, have, now = Date.now(), opt = {}) {
     const gn = ITEMS[got].name;
     lines.push(`장난꾸러기 ${k.name}${josa(k.name, '이', '가')} 키득거리며 주머니에서 ${gn}${josa(gn, '을', '를')} 꺼내 쥐여 주었다.`);
   }
-  lines.push(`유대 +${gain}`, ...logic.traitCount(d, 'care'));
+  lines.push(food ? `유대 +${gain} · ${satWord(k.data.sat)}` : `유대 +${gain}`, ...logic.traitCount(d, 'care'));
   return { title: k.name, lines, items };
 }
 
@@ -555,7 +605,8 @@ function restTogether(kin, minutes) {
   const extra = [];
   for (const k of hs) {
     const dbl = hasT(k, 'sleepy') || hasT(k, 'lonely'); // 잠꾸러기·외로움을 타는: 두 배
-    k.data.bond = clamp(k.data.bond + n * (dbl ? 2 : 1));
+    const fullUp = (k.data.sat ?? 0) >= HG.full ? HG.restFull : 1;   // 배부르면 더 푹 쉼
+    k.data.bond = clamp(k.data.bond + Math.round(n * (dbl ? 2 : 1) * fullUp));
     if (dbl) extra.push(k.name);
   }
   const names = hs.map((k) => k.name).join(', ');

@@ -225,6 +225,12 @@ const ITEMS = {
   hydra_tonic:  { name: '히드라 강장제',    rarity: 'rare',     type: 'use', use: { hp: 150 }, desc: '한 모금이면 찢긴 비늘 아래로 새살이 돋는다.' },
   ember_elixir: { name: '불씨 영약',        rarity: 'rare',     type: 'use', use: { en: 60, ap: 2 }, desc: '거인의 불씨를 녹인 영약. 몸속에서 불이 타오른다.' },
 
+  // ── 만든 물건: 식구 요리 (cat: meal. 인간 식구에게 건네면 배가 부르고 유대가 오름. 둥지 식구 칸에서 건넴) ──
+  honey_cake:     { name: '꿀떡',     rarity: 'common',   cat: 'meal', value: 6,  desc: '야생 꿀을 바른 쫀득한 떡. 아이들이 가장 반긴다. (약초꾼 쪽)' },
+  moss_soup:      { name: '이끼 수프', rarity: 'common',   cat: 'meal', value: 5,  desc: '빛나는 이끼를 넣어 은은하게 빛나는 수프. 먹으면 속이 따뜻해진다. (약초꾼 쪽)' },
+  fish_porridge:  { name: '생선 죽',   rarity: 'common',   cat: 'meal', value: 7,  desc: '절인 생선을 곱게 풀어 끓인 죽. 든든해서 오래 배부르다. (파수꾼 쪽)' },
+  hearth_bread:   { name: '화덕빵',    rarity: 'common',   cat: 'meal', value: 6,  desc: '붉은 점토로 빚은 작은 화덕에 구운 빵. 화덕은 아이가 가지고 논다. (대장장이 쪽)' },
+  feast_plate:    { name: '잔칫상',    rarity: 'uncommon', cat: 'meal', value: 16, desc: '꿀과 생선과 곡식을 한 상 가득 차린 잔치 음식. 배가 가득 차고, 유대가 크게 오른다.' },
   // ── 만든 물건: 강화 음식 (buff: 한 시간 동안 사냥·강적 전투에서 힘이 됨. 하나만 효과가 있음) ──
   war_paint:    { name: '전쟁 물감',        rarity: 'uncommon', type: 'use', use: { buff: 'might' }, desc: '독샘을 섞은 붉은 물감을 비늘에 바르면 피가 끓어오른다.' },
   scale_oil:    { name: '비늘 기름',        rarity: 'common',   type: 'use', use: { buff: 'iron' },  desc: '악어 비늘을 짜낸 기름. 바르면 비늘이 돌처럼 단단해진다.' },
@@ -344,6 +350,12 @@ const BUFFS = {
 
 // 제작법. needs: 재료와 개수, en: 쓰는 기력, wis: 필요한 지혜
 const RECIPES = [
+  // 식구 요리
+  { out: 'honey_cake',    needs: { wild_honey: 1, grass_seed: 2 },                     en: 3,  wis: 0 },
+  { out: 'moss_soup',     needs: { glow_moss: 1, grass_seed: 1 },                      en: 3,  wis: 0 },
+  { out: 'fish_porridge', needs: { salted_fish: 1, grass_seed: 1 },                    en: 3,  wis: 0 },
+  { out: 'hearth_bread',  needs: { red_clay: 1, grass_seed: 2 },                       en: 3,  wis: 0 },
+  { out: 'feast_plate',   needs: { wild_honey: 1, salted_fish: 1, grass_seed: 3 },      en: 6,  wis: 0 },
   { out: 'honey_salve',   needs: { wild_honey: 1, grass_seed: 2 },                     en: 4,  wis: 0 },
   { out: 'calamity_charm',needs: { calamity_core: 2, ancient_relic: 1 },                en: 16, wis: 13 },
   { out: 'thorn_trap',    needs: { beast_hide: 2, sharp_fang: 2 },                     en: 5,  wis: 0 },
@@ -500,6 +512,8 @@ const RAID = {
 };
 
 const TRADE = {
+  // 시장에서 하루(한국 날짜)에 살 수 있는 개수. 적지 않은 물건은 제한 없음
+  dailyBuy: { salted_fish: 5, holy_water: 5, herbal_ointment: 10, strong_wine: 10 },
   stanceCooldown: 12 * 60 * 60 * 1000, // 성향을 바꾼 뒤 다시 바꾸기까지 (12시간)
   refuseBelow: -40,                 // 평판이 이보다 낮으면 상인이 거래를 거절
   intimidateCost: 2,                // 위협하기에 드는 행동력
@@ -546,14 +560,32 @@ const KIN = {
   // 알을 품는 데 드는 재료 (종류별)
   eggNeeds: { red: 'fire_crystal', white: 'eternal_ice', green: 'heartwood', black: 'bog_pearl', gold: 'sun_stone', silver: 'deep_pearl', blue: 'deep_pearl', purple: 'ancient_relic', bronze: 'silver_clover' },
   // 돌보기에 쓰는 물건: 유대가 얼마나 오르는지, 어떤 재주 쪽으로 기우는지
+  // sat: 먹으면 차는 포만감 (0이면 먹을 것이 아님). eat: 요리를 먹을 때의 반응
   care: {
-    grass_seed: { bond: 2, talent: 'herbalist' }, wild_honey: { bond: 6, talent: 'herbalist' },
-    glow_moss: { bond: 5, talent: 'herbalist' }, honey_salve: { bond: 8, talent: 'herbalist' },
+    grass_seed: { bond: 2, talent: 'herbalist', sat: 10 }, wild_honey: { bond: 6, talent: 'herbalist', sat: 20 },
+    glow_moss: { bond: 5, talent: 'herbalist' }, honey_salve: { bond: 8, talent: 'herbalist', sat: 15 },
+    honey_cake:    { bond: 9,  talent: 'herbalist', sat: 45, eat: '두 손으로 꼭 쥐고 오물오물 먹는다. 입가에 꿀이 잔뜩 묻었다.' },
+    moss_soup:     { bond: 7,  talent: 'herbalist', sat: 40, eat: '빛나는 수프를 신기한 듯 들여다보다가 후후 불어 마신다.' },
+    fish_porridge: { bond: 9,  talent: 'guard',     sat: 60, eat: '한 그릇을 싹 비우고 배를 두드린다. "이제 드래곤처럼 힘이 세질 거야!"' },
+    hearth_bread:  { bond: 8,  talent: 'smith',     sat: 50, eat: '빵을 먹고 나서는 작은 점토 화덕을 이리저리 두드리며 논다.' },
+    feast_plate:   { bond: 14, talent: null,        sat: 100, eat: '눈이 휘둥그레져서 한 접시씩 맛을 본다. 오늘은 잔칫날이다!' },
     red_clay: { bond: 3, talent: 'smith' }, bog_iron: { bond: 5, talent: 'smith' },
     gold_ore: { bond: 7, talent: 'smith' }, obsidian: { bond: 6, talent: 'smith' },
-    salted_fish: { bond: 6, talent: 'guard' }, beast_hide: { bond: 4, talent: 'guard' }, sharp_fang: { bond: 5, talent: 'guard' },
+    salted_fish: { bond: 6, talent: 'guard', sat: 30 }, beast_hide: { bond: 4, talent: 'guard' }, sharp_fang: { bond: 5, talent: 'guard' },
   },
   tripTalent: 2,                      // 원정에 한 번 따라갈 때마다 파수꾼 쪽으로
+  // 인간 식구의 포만감 (0~100). 배고프다고 아프거나 떠나지는 않음. 배부르면 좋은 일만 생김
+  hunger: {
+    start: 80,                        // 처음 데려왔을 때
+    perHour: 5,                       // 한 시간에 줄어드는 양 (가득 찬 뒤 6시간쯤 '든든함', 10시간쯤 '출출함', 14시간쯤 '배고픔')
+    hungry: 30, full: 70,             // 이 아래면 배고픔, 이 위면 배부름
+    fullBondEvery: 3 * 60 * 60 * 1000,// 배부른 동안 이 간격마다 유대 +1
+    hungryGift: 0.5,                  // 배고플 때 먹을 것이 아닌 물건을 받으면 유대가 이만큼만
+    restFull: 1.5,                    // 배부르면 둥지에서 함께 쉴 때 유대 ×
+    favBond: 5,                       // 가장 좋아하는 요리를 받으면 유대 +
+    keeperFloor: 40,                  // 둥지에 남은 약초꾼 어른이 있으면 아이들의 포만감이 이 아래로 떨어지지 않음
+    meals: ['honey_cake', 'moss_soup', 'fish_porridge', 'hearth_bread'], // 아이마다 이 중 하나를 가장 좋아함
+  },
   companionBonus: 0.15,               // 원정에 따라간 식구 하나당 찾는 물건 +15%
 };
 const TALENTS = {
@@ -581,7 +613,7 @@ const KIN_LOOKS = {
 // 성격: 식구마다 2개. for는 인간(human)·새끼 드래곤(drake) 중 누구에게 붙는지
 const KIN_TRAITS = {
   // 인간 아이
-  glutton:   { for: 'human', name: '먹보',          desc: '먹을 것(씨앗·꿀·생선)을 건네면 유대가 2 더 오른다.' },
+  glutton:   { for: 'human', name: '먹보',          desc: '먹을 것(씨앗·꿀·생선·요리)을 건네면 유대가 2 더 오르고, 배가 더 든든해진다.' },
   gentle:    { for: 'human', name: '다정한',        desc: '무엇을 건네든 유대가 1 더 오른다.' },
   lonely:    { for: 'human', name: '외로움을 타는', desc: '하루 일찍 외로워하지만, 둥지에서 함께 쉬면 유대가 두 배로 오른다.' },
   sleepy:    { for: 'human', name: '잠꾸러기',      desc: '둥지에서 함께 쉬면 유대가 두 배로 오른다.' },

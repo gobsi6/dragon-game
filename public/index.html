@@ -421,6 +421,8 @@
   .mk-go .coin::after { width: 6px; height: 6px; }
   .ord-rw { display: inline-flex; align-items: center; gap: 5px; font: 600 12.5px/1 var(--sans); color: #6A4E12; white-space: nowrap; }
   .mk-row .lock { font-size: 12px; color: var(--muted); text-align: right; }
+  .mk-row .daily { color: var(--steel-d); font-weight: 600; }
+  .mk-row .daily.none { color: #A63E4B; }
   @media (max-width: 520px) {
     .mk-row { flex-wrap: wrap; }
     .mk-row .nm { flex-basis: 100%; }
@@ -480,6 +482,13 @@
   .bond { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
   .bond .bar { flex: 1; height: 5px; border-radius: 3px; background: #E1E3E0; }
   .bond .bar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #3A6B50, #79AE8C); }
+  /* 포만감: 따뜻한 빵빛. 배고프면 붉게 */
+  .bond.sat .bar i { background: linear-gradient(90deg, #B07A2E, #DDB36A); }
+  .bond.sat.hungry .bar i { background: linear-gradient(90deg, #A63E4B, #D27C82); }
+  .bond.sat.hungry > span:last-child { color: #A63E4B; font-weight: 600; }
+  .kin-card .bond > span:first-child { min-width: 2.2em; } /* 유대·배 막대의 시작을 맞춤 */
+  .kin-card .bond > span:last-child { min-width: 3em; text-align: right; }
+  .kin-meta.fav b { color: #8C6A1E; font-weight: 600; }
   .bond span:last-child { min-width: 3ch; text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); }
   .kin-stats { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--ink-2); }
   .kin-stats b { font-weight: 600; color: var(--ink); }
@@ -3384,7 +3393,7 @@
     if (!S.places) return '';
     return Object.values(S.places).filter((p) => p.drop === id).map((p) => `${p.name}(${S.regions[p.region]?.name || ''})`).join(', ');
   }
-  const itemCat = (it) => (it.type === 'equip' ? 'equip' : it.type === 'use' ? (it.use?.buff ? 'buff' : 'use') : it.cat === 'trophy' ? 'trophy' : 'mat');
+  const itemCat = (it) => (it.type === 'equip' ? 'equip' : it.type === 'use' ? (it.use?.buff ? 'buff' : 'use') : it.cat === 'meal' ? 'meal' : it.cat === 'trophy' ? 'trophy' : 'mat');
 
   // 프로필 카드의 장신구 자리
   function renderGear() {
@@ -3458,8 +3467,8 @@
     }
 
     const order = { rare: 0, uncommon: 1, common: 2 };
-    const CATS = ['equip', 'use', 'buff', 'trophy', 'mat'];
-    const CAT_NAME = { equip: '장신구', use: '회복약', buff: '강화 음식', trophy: '사냥 전리품', mat: '재료' };
+    const CATS = ['equip', 'use', 'buff', 'meal', 'trophy', 'mat'];
+    const CAT_NAME = { equip: '장신구', use: '회복약', buff: '강화 음식', meal: '식구 요리', trophy: '사냥 전리품', mat: '재료' };
     const list = Object.entries(invCache)
       .filter(([id, q]) => S.items[id] && q > 0)
       .sort(([a], [b]) => CATS.indexOf(itemCat(S.items[a])) - CATS.indexOf(itemCat(S.items[b]))
@@ -3708,7 +3717,9 @@
       g = '<path d="M12 3.6c3.9 0 6.8 5.4 6.8 10.2 0 4.2-3 7-6.8 7s-6.8-2.8-6.8-7C5.2 9 8.1 3.6 12 3.6z"/>';
     } else if (v.type === 'human') {
       // 앞머리: 얼굴 테두리 양옆에서 시작해 가운데에서 만남
-      g = `<circle cx="12" cy="13" r="8.5"/><path d="M3.65 11.4Q8.6 10.6 12 6.4Q15.4 10.6 20.35 11.4"/>${eyes(14.6)}`;
+      // 기분에 따라 입: 배고프면 시무룩, 배부르고 유대가 깊으면 웃음
+      const mouth = v.mood === 'hungry' ? '<path d="M10 18.6Q12 17.2 14 18.6"/>' : v.mood === 'happy' ? '<path d="M9.8 17.4Q12 19.6 14.2 17.4"/>' : '';
+      g = `<circle cx="12" cy="13" r="8.5"/><path d="M3.65 11.4Q8.6 10.6 12 6.4Q15.4 10.6 20.35 11.4"/>${eyes(14.6)}${mouth}`;
     } else {
       // 뿔: 양 끝이 얼굴 테두리에 붙어서 안쪽으로 삐져나오는 선이 없음
       g = `<circle cx="12" cy="13.5" r="8.5"/><path d="M5.49 8.04Q5 4.6 5.9 2.6Q7.6 3.8 8.82 5.62M18.51 8.04Q19 4.6 18.1 2.6Q16.4 3.8 15.18 5.62"/>${eyes(15)}`;
@@ -3835,6 +3846,14 @@
       bond.className = 'bond';
       bond.innerHTML = `<span>유대</span><div class="bar"><i style="width: ${v.bond}%"></i></div><span>${v.bond}</span>`;
       card.appendChild(bond);
+      if (v.sat != null) {
+        const sat = document.createElement('div');
+        sat.className = `bond sat${v.mood === 'hungry' ? ' hungry' : ''}`;
+        sat.innerHTML = `<span>배</span><div class="bar"><i style="width: ${v.sat}%"></i></div><span>${esc(v.satWord)}</span>`;
+        sat.title = `포만감 ${v.sat} / 100`;
+        card.appendChild(sat);
+        if (v.favFood && S.items[v.favFood]) meta(`가장 좋아하는 음식: <b>${esc(S.items[v.favFood].name)}</b>`, 'fav');
+      }
     }
 
     if (v.type === 'human' && v.status === 'home') {
@@ -3862,7 +3881,7 @@
         label(v.careIn > 0 ? `돌보기: ${dur(v.careIn)} 뒤에 다시 할 수 있다` : '돌보기: 무엇을 건네느냐에 따라 재주가 달라진다');
         if (!owned.length) label('건넬 물건이 없다. 꿀·약초는 약초꾼, 광석은 대장장이, 생선·가죽·송곳니는 파수꾼 쪽.');
         for (const id of owned) {
-          btn(`${S.items[id].name} ×${invCache[id]}`, () => nestAct(partner ? 'kin:pcare' : 'kin:care', { id: v.id, item: id }), v.careIn > 0, `${S.talents[R.care[id].talent].name} 쪽, 유대 +${R.care[id].bond}`);
+          btn(`${S.items[id].name} ×${invCache[id]}`, () => nestAct(partner ? 'kin:pcare' : 'kin:care', { id: v.id, item: id }), v.careIn > 0, `${R.care[id].talent ? `${S.talents[R.care[id].talent].name} 쪽, ` : ''}유대 +${R.care[id].bond}${R.care[id].sat ? `, 배 +${R.care[id].sat}` : ''}`);
         }
       }
     }
@@ -4456,11 +4475,16 @@
             const sm = row.querySelector('small');
             const u = document.createElement('span'); u.className = 'unit'; u.textContent = `개당 ${x.price}닢`;
             sm.prepend(u, ' · ');
+            // 하루에 살 수 있는 개수가 정해진 물건
+            if (x.limit) { const q = document.createElement('span'); q.className = `daily${x.left ? '' : ' none'}`; q.textContent = `오늘 ${x.left}/${x.limit}개`; sm.append(' · ', q); }
             if (x.locked) {
               const l = document.createElement('span'); l.className = 'lock'; l.textContent = `평판 '${m.specialFrom}'부터 살 수 있다`;
               row.querySelector('.ctl').appendChild(l);
+            } else if (x.limit && !x.left) {
+              const l = document.createElement('span'); l.className = 'lock'; l.textContent = '오늘은 다 샀다. 내일 다시 들어온다';
+              row.querySelector('.ctl').appendChild(l);
             } else {
-              mkControls(row, `buy:${x.id}`, x.price, 20, '사기', (n) => trade('market:buy', { item: x.id, qty: n }, `buy:${x.id}`), (t) => S.me.gold >= t);
+              mkControls(row, `buy:${x.id}`, x.price, x.limit ? Math.min(20, x.left) : 20, '사기', (n) => trade('market:buy', { item: x.id, qty: n }, `buy:${x.id}`), (t) => S.me.gold >= t);
             }
             list.appendChild(row);
           }
@@ -4832,7 +4856,7 @@
     // 고르기: 종류별로 나눠 보기, 재료가 다 있는 것만 보기
     const bar = document.createElement('div');
     bar.className = 'craft-bar';
-    const TABS = [['all', '전체'], ['use', '회복약'], ['buff', '강화 음식'], ['equip', '장신구']];
+    const TABS = [['all', '전체'], ['use', '회복약'], ['buff', '강화 음식'], ['meal', '식구 요리'], ['equip', '장신구']];
     for (const [k, label] of TABS) {
       const bt = document.createElement('button');
       bt.type = 'button';
@@ -4856,6 +4880,7 @@
     const groups = [
       ['회복약', (it) => itemCat(it) === 'use', 'use'],
       ['강화 음식', (it) => itemCat(it) === 'buff', 'buff'],
+      ['식구 요리', (it) => itemCat(it) === 'meal', 'meal'],
       ...S.slots.map((sl) => [`장신구 · ${sl.name}`, (it) => it.type === 'equip' && it.slot === sl.key, 'equip']),
     ];
     let shown = 0;
