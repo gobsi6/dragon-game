@@ -458,6 +458,8 @@
     .kin-card.drake .kin-face, .kin-card.drake .kin-chip { background: color-mix(in srgb, var(--kc) 9%, #fff); border-color: color-mix(in srgb, var(--kc) 35%, #fff); }
   }
   .kin-head .linkbtn { margin-left: auto; min-height: 28px; font-size: 12px; }
+  .partner-kin { display: flex; flex-direction: column; gap: 10px; padding: 12px; margin-bottom: 6px; background: #FBF3F5; border: 1px solid #E6C9D1; }
+  .partner-kin h3 { color: #8A3D52; }
   /* 식구의 타고난 모습: 성별 표시 + 생김새 한 줄, 성격 칩 (누르면 설명) */
   .kin-look { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: -1px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--ink-2); }
   .kin-sex { display: inline-flex; align-items: center; gap: 3px; padding: 0 6px; font-size: 11.5px; line-height: 20px; border-radius: 10px; font-weight: 600; }
@@ -1501,6 +1503,10 @@
   .stance { display: flex; flex-direction: column; gap: 6px; }
   .stance .l { font-size: 12px; color: var(--muted); }
   .seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid #B6B9B5; font-size: 13px; }
+  .auth-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 4px 0 8px; }
+  .auth-tabs button.on { background: var(--steel-d); }
+  .auth-tabs button { min-height: 38px; font-size: 14px; }
+  #auth-link-f .hint { font-size: 12px; line-height: 1.5; color: var(--muted); }
   .seg span { padding: 6px 0; text-align: center; color: var(--muted); }
   .seg span.on { background: var(--forest); color: #F4F7FA; font-weight: 600; }
 
@@ -1721,13 +1727,18 @@
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="brand"><svg width="34" height="38" viewBox="0 0 34 38" fill="none" aria-hidden="true"><path d="M17 2l14 5v11c0 9-6 15-14 18C9 33 3 27 3 18V7z" fill="#F7F7F5" stroke="#3C5A73" stroke-width="1.6" stroke-linejoin="round"/><path d="M17 6l10 3.6V18c0 6.8-4.4 11.4-10 13.8C11.4 29.4 7 24.8 7 18V9.6z" stroke="#9DB3C6"/><path d="M11 21c3-1 4-4 6-7 2 3 3 6 6 7-2 0-4 1-6 4-2-3-4-4-6-4z" fill="#3C5A73"/></svg><span class="t">용의 대륙</span></div>
   <p class="lead">드래곤이 되어 대륙을 떠돌며, 인간과 어울리거나 멀리하며 살아간다.</p>
+  <div class="seg auth-tabs" id="auth-tabs" role="tablist" aria-label="로그인 또는 가입">
+    <button type="button" role="tab" data-mode="login" class="on" aria-selected="true">로그인</button>
+    <button type="button" role="tab" data-mode="register" aria-selected="false">계정 만들기</button>
+  </div>
   <form id="auth-form">
     <label class="field"><span>아이디</span><input class="input" name="username" autocomplete="username" required maxlength="16"></label>
     <label class="field"><span>비밀번호</span><input class="input" name="password" type="password" autocomplete="current-password" required maxlength="64"></label>
+    <label class="field" id="auth-link-f" hidden><span>계정</span><input class="input" name="link" maxlength="40" autocomplete="off">
+      <small class="hint">GM과 연결된 계정을 적어주세요 (2차일 경우 1차 계정 입력)</small></label>
     <p class="error" id="auth-error" role="alert"></p>
     <div class="row">
-      <button class="btn primary" type="submit" data-mode="login">로그인</button>
-      <button class="btn" type="submit" data-mode="register">계정 만들기</button>
+      <button class="btn primary" type="submit" id="auth-go" data-mode="login">로그인</button>
     </div>
   </form>
 </section>
@@ -2480,16 +2491,28 @@
   $('update-later').addEventListener('click', () => { $('update-bar').hidden = true; updateLater = Date.now() + 10 * 60 * 1000; }); // 10분 뒤에 다시 알림
 
   // ── 로그인 ──
+  // 로그인 / 계정 만들기 탭: 가입할 때만 '연결된 계정' 칸이 보임
+  $('auth-tabs').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-mode]');
+    if (!b) return;
+    const mode = b.dataset.mode;
+    for (const t of $('auth-tabs').children) { const on = t === b; t.classList.toggle('on', on); t.setAttribute('aria-selected', String(on)); }
+    $('auth-link-f').hidden = mode !== 'register';
+    $('auth-go').dataset.mode = mode;
+    $('auth-go').textContent = mode === 'register' ? '계정 만들기' : '로그인';
+    $('auth-form').password.autocomplete = mode === 'register' ? 'new-password' : 'current-password';
+    $('auth-error').textContent = '';
+  });
   $('auth-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const mode = e.submitter?.dataset.mode || 'login';
+    const mode = $('auth-go').dataset.mode || 'login';
     const f = e.target;
     $('auth-error').textContent = '';
     try {
       const res = await fetch(`/api/${mode}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: f.username.value, password: f.password.value }),
+        body: JSON.stringify({ username: f.username.value, password: f.password.value, ...(mode === 'register' ? { link: f.link.value } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) return ($('auth-error').textContent = data.error || '다시 시도해 보자.');
@@ -3580,6 +3603,20 @@
     }
     return wrap;
   }
+  // 반려의 둥지에 와 있을 때: 그 집 식구를 함께 돌봄 (아이에게 물건 건네기, 새끼 가르치기)
+  function partnerKinSection(pk) {
+    const wrap = document.createElement('div');
+    wrap.className = 'partner-kin';
+    const h = document.createElement('h3');
+    h.textContent = `반려 ${pk.name}의 식구 · ${pk.home.length}`;
+    const p = document.createElement('p');
+    p.className = 'note';
+    p.textContent = pk.home.length ? `함께 둥지를 돌본다. 아이에게 물건을 건네거나 새끼를 가르치면 유대와 능력치는 ${pk.name}의 식구에게 쌓이고, ${pk.name}에게 소식이 간다. 돌보기 간격은 둘이 함께 쓴다.` : `${pk.name}의 둥지에는 아직 함께 사는 식구가 없다.`;
+    wrap.append(h, p);
+    const canAct = !S.me.exp;
+    for (const v of pk.home) wrap.appendChild(kinCard(v, canAct, { id: pk.id, name: pk.name }));
+    return wrap;
+  }
   // ── 식구 얼굴: 네모 틀 안에 선으로만 그린 단순한 얼굴 (인간은 가운데 가르마, 드래곤은 뿔, 알은 알 모양) ──
   function kinFace(v) {
     const w = document.createElement('span');
@@ -3599,7 +3636,8 @@
     w.innerHTML = `<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">${g}</svg>`;
     return w;
   }
-  function kinCard(v, canAct) {
+  // partner: 반려의 식구를 보는 중이면 { id, name } (돌보기·가르치기만 할 수 있음)
+  function kinCard(v, canAct, partner = null) {
     const R = S.kinRules;
     const card = document.createElement('div');
     card.className = 'kin-card';
@@ -3616,7 +3654,7 @@
     chip.className = `kin-chip${v.status === 'egg' ? ' egg' : ''}`;
     chip.textContent = v.status === 'egg' ? `알 · ${kindName(v.kind)}` : v.type === 'human' ? `인간 · ${v.stage}` : `${kindName(v.kind)} · ${v.stage}`;
     head.append(kinFace(v), nm, chip);
-    if (v.status !== 'egg') {
+    if (v.status !== 'egg' && !partner) {
       const rn = document.createElement('button');
       rn.type = 'button';
       rn.className = 'linkbtn';
@@ -3693,7 +3731,7 @@
         const own = invCache[v.need] || 0;
         const urgent = v.coldIn < 2 * 86400000;
         meta(`품으려면 <b>${esc(item.name)}</b> 1개가 필요하다. (가진 것 ${own}개)<br><span style="color: ${urgent ? '#A63E4B' : 'inherit'}">${urgent ? '온기가 옅어지고 있다. ' : ''}식기까지 ${dur(v.coldIn)}.</span>`);
-        if (canAct) btn(`${item.name}${ro(item.name)} 품기`, () => nestAct('kin:incubate', { id: v.id }), own < 1);
+        if (canAct && !partner) btn(`${item.name}${ro(item.name)} 품기`, () => nestAct('kin:incubate', { id: v.id }), own < 1);
       } else {
         meta(`따뜻하게 품는 중. 깨어나기까지 ${dur(v.hatchIn)}.`);
       }
@@ -3718,7 +3756,7 @@
       } else {
         meta(`${esc(origin)} ${v.lean ? `요즘은 <b>${S.talents[v.lean].name}</b> 쪽으로 기우는 것 같다.` : '아직 기질이 드러나지 않았다.'}`, 'talent');
       }
-      if (canAct && v.choosePath) {
+      if (canAct && v.choosePath && !partner) {
         label('갈 길 정하기');
         btn('둥지에 남긴다', () => nestAct('kin:path', { id: v.id, path: 'stay' }, true));
         btn(`용기사로 삼는다${v.bond < R.human.knightBond ? ` (유대 ${R.human.knightBond} 필요)` : ''}`,
@@ -3729,12 +3767,12 @@
             if (confirm(`${v.name}${josa(v.name, '을', '를')} ${tn}${ro(tn)} 돌려보낼까? 다시 데려올 수 없다. 대신 그 마을 평판이 크게 오른다.`)) nestAct('kin:path', { id: v.id, path: 'return', town }, true);
           });
         }
-      } else if (canAct && !v.onExp) {
+      } else if (canAct && !v.onExp && !v.choosePath) {
         const owned = Object.keys(R.care).filter((id) => (invCache[id] || 0) > 0);
         label(v.careIn > 0 ? `돌보기: ${dur(v.careIn)} 뒤에 다시 할 수 있다` : '돌보기: 무엇을 건네느냐에 따라 재주가 달라진다');
         if (!owned.length) label('건넬 물건이 없다. 꿀·약초는 약초꾼, 광석은 대장장이, 생선·가죽·송곳니는 파수꾼 쪽.');
         for (const id of owned) {
-          btn(`${S.items[id].name} ×${invCache[id]}`, () => nestAct('kin:care', { id: v.id, item: id }), v.careIn > 0, `${S.talents[R.care[id].talent].name} 쪽, 유대 +${R.care[id].bond}`);
+          btn(`${S.items[id].name} ×${invCache[id]}`, () => nestAct(partner ? 'kin:pcare' : 'kin:care', { id: v.id, item: id }), v.careIn > 0, `${S.talents[R.care[id].talent].name} 쪽, 유대 +${R.care[id].bond}`);
         }
       }
     }
@@ -3753,8 +3791,8 @@
           : v.trainIn > 0 ? `가르치기: ${dur(v.trainIn)} 뒤에 다시 할 수 있다`
           : `가르치기 (행동력 ${R2.trainAp}, 기력 ${R2.trainEn})`);
         const tired = full || v.trainIn > 0 || S.me.ap < R2.trainAp || S.me.en < R2.trainEn;
-        for (const x of S.stats) btn(x.name, () => nestAct('kin:train', { id: v.id, stat: x.key }), tired);
-        if (v.canRelease) {
+        for (const x of S.stats) btn(x.name, () => nestAct(partner ? 'kin:ptrain' : 'kin:train', { id: v.id, stat: x.key }), tired);
+        if (v.canRelease && !partner) {
           label('독립');
           btn('둥지를 떠나보낸다', () => {
             if (confirm(`${v.name}${josa(v.name, '을', '를')} 독립시킬까? 강하게, 정 깊게 키웠을수록 용족 명성이 크게 오른다.`)) nestAct('kin:release', { id: v.id }, true);
@@ -3768,7 +3806,7 @@
     if (pend) {
       label(`${pend.to.name}에게 입양을 제안했다. 답을 기다리는 중 (${dur(pend.until - Date.now())} 남음)`);
       btn('제안 거두기', () => socket.emit('kin:offer:cancel', { id: pend.id }, (r) => { if (r.error) return toast(r.error); toast(r.lines.join(' ')); openNest(); }));
-    } else if (canAct && canAdopt) {
+    } else if (canAct && canAdopt && !partner) {
       btn('동료에게 입양 보내기', () => adoptPicker(card, v));
     }
     if (acts.children.length) card.appendChild(acts);
@@ -3823,6 +3861,7 @@
             // 반려의 둥지에 와 있으면 그곳에서도 쉴 수 있음
             const pn = me.partnerNest;
             if (pn && pn.region === S.region) row.appendChild(me.restAt ? btn('깨어나기', () => nestAct('rest:stop'), true) : btn(`반려 ${pn.name}의 둥지에서 쉬기`, () => nestAct('rest:start'), true, !!me.exp));
+            if (pn && pn.region === S.region) note.textContent += ` 반려 ${pn.name}의 식구는 '식구' 탭에서 함께 돌볼 수 있다.`;
             row.appendChild(btn(`둥지로 날아가기${S.nestRules.homeFlightAp > 0 ? ` −${S.nestRules.homeFlightAp}` : ''}`, () => { nestAct('nest:home'); }, true, !!me.exp || !!me.restAt || me.ap < S.nestRules.homeFlightAp));
             if (!town) row.appendChild(btn(`여기로 둥지 옮기기 (금화 ${S.nestRules.moveCost})`, () => {
               const tierNote = (n.tier || 0) > 0 ? ` 넓혀 둔 둥지는 한 단계 낮아져 ${S.nestRules.tiers[n.tier - 1].name}${ro(S.nestRules.tiers[n.tier - 1].name)} 된다.` : '';
@@ -3974,7 +4013,8 @@
           }
         }
 
-        // 둥지 식구
+        // 둥지 식구 (반려의 둥지에 와 있으면 그 집 식구를 먼저)
+        if (n.partnerKin) (P ? P.kin : body).appendChild(partnerKinSection(n.partnerKin));
         (P ? P.kin : body).appendChild(kinSection(n));
 
         // 보물더미
@@ -7463,7 +7503,7 @@
       if (x.isGm) nm.appendChild(gEl('span', 'gm-tag', 'GM'));
       const sm = gEl('small');
       sm.innerHTML = `<span class="dot${x.online ? ' on' : ''}"></span>`;
-      sm.append(`${x.online ? S.regions[x.region]?.name || '' : ago(x.lastSeen)} · ${S.kinds[x.kind]?.name || ''} · Lv. ${x.level} · 아이디 ${x.username}`);
+      sm.append(`${x.online ? S.regions[x.region]?.name || '' : ago(x.lastSeen)} · ${S.kinds[x.kind]?.name || ''} · Lv. ${x.level} · 아이디 ${x.username}${x.link ? ` · 계정 ${x.link}` : ''}`);
       t.appendChild(sm);
       r.appendChild(t);
       const a = gEl('div', 'acts');
@@ -7501,7 +7541,7 @@
     who.appendChild(nm);
     const sm = gEl('small');
     sm.innerHTML = `<span class="dot${d.online ? ' on' : ''}"></span>`;
-    sm.append(`${d.online ? '접속 중' : `마지막 접속 ${ago(d.lastSeen)}`} · ${S.kinds[d.kind]?.name || ''} · Lv. ${d.level} · 아이디 ${d.username}`);
+    sm.append(`${d.online ? '접속 중' : `마지막 접속 ${ago(d.lastSeen)}`} · ${S.kinds[d.kind]?.name || ''} · Lv. ${d.level} · 아이디 ${d.username} · 계정 ${d.link || '없음'}`);
     who.appendChild(sm);
     head.appendChild(who);
     const ha = gEl('div', 'gm-r');

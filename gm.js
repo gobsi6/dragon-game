@@ -72,7 +72,7 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
     return {
       ...meOf(d),
       region: d.region,
-      username: u?.username || '', isGm: !!u?.is_gm,
+      username: u?.username || '', isGm: !!u?.is_gm, link: u?.link || '', // 가입할 때 적은 연결된 계정
       online: !!entry,
       lastSeen: entry ? now : d.last_seen,
       eventId: ev,
@@ -357,7 +357,7 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
       ok: true,
       dragons: db.gmList(str(p.q)).map((x) => ({
         id: x.id, name: x.name, kind: x.kind, level: x.level, region: x.region, gold: x.gold,
-        av: x.has_avatar ? x.avatar_ver : 0, username: x.username, isGm: !!x.isGm,
+        av: x.has_avatar ? x.avatar_ver : 0, username: x.username, isGm: !!x.isGm, link: x.link || '',
         online: online.has(x.id), lastSeen: online.has(x.id) ? Date.now() : x.lastSeen,
       })),
     }));

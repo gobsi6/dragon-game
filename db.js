@@ -49,6 +49,8 @@ db.exec(`
 const dragonCols = db.prepare('PRAGMA table_info(dragons)').all().map((c) => c.name);
 // 계정: 먼 여행을 떠난 드래곤이 남긴 의지 (새 드래곤을 만들 때 받고 지움)
 if (!db.prepare('PRAGMA table_info(users)').all().some((c) => c.name === 'legacy')) db.exec('ALTER TABLE users ADD COLUMN legacy TEXT');
+// 가입할 때 적는 'GM과 연결된 계정' (GM 확인용 메모. 게임에는 쓰지 않음)
+if (!db.prepare('PRAGMA table_info(users)').all().some((c) => c.name === 'link_account')) db.exec('ALTER TABLE users ADD COLUMN link_account TEXT');
 const addCol = (name, def) => {
   if (dragonCols.includes(name)) return false;
   db.exec(`ALTER TABLE dragons ADD COLUMN ${name} ${def}`);
@@ -257,7 +259,7 @@ const DRAGON_FIELDS = `id, name, kind, region, avatar_ver, level, xp, hp, hp_max
 const q = {
   countUsers:   db.prepare('SELECT COUNT(*) AS n FROM users'),
   userByName:   db.prepare('SELECT * FROM users WHERE username = ?'),
-  createUser:   db.prepare('INSERT INTO users (username, pw_hash, is_gm, created_at) VALUES (?, ?, ?, ?)'),
+  createUser:   db.prepare('INSERT INTO users (username, pw_hash, is_gm, created_at, link_account) VALUES (?, ?, ?, ?, ?)'),
   createSess:   db.prepare('INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)'),
   sessUser:     db.prepare('SELECT u.id, u.username, u.is_gm FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?'),
   deleteSess:   db.prepare('DELETE FROM sessions WHERE token = ?'),
@@ -366,10 +368,10 @@ const q = {
   noteClear:    db.prepare('DELETE FROM notes WHERE dragon_id = ?'),
   // GM
   gmList:       db.prepare(`SELECT d.id, d.name, d.kind, d.level, d.region, d.gold, d.last_seen AS lastSeen, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar,
-                                   u.username, u.is_gm AS isGm
+                                   u.username, u.is_gm AS isGm, u.link_account AS link
                             FROM dragons d JOIN users u ON u.id = d.user_id
                             WHERE d.name LIKE @q OR u.username LIKE @q ORDER BY d.last_seen DESC LIMIT 100`),
-  gmUserOf:     db.prepare('SELECT u.id, u.username, u.is_gm FROM dragons d JOIN users u ON u.id = d.user_id WHERE d.id = ?'),
+  gmUserOf:     db.prepare('SELECT u.id, u.username, u.is_gm, u.link_account AS link FROM dragons d JOIN users u ON u.id = d.user_id WHERE d.id = ?'),
   gmSetRole:    db.prepare('UPDATE users SET is_gm = ? WHERE id = ?'),
   gmLogAdd:     db.prepare('INSERT INTO gm_log (gm, target, text, at) VALUES (?, ?, ?, ?)'),
   gmLogList:    db.prepare('SELECT gm, target, text, at FROM gm_log ORDER BY id DESC LIMIT ?'),
@@ -447,7 +449,7 @@ module.exports = {
     q.delSessOf.run(userId);
     if (keep && keep.id === userId) q.createSess.run(keepToken, userId, Date.now());
   },
-  createUser: (name, hash, isGm) => q.createUser.run(name, hash, isGm ? 1 : 0, Date.now()).lastInsertRowid,
+  createUser: (name, hash, isGm, link = null) => q.createUser.run(name, hash, isGm ? 1 : 0, Date.now(), link || null).lastInsertRowid,
   createSession: (token, userId) => q.createSess.run(token, userId, Date.now()),
   getSessionUser: (token) => q.sessUser.get(token),
   deleteSession: (token) => q.deleteSess.run(token),

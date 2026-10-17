@@ -86,7 +86,8 @@ app.post('/api/register', (req, res) => {
     return res.status(409).json({ error: '이미 있는 아이디다. 다른 아이디를 골라야 한다.' });
   }
   const isGm = db.countUsers() === 0; // 처음 만든 계정이 GM
-  const userId = db.createUser(username, bcrypt.hashSync(password, 10), isGm);
+  const link = str(req.body?.link).replace(/\s+/g, ' ').trim().slice(0, 40); // GM과 연결된 계정 (GM 확인용 메모)
+  const userId = db.createUser(username, bcrypt.hashSync(password, 10), isGm, link);
   const token = crypto.randomBytes(24).toString('hex');
   db.createSession(token, userId);
   res.json({ token });
@@ -1030,6 +1031,30 @@ io.on('connection', (socket) => {
 
   // ── 둥지 식구 ──
   itemAction('kin:care', (d, p, have, kin) => life.care(d, kin, p.id, str(p.item), have));
+  // ── 반려의 둥지에서 그 집 식구 돌보기 (인간 아이 돌보기, 새끼 드래곤 가르치기). 유대·능력치는 반려의 식구에게 쌓임 ──
+  const partnerHome = (d) => {
+    const ph = logic.hooks.partnerNest(d);
+    if (!ph) return { error: '반려가 없거나, 반려에게 아직 둥지가 없다.' };
+    if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
+    if (d.region !== ph.region) return { error: `반려 ${ph.name}의 둥지(${REGIONS[ph.region].name})에 있어야 돌볼 수 있다.` };
+    return ph;
+  };
+  const partnerKinAct = (fn, verb) => (d, p, have) => {
+    const ph = partnerHome(d);
+    if (ph.error) return ph;
+    const pkin = db.kinLoad(ph.id);
+    const k = pkin.find((x) => x.id === Number(p.id));
+    const res = fn(d, pkin, p, have);
+    if (res.error) return res;
+    const pe = online.get(ph.id);
+    if (pe) refreshKin(pe.dragon, pkin); else db.kinSaveAll(ph.id, pkin);
+    res.title = `반려 ${ph.name}의 식구 · ${res.title}`;
+    const gain = res.lines.find((l) => /유대 \+/.test(l));
+    social.tellRival(ph.id, `${d.name}${josa(d.name, '이', '가')} 둥지에 들러 ${k ? k.name : '식구'}${josa(k ? k.name : '식구', '을', '를')} ${verb}.${gain ? ` (${gain})` : ''}`, '반려');
+    return res;
+  };
+  itemAction('kin:pcare', partnerKinAct((d, pkin, p, have) => life.care(d, pkin, p.id, str(p.item), have, Date.now(), { away: true }), '돌봐 주었다'));
+  itemAction('kin:ptrain', partnerKinAct((d, pkin, p) => life.train(d, pkin, p.id, str(p.stat), Date.now(), { away: true }), '가르쳐 주었다'));
   itemAction('kin:rename', (d, p, have, kin) => life.rename(kin, p.id, str(p.name)));
   itemAction('kin:path', (d, p, have, kin) => life.choosePath(d, kin, p.id, str(p.path), str(p.town)));
   itemAction('kin:incubate', (d, p, have, kin) => life.incubate(d, kin, p.id, have));
@@ -1069,6 +1094,12 @@ io.on('connection', (socket) => {
         guard: d.perks?.guard || null,
         forge: !!logic.nestInfo(d).forge, forgeCost: CRAFT.forge.cost, // 둥지 공방(화로)
         offers: social.kinOffers(d),            // 식구 입양 제안 (받은 것·보낸 것)
+        partnerKin: (() => {                     // 반려의 둥지에 와 있으면 그 집 식구 (같이 돌보기)
+          const ph = logic.hooks.partnerNest(d);
+          if (!ph || ph.region !== d.region || d.exp_end) return null;
+          const v = life.views(db.kinLoad(ph.id), Date.now(), d);
+          return { id: ph.id, name: ph.name, home: v.home };
+        })(),
       },
     });
   });

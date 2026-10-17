@@ -92,7 +92,7 @@ function introOf(k) {
   const sex = KIN_LOOKS.sex[k.type][k.data.sex];
   const [a, b, c] = k.data.looks;
   const look = k.type === 'human' ? `${a}에 ${b}, ${c}` : `${a}에 ${b}`;
-  const who = k.type === 'human' ? `${sex}아이` : sex;
+  const who = `${sex}아이`;
   return `${who}${josa(who, '이다', '다')}. ${look}. ${traitNames(k).map((n) => `'${n}'`).join(', ')} 성격이다.`;
 }
 
@@ -349,8 +349,9 @@ function views(kin, now, d) {
 }
 
 // ── 식구 돌보기 ────────────────────────────────────
-function care(d, kin, id, item, have, now = Date.now()) {
-  const err = atNest(d);
+// opt.away: 반려의 둥지에서 그 집 식구를 돌봄 (둥지에 있는지는 서버가 따로 확인)
+function care(d, kin, id, item, have, now = Date.now(), opt = {}) {
+  const err = opt.away ? null : atNest(d);
   if (err) return { error: err };
   const k = findKin(kin, id);
   if (!k || k.type !== 'human' || k.status !== 'home') return { error: '돌볼 수 있는 식구가 아니다.' };
@@ -445,8 +446,8 @@ function incubate(d, kin, id, have, now = Date.now()) {
 }
 
 const trainCd = (k) => R.trainCooldown - (hasT(k, 'diligent') ? TR.diligentMs : 0); // 부지런한: 간격이 짧음
-function train(d, kin, id, stat, now = Date.now()) {
-  const err = atNest(d);
+function train(d, kin, id, stat, now = Date.now(), opt = {}) {
+  const err = opt.away ? null : atNest(d);
   if (err) return { error: err };
   const k = findKin(kin, id);
   if (!k || k.type !== 'drake' || k.status !== 'home') return { error: '가르칠 새끼가 없다.' };
