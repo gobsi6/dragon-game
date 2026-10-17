@@ -1523,7 +1523,7 @@
   .log .mh .mhx { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; min-height: 22px; }
   .log .mh .ttl { overflow: visible; max-width: none; }
   .log .mh .nm { white-space: nowrap; }
-  .log .mh time { white-space: nowrap; flex: none; margin-left: auto; line-height: 22px; font-size: 9.5px; }
+  .log .mh time { white-space: nowrap; flex: none; margin-left: auto; line-height: 22px; font-size: 10.5px; color: #A3A6A9; }
   .log .mh .mhx { gap: 2px 3px; }
   .log .ml { position: relative; display: flex; align-items: flex-start; gap: 4px; padding: 0 2px; margin: 0 -2px; border-radius: 3px; color: var(--ink); }
   .log .ml .tx { flex: 1; min-width: 0; white-space: pre-wrap; }
@@ -7497,8 +7497,7 @@
   }
   const chatTime = (t) => {
     const d = new Date(t);
-    const h = d.getHours();
-    return `${h < 12 ? '오전' : '오후'} ${h % 12 || 12}:${String(d.getMinutes()).padStart(2, '0')}`;
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; // 24시간 (예: 20:15)
   };
   // 같은 드래곤이 3분 안에 잇따라 한 말은 이름표 하나 아래로 묶음
   function addChat(m) {
