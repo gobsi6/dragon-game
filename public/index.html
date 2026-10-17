@@ -761,6 +761,11 @@
   .pn .pin path { fill: var(--pin); stroke: var(--pin-ink); stroke-width: 1.8; }
   .pn .pin circle { fill: var(--tc); }
   .pn .lb { display: flex; flex-direction: column; align-items: center; padding: 1px 5px 2px; background: rgba(252, 251, 247, .9); border: 1px solid rgba(79, 75, 62, .18); border-radius: 3px; white-space: nowrap; }
+  /* 장소 이름표: 지도 폭의 42%를 넘지 않게 (폰에서 이름이 긴 장소끼리 겹치지 않도록, 넘치면 두 줄로). --lbw는 fitPlMap이 정함 */
+  .pl-map .pn .lb { max-width: var(--lbw, 130px); text-align: center; }
+  .pl-map .pn .lb b { white-space: normal; word-break: keep-all; }
+  .pl-map.small .pn .lb b { font-size: 10.5px; }
+  .pl-map.small .pn .lb small { font-size: 9.5px; }
   .pn .lb b { font: 700 11.5px/1.25 var(--serif); color: var(--ink); }
   .pn .lb small { font: 600 10px/1.2 var(--sans); color: var(--tc); }
   .pn.easy { --tc: #7C857F; } .pn.fit { --tc: #3F7A5C; } .pn.hard { --tc: #A87A1C; } .pn.deadly { --tc: #A63E4B; }
@@ -886,6 +891,13 @@
   .corrupt-note { padding: 9px 12px; background: #F3EEFA; border: 1px solid #D7CBEA; color: #3E3466; font-size: 13px; line-height: 1.55; }
   .corrupt-note b { font-weight: 600; }
   .corrupt-note .cn-gain { color: #5B3E8C; }
+  /* 환영 공지: 줄마다 문단, 빈 줄 뒤의 묶음은 작은 안내로 */
+  .wl-text { display: flex; flex-direction: column; gap: 10px; }
+  .gm-chk { display: inline-flex; align-items: center; gap: 6px; margin-right: auto; font-size: 13px; color: var(--ink-2); }
+  .wl-text p { margin: 0; font-size: 14.5px; line-height: 1.75; color: var(--ink); word-break: keep-all; }
+  .wl-text p:first-child { font: 700 16px/1.6 var(--serif); color: var(--steel-d); }
+  .wl-text .wl-sub { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; padding-top: 12px; border-top: 1px dashed var(--line-soft); }
+  .wl-text .wl-sub p { font: 400 12.5px/1.65 var(--sans); color: var(--muted); }
   /* 모브 드래곤 */
   .mob-bar { display: flex; align-items: center; gap: 12px; padding: 9px 10px 9px 12px; background: #F4F7FA; border: 1px solid #C9D6E2; }
   .mob-bar .mob-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
@@ -1787,6 +1799,7 @@
           <button class="iconbtn" id="menu-btn" type="button" aria-label="설정" aria-expanded="false" aria-controls="menu"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
           <div class="menu frame" id="menu" hidden>
             <button type="button" id="settings-open">설정</button>
+            <button type="button" id="welcome-open">환영 공지 다시 보기</button>
             <button type="button" id="gm-open" hidden>GM 도구</button>
             <button type="button" id="logout">로그아웃</button>
           </div>
@@ -2044,6 +2057,15 @@
     <div class="mk-tabs" id="mk-tabs" role="tablist" aria-label="시장"><button type="button" role="tab" data-t="buy" class="on">사기<span class="mk-n" id="mk-n-buy"></span></button><button type="button" role="tab" data-t="sell">팔기<span class="mk-n" id="mk-n-sell"></span></button><button type="button" role="tab" data-t="order">제작 의뢰<span class="mk-n" id="mk-n-order"></span></button></div>
     <div id="mk-body"></div>
     <div class="row"><button class="btn" type="button" id="market-close">닫기</button></div>
+  </div>
+</dialog>
+
+<dialog class="frame dlg" id="welcome-dlg" aria-labelledby="welcome-dlg-title">
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="welcome-dlg-title">용의 대륙</h2></div>
+  <div class="body">
+    <div class="wl-text" id="welcome-text"></div>
+    <div class="row"><button class="btn primary" type="button" id="welcome-ok">확인</button></div>
   </div>
 </dialog>
 
@@ -4419,6 +4441,37 @@
       setTimeout(openMarket, 50);
     });
   }
+  // ── 환영 공지: 계정마다 처음 들어올 때 한 번 (GM이 다시 띄우면 또 한 번). 메뉴에서 다시 볼 수 있음 ──
+  function drawWelcome(text) {
+    const box = $('welcome-text');
+    box.replaceChildren();
+    String(text || '').split(/\n\s*\n/).forEach((block, i) => {
+      const host = i === 0 ? box : box.appendChild(Object.assign(document.createElement('div'), { className: 'wl-sub' }));
+      for (const line of block.split('\n').map((x) => x.trim()).filter(Boolean)) {
+        const p = document.createElement('p'); p.textContent = line; host.appendChild(p);
+      }
+    });
+  }
+  function openWelcome(mark) {
+    if (!S.welcome) return;
+    drawWelcome(S.welcome.text);
+    $('welcome-dlg').dataset.mark = mark ? '1' : '';
+    if (!$('welcome-dlg').open) $('welcome-dlg').showModal();
+  }
+  // 드래곤이 있고(만들기 화면이 아니고) 아직 읽지 않은 판이면 띄움
+  function maybeWelcome() {
+    const w = S.welcome;
+    if (!w || !S.me || w.shown || w.seen >= w.ver) return;
+    w.shown = true;
+    openWelcome(true);
+  }
+  $('welcome-ok').addEventListener('click', () => {
+    if ($('welcome-dlg').dataset.mark && S.welcome) { S.welcome.seen = S.welcome.ver; socket.emit('welcome:seen', {}, () => {}); }
+    $('welcome-dlg').close();
+  });
+  $('welcome-dlg').addEventListener('cancel', (e) => { if ($('welcome-dlg').dataset.mark) e.preventDefault(); }); // 처음엔 Esc로 닫지 않고 확인을 눌러야
+  $('welcome-open').addEventListener('click', () => { $('menu').hidden = true; openWelcome(false); });
+
   // ── 모브 드래곤: 의뢰 · 이야기 · 교환 ──
   let mobTab = 'quest';
   const MOB_TIER = { 1: '쉬움', 2: '보통', 3: '어려움' };
@@ -6022,7 +6075,7 @@
   // 장소 자리 (지도 안 %, 핀 끝이 닿는 곳): 입구는 왼쪽 아래, 그다음은 오른쪽, 가장 깊은 곳은 위
   const PL_SPOTS = [{ x: 27, y: 70 }, { x: 73, y: 62 }, { x: 47, y: 31 }];
   // 장소가 넷이면: 입구 왼쪽 아래 → 오른쪽 아래 → 왼쪽 위 → 가장 깊은 곳 오른쪽 위
-  const PL_SPOTS4 = [{ x: 27, y: 72 }, { x: 74, y: 64 }, { x: 30, y: 38 }, { x: 68, y: 27 }];
+  const PL_SPOTS4 = [{ x: 26, y: 76 }, { x: 75, y: 66 }, { x: 27, y: 44 }, { x: 71, y: 24 }];
   // 지역마다의 땅 색과 지형 (대륙 지도와 같은 빛깔)
   const PL_LOOK = {
     plains:  { land: '#E8E1C4', mtn: 6, tree: 12, hill: 9, grass: 24, river: true },
@@ -6098,6 +6151,8 @@
     const n = Math.min(w, h);
     sq.style.width = `${n}px`;
     sq.style.height = `${n}px`;
+    map.style.setProperty('--lbw', `${Math.round(n * 0.42)}px`); // 이름표 최대 폭
+    map.classList.toggle('small', n < 280);
   }
   if (window.ResizeObserver) new ResizeObserver(fitPlMap).observe($('pl-map'));
   else window.addEventListener('resize', fitPlMap);
@@ -7860,6 +7915,27 @@
     }, 'primary');
     body.appendChild(r);
 
+    // 환영 공지
+    const wsec = gmSection(body, '환영 공지', '계정마다 처음 대륙에 들어올 때 한 번 뜬다. 줄마다 문단이 되고, 빈 줄 아래는 작은 글씨 안내로 보인다. 2,000자까지.');
+    const wlTa = gEl('textarea', 'input gm-ta');
+    wlTa.maxLength = 2000; wlTa.rows = 10; wlTa.setAttribute('aria-label', '환영 공지 내용');
+    wlTa.value = GM.welcomeDraft ?? (GM.welcome?.text || '');
+    wlTa.addEventListener('input', () => { GM.welcomeDraft = wlTa.value; });
+    wsec.appendChild(wlTa);
+    if (!GM.welcome) socket.emit('gm:welcome:get', {}, (res) => { if (res.ok) { GM.welcome = res.welcome; if (GM.welcomeDraft == null) wlTa.value = res.welcome.text; } });
+    const wlRow = gEl('div', 'gm-r');
+    const wlAgain = document.createElement('label'); wlAgain.className = 'gm-chk';
+    const wlCb = document.createElement('input'); wlCb.type = 'checkbox';
+    wlAgain.append(wlCb, ' 이미 읽은 드래곤에게도 다시 띄우기');
+    wlRow.appendChild(wlAgain);
+    gBtn(wlRow, '미리 보기', () => { const keep = S.welcome; S.welcome = { text: wlTa.value }; openWelcome(false); S.welcome = keep; });
+    gBtn(wlRow, '저장', () => {
+      if (!wlTa.value.trim()) return toast('공지 내용을 적자.');
+      if (wlCb.checked && !confirm('모두에게 환영 공지를 다시 띄울까?')) return;
+      gmCall('gm:welcome:set', { text: wlTa.value, again: wlCb.checked }, (res) => { GM.welcome = res.welcome; GM.welcomeDraft = null; toast(wlCb.checked ? '저장하고 모두에게 다시 띄웠다.' : '환영 공지를 저장했다.'); });
+    }, 'primary');
+    wsec.appendChild(wlRow);
+
     // 대륙의 재앙
     const sec = gmSection(body, '대륙의 재앙', S.boss ? `지금: ${S.boss.name} (${S.regions[S.boss.region]?.name}) · 체력 ${S.boss.hp.toLocaleString()} / ${S.boss.hpMax.toLocaleString()} · 맞선 드래곤 ${S.boss.fighters}` : '지금은 없다. 비워 두면 최근 접속한 드래곤 수와 평균 레벨로 정한다.');
     if (!S.boss) {
@@ -8306,7 +8382,11 @@
         show('create');
       }
     });
-    socket.on('me', setMe);
+    socket.on('me', (me) => { setMe(me); maybeWelcome(); });
+    socket.on('welcome', (w) => {
+      S.welcome = { text: w.text, ver: w.ver, seen: w.seen < 0 ? 0 : w.seen, shown: false };
+      maybeWelcome();
+    });
     socket.on('region:state', (data) => {
       S.region = data.region;
       S.occupants = data.occupants;

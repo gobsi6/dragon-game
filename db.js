@@ -51,6 +51,8 @@ const dragonCols = db.prepare('PRAGMA table_info(dragons)').all().map((c) => c.n
 if (!db.prepare('PRAGMA table_info(users)').all().some((c) => c.name === 'legacy')) db.exec('ALTER TABLE users ADD COLUMN legacy TEXT');
 // 가입할 때 적는 'GM과 연결된 계정' (GM 확인용 메모. 게임에는 쓰지 않음)
 if (!db.prepare('PRAGMA table_info(users)').all().some((c) => c.name === 'link_account')) db.exec('ALTER TABLE users ADD COLUMN link_account TEXT');
+// 환영 공지를 몇 번째 판까지 읽었는지 (계정마다)
+if (!db.prepare('PRAGMA table_info(users)').all().some((c) => c.name === 'welcome_seen')) db.exec('ALTER TABLE users ADD COLUMN welcome_seen INTEGER NOT NULL DEFAULT 0');
 const addCol = (name, def) => {
   if (dragonCols.includes(name)) return false;
   db.exec(`ALTER TABLE dragons ADD COLUMN ${name} ${def}`);
@@ -373,6 +375,8 @@ const q = {
                             WHERE d.name LIKE @q OR u.username LIKE @q ORDER BY d.last_seen DESC LIMIT 100`),
   gmUserOf:     db.prepare('SELECT u.id, u.username, u.is_gm, u.link_account AS link FROM dragons d JOIN users u ON u.id = d.user_id WHERE d.id = ?'),
   gmSetRole:    db.prepare('UPDATE users SET is_gm = ? WHERE id = ?'),
+  welcomeSeen:  db.prepare('SELECT welcome_seen AS v FROM users WHERE id = ?'),
+  welcomeSet:   db.prepare('UPDATE users SET welcome_seen = ? WHERE id = ?'),
   gmLogAdd:     db.prepare('INSERT INTO gm_log (gm, target, text, at) VALUES (?, ?, ?, ?)'),
   gmLogList:    db.prepare('SELECT gm, target, text, at FROM gm_log ORDER BY id DESC LIMIT ?'),
   gmLogPrune:   db.prepare('DELETE FROM gm_log WHERE id <= (SELECT id FROM gm_log ORDER BY id DESC LIMIT 1 OFFSET 500)'),
@@ -541,6 +545,8 @@ module.exports = {
   // GM
   gmList: (text) => q.gmList.all({ q: `%${String(text || '').replace(/[%_]/g, '')}%` }),
   gmUserOf: (dragonId) => q.gmUserOf.get(dragonId),
+  welcomeSeen: (userId) => q.welcomeSeen.get(userId)?.v || 0,
+  welcomeSet: (userId, ver) => q.welcomeSet.run(ver, userId),
   gmSetRole: (userId, on) => q.gmSetRole.run(on ? 1 : 0, userId),
   gmLog: (gm, target, text) => { q.gmLogAdd.run(gm, target ?? null, text, Date.now()); q.gmLogPrune.run(); },
   gmLogList: (n = 40) => q.gmLogList.all(n),

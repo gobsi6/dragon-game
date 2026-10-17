@@ -472,6 +472,16 @@ logic.hooks.firstRecipe = (d, out) => {
 // 이벤트가 볼 수 있게: 보물더미, 최근 재앙의 흔적
 logic.hooks.hoard = (id) => db.hoard(id);
 logic.hooks.bossTrace = (region) => boss.trace(region);
+// ── 환영 공지 (GM 도구에서 고칠 수 있음. ver가 오르면 모두에게 한 번 더 뜸) ──
+const WELCOME_MAX = 2000;
+const WELCOME_DEFAULT = `안녕하세요. 용의 대륙에 오신 것을 환영합니다.
+당신은 이 대륙에서 살아가는 용입니다. 인간을 적대할 수도 있고, 우호적인 관계를 맺을 수도 있으며, 어느 쪽에도 속하지 않은 채 은둔하며 살아갈 수도 있습니다. 버려진 알이나 인간 아이와 인연이 닿아 그들을 거두어 키울 수도 있겠죠. 몬스터를 사냥하며 스스로를 갈고닦는 것도 좋은 선택입니다.
+그러나 조심하세요. 강적을 만나 쓰러질 수도 있고, 정신력이 바닥나 폭주하게 될 수도 있습니다. 물론, 곁에서 당신을 도와줄 동료가 있다면 큰 문제는 없을지도 모릅니다.
+본 게임은 캐릭터 이입을 통한 플레이를 권장합니다. 처음 만나는 사이라도 상냥하게 대해주세요.
+
+본 게임은 바이브 코딩을 통해 제작되었습니다. 따라서 일부 기능이 원활하게 작동하지 않거나 예상치 못한 오류가 발생할 수 있습니다. 너그러운 마음으로 양해 부탁드리며, 플레이 중 문제가 발생한다면 GM(청우)에게 편하게 제보해주세요. 감사합니다!`;
+const welcomeOf = () => { const w = db.worldGet('welcome', null); return w && w.text ? { text: w.text, ver: w.ver || 1 } : { text: WELCOME_DEFAULT, ver: 1 }; };
+
 // 관계: 연인·반려와 같은 지역에 함께 있는지 (둘 다 접속), 반려의 둥지
 const heartId = (id) => db.relByBond(id, 'partner')[0] || db.relByBond(id, 'lover')[0] || null;
 logic.hooks.together = (d) => {
@@ -602,6 +612,7 @@ io.on('connection', (socket) => {
       creatures: Object.fromEntries(Object.entries(CREATURE_COMBAT).map(([r, c]) => [r, { weak: c.weak, resist: c.resist, special: c.special.name }])) },
   });
   if (dragon) enterWorld(socket, dragon);
+  socket.emit('welcome', { ...welcomeOf(), seen: db.welcomeSeen(user.id) }); // 환영 공지 (읽지 않은 판이면 화면이 띄움)
   socket.emit('rampage:list', arena.rampages());
   socket.emit('boss', boss.view());
   socket.emit('weather', weatherAll());
@@ -1127,6 +1138,29 @@ io.on('connection', (socket) => {
     db.saveState(d);
     sendMe(socket, d);
     ack({ ok: true, result: { title: '도둑 추격', hunt: true, raid: true, battle: view, lines, items: [], gold: 0, xp: 0 } });
+  });
+
+  // ── 환영 공지: 계정마다 처음 들어올 때(와 GM이 다시 띄울 때) 한 번 ──
+  socket.on('welcome:seen', (p, ack) => {
+    db.welcomeSet(user.id, welcomeOf().ver);
+    if (typeof ack === 'function') ack({ ok: true });
+  });
+  socket.on('gm:welcome:get', (p, ack) => {
+    if (typeof ack !== 'function') return;
+    if (!socket.data.user?.is_gm) return ack({ error: 'GM만 쓸 수 있다.' });
+    ack({ ok: true, welcome: welcomeOf() });
+  });
+  socket.on('gm:welcome:set', (p, ack) => {
+    if (typeof ack !== 'function') return;
+    if (!socket.data.user?.is_gm) return ack({ error: 'GM만 쓸 수 있다.' });
+    const text = (typeof p?.text === 'string' ? p.text : '').replace(/\r/g, '').replace(/[ \t]+\n/g, '\n').trim().slice(0, WELCOME_MAX);
+    if (!text) return ack({ error: '공지 내용을 적자.' });
+    const cur = welcomeOf();
+    const w = { text, ver: p?.again ? cur.ver + 1 : cur.ver };
+    db.worldSet('welcome', w);
+    db.gmLog(socket.data.user.username, null, `환영 공지를 고침${p?.again ? ' (모두에게 다시 띄움)' : ''}`);
+    if (p?.again) io.emit('welcome', { ...w, seen: -1 }); // 접속 중인 모두에게 바로 (seen −1: 다시 띄우라는 뜻)
+    ack({ ok: true, welcome: w });
   });
 
   socket.on('weather:get', (p, ack) => { if (typeof ack === 'function') ack({ ok: true, weather: weatherAll() }); });
