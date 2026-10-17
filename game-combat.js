@@ -3,7 +3,7 @@
 // - 강적·결투장: 매 턴 직접 고름 (실시간 결투에서 시간을 넘기면 자동으로 고름)
 // 전투 하나 = battle { kind, turn, a, b, log, over, winner }. a·b는 싸우는 쪽(fighter)
 const {
-  COMBAT, BREATHS, BREATH_COST, SKILLS, STATUS, ITEMS, RULES, STANCE_RULES, MIND, PLACES, PLACE_RULES, COMBOS, ENRAGE, RAID, BOSSES, BOSS,
+  COMBAT, CRAFT, BREATHS, BREATH_COST, SKILLS, STATUS, ITEMS, RULES, STANCE_RULES, MIND, PLACES, PLACE_RULES, COMBOS, ENRAGE, RAID, BOSSES, BOSS,
 } = require('./game-data');
 const logic = require('./game-logic');
 
@@ -78,6 +78,7 @@ function fromDragon(d, context) {
     atk: atk * (bf?.atk || 1) * (ti.atk || 1), def: st.scale, spd: st.wing + (bf?.spd || 0), mag: st.wisdom * (bf?.mag || 1), maj: st.majesty,
     taken: (hunt ? tm.huntDmg * (d.perks?.knight ? 0.7 : 1) : 1) * (bf?.taken || 1) * (ti.taken || 1) * love, // 받는 피해 배율
     healMult: ti.heal || 1,
+    engrave: logic.engraveOf(d), // 장신구에 새긴 속성: 그 속성 공격 피해 배율
     buff: bf?.id || null,
     element: BREATHS[d.kind]?.element || null,
     breath: BREATHS[d.kind] ? d.kind : null,
@@ -208,6 +209,7 @@ function damage(att, def, power, opt = {}) {
   raw *= rand(0.85, 1.15);
   let note = '';
   if (element && att.elemW?.[element]) raw *= att.elemW[element]; // 날씨: 비에는 불이 약해지고 번개가 세짐
+  if (element && att.engrave?.[element]) raw *= att.engrave[element]; // 장신구 각인
   if (element && def.weak.includes(element)) { raw *= 1.5; note = ' 약점을 찔렀다!'; }
   if (element && def.resist.includes(element)) { raw *= 0.5; note = ' 잘 통하지 않는다.'; }
   const crit = !magic && (opt.crit || Math.random() < 0.06 + Math.max(0, spdOf(att) - spdOf(def)) * 0.005);
@@ -707,6 +709,8 @@ function eliteReward(d, b) {
     items = logic.bundle(ids);
     gold = Math.round(randInt(20, 40) * lv * (logic.titleMods(d).huntGold || 1) * logic.weatherFx(b.region).huntGold * (b.corrupted ? MIND.reward.gold : 1));
     xp = (12 + lv * 6) * 3 * (b.corrupted ? MIND.reward.xp : 1);
+    // 바랜 제작서 (숨겨진 제작법)
+    if (Math.random() < CRAFT.scrollChance.elite) items = logic.bundle([...items.flatMap((x) => Array(x.qty).fill(x.id)), 'recipe_scroll']);
     // 오염된 강적: 검게 물든 비늘, 낮은 확률로 전설 장신구
     if (b.corrupted) {
       items = logic.bundle([...items.flatMap((x) => Array(x.qty).fill(x.id)), ...Array(MIND.scale.elite).fill('blackened_scale'), ...(Math.random() < MIND.legend.chance ? [MIND.legend.item] : [])]);

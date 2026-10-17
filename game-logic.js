@@ -5,7 +5,7 @@
 
 const {
   REGIONS, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, RECIPES, SLOTS, STANCES, SHOPS, REP_TIERS, repTier, TRADE, NEST, hoardTier, RAID, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, ELEMENTS,
-  SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, SKILLS, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES,
+  CRAFT, SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, SKILLS, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES,
 } = require('./game-data');
 
 const SR = STANCE_RULES;
@@ -199,6 +199,9 @@ function bonusOf(d) {
     if (!it) continue;
     for (const [k, v] of Object.entries(it.bonus || {})) b[k] += v;
     expRare += it.expRare || 0;
+    // 강화(+1~+3)와 걸작: 그 장신구의 주 능력치에 더함
+    const g = gearOf(d)[id];
+    if (g) { const main = mainStat(it); if (main) b[main] += (g.plus || 0) + (g.mw ? 1 : 0); }
   }
   b.majesty += fameTier(d.fame || 0).majesty; // 용족 명성
   if (d.nest) b.majesty += hoardTier(nestInfo(d).value || 0)?.majesty || 0; // 보물더미
@@ -894,12 +897,37 @@ function finishExpedition(d, now = Date.now(), companions = 0) {
 
 // ── 제작 ───────────────────────────────────────────
 // 둥지의 대장장이가 있으면 기력이 30% 덜 듦
-const craftEn = (d, r) => Math.ceil(r.en * (d.perks?.smith ? 0.7 : 1) * (titleMods(d).craftEn || 1) - 1e-9);
-// have(id): 지금 가진 개수를 알려주는 함수 (저장 공간에서 읽음)
-function craft(d, outId, have) {
+const craftEn = (d, r) => Math.ceil(r.en * (d.perks?.smith ? 0.7 : 1) * (titleMods(d).craftEn || 1) * (atForge(d) ? CRAFT.forge.en : 1) - 1e-9);
+// ── 제작 확장: 걸작·강화·각인(장신구별 기록), 숨겨진 제작법, 공방 ──
+// 전투 설정(combat JSON)에 { gear: { 아이템id: { plus, mw, elem } }, recipes: [찾아낸 제작법], orders: { day, done } }
+const gearOf = (d) => { const c = combatJson(d); if (!c.gear || typeof c.gear !== 'object') c.gear = {}; return c.gear; };
+const mainStat = (it) => Object.entries(it.bonus || {}).sort((a, b) => b[1] - a[1])[0]?.[0] || null; // 가장 크게 올려 주는 능력치
+const knownRecipes = (d) => { const c = combatJson(d); if (!Array.isArray(c.recipes)) c.recipes = []; return c.recipes; };
+const recipeKnown = (d, r) => !r.hidden || knownRecipes(d).includes(r.out);
+const atForge = (d) => !!d.nest && d.region === d.nest && !!nestInfo(d).forge;
+// 각인: 속성별 피해 배율 (착용한 장신구에 새긴 것만)
+function engraveOf(d) {
+  const m = {};
+  const g = gearOf(d);
+  for (const id of Object.values(equipOf(d))) { const e = g[id]?.elem; if (e) m[e] = (m[e] || 1) * CRAFT.engrave.power; }
+  return m;
+}
+// 대성공 확률 (focus: 불 조절 점수 0~1, 없으면 null)
+function greatChance(d, focus = null) {
+  const G = CRAFT.great;
+  const count = traitsOf(d).counts?.craft || 0;
+  let p = G.base + statsOf(d).wisdom * G.perWis + Math.min(G.countMax, count / G.perCount);
+  if (atForge(d)) p += G.forge;
+  if (d.perks?.smith) p += G.smith;
+  p += titleMods(d).craftGreat || 0;
+  if (focus != null) for (const [at, add] of G.focus) if (focus >= at) { p += add; break; }
+  return Math.min(G.cap, p);
+}
+// have(id): 지금 가진 개수를 알려주는 함수 (저장 공간에서 읽음). focus: 장신구를 만들 때 불 조절 점수
+function craft(d, outId, have, focus = null) {
   if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
   const r = RECIPES.find((x) => x.out === outId);
-  if (!r) return { error: '알 수 없는 제작법이다.' };
+  if (!r || !recipeKnown(d, r)) return { error: '알 수 없는 제작법이다.' };
   const st = statsOf(d);
   if (st.wisdom < r.wis) return { error: `지혜가 ${r.wis} 이상이어야 만들 수 있다.` };
   const en = craftEn(d, r);
@@ -907,16 +935,187 @@ function craft(d, outId, have) {
   for (const [id, n] of Object.entries(r.needs)) {
     if (have(id) < n) return { error: `${ITEMS[id].name}${josa(ITEMS[id].name, '이', '가')} 모자란다.` };
   }
+  const it = ITEMS[r.out];
+  const f = it.type === 'equip' && Number.isFinite(Number(focus)) ? Math.max(0, Math.min(1, Number(focus))) : null;
+  const chance = greatChance(d, f);
   if (d.en >= enCap(d)) d.en_at = Date.now();
   d.en -= en;
   const items = Object.entries(r.needs).map(([id, n]) => ({ id, qty: -n }));
-  items.push({ id: r.out, qty: 1 });
+  const name = it.name;
+  const lines = [];
+  let qty = 1;
+  let great = false;
+  if (f != null) lines.push(f >= 0.85 ? '불길을 완벽하게 다스렸다!' : f >= 0.55 ? '불길을 제법 잘 다스렸다.' : '불길이 조금 흔들렸다.');
+  if (Math.random() < chance) {
+    great = true;
+    const g = gearOf(d);
+    if (it.type === 'equip' && !g[r.out]?.mw) {
+      g[r.out] = { ...(g[r.out] || {}), mw: true };
+      lines.push(`대성공! 손끝에서 빛이 일더니 ${name}${josa(name, '이', '가')} 걸작으로 태어났다. (${STATS.find((x) => x.key === mainStat(it))?.name || '능력치'} +1)`);
+    } else {
+      qty = 2;
+      lines.push(`대성공! 재료를 아껴 ${name}${josa(name, '을', '를')} 하나 더 만들었다. (2개)`);
+    }
+    lines.push(...traitCount(d, 'masterwork'));
+  } else lines.push(`${name}${josa(name, '을', '를')} 만들었다.`);
+  items.push({ id: r.out, qty });
   traitCount(d, 'craft'); // 칭호: 제작 횟수
-  let xp = 4 + Math.floor(r.en / 2);
+  let xp = 4 + Math.floor(r.en / 2) + (great ? 4 : 0);
   xp = xpOf(d, xp);
   const levelUp = gainXp(d, xp);
-  const name = ITEMS[r.out].name;
-  return { title: '제작', lines: [`${name}${josa(name, '을', '를')} 만들었다.`], items, made: [{ id: r.out, qty: 1 }], gold: 0, xp, levelUp };
+  return { title: great ? '제작 · 대성공' : '제작', lines, items, made: [{ id: r.out, qty }], gold: 0, xp, levelUp, great };
+}
+// 실험: 재료 2~3가지를 하나씩 넣어 섞어 봄. 숨겨진 제작법과 재료가 같으면 알게 됨
+function experiment(d, ids, have) {
+  if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
+  ids = [...new Set((Array.isArray(ids) ? ids : []).filter((x) => typeof x === 'string' && ITEMS[x]))];
+  if (ids.length < 2 || ids.length > 3) return { error: '재료를 2~3가지 골라야 한다.' };
+  for (const id of ids) if (have(id) < 1) return { error: `${ITEMS[id].name}${josa(ITEMS[id].name, '이', '가')} 없다.` };
+  const en = CRAFT.experiment.en;
+  if (d.en < en) return { error: `기력이 모자란다. (${en} 필요)` };
+  if (d.en >= enCap(d)) d.en_at = Date.now();
+  d.en -= en;
+  const items = ids.map((id) => ({ id, qty: -1 }));
+  const key = (r) => Object.keys(r.needs).sort().join('|');
+  const mine = ids.slice().sort().join('|');
+  const hit = RECIPES.find((r) => key(r) === mine);
+  const names = ids.map((x) => ITEMS[x].name).join(', ');
+  const lines = [`${names}${josa(names, '을', '를')} 화로에 넣고 섞어 보았다.`];
+  let found = null;
+  if (hit && hit.hidden && !knownRecipes(d).includes(hit.out)) {
+    knownRecipes(d).push(hit.out);
+    found = hit.out;
+    lines.push(`재료가 녹아 하나로 엉기더니 새로운 모양이 떠올랐다… '${ITEMS[hit.out].name}' 제작법을 알아냈다!`);
+    lines.push(...(hooks.firstRecipe ? hooks.firstRecipe(d, hit.out) : []));
+  } else if (hit) {
+    lines.push(`이미 아는 제작법이다. ('${ITEMS[hit.out].name}')`);
+  } else {
+    const near = RECIPES.some((r) => r.hidden && !knownRecipes(d).includes(r.out) && Object.keys(r.needs).filter((x) => ids.includes(x)).length >= 2);
+    lines.push(near ? '무언가 될 듯하다가 연기만 피어올랐다. 재료 하나가 다른 것 같다.' : '쉭 하는 소리와 함께 연기만 피어올랐다.');
+  }
+  return { title: '실험', lines, items, found };
+}
+// 바랜 제작서: 아직 모르는 숨겨진 제작법 하나를 알게 됨
+function readRecipeScroll(d) {
+  const left = RECIPES.filter((r) => r.hidden && !knownRecipes(d).includes(r.out));
+  if (!left.length) return { error: '이미 모든 숨겨진 제작법을 알고 있다.' };
+  const r = left[Math.floor(Math.random() * left.length)];
+  knownRecipes(d).push(r.out);
+  const need = Object.entries(r.needs).map(([id, n]) => `${ITEMS[id].name} ${n}`).join(', ');
+  return { lines: [`바랜 글씨를 더듬어 읽었다. '${ITEMS[r.out].name}' 제작법이다! (${need})`, ...(hooks.firstRecipe ? hooks.firstRecipe(d, r.out) : [])], found: r.out };
+}
+// 가진 장신구 (착용한 것 + 소지품)
+const ownsGear = (d, id, have) => Object.values(equipOf(d)).includes(id) || have(id) > 0;
+// 장신구 강화: +1 → +3. 실패하면 재료·금화만 사라짐
+function enhanceGear(d, id, have) {
+  if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
+  const it = ITEMS[id];
+  if (!it || it.type !== 'equip') return { error: '장신구만 강화할 수 있다.' };
+  if (!ownsGear(d, id, have)) return { error: '가지고 있지 않은 장신구다.' };
+  const g = gearOf(d);
+  const lv = g[id]?.plus || 0;
+  const step = CRAFT.enhance[lv];
+  if (!step) return { error: '더는 강화할 수 없다. (+3이 끝)' };
+  if (d.gold < step.gold) return { error: `금화가 모자란다. (${step.gold}닢 필요)` };
+  for (const [x, n] of Object.entries(step.items)) if (have(x) < n) return { error: `${ITEMS[x].name}${josa(ITEMS[x].name, '이', '가')} 모자란다. (${n}개 필요)` };
+  d.gold -= step.gold;
+  const items = Object.entries(step.items).map(([x, n]) => ({ id: x, qty: -n }));
+  const rate = Math.min(1, step.rate + (atForge(d) ? CRAFT.forgeRate : 0));
+  const lines = [];
+  if (Math.random() < rate) {
+    g[id] = { ...(g[id] || {}), plus: lv + 1 };
+    lines.push(`망치 소리가 울려 퍼졌다. ${it.name}${josa(it.name, '이', '가')} +${lv + 1}로 강화되었다! (${STATS.find((x) => x.key === mainStat(it))?.name || '능력치'} +1)`);
+    if (lv + 1 === 3) chron(d, 'mark', `${it.name}${josa(it.name, '을', '를')} +3까지 강화했다.`);
+  } else {
+    lines.push(`불꽃이 튀며 금이 갔던 룬이 사라졌다. 강화에 실패했다. (${it.name}${josa(it.name, '은', '는')} +${lv} 그대로)`);
+  }
+  return { title: '강화', lines, items, gold: -step.gold };
+}
+// 속성 각인: 그 속성 공격 피해 +12%. 이미 새겼으면 바꿔 새김
+function engraveGear(d, id, elem, have) {
+  if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
+  const it = ITEMS[id];
+  if (!it || it.type !== 'equip') return { error: '장신구에만 새길 수 있다.' };
+  if (!ownsGear(d, id, have)) return { error: '가지고 있지 않은 장신구다.' };
+  const need = CRAFT.engrave.items[elem];
+  if (!need) return { error: '그런 속성은 없다.' };
+  const g = gearOf(d);
+  if (g[id]?.elem === elem) return { error: '이미 그 속성이 새겨져 있다.' };
+  if (d.gold < CRAFT.engrave.gold) return { error: `금화가 모자란다. (${CRAFT.engrave.gold}닢 필요)` };
+  for (const [x, n] of Object.entries(need)) if (have(x) < n) return { error: `${ITEMS[x].name}${josa(ITEMS[x].name, '이', '가')} 모자란다. (${n}개 필요)` };
+  d.gold -= CRAFT.engrave.gold;
+  const old = g[id]?.elem;
+  g[id] = { ...(g[id] || {}), elem };
+  const items = Object.entries(need).map(([x, n]) => ({ id: x, qty: -n }));
+  return { title: '각인', lines: [`${it.name}에 ${ELEMENTS[elem]} 룬을 새겼다.${old ? ` (먼저 있던 ${ELEMENTS[old]} 룬은 지워졌다)` : ''}`, `착용하면 ${ELEMENTS[elem]} 공격 피해 +${Math.round((CRAFT.engrave.power - 1) * 100)}%`], items, gold: -CRAFT.engrave.gold };
+}
+// 장신구를 모두 잃으면 기록도 지움 (팔거나 버리거나 줬을 때)
+function tidyGear(d, have) {
+  const g = gearOf(d);
+  for (const id of Object.keys(g)) if (!ownsGear(d, id, have)) delete g[id];
+}
+// ── 마을 제작 의뢰: 마을마다 하루 3개 (날마다 바뀜, 모두에게 같음) ──
+const dayIdx = (now = Date.now()) => Math.floor((now + 9 * 3600000) / 86400000); // 한국 날짜
+function ordersOf(town, now = Date.now()) {
+  const pool = RECIPES.filter((r) => !r.hidden && r.wis <= CRAFT.orders.maxWis && ['use', 'equip'].includes(ITEMS[r.out].type) && !ITEMS[r.out].use?.nestWard).map((r) => r.out);
+  let seed = dayIdx(now) * 9973 + [...town].reduce((a, c) => a * 31 + c.charCodeAt(0), 7);
+  const rnd = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+  const out = [];
+  const used = new Set();
+  while (out.length < CRAFT.orders.perTown && used.size < pool.length) {
+    const id = pool[Math.floor(rnd() * pool.length)];
+    if (used.has(id)) continue;
+    used.add(id);
+    const qty = ITEMS[id].type === 'equip' ? 1 : 1 + Math.floor(rnd() * 3);
+    out.push({ key: `${town}:${id}`, id, qty, gold: Math.round((ITEMS[id].value || 10) * qty * CRAFT.orders.gold), rep: CRAFT.orders.rep });
+  }
+  return out;
+}
+function ordersView(d, now = Date.now()) {
+  const town = d.region;
+  if (!SHOPS[town]) return null;
+  const c = combatJson(d);
+  const done = c.orders?.day === dayIdx(now) ? c.orders.done || [] : [];
+  return { town, list: ordersOf(town, now).map((o) => ({ ...o, done: done.includes(o.key) })), resetAt: (dayIdx(now) + 1) * 86400000 - 9 * 3600000 };
+}
+function fillOrder(d, key, have, now = Date.now()) {
+  const err = marketCheck(d);
+  if (err) return err;
+  const o = ordersOf(d.region, now).find((x) => x.key === key);
+  if (!o) return { error: '그 의뢰는 이미 내려갔다.' };
+  const c = combatJson(d);
+  if (c.orders?.day !== dayIdx(now)) c.orders = { day: dayIdx(now), done: [] };
+  if (c.orders.done.includes(key)) return { error: '오늘은 이미 이 의뢰를 마쳤다.' };
+  if (have(o.id) < o.qty) return { error: `${ITEMS[o.id].name} ${o.qty}개가 있어야 한다.` };
+  c.orders.done.push(key);
+  d.gold += o.gold;
+  addRep(d, d.region, o.rep);
+  const what = `${ITEMS[o.id].name}${o.qty > 1 ? ` ${o.qty}개` : ''}`;
+  return { title: '의뢰', lines: [`${what}${josa(o.qty > 1 ? '개' : ITEMS[o.id].name, '을', '를')} 건네자 의뢰인이 활짝 웃었다.`, `금화 ${o.gold}닢, ${REGIONS[d.region].name} 평판 +${o.rep}`], items: [{ id: o.id, qty: -o.qty }], gold: o.gold };
+}
+// ── 둥지 공방(화로) ──
+function buildForge(d, have) {
+  if (!d.nest || d.region !== d.nest) return { error: '공방은 둥지에 있을 때만 지을 수 있다.' };
+  const n = nestInfo(d);
+  if (n.forge) return { error: '이미 공방이 있다.' };
+  const c = CRAFT.forge.cost;
+  if (d.gold < c.gold) return { error: `금화가 모자란다. (${c.gold}닢 필요)` };
+  for (const [x, k] of Object.entries(c.items)) if (have(x) < k) return { error: `${ITEMS[x].name}${josa(ITEMS[x].name, '이', '가')} 모자란다. (${k}개 필요)` };
+  d.gold -= c.gold;
+  n.forge = true;
+  chron(d, 'mark', '둥지에 공방(화로)을 지었다.');
+  return { title: '공방', lines: ['둥지 안쪽에 돌을 쌓아 화로를 지었다. 불길이 낮게 으르렁거린다.', `둥지에서 만들면 기력 −${Math.round((1 - CRAFT.forge.en) * 100)}%, 대성공 +${Math.round(CRAFT.great.forge * 100)}%, 강화 성공 +${Math.round(CRAFT.forgeRate * 100)}%`], items: Object.entries(c.items).map(([x, k]) => ({ id: x, qty: -k })), gold: -c.gold };
+}
+// 화면에 보낼 제작 정보
+function craftView(d) {
+  return {
+    known: knownRecipes(d).slice(),
+    needs: Object.fromEntries(knownRecipes(d).map((o) => [o, RECIPES.find((r) => r.out === o)?.needs || {}])), // 찾아낸 숨겨진 제작법의 재료
+    hiddenLeft: RECIPES.filter((r) => r.hidden && !knownRecipes(d).includes(r.out)).length,
+    great: Math.round(greatChance(d) * 1000) / 10,
+    forge: atForge(d), hasForge: !!(d.nest && nestInfo(d).forge),
+    gear: { ...gearOf(d) },
+  };
 }
 
 // ── 강화 음식 ──────────────────────────────────────
@@ -954,6 +1153,11 @@ function useItem(d, id, have) {
     lines.push(u.nestWard === 'trap' ? '둥지 입구 바위틈에 가시 덫을 숨겨 두었다.' : '둥지 둘레에 결계석을 묻자, 룬이 희미하게 빛나기 시작했다.');
     lines.push(`설치한 ${it.name}: ${w[u.nestWard]}/${NEST.wardMax}`);
     return { title: it.name, lines, items: [{ id, qty: -1 }] };
+  }
+  if (u.recipe) {
+    const r = readRecipeScroll(d);
+    if (r.error) return r;
+    return { title: it.name, lines: r.lines, items: [{ id, qty: -1 }] };
   }
   if (u.buff) {
     const B = BUFFS[u.buff];
@@ -1224,6 +1428,7 @@ function buildNest(d) {
     if (ni.tier > 0) { ni.tier -= 1; lines.push(`새 둥지는 아직 ${NEST.tiers[ni.tier].name} 정도다.`); }
     if (ni.wards.trap || ni.wards.stone) lines.push('설치해 둔 덫과 결계는 옛 둥지에 남았다.');
     ni.wards = {};
+    if (ni.forge) { ni.forge = false; lines.push('공방의 화로는 옛 둥지에 두고 왔다. 새로 지어야 한다.'); }
   }
   return { title: '둥지', lines, gold: moving ? -NEST.moveCost : 0 };
 }
@@ -1414,7 +1619,8 @@ module.exports = {
   seasonAt, weatherOf, weatherIdAt, weatherFx, fxText, fxProse, weatherDebug, SLOT_MS,
   nestInfo, nestTier, maxKinOf, expandNest, checkRaid, raidView, chaseCheck,
   regen, gather, explore, hunt, startExpedition, finishExpedition, chooseFork, forkView, expInfo,
-  craft, useItem, equip, unequip, statsOf, bonusOf, hpCap, enCap, apCap, equipOf, buffOf, giveBuff,
+  craft, experiment, enhanceGear, engraveGear, tidyGear, engraveOf, gearOf, greatChance, craftView, ordersView, fillOrder, buildForge, atForge,
+  useItem, equip, unequip, statsOf, bonusOf, hpCap, enCap, apCap, equipOf, buffOf, giveBuff,
   repOf, setStance, marketInfo, buy, sell, intimidate,
   buildNest, flyHome, startRest, stopRest, hoardMove, hoardValue,
   actionCost, townArrows, hasBounty, addRep, addFame, craftEn, gainXp, spendStats,

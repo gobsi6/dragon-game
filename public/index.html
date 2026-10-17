@@ -280,6 +280,34 @@
   .slot.empty span { font: 400 12px/1.3 var(--sans); color: #8A8F94; }
   .dlg.wide { width: min(620px, calc(100% - 32px)); }
   .dlg h3 { margin: 6px 0 0; font: 700 14px/1.4 var(--serif); color: var(--steel-d); }
+  .craft-modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 2px 0 14px; }
+  .craft-modes button { display: flex; flex-direction: column; align-items: center; gap: 1px; min-height: 46px; padding: 6px 4px; border: 1px solid #C9CCC8; border-radius: 3px; background: var(--surface-2); color: var(--ink-2); }
+  .craft-modes button b { font: 700 13.5px/1.25 var(--serif); }
+  .craft-modes button small { font: 500 11px/1.3 var(--sans); opacity: .8; }
+  .craft-modes button.on { background: var(--steel-d); border-color: #1E3242; color: #F4F7FA; }
+  .rc-found { font: 600 11px/18px var(--sans); padding: 0 6px; border-radius: 2px; background: #F3EEFA; color: #4A3F78; border: 1px solid #D7CBEA; }
+  .craft-hint { margin-top: 12px; color: #4A3F78; }
+  .exp-slots { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px; margin: 8px 0 12px; background: #fff; border: 1px dashed var(--line-soft); border-radius: 4px; }
+  .exp-slot { min-width: 84px; padding: 6px 10px; text-align: center; font-size: 12.5px; color: var(--muted); border: 1px solid var(--line-in); border-radius: 3px; background: var(--surface-2); }
+  .exp-slot.on { color: var(--ink); font-weight: 600; border-color: #9DB3C6; background: #F4F7FA; }
+  .exp-slots .btn { margin-left: auto; min-height: 34px; font-size: 13px; }
+  .exp-pick { display: flex; flex-wrap: wrap; gap: 5px; }
+  .exp-chip { min-height: 30px; font-size: 12.5px; }
+  .exp-chip:disabled { opacity: .45; }
+  .gearw .gw-acts { display: flex; gap: 6px; }
+  .gearw .gw-acts .btn { min-height: 34px; padding: 0 12px; font-size: 13px; }
+  .gw-mw, .gw-el, .gw-worn { font: 600 11px/18px var(--sans); padding: 0 6px; border-radius: 2px; }
+  .gw-mw { background: #FBF6E8; color: #7A5A16; border: 1px solid #E2CF9E; }
+  .gw-el { background: #FBEFE6; color: #8A2E27; border: 1px solid #EAC6B7; }
+  .gw-worn { background: #EEF2F6; color: var(--steel-d); border: 1px solid #C9D6E1; }
+  .gw-elems { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 5px; padding: 8px; background: #fff; border: 1px solid var(--line-in); border-radius: 3px; }
+  .gw-elems .chipbtn { min-height: 28px; font-size: 12px; }
+  .gw-elems .chipbtn:disabled { opacity: .45; }
+  .gw-elems small { flex-basis: 100%; font-size: 11.5px; color: var(--muted); }
+  .forge-track { position: relative; height: 34px; margin: 6px 4px; border-radius: 17px; background: linear-gradient(90deg, #3A2A1E, #6B3B22 50%, #3A2A1E); box-shadow: inset 0 0 0 1px #2A1E15; overflow: hidden; }
+  .forge-track i { position: absolute; top: 0; bottom: 0; background: linear-gradient(180deg, #F3D27A, #D9A43A); opacity: .85; box-shadow: 0 0 14px #F3D27A; }
+  .forge-track b { position: absolute; top: 3px; bottom: 3px; width: 6px; margin-left: -3px; border-radius: 3px; background: #FFF6DE; box-shadow: 0 0 8px #FFD27A, 0 0 2px #fff; }
+  .forge-result { min-height: 20px; margin: 0; text-align: center; font: 700 15px/1.3 var(--serif); color: #8A6A22; }
   .recipe { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; padding: 12px 2px; border-top: 1px solid var(--line-in); align-items: center; }
   .recipe .nm { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .recipe .nm b { font: 700 15px/1.4 var(--serif); display: flex; align-items: center; gap: 8px; }
@@ -306,6 +334,7 @@
   .inv .it .eff { font-size: 11.5px; line-height: 1.55; color: var(--steel-d); }
   .inv .it .acts { grid-column: 2; grid-row: 1 / span 3; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; max-width: 220px; }
   .inv .it .acts:empty { display: none; }
+  .inv .it > .cost-list { grid-column: 1; margin: 4px 0 0; }
   .inv .it .acts .btn { min-height: 30px; padding: 0 12px; font-size: 12.5px; }
   .inv .it .acts .drop-btn { border-color: transparent; background: transparent; box-shadow: none; color: var(--muted); padding: 0 8px; }
   .inv .it .acts .drop-btn:hover { color: #A63E4B; background: #FBF1F2; }
@@ -355,7 +384,7 @@
   .mk-banner .mkb-note { margin: 0; font-size: 12px; line-height: 1.6; color: #C7D3DE; }
   .mk-banner .mkb-note:empty { display: none; }
   .mk-closed { padding: 18px; text-align: center; color: #A63E4B; background: #FBF1F2; border: 1px solid #E6C3C7; font-size: 15px; }
-  .mk-tabs { display: flex; gap: 20px; border-bottom: 1px solid var(--line-in); }
+  .mk-tabs { display: flex; flex-wrap: wrap; gap: 4px 20px; border-bottom: 1px solid var(--line-in); }
   .mk-tabs[hidden] { display: none; }
   .mk-tabs button { min-height: 0; padding: 9px 2px; margin-bottom: -1px; border: 0; border-bottom: 2px solid transparent; background: none; font: 600 14px/1 var(--serif); color: var(--muted); }
   .mk-tabs button.on { border-bottom-color: var(--steel-d); color: var(--steel-d); font-weight: 700; }
@@ -386,6 +415,7 @@
   .mk-go { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 96px; min-height: 32px; padding: 0 12px; font-size: 12.5px; white-space: nowrap; }
   .mk-go .coin { width: 13px; height: 13px; color: currentColor; }
   .mk-go .coin::after { width: 6px; height: 6px; }
+  .ord-rw { display: inline-flex; align-items: center; gap: 5px; font: 600 12.5px/1 var(--sans); color: #6A4E12; white-space: nowrap; }
   .mk-row .lock { font-size: 12px; color: var(--muted); text-align: right; }
   @media (max-width: 520px) {
     .mk-row { flex-wrap: wrap; }
@@ -1917,6 +1947,17 @@
   </div>
 </dialog>
 
+<dialog class="frame dlg" id="forge-dlg" aria-labelledby="forge-what">
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="forge-what">만들기</h2></div>
+  <div class="body">
+    <p class="note">불꽃이 금빛 구간에 들어왔을 때 두드리면 대성공 확률이 크게 오른다.</p>
+    <div class="forge-track" aria-hidden="true"><i id="forge-zone"></i><b id="forge-mark"></b></div>
+    <p class="forge-result" id="forge-result" role="status"></p>
+    <div class="row"><button class="btn" type="button" id="forge-skip">건너뛰고 만들기</button><button class="btn primary" type="button" id="forge-hit">두드리기!</button></div>
+  </div>
+</dialog>
+
 <dialog class="frame dlg wide" id="nest-dlg" aria-labelledby="nest-dlg-title">
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="nest-dlg-title">둥지</h2></div>
@@ -1936,7 +1977,7 @@
       <div class="mkb-rep"><div class="mkb-l"><span id="mk-rep"></span><span id="mk-next"></span></div><div class="mkb-bar"><i id="mk-bar"></i></div></div>
       <p class="mkb-note" id="mk-note"></p>
     </div>
-    <div class="mk-tabs" id="mk-tabs" role="tablist" aria-label="시장"><button type="button" role="tab" data-t="buy" class="on">사기<span class="mk-n" id="mk-n-buy"></span></button><button type="button" role="tab" data-t="sell">팔기<span class="mk-n" id="mk-n-sell"></span></button></div>
+    <div class="mk-tabs" id="mk-tabs" role="tablist" aria-label="시장"><button type="button" role="tab" data-t="buy" class="on">사기<span class="mk-n" id="mk-n-buy"></span></button><button type="button" role="tab" data-t="sell">팔기<span class="mk-n" id="mk-n-sell"></span></button><button type="button" role="tab" data-t="order">제작 의뢰<span class="mk-n" id="mk-n-order"></span></button></div>
     <div id="mk-body"></div>
     <div class="row"><button class="btn" type="button" id="market-close">닫기</button></div>
   </div>
@@ -3233,7 +3274,8 @@
       d.className = `slot ${id ? 'on' : 'empty'}`;
       d.innerHTML = '<div style="min-width: 0"><small></small><br><span></span></div>';
       d.querySelector('small').textContent = sl.name;
-      d.querySelector('span').textContent = id ? S.items[id].name : '비어 있음';
+      const gm = id ? S.me.craft?.gear?.[id] : null; // 강화·걸작 표시
+      d.querySelector('span').textContent = id ? `${S.items[id].name}${gm?.plus ? ` +${gm.plus}` : ''}${gm?.mw ? ' ★' : ''}` : '비어 있음';
       if (id) {
         const b = document.createElement('button');
         b.type = 'button';
@@ -3291,8 +3333,11 @@
       const row = document.createElement('div');
       row.className = `it ${it.rarity}`;
       row.innerHTML = '<b><span class="nm"></span><span class="q"></span></b><small></small>';
-      row.querySelector('.nm').textContent = it.name;
+      const gmod = it.type === 'equip' ? S.me.craft?.gear?.[id] : null;
+      row.querySelector('.nm').textContent = `${it.name}${gmod?.plus ? ` +${gmod.plus}` : ''}`;
       row.querySelector('.q').textContent = `×${qty}`;
+      if (gmod?.mw) { const t = document.createElement('span'); t.className = 'gw-mw'; t.textContent = '걸작'; row.querySelector('b').appendChild(t); }
+      if (gmod?.elem) { const t = document.createElement('span'); t.className = 'gw-el'; t.textContent = `${ELEM_NAME[gmod.elem]} 각인`; row.querySelector('b').appendChild(t); }
       row.querySelector('small').textContent = it.desc;
       if (it.cat === 'trophy') {
         const eff = document.createElement('span');
@@ -3927,6 +3972,34 @@
             wl.appendChild(r4);
           }
           host.appendChild(wl);
+          // 둥지 공방(화로): 둥지에서 만들 때 기력 −20%, 대성공·강화 성공 확률이 오름
+          const hf = document.createElement('h3');
+          hf.textContent = '공방';
+          host.appendChild(hf);
+          const fr = document.createElement('div');
+          fr.className = 'inv inv-box';
+          const fi = document.createElement('div');
+          fi.className = 'it common';
+          fi.innerHTML = '<b><span class="nm"></span></b><small></small><div class="acts"></div>';
+          fi.querySelector('.nm').textContent = n.forge ? '화로 (지어 둠)' : '화로';
+          const FR = S.craftRules?.forge;
+          fi.querySelector('small').textContent = n.forge
+            ? `둥지에서 만들면 기력 −${Math.round((1 - (FR?.en || 0.8)) * 100)}%, 대성공·강화 성공 확률이 오른다. 둥지를 옮기면 두고 간다.`
+            : `둥지에 화로를 지으면 여기서 만들 때 기력이 덜 들고, 대성공·강화 성공 확률이 오른다.`;
+          if (!n.forge && n.forgeCost) {
+            const cost = n.forgeCost;
+            const lackG = me.gold < cost.gold;
+            const lackI = Object.entries(cost.items).some(([x, k]) => (invCache[x] || 0) < k);
+            const cl2 = document.createElement('div');
+            cl2.className = 'cost-list';
+            const chip2 = (text, okk) => { const sp = document.createElement('span'); sp.textContent = text; if (!okk) sp.className = 'lack'; cl2.appendChild(sp); };
+            chip2(`금화 ${me.gold}/${cost.gold}`, !lackG);
+            for (const [x, k] of Object.entries(cost.items)) chip2(`${S.items[x]?.name || x} ${invCache[x] || 0}/${k}`, (invCache[x] || 0) >= k);
+            fi.appendChild(cl2);
+            if (n.here) fi.querySelector('.acts').append(btn('화로 짓기', () => nestAct('nest:forge'), true, lackG || lackI || !!me.exp));
+          }
+          fr.appendChild(fi);
+          host.appendChild(fr);
           host = P.hoard;
           const h5 = document.createElement('h3');
           h5.textContent = '보물 넣고 꺼내기';
@@ -4142,7 +4215,43 @@
         for (const t of $('mk-tabs').children) { const on = t.dataset.t === mkTab; t.classList.toggle('on', on); t.setAttribute('aria-selected', on); }
         const list = document.createElement('div');
         list.className = 'mk-list';
-        if (mkTab === 'buy') {
+        if (mkTab === 'order') {
+          // 마을 제작 의뢰: 하루 3개, 납품하면 금화와 평판
+          const wait = document.createElement('div'); wait.className = 'mk-empty'; wait.textContent = '게시판을 살펴보는 중…';
+          list.appendChild(wait);
+          socket.emit('order:list', {}, (res) => {
+            list.replaceChildren();
+            if (res.error) { const e = document.createElement('div'); e.className = 'mk-empty'; e.textContent = res.error; list.appendChild(e); return; }
+            const o = res.orders;
+            const h = document.createElement('div');
+            h.className = 'mk-sum';
+            const left = Math.max(1, Math.round((o.resetAt - Date.now()) / 3600000));
+            h.innerHTML = '<span>마을 게시판에 붙은 제작 의뢰. 물건을 만들어 납품하면 금화와 평판을 받는다.</span><span></span>';
+            h.lastChild.textContent = `약 ${left}시간 뒤 새 의뢰`;
+            list.appendChild(h);
+            for (const x of o.list) {
+              const row = marketRow(x.id, x.done ? 'locked' : '');
+              const sm = row.querySelector('small');
+              const have = invCache[x.id] || 0;
+              const u = document.createElement('span'); u.className = 'unit'; u.textContent = `${x.qty}개 필요 · 가진 것 ${have}`;
+              sm.prepend(u, ' · ');
+              const ctl = row.querySelector('.ctl');
+              const rw = document.createElement('span'); rw.className = 'ord-rw';
+              const c = document.createElement('i'); c.className = 'coin'; c.setAttribute('aria-hidden', 'true');
+              rw.append(c, `${x.gold}닢 · 평판 +${x.rep}`);
+              const bt = document.createElement('button'); bt.type = 'button'; bt.className = 'btn primary mk-go';
+              bt.textContent = x.done ? '오늘 납품함' : '납품하기';
+              bt.disabled = x.done || have < x.qty;
+              bt.addEventListener('click', () => socket.emit('order:fill', { key: x.key }, (r2) => {
+                if (r2.error) { SFX.play('error'); return toast(r2.error); }
+                SFX.play('coin'); toast(r2.result.lines.join(' ')); fetchInv(() => openMarket());
+              }));
+              ctl.append(rw, bt);
+              list.appendChild(row);
+            }
+            $('mk-n-order').textContent = o.list.filter((x) => !x.done).length;
+          });
+        } else if (mkTab === 'buy') {
           for (const x of buys) {
             const row = marketRow(x.id, x.locked ? 'locked' : '');
             if (x.special) { const t = document.createElement('span'); t.className = 'tag'; t.textContent = '우호 전용'; row.querySelector('b').appendChild(t); }
@@ -4212,23 +4321,43 @@
   });
 
   // ── 제작 ──
+  // 제작 창: 만들기 / 실험 / 다듬기(강화·각인)
+  let craftMode = 'make', mixPick = [];
+  const ELEM_NAME = { fire: '화염', ice: '얼음', lightning: '번개', earth: '대지', poison: '독', mist: '안개', acid: '산', water: '물', spirit: '정화' };
   function renderCraft() {
     const me = S.me;
-    $('craft-status').textContent = `기력 ${me.en} / ${me.enMax}, 지혜 ${me.stats.wisdom}. 기력은 2분마다 1씩 찬다.`;
+    const ci = me.craft || { known: [], needs: {}, hiddenLeft: 0, great: 0, gear: {} };
+    $('craft-status').textContent = `기력 ${me.en} / ${me.enMax}, 지혜 ${me.stats.wisdom}. 대성공 ${ci.great}%${ci.forge ? ' · 공방의 화로를 쓰는 중' : ''}`;
     const box = $('craft-list');
     box.replaceChildren();
-    // 위쪽 고르기: 종류별로 나눠 보기, 재료가 다 있는 것만 보기
+    // 위쪽: 만들기 / 실험 / 다듬기
+    const modes = document.createElement('div');
+    modes.className = 'craft-modes';
+    for (const [k, label, sub] of [['make', '만들기', '제작법대로'], ['exp', '실험', `숨은 제작법 ${ci.hiddenLeft}개`], ['gear', '다듬기', '강화 · 각인']]) {
+      const bt = document.createElement('button');
+      bt.type = 'button';
+      bt.className = craftMode === k ? 'on' : '';
+      bt.innerHTML = '<b></b><small></small>';
+      bt.querySelector('b').textContent = label;
+      bt.querySelector('small').textContent = sub;
+      bt.addEventListener('click', () => { craftMode = k; renderCraft(); });
+      modes.appendChild(bt);
+    }
+    box.appendChild(modes);
+    if (craftMode === 'exp') return renderExperiment(box, ci);
+    if (craftMode === 'gear') return renderGearWork(box, ci);
+    // 고르기: 종류별로 나눠 보기, 재료가 다 있는 것만 보기
     const bar = document.createElement('div');
     bar.className = 'craft-bar';
     const TABS = [['all', '전체'], ['use', '회복약'], ['buff', '강화 음식'], ['equip', '장신구']];
     for (const [k, label] of TABS) {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = `chipbtn${craftTab === k ? ' on' : ''}`;
-      b.setAttribute('aria-pressed', String(craftTab === k));
-      b.textContent = label;
-      b.addEventListener('click', () => { craftTab = k; renderCraft(); });
-      bar.appendChild(b);
+      const bt = document.createElement('button');
+      bt.type = 'button';
+      bt.className = `chipbtn${craftTab === k ? ' on' : ''}`;
+      bt.setAttribute('aria-pressed', String(craftTab === k));
+      bt.textContent = label;
+      bt.addEventListener('click', () => { craftTab = k; renderCraft(); });
+      bar.appendChild(bt);
     }
     const lab = document.createElement('label');
     lab.className = 'craft-can';
@@ -4238,6 +4367,8 @@
     cb.addEventListener('change', () => { craftCan = cb.checked; renderCraft(); });
     bar.appendChild(lab);
     box.appendChild(bar);
+    // 숨겨진 제작법은 찾아낸 것만 (재료는 me.craft.needs에서)
+    const recipes = S.recipes.filter((r) => !r.hidden || ci.known.includes(r.out)).map((r) => (r.hidden ? { ...r, needs: ci.needs[r.out] || {} } : r));
     const hasAll = (r) => Object.entries(r.needs).every(([id, n]) => (invCache[id] || 0) >= n);
     const groups = [
       ['회복약', (it) => itemCat(it) === 'use', 'use'],
@@ -4247,7 +4378,7 @@
     let shown = 0;
     for (const [title, test, tab] of groups) {
       if (craftTab !== 'all' && craftTab !== tab) continue;
-      const rs = S.recipes.filter((x) => test(S.items[x.out]) && (!craftCan || hasAll(x)));
+      const rs = recipes.filter((x) => test(S.items[x.out]) && (!craftCan || hasAll(x)));
       if (!rs.length) continue;
       shown += rs.length;
       const h = document.createElement('h3');
@@ -4259,6 +4390,7 @@
         row.className = `recipe ${it.rarity}`;
         row.innerHTML = '<div class="nm"><b></b><span class="eff"></span></div><button type="button" class="btn primary">만들기</button><div class="needs"></div>';
         row.querySelector('b').textContent = it.name;
+        if (r.hidden) { const t = document.createElement('span'); t.className = 'rc-found'; t.textContent = '찾아낸 제작법'; row.querySelector('b').appendChild(t); }
         row.querySelector('.eff').textContent = effectText(it);
         const needs = row.querySelector('.needs');
         let ok = true;
@@ -4267,13 +4399,15 @@
           add(`${S.items[id].name} ${invCache[id] || 0}/${n}`, (invCache[id] || 0) < n);
           if (S.items[id].cat === 'trophy') needs.lastChild.title = effectText(S.items[id]);
         }
-        const en = Math.ceil(r.en * (me.perks?.smith ? 0.7 : 1) * (me.craftMult || 1) - 1e-9); // 둥지의 대장장이, 칭호
-        const why = [me.perks?.smith, me.craftMult < 1 ? '칭호' : null].filter(Boolean).join('·');
+        const forgeM = ci.forge ? (S.craftRules?.forge.en || 1) : 1;
+        const en = Math.ceil(r.en * (me.perks?.smith ? 0.7 : 1) * (me.craftMult || 1) * forgeM - 1e-9); // 둥지의 대장장이, 칭호, 공방
+        const why = [me.perks?.smith, me.craftMult < 1 ? '칭호' : null, ci.forge ? '공방' : null].filter(Boolean).join('·');
         add(`기력 ${en}${en < r.en ? ` (${why} 덕분에 −${r.en - en})` : ''}`, me.en < en);
         if (r.wis) add(`지혜 ${r.wis} 이상`, me.stats.wisdom < r.wis);
-        const b = row.querySelector('.btn');
-        b.disabled = !ok || !!me.exp;
-        b.addEventListener('click', () => itemAct('craft', { recipe: r.out }));
+        const bt = row.querySelector('.btn');
+        bt.disabled = !ok || !!me.exp;
+        // 장신구는 불 조절(두드리기)을 거쳐 만듦. 잘 맞추면 대성공 확률이 오름
+        bt.addEventListener('click', () => (it.type === 'equip' ? openForgeGame(r.out) : itemAct('craft', { recipe: r.out })));
         box.appendChild(row);
       }
     }
@@ -4283,7 +4417,178 @@
       p.textContent = craftCan ? '지금 가진 재료로 만들 수 있는 것이 없다. 사냥 전리품을 모아 보자.' : '이 종류의 제작법이 없다.';
       box.appendChild(p);
     }
+    if (ci.hiddenLeft) {
+      const p = document.createElement('p');
+      p.className = 'note craft-hint';
+      p.textContent = `아직 찾지 못한 제작법이 ${ci.hiddenLeft}개 있다. '실험'에서 재료를 섞어 보거나, 탐사·강적에게서 얻는 바랜 제작서를 읽으면 알게 된다.`;
+      box.appendChild(p);
+    }
   }
+  // 실험: 가진 재료 중 2~3가지를 골라 섞어 봄
+  function renderExperiment(box, ci) {
+    const p = document.createElement('p');
+    p.className = 'note';
+    p.textContent = `재료 2~3가지를 골라 화로에 넣어 본다. 숨겨진 제작법과 재료가 맞으면 그 제작법을 알게 된다. 고른 재료는 하나씩 사라지고 기력 ${S.craftRules?.experimentEn || 4}이 든다.`;
+    box.appendChild(p);
+    const mats = Object.entries(invCache).filter(([id, q]) => q > 0 && S.items[id] && S.items[id].type !== 'equip')
+      .sort(([a], [b2]) => S.items[a].name.localeCompare(S.items[b2].name, 'ko'));
+    mixPick = mixPick.filter((id) => (invCache[id] || 0) > 0);
+    const pick = document.createElement('div');
+    pick.className = 'exp-pick';
+    const slots = document.createElement('div');
+    slots.className = 'exp-slots';
+    for (let i = 0; i < 3; i++) {
+      const sl = document.createElement('span');
+      const id = mixPick[i];
+      sl.className = `exp-slot${id ? ' on' : ''}`;
+      sl.textContent = id ? S.items[id].name : (i < 2 ? '재료' : '(선택)');
+      slots.appendChild(sl);
+    }
+    const go = document.createElement('button');
+    go.type = 'button';
+    go.className = 'btn primary';
+    go.textContent = `섞어 보기 · 기력 ${S.craftRules?.experimentEn || 4}`;
+    go.disabled = mixPick.length < 2 || S.me.en < (S.craftRules?.experimentEn || 4) || !!S.me.exp;
+    go.addEventListener('click', () => { const ids = mixPick.slice(); mixPick = []; itemAct('craft:experiment', { items: ids }); });
+    slots.appendChild(go);
+    box.appendChild(slots);
+    if (!mats.length) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = '섞어 볼 재료가 없다.'; box.appendChild(e); return; }
+    for (const [id, q] of mats) {
+      const c = document.createElement('button');
+      c.type = 'button';
+      const on = mixPick.includes(id);
+      c.className = `chipbtn exp-chip${on ? ' on' : ''}`;
+      c.textContent = `${S.items[id].name} ${q}`;
+      c.disabled = !on && mixPick.length >= 3;
+      c.addEventListener('click', () => { mixPick = on ? mixPick.filter((x) => x !== id) : [...mixPick, id]; renderCraft(); });
+      pick.appendChild(c);
+    }
+    box.appendChild(pick);
+    if (ci.known.length) {
+      const h = document.createElement('p');
+      h.className = 'note';
+      h.textContent = `찾아낸 제작법: ${ci.known.map((o) => S.items[o]?.name || o).join(', ')}`;
+      box.appendChild(h);
+    }
+  }
+  // 다듬기: 가진 장신구를 강화(+1~+3)하고 속성을 새김
+  function renderGearWork(box, ci) {
+    const R = S.craftRules;
+    const p = document.createElement('p');
+    p.className = 'note';
+    p.textContent = `강화할 때마다 그 장신구의 주 능력치 +1 (최대 +3). 단계가 오를수록 실패할 수 있고, 실패하면 재료와 금화만 사라진다.${ci.forge ? ` 공방의 화로 덕분에 성공 확률 +${Math.round(R.forgeRate * 100)}%.` : ''} 각인을 새기면 그 속성 공격 피해 +${Math.round((R.engrave.power - 1) * 100)}%.`;
+    box.appendChild(p);
+    const worn = Object.values(S.me.equip || {});
+    const ids = [...new Set([...worn, ...Object.keys(invCache).filter((id) => invCache[id] > 0 && S.items[id]?.type === 'equip')])].filter((id) => S.items[id]);
+    if (!ids.length) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = '다듬을 장신구가 없다. 먼저 장신구를 만들거나 구해 오자.'; box.appendChild(e); return; }
+    for (const id of ids) {
+      const it = S.items[id];
+      const g = ci.gear[id] || {};
+      const row = document.createElement('div');
+      row.className = `recipe gearw ${it.rarity}`;
+      row.innerHTML = '<div class="nm"><b></b><span class="eff"></span></div><div class="gw-acts"></div><div class="needs"></div>';
+      const bn = row.querySelector('b');
+      bn.textContent = `${it.name}${g.plus ? ` +${g.plus}` : ''}`;
+      if (g.mw) { const t = document.createElement('span'); t.className = 'gw-mw'; t.textContent = '걸작'; bn.appendChild(t); }
+      if (g.elem) { const t = document.createElement('span'); t.className = 'gw-el'; t.textContent = `${ELEM_NAME[g.elem]} 각인`; bn.appendChild(t); }
+      if (worn.includes(id)) { const t = document.createElement('span'); t.className = 'gw-worn'; t.textContent = '착용 중'; bn.appendChild(t); }
+      row.querySelector('.eff').textContent = effectText(it);
+      const acts = row.querySelector('.gw-acts');
+      const needs = row.querySelector('.needs');
+      const step = R.enhance[g.plus || 0];
+      if (step) {
+        const rate = Math.min(1, step.rate + (ci.forge ? R.forgeRate : 0));
+        let ok = S.me.gold >= step.gold;
+        const n1 = document.createElement('span'); n1.className = `need${S.me.gold < step.gold ? ' lack' : ''}`; n1.textContent = `금화 ${step.gold}`; needs.appendChild(n1);
+        for (const [x, n] of Object.entries(step.items)) {
+          const lack = (invCache[x] || 0) < n; if (lack) ok = false;
+          const sp = document.createElement('span'); sp.className = `need${lack ? ' lack' : ''}`; sp.textContent = `${S.items[x].name} ${invCache[x] || 0}/${n}`; needs.appendChild(sp);
+        }
+        const bt = document.createElement('button');
+        bt.type = 'button'; bt.className = 'btn primary';
+        bt.textContent = `+${(g.plus || 0) + 1} 강화 · ${Math.round(rate * 100)}%`;
+        bt.disabled = !ok || !!S.me.exp;
+        bt.addEventListener('click', () => itemAct('gear:enhance', { item: id }));
+        acts.appendChild(bt);
+      } else {
+        const t = document.createElement('span'); t.className = 'need'; t.textContent = '+3 강화 완료'; needs.appendChild(t);
+      }
+      const eb = document.createElement('button');
+      eb.type = 'button'; eb.className = 'btn';
+      eb.textContent = g.elem ? '각인 바꾸기' : '각인';
+      eb.addEventListener('click', () => {
+        const open = row.querySelector('.gw-elems');
+        if (open) { open.remove(); return; }
+        const el = document.createElement('div');
+        el.className = 'gw-elems';
+        for (const [e, need] of Object.entries(R.engrave.items)) {
+          const has = Object.entries(need).every(([x, n]) => (invCache[x] || 0) >= n) && S.me.gold >= R.engrave.gold;
+          const c = document.createElement('button');
+          c.type = 'button';
+          c.className = `chipbtn${g.elem === e ? ' on' : ''}`;
+          c.textContent = `${ELEM_NAME[e]} · ${Object.entries(need).map(([x, n]) => `${S.items[x].name} ${n}`).join(', ')}`;
+          c.disabled = !has || g.elem === e;
+          c.addEventListener('click', () => itemAct('gear:engrave', { item: id, elem: e }));
+          el.appendChild(c);
+        }
+        const note = document.createElement('small'); note.textContent = `각인마다 금화 ${R.engrave.gold}닢이 든다.`;
+        el.appendChild(note);
+        row.appendChild(el);
+      });
+      acts.appendChild(eb);
+      box.appendChild(row);
+    }
+  }
+  // 불 조절 미니게임: 움직이는 불꽃을 알맞은 구간에서 멈추면 대성공 확률이 오름. 건너뛰어도 만들 수는 있음
+  let forgeGame = null;
+  function openForgeGame(out) {
+    const dlg = $('forge-dlg');
+    const it = S.items[out];
+    $('forge-what').textContent = `${it.name} 만들기`;
+    const w = 0.16 + Math.random() * 0.08, c = 0.2 + Math.random() * 0.6; // 알맞은 구간 (가운데, 폭)
+    const zone = $('forge-zone');
+    zone.style.left = `${(c - w / 2) * 100}%`;
+    zone.style.width = `${w * 100}%`;
+    const mark = $('forge-mark');
+    const t0 = performance.now(), speed = 0.9 + Math.random() * 0.4; // 1초에 오가는 정도
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    forgeGame = { out, c, w, pos: 0, raf: 0, done: false };
+    const tick = (t) => {
+      if (!forgeGame || forgeGame.done) return;
+      const x = ((t - t0) / 1000) * speed * (reduce ? 0.5 : 1);
+      forgeGame.pos = 1 - Math.abs((x % 2) - 1); // 0→1→0 왕복
+      mark.style.left = `${forgeGame.pos * 100}%`;
+      forgeGame.raf = requestAnimationFrame(tick);
+    };
+    forgeGame.raf = requestAnimationFrame(tick);
+    $('forge-result').textContent = '';
+    $('forge-hit').disabled = false;
+    if (!dlg.open) dlg.showModal();
+  }
+  function forgeScore(g) {
+    const d0 = Math.abs(g.pos - g.c), half = g.w / 2;
+    if (d0 <= half) return 0.85 + 0.15 * (1 - d0 / half);
+    return Math.max(0, 0.85 - ((d0 - half) / 0.3) * 0.85);
+  }
+  $('forge-hit').addEventListener('click', () => {
+    if (!forgeGame || forgeGame.done) return;
+    forgeGame.done = true;
+    cancelAnimationFrame(forgeGame.raf);
+    const sc = forgeScore(forgeGame);
+    $('forge-result').textContent = sc >= 0.85 ? '완벽한 타이밍!' : sc >= 0.55 ? '괜찮은 타이밍.' : '조금 빗나갔다.';
+    $('forge-hit').disabled = true;
+    const out = forgeGame.out;
+    setTimeout(() => { $('forge-dlg').close(); itemAct('craft', { recipe: out, focus: Math.round(sc * 100) / 100 }); }, 650);
+  });
+  $('forge-skip').addEventListener('click', () => {
+    if (!forgeGame) return;
+    forgeGame.done = true;
+    cancelAnimationFrame(forgeGame.raf);
+    const out = forgeGame.out;
+    $('forge-dlg').close();
+    itemAct('craft', { recipe: out });
+  });
+  $('forge-dlg').addEventListener('close', () => { if (forgeGame) { forgeGame.done = true; cancelAnimationFrame(forgeGame.raf); } });
   let craftTab = 'all', craftCan = false;
   function openCraft() { fetchInv(() => { renderCraft(); openPanel('craft-dlg'); }); }
   $('craft-close').addEventListener('click', () => $('craft-dlg').close());
@@ -7650,6 +7955,7 @@
       S.slots = data.slots;
       for (const [k, v] of Object.entries(S.items || {})) v.id = k;
       S.recipes = data.recipes;
+      S.craftRules = data.craftRules || null;
       S.buffs = data.buffs || {};
       S.expGoals = data.expGoals || {};
       S.deathCfg = data.death || { waitMs: 3 * 3600000, helpAp: 2, helpEn: 8 };

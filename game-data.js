@@ -170,6 +170,13 @@ const ITEMS = {
   beast_hide:   { name: '짐승 가죽',        rarity: 'common',   desc: '질기고 두꺼운 가죽이다.' },
   sharp_fang:   { name: '날카로운 송곳니',  rarity: 'uncommon', desc: '사냥한 짐승에게서 얻었다.' },
   corrupt_crystal:{ name: '오염 결정',      rarity: 'rare', value: 55, desc: '오염된 땅에서만 맺히는 검붉은 결정. 오래 쥐고 있으면 머릿속이 웅웅거린다.' },
+  recipe_scroll:  { name: '바랜 제작서',   rarity: 'rare',     type: 'use', use: { recipe: true }, value: 40, desc: '누군가 남긴 제작법이 적힌 낡은 양피지. 읽으면 아직 모르는 제작법 하나를 알게 된다.' },
+  ember_tonic:    { name: '불씨 강장제',   rarity: 'uncommon', type: 'use', use: { hp: 25, en: 40 }, desc: '불도마뱀 꼬리를 꿀에 재운 강장제. 목구멍이 화끈거린다.' },
+  hydra_salve:    { name: '히드라 고약',   rarity: 'rare',     type: 'use', use: { hp: 120 }, desc: '잘려도 다시 자라는 히드라의 피를 고약에 섞었다.' },
+  storm_charm:    { name: '폭풍 깃 부적',  rarity: 'rare',     type: 'equip', slot: 'charm', bonus: { wing: 2, wisdom: 1 }, desc: '그리핀 깃에 룬을 새겼다. 쥐면 바람이 따라 분다.' },
+  troll_gorget:   { name: '트롤 엄니 목가리개', rarity: 'rare', type: 'equip', slot: 'neck', bonus: { scale: 3 }, desc: '트롤 엄니를 늪철로 엮었다. 투박하지만 무엇이든 막아 낸다.' },
+  moon_circlet:   { name: '달빛 머리장식', rarity: 'rare',     type: 'equip', slot: 'head', bonus: { majesty: 2, wisdom: 2 }, desc: '은빛 토끼풀과 심해 진주를 비단으로 묶었다. 달빛 아래에서 은은하게 빛난다.' },
+  star_crown:     { name: '별조각 관',     rarity: 'rare',     type: 'equip', slot: 'head', bonus: { wisdom: 3, majesty: 1 }, desc: '유성우의 밤에 주운 별조각을 금으로 박았다.' },
   blackened_scale:{ name: '검게 물든 비늘', rarity: 'rare', value: 45, desc: '오염된 땅의 짐승에게서만 벗겨지는 비늘. 차갑고, 쇠보다 단단하다.' },
   frenzy_draught: { name: '광기의 묘약',   rarity: 'uncommon', type: 'use', use: { buff: 'frenzy', mindCost: 15 }, desc: '오염 결정을 녹인 검붉은 물약. 마시면 힘이 끓어오르지만 머릿속이 웅웅거린다. (마실 때 정신 −15)' },
   purify_incense: { name: '정화의 향',     rarity: 'rare',     type: 'use', use: { mind: 60 }, desc: '오염 결정을 꿀과 이끼로 감싸 태우면, 검은 기운이 하얀 연기로 바뀐다.' },
@@ -336,6 +343,13 @@ const RECIPES = [
   { out: 'calm_incense',  needs: { glow_moss: 1, wild_honey: 1 },                      en: 5,  wis: 8 },
   { out: 'void_claw',     needs: { corrupt_crystal: 3, obsidian: 1 },                  en: 14, wis: 11 },
   { out: 'pure_amulet',   needs: { corrupt_crystal: 2, rune_stone: 2, silver_clover: 1 }, en: 14, wis: 12 },
+  // 숨겨진 제작법: 처음엔 안 보임. 재료를 섞어 보는 실험이나 바랜 제작서로 알게 됨
+  { out: 'ember_tonic',   needs: { salamander_tail: 1, wild_honey: 1 },               en: 6,  wis: 8,  hidden: true },
+  { out: 'hydra_salve',   needs: { hydra_blood: 1, honey_salve: 1 },                  en: 8,  wis: 11, hidden: true },
+  { out: 'storm_charm',   needs: { griffin_feather: 1, rune_stone: 2 },               en: 13, wis: 11, hidden: true },
+  { out: 'troll_gorget',  needs: { troll_tusk: 2, bog_iron: 1 },                      en: 12, wis: 10, hidden: true },
+  { out: 'moon_circlet',  needs: { silver_clover: 1, deep_pearl: 1, silk_scrap: 1 },  en: 14, wis: 12, hidden: true },
+  { out: 'star_crown',    needs: { star_shard: 2, gold_ore: 1 },                      en: 15, wis: 13, hidden: true },
   { out: 'frenzy_draught', needs: { corrupt_crystal: 1, poison_herb: 2 },               en: 6,  wis: 9 },
   { out: 'purify_incense', needs: { corrupt_crystal: 1, glow_moss: 2, wild_honey: 1 },  en: 8,  wis: 10 },
   { out: 'abyss_pendant',  needs: { corrupt_crystal: 2, blackened_scale: 2, silver_chain: 1 }, en: 14, wis: 12 },
@@ -812,6 +826,8 @@ const TITLES = [
   { id: 'teacher',   name: '이름난 스승',      cond: { count: 'teach', at: 20 },    mod: { xp: 1.03 },       eff: '경험치 +3%' },
   { id: 'surpass',   name: '청출어람',         cond: { count: 'surpass', at: 1 },   mod: { atk: 1.03 },      eff: '사냥 공격 +3%' },
   // 이어받은 의지
+  { id: 'pioneer',   name: '새 길을 연 발톱',   cond: { count: 'firstcraft', at: 1 }, mod: { craftEn: 0.9 }, eff: '제작 기력 −10%' },
+  { id: 'masterwork', name: '걸작의 장인',     cond: { count: 'masterwork', at: 5 }, mod: { craftGreat: 0.05 }, eff: '제작 대성공 +5%' },
   { id: 'voidwalker', name: '어둠을 걷는 자',  cond: { count: 'corrupt', at: 100 }, mod: { mindWard: 0.85 }, eff: '깎이는 정신 −15%' },
   { id: 'cleanser',  name: '오염을 걷어 낸 자', cond: { count: 'purify', at: 1 },     mod: { xp: 1.03 },       eff: '경험치 +3%' },
   { id: 'heir',      name: '의지를 이은 자',   cond: { count: 'heir', at: 1 },      mod: { xp: 1.05 },       eff: '경험치 +5%' },
@@ -827,7 +843,7 @@ const TITLES = [
   { id: 'scarred',   name: '상흔투성이',       cond: { scars: 3 },                  mod: { taken: 0.95 },    eff: '사냥 받는 피해 −5%' },
 ];
 // 칭호 조건을 사람이 읽는 글로
-const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: '둥지에서 {n}번 쉬기', craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격', heir: '먼 여행을 떠난 드래곤의 의지를 잇기', teach: '제자를 {n}번 가르치기', surpass: '스승의 레벨을 따라잡기', sendoff: '다 자란 식구를 {n}번 떠나보내기', corrupt: '오염된 땅에서 {n}번 행동하기', purify: '오염된 땅을 {n}번 정화하기' };
+const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: '둥지에서 {n}번 쉬기', craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격', heir: '먼 여행을 떠난 드래곤의 의지를 잇기', teach: '제자를 {n}번 가르치기', surpass: '스승의 레벨을 따라잡기', sendoff: '다 자란 식구를 {n}번 떠나보내기', corrupt: '오염된 땅에서 {n}번 행동하기', purify: '오염된 땅을 {n}번 정화하기', firstcraft: '숨겨진 제작법을 대륙에서 처음 찾아내기', masterwork: '대성공 {n}번' };
 
 // ── 장소와 사냥터 난이도 ───────────────────────────
 // 야생 지역마다 장소가 셋. 입구는 쉽고 안쪽일수록 사냥터 난이도(Lv.1~12)가 높다.
@@ -930,6 +946,27 @@ const MIND = {
   scale: { explore: 0.12, gather: 0.15, hunt: 0.25, elite: 2 }, // 검게 물든 비늘이 나올 확률 (강적은 개수)
   legend: { item: 'abyss_crown', chance: 0.08 },               // 오염된 강적이 떨어뜨리는 전설 장신구
 };
+// 제작을 더 재미있게: 대성공, 실험, 장신구 강화·각인, 마을 의뢰, 둥지 공방
+const CRAFT = {
+  // 대성공 확률 = 기본 + 지혜 × 지혜당 + 제작 횟수 / 횟수당(최대 countMax) + 공방 + 대장장이 식구 + 칭호 + 불 조절(미니게임)
+  great: { base: 0.08, perWis: 0.004, perCount: 500, countMax: 0.08, forge: 0.03, smith: 0.05, cap: 0.6, focus: [[0.85, 0.25], [0.55, 0.1]] },
+  experiment: { en: 4 },                  // 실험에 드는 기력 (고른 재료는 하나씩 사라짐)
+  scrollChance: { explore: 0.04, elite: 0.1 }, // 바랜 제작서가 나올 확률
+  // 장신구 강화: 단계마다 성공 확률·재료·금화. 실패하면 재료와 금화만 사라짐. 한 단계마다 그 장신구의 주 능력치 +1
+  enhance: [
+    { rate: 1.0,  gold: 40,  items: { rune_stone: 2 } },
+    { rate: 0.75, gold: 100, items: { rune_stone: 3, old_scroll: 1 } },
+    { rate: 0.5,  gold: 220, items: { rune_stone: 4, ancient_relic: 1 } },
+  ],
+  forgeRate: 0.1,                         // 공방이 있는 둥지에서 강화하면 성공 확률 +10%
+  // 속성 각인: 그 속성 공격(숨결·스킬) 피해 배율. 재료는 속성마다 다름
+  engrave: { power: 1.12, gold: 40, items: { fire: { fire_crystal: 1 }, ice: { eternal_ice: 1 }, lightning: { sun_stone: 1 }, earth: { obsidian: 2 }, poison: { poison_herb: 3 }, mist: { glow_moss: 2 }, acid: { toad_gland: 2 }, water: { deep_pearl: 1 }, spirit: { silver_clover: 1 } } },
+  // 마을 제작 의뢰: 마을마다 하루 3개. 보상 = 물건 값 × 개수 × gold, 평판 +rep
+  orders: { perTown: 3, gold: 1.6, rep: 4, maxWis: 12 },
+  // 둥지 공방(화로): 둥지에서 만들 때 기력 −20%, 대성공 +3%
+  forge: { cost: { gold: 250, items: { bog_iron: 4, red_clay: 4, obsidian: 2 } }, en: 0.8 },
+};
+
 // 정화: 오염된 땅에서 행동할수록 모두의 정화 기여가 쌓이고, 목표에 닿으면 그 땅의 오염이 일찍 걷힘
 const PURIFY = {
   goal: 250,                                   // 모두 합쳐 이만큼 모이면 정화
@@ -1189,7 +1226,7 @@ const ELITES = {
 
 module.exports = {
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, TITLES, TITLE_COUNT_NAMES,
-  PURIFY, SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
+  PURIFY, CRAFT, SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
   DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
   COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, DEPART, BONDS, MARKS, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES,
 };

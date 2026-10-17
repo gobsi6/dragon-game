@@ -12,7 +12,7 @@ const db = require('./db');
 const {
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, CREATURES, RULES, SLOTS, RECIPES, SHOPS, repTier, TRADE, NEST,
   STANCE_RULES, FAME_TIERS, fameTier, KIN, TALENTS, TRAITS, TRAIT_EARN, TRAIT_COUNTS,
-  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, STATUS, CREATURE_COMBAT, MIND, PURIFY, PLACES, REGION_PLACES, PLACE_RULES, HOARD_TIERS, RAID, SEASONS, WEATHERS, DEPART,
+  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, STATUS, CREATURE_COMBAT, MIND, PURIFY, CRAFT, PLACES, REGION_PLACES, PLACE_RULES, HOARD_TIERS, RAID, SEASONS, WEATHERS, DEPART,
 } = require('./game-data');
 const logic = require('./game-logic');
 const life = require('./game-life');
@@ -149,6 +149,7 @@ const meOf = (d) => ({
   fallen: logic.isFallen(d) ? death.view(d) : null,
   titles: logic.titlesView(d),
   craftMult: logic.titleMods(d).craftEn || 1,
+  craft: logic.craftView(d),                // 찾아낸 제작법, 대성공 확률, 공방, 장신구 강화·각인
   buff: (() => { const b = logic.buffOf(d); return b ? { id: b.id, until: b.until } : null; })(),
   scars: death.scarsOf(d),
   bio: bioOf(d),
@@ -455,6 +456,16 @@ const purify = (() => {
 logic.hooks.purified = purify.purified;
 logic.hooks.purify = (d, kind) => purify.add(d, kind);
 logic.hooks.purifyDebug = purify.debugSet; // 시험용: 정화 진행을 바로 정함
+// 숨겨진 제작법을 대륙에서 처음 찾아낸 드래곤: 전체 공지와 칭호
+logic.hooks.firstRecipe = (d, out) => {
+  const w = db.worldGet('firstRecipe') || {};
+  if (w[out]) return [`(이 제작법을 처음 찾아낸 드래곤은 ${w[out].name}이었다)`];
+  w[out] = { id: d.id, name: d.name, at: Date.now() };
+  db.worldSet('firstRecipe', w);
+  io.emit('system', { text: `[발견] ${d.name}${josa(d.name, '이', '가')} 대륙에서 처음으로 '${ITEMS[out].name}' 제작법을 찾아냈다!`, at: Date.now() });
+  logic.chron(d, 'mark', `대륙에서 처음으로 '${ITEMS[out].name}' 제작법을 찾아냈다.`);
+  return ['대륙에서 처음 찾아낸 제작법이다! 모두에게 소식이 퍼졌다.', ...logic.traitCount(d, 'firstcraft')];
+};
 // 이벤트가 볼 수 있게: 보물더미, 최근 재앙의 흔적
 logic.hooks.hoard = (id) => db.hoard(id);
 logic.hooks.bossTrace = (region) => boss.trace(region);
@@ -566,7 +577,7 @@ io.on('connection', (socket) => {
     kinRules: KIN, talents: TALENTS,
     rules: { cost: RULES.cost, apEvery: RULES.apEvery, enEvery: RULES.enEvery, expeditionMinutes: RULES.expeditionMinutes },
     slots: SLOTS,
-    recipes: RECIPES,
+    recipes: RECIPES.map((r) => (r.hidden ? { ...r, needs: {} } : r)), // 숨겨진 제작법은 재료를 숨김 (찾아내면 me.craft.needs로)
     buffs: require('./game-data').BUFFS,
     expGoals: Object.fromEntries(Object.entries(require('./game-data').EXP_GOALS).map(([k, g]) => [k, { name: g.name, desc: g.desc, eff: g.eff, wild: !!g.wild }])),
     death: { waitMs: require('./game-data').DEATH.waitMs, helpAp: require('./game-data').DEATH.helpAp, helpEn: require('./game-data').DEATH.helpEn },
@@ -580,6 +591,7 @@ io.on('connection', (socket) => {
     stanceRules: STANCE_RULES,
     fameTiers: FAME_TIERS,
     traits: TRAITS, traitEarn: TRAIT_EARN, traitCounts: TRAIT_COUNTS,
+    craftRules: { enhance: CRAFT.enhance, forgeRate: CRAFT.forgeRate, engrave: CRAFT.engrave, experimentEn: CRAFT.experiment.en, forge: CRAFT.forge, hidden: RECIPES.filter((r) => r.hidden).map((r) => r.out) },
     statPerLevel: require('./game-data').STAT_POINTS.perLevel,
     places: PLACES, regionPlaces: REGION_PLACES, placeRules: PLACE_RULES,
     combat: { breaths: BREATHS, breathCost: BREATH_COST, elements: ELEMENTS, skills: SKILLS, status: STATUS, combos: require('./game-data').COMBOS, maxSkills: COMBAT.maxSkills, turnSeconds: COMBAT.turnSeconds,
@@ -780,6 +792,8 @@ io.on('connection', (socket) => {
       }
       res.lines.push(...logic.traitCount(d, 'corrupt'));
     }
+    // 바랜 제작서: 탐사하다 가끔 (숨겨진 제작법)
+    if (type === 'explore' && Math.random() < CRAFT.scrollChance.explore) { res.items = [...(res.items || []), { id: 'recipe_scroll', qty: 1 }]; res.lines.push('무너진 돌 틈에 낡은 양피지가 끼어 있었다. 바랜 제작서다!'); }
     // 특성: 행동을 세고, 쓰러지기 직전까지 몰린 사냥은 상처로 셈
     res.lines.push(...logic.traitCount(d, type));
     if (res.wound) res.lines.push(...logic.traitCount(d, 'wound'));
@@ -895,13 +909,31 @@ io.on('connection', (socket) => {
       const t = trigger && trigger(res);
       if (t) res.event = life.rollEvent(d, kin, have, t, now);
       refreshKin(d, kin);
+      // 장신구를 모두 팔거나 버렸으면 강화·각인 기록도 지움
+      if ((res.items || []).some((x) => x.qty < 0 && ITEMS[x.id]?.type === 'equip')) {
+        const delta = {}; for (const x of res.items) delta[x.id] = (delta[x.id] || 0) + x.qty;
+        logic.tidyGear(d, (id) => have(id) + (delta[id] || 0));
+      }
       db.saveState(d, res.items, res.hoardItems);
       sendMe(socket, d);
       if (after) after(d, res);
       ack({ ok: true, result: res });
     });
   };
-  itemAction('craft', (d, p, have) => logic.craft(d, str(p.recipe), have));
+  itemAction('craft', (d, p, have) => logic.craft(d, str(p.recipe), have, p.focus));
+  itemAction('craft:experiment', (d, p, have) => logic.experiment(d, p.items, have));
+  itemAction('gear:enhance', (d, p, have) => logic.enhanceGear(d, str(p.item), have));
+  itemAction('gear:engrave', (d, p, have) => logic.engraveGear(d, str(p.item), str(p.elem), have));
+  itemAction('nest:forge', (d, p, have) => logic.buildForge(d, have));
+  itemAction('order:fill', (d, p, have) => logic.fillOrder(d, str(p.key), have));
+  socket.on('order:list', (payload, ack) => {
+    if (typeof ack !== 'function') return;
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+    const v = logic.ordersView(entry.dragon);
+    if (!v) return ack({ error: '의뢰 게시판은 인간 마을에만 있다.' });
+    ack({ ok: true, orders: v });
+  });
   itemAction('item:use', (d, p, have) => logic.useItem(d, str(p.item), have), (d) => arena.checkMind(d)); // 광기의 묘약으로 정신이 다 깎일 수 있음
   // 소지품 버리기: 버린 물건은 사라짐
   itemAction('item:drop', (d, p, have) => {
@@ -1015,6 +1047,7 @@ io.on('connection', (socket) => {
         wards: { trap: logic.nestInfo(d).wards.trap || 0, stone: logic.nestInfo(d).wards.stone || 0 },
         raid: logic.raidView(d),
         guard: d.perks?.guard || null,
+        forge: !!logic.nestInfo(d).forge, forgeCost: CRAFT.forge.cost, // 둥지 공방(화로)
         offers: social.kinOffers(d),            // 식구 입양 제안 (받은 것·보낸 것)
       },
     });
