@@ -878,11 +878,11 @@
   .buff-row b { font-weight: 700; }
   .buff-row svg { color: #A87A1C; flex: none; }
   .buff-now { padding: 8px 12px; font-size: 13px; color: #5A4A12; background: #FBF6E8; border: 1px solid #E2CF9E; border-radius: 3px; margin-bottom: 4px; }
-  .inv-h { margin: 14px 0 6px; font: 700 13px/1.4 var(--serif); color: var(--steel-d); display: flex; align-items: center; gap: 8px; grid-column: 1 / -1; }
+  .inv-h, .dlg h3.inv-h { margin: 26px 0 8px; font: 700 13px/1.4 var(--serif); color: var(--steel-d); display: flex; align-items: center; gap: 8px; grid-column: 1 / -1; }
   .inv-h .inv-hn { font: 400 11px/1 var(--sans); color: var(--muted); }
   .inv-h::after { content: ""; flex: 1; height: 1px; background: var(--line-in); }
-  .inv-h:first-child, .buff-now + .inv-h { margin-top: 2px; }
-  .craft-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 2px 0 6px; }
+  .dlg h3.inv-h:first-child, .dlg .buff-now + h3.inv-h { margin-top: 4px; }
+  .craft-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 2px 0 26px; }
   .chipbtn { min-height: 32px; padding: 0 12px; font-size: 13px; border: 1px solid var(--line-soft); background: #fff; border-radius: 16px; color: var(--ink-2); }
   .chipbtn.on { background: var(--steel-d); border-color: var(--steel-d); color: #fff; }
   .craft-can { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); cursor: pointer; }

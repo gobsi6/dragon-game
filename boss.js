@@ -185,7 +185,7 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
     const xp = logic.xpOf(d, Math.round(BOSS.xpBase + dealt * BOSS.xpPerDmg));
     const levelUp = logic.gainXp(d, xp);
     if (gold) lines.push(`흩어진 비늘 사이에서 금화 ${gold}닢을 주웠다.`);
-    lines.push(`체력을 ${Math.round(me.hpMax - me.hp)} 잃었다.`);
+    lines.push(`체력을 ${Math.round(Math.max(0, (me.hp0 ?? me.hpMax) - me.hp))} 잃었다.`);
     if (killed) setImmediate(() => defeat(d.id)); else setImmediate(push);
     return { title: `대륙의 재앙`, lines, items: [], gold, xp, levelUp, win: killed, turns: b.turn, fall: false, dealt, wound: d.hp <= logic.hpCap(d) * 0.15 };
   }

@@ -74,7 +74,7 @@ function fromDragon(d, context) {
   const love = hunt && logic.hooks.together?.(d) ? logic.BOND_TOGETHER.taken : 1; // 연인·반려와 함께 있으면 받는 피해가 줌
   return {
     id: d.id, name: d.name, kind: d.kind, creature: false,
-    hp: hunt ? d.hp : hpMax, hpMax, en: hunt ? d.en : enMax, enMax,
+    hp: hunt ? d.hp : hpMax, hp0: hunt ? d.hp : hpMax, hpMax, en: hunt ? d.en : enMax, enMax, // hp0: 싸움을 시작할 때의 체력 (잃은 체력 계산)
     atk: atk * (bf?.atk || 1) * (ti.atk || 1), def: st.scale, spd: st.wing + (bf?.spd || 0), mag: st.wisdom * (bf?.mag || 1), maj: st.majesty,
     taken: (hunt ? tm.huntDmg * (d.perks?.knight ? 0.7 : 1) : 1) * (bf?.taken || 1) * (ti.taken || 1) * love, // 받는 피해 배율
     healMult: ti.heal || 1,
@@ -592,7 +592,7 @@ function huntReward(d, b, c) {
   d.en = Math.max(0, Math.round(me.en));
   const skillsUsed = [...new Set(me.used || [])].slice(0, 3);
   const win = b.winner === me;
-  const lost = me.hpMax - me.hp;
+  const lost = Math.max(0, (me.hp0 ?? me.hpMax) - me.hp); // 싸우기 전 체력에서 줄어든 만큼
   const killed = foes.filter((f) => f.hp <= 0);
   const lines = [];
   const hostile = d.stance === 'hostile';
@@ -764,7 +764,7 @@ function raidReward(d, b, c, raid) {
   d.en = Math.max(0, Math.round(me.en));
   const win = b.winner === me;
   const fled = b.fled === me;
-  const lost = Math.round(me.hpMax - me.hp);
+  const lost = Math.round(Math.max(0, (me.hp0 ?? me.hpMax) - me.hp));
   const killed = foes.filter((f) => f.hp <= 0);
   const lines = [];
   let gold = 0;
