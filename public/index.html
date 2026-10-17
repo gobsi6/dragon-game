@@ -1509,7 +1509,7 @@
   .who .me { margin-left: auto; margin-right: 2px; padding: 1px 7px; border: 1px solid #B9C7D3; color: #2E4A60; font-size: 11px; border-radius: 2px; }
 
   /* 이야기 창: 같은 드래곤이 잇따라 한 말은 한 묶음으로, 이름표를 누르면 그 드래곤의 기록 */
-  .log { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 6px; display: flex; flex-direction: column; gap: 5px; font-size: 13px; line-height: 1.5; }
+  .log { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; transform: translateZ(0); padding: 10px 6px; display: flex; flex-direction: column; gap: 5px; font-size: 13px; line-height: 1.5; }
   /* 말 묶음마다 얇은 테두리를 둘러 서로 나뉘어 보이게 */
   .log .msg { display: flex; flex-direction: column; gap: 1px; padding: 5px 8px 6px; border: 1px solid var(--line-in); border-radius: 4px; background: var(--surface-2); overflow-wrap: anywhere; }
   .log .msg.mine { background: #F2F5F8; border-color: #D3DDE6; }
@@ -1523,7 +1523,8 @@
   .log .mh .mhx { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; min-height: 22px; }
   .log .mh .ttl { overflow: visible; max-width: none; }
   .log .mh .nm { white-space: nowrap; }
-  .log .mh time { white-space: nowrap; }
+  .log .mh time { white-space: nowrap; flex: none; margin-left: auto; line-height: 22px; font-size: 9.5px; }
+  .log .mh .mhx { gap: 2px 3px; }
   .log .ml { position: relative; display: flex; align-items: flex-start; gap: 4px; padding: 0 2px; margin: 0 -2px; border-radius: 3px; color: var(--ink); }
   .log .ml .tx { flex: 1; min-width: 0; white-space: pre-wrap; }
   .log .ml .del { flex: none; width: 18px; height: 18px; margin-top: 1px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font-size: 13px; line-height: 18px; opacity: 0; cursor: pointer; }
@@ -1606,7 +1607,7 @@
     /* 폰: 이야기 창은 오른쪽 아래 △ 버튼으로 접어 두고, 누르면 메뉴 바로 위에 떠오름 */
     .chat {
       display: none; position: fixed; z-index: 15; right: 12px; bottom: calc(var(--dock-h, 56px) + 12px);
-      width: min(380px, calc(100vw - 24px)); height: min(460px, calc(100vh - var(--dock-h, 56px) - 90px)); height: min(460px, calc(100dvh - var(--dock-h, 56px) - 90px));
+      width: min(380px, calc(100vw - 24px)); height: min(460px, calc(100vh - var(--dock-h, 56px) - 90px)); height: min(460px, calc(100svh - var(--dock-h, 56px) - 90px)); /* svh: 주소창이 접혔다 펴져도 높이가 바뀌지 않음 (dvh면 스크롤할 때마다 글자가 출렁였음) */
       padding: 10px 10px 8px; background: var(--surface); border: 1px solid var(--orn); border-radius: 4px;
       box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px var(--line-in), 0 10px 28px rgba(20, 30, 40, .22);
     }
@@ -7487,6 +7488,13 @@
     log.appendChild(node);
     if (atBottom) log.scrollTop = log.scrollHeight;
   }
+  // 이야기 창의 크기가 바뀌어도(화면 회전, 주소창, 창 크기) 맨 아래를 보고 있었다면 맨 아래에 붙여 둠. 글자가 위아래로 밀려 보이지 않게
+  {
+    const log = $('log');
+    let pinned = true;
+    log.addEventListener('scroll', () => { pinned = log.scrollHeight - log.scrollTop - log.clientHeight < 40; }, { passive: true });
+    if ('ResizeObserver' in window) new ResizeObserver(() => { if (pinned) log.scrollTop = log.scrollHeight; }).observe(log);
+  }
   const chatTime = (t) => {
     const d = new Date(t);
     const h = d.getHours();
@@ -7543,8 +7551,8 @@
     const hx = document.createElement('span');
     hx.className = 'mhx';
     if (m.title) { const tt = document.createElement('span'); tt.className = 'ttl'; tt.textContent = m.title; hx.append(tt); }
-    hx.append(nm, tm);
-    head.append(hx);
+    hx.append(nm);
+    head.append(hx, tm); // 시각은 머리줄 오른쪽 끝에 따로 (칭호·이름이 길어도 첫 줄에 남음)
     // 작은 프로필 사진을 이름 바로 왼쪽에 (없으면 종류 문양). 눌러도 기록이 열림
     if (m.dragonId) {
       const ava = avaEl({ id: m.dragonId, kind: m.kind, av: m.av }, 22);
