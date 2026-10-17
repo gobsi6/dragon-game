@@ -3814,7 +3814,7 @@
     const row = document.createElement('div');
     row.className = `mk-row ${it.rarity} ${cls || ''}`;
     row.innerHTML = '<div class="nm"><b></b><small></small></div><div class="acts"><span class="price"></span><div class="btns"></div></div>';
-    row.querySelector('.nm').textContent = it.name;
+    row.querySelector('b').textContent = it.name;
     row.querySelector('small').textContent = it.desc;
     if (it.type) {
       const e = document.createElement('span');
@@ -3983,7 +3983,7 @@
         const row = document.createElement('div');
         row.className = `recipe ${it.rarity}`;
         row.innerHTML = '<div class="nm"><b></b><span class="eff"></span></div><button type="button" class="btn primary">만들기</button><div class="needs"></div>';
-        row.querySelector('.nm').textContent = it.name;
+        row.querySelector('b').textContent = it.name;
         row.querySelector('.eff').textContent = effectText(it);
         const needs = row.querySelector('.needs');
         let ok = true;
