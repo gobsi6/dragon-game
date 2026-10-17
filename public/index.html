@@ -1634,6 +1634,18 @@
   .chat-h, .chat-fab { display: none; }
   .say .input { flex: 1; min-width: 0; min-height: 40px; font-size: 14px; }
   .say .btn { min-height: 40px; padding: 0 14px; font-size: 14px; }
+  .say .say-send { flex: none; width: 40px; padding: 0; display: grid; place-items: center; }
+  /* 용언: 모두에게 닿는 말. 보랏빛으로 구별 */
+  /* 양옆 버튼은 좁게: 용언은 세로 글씨의 얇은 버튼, 보내기는 화살표 하나짜리 정사각 버튼 */
+  .say-mode { flex: none; width: 22px; min-height: 40px; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font: 700 10.5px/1 var(--serif); color: var(--ink-2); background: #E3E5E2; border: 1px solid #D0D3CF; border-radius: 3px; cursor: pointer; }
+  .say-mode span { display: block; line-height: 1; }
+  .say-mode:hover { background: #D9DCD8; }
+  .say-mode[aria-pressed="true"] { color: #fff; background: #5B4A8A; border-color: #5B4A8A; }
+  .say-mode:disabled { color: var(--muted); border-color: var(--line-in); background: var(--surface-2); cursor: not-allowed; }
+  .say.shout .input { border-color: #9C8CC4; box-shadow: 0 0 0 2px rgba(91, 74, 138, .12); }
+  .say.shout .btn { background: #5B4A8A; border-color: #5B4A8A; }
+  .log .msg.shout { background: #F4F1FA; border-color: #D9D0EA; }
+  .log .mh .shout-tag { flex: none; padding: 0 6px; font: 700 10.5px/18px var(--serif); color: #5B4A8A; background: #E9E3F5; border-radius: 9px; }
 
   /* ── 하단 메뉴 ── */
   /* 화면 맨 아래에 고정. 본문은 메뉴 높이(--dock-h)만큼 아래 여백을 둬서 가려지지 않게 함 */
@@ -1965,9 +1977,10 @@
         </div>
         <div class="log" id="log" aria-live="polite"></div>
         <form class="say" id="say">
+          <button class="say-mode" type="button" id="say-mode" aria-pressed="false" title="용언: 대륙의 모든 드래곤에게 닿는 말" aria-label="용언"><span aria-hidden="true">용</span><span aria-hidden="true">언</span></button>
           <label class="sr" for="say-input">채팅 입력</label>
           <input class="input" id="say-input" maxlength="200" autocomplete="off" placeholder="말하기">
-          <button class="btn green" type="submit">보내기</button>
+          <button class="btn green say-send" type="submit" id="say-send" aria-label="보내기" title="보내기"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 15l7-7 7 7"/></svg></button>
         </form>
       </div>
     </aside>
@@ -8206,12 +8219,12 @@
       x.title = mine ? '이 말 지우기' : '이 말 지우기 (GM)';
       x.setAttribute('aria-label', x.title);
       x.addEventListener('click', () => {
-        if (!confirm('이 말을 지울까? 이곳의 모두에게서 사라진다.')) return;
+        if (!confirm(m.shout ? '이 용언을 지울까? 대륙의 모두에게서 사라진다.' : '이 말을 지울까? 이곳의 모두에게서 사라진다.')) return;
         socket.emit('chat:delete', { id: m.id }, (res) => { if (res.error) toast(res.error); });
       });
       line.appendChild(x);
     }
-    if (lastNode?.classList.contains('msg') && Number(lastNode.dataset.author) === m.dragonId && m.at - Number(lastNode.dataset.last) < 3 * 60000) {
+    if (lastNode?.classList.contains('msg') && lastNode.classList.contains('shout') === !!m.shout && Number(lastNode.dataset.author) === m.dragonId && m.at - Number(lastNode.dataset.last) < 3 * 60000) {
       lastNode.dataset.last = m.at;
       const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
       lastNode.appendChild(line);
@@ -8219,7 +8232,7 @@
       return;
     }
     const p = document.createElement('div');
-    p.className = `msg${mine ? ' mine' : ''}`;
+    p.className = `msg${mine ? ' mine' : ''}${m.shout ? ' shout' : ''}`;
     p.dataset.author = m.dragonId;
     p.dataset.last = m.at;
     p.style.setProperty('--t', `var(--t-${m.kind})`);
@@ -8238,6 +8251,7 @@
     hx.className = 'mhx';
     if (m.title) { const tt = document.createElement('span'); tt.className = 'ttl'; tt.textContent = m.title; hx.append(tt); }
     hx.append(nm);
+    if (m.shout) { const st = document.createElement('span'); st.className = 'shout-tag'; st.textContent = '용언'; st.title = '대륙의 모든 드래곤에게 닿은 말'; hx.append(st); }
     head.append(hx, tm); // 시각은 머리줄 오른쪽 끝에 따로 (칭호·이름이 길어도 첫 줄에 남음)
     // 작은 프로필 사진을 이름 바로 왼쪽에 (없으면 종류 문양). 눌러도 기록이 열림
     if (m.dragonId) {
@@ -8290,11 +8304,37 @@
     if (chatMq.matches && !$('chat').classList.contains('open') && !(S.me && m.dragonId === S.me.id)) { chatUnread += 1; chatBadge(); }
   }
 
+  // 용언 모드: 켜면 다음 한 번의 말이 대륙 전체로 감 (보내고 나면 다시 꺼짐)
+  let shoutOn = false;
+  function renderSayMode() {
+    const left = S.me?.shoutLeft ?? 0, max = S.me?.shoutMax ?? 10;
+    const b = $('say-mode');
+    if (!left) shoutOn = false;
+    b.disabled = !left;
+    b.setAttribute('aria-pressed', String(shoutOn));
+    b.title = left ? `용언: 대륙의 모든 드래곤에게 닿는 말 (오늘 ${left}/${max}번 남음)` : `오늘은 용언을 ${max}번 모두 썼다`;
+    $('say').classList.toggle('shout', shoutOn);
+    $('say-input').placeholder = shoutOn ? `모두에게 · ${left}번 남음` : '말하기';
+    const sb = $('say-send');
+    sb.setAttribute('aria-label', shoutOn ? '외치기' : '보내기');
+    sb.title = shoutOn ? '외치기' : '보내기';
+  }
+  $('say-mode').addEventListener('click', () => { shoutOn = !shoutOn; renderSayMode(); $('say-input').focus(); });
   $('say').addEventListener('submit', (e) => {
     e.preventDefault();
     const input = $('say-input');
     const text = input.value.trim();
     if (!text) return;
+    if (shoutOn) {
+      socket.emit('shout', { text }, (res) => {
+        if (res.error) return toast(res.error);
+        if (S.me) S.me.shoutLeft = res.left;
+        shoutOn = false;
+        renderSayMode();
+      });
+      input.value = '';
+      return;
+    }
     socket.emit('chat', { text });
     input.value = '';
   });
@@ -8382,7 +8422,7 @@
         show('create');
       }
     });
-    socket.on('me', (me) => { setMe(me); maybeWelcome(); });
+    socket.on('me', (me) => { setMe(me); renderSayMode(); maybeWelcome(); });
     socket.on('welcome', (w) => {
       S.welcome = { text: w.text, ver: w.ver, seen: w.seen < 0 ? 0 : w.seen, shown: false };
       maybeWelcome();
