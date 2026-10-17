@@ -417,8 +417,16 @@
   .kin-card { padding: 12px 14px; display: flex; flex-direction: column; gap: 7px; background: var(--surface-2); border: 1px solid var(--line-in); border-radius: 3px; }
   .kin-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
   .kin-head b { font: 700 17px/1.3 var(--serif); }
-  .kin-chip { padding: 0 7px; font-size: 11.5px; line-height: 20px; border: 1px solid #B9C7D3; background: #EEF2F6; color: #2E4A60; border-radius: 2px; }
+  /* 식구 얼굴: 날씨 그림처럼 네모 틀 안에 */
+  .kin-face { flex: none; width: 42px; height: 42px; display: grid; place-items: center; margin-right: 2px; color: #5B6066; background: #F2F3F1; border: 1px solid #D5D8D4; border-radius: 3px; }
+  .kin-face svg { display: block; width: 30px; height: 30px; }
+  .kin-chip { padding: 0 7px; font-size: 11.5px; line-height: 20px; border: 1px solid #D5D8D4; background: #F2F3F1; color: #5B6066; border-radius: 2px; }
   .kin-chip.egg { border-color: #E2CF9E; background: #FBF6E8; color: #6B4E12; }
+  /* 새끼 드래곤·알: 얼굴 틀과 종류 칩을 그 종류 색으로 (날씨 그림 틀처럼 옅게 섞음, 선은 종류의 진한 글자색) */
+  .kin-card.drake .kin-face, .kin-card.drake .kin-chip { color: var(--kt); }
+  @supports (background: color-mix(in srgb, red 10%, white)) {
+    .kin-card.drake .kin-face, .kin-card.drake .kin-chip { background: color-mix(in srgb, var(--kc) 9%, #fff); border-color: color-mix(in srgb, var(--kc) 35%, #fff); }
+  }
   .kin-head .linkbtn { margin-left: auto; min-height: 28px; font-size: 12px; }
   /* 식구의 타고난 모습: 성별 표시 + 생김새 한 줄, 성격 칩 (누르면 설명) */
   .kin-look { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: -1px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--ink-2); }
@@ -3450,10 +3458,34 @@
     }
     return wrap;
   }
+  // ── 식구 얼굴: 네모 틀 안에 선으로만 그린 단순한 얼굴 (인간은 가운데 가르마, 드래곤은 뿔, 알은 알 모양) ──
+  function kinFace(v) {
+    const w = document.createElement('span');
+    w.className = 'kin-face';
+    w.setAttribute('aria-hidden', 'true');
+    const eyes = (y) => `<circle cx="9" cy="${y}" r=".95" fill="currentColor" stroke="none"/><circle cx="15" cy="${y}" r=".95" fill="currentColor" stroke="none"/>`;
+    let g;
+    if (v.status === 'egg') {
+      g = '<path d="M12 3.6c3.9 0 6.8 5.4 6.8 10.2 0 4.2-3 7-6.8 7s-6.8-2.8-6.8-7C5.2 9 8.1 3.6 12 3.6z"/>';
+    } else if (v.type === 'human') {
+      // 앞머리: 얼굴 테두리 양옆에서 시작해 가운데에서 만남
+      g = `<circle cx="12" cy="13" r="8.5"/><path d="M3.65 11.4Q8.6 10.6 12 6.4Q15.4 10.6 20.35 11.4"/>${eyes(14.6)}`;
+    } else {
+      // 뿔: 양 끝이 얼굴 테두리에 붙어서 안쪽으로 삐져나오는 선이 없음
+      g = `<circle cx="12" cy="13.5" r="8.5"/><path d="M5.49 8.04Q5 4.6 5.9 2.6Q7.6 3.8 8.82 5.62M18.51 8.04Q19 4.6 18.1 2.6Q16.4 3.8 15.18 5.62"/>${eyes(15)}`;
+    }
+    w.innerHTML = `<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">${g}</svg>`;
+    return w;
+  }
   function kinCard(v, canAct) {
     const R = S.kinRules;
     const card = document.createElement('div');
     card.className = 'kin-card';
+    if (v.type === 'drake' && v.kind) {
+      card.classList.add('drake');
+      card.style.setProperty('--kc', `var(--k-${v.kind})`);
+      card.style.setProperty('--kt', `var(--t-${v.kind})`);
+    }
     const head = document.createElement('div');
     head.className = 'kin-head';
     const nm = document.createElement('b');
@@ -3461,7 +3493,7 @@
     const chip = document.createElement('span');
     chip.className = `kin-chip${v.status === 'egg' ? ' egg' : ''}`;
     chip.textContent = v.status === 'egg' ? `알 · ${kindName(v.kind)}` : v.type === 'human' ? `인간 · ${v.stage}` : `${kindName(v.kind)} · ${v.stage}`;
-    head.append(nm, chip);
+    head.append(kinFace(v), nm, chip);
     if (v.status !== 'egg') {
       const rn = document.createElement('button');
       rn.type = 'button';
@@ -3591,7 +3623,7 @@
       st.innerHTML = S.stats.map((x) => `<span>${x.name} <b>${v.stats[x.key]}</b></span>`).join('');
       card.appendChild(st);
       const pers = { friendly: '인간과 어울리는', hermit: '조용히 홀로 지내는', hostile: '거칠고 대담한' }[v.personality];
-      meta(`가르친 횟수 ${v.trains}/${v.trainLimit} · 어미를 닮아 ${pers} 성격으로 자라는 중`);
+      meta(`가르친 횟수 ${v.trains}/${v.trainLimit} · 보호자를 닮아 ${pers} 성격으로 자라는 중`);
       if (canAct && !v.onExp) {
         const R2 = R.drake;
         const full = v.trains >= v.trainLimit;
