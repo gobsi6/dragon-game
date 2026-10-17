@@ -225,6 +225,19 @@ const ITEMS = {
   hydra_tonic:  { name: '히드라 강장제',    rarity: 'rare',     type: 'use', use: { hp: 150 }, desc: '한 모금이면 찢긴 비늘 아래로 새살이 돋는다.' },
   ember_elixir: { name: '불씨 영약',        rarity: 'rare',     type: 'use', use: { en: 60, ap: 2 }, desc: '거인의 불씨를 녹인 영약. 몸속에서 불이 타오른다.' },
 
+  // ── 낚시 (해안 절벽에서만. 행동력 대신 미끼를 씀) ──
+  bait_worm:     { name: '지렁이 미끼',   rarity: 'common',   cat: 'bait', value: 3,  desc: '해안 어촌에서 파는 통통한 지렁이. 낚시 한 번에 하나씩 쓴다.' },
+  bait_shrimp:   { name: '작은 새우 미끼', rarity: 'common',   cat: 'bait', value: 3,  desc: '갯바위 틈에서 건진 작은 새우. 낚시 한 번에 하나씩 쓴다.' },
+  bait_meat:     { name: '고깃덩이 미끼', rarity: 'common',   cat: 'bait', value: 5,  desc: '사냥감 가죽에 붙은 고기를 뭉친 미끼. 냄새가 진해서 큰 물고기가 잘 문다.' },
+  bait_lure:     { name: '반짝이는 루어', rarity: 'uncommon', cat: 'bait', value: 12, desc: '놋쇠 단추와 조개껍데기로 만든 가짜 물고기. 귀한 물고기가 잘 속는다.' },
+  salt_crystal:  { name: '소금 결정',     rarity: 'common',   value: 2,  desc: '바닷물이 마른 바위에서 긁어 모은 굵은 소금. 생선을 절일 때 쓴다.' },
+  fish_mackerel: { name: '고등어',        rarity: 'common',   cat: 'fish', value: 4,  desc: '등이 푸른 흔한 생선. 셋을 소금에 절이면 절인 생선이 된다.' },
+  fish_flounder: { name: '가자미',        rarity: 'common',   cat: 'fish', value: 6,  desc: '모래에 납작 엎드려 있던 생선. 아이들이 생김새를 보고 깔깔 웃는다.' },
+  fish_salmon:   { name: '은비늘 연어',   rarity: 'uncommon', cat: 'fish', value: 14, desc: '비늘이 은처럼 빛나는 연어. 비 오는 날 잘 문다.' },
+  fish_eel:      { name: '번개 장어',     rarity: 'uncommon', cat: 'fish', value: 18, desc: '건드리면 찌릿한 장어. 뇌우가 치는 날에만 물가로 올라온다.' },
+  fish_marlin:   { name: '푸른 청새치',   rarity: 'rare',     cat: 'fish', value: 45, desc: '창처럼 긴 주둥이를 가진 큰 물고기. 어부들이 평생 한 번 볼까 말까 하다.' },
+  sea_scale:     { name: '바다 용의 비늘', rarity: 'rare',     cat: 'fish', value: 70, desc: '낚싯줄에 걸려 올라온 커다란 비늘. 깊은 바다에 무언가가 산다.' },
+  salmon_grill:  { name: '연어 구이',     rarity: 'uncommon', cat: 'meal', value: 16, desc: '소금을 뿌려 구운 은비늘 연어. 한 입만 먹어도 든든하다. (파수꾼 쪽)' },
   // ── 만든 물건: 식구 요리 (cat: meal. 인간 식구에게 건네면 배가 부르고 유대가 오름. 둥지 식구 칸에서 건넴) ──
   honey_cake:     { name: '꿀떡',     rarity: 'common',   cat: 'meal', value: 6,  desc: '야생 꿀을 바른 쫀득한 떡. 아이들이 가장 반긴다. (약초꾼 쪽)' },
   moss_soup:      { name: '이끼 수프', rarity: 'common',   cat: 'meal', value: 5,  desc: '빛나는 이끼를 넣어 은은하게 빛나는 수프. 먹으면 속이 따뜻해진다. (약초꾼 쪽)' },
@@ -350,6 +363,11 @@ const BUFFS = {
 
 // 제작법. needs: 재료와 개수, en: 쓰는 기력, wis: 필요한 지혜
 const RECIPES = [
+  // 낚시
+  { out: 'salted_fish',   needs: { fish_mackerel: 3, salt_crystal: 1 },                 en: 4,  wis: 0 },
+  { out: 'bait_meat',     needs: { beast_hide: 1 },                                     en: 2,  wis: 0 },
+  { out: 'bait_lure',     needs: { brass_button: 1, sea_shell: 1 },                     en: 4,  wis: 0 },
+  { out: 'salmon_grill',  needs: { fish_salmon: 1, salt_crystal: 1 },                   en: 4,  wis: 0 },
   // 식구 요리
   { out: 'honey_cake',    needs: { wild_honey: 1, grass_seed: 2 },                     en: 3,  wis: 0 },
   { out: 'moss_soup',     needs: { glow_moss: 1, grass_seed: 1 },                      en: 3,  wis: 0 },
@@ -436,7 +454,7 @@ for (const it of Object.values(ITEMS)) if (it.value == null) it.value = RARITY_V
 // 시장이 있는 지역과 파는 물건
 const SHOPS = {
   capital: ['herbal_ointment', 'strong_wine', 'silver_chain', 'travel_map', 'holy_water'],
-  coast:   ['herbal_ointment', 'salted_fish', 'silver_chain', 'sea_compass'],
+  coast:   ['herbal_ointment', 'salted_fish', 'bait_worm', 'silver_chain', 'sea_compass'],
 };
 
 // 우호 성향이고 마을 평판이 '호의'(20) 이상일 때만 파는 물건
@@ -511,9 +529,31 @@ const RAID = {
   ],
 };
 
+// ── 낚시: 해안 절벽에서만. 미끼 하나로 한 번 던짐 (행동력은 들지 않음) ──
+const FISHING = {
+  region: 'coast',
+  biteMin: 1500, biteMax: 4500,          // 던진 뒤 입질이 오기까지 (ms)
+  window: 1400,                          // 입질 뒤 이 안에 당겨야 함 (ms, 늦으면 놓침)
+  perfect: 450, good: 800,               // 입질 뒤 이 안에 당기면 '완벽'·'좋음'
+  // 잡히는 것: 기본 무게. tier가 높을수록 잘 당기거나 좋은 미끼일 때 잘 나옴. wx: 그 날씨에 무게 ×
+  fish: [
+    { id: 'fish_mackerel', w: 50, tier: 'common' },
+    { id: 'fish_flounder', w: 30, tier: 'common' },
+    { id: 'fish_salmon',   w: 10, tier: 'uncommon', wx: { rain: 2.5, fog: 1.5 } },
+    { id: 'fish_eel',      w: 0.5, tier: 'uncommon', wx: { storm: 24 } },
+    { id: 'fish_marlin',   w: 2,  tier: 'rare', wx: { clear: 1.5, heat: 1.5 } },
+    { id: 'sea_scale',     w: 1,  tier: 'rare', wx: { fog: 2, storm: 1.5, aurora: 2 } },
+  ],
+  quality: { perfect: { uncommon: 2.5, rare: 4, common: 0.6 }, good: { uncommon: 1.5, rare: 2 }, ok: { rare: 0.5 }, auto: { uncommon: 0.8, rare: 0.4 } },
+  bait: { bait_worm: {}, bait_shrimp: { common: 1.2 }, bait_meat: { uncommon: 1.6, rare: 1.5 }, bait_lure: { uncommon: 2, rare: 3 } },
+  xp: { common: 2, uncommon: 5, rare: 12 },
+  gatherBait: 0.45, gatherSalt: 0.35,    // 해안에서 채집할 때 미끼·소금이 함께 나올 확률
+  coastTribute: { bait: [3, 5], fish: [1, 3], failBait: [1, 2] }, // 적대가 해안을 위협할 때: 성공하면 미끼·생선, 실패해도 미끼 조금
+};
+
 const TRADE = {
   // 시장에서 하루(한국 날짜)에 살 수 있는 개수. 적지 않은 물건은 제한 없음
-  dailyBuy: { salted_fish: 5, holy_water: 5, herbal_ointment: 10, strong_wine: 10 },
+  dailyBuy: { salted_fish: 5, holy_water: 5, herbal_ointment: 10, strong_wine: 10, bait_worm: 10 },
   stanceCooldown: 12 * 60 * 60 * 1000, // 성향을 바꾼 뒤 다시 바꾸기까지 (12시간)
   refuseBelow: -40,                 // 평판이 이보다 낮으면 상인이 거래를 거절
   intimidateCost: 2,                // 위협하기에 드는 행동력
@@ -568,6 +608,10 @@ const KIN = {
     moss_soup:     { bond: 7,  talent: 'herbalist', sat: 40, eat: '빛나는 수프를 신기한 듯 들여다보다가 후후 불어 마신다.' },
     fish_porridge: { bond: 9,  talent: 'guard',     sat: 60, eat: '한 그릇을 싹 비우고 배를 두드린다. "이제 드래곤처럼 힘이 세질 거야!"' },
     hearth_bread:  { bond: 8,  talent: 'smith',     sat: 50, eat: '빵을 먹고 나서는 작은 점토 화덕을 이리저리 두드리며 논다.' },
+    fish_mackerel: { bond: 3,  talent: 'guard',     sat: 20, eat: '고등어를 꼬챙이에 꿰어 구워 주자 호호 불며 먹는다.' },
+    fish_flounder: { bond: 4,  talent: 'guard',     sat: 25, eat: '납작한 가자미를 보고 한참 웃더니, 구워 주자 맛있게 먹는다.' },
+    fish_salmon:   { bond: 7,  talent: 'guard',     sat: 40, eat: '은빛 비늘을 하나 떼어 간직하고는 연어를 맛있게 먹는다.' },
+    salmon_grill:  { bond: 12, talent: 'guard',     sat: 70, eat: '연어 구이 냄새에 달려와 뼈까지 발라 먹는다. "바다 맛이 나!"' },
     feast_plate:   { bond: 14, talent: null,        sat: 100, eat: '눈이 휘둥그레져서 한 접시씩 맛을 본다. 오늘은 잔칫날이다!' },
     red_clay: { bond: 3, talent: 'smith' }, bog_iron: { bond: 5, talent: 'smith' },
     gold_ore: { bond: 7, talent: 'smith' }, obsidian: { bond: 6, talent: 'smith' },
@@ -1317,7 +1361,7 @@ const ELITES = {
 
 module.exports = {
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, TITLES, TITLE_COUNT_NAMES,
-  PURIFY, CRAFT, SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
+  PURIFY, CRAFT, SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, FISHING, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
   DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
   COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, DEPART, BONDS, MARKS, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES,
 };

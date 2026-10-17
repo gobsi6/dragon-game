@@ -431,6 +431,33 @@
   .mk-go .coin::after { width: 6px; height: 6px; }
   .ord-rw { display: inline-flex; align-items: center; gap: 5px; font: 600 12.5px/1 var(--sans); color: #6A4E12; white-space: nowrap; }
   .mk-row .lock { font-size: 12px; color: var(--muted); text-align: right; }
+  /* 낚시 */
+  .fish-wx { margin: 0 0 10px; font-size: 13px; color: #2F5F73; }
+  .fish-baits { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .fish-baits button { min-height: 32px; padding: 0 11px; font-size: 13px; color: var(--ink-2); background: #fff; border: 1px solid var(--line-in); border-radius: 16px; cursor: pointer; }
+  .fish-baits button[aria-checked="true"] { color: #fff; background: #2F6F86; border-color: #2F6F86; }
+  .fish-baits .none { margin: 0; font-size: 12.5px; line-height: 1.6; color: var(--muted); }
+  .fish-pond { display: block; width: 100%; padding: 0; border: 1px solid #B9CFD9; border-radius: 4px; overflow: hidden; background: #EAF2F5; cursor: pointer; aspect-ratio: 320 / 130; }
+  .fish-pond svg { display: block; width: 100%; height: 100%; }
+  .fish-pond .wave { animation: fish-wave 3s ease-in-out infinite; }
+  .fish-pond .wave.w2 { animation-duration: 4.2s; }
+  .fish-pond .bob, .fish-pond .line, .fish-pond .ripple, .fish-pond .bang { transition: opacity .2s; }
+  .fish-pond[data-st="idle"] .bob, .fish-pond[data-st="idle"] .line, .fish-pond[data-st="idle"] .ripple { opacity: 0; }
+  .fish-pond .ripple, .fish-pond .bang { opacity: 0; }
+  .fish-pond .bang { font: 700 26px/1 var(--serif); fill: #C2453F; }
+  .fish-pond[data-st="wait"] .bob { animation: fish-bob 1.6s ease-in-out infinite; }
+  .fish-pond[data-st="bite"] .bob { animation: fish-bite .18s ease-in-out infinite alternate; }
+  .fish-pond[data-st="bite"] .ripple, .fish-pond[data-st="bite"] .bang { opacity: 1; }
+  .fish-pond[data-st="bite"] { border-color: #C2453F; box-shadow: 0 0 0 2px rgba(194, 69, 63, .25); }
+  @keyframes fish-wave { 50% { transform: translateX(-12px); } }
+  @keyframes fish-bob { 50% { transform: translateY(2.5px); } }
+  @keyframes fish-bite { from { transform: translateY(6px); } to { transform: translateY(10px) rotate(4deg); } }
+  @media (prefers-reduced-motion: reduce) { .fish-pond .wave, .fish-pond .bob { animation: none !important; } }
+  .fish-msg { min-height: 1.6em; margin: 10px 0 0; font-size: 13.5px; line-height: 1.6; color: var(--ink); text-align: center; word-break: keep-all; }
+  .fish-catch { display: flex; justify-content: center; gap: 6px; margin-top: 6px; }
+  .fish-acts { display: grid; grid-template-columns: 1fr 1.5fr; gap: 8px; margin-top: 12px; }
+  .fish-acts .btn { min-height: 44px; white-space: nowrap; padding: 0 10px; }
+  .fish-acts #fish-auto[hidden] + #fish-main { grid-column: 1 / -1; } /* 기다리는 동안엔 당기기 버튼을 크게 */
   .mk-row .daily { color: var(--steel-d); font-weight: 600; }
   .mk-row .daily.none { color: #A63E4B; }
   @media (max-width: 520px) {
@@ -1985,6 +2012,7 @@
           <button class="btn" type="button" data-act="hunt"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3C5A73" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19L19 5"/><path d="M14 5h5v5"/><path d="M4 15l5 5"/></svg>사냥<span class="cost">−2</span></button>
           <button class="btn" type="button" id="market-open" hidden><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7A5A16" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l2-5h14l2 5"/><path d="M4 9v11h16V9"/><path d="M3 9h18"/><path d="M10 20v-6h4v6"/></svg>시장</button>
           <button class="btn" type="button" id="intimidate" hidden><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#A63E4B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17l-1-10 5 4 4-6 4 6 5-4-1 10z"/><path d="M8 21l4-3 4 3"/></svg>위협하기<span class="cost">−2</span></button>
+          <button class="btn" type="button" id="fish-open" hidden><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2F6F86" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12c3-4 8-5 12-3l4-3v12l-4-3c-4 2-9 1-12-3z"/><circle cx="14.5" cy="11" r=".6" fill="#2F6F86"/></svg>낚시<span class="cost">미끼</span></button>
           <button class="btn" type="button" id="nest-open"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7E8389" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-6 8 6"/><path d="M6 10v9h12v-9"/></svg>둥지</button>
           <button class="btn" type="button" id="exp-open"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2A4256" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/><path d="M9 2h6"/></svg>원정 보내기</button>
           <span class="note">숫자는 소모하는 행동력이다.</span>
@@ -2131,6 +2159,32 @@
   <div class="row" style="margin-top: 12px"><button class="btn" type="button" id="nest-close">닫기</button></div>
 </dialog>
 
+<dialog class="frame dlg" id="fish-dlg" aria-labelledby="fish-dlg-title">
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="fish-dlg-title">낚시</h2></div>
+  <div class="body">
+    <p class="fish-wx" id="fish-wx"></p>
+    <div class="fish-baits" id="fish-baits" role="radiogroup" aria-label="미끼"></div>
+    <button type="button" class="fish-pond" id="fish-pond" data-st="idle" aria-label="낚싯줄">
+      <svg viewBox="0 0 320 130" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <defs><linearGradient id="fish-sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9CC3D3"/><stop offset="1" stop-color="#3E7790"/></linearGradient></defs>
+        <rect x="0" y="0" width="320" height="56" fill="#EAF2F5"/>
+        <rect x="0" y="56" width="320" height="74" fill="url(#fish-sea)"/>
+        <path class="wave" d="M0 60q20-5 40 0t40 0 40 0 40 0 40 0 40 0 40 0 40 0" fill="none" stroke="#DCEBF1" stroke-width="2"/>
+        <path class="wave w2" d="M0 84q20-4 40 0t40 0 40 0 40 0 40 0 40 0 40 0 40 0" fill="none" stroke="#7FB0C4" stroke-width="1.5" opacity=".7"/>
+        <path d="M6 4l70 36" stroke="#6B4E12" stroke-width="3" stroke-linecap="round"/>
+        <path class="line" d="M76 40Q150 30 214 58" fill="none" stroke="#5B6066" stroke-width="1"/>
+        <g class="ripple"><ellipse cx="214" cy="62" rx="14" ry="4" fill="none" stroke="#fff" stroke-width="1.5"/><ellipse cx="214" cy="62" rx="26" ry="7" fill="none" stroke="#fff" stroke-width="1" opacity=".6"/></g>
+        <g class="bob"><circle cx="214" cy="58" r="6.5" fill="#fff" stroke="#3B3F44" stroke-width="1.2"/><path d="M207.5 58a6.5 6.5 0 0 1 13 0z" fill="#C2453F" stroke="#3B3F44" stroke-width="1.2"/><path d="M214 51.5v-6" stroke="#3B3F44" stroke-width="1.2"/></g>
+        <text class="bang" x="214" y="34" text-anchor="middle">!</text>
+      </svg>
+    </button>
+    <p class="fish-msg" id="fish-msg" aria-live="polite"></p>
+    <div class="fish-catch" id="fish-catch" hidden></div>
+    <div class="fish-acts"><button class="btn" type="button" id="fish-auto">그냥 건지기</button><button class="btn primary" type="button" id="fish-main">던지기</button></div>
+    <div class="row"><button class="btn" type="button" id="fish-close">닫기</button></div>
+  </div>
+</dialog>
 <dialog class="frame dlg wide" id="market-dlg" aria-labelledby="market-dlg-title">
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="market-dlg-title">시장</h2></div>
@@ -3043,6 +3097,10 @@
     $('market-open').hidden = !town;
     $('intimidate').hidden = !town || me.stance !== 'hostile';
     $('intimidate').disabled = me.ap < S.trade.intimidateCost;
+    // 해안: 낚시(미끼로)
+    const coast = S.fishing && S.region === S.fishing.region;
+    $('fish-open').hidden = !coast;
+    if (!coast && $('fish-dlg').open) $('fish-dlg').close();
     renderMobBar();
   }
   // 머리 띠 아이콘: 승리 체크 · 패배 느낌표 · 그 밖은 마름모
@@ -3437,7 +3495,7 @@
     if (!S.places) return '';
     return Object.values(S.places).filter((p) => p.drop === id).map((p) => `${p.name}(${S.regions[p.region]?.name || ''})`).join(', ');
   }
-  const itemCat = (it) => (it.type === 'equip' ? 'equip' : it.type === 'use' ? (it.use?.buff ? 'buff' : 'use') : it.cat === 'meal' ? 'meal' : it.cat === 'trophy' ? 'trophy' : 'mat');
+  const itemCat = (it) => (it.type === 'equip' ? 'equip' : it.type === 'use' ? (it.use?.buff ? 'buff' : 'use') : it.cat === 'meal' ? 'meal' : it.cat === 'bait' || it.cat === 'fish' ? 'fish' : it.cat === 'trophy' ? 'trophy' : 'mat');
 
   // 프로필 카드의 장신구 자리
   function renderGear() {
@@ -3511,8 +3569,8 @@
     }
 
     const order = { rare: 0, uncommon: 1, common: 2 };
-    const CATS = ['equip', 'use', 'buff', 'meal', 'trophy', 'mat'];
-    const CAT_NAME = { equip: '장신구', use: '회복약', buff: '강화 음식', meal: '식구 요리', trophy: '사냥 전리품', mat: '재료' };
+    const CATS = ['equip', 'use', 'buff', 'meal', 'fish', 'trophy', 'mat'];
+    const CAT_NAME = { equip: '장신구', use: '회복약', buff: '강화 음식', meal: '식구 요리', fish: '낚시', trophy: '사냥 전리품', mat: '재료' };
     const list = Object.entries(invCache)
       .filter(([id, q]) => S.items[id] && q > 0)
       .sort(([a], [b]) => CATS.indexOf(itemCat(S.items[a])) - CATS.indexOf(itemCat(S.items[b]))
@@ -4936,6 +4994,111 @@
   $('mob-close').addEventListener('click', () => $('mob-dlg').close());
   $('market-open').addEventListener('click', () => { mkTab = 'buy'; mkQty.clear(); openMarket(); });
   $('market-close').addEventListener('click', () => $('market-dlg').close());
+  // ── 낚시 ──
+  const FISH_WX = {
+    rain: '비가 내린다. 은비늘 연어가 잘 문다.', storm: '뇌우다. 번개 장어가 물가로 올라온다.', fog: '안개 속에서 무언가 큰 것이 움직인다.',
+    clear: '맑은 날엔 청새치가 수면 가까이 올라온다.', heat: '뜨거운 날엔 청새치가 수면 가까이 올라온다.', aurora: '오로라 아래 바다가 이상하게 일렁인다.',
+  };
+  const QUALITY_NAME = { perfect: '완벽!', good: '좋음', ok: '아슬아슬', auto: '느긋하게' };
+  const FISH = { st: 'idle', bait: null, t1: 0, t2: 0 };
+  function fishSet(st) {
+    FISH.st = st;
+    $('fish-pond').dataset.st = st;
+    const busy = st === 'wait' || st === 'bite' || st === 'reel';
+    $('fish-main').textContent = busy ? '당기기' : st === 'done' ? '다시 던지기' : '던지기';
+    $('fish-auto').hidden = busy;
+    $('fish-main').disabled = st === 'reel' || (!busy && !FISH.bait);
+    $('fish-auto').disabled = !FISH.bait;
+    for (const b of $('fish-baits').querySelectorAll('button')) b.disabled = busy;
+  }
+  function renderFishBaits() {
+    const box = $('fish-baits');
+    box.replaceChildren();
+    const list = Object.entries(invCache).filter(([id, n]) => n > 0 && S.items[id]?.cat === 'bait');
+    if (!list.some(([id]) => id === FISH.bait)) FISH.bait = list[0]?.[0] || null;
+    if (!list.length) {
+      const p = document.createElement('p');
+      p.className = 'none';
+      p.textContent = S.me?.stance === 'hostile' // 적대는 시장을 못 쓰는 대신 위협으로 얻음
+        ? '미끼가 없다. 해안에서 채집하면 나오고, 짐승 가죽으로 고깃덩이 미끼를 만들 수도 있다. 해안을 위협하면 미끼를 얻을 수 있다.'
+        : '미끼가 없다. 해안 시장에서 사거나, 해안에서 채집하면 나온다. 짐승 가죽으로 고깃덩이 미끼를 만들 수도 있다.';
+      box.appendChild(p);
+    }
+    for (const [id, n] of list) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', String(id === FISH.bait));
+      b.textContent = `${S.items[id].name} ${n}`;
+      b.title = S.items[id].desc;
+      b.addEventListener('click', () => { FISH.bait = id; renderFishBaits(); fishSet(FISH.st); });
+      box.appendChild(b);
+    }
+  }
+  function openFish() {
+    fetchInv(() => {
+      const w = S.wx?.regions?.[S.region]?.id;
+      $('fish-wx').textContent = `${S.weathers?.[w]?.name ? `${S.weathers[w].name} · ` : ''}${FISH_WX[w] || '파도가 잔잔하다. 미끼 하나로 한 번 던진다.'}`;
+      $('fish-msg').textContent = '찌가 크게 흔들리는 순간 당기면 더 좋은 물고기가 걸린다.';
+      $('fish-catch').hidden = true;
+      renderFishBaits();
+      fishSet('idle');
+      if (!$('fish-dlg').open) $('fish-dlg').showModal();
+    });
+  }
+  function fishDone(r) {
+    clearTimeout(FISH.t1); clearTimeout(FISH.t2);
+    $('fish-msg').textContent = r.lines.join(' ');
+    const c = $('fish-catch');
+    c.replaceChildren();
+    c.hidden = !r.catch;
+    if (r.catch) {
+      const it = S.items[r.catch.id];
+      const chip = document.createElement('span');
+      chip.className = `gain ${it.rarity}`;
+      chip.textContent = `${it.name} ×1`;
+      const q = document.createElement('span');
+      q.className = 'gain lvl';
+      q.textContent = QUALITY_NAME[r.catch.quality] || '';
+      c.append(chip, q);
+      if (r.xp) { const x = document.createElement('span'); x.className = 'gain common'; x.textContent = `경험 +${r.xp}`; c.append(x); }
+      SFX.play('coin');
+    }
+    fetchInv(() => { renderFishBaits(); fishSet('done'); });
+  }
+  function fishCast(auto) {
+    if (!FISH.bait) return toast('미끼가 없다.');
+    socket.emit('fish:cast', { bait: FISH.bait, auto }, (res) => {
+      if (res.error) return toast(res.error);
+      const r = res.result;
+      if (auto) return fishDone(r);
+      $('fish-catch').hidden = true;
+      $('fish-msg').textContent = '찌를 지켜보자…';
+      fishSet('wait');
+      FISH.t1 = setTimeout(() => {
+        if (FISH.st !== 'wait') return;
+        fishSet('bite');
+        $('fish-msg').textContent = '지금! 당겨!';
+        FISH.t2 = setTimeout(() => { if (FISH.st === 'bite') fishReel(); }, r.fishing.window + 250); // 놓치면 서버가 '늦었다'를 알려 줌
+      }, r.fishing.biteIn);
+    });
+  }
+  function fishReel() {
+    if (FISH.st !== 'wait' && FISH.st !== 'bite') return;
+    clearTimeout(FISH.t1); clearTimeout(FISH.t2);
+    fishSet('reel');
+    socket.emit('fish:reel', {}, (res) => {
+      if (res.error) { toast(res.error); return fishSet('done'); }
+      fishDone(res.result);
+    });
+  }
+  const fishMain = () => (FISH.st === 'wait' || FISH.st === 'bite' ? fishReel() : FISH.st !== 'reel' && fishCast(false));
+  $('fish-open').addEventListener('click', openFish);
+  $('fish-main').addEventListener('click', fishMain);
+  $('fish-pond').addEventListener('click', fishMain);
+  $('fish-auto').addEventListener('click', () => fishCast(true));
+  $('fish-close').addEventListener('click', () => $('fish-dlg').close());
+  $('fish-dlg').addEventListener('close', () => { clearTimeout(FISH.t1); clearTimeout(FISH.t2); if (FISH.st !== 'reel') fishSet('idle'); });
   $('intimidate').addEventListener('click', () => {
     socket.emit('intimidate', {}, (res) => {
       if (res.error) return toast(res.error);
@@ -4972,7 +5135,7 @@
     // 고르기: 종류별로 나눠 보기, 재료가 다 있는 것만 보기
     const bar = document.createElement('div');
     bar.className = 'craft-bar';
-    const TABS = [['all', '전체'], ['use', '회복약'], ['buff', '강화 음식'], ['meal', '식구 요리'], ['equip', '장신구']];
+    const TABS = [['all', '전체'], ['use', '회복약'], ['buff', '강화 음식'], ['meal', '식구 요리'], ['fish', '낚시'], ['equip', '장신구']];
     for (const [k, label] of TABS) {
       const bt = document.createElement('button');
       bt.type = 'button';
@@ -4997,6 +5160,7 @@
       ['회복약', (it) => itemCat(it) === 'use', 'use'],
       ['강화 음식', (it) => itemCat(it) === 'buff', 'buff'],
       ['식구 요리', (it) => itemCat(it) === 'meal', 'meal'],
+      ['낚시 미끼', (it) => itemCat(it) === 'fish', 'fish'],
       ...S.slots.map((sl) => [`장신구 · ${sl.name}`, (it) => it.type === 'equip' && it.slot === sl.key, 'equip']),
     ];
     let shown = 0;
@@ -8703,6 +8867,7 @@
       S.deathCfg = data.death || { waitMs: 3 * 3600000, helpAp: 2, helpEn: 8 };
       S.shops = data.shops;
       S.trade = data.trade;
+      S.fishing = data.fishing || null;
       S.nestRules = data.nestRules;
       S.bonds = data.bonds || {}; S.marks = data.marks || {}; S.bondRules = data.bondRules || {};
       S.departRules = data.departRules;

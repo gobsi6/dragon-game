@@ -5,7 +5,7 @@
 
 const {
   REGIONS, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, RECIPES, SLOTS, STANCES, SHOPS, REP_TIERS, repTier, TRADE, NEST, hoardTier, RAID, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, ELEMENTS,
-  CRAFT, SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, SKILLS, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES,
+  CRAFT, SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, SKILLS, FISHING, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES,
 } = require('./game-data');
 
 const SR = STANCE_RULES;
@@ -626,6 +626,10 @@ function gather(d) {
   for (let i = 0; i < n; i++) {
     const pl = placeLoot(d);
     ids.push(rollItem(d.region, { uncommon: 0.12 + st.wisdom * 0.006 + pl.uncommon, rare: Math.max(0, 0.01 + st.wisdom * 0.001 + pl.rare + wx.findRare) }));
+  }
+  if (d.region === FISHING.region) { // 해안: 갯바위 틈의 미끼와 소금
+    if (Math.random() < FISHING.gatherBait) ids.push(...Array(randInt(1, 2)).fill('bait_shrimp'));
+    if (Math.random() < FISHING.gatherSalt) ids.push('salt_crystal');
   }
   const items = bundle(ids);
   let xp = 3;
@@ -1386,6 +1390,64 @@ function sell(d, id, qty, have) {
   return { title: '시장', lines, items: [{ id, qty: -qty }] };
 }
 
+// ── 낚시 (해안 절벽에서만, 미끼 하나로 한 번) ──────
+const FG = FISHING;
+function fishCheck(d) {
+  if (d.region !== FG.region) return { error: `낚시는 ${REGIONS[FG.region].name}에서만 할 수 있다.` };
+  if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
+  if (d.rest_at) return { error: RESTING };
+  return null;
+}
+const isBait = (id) => ITEMS[id]?.cat === 'bait';
+// 무엇이 낚일지: quality = perfect | good | ok | auto
+function fishRoll(d, bait, quality) {
+  const wx = weatherIdAt(d.region);
+  const q = FG.quality[quality] || {}, b = FG.bait[bait] || {};
+  const list = FG.fish.map((f) => ({ f, w: f.w * (q[f.tier] ?? 1) * (b[f.tier] ?? 1) * (f.wx?.[wx] ?? 1) }));
+  let r = Math.random() * list.reduce((a, x) => a + x.w, 0);
+  return (list.find((x) => (r -= x.w) < 0) || list[0]).f;
+}
+const QUALITY_LINE = {
+  perfect: '찌가 쑥 들어가는 순간, 단숨에 낚아챘다!',
+  good: '입질에 맞춰 힘껏 당겼다.',
+  ok: '조금 늦었지만 겨우 끌어 올렸다.',
+  auto: '느긋하게 기다리다 줄을 건졌다.',
+};
+// 낚아 올림: 결과 { title, lines, items, xp }
+function fishLand(d, bait, quality) {
+  const f = fishRoll(d, bait, quality);
+  const it = ITEMS[f.id];
+  const lines = [QUALITY_LINE[quality], `${it.name}${josa(it.name, '이', '가')} 걸려 올라왔다!`];
+  if (f.tier === 'rare') { lines.push('해안의 어부들이 몰려와 웅성거린다.'); chron(d, 'mark', `해안에서 ${it.name}${josa(it.name, '을', '를')} 낚았다.`); }
+  const xp = xpOf(d, FG.xp[f.tier]);
+  const levelUp = gainXp(d, xp);
+  return { title: '낚시', lines, items: [{ id: f.id, qty: 1 }], xp, levelUp, catch: { id: f.id, tier: f.tier, quality } };
+}
+// 던짐: 미끼를 하나 씀. auto면 바로 건짐
+function fishCast(d, bait, have, auto) {
+  const err = fishCheck(d);
+  if (err) return err;
+  if (!isBait(bait)) return { error: '미끼를 골라야 한다.' };
+  if (have(bait) < 1) return { error: `${ITEMS[bait].name}${josa(ITEMS[bait].name, '이', '가')} 없다.` };
+  if (auto) {
+    const r = fishLand(d, bait, 'auto');
+    r.items.unshift({ id: bait, qty: -1 });
+    return r;
+  }
+  const biteIn = randInt(FG.biteMin, FG.biteMax);
+  return { title: '낚시', lines: [`${ITEMS[bait].name}${josa(ITEMS[bait].name, '을', '를')} 꿰어 줄을 던졌다.`], items: [{ id: bait, qty: -1 }], fishing: { biteIn, window: FG.window } };
+}
+// 당김: cast = { bait, bite(입질 시각) }
+function fishReel(d, cast, now = Date.now()) {
+  const err = fishCheck(d);
+  if (err) return err;
+  if (!cast) return { error: '던져 둔 낚싯줄이 없다.' };
+  const dt = now - cast.bite;
+  if (dt < 0) return { title: '낚시', lines: ['너무 일찍 당겼다. 물고기가 놀라 달아나고, 미끼만 사라졌다.'], items: [], missed: 'early' };
+  if (dt > FG.window) return { title: '낚시', lines: ['찌가 잠잠해졌다. 물고기가 미끼만 떼어 먹고 달아났다.'], items: [], missed: 'late' };
+  return fishLand(d, cast.bait, dt <= FG.perfect ? 'perfect' : dt <= FG.good ? 'good' : 'ok');
+}
+
 // ── 위협하기 (적대 성향만) ──────────────────────────
 function intimidate(d) {
   if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
@@ -1413,12 +1475,23 @@ function intimidate(d) {
     } else {
       lines.push(`금화 ${gold}닢을 빼앗았다.`);
     }
+    if (d.region === FISHING.region) { // 해안 어촌: 그물째 바침
+      const N = FISHING.coastTribute, n = randInt(...N.bait), f = randInt(...N.fish);
+      const fid = Math.random() < 0.3 ? 'fish_flounder' : 'fish_mackerel';
+      items.push({ id: 'bait_worm', qty: n }, { id: fid, qty: f });
+      lines.push(`어부들이 벌벌 떨며 지렁이 미끼 ${n}개와 ${ITEMS[fid].name} ${f}마리를 그물째 바쳤다.`);
+    }
     addRep(d, d.region, -12);
     lines.push(addFame(d, SR.hostile.fameOnIntimidate) || '드래곤들 사이에 이름이 퍼진다.');
   } else {
     const dmg = Math.max(3, Math.round(randInt(8, 16) - st.scale * 0.3));
     d.hp = Math.max(1, d.hp - dmg);
     lines.push(`성벽 위 궁수들이 화살을 퍼부었다. 체력을 ${dmg} 잃고 물러났다.`);
+    if (d.region === FISHING.region) { // 해안: 쫓겨나면서도 그물 한 자락은 낚아챔
+      const n = randInt(...FISHING.coastTribute.failBait);
+      items.push({ id: 'bait_worm', qty: n });
+      lines.push(`달아나면서 발톱에 걸린 그물 한 자락에서 지렁이 미끼 ${n}개를 건졌다.`);
+    }
     addRep(d, d.region, -4);
     const f = addFame(d, SR.hostile.fameOnIntimidateFail);
     if (f) lines.push(f);
@@ -1642,7 +1715,7 @@ module.exports = {
   hooks, BOND_TOGETHER: BOND_RULES.together,
   seasonAt, weatherOf, weatherIdAt, weatherFx, fxText, fxProse, weatherDebug, SLOT_MS,
   nestInfo, nestTier, maxKinOf, expandNest, checkRaid, raidView, chaseCheck,
-  regen, gather, explore, hunt, startExpedition, finishExpedition, chooseFork, forkView, expInfo,
+  regen, gather, explore, hunt, fishCast, fishReel, startExpedition, finishExpedition, chooseFork, forkView, expInfo,
   craft, experiment, enhanceGear, engraveGear, tidyGear, engraveOf, gearOf, greatChance, craftView, ordersView, fillOrder, buildForge, atForge,
   useItem, equip, unequip, statsOf, bonusOf, hpCap, enCap, apCap, equipOf, buffOf, giveBuff,
   repOf, setStance, marketInfo, buy, sell, intimidate,

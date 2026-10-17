@@ -10,7 +10,7 @@ const { Server } = require('socket.io');
 
 const db = require('./db');
 const {
-  KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, CREATURES, RULES, SLOTS, RECIPES, SHOPS, repTier, TRADE, NEST,
+  KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, CREATURES, RULES, SLOTS, RECIPES, SHOPS, repTier, TRADE, NEST, FISHING,
   STANCE_RULES, FAME_TIERS, fameTier, KIN, TALENTS, TRAITS, TRAIT_EARN, TRAIT_COUNTS,
   COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, STATUS, CREATURE_COMBAT, MIND, PURIFY, CRAFT, PLACES, REGION_PLACES, PLACE_RULES, HOARD_TIERS, RAID, SEASONS, WEATHERS, DEPART,
 } = require('./game-data');
@@ -619,6 +619,7 @@ io.on('connection', (socket) => {
     death: { waitMs: require('./game-data').DEATH.waitMs, helpAp: require('./game-data').DEATH.helpAp, helpEn: require('./game-data').DEATH.helpEn },
     shops: Object.keys(SHOPS),
     trade: TRADE,
+    fishing: { region: FISHING.region, window: FISHING.window },
     bonds: require('./game-data').BONDS, marks: require('./game-data').MARKS, bondRules: require('./game-data').BOND_RULES,
     nestRules: NEST, hoardTiers: HOARD_TIERS,
     seasons: SEASONS.map((x) => ({ id: x.id, name: x.name, desc: x.desc, prose: logic.fxProse(x.fx), ...logic.fxText(x.fx) })),
@@ -1012,6 +1013,16 @@ io.on('connection', (socket) => {
   itemAction('market:buy', counted('trade', (d, p, have) => logic.buy(d, str(p.item), Number(p.qty), have)));
   itemAction('market:sell', counted('trade', (d, p, have) => logic.sell(d, str(p.item), Number(p.qty), have)));
   itemAction('intimidate', counted('intimidate', (d) => logic.intimidate(d)), null, (res) => (res.gold > 0 ? 'intimidate' : null));
+  // ── 낚시: 던지면 서버가 입질 시각을 정하고, 당긴 시각으로 결과를 정함 ──
+  itemAction('fish:cast', (d, p, have) => {
+    const f = socket.data.fish;
+    if (f && Date.now() < f.bite + FISHING.window) return { error: '이미 줄을 던져 두었다.' };
+    const bait = str(p.bait);
+    const r = logic.fishCast(d, bait, have, !!p.auto);
+    socket.data.fish = r.fishing ? { bait, bite: Date.now() + r.fishing.biteIn } : null;
+    return r;
+  });
+  itemAction('fish:reel', (d) => { const c = socket.data.fish; socket.data.fish = null; return logic.fishReel(d, c); });
   itemAction('traits:choose', (d, p) => logic.chooseTraits(d, str(p.good), str(p.bad)));
   itemAction('stats:spend', (d, p) => logic.spendStats(d, p.alloc));
   itemAction('title:set', (d, p) => logic.setTitle(d, str(p.id) || null), (d) => broadcastPresence(d.region));
