@@ -294,19 +294,27 @@
   .recipe .btn { min-height: 38px; padding: 0 14px; font-size: 14px; }
   .inv { display: flex; flex-direction: column; }
   /* 물건 한 줄: 왼쪽에 이름(개수)·설명, 오른쪽에 버튼 */
-  .inv .it { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; row-gap: 4px; padding: 9px 2px; border-top: 1px solid var(--line-in); align-items: center; }
+  .inv .it { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 14px; row-gap: 4px; padding: 11px 14px; border-top: 1px solid #E6E8E4; align-items: center; }
+  /* 분류마다 흰 상자로 묶음 (시안 A) */
+  .inv-box { display: flex; flex-direction: column; background: var(--surface-2); border: 1px solid var(--line-in); border-radius: 4px; }
+  .inv-box > .it:first-child, .inv-box > .empty:first-child { border-top: 0; }
+  .inv-box > .empty { padding: 16px 14px; }
   .inv .it > b, .inv .it > small, .inv .it > .eff { grid-column: 1; min-width: 0; }
-  .inv .it b { font: 700 14px/1.4 var(--serif); display: flex; flex-wrap: wrap; align-items: center; gap: 2px 7px; }
-  .inv .it b::before { content: ""; width: 6px; height: 6px; transform: rotate(45deg); background: var(--r); flex: none; }
+  .inv .it b { font: 700 14.5px/1.3 var(--serif); display: flex; flex-wrap: wrap; align-items: center; gap: 2px 7px; }
+  .inv .it b::before { content: ""; width: 7px; height: 7px; transform: rotate(45deg); background: var(--r); flex: none; }
   .inv .it.common { --r: #9A9C98; } .inv .it.uncommon { --r: #3C5A73; } .inv .it.rare { --r: #B8913A; }
-  .inv .it .q { font: 600 11.5px/18px var(--sans); padding: 0 6px; border-radius: 9px; background: #EEF0EE; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .inv .it .q { font: 600 11px/18px var(--sans); padding: 0 7px; border-radius: 9px; background: #EEF0EE; color: var(--ink-2); font-variant-numeric: tabular-nums; }
   .inv .it small { font-size: 12px; line-height: 1.55; color: var(--muted); }
   .inv .it .eff { font-size: 11.5px; line-height: 1.55; color: var(--steel-d); }
   .inv .it .acts { grid-column: 2; grid-row: 1 / span 3; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; max-width: 220px; }
   .inv .it .acts:empty { display: none; }
-  .inv .it .acts .btn { min-height: 28px; padding: 0 9px; font-size: 12px; }
+  .inv .it .acts .btn { min-height: 30px; padding: 0 12px; font-size: 12.5px; }
   .inv .empty { padding: 16px 0; text-align: center; color: var(--muted); font-size: 13px; border-top: 1px solid var(--line-in); }
-  @media (max-width: 420px) { .inv .it .acts { max-width: 46vw; } }
+  @media (max-width: 420px) {
+    .inv .it { padding: 10px 12px; column-gap: 10px; }
+    .inv .it .acts { max-width: 52vw; }
+    .inv .it .acts .btn { min-height: 28px; padding: 0 8px; font-size: 12px; }
+  }
   .inv-gear { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
   .inv-gear .slot { flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; min-height: 40px; padding: 4px 6px 4px 10px; line-height: 1.25; }
   .inv-gear .slot small { font-size: 10.5px; }
@@ -870,7 +878,8 @@
   .buff-row b { font-weight: 700; }
   .buff-row svg { color: #A87A1C; flex: none; }
   .buff-now { padding: 8px 12px; font-size: 13px; color: #5A4A12; background: #FBF6E8; border: 1px solid #E2CF9E; border-radius: 3px; margin-bottom: 4px; }
-  .inv-h { margin: 10px 0 2px; font: 700 13px/1.4 var(--serif); color: var(--steel-d); display: flex; align-items: center; gap: 8px; grid-column: 1 / -1; }
+  .inv-h { margin: 14px 0 6px; font: 700 13px/1.4 var(--serif); color: var(--steel-d); display: flex; align-items: center; gap: 8px; grid-column: 1 / -1; }
+  .inv-h .inv-hn { font: 400 11px/1 var(--sans); color: var(--muted); }
   .inv-h::after { content: ""; flex: 1; height: 1px; background: var(--line-in); }
   .inv-h:first-child, .buff-now + .inv-h { margin-top: 2px; }
   .craft-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 2px 0 6px; }
@@ -3116,7 +3125,9 @@
       n.textContent = `지금 ${buf.name} 상태 · ${buf.desc} · ${leftMin(S.me.buff.until)}분 남음`;
       box.appendChild(n);
     }
-    let lastCat = null;
+    let lastCat = null, group = box;
+    const catN = {};
+    for (const [id] of list) { const c = itemCat(S.items[id]); catN[c] = (catN[c] || 0) + 1; }
     if (!list.length) {
       const p = document.createElement('div');
       p.className = 'empty';
@@ -3131,7 +3142,14 @@
         const h = document.createElement('h3');
         h.className = 'inv-h';
         h.textContent = CAT_NAME[cat];
+        const hn = document.createElement('span');
+        hn.className = 'inv-hn';
+        hn.textContent = `${catN[cat]}종`;
+        h.appendChild(hn);
         box.appendChild(h);
+        group = document.createElement('div');
+        group.className = 'inv-box';
+        box.appendChild(group);
       }
       const row = document.createElement('div');
       row.className = `it ${it.rarity}`;
@@ -3160,7 +3178,7 @@
         acts.appendChild(b);
         row.appendChild(acts);
       }
-      box.appendChild(row);
+      group.appendChild(row);
     }
   }
   function openInv() { fetchInv(() => { renderInv(); openPanel('inv-dlg'); }); }
@@ -3671,7 +3689,7 @@
             : `둥지를 비운 동안 보물 도둑이 들 수 있다. 보물이 많을수록 잘 든다.${n.guard ? ` 파수꾼 ${n.guard} 덕에 절반으로 준다.` : ''}`;
           host.appendChild(risk);
           const wl = document.createElement('div');
-          wl.className = 'inv';
+          wl.className = 'inv inv-box';
           for (const [key, id] of [['trap', 'thorn_trap'], ['stone', 'ward_stone']]) {
             const it = S.items[id];
             const r4 = document.createElement('div');
@@ -3703,7 +3721,7 @@
               btn(`꺼내기 (쌓인 금화 ${n.gold})`, () => nestAct('hoard:take', { what: 'gold', qty: amount() })),
             );
             const list = document.createElement('div');
-            list.className = 'inv';
+            list.className = 'inv inv-box';
             const items = n.items.filter((x) => S.items[x.item]);
             const own = Object.entries(invCache).filter(([id, q]) => S.items[id] && q > 0)
               .sort(([a], [b]) => S.items[b].value - S.items[a].value);
@@ -3742,7 +3760,7 @@
             }
             host.appendChild(list);
             const inv = document.createElement('div');
-            inv.className = 'inv';
+            inv.className = 'inv inv-box';
             if (!own.length) {
               const e = document.createElement('div');
               e.className = 'empty';
