@@ -87,6 +87,16 @@ function fromDragon(d, context) {
     st: {}, cd: {},
   };
 }
+// 레벨별 사냥감 기본 세기. Lv12를 넘으면 레벨당 hpHigh·atkHigh가 더 붙음 (고레벨 구역)
+function creatureBase(lv) {
+  const K = COMBAT.creature;
+  const hi = Math.max(0, lv - (K.highFrom || 12));
+  return {
+    hp: K.hp[0] + lv * K.hp[1] + hi * (K.hpHigh || 0),
+    atk: K.atk[0] + lv * K.atk[1] + hi * (K.atkHigh || 0),
+    def: K.def[0] + lv * K.def[1] + hi * (K.defHigh || 0),
+  };
+}
 // place: 장소 id (사냥터 난이도 = 사냥감 레벨). corrupted: 오염된 땅의 몬스터 (조금 더 세고, 입힌 피해만큼 정신도 깎음)
 // minion: 무리에 함께 나온 사냥감이면 이름 앞에 붙일 말 ('어린' 등). 체력·공격이 조금 낮음
 function fromCreature(place, elite, corrupted = false, minion = null) {
@@ -96,14 +106,15 @@ function fromCreature(place, elite, corrupted = false, minion = null) {
   const K = COMBAT.creature; // 사냥터 난이도별 사냥감 세기
   const G = COMBAT.group;
   const DF = COMBAT.difficulty || { hp: 1, atk: 1 }; // 난이도 배율
-  const hpMax = Math.round((K.hp[0] + lv * K.hp[1]) * (elite ? K.eliteHp : 1) * (minion ? G.hp : 1) * DF.hp);
+  const CB = creatureBase(lv);
+  const hpMax = Math.round(CB.hp * (elite ? K.eliteHp : 1) * (minion ? G.hp : 1) * DF.hp);
   const name = `${minion ? `${minion} ` : ''}${elite ? pl.elite : pl.creature}`;
   return {
     id: null, name: corrupted ? `오염된 ${name}` : name, kind: null, creature: true, region: pl.region, place, elite: !!elite, minion: !!minion, level: lv,
     type: (elite && pl.eliteType) || pl.type || null, // 화면 아이콘 계통
     corrupted, mindDrain: corrupted ? MIND.monster : 0,
     hp: hpMax, hpMax, en: 0, enMax: 0,
-    atk: (K.atk[0] + lv * K.atk[1]) * (elite ? K.eliteAtk : 1) * (corrupted ? MIND.monsterAtk : 1) * (minion ? G.atk : 1) * DF.atk, def: K.def[0] + lv * K.def[1], spd: 6 + lv * 2, mag: 4 + lv * 2, maj: 6 + lv * 2,
+    atk: CB.atk * (elite ? K.eliteAtk : 1) * (corrupted ? MIND.monsterAtk : 1) * (minion ? G.atk : 1) * DF.atk, def: CB.def, spd: 6 + lv * 2, mag: 4 + lv * 2, maj: 6 + lv * 2,
     taken: 1, element: cc.special.element || null,
     breath: null, skills: [], special: cc.special,
     weak: cc.weak, resist: cc.resist,
@@ -753,14 +764,14 @@ function eliteReward(d, b) {
 // ── 보물 도둑 쫓기 ─────────────────────────────────
 // 둥지에서 도둑의 흔적을 쫓아 무리와 싸움 (사냥처럼 직접 싸우고, 자동으로 끝낼 수도 있음)
 function fromThief(T, lv, name, minion, trapped) {
-  const K = COMBAT.creature;
   const G = COMBAT.group;
-  const hpMax = Math.round((K.hp[0] + lv * K.hp[1]) * (minion ? G.hp : 1));
+  const CB = creatureBase(lv);
+  const hpMax = Math.round(CB.hp * (minion ? G.hp : 1));
   return {
     id: null, name, kind: null, creature: true, region: null, place: null, elite: false, minion, level: lv, type: 'thief',
     corrupted: false, mindDrain: 0,
     hp: Math.round(hpMax * (trapped ? RAID.trapHp : 1)), hpMax, en: 0, enMax: 0,
-    atk: (K.atk[0] + lv * K.atk[1]) * (minion ? G.atk : 1), def: K.def[0] + lv * K.def[1], spd: 6 + lv * 2, mag: 4 + lv * 2, maj: 6 + lv * 2,
+    atk: CB.atk * (minion ? G.atk : 1), def: CB.def, spd: 6 + lv * 2, mag: 4 + lv * 2, maj: 6 + lv * 2,
     taken: 1, element: null, breath: null, skills: [],
     special: T.special,
     weak: T.weak, resist: T.resist,
@@ -771,13 +782,13 @@ function fromThief(T, lv, name, minion, trapped) {
 // 모두가 함께 깎는 체력: 싸움을 시작할 때의 남은 체력(hp)과 전체 체력(hpMax)으로 만듦. 절반 아래면 처음부터 분노
 function fromBoss(key, lv, hp, hpMax) {
   const T = BOSSES[key];
-  const K = COMBAT.creature;
+  const CB = creatureBase(lv);
   const enraged = hp <= hpMax * ENRAGE.below;
   return {
     id: null, name: T.name, kind: null, creature: true, region: key, place: null, elite: true, boss: true, level: lv, type: T.type,
     corrupted: false, mindDrain: 0,
     hp, hpMax, en: 0, enMax: 0,
-    atk: (K.atk[0] + lv * K.atk[1]) * BOSS.atk * (enraged ? ENRAGE.atk : 1), def: (K.def[0] + lv * K.def[1]) * BOSS.def, spd: 6 + lv * 2, mag: 4 + lv * 2, maj: 8 + lv * 2,
+    atk: CB.atk * BOSS.atk * (enraged ? ENRAGE.atk : 1), def: CB.def * BOSS.def, spd: 6 + lv * 2, mag: 4 + lv * 2, maj: 8 + lv * 2,
     taken: 1, element: T.special.element || null, breath: null, skills: [], special: T.special,
     weak: T.weak, resist: T.resist, enraged,
     st: {}, cd: {},
@@ -862,5 +873,5 @@ function raidReward(d, b, c, raid) {
 module.exports = {
   combatOf, loadout, learned, setSkills, setSettings,
   fromDragon, fromCreature, newBattle, round, aiPick, autoAct, runAuto, blocked, view, comboOf, intentOf, targetOf,
-  hunt, huntReward, eliteReward, raidBattle, raidReward, fromBoss, bossBattle, weatherize, debug,
+  hunt, huntReward, eliteReward, creatureBase, raidBattle, raidReward, fromBoss, bossBattle, weatherize, debug,
 };

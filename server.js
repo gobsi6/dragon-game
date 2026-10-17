@@ -138,7 +138,7 @@ const publicDragon = (d) => ({
 const meOf = (d) => ({
   duelUnseen: db.duelUnseen(d.id),       // 아직 확인하지 않은, 받은 자동 결투 수
   ...publicDragon(d),
-  level: d.level, xp: d.xp, xpMax: d.level * 100,
+  level: d.level, xp: d.xp, xpMax: logic.xpNeed(d.level), levelMax: logic.atMaxLevel(d),
   hp: d.hp, hpMax: logic.hpCap(d), en: d.en, enMax: logic.enCap(d),
   ap: d.ap, apMax: logic.apCap(d), gold: d.gold,
   stats: logic.statsOf(d),                 // 장신구까지 더한 값

@@ -205,6 +205,14 @@ const ITEMS = {
   salamander_tail:{ name: '불도마뱀 꼬리',     rarity: 'common',   cat: 'trophy', desc: '잘려도 한참 동안 뜨겁게 꿈틀거린다.' },
   magma_core:     { name: '용암 심장',         rarity: 'rare',     cat: 'trophy', desc: '용암 골렘의 가슴에서 아직도 끓고 있는 돌이다.' },
   giant_ember:    { name: '거인의 불씨',       rarity: 'rare',     cat: 'trophy', value: 55, desc: '화염 거인이 쓰러지며 남긴 꺼지지 않는 불씨다.' },
+  // 고레벨 구역 (Lv13~24) 전리품
+  knight_crest:   { name: '기사단 문장',       rarity: 'rare', cat: 'trophy', value: 60, desc: '용사냥 기사단이 가슴에 달던 은빛 문장. 발톱 자국이 깊게 남아 있다.' },
+  shadow_spore:   { name: '그늘 포자',         rarity: 'rare', cat: 'trophy', value: 65, desc: '빛을 받으면 스르르 녹아 버리는 검푸른 포자. 숨을 막고 감각을 흐린다.' },
+  basilisk_eye:   { name: '바실리스크의 눈',   rarity: 'rare', cat: 'trophy', value: 70, desc: '아직도 노려보는 듯한 누런 눈알. 오래 들여다보면 손끝이 굳는다.' },
+  frost_heart:    { name: '서리 거인의 심장',  rarity: 'rare', cat: 'trophy', value: 75, desc: '쥐면 손이 얼어붙을 듯 차가운 푸른 덩어리. 아직 희미하게 뛴다.' },
+  sphinx_mane:    { name: '스핑크스의 갈기',   rarity: 'rare', cat: 'trophy', value: 80, desc: '햇빛을 머금어 금실처럼 빛나는 갈기. 만지면 따뜻하다.' },
+  crown_shard:    { name: '부서진 왕관 조각',  rarity: 'rare', cat: 'trophy', value: 85, desc: '이름 잃은 왕의 왕관에서 떨어져 나온 조각. 보석 속에 검은 빛이 갇혀 있다.' },
+  elder_ember:    { name: '고룡의 불씨',       rarity: 'rare', cat: 'trophy', value: 95, desc: '꺼지지 않는 붉은 불씨. 쥐고 있으면 먼 옛날 드래곤의 포효가 들리는 듯하다.' },
 
   // ── 만든 물건: 회복약 (use: 사용 효과) ──
   honey_salve:  { name: '꿀 고약',          rarity: 'common',   type: 'use', use: { hp: 30 },  desc: '상처에 바르면 금세 아문다.' },
@@ -250,6 +258,14 @@ const ITEMS = {
   guardian_charm:{ name: '파수꾼의 돌 부적', rarity: 'uncommon', type: 'equip', slot: 'charm', bonus: { scale: 2, wisdom: 1 },  desc: '돌심장이 천천히 고동친다.' },
   seal_charm:   { name: '봉인의 부적',      rarity: 'rare',     type: 'equip', slot: 'charm', bonus: { wisdom: 3, scale: 1 },   desc: '고대의 룬이 머릿속에 길을 낸다.' },
   giant_heart:  { name: '거인의 심장',      rarity: 'rare',     type: 'equip', slot: 'charm', bonus: { claw: 1, scale: 1, majesty: 2 }, desc: '용암 심장에 거인의 불씨를 넣어 깨웠다.' },
+  // 고레벨 구역 재료로 만드는 장신구
+  crest_charm:    { name: '기사단 문장 부적',   rarity: 'rare', type: 'equip', slot: 'charm', bonus: { claw: 2, majesty: 2 }, desc: '쓰러뜨린 기사단의 문장을 녹여 만든 부적. 인간들이 보면 움찔한다.' },
+  spore_mantle:   { name: '그늘 포자 날개덮개', rarity: 'rare', type: 'equip', slot: 'wing',  bonus: { wing: 3, wisdom: 1 }, desc: '포자를 먹인 거미줄로 짠 덮개. 날갯짓할 때마다 검푸른 가루가 흩날린다.' },
+  basilisk_pendant:{ name: '바실리스크 눈 목걸이', rarity: 'rare', type: 'equip', slot: 'neck', bonus: { wisdom: 2, scale: 2 }, desc: '굳은 눈알을 늪 진주로 감싼 목걸이. 노려보는 눈길을 대신 받아 준다.' },
+  glacier_tailguard:{ name: '빙하 비늘 꼬리갑', rarity: 'rare', type: 'equip', slot: 'tail', bonus: { scale: 4 }, desc: '서리 거인의 심장으로 얼린 꼬리갑. 어떤 불에도 쉽게 녹지 않는다.' },
+  sphinx_claw:    { name: '스핑크스 발톱덮개',  rarity: 'rare', type: 'equip', slot: 'claw',  bonus: { claw: 4, wing: 1 }, desc: '금빛 갈기를 꼬아 묶은 발톱덮개. 햇빛 아래서 칼날처럼 번뜩인다.' },
+  kings_crown:    { name: '잊힌 왕의 관',       rarity: 'rare', type: 'equip', slot: 'head',  bonus: { majesty: 3, wisdom: 2 }, desc: '부서진 조각을 다시 맞춘 왕관. 쓰면 잊힌 왕국의 목소리가 들린다.' },
+  elder_heart:    { name: '고룡의 심장 부적',   rarity: 'rare', type: 'equip', slot: 'charm', bonus: { claw: 2, scale: 2, wing: 1, majesty: 1 }, desc: '고룡의 불씨를 용암 심장에 담은 부적. 지닌 드래곤의 숨결이 한층 뜨거워진다.' },
   silk_wingband:{ name: '거미줄 날개띠',    rarity: 'common',   type: 'equip', slot: 'wing',  bonus: { wing: 1 },               desc: '날개 뼈를 따라 질긴 실을 감았다.' },
   wolf_cloak:   { name: '늑대 털 날개덮개', rarity: 'uncommon', type: 'equip', slot: 'wing',  bonus: { wing: 1, scale: 1 },     desc: '추운 하늘에서도 날개가 굳지 않는다.' },
   wyvern_guard: { name: '와이번 날개막 덮개', rarity: 'rare',   type: 'equip', slot: 'wing',  bonus: { wing: 3, scale: 1 },     desc: '오로라 빛이 도는 막이 바람을 붙잡는다.' },
@@ -386,6 +402,14 @@ const RECIPES = [
   { out: 'magma_tail',    needs: { magma_core: 1, obsidian: 2 },                       en: 14, wis: 12 },
   { out: 'seal_charm',    needs: { seal_core: 1, rune_stone: 2, old_scroll: 1 },       en: 15, wis: 13 },
   { out: 'giant_heart',   needs: { giant_ember: 1, magma_core: 1 },                    en: 18, wis: 14 },
+  // 고레벨 구역 (Lv13~24)
+  { out: 'crest_charm',       needs: { knight_crest: 2, gold_ore: 2, rune_stone: 2 },        en: 16, wis: 13 },
+  { out: 'spore_mantle',      needs: { shadow_spore: 2, spider_silk: 3, living_bark: 1 },    en: 16, wis: 14 },
+  { out: 'basilisk_pendant',  needs: { basilisk_eye: 1, bog_pearl: 1, bog_iron: 2 },         en: 17, wis: 15 },
+  { out: 'glacier_tailguard', needs: { frost_heart: 1, eternal_ice: 2, troll_tusk: 2 },      en: 18, wis: 16 },
+  { out: 'sphinx_claw',       needs: { sphinx_mane: 2, sun_stone: 1, sandworm_tooth: 2 },    en: 19, wis: 17 },
+  { out: 'kings_crown',       needs: { crown_shard: 2, ancient_relic: 1, seal_core: 1 },     en: 20, wis: 18 },
+  { out: 'elder_heart',       needs: { elder_ember: 1, magma_core: 1, fire_crystal: 2 },     en: 22, wis: 19 },
 ];
 for (const r of RECIPES) {
   const it = ITEMS[r.out];
@@ -686,6 +710,9 @@ const RULES = {
   cost: { explore: 1, gather: 1, hunt: 2 },
   huntMinHp: 15,                // 이보다 체력이 낮으면 사냥 불가
   expeditionMinutes: [30, 60, 120, 180],
+  levelMax: 25,                 // 레벨 상한
+  // 다음 레벨까지 필요한 경험치 = 레벨 × 100. xpFrom 레벨부터는 (레벨 − xpFrom) × xpStep 배만큼 더 (Lv13 ×1.5, Lv18 ×4, Lv24 ×7)
+  xpFrom: 12, xpStep: 0.5,
 };
 
 // ── 특성 ───────────────────────────────────────────
@@ -856,7 +883,7 @@ const TITLES = [
 const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: '둥지에서 {n}번 쉬기', craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격', heir: '먼 여행을 떠난 드래곤의 의지를 잇기', teach: '제자를 {n}번 가르치기', surpass: '스승의 레벨을 따라잡기', sendoff: '다 자란 식구를 {n}번 떠나보내기', corrupt: '오염된 땅에서 {n}번 행동하기', purify: '오염된 땅을 {n}번 정화하기', firstcraft: '숨겨진 제작법을 대륙에서 처음 찾아내기', masterwork: '대성공 {n}번', mobquest: '모브 드래곤의 의뢰 {n}번 마치기', mobstory: '모브 드래곤의 이야기 {n}개를 끝까지 듣기' };
 
 // ── 장소와 사냥터 난이도 ───────────────────────────
-// 야생 지역마다 장소가 셋. 입구는 쉽고 안쪽일수록 사냥터 난이도(Lv.1~12)가 높다.
+// 야생 지역마다 장소가 넷. 입구는 쉽고 안쪽일수록 사냥터 난이도가 높다 (셋째까지 Lv.1~12, 넷째는 고레벨 구역 Lv.13~24).
 // 지역으로 날아오면 첫 장소(입구)에 내려앉고, 같은 지역 안에서는 행동력 없이 옮겨 다닌다.
 // creature: 사냥감, elite: 강적, weak/resist: 약점·저항 속성, special: 특기 (power 피해 배율, hits 연타, debuff 상태 이상, self 자기 강화)
 const PLACES = {
@@ -901,10 +928,24 @@ const PLACES = {
   volcano_cave:  { region: 'volcano', name: '용암 동굴',    level: 8,  creature: '용암 골렘', type: 'construct',     elite: '녹아내린 대장장이의 골렘', weak: ['ice', 'water'], resist: ['fire', 'poison'], special: { name: '용암 주먹', power: 1.3, debuff: { burn: 3 }, element: 'fire' },
     desc: '붉은 빛이 동굴 벽을 핥는다. 땅 밑에서 무언가 거대한 것이 걸어 다닌다.' },
   volcano_crater:{ region: 'volcano', name: '분화구',       level: 12, creature: '화염 거인', type: 'giant', eliteType: 'ghost',     elite: '잠든 화룡의 망령',   weak: ['ice', 'water'], resist: ['fire', 'poison'], special: { name: '화산 강타', power: 1.8, debuff: { burn: 3 }, element: 'fire' },
-    desc: '대륙에서 가장 뜨거운 곳. 끓는 용암 위로 오래전 쓰러진 드래곤의 뼈가 보인다.' },
+    desc: '대륙에서 가장 뜨거운 곳. 끓는 용암 위로 오래전 쓰러진 드래곤의 뼈가 보인다.' },  // ── 고레벨 구역 (지역마다 넷째 장소) ──
+  plains_keep:   { region: 'plains',  name: '무너진 성채',  level: 13, creature: '용사냥 기사단', type: 'thief', elite: '은빛 투구의 기사단장', weak: ['lightning', 'acid'], resist: ['mist'], special: { name: '작살 쇠뇌', power: 1.5, debuff: { bleed: 3 } },
+    desc: '용을 사냥하려고 인간들이 쌓은 성채. 무너진 성벽 위로 아직 기사단 깃발이 나부낀다.' },
+  forest_root:   { region: 'forest',  name: '그늘진 뿌리굴', level: 14, creature: '썩은 뿌리 괴물', type: 'spirit', elite: '빛을 먹는 숲의 어미', weak: ['fire', 'spirit'], resist: ['poison', 'earth', 'water'], special: { name: '포자 폭발', power: 0.9, debuff: { poison: 4 } },
+    desc: '고목의 뿌리 아래로 이어진 어두운 굴. 썩은 냄새와 함께 희미한 포자가 떠다닌다.' },
+  swamp_abyss:   { region: 'swamp',   name: '늪의 심연',    level: 16, creature: '검은 바실리스크', type: 'reptile', elite: '눈먼 바실리스크 여왕', weak: ['lightning', 'spirit'], resist: ['poison', 'acid', 'water'], special: { name: '석화의 눈', power: 0.8, debuff: { stun: 1 }, chance: 0.4 },
+    desc: '수렁보다 더 깊이 가라앉은 곳. 돌이 된 짐승들이 진흙 속에 서 있다.' },
+  snow_glacier:  { region: 'snow',    name: '영원의 빙하',  level: 18, creature: '빙하 거인', type: 'giant', elite: '겨울을 부르는 서리 거인왕', weak: ['fire', 'lightning'], resist: ['ice', 'water', 'earth'], special: { name: '빙하 붕괴', power: 1.6, debuff: { freeze: 1 }, chance: 0.35, element: 'ice' },
+    desc: '천 년 동안 녹지 않은 얼음 강. 얼음 속에 거인들의 그림자가 잠들어 있다.' },
+  canyon_temple: { region: 'canyon',  name: '모래에 묻힌 신전', level: 20, creature: '사막 스핑크스', type: 'beast', elite: '수수께끼를 잊은 스핑크스왕', weak: ['ice', 'water'], resist: ['fire', 'lightning'], special: { name: '태양 광선', power: 1.4, debuff: { burn: 3 }, element: 'fire' },
+    desc: '협곡 끝 모래 속에서 드러난 황금 신전. 입구를 지키는 짐승이 낯선 이에게 수수께끼를 낸다.' },
+  ruins_vault:   { region: 'ruins',   name: '잊힌 왕의 금고', level: 22, creature: '저주받은 근위대', type: 'ghost', elite: '이름 잃은 왕', weak: ['fire', 'spirit'], resist: ['poison', 'ice', 'earth'], special: { name: '왕의 저주', power: 1.1, debuff: { weaken: 3 } },
+    desc: '봉인된 제단 아래 숨겨진 금고. 죽어서도 보물을 지키는 근위대가 문 앞에 늘어서 있다.' },
+  volcano_core:  { region: 'volcano', name: '불의 심장부',  level: 24, creature: '용암 와이번', type: 'flyer', eliteType: 'ghost', elite: '불을 삼킨 고룡의 그림자', weak: ['ice', 'water'], resist: ['fire', 'poison', 'earth'], special: { name: '불바다', power: 1.5, debuff: { burn: 4 }, element: 'fire' },
+    desc: '분화구 아래, 대륙의 불이 시작되는 곳. 오래전 이곳에서 쓰러진 고룡의 기운이 아직 맴돈다.' },
 };
 // 장소별 사냥 전리품
-const PLACE_DROPS = {'plains_field': 'bison_horn', 'plains_hill': 'wolf_pelt', 'plains_war': 'ghost_ash', 'forest_edge': 'spider_silk', 'forest_valley': 'toad_gland', 'forest_heart': 'living_bark', 'swamp_reeds': 'croc_scale', 'swamp_village': 'ghost_ash', 'swamp_mire': 'hydra_blood', 'snow_field': 'wolf_pelt', 'snow_cave': 'troll_tusk', 'snow_peak': 'wyvern_membrane', 'ruins_hall': 'stone_heart', 'ruins_crypt': 'cursed_steel', 'ruins_altar': 'seal_core', 'canyon_path': 'scorpion_stinger', 'canyon_storm': 'sandworm_tooth', 'canyon_cliff': 'griffin_feather', 'volcano_slope': 'salamander_tail', 'volcano_cave': 'magma_core', 'volcano_crater': 'giant_ember'};
+const PLACE_DROPS = {'plains_keep': 'knight_crest', 'forest_root': 'shadow_spore', 'swamp_abyss': 'basilisk_eye', 'snow_glacier': 'frost_heart', 'canyon_temple': 'sphinx_mane', 'ruins_vault': 'crown_shard', 'volcano_core': 'elder_ember', 'plains_field': 'bison_horn', 'plains_hill': 'wolf_pelt', 'plains_war': 'ghost_ash', 'forest_edge': 'spider_silk', 'forest_valley': 'toad_gland', 'forest_heart': 'living_bark', 'swamp_reeds': 'croc_scale', 'swamp_village': 'ghost_ash', 'swamp_mire': 'hydra_blood', 'snow_field': 'wolf_pelt', 'snow_cave': 'troll_tusk', 'snow_peak': 'wyvern_membrane', 'ruins_hall': 'stone_heart', 'ruins_crypt': 'cursed_steel', 'ruins_altar': 'seal_core', 'canyon_path': 'scorpion_stinger', 'canyon_storm': 'sandworm_tooth', 'canyon_cliff': 'griffin_feather', 'volcano_slope': 'salamander_tail', 'volcano_cave': 'magma_core', 'volcano_crater': 'giant_ember'};
 for (const [id, p] of Object.entries(PLACES)) { p.id = id; p.drop = PLACE_DROPS[id]; }
 // 지역별 장소 (입구 → 안쪽)
 const REGION_PLACES = {};
@@ -1004,7 +1045,7 @@ const COMBAT = {
   xpWin: 20, xpLose: 8,
   xpWinPerLv: 4, xpLosePerLv: 2,
   // 사냥감 세기: [기본, 사냥터 Lv.1당]. 강적은 체력·공격에 배율
-  creature: { hp: [34, 3.3], atk: [12, 0.45], def: [3.5, 0.4], eliteHp: 1.8, eliteAtk: 1.3 }, // 초반은 조금 더 아프게, 레벨당 오르는 폭은 줄여 후반 벽을 낮춤 (예전: hp [27, 4.2], atk [8, 0.85], 강적 공격 1.2)
+  creature: { hp: [34, 3.3], atk: [12, 0.45], def: [3.5, 0.4], eliteHp: 1.8, eliteAtk: 1.3, highFrom: 12, hpHigh: 2, atkHigh: 0.3 }, // 초반은 조금 더 아프게, 레벨당 오르는 폭은 줄여 후반 벽을 낮춤 (예전: hp [27, 4.2], atk [8, 0.85], 강적 공격 1.2)
   // 난이도: 사냥·강적의 사냥감 세기 배율 (1이면 예전과 같음). 올리면 사냥감이 더 단단하고 아프게 문다
   difficulty: { hp: 1.08, atk: 1.08 },
   // 무리 조우: 사냥하다 여러 마리를 한꺼번에 만남. 함께 나온 사냥감은 조금 약하고(체력·공격 배율), 쓰러뜨린 만큼 전리품이 더 나옴
@@ -1208,7 +1249,7 @@ const BOSS = {
   minActive: 2,
   triesPerActive: 4,       // 드래곤 하나가 평균 이만큼 맞서면 쓰러지도록
   lvAdd: 1,                // 최근 접속한 드래곤들의 평균 레벨 + 이만큼
-  lvMin: 2, lvMax: 14,
+  lvMin: 2, lvMax: 26,
   atk: 1.3, def: 1.2,      // 같은 레벨 사냥감보다 이만큼 셈
   // 한 번 맞설 때마다: 입힌 피해에 따라 경험치·금화
   xpBase: 10, xpPerDmg: 0.12, goldPerDmg: 0.04,

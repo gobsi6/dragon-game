@@ -2626,8 +2626,8 @@
     $('me-title').textContent = me.title || '';
     $('me-lv').textContent = `Lv. ${me.level}`;
     $('me-kind').textContent = S.kinds[me.kind]?.name || '';
-    $('xp-bar').style.width = pct(me.xp, me.xpMax);
-    $('xp-t').textContent = `${me.xp.toLocaleString()} / ${me.xpMax.toLocaleString()}`;
+    $('xp-bar').style.width = me.levelMax ? '100%' : pct(me.xp, me.xpMax);
+    $('xp-t').textContent = me.levelMax ? '최대 레벨' : `${me.xp.toLocaleString()} / ${me.xpMax.toLocaleString()}`;
     $('hp-t').innerHTML = `<b>${me.hp}</b><span> / ${me.hpMax}</span>`;
     $('hp-bar').style.width = pct(me.hp, me.hpMax);
     $('en-t').innerHTML = `<b>${me.en}</b><span> / ${me.enMax}</span>`;
@@ -5981,6 +5981,8 @@
   // 장소 자리: 입구(가장 쉬움)는 왼쪽 아래, 그다음은 오른쪽 아래, 가장 깊은 곳은 위. 가운데는 갈림길
   // 장소 자리 (지도 안 %, 핀 끝이 닿는 곳): 입구는 왼쪽 아래, 그다음은 오른쪽, 가장 깊은 곳은 위
   const PL_SPOTS = [{ x: 27, y: 70 }, { x: 73, y: 62 }, { x: 47, y: 31 }];
+  // 장소가 넷이면: 입구 왼쪽 아래 → 오른쪽 아래 → 왼쪽 위 → 가장 깊은 곳 오른쪽 위
+  const PL_SPOTS4 = [{ x: 27, y: 72 }, { x: 74, y: 64 }, { x: 30, y: 38 }, { x: 68, y: 27 }];
   // 지역마다의 땅 색과 지형 (대륙 지도와 같은 빛깔)
   const PL_LOOK = {
     plains:  { land: '#E8E1C4', mtn: 6, tree: 12, hill: 9, grass: 24, river: true },
@@ -6073,7 +6075,8 @@
     // ── 미니맵: 손으로 그린 듯한 지형 위에 장소 핀 ──
     const map = $('pl-map');
     map.replaceChildren();
-    const spots = ids.map((_, i) => PL_SPOTS[i] || PL_SPOTS[PL_SPOTS.length - 1]);
+    const SP = ids.length >= 4 ? PL_SPOTS4 : PL_SPOTS;
+    const spots = ids.map((_, i) => SP[i] || SP[SP.length - 1]);
     const land = blobPath(S.region);
     const t = terrainSvg(S.region, spots);
     const clip = `pl-clip-${S.region}`;

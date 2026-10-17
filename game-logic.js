@@ -531,18 +531,23 @@ function townArrows(d) {
 }
 
 // ── 경험치와 레벨 ──────────────────────────────────
+// 다음 레벨까지 필요한 경험치 (RULES.xpFrom 레벨부터 가파르게)
+const xpNeed = (lv) => Math.round(lv * 100 * (1 + Math.max(0, lv - (RULES.xpFrom || Infinity)) * (RULES.xpStep || 0)));
+const atMaxLevel = (d) => d.level >= (RULES.levelMax || Infinity);
 function gainXp(d, xp) {
+  if (atMaxLevel(d)) { d.xp = 0; return 0; } // 레벨 상한: 경험치가 더 쌓이지 않음
   d.xp += xp;
   const apBefore = apCap(d);
   const lvBefore = d.level;
   let up = 0;
-  while (d.xp >= d.level * 100) {
-    d.xp -= d.level * 100;
+  while (!atMaxLevel(d) && d.xp >= xpNeed(d.level)) {
+    d.xp -= xpNeed(d.level);
     d.level += 1;
     d.hp_max += 5;
     d.en_max += 2;
     up += 1;
   }
+  if (atMaxLevel(d)) d.xp = 0;
   if (up) {
     chron(d, 'mark', `레벨 ${d.level}${[2, 4, 5, 9].includes(d.level % 10) ? '가' : '이'} 되었다.`);
     d.stat_pts = (d.stat_pts || 0) + STAT_POINTS.perLevel * up; // 나눌 능력치 포인트
@@ -1635,4 +1640,5 @@ module.exports = {
   placeOf, goPlace, isFallen, chron, chronOf,
   titlesOf, titleOn, titleName, titleMods, checkTitles, setTitle, titlesView,
   combatJson, dayIdx, // 모브 드래곤(game-mobs.js)이 씀
+  xpNeed, atMaxLevel,
 };
