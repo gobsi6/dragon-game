@@ -842,6 +842,17 @@ io.on('connection', (socket) => {
   };
   itemAction('craft', (d, p, have) => logic.craft(d, str(p.recipe), have));
   itemAction('item:use', (d, p, have) => logic.useItem(d, str(p.item), have));
+  // 소지품 버리기: 버린 물건은 사라짐
+  itemAction('item:drop', (d, p, have) => {
+    const id = str(p.item);
+    const it = require('./game-data').ITEMS[id];
+    if (!it) return { error: '알 수 없는 물건이다.' };
+    const n = have(id);
+    if (n < 1) return { error: '가지고 있지 않다.' };
+    const q = Math.max(1, Math.min(n, Math.floor(Number(p.qty)) || 1));
+    const what = q > 1 ? `${it.name} ${q}개` : it.name;
+    return { title: '소지품', lines: [`${what}${josa(q > 1 ? '개' : it.name, '을', '를')} 버렸다.`], items: [{ id, qty: -q }] };
+  });
   itemAction('equip', (d, p, have) => logic.equip(d, str(p.item), have));
   itemAction('unequip', (d, p) => logic.unequip(d, str(p.slot)));
 

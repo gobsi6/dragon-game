@@ -309,6 +309,10 @@
   .inv .it .acts { grid-column: 2; grid-row: 1 / span 3; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; max-width: 220px; }
   .inv .it .acts:empty { display: none; }
   .inv .it .acts .btn { min-height: 30px; padding: 0 12px; font-size: 12.5px; }
+  .inv .it .acts .drop-btn { border-color: transparent; background: transparent; box-shadow: none; color: var(--muted); padding: 0 8px; }
+  .inv .it .acts .drop-btn:hover { color: #A63E4B; background: #FBF1F2; }
+  .inv .it .acts .drop-yes { color: #A63E4B; border-color: #E6C3C7; background: #FBF1F2; box-shadow: none; }
+  .inv .it .acts .drop-yes:hover { background: #F6E1E4; }
   .inv .empty { padding: 16px 0; text-align: center; color: var(--muted); font-size: 13px; border-top: 1px solid var(--line-in); }
   @media (max-width: 420px) {
     .inv .it { padding: 10px 12px; column-gap: 10px; }
@@ -3163,21 +3167,41 @@
         eff.textContent = effectText(it);
         row.appendChild(eff);
       }
+      const acts = document.createElement('div');
+      acts.className = 'acts';
       if (it.type) {
         const eff = document.createElement('span');
         eff.className = 'eff';
         eff.textContent = effectText(it);
         row.appendChild(eff);
-        const acts = document.createElement('div');
-        acts.className = 'acts';
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'btn';
-        b.textContent = it.type === 'use' ? '사용' : '착용';
-        b.addEventListener('click', () => itemAct(it.type === 'use' ? 'item:use' : 'equip', { item: id }));
-        acts.appendChild(b);
-        row.appendChild(acts);
       }
+      // 기본 버튼: 사용·착용 + 버리기. 버리기를 누르면 그 자리에서 개수를 고르고 한 번 더 확인
+      const normal = () => {
+        acts.replaceChildren();
+        if (it.type) {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'btn';
+          b.textContent = it.type === 'use' ? '사용' : '착용';
+          b.addEventListener('click', () => itemAct(it.type === 'use' ? 'item:use' : 'equip', { item: id }));
+          acts.appendChild(b);
+        }
+        const x = document.createElement('button');
+        x.type = 'button';
+        x.className = 'btn drop-btn';
+        x.textContent = '버리기';
+        x.addEventListener('click', asking);
+        acts.appendChild(x);
+      };
+      const asking = () => {
+        acts.replaceChildren();
+        const mk = (text, cls, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = `btn ${cls}`; b.textContent = text; b.addEventListener('click', fn); acts.appendChild(b); };
+        mk(qty > 1 ? '1개 버리기' : '버리기', 'drop-yes', () => itemAct('item:drop', { item: id, qty: 1 }));
+        if (qty > 1) mk(`모두 버리기 (${qty})`, 'drop-yes', () => itemAct('item:drop', { item: id, qty }));
+        mk('취소', '', normal);
+      };
+      normal();
+      row.appendChild(acts);
       group.appendChild(row);
     }
   }
