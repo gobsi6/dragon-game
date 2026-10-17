@@ -18,6 +18,29 @@ const {
 const logic = require('./game-logic');
 const mobs = require('./game-mobs'); // 모브 드래곤: 의뢰·이야기·교환
 const life = require('./game-life');
+const { REGION_LOOT, SHOPS_SPECIAL } = require('./game-data');
+
+// ── 물건을 얻는 곳: 제작 화면에서 재료를 누르면 보여 줌. 서버를 켤 때 한 번 정리해 둠 ──
+const ITEM_SOURCES = (() => {
+  const out = {};
+  const add = (id, text) => { if (!ITEMS[id]) return; (out[id] ||= []); if (!out[id].includes(text)) out[id].push(text); };
+  const rn = (r) => REGIONS[r]?.name || r;
+  const TIER = { common: '', uncommon: ' (가끔)', rare: ' (드물게)' };
+  for (const [r, loot] of Object.entries(REGION_LOOT)) for (const [tier, ids] of Object.entries(loot)) for (const id of ids || []) add(id, `${rn(r)} 탐사·채집${TIER[tier] || ''}`);
+  for (const p of Object.values(PLACES)) if (p.drop) add(p.drop, `${rn(p.region)} ${p.name} 사냥 (${p.creature})`);
+  add('beast_hide', '어디서든 사냥'); add('sharp_fang', '어디서든 사냥 (가끔)'); add('recipe_scroll', '강적을 쓰러뜨리면 가끔');
+  add('calamity_core', '대륙의 재앙을 쓰러뜨리면 (함께 싸운 드래곤 모두)');
+  add('blackened_scale', '오염된 사냥감·강적을 쓰러뜨리면'); add('blackened_scale', '오염된 곳에서 탐사·채집 (가끔)');
+  add('corrupt_crystal', '오염된 사냥감·강적을 쓰러뜨리면 (가끔)'); add('corrupt_crystal', '오염된 곳에서 탐사·채집 (드물게)');
+  for (const [r, ids] of Object.entries(SHOPS)) for (const id of ids) add(id, `${rn(r)} 시장${TRADE.dailyBuy?.[id] ? ` (하루 ${TRADE.dailyBuy[id]}개)` : ''}`);
+  for (const [r, ids] of Object.entries(SHOPS_SPECIAL || {})) for (const id of ids) add(id, `${rn(r)} 시장 (우호·평판이 높을 때)`);
+  for (const f of FISHING.fish) add(f.id, `${rn(FISHING.region)} 낚시${f.tier === 'rare' ? ' (드물게)' : f.tier === 'uncommon' ? ' (가끔)' : ''}`);
+  add('bait_shrimp', `${rn(FISHING.region)} 채집`); add('salt_crystal', `${rn(FISHING.region)} 채집`);
+  add('bait_worm', `${rn(FISHING.region)} 위협 (적대)`); add('fish_mackerel', `${rn(FISHING.region)} 위협 (적대)`);
+  for (const m of Object.values(mobs.MOBS)) for (const t of m.trades || []) for (const id of Object.keys(t.get || {})) add(id, `${m.name}(${rn(m.region)})와 교환`);
+  for (const r of RECIPES) if (!r.hidden) add(r.out, '제작');
+  return out;
+})();
 const combat = require('./game-combat');
 
 const PORT = process.env.PORT || 3000;
@@ -657,6 +680,7 @@ io.on('connection', (socket) => {
     death: { waitMs: require('./game-data').DEATH.waitMs, helpAp: require('./game-data').DEATH.helpAp, helpEn: require('./game-data').DEATH.helpEn },
     shops: Object.keys(SHOPS),
     trade: TRADE,
+    sources: ITEM_SOURCES,
     fishing: { region: FISHING.region, window: FISHING.window },
     bonds: require('./game-data').BONDS, marks: require('./game-data').MARKS, bondRules: require('./game-data').BOND_RULES,
     nestRules: NEST, hoardTiers: HOARD_TIERS,

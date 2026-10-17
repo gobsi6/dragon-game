@@ -328,6 +328,15 @@
   .recipe .needs { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 5px; }
   .need { padding: 2px 8px; font-size: 12px; border: 1px solid var(--line-in); background: var(--surface-2); border-radius: 2px; font-variant-numeric: tabular-nums; }
   .need.lack { color: #A63E4B; border-color: #E6C3C7; background: #FBF1F2; }
+  /* 재료를 누르면 얻는 곳이 펼쳐짐 */
+  .need.src { cursor: pointer; }
+  .need.src:hover { border-color: #9DB2C3; }
+  .need.src[aria-expanded="true"] { color: #fff; background: var(--steel-d); border-color: var(--steel-d); }
+  .need.src.lack[aria-expanded="true"] { background: #A63E4B; border-color: #A63E4B; }
+  .src-box { grid-column: 1 / -1; margin-top: 6px; padding: 8px 12px; background: #F2F5F8; border-left: 2px solid #7E97AC; font-size: 12.5px; line-height: 1.6; color: #2E4A60; }
+  .src-box b { display: block; margin-bottom: 2px; font-weight: 600; }
+  .src-box ul { margin: 0; padding-left: 16px; }
+  .src-box p { margin: 0; }
   .recipe .btn { min-height: 38px; padding: 0 14px; font-size: 14px; }
   .inv { display: flex; flex-direction: column; }
   /* 물건 한 줄: 왼쪽에 이름(개수)·설명, 오른쪽에 버튼 */
@@ -5111,6 +5120,30 @@
   // 제작 창: 만들기 / 실험 / 다듬기(강화·각인)
   let craftMode = 'make', mixPick = [];
   const ELEM_NAME = { fire: '화염', ice: '얼음', lightning: '번개', earth: '대지', poison: '독', mist: '안개', acid: '산', water: '물', spirit: '정화' };
+  // 제작 재료를 누르면, 그 재료를 얻는 곳을 재료 줄 아래에 펼침 (한 번 더 누르면 접힘)
+  function toggleSource(row, chip, id) {
+    const open = chip.getAttribute('aria-expanded') !== 'true';
+    for (const c of row.querySelectorAll('.need.src')) c.setAttribute('aria-expanded', 'false');
+    row.querySelector('.src-box')?.remove();
+    if (!open) return;
+    chip.setAttribute('aria-expanded', 'true');
+    const box = document.createElement('div');
+    box.className = 'src-box';
+    const list = S.sources?.[id] || [];
+    const h = document.createElement('b');
+    h.textContent = `${S.items[id].name} 얻는 곳`;
+    box.appendChild(h);
+    if (!list.length) {
+      const p = document.createElement('p');
+      p.textContent = '이벤트나 특별한 일로만 얻을 수 있다.';
+      box.appendChild(p);
+    } else {
+      const ul = document.createElement('ul');
+      for (const t of list) { const li = document.createElement('li'); li.textContent = t; ul.appendChild(li); }
+      box.appendChild(ul);
+    }
+    row.appendChild(box);
+  }
   function renderCraft() {
     const me = S.me;
     const ci = me.craft || { known: [], needs: {}, hiddenLeft: 0, great: 0, gear: {} };
@@ -5195,6 +5228,16 @@
         for (const [id, n] of Object.entries(r.needs)) {
           add(`${S.items[id].name} ${invCache[id] || 0}/${n}`, (invCache[id] || 0) < n);
           if (S.items[id].cat === 'trophy') needs.lastChild.title = effectText(S.items[id]);
+          // 누르면 그 재료를 얻는 곳이 펼쳐짐
+          const chip = needs.lastChild;
+          chip.classList.add('src');
+          chip.tabIndex = 0;
+          chip.setAttribute('role', 'button');
+          chip.setAttribute('aria-expanded', 'false');
+          if (!chip.title) chip.title = '눌러서 얻는 곳 보기';
+          const toggle = () => toggleSource(row, chip, id);
+          chip.addEventListener('click', toggle);
+          chip.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
         }
         const forgeM = ci.forge ? (S.craftRules?.forge.en || 1) : 1;
         const en = Math.ceil(r.en * (me.perks?.smith ? 0.7 : 1) * (me.craftMult || 1) * forgeM - 1e-9); // 둥지의 대장장이, 칭호, 공방
@@ -8915,6 +8958,7 @@
       S.deathCfg = data.death || { waitMs: 3 * 3600000, helpAp: 2, helpEn: 8 };
       S.shops = data.shops;
       S.trade = data.trade;
+      S.sources = data.sources || {};
       S.fishing = data.fishing || null;
       S.nestRules = data.nestRules;
       S.bonds = data.bonds || {}; S.marks = data.marks || {}; S.bondRules = data.bondRules || {};
