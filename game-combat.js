@@ -657,6 +657,7 @@ function huntReward(d, b, c) {
     // 칭호: 사냥에서 이긴 횟수 (전체와 지역별)
     logic.traitCount(d, 'huntwin');
     logic.traitCount(d, `huntwin:${PLACES[b.place]?.region || d.region}`);
+    if (b.place) logic.traitCount(d, `huntwin:${b.place}`); // 모브 드래곤 의뢰: 장소별
   } else if (b.fled === me) {
     lines.push(killed.length ? `${names(killed)} 쓰러뜨리고, 나머지에게 밀려 ${b.turn}턴 만에 물러났다${how}.` : `${c.name}에게 밀려 ${b.turn}턴 만에 물러났다${how}.`);
   } else {
@@ -716,6 +717,7 @@ function eliteReward(d, b) {
       items = logic.bundle([...items.flatMap((x) => Array(x.qty).fill(x.id)), ...Array(MIND.scale.elite).fill('blackened_scale'), ...(Math.random() < MIND.legend.chance ? [MIND.legend.item] : [])]);
     }
     logic.traitCount(d, 'elite');
+    logic.traitCount(d, `elite:${PLACES[b.place]?.region || d.region}`); // 모브 드래곤 의뢰: 지역별 강적
     logic.traitCount(d, 'huntwin');
     logic.traitCount(d, `huntwin:${PLACES[b.place]?.region || d.region}`);
     d.gold += gold;

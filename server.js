@@ -15,6 +15,7 @@ const {
   COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, STATUS, CREATURE_COMBAT, MIND, PURIFY, CRAFT, PLACES, REGION_PLACES, PLACE_RULES, HOARD_TIERS, RAID, SEASONS, WEATHERS, DEPART,
 } = require('./game-data');
 const logic = require('./game-logic');
+const mobs = require('./game-mobs'); // 모브 드래곤: 의뢰·이야기·교환
 const life = require('./game-life');
 const combat = require('./game-combat');
 
@@ -149,6 +150,7 @@ const meOf = (d) => ({
   fallen: logic.isFallen(d) ? death.view(d) : null,
   titles: logic.titlesView(d),
   craftMult: logic.titleMods(d).craftEn || 1,
+  mob: mobs.summary(d),                     // 맡은 모브 드래곤 의뢰와 진행도
   craft: logic.craftView(d),                // 찾아낸 제작법, 대성공 확률, 공방, 장신구 강화·각인
   buff: (() => { const b = logic.buffOf(d); return b ? { id: b.id, until: b.until } : null; })(),
   scars: death.scarsOf(d),
@@ -591,6 +593,7 @@ io.on('connection', (socket) => {
     stanceRules: STANCE_RULES,
     fameTiers: FAME_TIERS,
     traits: TRAITS, traitEarn: TRAIT_EARN, traitCounts: TRAIT_COUNTS,
+    mobs: mobs.listForClient(),
     craftRules: { enhance: CRAFT.enhance, forgeRate: CRAFT.forgeRate, engrave: CRAFT.engrave, experimentEn: CRAFT.experiment.en, forge: CRAFT.forge, hidden: RECIPES.filter((r) => r.hidden).map((r) => r.out) },
     statPerLevel: require('./game-data').STAT_POINTS.perLevel,
     places: PLACES, regionPlaces: REGION_PLACES, placeRules: PLACE_RULES,
@@ -796,6 +799,7 @@ io.on('connection', (socket) => {
     if (type === 'explore' && Math.random() < CRAFT.scrollChance.explore) { res.items = [...(res.items || []), { id: 'recipe_scroll', qty: 1 }]; res.lines.push('무너진 돌 틈에 낡은 양피지가 끼어 있었다. 바랜 제작서다!'); }
     // 특성: 행동을 세고, 쓰러지기 직전까지 몰린 사냥은 상처로 셈
     res.lines.push(...logic.traitCount(d, type));
+    if (type === 'gather' || type === 'explore') logic.traitCount(d, `${type}:${d.region}`); // 모브 드래곤 의뢰: 지역별
     if (res.wound) res.lines.push(...logic.traitCount(d, 'wound'));
     res.event = life.rollEvent(d, kin, (id) => db.itemCount(d.id, id), str(payload?.type), now);
     db.saveState(d, res.items);
@@ -926,6 +930,22 @@ io.on('connection', (socket) => {
   itemAction('gear:engrave', (d, p, have) => logic.engraveGear(d, str(p.item), str(p.elem), have));
   itemAction('nest:forge', (d, p, have) => logic.buildForge(d, have));
   itemAction('order:fill', (d, p, have) => logic.fillOrder(d, str(p.key), have));
+  // ── 모브 드래곤 ──
+  socket.on('mob:get', (payload, ack) => {
+    if (typeof ack !== 'function') return;
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+    const d = entry.dragon;
+    const id = mobs.MOB_BY_REGION[d.region];
+    if (!id) return ack({ error: '이곳에는 머무는 드래곤이 없다.' });
+    ack({ ok: true, mob: mobs.view(d, id, (x) => db.itemCount(d.id, x)) });
+  });
+  itemAction('mob:accept', (d, p) => mobs.accept(d, str(p.mob), p.i));
+  itemAction('mob:turnin', (d, p, have) => mobs.turnIn(d, str(p.mob), p.i, have));
+  itemAction('mob:abandon', (d, p) => mobs.abandon(d, str(p.mob), p.i));
+  itemAction('mob:story', (d, p) => mobs.storyAccept(d, str(p.mob)));
+  itemAction('mob:storyturn', (d, p, have) => mobs.storyTurnIn(d, str(p.mob), have));
+  itemAction('mob:trade', (d, p, have) => mobs.trade(d, str(p.mob), p.i, have));
   socket.on('order:list', (payload, ack) => {
     if (typeof ack !== 'function') return;
     const entry = entryOf(socket);

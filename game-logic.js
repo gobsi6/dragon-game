@@ -1629,4 +1629,5 @@ module.exports = {
   corruptedRegion, corruptUntil, isCorrupted, berserkOf, loseMind, nearestTown,
   placeOf, goPlace, isFallen, chron, chronOf,
   titlesOf, titleOn, titleName, titleMods, checkTitles, setTitle, titlesView,
+  combatJson, dayIdx, // 모브 드래곤(game-mobs.js)이 씀
 };

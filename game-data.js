@@ -290,7 +290,14 @@ const ITEMS = {
   keepsake_cloth: { name: '낡은 손수건',     rarity: 'common',   value: 20,  desc: '작은 손이 늘 쥐고 있던 손수건이다.' },
   keepsake_toy:   { name: '손때 묻은 목각 용', rarity: 'uncommon', value: 80,  desc: '어린 날 드래곤을 흉내 내며 깎은 인형이다.' },
   keepsake_scale: { name: '비늘 목걸이',     rarity: 'rare',     value: 200, desc: '드래곤의 비늘을 꿰어 평생 걸고 다닌 목걸이다.' },
-  keepsake_sword: { name: '용기사의 검',     rarity: 'rare',     value: 180, desc: '드래곤과 함께 하늘을 누빈 기사의 검이다.' },
+  keepsake_sword: { name: '용기사의 검',     rarity: 'rare',     value: 180, desc: '드래곤과 함께 하늘을 누빈 기사의 검이다.' },  // 모브 드래곤 이야기 퀘스트를 끝까지 하면 받는 장신구 (game-mobs.js)
+  barg_horn:      { name: '부러진 뿔 부적',   rarity: 'rare', type: 'equip', slot: 'charm', bonus: { claw: 2, majesty: 1 }, value: 150, desc: '늙은 레드 드래곤 바르그가 건넨 뿔 조각. 아직 전장의 열기가 남아 있다.' },
+  harsia_mantle:  { name: '서리 비늘 망토',   rarity: 'rare', type: 'equip', slot: 'wing',  bonus: { wing: 2, scale: 1 }, value: 150, desc: '하르시아가 자기 비늘로 엮은 망토. 눈보라 속에서도 날개가 얼지 않는다.' },
+  ordin_circlet:  { name: '비문의 관',        rarity: 'rare', type: 'equip', slot: 'head',  bonus: { wisdom: 3 }, value: 150, desc: '오르딘이 완성된 비문의 룬을 새겨 넣은 관. 쓰고 있으면 오래된 글자가 저절로 읽힌다.' },
+  morgana_seed:   { name: '고목 씨앗 목걸이', rarity: 'rare', type: 'equip', slot: 'neck',  bonus: { scale: 2, wisdom: 1 }, value: 150, desc: '되살아난 고목의 씨앗을 꿴 목걸이. 은은한 숲 냄새가 난다.' },
+  skrag_claw:     { name: '늪 그림자 발톱',   rarity: 'rare', type: 'equip', slot: 'claw',  bonus: { claw: 3 }, value: 150, desc: '스크라그가 오래 쓰던 검은 발톱덮개. 늪의 진흙 냄새가 배어 있다.' },
+  aurel_ring:     { name: '금빛 꼬리고리',    rarity: 'rare', type: 'equip', slot: 'tail',  bonus: { majesty: 2, scale: 1 }, value: 150, desc: '아우렐이 아끼던 금고리. 꼬리를 흔들 때마다 맑은 소리가 난다.' },
+  ignar_heart:    { name: '꺼지지 않는 불씨', rarity: 'rare', type: 'equip', slot: 'charm', bonus: { claw: 1, scale: 1, wing: 1 }, value: 150, desc: '이그나르가 사흘 밤낮 두드려 만든 부적. 손에 쥐면 늘 따뜻하다.' },
 };
 
 // 물건 기준 값. value가 없으면 귀한 정도로, 만든 물건은 재료 값으로 정함
@@ -828,6 +835,9 @@ const TITLES = [
   // 이어받은 의지
   { id: 'pioneer',   name: '새 길을 연 발톱',   cond: { count: 'firstcraft', at: 1 }, mod: { craftEn: 0.9 }, eff: '제작 기력 −10%' },
   { id: 'masterwork', name: '걸작의 장인',     cond: { count: 'masterwork', at: 5 }, mod: { craftGreat: 0.05 }, eff: '제작 대성공 +5%' },
+  // 모브 드래곤
+  { id: 'errand',    name: '용족의 해결사',     cond: { count: 'mobquest', at: 15 }, mod: { mobGold: 1.2 }, eff: '모브 드래곤 의뢰 금화 +20%' },
+  { id: 'lorekeeper', name: '옛이야기를 들은 용', cond: { count: 'mobstory', at: 3 }, mod: { xp: 1.05 }, eff: '경험치 +5%' },
   { id: 'voidwalker', name: '어둠을 걷는 자',  cond: { count: 'corrupt', at: 100 }, mod: { mindWard: 0.85 }, eff: '깎이는 정신 −15%' },
   { id: 'cleanser',  name: '오염을 걷어 낸 자', cond: { count: 'purify', at: 1 },     mod: { xp: 1.03 },       eff: '경험치 +3%' },
   { id: 'heir',      name: '의지를 이은 자',   cond: { count: 'heir', at: 1 },      mod: { xp: 1.05 },       eff: '경험치 +5%' },
@@ -843,7 +853,7 @@ const TITLES = [
   { id: 'scarred',   name: '상흔투성이',       cond: { scars: 3 },                  mod: { taken: 0.95 },    eff: '사냥 받는 피해 −5%' },
 ];
 // 칭호 조건을 사람이 읽는 글로
-const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: '둥지에서 {n}번 쉬기', craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격', heir: '먼 여행을 떠난 드래곤의 의지를 잇기', teach: '제자를 {n}번 가르치기', surpass: '스승의 레벨을 따라잡기', sendoff: '다 자란 식구를 {n}번 떠나보내기', corrupt: '오염된 땅에서 {n}번 행동하기', purify: '오염된 땅을 {n}번 정화하기', firstcraft: '숨겨진 제작법을 대륙에서 처음 찾아내기', masterwork: '대성공 {n}번' };
+const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: '둥지에서 {n}번 쉬기', craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격', heir: '먼 여행을 떠난 드래곤의 의지를 잇기', teach: '제자를 {n}번 가르치기', surpass: '스승의 레벨을 따라잡기', sendoff: '다 자란 식구를 {n}번 떠나보내기', corrupt: '오염된 땅에서 {n}번 행동하기', purify: '오염된 땅을 {n}번 정화하기', firstcraft: '숨겨진 제작법을 대륙에서 처음 찾아내기', masterwork: '대성공 {n}번', mobquest: '모브 드래곤의 의뢰 {n}번 마치기', mobstory: '모브 드래곤의 이야기 {n}개를 끝까지 듣기' };
 
 // ── 장소와 사냥터 난이도 ───────────────────────────
 // 야생 지역마다 장소가 셋. 입구는 쉽고 안쪽일수록 사냥터 난이도(Lv.1~12)가 높다.
