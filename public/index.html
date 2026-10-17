@@ -270,8 +270,6 @@
   .stance-note .pro { color: var(--forest); }
   .stance-note .con { color: #A63E4B; }
   .reps .bounty { color: #A63E4B; font-weight: 600; }
-  .mk-row.special .nm b::after { content: "우호 전용"; padding: 0 7px; font: 600 12px/20px var(--sans); color: #2F5D45; background: #EEF4EF; border: 1px solid #A9C4B2; border-radius: 2px; }
-  .mk-row.locked { opacity: .55; }
   .gear { display: flex; flex-direction: column; gap: 6px; }
   .gear .l { font-size: 12px; color: var(--muted); }
   .gear-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
@@ -336,42 +334,63 @@
   .reps span:first-child { color: var(--ink-2); }
   .reps b { font-weight: 600; }
   .reps b.good { color: var(--forest); } .reps b.bad { color: #A63E4B; }
-  .mk-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; font-size: 15px; color: var(--ink-2); }
-  .mk-top #mk-where { font: 600 15px/1.4 var(--serif); color: var(--ink); }
-  .mk-gold { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px 4px 8px; border: 1px solid #E2D2A6; border-radius: 16px; background: #FBF6E8; color: #7A5A16; font-size: 14px; }
-  .mk-gold b { font: 700 16px/1 var(--sans); color: #6A4E12; font-variant-numeric: tabular-nums; }
-  .coin { width: 12px; height: 12px; flex: none; border-radius: 50%; background: #D9B24E; border: 1.5px solid #A8822C; }
-  #mk-note { font-size: 13.5px; line-height: 1.6; margin: 0; }
-  #mk-note:empty { display: none; }
+  /* 금화 아이콘: 위쪽 바의 금화와 같은 겹동그라미 */
+
+  /* ── 시장: 상인 카운터 (시안 2) ── */
+  .coin { width: 15px; height: 15px; flex: none; box-sizing: border-box; border-radius: 50%; border: 1.6px solid currentColor; display: inline-flex; align-items: center; justify-content: center; color: #8A6A22; }
+  .coin::after { content: ""; width: 7px; height: 7px; box-sizing: border-box; border-radius: 50%; border: 1.6px solid currentColor; }
+  .mk-banner { display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; background: #2A4256; color: #F4F7FA; border-radius: 4px; }
+  .mk-banner .mkb-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .mk-banner .mkb-who { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .mk-banner .mkb-where { font-size: 11.5px; letter-spacing: .08em; color: #B9C7D3; }
+  .mk-banner .mkb-say { font: 700 17px/1.4 var(--serif); }
+  .mk-banner .mkb-gold { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 16px; background: rgba(255, 255, 255, .12); font-size: 13px; color: #E8DCC0; }
+  .mk-banner .mkb-gold .coin { color: #E8CF8A; }
+  .mk-banner .mkb-gold b { font: 700 15px/1 var(--sans); color: #F3E2B0; font-variant-numeric: tabular-nums; }
+  .mk-banner .mkb-rep { display: flex; flex-direction: column; gap: 5px; }
+  .mk-banner .mkb-l { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: #D5E0EA; }
+  .mk-banner .mkb-l b { color: #fff; }
+  .mk-banner .mkb-bar { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .15); overflow: hidden; }
+  .mk-banner .mkb-bar i { display: block; height: 100%; background: #E8CF8A; }
+  .mk-banner .mkb-note { margin: 0; font-size: 12px; line-height: 1.6; color: #C7D3DE; }
+  .mk-banner .mkb-note:empty { display: none; }
   .mk-closed { padding: 18px; text-align: center; color: #A63E4B; background: #FBF1F2; border: 1px solid #E6C3C7; font-size: 15px; }
-  #mk-tabs { margin: 0; }
-  #mk-tabs button { min-height: 44px; font-size: 15px; }
-  #mk-tabs .mk-n { min-width: 22px; text-align: center; padding: 1px 7px; border-radius: 10px; background: rgba(42, 66, 86, .1); color: var(--steel-d); font: 600 12px/18px var(--sans); }
-  #mk-tabs button.on .mk-n { background: rgba(255, 255, 255, .2); color: #fff; }
-  .mk-list { display: flex; flex-direction: column; }
-  .mk-sum { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; padding: 0 2px 8px; font-size: 13.5px; color: var(--muted); }
+  .mk-tabs { display: flex; gap: 20px; border-bottom: 1px solid var(--line-in); }
+  .mk-tabs[hidden] { display: none; }
+  .mk-tabs button { min-height: 0; padding: 9px 2px; margin-bottom: -1px; border: 0; border-bottom: 2px solid transparent; background: none; font: 600 14px/1 var(--serif); color: var(--muted); }
+  .mk-tabs button.on { border-bottom-color: var(--steel-d); color: var(--steel-d); font-weight: 700; }
+  .mk-tabs button:hover:not(.on) { color: var(--ink); }
+  .mk-tabs .mk-n { margin-left: 4px; font: 600 12px/1 var(--sans); }
+  .mk-list { display: flex; flex-direction: column; gap: 8px; }
+  .mk-sum { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; padding: 0 2px; font-size: 13px; color: var(--muted); }
   .mk-sum b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
-  .mk-empty { padding: 28px 12px; text-align: center; color: var(--muted); font-size: 14.5px; border: 1px dashed var(--line-soft); border-radius: 3px; }
-  .mk-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 16px; padding: 9px 4px; border-top: 1px solid var(--line-in); align-items: center; }
-  .mk-row:first-child { border-top: 0; }
-  .mk-row .nm { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-  .mk-row .nm b { font: 700 15.5px/1.35 var(--serif); color: var(--ink); display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
-  .mk-row .nm b::before { content: ""; width: 8px; height: 8px; transform: rotate(45deg); background: var(--r); flex: none; }
+  .mk-empty { padding: 28px 12px; text-align: center; color: var(--muted); font-size: 14px; border: 1px dashed var(--line-soft); border-radius: 3px; }
+  .mk-row { display: flex; align-items: center; gap: 12px; padding: 11px 12px 11px 14px; background: var(--surface-2); border: 1px solid var(--line-in); border-radius: 4px; }
+  .mk-row.on { background: #F4F7FA; border-color: #9DB3C6; }
+  .mk-row.locked { opacity: .6; }
+  .mk-row .nm { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+  .mk-row .nm b { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font: 700 14.5px/1.35 var(--serif); color: var(--ink); }
+  .mk-row .nm b::before { content: ""; width: 7px; height: 7px; transform: rotate(45deg); background: var(--r); flex: none; }
   .mk-row.common { --r: #9A9C98; } .mk-row.uncommon { --r: #3C5A73; } .mk-row.rare { --r: #B8913A; }
-  .mk-row .qty { font: 600 12px/19px var(--sans); padding: 0 8px; border-radius: 10px; background: #EEF0EE; color: var(--ink-2); }
-  .mk-row .nm small { font-size: 13px; line-height: 1.5; color: var(--muted); }
-  .mk-row .nm .eff { align-self: flex-start; font-size: 12px; line-height: 1.5; color: var(--steel-d); background: #EEF2F6; border-radius: 2px; padding: 1px 7px; }
-  .mk-row .acts { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
-  .mk-row .price { display: inline-flex; align-items: center; gap: 6px; font: 700 15.5px/1.2 var(--sans); color: #6A4E12; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .mk-row .price small { font: 400 12px/1 var(--sans); color: var(--muted); }
-  .mk-row .price.lock { font: 600 12.5px/1.3 var(--sans); color: var(--muted); }
-  .mk-row .btns { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
-  .mk-row .btn { min-height: 30px; padding: 0 10px; font-size: 12.5px; }
-  .mk-row .short { font-size: 12px; color: #A63E4B; }
+  .mk-row .nm .eff { font: 400 11.5px/1.4 var(--sans); color: var(--steel-d); }
+  .mk-row .nm .tag { font: 600 11px/18px var(--sans); padding: 0 6px; color: #2F5D45; background: #EEF4EF; border: 1px solid #A9C4B2; border-radius: 2px; }
+  .mk-row .nm .have { font: 600 11px/18px var(--sans); padding: 0 7px; border-radius: 9px; background: #EEF0EE; color: var(--ink-2); }
+  .mk-row .nm small { font-size: 12px; line-height: 1.5; color: var(--muted); }
+  .mk-row .nm small .unit { color: #6A4E12; font-weight: 600; }
+  .mk-row .ctl { display: flex; align-items: center; gap: 8px; flex: none; }
+  .mk-step { display: flex; align-items: center; border: 1px solid #C9CCC8; border-radius: 3px; background: #fff; }
+  .mk-step button { width: 28px; min-height: 30px; padding: 0; border: 0; background: transparent; font: 500 16px/1 var(--sans); color: var(--ink-2); }
+  .mk-step button:disabled { color: #C4C6C2; }
+  .mk-step span { min-width: 22px; text-align: center; font: 600 13px/1 var(--sans); font-variant-numeric: tabular-nums; }
+  .mk-all { min-height: 0; padding: 0 2px; border: 0; background: none; font: 500 12px/1 var(--sans); color: var(--steel); text-decoration: underline; text-underline-offset: 2px; }
+  .mk-go { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 96px; min-height: 32px; padding: 0 12px; font-size: 12.5px; white-space: nowrap; }
+  .mk-go .coin { width: 13px; height: 13px; color: currentColor; }
+  .mk-go .coin::after { width: 6px; height: 6px; }
+  .mk-row .lock { font-size: 12px; color: var(--muted); text-align: right; }
   @media (max-width: 520px) {
-    .mk-row { grid-template-columns: minmax(0, 1fr); }
-    .mk-row .acts { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; }
-    .mk-row .btns { margin-left: auto; }
+    .mk-row { flex-wrap: wrap; }
+    .mk-row .nm { flex-basis: 100%; }
+    .mk-row .ctl { margin-left: auto; }
   }
 
   /* ── 이벤트 · 둥지 소식 · 식구 ── */
@@ -1869,9 +1888,15 @@
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="market-dlg-title">시장</h2></div>
   <div class="body">
-    <div class="mk-top"><span id="mk-where"></span><span class="mk-gold"><i class="coin" aria-hidden="true"></i>가진 금화 <b id="mk-gold"></b></span></div>
-    <p class="note" id="mk-note"></p>
-    <div class="seg dtabs" id="mk-tabs" role="tablist" aria-label="시장"><button type="button" role="tab" data-t="buy" class="on">사기 <span class="mk-n" id="mk-n-buy"></span></button><button type="button" role="tab" data-t="sell">팔기 <span class="mk-n" id="mk-n-sell"></span></button></div>
+    <div class="mk-banner">
+      <div class="mkb-top">
+        <div class="mkb-who"><span class="mkb-where" id="mk-where"></span><span class="mkb-say" id="mk-say"></span></div>
+        <span class="mkb-gold"><i class="coin" aria-hidden="true"></i><b id="mk-gold"></b></span>
+      </div>
+      <div class="mkb-rep"><div class="mkb-l"><span id="mk-rep"></span><span id="mk-next"></span></div><div class="mkb-bar"><i id="mk-bar"></i></div></div>
+      <p class="mkb-note" id="mk-note"></p>
+    </div>
+    <div class="mk-tabs" id="mk-tabs" role="tablist" aria-label="시장"><button type="button" role="tab" data-t="buy" class="on">사기<span class="mk-n" id="mk-n-buy"></span></button><button type="button" role="tab" data-t="sell">팔기<span class="mk-n" id="mk-n-sell"></span></button></div>
     <div id="mk-body"></div>
     <div class="row"><button class="btn" type="button" id="market-close">닫기</button></div>
   </div>
@@ -3914,15 +3939,11 @@
     const it = S.items[id];
     const row = document.createElement('div');
     row.className = `mk-row ${it.rarity} ${cls || ''}`;
-    row.innerHTML = '<div class="nm"><b></b><small></small></div><div class="acts"><span class="price"></span><div class="btns"></div></div>';
-    row.querySelector('b').textContent = it.name;
+    row.innerHTML = '<div class="nm"><b></b><small></small></div><div class="ctl"></div>';
+    const b = row.querySelector('b');
+    b.textContent = it.name;
+    if (it.type) { const e = document.createElement('span'); e.className = 'eff'; e.textContent = effectText(it); b.appendChild(e); }
     row.querySelector('small').textContent = it.desc;
-    if (it.type) {
-      const e = document.createElement('span');
-      e.className = 'eff';
-      e.textContent = effectText(it);
-      row.querySelector('.nm').appendChild(e);
-    }
     return row;
   }
   function mkButton(text, onClick, disabled, primary) {
@@ -3934,12 +3955,43 @@
     b.addEventListener('click', onClick);
     return b;
   }
-  // 값 표시: 동전 + 숫자 (+ 작은 설명)
-  function mkPrice(el, n, label) {
-    el.replaceChildren();
-    const c = document.createElement('i'); c.className = 'coin'; c.setAttribute('aria-hidden', 'true');
-    el.append(c, `${n.toLocaleString()}닢`);
-    if (label) { const sm = document.createElement('small'); sm.textContent = label; el.append(sm); }
+  // 개수 고르기 (− n +) 와 합계가 적힌 버튼. 개수를 바꿔도 창을 다시 그리지 않고 그 줄만 바꿈
+  const mkQty = new Map();
+  function mkControls(row, key, unit, max, label, onGo, canAfford) {
+    const ctl = row.querySelector('.ctl');
+    const step = document.createElement('div');
+    step.className = 'mk-step';
+    const minus = document.createElement('button'); minus.type = 'button'; minus.textContent = '−'; minus.setAttribute('aria-label', '하나 덜');
+    const num = document.createElement('span');
+    const plus = document.createElement('button'); plus.type = 'button'; plus.textContent = '+'; plus.setAttribute('aria-label', '하나 더');
+    step.append(minus, num, plus);
+    const go = document.createElement('button');
+    go.type = 'button';
+    go.className = 'btn primary mk-go';
+    const draw = () => {
+      const n = Math.max(1, Math.min(max, mkQty.get(key) || 1));
+      mkQty.set(key, n);
+      num.textContent = n;
+      minus.disabled = n <= 1;
+      plus.disabled = n >= max;
+      go.replaceChildren();
+      const c = document.createElement('i'); c.className = 'coin'; c.setAttribute('aria-hidden', 'true');
+      go.append(c, `${(unit * n).toLocaleString()}닢 ${label}`);
+      go.disabled = canAfford ? !canAfford(unit * n) : false;
+      go.title = go.disabled ? `금화가 ${(unit * n - S.me.gold).toLocaleString()}닢 모자란다.` : '';
+      row.classList.toggle('on', n > 1);
+    };
+    minus.addEventListener('click', () => { mkQty.set(key, (mkQty.get(key) || 1) - 1); draw(); });
+    plus.addEventListener('click', () => { mkQty.set(key, (mkQty.get(key) || 1) + 1); draw(); });
+    go.addEventListener('click', () => onGo(mkQty.get(key) || 1));
+    if (label === '팔기' && max > 1) {
+      const all = document.createElement('button');
+      all.type = 'button'; all.className = 'mk-all'; all.textContent = '전부';
+      all.addEventListener('click', () => { mkQty.set(key, max); draw(); });
+      ctl.append(all);
+    }
+    ctl.append(step, go);
+    draw();
   }
   let mkTab = 'buy';
   function openMarket() {
@@ -3948,10 +4000,21 @@
       const m = res.market;
       const dlg = $('market-dlg'), scroller = dlg.querySelector('.body');
       const keep = [dlg.scrollTop, scroller.scrollTop];
-      $('mk-where').textContent = `${S.regions[m.region].name} · 평판 ${m.repName}`;
+      // 상인 배너: 어디인지, 상인의 말, 가진 금화, 평판 막대
+      const town = S.regions[m.region].name;
+      $('mk-where').textContent = `${town} · 시장`;
+      $('mk-say').textContent = m.closed ? '"…용에게는 팔 물건이 없소."'
+        : m.stance === 'hermit' ? '"어서 오세요, 손님. 처음 뵙는 얼굴이네요."'
+        : m.stance === 'hostile' ? `"${m.proxy || '심부름꾼'} 씨, 오늘은 뭘 찾으시오?"`
+        : '"어서 오시오, 용이여. 오늘은 무엇을 찾으시오?"';
       $('mk-gold').textContent = `${S.me.gold.toLocaleString()}닢`;
+      const rb = m.repBar || { from: -100, to: 100, next: null };
+      $('mk-rep').innerHTML = '';
+      $('mk-rep').append('평판 ', Object.assign(document.createElement('b'), { textContent: m.repName }), ` (${m.rep})`);
+      $('mk-next').textContent = rb.next ? `${rb.next}까지 ${rb.to - m.rep}` : '가장 높은 단계';
+      $('mk-bar').style.width = `${Math.max(3, Math.min(100, ((m.rep - rb.from) / Math.max(1, rb.to - rb.from)) * 100))}%`;
       $('mk-note').textContent = {
-        friendly: '인간과 어울리는 드래곤에게는 평판이 높을수록 값을 잘 쳐준다. 거래할 때마다 평판이 오르지만, 드래곤들 사이에서는 수군거림을 산다.',
+        friendly: '평판이 높을수록 값을 잘 쳐준다. 거래할 때마다 평판이 오르지만, 드래곤들 사이에서는 수군거림을 산다.',
         hermit: '사람의 모습으로 섞여 들어가 정체를 숨겼다. 값은 크게 손해 보지만 평판도 명성도 변하지 않는다.',
         hostile: m.proxy ? `${m.proxy}${josa(m.proxy, '이', '가')} 사람들 틈에 섞여 대신 흥정한다. 값은 은둔과 같고, 평판은 변하지 않는다.` : '',
       }[m.stance] || '';
@@ -3974,14 +4037,17 @@
         list.className = 'mk-list';
         if (mkTab === 'buy') {
           for (const x of buys) {
-            const row = marketRow(x.id, x.special ? `special${x.locked ? ' locked' : ''}` : '');
-            const price = row.querySelector('.price'), btns = row.querySelector('.btns');
-            if (x.locked) { price.classList.add('lock'); price.textContent = `평판 '${m.specialFrom}'부터 살 수 있다`; }
-            else mkPrice(price, x.price);
-            const short = !x.locked && S.me.gold < x.price;
-            if (short) { const sh = document.createElement('span'); sh.className = 'short'; sh.textContent = `${(x.price - S.me.gold).toLocaleString()}닢 모자람`; btns.append(sh); btns.style.alignItems = 'center'; }
-            btns.append(mkButton('1개 사기', () => trade('market:buy', { item: x.id, qty: 1 }), x.locked || short, true));
-            if (!x.locked) btns.append(mkButton('3개 사기', () => trade('market:buy', { item: x.id, qty: 3 }), S.me.gold < x.price * 3, true));
+            const row = marketRow(x.id, x.locked ? 'locked' : '');
+            if (x.special) { const t = document.createElement('span'); t.className = 'tag'; t.textContent = '우호 전용'; row.querySelector('b').appendChild(t); }
+            const sm = row.querySelector('small');
+            const u = document.createElement('span'); u.className = 'unit'; u.textContent = `개당 ${x.price}닢`;
+            sm.prepend(u, ' · ');
+            if (x.locked) {
+              const l = document.createElement('span'); l.className = 'lock'; l.textContent = `평판 '${m.specialFrom}'부터 살 수 있다`;
+              row.querySelector('.ctl').appendChild(l);
+            } else {
+              mkControls(row, `buy:${x.id}`, x.price, 20, '사기', (n) => trade('market:buy', { item: x.id, qty: n }, `buy:${x.id}`), (t) => S.me.gold >= t);
+            }
             list.appendChild(row);
           }
         } else if (!sells.length) {
@@ -3999,13 +4065,12 @@
           body.appendChild(sum);
           for (const x of sells) {
             const row = marketRow(x.id);
-            const q = document.createElement('span'); q.className = 'qty'; q.textContent = `${x.qty}개`;
-            row.querySelector('b').appendChild(q);
-            const price = row.querySelector('.price'), btns = row.querySelector('.btns');
-            mkPrice(price, x.price, '개당');
-            btns.append(mkButton('1개 팔기', () => trade('market:sell', { item: x.id, qty: 1 })));
-            if (x.qty > 3) btns.append(mkButton('3개 팔기', () => trade('market:sell', { item: x.id, qty: 3 })));
-            if (x.qty > 1) btns.append(mkButton(`모두 팔기 · ${(x.price * x.qty).toLocaleString()}닢`, () => trade('market:sell', { item: x.id, qty: x.qty })));
+            const h = document.createElement('span'); h.className = 'have'; h.textContent = `${x.qty}개 있음`;
+            row.querySelector('b').appendChild(h);
+            const sm = row.querySelector('small');
+            const u = document.createElement('span'); u.className = 'unit'; u.textContent = `개당 ${x.price}닢`;
+            sm.prepend(u, ' · ');
+            mkControls(row, `sell:${x.id}`, x.price, x.qty, '팔기', (n) => trade('market:sell', { item: x.id, qty: n }, `sell:${x.id}`));
             list.appendChild(row);
           }
         }
@@ -4021,15 +4086,16 @@
     mkTab = b.dataset.t;
     openMarket();
   });
-  function trade(event, payload) {
+  function trade(event, payload, key) {
     socket.emit(event, payload, (res) => {
       if (res.error) { SFX.play('error'); return toast(res.error); }
       SFX.play('coin');
+      if (key) mkQty.delete(key); // 거래한 물건은 개수를 1로 되돌림
       toast(res.result.lines.join(' '));
       setTimeout(openMarket, 50);
     });
   }
-  $('market-open').addEventListener('click', () => { mkTab = 'buy'; openMarket(); });
+  $('market-open').addEventListener('click', () => { mkTab = 'buy'; mkQty.clear(); openMarket(); });
   $('market-close').addEventListener('click', () => $('market-dlg').close());
   $('intimidate').addEventListener('click', () => {
     socket.emit('intimidate', {}, (res) => {

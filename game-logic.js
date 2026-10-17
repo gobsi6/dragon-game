@@ -4,7 +4,7 @@
 // 저장은 부르는 쪽(server.js)이 db.saveState(d, items)로 합니다.
 
 const {
-  REGIONS, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, RECIPES, SLOTS, STANCES, SHOPS, repTier, TRADE, NEST, hoardTier, RAID, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, ELEMENTS,
+  REGIONS, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, RECIPES, SLOTS, STANCES, SHOPS, REP_TIERS, repTier, TRADE, NEST, hoardTier, RAID, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, ELEMENTS,
   SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES,
 } = require('./game-data');
 
@@ -1095,6 +1095,12 @@ function marketInfo(d, invList) {
     region: d.region,
     stance: d.stance,
     rep, repName: repTier(rep),
+    repBar: (() => { // 평판 막대: 지금 단계의 시작부터 다음 단계까지
+      const T = [...REP_TIERS].sort((a, b) => a.min - b.min);
+      const i = T.reduce((k, t, j) => (rep >= t.min ? j : k), 0);
+      const nx = T[i + 1];
+      return { from: T[i].min, to: nx ? nx.min : 100, next: nx ? nx.name : null };
+    })(),
     closed: closed ? closed.error : null,
     proxy: d.stance === 'hostile' ? d.perks?.trader || null : null, // 대신 흥정하는 둥지 사람
     buy: shop.map((id) => ({ id, price: buyPrice(d, id) })),
