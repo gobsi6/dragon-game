@@ -6,7 +6,7 @@
 // 모든 함수는 식구 목록 kin을 직접 바꿉니다. 새 식구는 id가 null이고, 저장은 server.js가 합니다.
 
 const {
-  ITEMS, KINDS, REGIONS, SHOPS, STATS, REGION_LOOT, DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, EVENT_RULES,
+  ITEMS, KINDS, REGIONS, SHOPS, STATS, REGION_LOOT, DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, EVENT_RULES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES,
 } = require('./game-data');
 const logic = require('./game-logic');
 const EVENTS = require('./game-events');
@@ -63,6 +63,39 @@ function nearestTown(region) {
     Math.hypot(REGIONS[a].x - r.x, REGIONS[a].y - r.y) - Math.hypot(REGIONS[b].x - r.x, REGIONS[b].y - r.y))[0];
 }
 
+// ── 타고난 모습 (성별·생김새·성격) ─────────────────
+const TR = KIN_TRAIT_RULES;
+const hasT = (k, id) => !!k.data.traits && k.data.traits.includes(id);
+// 아직 모습이 정해지지 않은 식구에게 한 번만 정해 줌 (알은 깨어날 때)
+function rollLooks(k) {
+  if (k.data.sex || k.status === 'egg' || k.status === 'cold') return false;
+  const L = KIN_LOOKS[k.type];
+  k.data.sex = Math.random() < 0.5 ? 'm' : 'f';
+  k.data.looks = k.type === 'human'
+    ? [pick(L.hair), pick(L.eyes), pick(L.mark)]
+    : [`${pick(L.scale)} ${(KINDS[k.data.kind]?.name || '').replace(/\s*드래곤$/, '')} 비늘`.replace(/\s+/g, ' '), pick(L.horn), pick(L.eyes), pick(L.mark)];
+  const pool = Object.keys(KIN_TRAITS).filter((id) => KIN_TRAITS[id].for === k.type || KIN_TRAITS[id].for === 'both');
+  const got = [];
+  while (got.length < TR.count && pool.length) got.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  k.data.traits = got;
+  // 타고난 기울기 (아직 재주가 정해지지 않은 아이만)
+  if (k.type === 'human' && k.data.lean && !k.data.talent) {
+    if (hasT(k, 'brave')) k.data.lean.guard += 1;
+    if (hasT(k, 'handy')) k.data.lean.smith += 1;
+    if (hasT(k, 'flowers')) k.data.lean.herbalist += 1;
+  }
+  return true;
+}
+// "윤기 도는 레드 비늘에 굽은 뿔. 영리하고 응석받이 같다." 같은 소개
+const traitNames = (k) => (k.data.traits || []).map((id) => KIN_TRAITS[id]?.name).filter(Boolean);
+function introOf(k) {
+  const sex = KIN_LOOKS.sex[k.type][k.data.sex];
+  const [a, b, c] = k.data.looks;
+  const look = k.type === 'human' ? `${a}에 ${b}, ${c}` : `${a}에 ${b}`;
+  const who = k.type === 'human' ? `${sex}아이` : sex;
+  return `${who}${josa(who, '이다', '다')}. ${look}. ${traitNames(k).map((n) => `'${n}'`).join(', ')} 성격이다.`;
+}
+
 // ── 새 식구 ────────────────────────────────────────
 // 함께 사는 식구와 겹치지 않는 이름 (다 겹치면 아무거나)
 function freshName(kin, names) {
@@ -75,11 +108,13 @@ function newHuman(origin, now, town) {
   if (origin === 'abandoned') lean.herbalist += 1;   // 마을 사람들 손에서 자람
   if (origin === 'lost') lean.smith += 1;            // 홀로 버틴 손재주
   if (origin === 'tribute') lean.guard += 2;         // 겁먹지 않는 아이
-  return {
+  const k = {
     id: null, type: 'human', status: 'home', name: pick(HUMAN_NAMES),
     // lastCare를 돌보기 간격만큼 앞당겨 둬서, 데려오자마자 처음 돌보기를 할 수 있음
     data: { born: now, origin, town: town || null, bond: H.startBond, lean, trips: 0, lastCare: now - H.careCooldown, decayed: 0, stage: 0 },
   };
+  rollLooks(k);
+  return k;
 }
 function newEgg(kind, now) {
   return { id: null, type: 'drake', status: 'egg', name: pick(DRAKE_NAMES), data: { kind, found: now, incubateAt: null } };
@@ -94,6 +129,7 @@ function hatch(k, at) {
   // 알일 때 받은 정성 (이벤트 '알 속의 두근거림')
   if (k.data.preBond) k.data.bond = clamp(k.data.bond + k.data.preBond);
   if (k.data.preStat && k.data.stats[k.data.preStat] != null) k.data.stats[k.data.preStat] += 1;
+  rollLooks(k);
 }
 
 // 어른이 될 때 정해지는 재주: 가장 많이 기운 쪽 (같으면 자라 온 내력대로)
@@ -121,12 +157,14 @@ function personalityOf(k) {
 function tick(d, kin, now = Date.now()) {
   const out = { lines: [], items: [], hoardItems: [], gold: 0 };
   for (const k of kin) {
+    // 모습이 정해지기 전에 들어온 식구 (이 기능이 생기기 전의 식구)
+    if (k.status === 'home' && rollLooks(k)) out.lines.push(`${k.name}${josa(k.name, '을', '를')} 다시 찬찬히 들여다보았다. ${introOf(k)}`);
     if (k.type === 'human' && k.status === 'home') {
       const a = ageOf(k, now);
-      // 오래 돌보지 않으면 유대가 줄어듦
-      const idle = Math.floor((now - k.data.lastCare) / DAY) - H.neglectAfter;
+      // 오래 돌보지 않으면 유대가 줄어듦 (외로움을 타는: 하루 일찍 · 의젓한: 절반만)
+      const idle = Math.floor((now - k.data.lastCare) / DAY) - (H.neglectAfter - (hasT(k, 'lonely') ? 1 : 0));
       if (idle > (k.data.decayed || 0)) {
-        const n = (idle - (k.data.decayed || 0)) * H.neglectPerDay;
+        const n = Math.ceil((idle - (k.data.decayed || 0)) * H.neglectPerDay * (hasT(k, 'steady') ? 0.5 : 1));
         k.data.bond = clamp(k.data.bond - n);
         k.data.decayed = idle;
         out.lines.push(`${ga(k)} 외로워한다. 한동안 돌봐 주지 못했다. (유대 −${n})`);
@@ -184,7 +222,7 @@ function tick(d, kin, now = Date.now()) {
     if (k.type === 'drake' && k.status === 'egg' && k.data.incubateAt && now >= k.data.incubateAt + R.hatchTime) {
       hatch(k, k.data.incubateAt + R.hatchTime);
       const kn = KINDS[k.data.kind].name;
-      out.lines.push(`알이 깨지고 ${ga(k)} 태어났다! 작은 ${kn}${josa(kn, '이다', '다')}.`);
+      out.lines.push(`알이 깨지고 ${ga(k)} 태어났다! 작은 ${kn}${josa(kn, '이다', '다')}.`, introOf(k));
     }
     if (k.type === 'drake' && k.status === 'home') {
       // 어미의 성향을 보고 자람
@@ -204,9 +242,10 @@ function tick(d, kin, now = Date.now()) {
         if (now - k.data.lastHunt >= R.huntEvery) k.data.lastHunt = now;
         if (n) {
           const fangs = Array.from({ length: n }, () => Math.random() < 0.3).filter(Boolean).length;
-          out.items.push({ id: 'beast_hide', qty: n });
+          const hides = n * (hasT(k, 'hunter') ? 2 : 1); // 사냥 본능: 한 장씩 더
+          out.items.push({ id: 'beast_hide', qty: hides });
           if (fangs) out.items.push({ id: 'sharp_fang', qty: fangs });
-          out.lines.push(`${ga(k)} 혼자 사냥해서 짐승 가죽 ${n}장${fangs ? `과 송곳니 ${fangs}개` : ''}를 물어 왔다.`);
+          out.lines.push(`${ga(k)} 혼자 사냥해서 짐승 가죽 ${hides}장${fangs ? `과 송곳니 ${fangs}개` : ''}를 물어 왔다.`);
         }
       }
       if (a >= R.independentDay && !k.data.readyTold) {
@@ -272,6 +311,12 @@ function view(k, now, d) {
   const a = ageOf(k, isHome(k) ? now : k.data.ended || now); // 떠난 식구는 떠난 날의 나이
   v.age = Math.floor(a);
   v.bond = Math.round(k.data.bond);
+  if (k.data.sex) {
+    v.sex = k.data.sex;
+    v.sexName = KIN_LOOKS.sex[k.type][k.data.sex];
+    v.looks = k.data.looks || [];
+    v.traits = (k.data.traits || []).filter((id) => KIN_TRAITS[id]).map((id) => ({ id, name: KIN_TRAITS[id].name, desc: KIN_TRAITS[id].desc }));
+  }
   if (isHome(k)) v.nextIn = st.next != null ? (st.next - a) * DAY : null;
   if (k.type === 'human') {
     v.origin = k.data.origin;
@@ -287,7 +332,7 @@ function view(k, now, d) {
     v.stats = k.data.stats;
     v.trains = k.data.trains;
     v.trainLimit = R.trainLimit[Math.max(0, st.i)];
-    v.trainIn = Math.max(0, (k.data.lastTrain || 0) + R.trainCooldown - now);
+    v.trainIn = Math.max(0, (k.data.lastTrain || 0) + trainCd(k) - now);
     v.personality = personalityOf(k);
     v.canRelease = k.status === 'home' && a >= R.independentDay;
     v.onExp = !!k.data.onExp;
@@ -313,7 +358,12 @@ function care(d, kin, id, item, have, now = Date.now()) {
   if (!c) return { error: '그 물건으로는 돌볼 수 없다.' };
   if (have(item) < 1) return { error: '가지고 있지 않다.' };
   if (now - k.data.lastCare < H.careCooldown) return { error: `${ga(k)} 아직 배부르다. 조금 뒤에 다시 돌보자.` };
-  const gain = Math.max(1, c.bond + logic.traitMods(d).bond); // 특성: 다정한 발톱·냉담
+  // 특성: 다정한 발톱·냉담 / 아이의 성격: 다정한·먹보·수줍은
+  let mood = 0;
+  if (hasT(k, 'gentle')) mood += 1;
+  if (hasT(k, 'glutton') && TR.food.includes(item)) mood += 2;
+  if (hasT(k, 'shy')) mood += k.data.bond < 40 ? -1 : 2;
+  const gain = Math.max(1, c.bond + logic.traitMods(d).bond + mood);
   k.data.bond = clamp(k.data.bond + gain);
   if (!k.data.talent) k.data.lean[c.talent] += 1;
   k.data.lastCare = now;
@@ -324,7 +374,18 @@ function care(d, kin, id, item, have, now = Date.now()) {
     smith: '반짝이는 걸 쥐고 이리저리 두드려 본다.',
     guard: '꼭 쥐고 드래곤 흉내를 내며 으르렁거린다.',
   }[c.talent];
-  return { title: k.name, lines: [`${k.name}에게 ${name}${josa(name, '을', '를')} 건넸다. ${react}`, `유대 +${gain}`, ...logic.traitCount(d, 'care')], items: [{ id: item, qty: -1 }] };
+  const lines = [`${k.name}에게 ${name}${josa(name, '을', '를')} 건넸다. ${react}`];
+  if (hasT(k, 'glutton') && TR.food.includes(item)) lines.push(`먹보 ${k.name}${josa(k.name, '은', '는')} 눈 깜짝할 새 먹어 치우고 입맛을 다신다.`);
+  else if (hasT(k, 'shy')) lines.push(k.data.bond - gain < 40 ? `수줍은 ${k.name}${josa(k.name, '은', '는')} 받아 들고 슬그머니 등을 돌린다.` : `${k.name}${josa(k.name, '이', '가')} 이제는 수줍게 웃으며 다가온다.`);
+  const items = [{ id: item, qty: -1 }];
+  if (hasT(k, 'prankster') && Math.random() < TR.pranksterChance) {
+    const got = pick(TR.pranksterItems);
+    items.push({ id: got, qty: 1 });
+    const gn = ITEMS[got].name;
+    lines.push(`장난꾸러기 ${k.name}${josa(k.name, '이', '가')} 키득거리며 주머니에서 ${gn}${josa(gn, '을', '를')} 꺼내 쥐여 주었다.`);
+  }
+  lines.push(`유대 +${gain}`, ...logic.traitCount(d, 'care'));
+  return { title: k.name, lines, items };
 }
 
 function rename(kin, id, name) {
@@ -383,6 +444,7 @@ function incubate(d, kin, id, have, now = Date.now()) {
   };
 }
 
+const trainCd = (k) => R.trainCooldown - (hasT(k, 'diligent') ? TR.diligentMs : 0); // 부지런한: 간격이 짧음
 function train(d, kin, id, stat, now = Date.now()) {
   const err = atNest(d);
   if (err) return { error: err };
@@ -391,19 +453,25 @@ function train(d, kin, id, stat, now = Date.now()) {
   if (!STAT_KEYS.includes(stat)) return { error: '알 수 없는 능력치다.' };
   const limit = R.trainLimit[stageOf(k, now).i];
   if (k.data.trains >= limit) return { error: '지금은 더 가르쳐도 소용이 없다. 조금 더 자라야 한다.' };
-  if (now - (k.data.lastTrain || 0) < R.trainCooldown) return { error: `${ga(k)} 지쳐 있다. 조금 쉬게 하자.` };
+  if (now - (k.data.lastTrain || 0) < trainCd(k)) return { error: `${ga(k)} 지쳐 있다. 조금 쉬게 하자.` };
   if (d.ap < R.trainAp) return { error: `행동력이 모자란다. (${R.trainAp} 필요)` };
   if (d.en < R.trainEn) return { error: `기력이 모자란다. (${R.trainEn} 필요)` };
   if (d.ap >= logic.apCap(d)) d.ap_at = now;
   d.ap -= R.trainAp;
   d.en -= R.trainEn;
-  k.data.stats[stat] += 1;
+  const up = hasT(k, 'clever') && Math.random() < TR.cleverChance ? 2 : 1; // 영리한: 가끔 한 번 더
+  const bondUp = 3 + (hasT(k, 'clingy') ? 2 : 0);                          // 응석받이
+  k.data.stats[stat] += up;
   k.data.trains += 1;
   k.data.lastTrain = now;
-  k.data.bond = clamp(k.data.bond + 3);
+  k.data.bond = clamp(k.data.bond + bondUp);
   const name = STATS.find((s) => s.key === stat).name;
   const how = { claw: '바위를 할퀴는 법', scale: '비늘을 단단히 세우는 법', wing: '바람을 타는 법', wisdom: '별을 읽는 법', majesty: '포효하는 법' }[stat];
-  return { title: k.name, lines: [`${k.name}에게 ${how}을 가르쳤다.`, `${name} +1, 유대 +3`] };
+  const lines = [`${k.name}에게 ${how}을 가르쳤다.`];
+  if (up > 1) lines.push(`영리한 ${k.name}${josa(k.name, '은', '는')} 한 번 보고 두 가지를 깨우쳤다.`);
+  if (hasT(k, 'clingy')) lines.push(`${ga(k)} 끝나자마자 품으로 파고든다.`);
+  lines.push(`${name} +${up}, 유대 +${bondUp}`);
+  return { title: k.name, lines };
 }
 
 // 다 자란 새끼를 떠나보냄. 강하게, 정 깊게 키울수록 용족 명성이 크게 오름
@@ -445,7 +513,8 @@ function expStart(kin, now = Date.now()) {
   }
   return went;
 }
-const companions = (kin) => kin.filter((k) => k.data.onExp && k.status === 'home').length;
+// 함께 간 식구 수. 호기심 많은 식구는 조금 더 쳐 줌
+const companions = (kin) => kin.filter((k) => k.data.onExp && k.status === 'home').reduce((a, k) => a + 1 + (hasT(k, 'curious') ? TR.curiousBonus : 0), 0);
 function expFinish(kin, minutes) {
   const lines = [];
   const back = [];
@@ -454,14 +523,20 @@ function expFinish(kin, minutes) {
     k.data.onExp = false;
     if (k.status !== 'home') continue;
     back.push(k.name);
-    k.data.bond = clamp(k.data.bond + 3);
+    k.data.bond = clamp(k.data.bond + 3 + (hasT(k, 'brave') ? 2 : 0)); // 씩씩한: 원정이 즐거움
     if (k.type === 'human') {
       k.data.trips += 1;
       if (!k.data.talent) k.data.lean.guard += KIN.tripTalent;
     } else {
       const n = Math.min(2, Math.floor(minutes / 60));
       const got = [];
-      for (let i = 0; i < n; i++) { const s = pick(STAT_KEYS); k.data.stats[s] += 1; got.push(STATS.find((x) => x.key === s).name); }
+      // 날쌘·고집 센·꿈꾸는: 그쪽으로 잘 자람
+      const bias = hasT(k, 'swift') ? 'wing' : hasT(k, 'stubborn') ? 'claw' : hasT(k, 'dreamy') ? 'wisdom' : null;
+      for (let i = 0; i < n; i++) {
+        const s = bias && Math.random() < TR.growBias ? bias : pick(STAT_KEYS);
+        k.data.stats[s] += 1;
+        got.push(STATS.find((x) => x.key === s).name);
+      }
       if (got.length) lines.push(`${ga(k)} 원정에서 자랐다. ${got.map((g) => `${g} +1`).join(', ')}`);
     }
   }
@@ -473,9 +548,15 @@ function restTogether(kin, minutes) {
   const n = Math.min(10, Math.floor(minutes / 30) * H.restBondPer30m);
   const hs = homeKin(kin).humans;
   if (!hs.length || !n) return null;
-  for (const k of hs) k.data.bond = clamp(k.data.bond + n);
+  const extra = [];
+  for (const k of hs) {
+    const dbl = hasT(k, 'sleepy') || hasT(k, 'lonely'); // 잠꾸러기·외로움을 타는: 두 배
+    k.data.bond = clamp(k.data.bond + n * (dbl ? 2 : 1));
+    if (dbl) extra.push(k.name);
+  }
   const names = hs.map((k) => k.name).join(', ');
-  return `${names}${josa(names, '과', '와')} 함께 쉬었다. 유대 +${n}`;
+  const ex = extra.length ? ` (${extra.join(', ')}${josa(extra.at(-1), '은', '는')} 곁에 꼭 붙어 +${n * 2})` : '';
+  return `${names}${josa(names, '과', '와')} 함께 쉬었다. 유대 +${n}${ex}`;
 }
 
 // ── 이벤트 엔진 ────────────────────────────────────
@@ -601,7 +682,7 @@ function chooseEvent(d, kin, have, idx, now = Date.now()) {
       const k = newHuman(origin, now, origin === 'lost' ? nearestTown(c.region) : town);
       k.name = freshName(kin, HUMAN_NAMES);
       kin.push(k);
-      out.lines.push(`아이에게 '${k.name}'${josa(k.name, '이라는', '라는')} 이름을 붙여 주었다.`);
+      out.lines.push(`아이에게 '${k.name}'${josa(k.name, '이라는', '라는')} 이름을 붙여 주었다. ${introOf(k)}`);
     },
     egg: (kind) => {
       if (homeKin(kin, logic.maxKinOf(d)).full) return out.lines.push('둥지에는 이미 식구가 가득해 알을 둘 자리가 없었다.');

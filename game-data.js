@@ -516,6 +516,54 @@ const TALENTS = {
   smith:     { name: '대장장이', desc: '둥지에 남으면 제작에 드는 기력이 30% 줄어든다.' },
   guard:     { name: '파수꾼',   desc: '둥지에 남으면 기사단 습격과 구출 시도가 절반으로 준다.' },
 };
+// ── 식구의 타고난 모습 ─────────────────────────────
+// 인간 아이는 데려올 때, 새끼 드래곤은 알에서 깨어날 때 정해짐. 성별·생김새는 보는 재미, 성격은 키우는 방식에 조금씩 영향을 줌
+// 이미 있던 식구도 다음 접속 때 한 번 정해짐
+const KIN_LOOKS = {
+  sex: { human: { m: '남자', f: '여자' }, drake: { m: '수컷', f: '암컷' } },
+  human: {
+    hair: ['까만 머리', '갈색 머리', '붉은 머리', '금빛 머리', '잿빛 머리', '밤색 곱슬머리'],
+    eyes: ['검은 눈', '갈색 눈', '푸른 눈', '초록 눈', '회색 눈'],
+    mark: ['주근깨', '보조개', '덧니', '눈 밑 점', '짙은 눈썹', '긴 속눈썹', '앞니 빠진 웃음', '귀가 조금 큼'],
+  },
+  drake: {
+    scale: ['짙은', '옅은', '얼룩무늬', '윤기 도는', '잿빛 감도는'], // + 종류 이름 비늘 (예: 윤기 도는 레드 비늘)
+    horn: ['곧은 뿔', '굽은 뿔', '짧고 뭉툭한 뿔', '갈래진 뿔', '나선 뿔'],
+    eyes: ['호박색 눈', '청록 눈', '은빛 눈', '붉은 눈', '금빛 눈'],
+    mark: ['꼬리 끝이 두 갈래', '이마에 별 무늬', '날개막에 반점', '한쪽 뿔이 조금 짧음', '등가시가 유난히 큼', '목덜미에 흰 비늘 한 줌'],
+  },
+};
+// 성격: 식구마다 2개. for는 인간(human)·새끼 드래곤(drake) 중 누구에게 붙는지
+const KIN_TRAITS = {
+  // 인간 아이
+  glutton:   { for: 'human', name: '먹보',          desc: '먹을 것(씨앗·꿀·생선)을 건네면 유대가 2 더 오른다.' },
+  gentle:    { for: 'human', name: '다정한',        desc: '무엇을 건네든 유대가 1 더 오른다.' },
+  lonely:    { for: 'human', name: '외로움을 타는', desc: '하루 일찍 외로워하지만, 둥지에서 함께 쉬면 유대가 두 배로 오른다.' },
+  sleepy:    { for: 'human', name: '잠꾸러기',      desc: '둥지에서 함께 쉬면 유대가 두 배로 오른다.' },
+  steady:    { for: 'human', name: '의젓한',        desc: '한동안 돌보지 못해도 유대가 절반만 줄어든다.' },
+  shy:       { for: 'human', name: '수줍은',        desc: '유대 40까지는 낯을 가려 돌보기 유대가 1 덜 오르고, 그 뒤로는 2 더 오른다.' },
+  prankster: { for: 'human', name: '장난꾸러기',    desc: '돌볼 때 가끔 주머니에서 무언가를 꺼내 준다.' },
+  brave:     { for: 'human', name: '씩씩한',        desc: '파수꾼 쪽으로 조금 기울어 태어나고, 원정에서 돌아오면 유대가 2 더 오른다.' },
+  handy:     { for: 'human', name: '손재주 좋은',   desc: '대장장이 쪽으로 조금 기울어 태어난다.' },
+  flowers:   { for: 'human', name: '풀꽃을 좋아하는', desc: '약초꾼 쪽으로 조금 기울어 태어난다.' },
+  curious:   { for: 'both',  name: '호기심 많은',   desc: '원정에 따라가면 찾는 물건이 조금 더 늘어난다.' },
+  // 새끼 드래곤
+  clever:    { for: 'drake', name: '영리한',        desc: '가르칠 때 네 번에 한 번꼴로 능력치가 1 더 오른다.' },
+  diligent:  { for: 'drake', name: '부지런한',      desc: '가르치기 간격이 2시간 짧다.' },
+  clingy:    { for: 'drake', name: '응석받이',      desc: '가르칠 때 유대가 2 더 오른다.' },
+  hunter:    { for: 'drake', name: '사냥 본능',     desc: '혼자 사냥해 올 때 가죽을 한 장 더 물어 온다.' },
+  swift:     { for: 'drake', name: '날쌘',          desc: '원정에서 자랄 때 날개 쪽으로 잘 자란다.' },
+  stubborn:  { for: 'drake', name: '고집 센',       desc: '원정에서 자랄 때 발톱 쪽으로 잘 자란다.' },
+  dreamy:    { for: 'drake', name: '꿈꾸는',        desc: '원정에서 자랄 때 지혜 쪽으로 잘 자란다.' },
+};
+const KIN_TRAIT_RULES = {
+  count: 2,                                        // 식구마다 붙는 성격 수
+  food: ['grass_seed', 'wild_honey', 'salted_fish', 'honey_salve'], // 먹보가 좋아하는 것
+  pranksterChance: 0.2, pranksterItems: ['grass_seed', 'red_clay', 'glow_moss', 'bog_iron'],
+  cleverChance: 0.25, diligentMs: 2 * 60 * 60 * 1000,
+  curiousBonus: 1 / 3,                             // 원정 동행 하나를 이만큼 더 쳐 줌 (KIN.companionBonus 15% × 1/3 ≈ +5%)
+  growBias: 0.5,                                   // 날쌘·고집 센·꿈꾸는: 원정에서 자랄 때 그쪽 능력치가 고를 확률
+};
 const HUMAN_NAMES = ['미르', '엘라', '토비', '세린', '리안', '하나', '오웬', '루카', '니나', '테오', '소이', '다온', '에반', '유나', '카이', '로웬'];
 const DRAKE_NAMES = ['아르', '벨카', '시엘', '모라크', '카이렌', '이그', '루미', '타르', '세라', '노크', '베른', '이즈'];
 
@@ -1132,6 +1180,6 @@ const ELITES = {
 module.exports = {
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, TITLES, TITLE_COUNT_NAMES,
   PURIFY, SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
-  DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
+  DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
   COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, DEPART, BONDS, MARKS, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES,
 };

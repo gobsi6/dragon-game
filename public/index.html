@@ -420,6 +420,17 @@
   .kin-chip { padding: 0 7px; font-size: 11.5px; line-height: 20px; border: 1px solid #B9C7D3; background: #EEF2F6; color: #2E4A60; border-radius: 2px; }
   .kin-chip.egg { border-color: #E2CF9E; background: #FBF6E8; color: #6B4E12; }
   .kin-head .linkbtn { margin-left: auto; min-height: 28px; font-size: 12px; }
+  /* 식구의 타고난 모습: 성별 표시 + 생김새 한 줄, 성격 칩 (누르면 설명) */
+  .kin-look { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: -1px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--ink-2); }
+  .kin-sex { display: inline-flex; align-items: center; gap: 3px; padding: 0 6px; font-size: 11.5px; line-height: 20px; border-radius: 10px; font-weight: 600; }
+  .kin-sex.m { background: #E8EEF3; color: #2F5574; }
+  .kin-sex.f { background: #F6E9EC; color: #8A3D52; }
+  .kin-traits { display: flex; flex-wrap: wrap; gap: 6px; }
+  .kin-trait { min-height: 26px; padding: 0 9px; font: 600 12px/24px var(--sans); color: #2E4A60; background: #EEF2F6; border: 1px solid #B9C7D3; border-radius: 13px; cursor: pointer; }
+  .kin-trait:hover { background: #E2E9F0; }
+  .kin-trait[aria-expanded="true"] { background: var(--steel-d); border-color: var(--steel-d); color: #F4F7FA; }
+  .kin-trait-desc { margin: 0; padding: 6px 10px; font-size: 12px; line-height: 1.55; color: #2E4A60; background: #EEF2F6; border-left: 2px solid #7E97AC; }
+  .kin-trait-desc[hidden] { display: none; }
   .kin-meta { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--ink-2); }
   .kin-meta.talent b { color: var(--steel-d); font-weight: 600; }
   .bond { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
@@ -3463,6 +3474,48 @@
       head.appendChild(rn);
     }
     card.appendChild(head);
+    // 타고난 모습 (알은 깨어나야 알 수 있음)
+    if (v.sex) {
+      const lk = document.createElement('p');
+      lk.className = 'kin-look';
+      const sx = document.createElement('span');
+      sx.className = `kin-sex ${v.sex}`;
+      sx.textContent = `${v.sex === 'm' ? '♂' : '♀'} ${v.sexName}`;
+      const tx = document.createElement('span');
+      tx.textContent = (v.looks || []).join(' · ');
+      lk.append(sx, tx);
+      card.appendChild(lk);
+      if (v.traits?.length) {
+        const tw = document.createElement('div');
+        tw.className = 'kin-traits';
+        const desc = document.createElement('p');
+        desc.className = 'kin-trait-desc';
+        desc.hidden = true;
+        desc.setAttribute('aria-live', 'polite');
+        for (const t of v.traits) {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'kin-trait';
+          b.textContent = t.name;
+          b.title = t.desc;
+          b.setAttribute('aria-expanded', 'false');
+          b.addEventListener('click', () => {
+            const open = b.getAttribute('aria-expanded') !== 'true';
+            for (const x of tw.children) x.setAttribute('aria-expanded', 'false');
+            b.setAttribute('aria-expanded', String(open));
+            desc.hidden = !open;
+            desc.textContent = open ? `${t.name}: ${t.desc}` : '';
+          });
+          tw.appendChild(b);
+        }
+        card.append(tw, desc);
+      }
+    } else if (v.status === 'egg') {
+      const lk = document.createElement('p');
+      lk.className = 'kin-look';
+      lk.textContent = '어떤 아이일지는 깨어나 봐야 안다.';
+      card.appendChild(lk);
+    }
     const meta = (t, cls) => { const p = document.createElement('p'); p.className = `kin-meta ${cls || ''}`; p.innerHTML = t; card.appendChild(p); return p; };
     const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     const acts = document.createElement('div');
