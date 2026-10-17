@@ -1,6 +1,6 @@
 // 모브 드래곤: 야생 지역마다 머무는 드래곤들. 성향과 상관없이 의뢰·이야기·물물교환을 할 수 있다.
 // 숫자와 대사는 이 파일 위쪽(MOB_RULES, MOBS)에서 고친다.
-const { ITEMS, PLACES, REGIONS, ELITES, fameTier } = require('./game-data');
+const { ITEMS, PLACES, REGIONS, ELITES, REGION_PLACES, fameTier } = require('./game-data');
 const logic = require('./game-logic');
 
 // ── 규칙 ────────────────────────────────────────────
@@ -8,7 +8,11 @@ const MOB_RULES = {
   offers: 2,       // 드래곤마다 하루에 내미는 의뢰 수 (한국 시간 자정에 바뀜)
   maxActive: 3,    // 동시에 맡을 수 있는 의뢰 수 (건네기 의뢰는 맡지 않고 바로 끝냄)
   tradeDaily: 3,   // 교환 하나당 하루 횟수
-  fameCap: 30,     // 의뢰·이야기로 오르는 용족 명성은 여기('존중')까지만. 그 위는 결투·재앙·위협 같은 원래 길로
+  fameCap: 30,
+  // 보상 크기 맞추기
+  //  경험치: 난이도별 기본값 × (xpBase + 내 레벨 × xpPerLv)  (Lv1 ×0.72, Lv5 ×1.2, Lv10 ×1.8)
+  //  금화·경험치: 일의 레벨과 내 레벨 차이 1당 ±perLv (gapMin~gapMax). 내게 쉬운 일은 덜, 버거운 일은 더 받음
+  scale: { xpBase: 0.6, xpPerLv: 0.12, perLv: 0.1, gapMin: 0.4, gapMax: 1.5 },     // 의뢰·이야기로 오르는 용족 명성은 여기('존중')까지만. 그 위는 결투·재앙·위협 같은 원래 길로
   // 의뢰 난이도별 보상
   tiers: {
     1: { gold: 35,  xp: 25,  fame: 2 },
@@ -112,7 +116,7 @@ const MOBS = {
     ],
     trades: [
       { give: { rune_stone: 5 }, get: { old_scroll: 1 } },
-      { give: { old_scroll: 3 }, get: { recipe_scroll: 1 }, daily: 1 },
+      { give: { old_scroll: 3 }, get: { recipe_scroll: 1 }, weekly: 1, needStory: true }, // 이야기를 끝까지 들은 뒤, 일주일에 1번
       { give: { ancient_relic: 1 }, get: { sage_tea: 1 } },
     ],
     story: {
@@ -318,6 +322,12 @@ function todayDone(m, now) {
   if (m.done.day !== day) m.done = { day, keys: [] };
   return m.done.keys;
 }
+// 한 주 (한국 시간 월요일 0시에 바뀜)
+const weekIdx = (now = Date.now()) => Math.floor((logic.dayIdx(now) + 3) / 7);
+function weekTrades(m, now) {
+  if (!m.trw || typeof m.trw !== 'object' || m.trw.week !== weekIdx(now)) m.trw = { week: weekIdx(now), n: {} };
+  return m.trw.n;
+}
 function todayTrades(m, now) {
   const day = logic.dayIdx(now);
   if (m.tr.day !== day) m.tr = { day, n: {} };
@@ -337,10 +347,31 @@ function offersOf(mobId, now = Date.now()) {
   return out.sort((a, b) => pool[a].t - pool[b].t || a - b);
 }
 
-// 보상 주기
-function payReward(d, tier, extra = {}) {
+// 일의 레벨: 사냥은 그 장소, 지역 일은 그 지역에서 가장 쉬운 장소(강적은 +1). 물건·셈 의뢰는 내 레벨과 같게 봄
+function goalLevel(d, g) {
+  const minLv = (r) => Math.min(...(REGION_PLACES[r] || []).map((p) => PLACES[p].level));
+  if (g.win) return PLACES[g.win].level;
+  if (g.winR) return minLv(g.winR);
+  if (g.elite) return minLv(g.elite) + 1;
+  if (g.gather) return minLv(g.gather);
+  if (g.explore) return minLv(g.explore);
+  return d.level || 1;
+}
+// 내게 맞춘 보상: { gold, xp, fame, gap(배율) }
+function rewardFor(d, tier, g) {
   const r = MOB_RULES.tiers[tier] || MOB_RULES.tiers[1];
-  const gold = Math.round(r.gold * (logic.titleMods(d).mobGold || 1));
+  const S = MOB_RULES.scale;
+  const gap = Math.max(S.gapMin, Math.min(S.gapMax, 1 + (goalLevel(d, g) - (d.level || 1)) * S.perLv));
+  return {
+    gold: Math.round(r.gold * gap * (logic.titleMods(d).mobGold || 1)),
+    xp: Math.round(r.xp * (S.xpBase + (d.level || 1) * S.xpPerLv) * gap),
+    fame: r.fame, gap: Math.round(gap * 100) / 100,
+  };
+}
+// 보상 주기
+function payReward(d, tier, g, extra = {}) {
+  const r = rewardFor(d, tier, g);
+  const gold = r.gold;
   d.gold += gold;
   const xp = logic.xpOf(d, r.xp);
   const up = logic.gainXp(d, xp);
@@ -419,7 +450,7 @@ function turnIn(d, mobId, i, have, now = Date.now()) {
     lines.push(`${goalText(q.g)} — 해냈다고 알렸다.`);
   }
   lines.push(`${mb.name}${josa(mb.name, '이', '가')} 고개를 끄덕인다.`);
-  const r = payReward(d, q.t);
+  const r = payReward(d, q.t, q.g);
   lines.push(...r.lines, ...logic.traitCount(d, 'mobquest'));
   return { title: `${mb.name}의 의뢰`, lines, items: [...items, ...r.items], gold: r.gold };
 }
@@ -476,11 +507,11 @@ function storyTurnIn(d, mobId, have) {
   }
   const last = s.ch === mb.story.ch.length - 1;
   m.story[mobId] = { ch: s.ch + 1, base: null };
-  const r = payReward(d, c.t, { item: c.item });
+  const r = payReward(d, c.t, c.g, { item: c.item });
   const lines = [c.done, ...r.lines];
   if (last) {
     lines.push(`'${mb.story.title}' 이야기를 끝까지 들었다.`, ...logic.traitCount(d, 'mobstory'));
-    logic.chron(d, 'mark', `${mb.name}의 이야기 '${mb.story.title}'를 끝까지 함께했다.`);
+    logic.chron(d, 'mark', `${mb.name}의 이야기 '${mb.story.title}'${josa(mb.story.title, '을', '를')} 끝까지 함께했다.`);
   }
   return { title: `${mb.story.title} · ${s.ch + 1}장`, lines, items: [...items, ...r.items], gold: r.gold };
 }
@@ -494,10 +525,11 @@ function trade(d, mobId, i, have, now = Date.now()) {
   const o = mb.trades[i];
   if (!o) return { error: '그런 교환은 없다.' };
   const m = stateOf(d);
-  const used = todayTrades(m, now);
+  if (o.needStory && storyOf(m, mobId).ch < mb.story.ch.length) return { error: `${mb.name}의 이야기 '${mb.story.title}'${josa(mb.story.title, '을', '를')} 끝까지 들어야 바꿔 준다.` };
+  const used = o.weekly ? weekTrades(m, now) : todayTrades(m, now);
   const key = `${mobId}:${i}`;
-  const cap = o.daily || MOB_RULES.tradeDaily;
-  if ((used[key] || 0) >= cap) return { error: '오늘은 더 바꿔 줄 수 없다고 한다.' };
+  const cap = o.weekly || o.daily || MOB_RULES.tradeDaily;
+  if ((used[key] || 0) >= cap) return { error: o.weekly ? '이번 주에는 더 바꿔 줄 수 없다고 한다.' : '오늘은 더 바꿔 줄 수 없다고 한다.' };
   if (o.gold && d.gold < o.gold) return { error: `금화가 모자란다. (${o.gold}닢 필요)` };
   const lack = lacking(o.give || {}, have);
   if (lack.length) return { error: `${lack.map(([id, n]) => `${ITEMS[id].name} ${n}개`).join(', ')}가 있어야 한다.` };
@@ -519,7 +551,6 @@ function greetOf(d, mb) {
   if (t.majesty < 0 && mb.greetLo) return { text: mb.greetLo, fame: t.name, mood: 'lo' };
   return { text: mb.greet, fame: t.name, mood: 'mid' };
 }
-const rewardOf = (t) => MOB_RULES.tiers[t];
 function activeView(d) {
   const m = stateOf(d);
   return m.act.map((a) => {
@@ -547,7 +578,7 @@ function view(d, mobId, have, now = Date.now()) {
     const act = m.act.find((a) => a.mob === mobId && a.i === i);
     const p = act ? progressOf(d, act) : null;
     return {
-      i, t: q.t, say: q.say, text: goalText(q.g), bring, reward: rewardOf(q.t),
+      i, t: q.t, say: q.say, text: goalText(q.g), bring, reward: rewardFor(d, q.t, q.g),
       needs: bring ? Object.entries(q.g.bring).map(([id, n]) => ({ id, n, have: have(id) })) : null,
       state: act ? (p.have >= p.n ? 'ready' : 'doing') : done.includes(`${mobId}:${i}`) ? 'done' : 'open',
       have: p?.have, n: p?.n,
@@ -559,17 +590,20 @@ function view(d, mobId, have, now = Date.now()) {
     title: mb.story.title, total: mb.story.ch.length, ch: s.ch,
     past: mb.story.ch.slice(0, s.ch).map((x) => x.done),
     cur: c ? {
-      intro: c.intro, text: goalText(c.g), accepted: s.base != null, bring: isBring(c.g), reward: rewardOf(c.t),
+      intro: c.intro, text: goalText(c.g), accepted: s.base != null, bring: isBring(c.g), reward: rewardFor(d, c.t, c.g),
       item: c.item ? { id: c.item, name: ITEMS[c.item].name } : null,
       needs: isBring(c.g) ? Object.entries(c.g.bring).map(([id, n]) => ({ id, n, have: have(id) })) : null,
       prog: storyProgress(d, mobId),
     } : null,
   };
   const used = todayTrades(m, now);
+  const usedW = weekTrades(m, now);
   const trades = mb.trades.map((o, i) => ({
     i, give: Object.entries(o.give || {}).map(([id, n]) => ({ id, n, have: have(id) })), gold: o.gold || 0,
     get: Object.entries(o.get || {}).map(([id, n]) => ({ id, n })), getGold: o.getGold || 0,
-    left: (o.daily || MOB_RULES.tradeDaily) - (used[`${mobId}:${i}`] || 0),
+    weekly: !!o.weekly,
+    left: o.weekly ? o.weekly - (usedW[`${mobId}:${i}`] || 0) : (o.daily || MOB_RULES.tradeDaily) - (used[`${mobId}:${i}`] || 0),
+    locked: o.needStory && storyOf(m, mobId).ch < mb.story.ch.length ? `'${mb.story.title}' 이야기를 끝까지 들으면 열린다` : null,
   }));
   return {
     id: mobId, name: mb.name, kind: mb.kind, who: mb.who, desc: mb.desc, greet: greetOf(d, mb).text, fame: greetOf(d, mb).fame, mood: greetOf(d, mb).mood, region: mb.region,
@@ -581,6 +615,6 @@ function view(d, mobId, have, now = Date.now()) {
 const listForClient = () => Object.fromEntries(Object.entries(MOBS).map(([id, m]) => [m.region, { id, name: m.name, kind: m.kind, who: m.who }]));
 
 module.exports = {
-  MOBS, MOB_RULES, MOB_BY_REGION, goalKey, goalText, offersOf,
+  MOBS, MOB_RULES, MOB_BY_REGION, goalKey, goalText, offersOf, rewardFor,
   accept, turnIn, abandon, storyAccept, storyTurnIn, trade, view, summary, listForClient,
 };

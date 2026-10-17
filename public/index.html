@@ -923,6 +923,9 @@
   .mob-card .linkbtn { min-height: 28px; padding: 0 4px; border: 0; font-size: 12.5px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
   .mob-card .mc-foot .cost-list { margin: 0; }
   .mob-card .gift { font: 600 12.5px/1.4 var(--sans); color: #7A5A16; }
+  .mob-card .ord-rw { white-space: normal; flex-wrap: wrap; row-gap: 2px; }
+  .mob-card .gap { margin-left: 8px; font: 500 11.5px/1.4 var(--sans); color: var(--muted); }
+  .mob-card .gap.hi { color: #2F5D45; }
   .mob-chs { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
   .mob-chs i { width: 9px; height: 9px; transform: rotate(45deg); border: 1px solid var(--steel-d); background: #fff; }
   .mob-chs i.on { background: var(--steel-d); }
@@ -4421,6 +4424,8 @@
     const c = document.createElement('i'); c.className = 'coin'; c.setAttribute('aria-hidden', 'true');
     s.append(c, `${rw.gold}닢 · 경험 +${rw.xp} · 명성 +${rw.fame}`);
     if (item) { const g = document.createElement('span'); g.className = 'gift'; g.textContent = ` · ${item.name}`; s.appendChild(g); }
+    // 내 레벨과 일의 레벨 차이로 보상이 달라짐
+    if (rw.gap && Math.abs(rw.gap - 1) > 0.04) { const h = document.createElement('span'); h.className = `gap ${rw.gap < 1 ? 'lo' : 'hi'}`; h.textContent = rw.gap < 1 ? '내게는 쉬운 일 · 보상 줄어듦' : '버거운 일 · 보상 늘어남'; s.appendChild(h); }
     return s;
   };
   const mobBtn = (text, primary, disabled, fn) => {
@@ -4540,9 +4545,9 @@
           body.appendChild(c);
         }
       } else {
-        note(`인간 시장을 쓰지 못해도 드래곤끼리는 물건을 바꿀 수 있다. 교환마다 하루 횟수가 정해져 있다.`);
+        note(`인간 시장을 쓰지 못해도 드래곤끼리는 물건을 바꿀 수 있다. 교환마다 하루(또는 한 주) 횟수가 정해져 있다.`);
         for (const o of m.trades) {
-          const c = document.createElement('div'); c.className = `mob-card${o.left <= 0 ? ' done' : ''}`;
+          const c = document.createElement('div'); c.className = `mob-card${o.left <= 0 || o.locked ? ' done' : ''}`;
           const top = document.createElement('div'); top.className = 'mc-top';
           const give = [...o.give.map((x) => `${S.items[x.id].name} ${x.n}개`), ...(o.gold ? [`금화 ${o.gold}닢`] : [])].join(' + ');
           const get = [...o.get.map((x) => `${S.items[x.id].name}${x.n > 1 ? ` ${x.n}개` : ''}`), ...(o.getGold ? [`금화 ${o.getGold}닢`] : [])].join(' + ');
@@ -4551,12 +4556,13 @@
           top.append(g, ar);
           c.appendChild(top);
           const it = o.get[0] && S.items[o.get[0].id];
-          if (it) { const say = document.createElement('span'); say.className = 'mc-say'; say.textContent = it.type ? `${effectText(it)} · ${it.desc}` : it.desc; c.appendChild(say); }
+          if (it) { const say = document.createElement('span'); say.className = 'mc-say'; const ef = it.type ? effectText(it) : ''; say.textContent = ef ? `${ef} · ${it.desc}` : it.desc; c.appendChild(say); }
           const foot = document.createElement('div'); foot.className = 'mc-foot';
-          const lf = document.createElement('span'); lf.className = 'prog'; lf.textContent = o.left > 0 ? `오늘 ${o.left}번 남음` : '오늘은 끝';
+          const when = o.weekly ? '이번 주' : '오늘';
+          const lf = document.createElement('span'); lf.className = 'prog'; lf.textContent = o.locked || (o.left > 0 ? `${when} ${o.left}번 남음` : `${when}은 끝`);
           const sp = document.createElement('span'); sp.className = 'sp';
           const lack = o.give.some((x) => x.have < x.n) || (o.gold && S.me.gold < o.gold);
-          foot.append(mobChips(o.give, o.gold), sp, lf, mobBtn('바꾸기', true, o.left <= 0 || lack, () => mobAct('mob:trade', { mob: m.id, i: o.i })));
+          foot.append(mobChips(o.give, o.gold), sp, lf, mobBtn('바꾸기', true, !!o.locked || o.left <= 0 || lack, () => mobAct('mob:trade', { mob: m.id, i: o.i })));
           c.appendChild(foot);
           body.appendChild(c);
         }
