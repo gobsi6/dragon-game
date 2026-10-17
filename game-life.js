@@ -91,6 +91,9 @@ function hatch(k, at) {
     born: at, bond: 20, trains: 0, lastTrain: 0, lastHunt: at, stanceMs: {}, tickAt: at, stage: 0,
     stats: Object.fromEntries(STAT_KEYS.map((s) => [s, Math.round(base[s] / 3)])),
   });
+  // 알일 때 받은 정성 (이벤트 '알 속의 두근거림')
+  if (k.data.preBond) k.data.bond = clamp(k.data.bond + k.data.preBond);
+  if (k.data.preStat && k.data.stats[k.data.preStat] != null) k.data.stats[k.data.preStat] += 1;
 }
 
 // 어른이 될 때 정해지는 재주: 가장 많이 기운 쪽 (같으면 자라 온 내력대로)
@@ -410,6 +413,10 @@ function release(d, kin, id, now = Date.now()) {
   const k = findKin(kin, id);
   if (!k || k.type !== 'drake' || k.status !== 'home') return { error: '떠나보낼 새끼가 없다.' };
   if (ageOf(k, now) < R.independentDay) return { error: '아직 혼자 살아가기에는 어리다.' };
+  return { title: '독립', lines: freeDrake(d, kin, k, now) };
+}
+// 새끼를 독립시키고 문장을 돌려줌 (떠나보내기, 이벤트에서 함께 씀)
+function freeDrake(d, kin, k, now) {
   const sum = STAT_KEYS.reduce((a, s) => a + k.data.stats[s], 0);
   const gain = 8 + Math.floor(sum / 4) + (k.data.bond >= 60 ? 4 : 0);
   k.status = 'independent';
@@ -424,7 +431,7 @@ function release(d, kin, id, now = Date.now()) {
   lines.push(`새끼를 길러 낸 드래곤으로 이름이 났다. 용족 명성 +${gain}`);
   if (f) lines.push(f);
   lines.push(`계보: ${kin.filter((x) => x.type === 'drake' && x.status === 'independent').length}마리째 독립`);
-  return { title: '독립', lines };
+  return lines;
 }
 
 // ── 원정에 함께 가는 식구 ──────────────────────────
@@ -479,6 +486,7 @@ function ctxOf(d, kin, have, trigger, now, region = d.region) {
     rep: logic.repOf(d)[region] || 0, fame: d.fame || 0, stance: d.stance, nest: d.nest,
     ...hk,                                        // home humans drakes eggs full
     grown: [...hk.humans, ...hk.drakes],          // 알을 뺀 식구
+    gone: kin.filter((x) => x.type === 'drake' && x.status === 'independent'), // 독립한 새끼
     k: (id) => hk.home.find((x) => x.id === id) || null, // 이벤트가 고른 식구 (떠났으면 null)
     age: (x) => (x && x.data.born ? (now - x.data.born) / DAY : -1),
     stage: (x) => stageOf(x, now).name,          // '아기' '아이' … '어린 용' …
@@ -486,8 +494,18 @@ function ctxOf(d, kin, have, trigger, now, region = d.region) {
     pick,
     have, perks: d.perks || {}, stats: logic.statsOf(d), josa,
     rivals: d.rivalsCache || [], me: d.name, regionName: REGIONS[region]?.name || '', // 라이벌 이벤트
+    // 날씨·계절·장소·보물더미·재앙의 흔적 (날씨·둥지 이벤트)
+    weather: logic.weatherIdAt(region, now), season: logic.seasonAt(now).id, level: d.level,
+    place: region === d.region ? logic.placeOf(d) : null,
+    hoard: d.nest && logic.hooks.hoard ? logic.hooks.hoard(d.id).filter((x) => x.qty > 0) : [],
+    hoardValue: d.nest ? logic.nestInfo(d).value || 0 : 0,
+    bossTrace: logic.hooks.bossTrace ? logic.hooks.bossTrace(region) : null,
+    // 동료와의 관계 (관계 이벤트). 처음 볼 때 한 번만 불러옴
+    get ties() { return this._ties || (this._ties = (logic.hooks.ties && safe(() => logic.hooks.ties(d))) || NO_TIES); },
+    hour: new Date(now + 9 * 3600000).getUTCHours(), // 한국 시각 (밤 이벤트)
   };
 }
+const NO_TIES = { mentor: null, students: [], heart: null, nemesis: [], friends: [], departed: [], adoptedOut: [] };
 const weightOf = (e, c) => (typeof e.weight === 'function' ? e.weight(c) : e.weight);
 function safe(fn) { try { return fn(); } catch { return false; } }
 
@@ -560,7 +578,7 @@ function chooseEvent(d, kin, have, idx, now = Date.now()) {
   const reason = ch.need ? ch.need(c, vars) : null;
   if (reason) return { error: reason };
 
-  const out = { lines: [], items: [], gold: 0, tells: [] };
+  const out = { lines: [], items: [], hoardItems: [], gold: 0, tells: [], sends: [] };
   const town = SHOPS[c.region] ? c.region : nearestTown(c.region);
   const h = {
     say: (...l) => out.lines.push(...l),
@@ -591,7 +609,19 @@ function chooseEvent(d, kin, have, idx, now = Date.now()) {
       kin.push(k);
     },
     nearestTown: () => nearestTown(c.region),
-    notify: (id, text) => out.tells.push({ id, text }),           // 다른 드래곤에게 소식 (라이벌 이벤트)
+    notify: (id, text, title) => out.tells.push({ id, text, title }), // 다른 드래곤에게 소식 (라이벌 이벤트 등)
+    // 보물더미에서 꺼내거나 넣음 (꺼낼 때는 지금 있는 만큼만)
+    hoardTake: (id, qty = 1) => {
+      const have = (c.hoard.find((x) => x.item === id)?.qty || 0) + out.hoardItems.filter((x) => x.id === id).reduce((a, x) => a + x.qty, 0);
+      const n = Math.min(qty, have);
+      if (n > 0) out.hoardItems.push({ id, qty: -n });
+      return n;
+    },
+    hoardGive: (id, qty = 1) => out.hoardItems.push({ id, qty }),
+    send: (id, items, msg = '') => out.sends.push({ id, items, msg }), // 다른 드래곤에게 물건을 보냄 (받은 선물 상자로)
+    xp: (n) => { const lv = d.level; logic.gainXp(d, n); if (d.level > lv) out.lines.push(`레벨 ${d.level}${[2, 4, 5, 9].includes(d.level % 10) ? '가' : '이'} 되었다!`); },
+    count: (key) => out.lines.push(...logic.traitCount(d, key)), // 칭호·특성에 쓰는 셈
+    free: (k) => { if (k && k.type === 'drake' && k.status === 'home') out.lines.push(...freeDrake(d, kin, k, now)); },
     buff: (id, minutes) => logic.giveBuff(d, id, minutes),
     mind: (n) => { if (!logic.berserkOf(d)) d.mind = clamp((d.mind ?? 100) + n, 0, 100); },
     name: (k) => ga(k),
@@ -600,7 +630,7 @@ function chooseEvent(d, kin, have, idx, now = Date.now()) {
   ch.run(h, c, vars);
   d.pending_event = null;
   const label = typeof ch.label === 'function' ? ch.label(c, vars) : ch.label;
-  return { title: e.title, lines: out.lines, items: out.items, gold: out.gold, choice: label, tells: out.tells };
+  return { title: e.title, lines: out.lines, items: out.items, hoardItems: out.hoardItems, gold: out.gold, choice: label, tells: out.tells, sends: out.sends };
 }
 
 module.exports = {

@@ -11,7 +11,7 @@
 // 입양   둥지의 알이나 아직 어른이 되지 않은 인간 아이를 동료에게 보내자고 제안. 받는 쪽이 데려오기로 하면
 //        그 둥지로 옮겨 감 (받는 쪽 둥지에 빈자리가 있어야 함). 정할 때까지는 보내는 쪽 둥지에 있음
 
-const { ITEMS, KINDS, REGIONS, STANCES, MIND, SKILLS, HEAL_OTHER, fameTier, KIN, DAY } = require('./game-data');
+const { ITEMS, KINDS, REGIONS, STANCES, MIND, SKILLS, HEAL_OTHER, fameTier, KIN, DAY, BONDS, MARKS, BOND_RULES } = require('./game-data');
 
 const ADOPT = { days: 3 };         // 입양 제안을 기다리는 날 (지나면 저절로 거둬짐)
 
@@ -35,10 +35,55 @@ const giveText = (gold, items) => [gold ? `금화 ${gold}닢` : '', itemText(ite
 module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life, inBattle = () => false }) {
   const trades = new Map();   // 교환 창: id → { id, a, b, side: { [드래곤 id]: { gold, items, ready } } }
   const invites = new Map();  // 교환 요청: id → { from, to, at }
+  const teachAt = new Map();  // 가르치기: '스승 id:제자 id' → 마지막으로 가르친 시각
   let nextId = 1;
 
   const live = (id) => online.get(id) || null;
   const isFriend = (a, b) => db.relGet(a, b) === 'friend';
+  // ── 관계 이름 ──
+  const invOf = (bond) => BONDS[bond]?.inv || bond;          // 상대 쪽에서 본 관계 (스승 ↔ 제자)
+  const bondName = (bond) => BONDS[bond]?.name || '동료';
+  // 연인·반려 상대 (한 명)
+  const heartOf = (id) => { for (const b of BOND_RULES.hearts) { const x = db.relByBond(id, b)[0]; if (x) return { id: x, bond: b }; } return null; };
+  // a가 b에게 bond(b가 a에게 무엇인지)를 맺을 수 있는지. 안 되면 이유
+  function bondWhy(a, b, bond) {
+    const A = loadD(a), B = loadD(b);
+    if (!BONDS[bond]) return '그런 관계는 없다.';
+    if (!A || !B || B.dead_at) return '그 드래곤과는 관계를 맺을 수 없다.';
+    const cur = db.relBond(a, b);
+    if (cur === bond) return `이미 ${bondName(bond)} 사이다.`;
+    if (BONDS[bond].needs && cur !== BONDS[bond].needs) return `${bondName(BONDS[bond].needs)} 사이여야 ${bondName(bond)}${josa(bondName(bond), '이', '가')} 될 수 있다.`;
+    if (BOND_RULES.hearts.includes(bond)) {
+      const ha = heartOf(a), hb = heartOf(b);
+      if (ha && ha.id !== b) return `이미 마음을 준 상대가 있다.`;
+      if (hb && hb.id !== a) return `${B.name}에게는 이미 마음을 준 상대가 있다.`;
+    }
+    const G = BOND_RULES.mentorGap;
+    const mentorStudent = (m, st) => {
+      if (m.level < st.level + G) return `스승은 제자보다 레벨이 ${G} 이상 높아야 한다.`;
+      if (db.relByBond(st.id, 'mentor').some((x) => x !== m.id)) return `${st.name}에게는 이미 스승이 있다.`;
+      if (db.relByBond(m.id, 'student').filter((x) => x !== st.id).length >= BOND_RULES.studentsMax) return `${m.name}에게는 이미 제자가 ${BOND_RULES.studentsMax}명 있다.`;
+      return null;
+    };
+    if (bond === 'mentor') return mentorStudent(B, A);   // b를 스승으로
+    if (bond === 'student') return mentorStudent(A, B);  // b를 제자로
+    return null;
+  }
+  const loadD = (id) => { const e = live(id); return e ? e.dragon : db.getDragon(id); };
+  // '시엘과 친구 사이가 되었다' / '시엘이 나의 제자가 되었다' (관계: 상대가 나에게 무엇인지)
+  const becameText = (name, bond) => {
+    const n = bondName(bond);
+    return n === bondName(invOf(bond)) ? `${name}${josa(name, '과', '와')} ${n} 사이가 되었다.` : `${name}${josa(name, '이', '가')} 나의 ${n}${josa(n, '이', '가')} 되었다.`;
+  };
+  // 관계를 맺음 (a가 청하고 b가 받아들임)
+  function bondMake(a, b, bond) {
+    db.befriend(a, b, bond, invOf(bond));
+    const A = loadD(a), B = loadD(b);
+    const nA = bondName(bond), nB = bondName(invOf(bond));
+    logic.chron(A, 'mark', `${B.name}${josa(B.name, '과', '와')} ${nA === nB ? `${nA} 사이가 되었다` : `${B.name}${josa(B.name, '이', '가')} 나의 ${nA}${josa(nA, '이', '가')} 되었다`}.`);
+    logic.chron(B, 'mark', `${A.name}${josa(A.name, '과', '와')} ${nA === nB ? `${nB} 사이가 되었다` : `${A.name}${josa(A.name, '이', '가')} 나의 ${nB}${josa(nB, '이', '가')} 되었다`}.`);
+    db.saveState(A); db.saveState(B);
+  }
   const sameRegion = (a, b) => {
     const x = live(a), y = live(b);
     return !!x && !!y && x.dragon.region === y.dragon.region;
@@ -47,8 +92,19 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
   const relChanged = (id) => tell(id, 'rel:changed', {});
   // 내가 라이벌로 정한 드래곤 (이벤트에서 씀)
   const refreshRivals = (d) => { d.rivalsCache = db.relList(d.id).filter((r) => r.kind === 'rival').map((r) => ({ id: r.id, name: r.name })); };
-  const tellRival = (id, text) => { const t = live(id); if (t) t.socket.emit('notice', { title: '라이벌', lines: [text] }); else db.noteAdd(id, text); };
+  const tellRival = (id, text, title = '라이벌') => { const t = live(id); if (t) t.socket.emit('notice', { title, lines: [text] }); else db.noteAdd(id, text); };
   const eul = (n) => `${n}${josa(n, '을', '를')}`;
+  // 이벤트에서 생긴 물건을 다른 드래곤에게 보냄 (받은 선물 상자로)
+  const eventGift = (from, id, items, msg = '') => {
+    const t = live(id);
+    if (!t && !db.getDragon(id)) return;
+    if (t) db.saveState(t.dragon, items); else db.giftOffline(id, 0, items);
+    const gid = db.giftIn(id, from, 0, items, msg);
+    if (t) {
+      t.socket.emit('gift:got', { id: gid, from: { id: from.id, name: from.name, kind: from.kind }, gold: 0, items, msg, at: Date.now() });
+      sendMe(t.socket, t.dragon);
+    }
+  };
 
   // 교환·선물이 가능한지. 안 되면 이유를 돌려줌
   function reach(me, them, { needOnline }) {
@@ -155,7 +211,11 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       nest: friend || self ? d.nest || null : null,
       self,
       rel: self ? null : {
-        mine: db.relGet(viewer.id, d.id),                 // friend / rival / wary / null
+        mine: db.relGet(viewer.id, d.id),                 // friend(관계를 맺음) / rival / wary / nemesis / null
+        bond: db.relBond(viewer.id, d.id),                // 맺은 관계: 상대가 나에게 무엇인지 (acquaint, comrade, friend, mentor, student …)
+        sentBond: db.reqBond(viewer.id, d.id),            // 내가 청해 둔 관계
+        gotBond: db.reqBond(d.id, viewer.id),             // 상대가 청해 온 관계 (상대에게 내가 무엇이 되는지)
+        teachIn: (() => { const l = teachAt.get(`${viewer.id}:${d.id}`) || 0; return Math.max(0, l + BOND_RULES.teach.cooldown - Date.now()); })(),
         sent: db.reqGet(viewer.id, d.id),                 // 내가 보낸 동료 요청
         got: db.reqGet(d.id, viewer.id),                  // 상대가 보낸 동료 요청
         memo: db.memoGet(viewer.id, d.id).text,           // 내가 이 드래곤에 대해 남긴 메모
@@ -172,19 +232,21 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
   }
 
   function relList(me) {
-    const out = { friends: [], rivals: [], wary: [] };
+    const out = { friends: [], rivals: [], wary: [], nemesis: [] };
     for (const r of db.relList(me.id)) {
       const e = live(r.id);
       const row = { id: r.id, name: r.name, kind: r.dkind, level: r.level, av: r.has_avatar ? r.avatar_ver : 0, online: !!e };
       if (r.kind === 'friend') {
+        row.bond = r.bond || 'comrade';
         row.region = e ? e.dragon.region : r.region;
         row.away = !!e?.dragon.exp_end;
         out.friends.push(row);
       } else if (r.kind === 'rival') { row.mutual = db.relGet(r.id, me.id) === 'rival'; out.rivals.push(row); }
       else if (r.kind === 'wary') out.wary.push(row);
+      else if (r.kind === 'nemesis') out.nemesis.push(row);
     }
     out.friends.sort((a, b) => b.online - a.online);
-    const view = (r) => ({ id: r.id, name: r.name, kind: r.dkind, level: r.level, av: r.has_avatar ? r.avatar_ver : 0, online: !!live(r.id) });
+    const view = (r) => ({ id: r.id, name: r.name, kind: r.dkind, level: r.level, av: r.has_avatar ? r.avatar_ver : 0, online: !!live(r.id), bond: r.bond || 'comrade' });
     out.incoming = db.reqIn(me.id).map(view);
     // 나를 라이벌로 정했지만 나는 아직 정하지 않은 드래곤
     const mine = new Set(out.rivals.map((x) => x.id));
@@ -253,16 +315,17 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
 
   // ── 식구 입양 ─────────────────────────────────────
   // 보낼 수 있는 식구: 알(식지 않은 것), 아직 갈 길을 정하지 않은 인간 아이 (어른이 되기 전). 원정을 따라간 식구는 안 됨
-  function adoptWhy(k, now = Date.now()) {
+  // keep: 이미 건 제안을 살려 둘지 볼 때. 원정에 따라간 건 잠깐이라 제안을 지우지 않음 (돌아오면 데려갈 수 있음)
+  function adoptWhy(k, now = Date.now(), keep = false) {
     if (!k) return '그 식구는 이제 둥지에 없다.';
     if (k.status === 'egg') return null;
     if (k.type !== 'human' || k.status !== 'home') return '알이나 인간 아이만 입양 보낼 수 있다.';
     if (k.data.path || (now - k.data.born) / DAY >= KIN.human.adultDay) return '이미 다 자라 제 갈 길을 정할 때가 되었다.';
-    if (k.data.onExp) return '원정에 따라가 있는 동안에는 보낼 수 없다.';
+    if (k.data.onExp && !keep) return '원정에 따라가 있는 동안에는 보낼 수 없다.';
     return null;
   }
   const kinWhat = (k) => (k.status === 'egg' ? `${KINDS[k.data.kind]?.name || ''}의 알 ${k.name}` : `인간 아이 ${k.name}`);
-  const kinBrief = (k, now) => ({ id: k.id, name: k.name, type: k.type, egg: k.status === 'egg', kind: k.data.kind || null, stage: life.stageOf(k, now).name });
+  const kinBrief = (k, now) => ({ id: k.id, name: k.name, type: k.type, egg: k.status === 'egg', kind: k.data.kind || null, stage: life.stageOf(k, now).name, away: !!k.data.onExp });
   const loadDragon = (id) => { const e = live(id); return e ? e.dragon : db.getDragon(id); };
   // 식구가 바뀐 드래곤: 저장하고 식구 도움·요약을 새로
   function kinChanged(d, kin) {
@@ -282,7 +345,15 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
   function offerAlive(o, now = Date.now()) {
     if (now - o.at > ADOPT.days * DAY) { db.offerDel(o.id); adoptTell(o.from_id, `입양 제안에 답이 없어 거두어들였다.`); return null; }
     const k = db.kinLoad(o.from_id).find((x) => x.id === o.kin_id);
-    if (adoptWhy(k, now)) { db.offerDel(o.id); return null; }
+    const why = adoptWhy(k, now, true);
+    if (why) {
+      // 더는 보낼 수 없게 됨: 양쪽에 알리고 지움 (예전엔 말없이 사라졌음)
+      db.offerDel(o.id);
+      const name = k ? k.name : '그 식구';
+      adoptTell(o.from_id, `${name}의 입양 제안이 취소되었다. ${why}`, 'kin:offer:gone', { id: o.id });
+      adoptTell(o.to_id, `${name}의 입양 제안이 취소되었다. ${why}`, 'kin:offer:gone', { id: o.id });
+      return null;
+    }
     return k;
   }
   // 둥지 창에 보일 제안: 받은 것과 보낸 것
@@ -332,35 +403,42 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     on('rel:list', (d) => ({ ok: true, list: relList(d) }));
 
     // 동료 요청. 상대도 이미 요청을 보냈다면 바로 맺어짐
+    // 관계 청하기: p.bond = 상대가 나에게 무엇이 되었으면 하는지 (없으면 동료). 이미 맺은 사이면 관계를 바꾸자는 청
     on('rel:request', (d, p) => {
       const id = target(p);
       if (!id || id === d.id) return { error: '그런 드래곤은 없다.' };
-      if (isFriend(d.id, id)) return { error: '이미 동료다.' };
+      const bond = BONDS[p.bond] ? p.bond : 'comrade';
+      const why = bondWhy(d.id, id, bond);
+      if (why) return { error: why };
       const name = db.getDragon(id).name;
-      if (db.reqGet(id, d.id)) {
-        db.befriend(d.id, id);
-        tell(id, 'notice', { title: '동료', lines: [`${ga(d.name)} 동료 요청을 받아들였다. 이제 동료다.`] });
-        if (!live(id)) db.noteAdd(id, `${ga(d.name)} 동료 요청을 받아들였다. 이제 동료다.`);
+      // 상대도 같은 관계를 청해 두었으면 바로 맺어짐
+      if (db.reqBond(id, d.id) === invOf(bond)) {
+        bondMake(id, d.id, invOf(bond));
+        const text = `${ga(d.name)} 청을 받아들였다. ${becameText(d.name, invOf(bond)).replace(`${d.name}${josa(d.name, '과', '와')} `, '이제 ')}`;
+        if (live(id)) tell(id, 'notice', { title: '관계', lines: [text] }); else db.noteAdd(id, text);
         relChanged(id);
-        return { ok: true, lines: [`${name}${josa(name, '과', '와')} 동료가 되었다.`] };
+        return { ok: true, lines: [becameText(name, bond)] };
       }
-      if (db.reqGet(d.id, id)) return { error: '이미 동료 요청을 보냈다.' };
-      db.reqAdd(d.id, id);
-      // 동료를 청하면서 붙여 둔 라이벌·경계 표시는 지움
-      if (db.relGet(d.id, id)) db.relDel(d.id, id);
-      tell(id, 'notice', { title: '동료 요청', lines: [`${ga(d.name)} 동료가 되자고 청했다. 동료 메뉴에서 받아들일 수 있다.`] });
+      db.reqAddBond(d.id, id, bond);
+      // 관계를 청하면서 붙여 둔 라이벌·경계·원수 표시는 지움
+      if (db.relGet(d.id, id) && !isFriend(d.id, id)) db.relDel(d.id, id);
+      const text = `${ga(d.name)} ${BONDS[bond].ask}. 동료 메뉴에서 받아들일 수 있다.`;
+      if (live(id)) tell(id, 'notice', { title: '관계 요청', lines: [text] }); else db.noteAdd(id, text);
       relChanged(id);
-      return { ok: true, lines: [`${name}에게 동료 요청을 보냈다.`] };
+      return { ok: true, lines: [`${name}에게 '${BONDS[bond].label}' 청을 보냈다.`] };
     });
     on('rel:accept', (d, p) => {
       const id = target(p);
-      if (!id || !db.reqGet(id, d.id)) return { error: '받은 요청이 없다.' };
-      db.befriend(d.id, id);
+      const bond = id && db.reqBond(id, d.id); // 청한 쪽에게 내가 무엇이 되는지
+      if (!bond) return { error: '받은 요청이 없다.' };
+      const why = bondWhy(id, d.id, bond);
+      if (why) return { error: why };
+      bondMake(id, d.id, bond);
       const name = db.getDragon(id).name;
-      const text = `${ga(d.name)} 동료 요청을 받아들였다. 이제 동료다.`;
-      if (live(id)) tell(id, 'notice', { title: '동료', lines: [text] }); else db.noteAdd(id, text);
+      const text = `${ga(d.name)} 청을 받아들였다. ${becameText(d.name, bond).replace(`${d.name}${josa(d.name, '과', '와')} `, '이제 ')}`;
+      if (live(id)) tell(id, 'notice', { title: '관계', lines: [text] }); else db.noteAdd(id, text);
       relChanged(id);
-      return { ok: true, lines: [`${name}${josa(name, '과', '와')} 동료가 되었다.`] };
+      return { ok: true, lines: [becameText(name, invOf(bond))] };
     });
     on('rel:decline', (d, p) => {
       const id = target(p);
@@ -378,24 +456,29 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     });
     on('rel:unfriend', (d, p) => {
       const id = target(p);
-      if (!id || !isFriend(d.id, id)) return { error: '동료가 아니다.' };
+      if (!id || !isFriend(d.id, id)) return { error: '맺은 관계가 없다.' };
+      const was = bondName(db.relBond(d.id, id));
       db.unfriend(d.id, id);
       relChanged(id);
       const name = db.getDragon(id).name;
-      return { ok: true, lines: [`${name}${josa(name, '과', '와')}의 동료 관계를 끊었다.`] };
+      const text = `${ga(d.name)} ${was} 관계를 끊었다.`;
+      if (live(id)) tell(id, 'notice', { title: '관계', lines: [text] }); else db.noteAdd(id, text);
+      logic.chron(d, 'mark', `${name}${josa(name, '과', '와')}의 ${was} 관계를 끊었다.`); db.saveState(d);
+      return { ok: true, lines: [`${name}${josa(name, '과', '와')}의 ${was} 관계를 끊었다.`] };
     });
     // 라이벌·경계: 혼자 붙이는 표시. 동료에게는 붙일 수 없음 (먼저 끊어야 함)
     on('rel:mark', (d, p) => {
       const id = target(p);
       if (!id || id === d.id) return { error: '그런 드래곤은 없다.' };
-      const kind = p.kind === 'rival' || p.kind === 'wary' ? p.kind : null;
-      if (isFriend(d.id, id)) return { error: '동료에게는 붙일 수 없다. 먼저 동료 관계를 끊어야 한다.' };
+      const kind = MARKS[p.kind] ? p.kind : null;
+      if (isFriend(d.id, id)) return { error: '관계를 맺은 상대에게는 붙일 수 없다. 먼저 관계를 끊어야 한다.' };
       const name = db.getDragon(id).name;
       const was = db.relGet(d.id, id);
       if (!kind) {
         db.relDel(d.id, id);
         refreshRivals(d);
         if (was === 'rival') { tellRival(id, `${ga(d.name)} 라이벌 표시를 거두었다.`); relChanged(id); }
+        if (was === 'nemesis') { tellRival(id, `${ga(d.name)} 원한을 내려놓았다.`, '원수'); relChanged(id); }
         return { ok: true, lines: [`${name}에게 붙인 표시를 지웠다.`] };
       }
       db.relSet(d.id, id, kind);
@@ -415,7 +498,14 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
         db.saveState(d);
         relChanged(id);
       }
-      return { ok: true, lines: [`${name}${josa(name, '을', '를')} ${kind === 'rival' ? '라이벌로' : '경계할 드래곤으로'} 표시했다.`] };
+      // 원수: 상대에게도 알림 (결투에서 이기면 명성이 더 오름)
+      if (kind === 'nemesis' && was !== 'nemesis') {
+        logic.chron(d, 'choice', `${eul(name)} 원수로 삼았다.`);
+        db.saveState(d);
+        tellRival(id, `${ga(d.name)} 당신을 원수로 삼았다.`, '원수');
+        relChanged(id);
+      }
+      return { ok: true, lines: [`${name}${josa(name, '을', '를')} ${kind === 'rival' ? '라이벌로' : kind === 'nemesis' ? '원수로' : '경계할 드래곤으로'} 표시했다.`] };
     });
 
     // 관계 메모: 상대가 누구든 남길 수 있고, 상대도 그 드래곤의 기록에서 볼 수 있음. 빈 글이면 지움
@@ -469,6 +559,38 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       return { ok: true, amount: amt, lines };
     });
 
+    // ── 가르치기: 스승이 같은 지역의 제자에게 (제자는 경험치, 스승은 명성) ──
+    on('rel:teach', (d, p) => {
+      const id = target(p);
+      if (!id || db.relBond(d.id, id) !== 'student') return { error: '내 제자가 아니다.' };
+      const T = BOND_RULES.teach;
+      const t = loadD(id);
+      if (!t || t.dead_at) return { error: '지금은 가르칠 수 없다.' };
+      if (t.region !== d.region || d.exp_end || t.exp_end) return { error: '같은 지역에 함께 있어야 가르칠 수 있다.' };
+      if (inBattle(d.id) || inBattle(id)) return { error: '싸우는 중에는 할 수 없다.' };
+      const now = Date.now();
+      const last = teachAt.get(`${d.id}:${id}`) || 0;
+      if (now - last < T.cooldown) return { error: `${t.name}${josa(t.name, '은', '는')} 아직 배운 것을 익히는 중이다. (${Math.ceil((T.cooldown - (now - last)) / 60000)}분 뒤)` };
+      logic.regen(d, now);
+      if (d.ap < T.ap) return { error: `행동력이 모자란다. (${T.ap} 필요)` };
+      if (d.en < T.en) return { error: `기력이 모자란다. (${T.en} 필요)` };
+      logic.spendAp(d, T.ap);
+      d.en -= T.en;
+      teachAt.set(`${d.id}:${id}`, now);
+      const xp = logic.xpOf(t, T.xpBase + d.level * T.xpPerLv);
+      const up = logic.gainXp(t, xp);
+      const lines = [`${t.name}에게 사냥과 숨결의 요령을 가르쳤다.`];
+      lines.push(...logic.traitCount(d, 'teach'));
+      const f = logic.addFame(d, T.fame); if (f) lines.push(f);
+      const told = [`스승 ${ga(d.name)} 가르침을 주었다. 경험치 +${xp}${up ? ` · 레벨이 올랐다! Lv. ${t.level}` : ''}`];
+      if (t.level >= d.level) { told.push(...logic.traitCount(t, 'surpass')); told.push(`스승 ${d.name}의 레벨을 따라잡았다!`); logic.chron(t, 'mark', `스승 ${d.name}의 레벨을 따라잡았다.`); }
+      db.saveState(d); db.saveState(t);
+      const e = live(id);
+      if (e) { sendMe(e.socket, t); e.socket.emit('notice', { title: '가르침', lines: told }); } else for (const l of told) db.noteAdd(id, l);
+      sendMe(socket, d);
+      return { ok: true, lines };
+    });
+
     // ── 식구 입양 ──
     on('kin:offer', (d, p) => {
       if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
@@ -512,6 +634,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
         adoptTell(f.id, `${ga(d.name)} ${eul(what)} 맡기 어렵다고 했다.`);
         return { ok: true, lines: [`${f.name}의 제안을 정중히 거절했다.`] };
       }
+      if (k.data.onExp) return { error: `${k.name}${josa(k.name, '은', '는')} 지금 ${f.name}의 원정에 따라가 있다. 돌아온 뒤에 데려올 수 있다.` };
       if (!d.nest) return { error: '데려오려면 내 둥지가 있어야 한다.' };
       if (!roomOf(d)) return { error: `내 둥지에는 이미 식구가 가득하다. (최대 ${logic.maxKinOf(d)})` };
       if (!db.kinMove(k.id, f.id, d.id)) { db.offerDel(o.id); return { error: '그 식구는 이미 떠났다.' }; }
@@ -521,6 +644,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       const m = mine.find((x) => x.id === k.id);
       if (m) {
         m.data.adoptedFrom = f.name;
+        m.data.adoptedFromId = f.id;
         if (m.status === 'egg') { m.data.incubateAt = null; m.data.found = now; }
         else { m.data.bond = Math.max(KIN.human.startBond, Math.round((m.data.bond || 0) * 0.5)); m.data.lastCare = now - KIN.human.careCooldown; m.data.onExp = false; }
       }
@@ -705,5 +829,5 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     }
   }
 
-  return { attach, onEnter, onLeave, onMove, relIncoming: (id) => db.reqInCount(id), tellRival, refreshRivals, kinOffers };
+  return { attach, onEnter, onLeave, onMove, relIncoming: (id) => db.reqInCount(id), tellRival, refreshRivals, kinOffers, eventGift };
 };

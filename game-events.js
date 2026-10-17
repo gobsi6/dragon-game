@@ -4,7 +4,7 @@
 // 이벤트 하나의 모양
 //   id       고유 이름
 //   title    선택 창 제목
-//   when     일어나는 때: explore(탐사) gather(채집) expedition(원정 귀환) wake(둥지에서 깨어남) intimidate(위협 성공)
+//   when     일어나는 때: explore(탐사) gather(채집) hunt(사냥을 마침) expedition(원정 귀환) wake(둥지에서 깨어남) intimidate(위협 성공)
 //   weight   뽑힐 무게. 숫자 또는 (c) => 숫자
 //   cond     (c) => 참이면 일어날 수 있음
 //   setup    (c) => 이벤트 동안 고정할 값 (알의 종류 등). 선택할 때 vars로 다시 들어옴
@@ -15,17 +15,24 @@
 //           home(함께 사는 식구) humans drakes(깨어난 새끼) eggs grown(알 뺀 식구) full(식구가 가득 찼는지, 최대 2)
 //           k(id)(이벤트가 고른 식구, 떠났으면 null) age(식구)(나이, 일) stage(식구)(성장 단계 이름)
 //           canTravel(식구)(원정에 따라갈 나이인지) pick(목록)
+//           weather(지금 날씨 id) season(계절 id) level place(장소 id) hoard(보물더미 [{item, qty}]) hoardValue
+//           bossTrace(하루 안에 재앙이 쓰러지거나 떠난 지역이면 { name, won }) me(내 이름)
 //   식구를 다루는 이벤트는 setup에서 대상 id를 골라 두고, text·run에서 c.k(v.id)로 꺼냅니다.
 //   그 사이 식구가 떠나 버리면 이벤트는 조용히 지나갑니다.
 // h (결과 만들기): say(문장) gold(n) give(id, n) take(id, n) rep(지역, n) fame(n) hp(n) en(n)
 //           adopt(유래) egg(종류) bond(식구, n) lean(식구, 재주, n) train(새끼, 능력치) leave(식구, 상태)
 //           nudge(새끼, 성향, 일)(성격을 그 성향 쪽으로)
 //           nearestTown() name(식구 → '미르가') josa(말, 받침, 없음)
+//           mind(n) buff(강화 id, 분) notify(드래곤 id, 글, 제목) hoardTake(id, n)(보물더미에서, 있는 만큼만) hoardGive(id, n)
 
-const { ITEMS, KINDS, REGIONS, SHOPS } = require('./game-data');
+const { ITEMS, KINDS, REGIONS, SHOPS, PLACES, REGION_LOOT, KIN, STATS } = require('./game-data');
 
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const randInt = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const statName = (k) => STATS.find((x) => x.key === k)?.name || k;
+const bestStat = (kind) => Object.entries(KINDS[kind].stats).sort((a, b) => b[1] - a[1])[0][0]; // 그 종류가 가장 강한 능력치
+const D3 = 3 * 864e5;
+const ready = (t, ms) => !t || Date.now() - t > ms; // 다시 일어나기까지의 간격
 
 module.exports = [
   // ── 아이를 만나는 길: 성향마다 다름 ──
@@ -506,6 +513,829 @@ module.exports = [
         h.say('비늘을 바위 위에 잘 올려 두고 짧은 생각을 보냈다. 라이벌이라도 지킬 것은 지킨다.');
       } },
       { label: '발로 밟아 묻어 버린다', run: (h) => h.say('비늘을 흙 속에 밟아 넣었다. 속이 조금 후련하다.') },
+    ],
+  },
+
+  // ── 사냥하다 생기는 일 ───────────────────────────
+  {
+    id: 'trapped_beast',
+    title: '덫에 걸린 짐승',
+    when: ['hunt'],
+    weight: 3,
+    cond: (c) => !c.town && !!c.place,
+    setup: (c) => ({ beast: PLACES[c.place].creature }),
+    text: (c, v) => [
+      `사냥감을 쫓던 중, 쇠덫에 다리가 물린 ${v.beast}${c.josa(v.beast, '이', '가')} 몸부림치는 것을 보았다.`,
+      '덫에는 인간 마을의 낙인이 찍혀 있다. 밀렵꾼의 짓이다.',
+    ],
+    choices: [
+      { label: '덫을 부수고 풀어 준다', run: (h, c, v) => {
+        h.fame(1); h.mind(5);
+        h.say(`발톱으로 덫을 비틀어 끊자 ${v.beast}${h.josa(v.beast, '이', '가')} 절뚝이며 숲으로 사라졌다. 마음 한구석이 개운하다.`);
+      } },
+      { label: '덫째로 잡아먹는다', run: (h, c, v) => {
+        h.hp(15); h.give('beast_hide');
+        h.say(`손쉬운 먹잇감이다. 배를 채우고 가죽까지 챙겼다. (체력 +15)`);
+      } },
+      { label: '덫을 놓은 밀렵꾼을 찾아가 혼낸다', run: (h, c) => {
+        const g = randInt(8, 20) + c.level * 2;
+        h.gold(g); h.rep(h.nearestTown(), -4); h.fame(1);
+        h.say(`냄새를 따라가 밀렵꾼의 움막을 덮쳤다. 밀렵꾼은 금화 주머니를 던지고 달아났다. (금화 ${g}닢)`);
+      } },
+    ],
+  },
+  {
+    id: 'alpha_yields',
+    title: '항복한 우두머리',
+    when: ['hunt'],
+    weight: 2,
+    cond: (c) => !c.town && !!c.place && c.level >= 3,
+    setup: (c) => ({ beast: PLACES[c.place].creature, drop: PLACES[c.place].drop || null }),
+    text: (c, v) => [
+      `무리를 흩어 놓자, 상처투성이 ${v.beast} 우두머리가 앞으로 나와 머리를 땅에 댔다.`,
+      '뒤에 남은 무리가 숨을 죽이고 지켜본다.',
+    ],
+    choices: [
+      { label: '살려 보낸다', run: (h, c, v) => {
+        h.fame(1); h.buff('iron', 60);
+        h.say(`고개를 돌리자 우두머리가 무리를 이끌고 물러났다. 소문이 퍼져 한동안 짐승들이 함부로 덤비지 못한다. (한 시간 동안 단단함: 받는 피해 −15%)`);
+      } },
+      { label: '마지막 숨을 끊는다', run: (h, c, v) => {
+        if (v.drop) h.give(v.drop, 2); else h.give('sharp_fang', 2);
+        h.mind(-5);
+        h.say(`우두머리를 쓰러뜨리고 전리품을 넉넉히 챙겼다. 그 눈빛이 오래 머리에 남는다. (정신 −5)`);
+      } },
+    ],
+  },
+  {
+    id: 'rival_hunter',
+    title: '사냥감을 노리는 드래곤',
+    when: ['hunt'],
+    weight: 2,
+    cond: (c) => !c.town,
+    setup: () => ({ kind: pick(Object.keys(KINDS)) }),
+    text: (c, v) => [
+      `쓰러뜨린 사냥감 위로 그림자가 드리웠다. 낯선 ${KINDS[v.kind].name}${c.josa(KINDS[v.kind].name, '이', '가')} 내려앉아 이빨을 드러낸다.`,
+      '"그건 내가 먼저 노리던 거다."',
+    ],
+    choices: [
+      { label: '반으로 나눠 먹는다', run: (h) => {
+        h.fame(2); h.hp(10);
+        h.say('사냥감을 반으로 갈라 내밀자, 낯선 드래곤이 잠시 망설이다 고개를 끄덕였다. 둘은 말없이 배를 채웠다. (체력 +10)');
+      } },
+      { label: '으르렁거려 쫓아낸다', run: (h, c) => {
+        h.hp(-randInt(8, 16)); h.fame(c.stance === 'hostile' ? 2 : 1); h.give('sharp_fang');
+        h.say('발톱이 몇 번 오간 끝에 낯선 드래곤이 물러났다. 상처는 났지만 사냥감은 지켰다.');
+      } },
+      { label: '사냥감을 넘겨준다', run: (h) => {
+        h.mind(8);
+        h.say('굳이 다툴 일은 아니다. 사냥감을 남겨 두고 날아올랐다. 마음이 한결 가볍다. (정신 +8)');
+      } },
+    ],
+  },
+
+  // ── 날씨·계절에 따라 생기는 일 ───────────────────
+  {
+    id: 'lightning_tree',
+    title: '낙뢰 맞은 고목',
+    when: ['explore', 'gather'],
+    weight: 4,
+    cond: (c) => c.weather === 'storm' && !c.town,
+    text: () => ['하늘을 가르는 번개가 바로 앞의 고목을 내리쳤다.', '쪼개진 줄기에서 불길이 치솟고, 그 속에서 단단한 심재가 붉게 빛난다.'],
+    choices: [
+      { label: '불길 속에서 심재를 꺼낸다', run: (h) => {
+        h.hp(-randInt(10, 20)); h.give('heartwood');
+        h.say('불길에 비늘을 그을리며 고목의 심재를 끌어냈다.');
+      } },
+      { label: '숲으로 번지지 않게 불을 끈다 (기력 8)', need: (c) => (c.d.en < 8 ? '기력이 모자란다.' : null), run: (h) => {
+        h.en(-8); h.fame(1); h.mind(5); h.rep(h.nearestTown(), 3);
+        h.say('날갯짓으로 흙을 덮어 불길을 잡았다. 멀리서 지켜보던 인간 나무꾼들이 고개를 숙인다.');
+      } },
+      { label: '지나친다', run: (h) => h.say('비를 맞으며 그 자리를 떠났다. 등 뒤에서 고목이 무너지는 소리가 났다.') },
+    ],
+  },
+  {
+    id: 'snowbound_caravan',
+    title: '눈에 갇힌 상단',
+    when: ['explore'],
+    weight: 4,
+    cond: (c) => c.weather === 'snow' && !c.town,
+    text: () => ['함박눈 속에 인간 상단의 수레들이 반쯤 파묻혀 있다.', '상인들이 모닥불 앞에 웅크린 채 드래곤을 보고 얼어붙었다.'],
+    choices: [
+      { label: '눈을 치우고 길을 터 준다 (기력 10)', need: (c) => (c.d.en < 10 ? '기력이 모자란다.' : null), run: (h) => {
+        const g = randInt(10, 25);
+        h.en(-10); h.rep(h.nearestTown(), 8); h.gold(g);
+        h.say(`날갯짓으로 눈을 쓸어 길을 냈다. 상인들이 몇 번이고 절하며 금화 ${g}닢을 건넸다.`);
+      } },
+      { label: '짐을 털어 간다', run: (h, c) => {
+        const g = randInt(30, 60);
+        h.gold(g); h.give('silk_scrap'); h.rep(h.nearestTown(), -10); if (c.stance === 'hostile') h.fame(1);
+        h.say(`눈보라 속에서 수레를 뒤집었다. 금화 ${g}닢과 비단 조각을 챙겼다. 이 일은 마을에 금세 퍼질 것이다.`);
+      } },
+      { label: '지나친다', run: (h) => h.say('눈보라를 뚫고 그대로 날아갔다.') },
+    ],
+  },
+  {
+    id: 'aurora_vision',
+    title: '오로라 아래의 환영',
+    when: ['explore', 'wake'],
+    weight: 4,
+    cond: (c) => c.weather === 'aurora',
+    text: () => ['밤하늘에 흔들리는 빛의 장막 아래, 오래전 사라진 거대한 용의 환영이 내려앉았다.', '"어린 것아, 내 이야기를 들어 보겠느냐. 아니면 내가 가는 길을 따라오겠느냐."'],
+    choices: [
+      { label: '이야기를 듣는다', run: (h) => {
+        h.mind(25);
+        h.say('옛 용은 대륙이 처음 생겨나던 때의 이야기를 들려주었다. 흐려졌던 머릿속이 맑게 갠다. (정신 +25)');
+      } },
+      { label: '환영을 따라간다', run: (h, c) => {
+        if (Math.random() < 0.6) {
+          const id = pick(REGION_LOOT[c.region]?.rare || ['ancient_relic']);
+          h.give(id);
+          h.say(`빛을 따라 날아가자, 환영이 사라진 자리에 ${ITEMS[id].name}${h.josa(ITEMS[id].name, '이', '가')} 놓여 있었다.`);
+        } else {
+          h.hp(-10); h.en(-10);
+          h.say('빛을 쫓다 보니 어느새 길을 잃었다. 새벽이 되어서야 겨우 돌아왔다. (체력·기력 −10)');
+        }
+      } },
+      { label: '고개를 숙이고 물러난다', run: (h) => { h.mind(5); h.say('환영은 고개를 끄덕이고 빛 속으로 흩어졌다.'); } },
+    ],
+  },
+  {
+    id: 'harvest_festival',
+    title: '가을 수확제',
+    when: ['explore'],
+    weight: 5,
+    cond: (c) => c.season === 'autumn' && c.town,
+    text: (c) => [`${c.regionName}에 수확제가 열렸다. 곡식 단과 과일 바구니가 광장을 가득 메웠다.`, '사람들이 하늘의 그림자를 올려다보며 웅성거린다.'],
+    choices: [
+      { label: '광장에 내려앉아 어울린다', show: (c) => c.stance !== 'hostile', run: (h, c) => {
+        h.rep(c.region, 5); h.en(10); h.give(pick(['honey_salve', 'strong_wine', 'salted_fish']));
+        h.say('아이들이 겁도 없이 꼬리에 매달리고, 어른들은 햇과일과 술을 내왔다. (기력 +10)');
+      } },
+      { label: '공물을 요구한다', show: (c) => c.stance === 'hostile', run: (h, c) => {
+        const g = randInt(25, 50);
+        h.gold(g); h.rep(c.region, -6); h.fame(1);
+        h.say(`광장 한가운데 내려앉아 포효하자, 촌장이 떨리는 손으로 금화 ${g}닢을 바쳤다.`);
+      } },
+      { label: '멀리서 바라본다', run: (h) => { h.mind(10); h.say('지붕 위에서 축제의 불빛을 한참 내려다보았다. (정신 +10)'); } },
+    ],
+  },
+
+  // ── 둥지와 보물더미 ──────────────────────────────
+  {
+    id: 'raven_thief',
+    title: '보물을 물어 가는 까마귀',
+    when: ['wake'],
+    weight: 3,
+    cond: (c) => !!c.nest && c.hoard.some((x) => ITEMS[x.item] && ITEMS[x.item].type !== 'use'),
+    setup: (c) => ({ item: pick(c.hoard.filter((x) => ITEMS[x.item] && ITEMS[x.item].type !== 'use')).item }),
+    text: (c, v) => [`눈을 뜨자 까마귀 한 마리가 보물더미에서 ${ITEMS[v.item].name}${c.josa(ITEMS[v.item].name, '을', '를')} 물고 날아오르고 있다.`, '반짝이는 것을 좋아하는 녀석들이다.'],
+    choices: [
+      { label: '쫓아간다 (기력 6)', need: (c) => (c.d.en < 6 ? '기력이 모자란다.' : null), run: (h, c, v) => {
+        h.en(-6);
+        if (Math.random() < 0.7) {
+          const g = randInt(5, 15);
+          h.gold(g); h.give('brass_button', 2);
+          h.say(`까마귀 둥지까지 쫓아가 ${ITEMS[v.item].name}${h.josa(ITEMS[v.item].name, '을', '를')} 되찾았다. 둥지에 모여 있던 놋쇠 단추와 금화 ${g}닢도 챙겼다.`);
+        } else {
+          h.hoardTake(v.item, 1);
+          h.say('바위 틈으로 숨어든 까마귀를 끝내 놓쳤다.');
+        }
+      } },
+      { label: '내버려 둔다', run: (h, c, v) => {
+        h.hoardTake(v.item, 1); h.mind(3);
+        h.say('반짝이 하나쯤이야. 다시 눈을 감았다.');
+      } },
+    ],
+  },
+  {
+    id: 'cursed_ring',
+    title: '속삭이는 반지',
+    when: ['wake'],
+    weight: 2,
+    cond: (c) => !!c.nest && c.hoardValue >= 300,
+    text: () => ['보물더미 깊은 곳에서 본 적 없는 반지가 굴러 나왔다.', '귀를 기울이자 반지 속에서 누군가 속삭인다. "나를 끼면… 모두가 너를 우러러볼 거야."'],
+    choices: [
+      { label: '손가락에 끼워 본다', run: (h) => {
+        h.give('whisper_ring'); h.mind(-10);
+        h.say('반지를 끼자 등줄기에 서늘한 힘이 차올랐다. 속삭임은 멈추지 않는다. (속삭이는 반지를 얻었다. 정신 −10)');
+      } },
+      { label: '녹여서 금화로 만든다', run: (h) => {
+        const g = randInt(30, 50);
+        h.gold(g);
+        h.say(`숨결로 반지를 녹이자 비명 같은 소리가 났다. 남은 금덩이는 금화 ${g}닢 값어치였다.`);
+      } },
+      { label: '아무도 찾지 못할 곳에 묻는다', run: (h) => { h.mind(5); h.say('반지를 둥지 밑 깊은 곳에 묻었다. 속삭임이 잦아들었다. (정신 +5)'); } },
+    ],
+  },
+  {
+    id: 'kid_toy',
+    title: '아이의 보물 장난감',
+    when: ['wake'],
+    weight: 3,
+    cond: (c) => !!c.nest && c.humans.some((x) => ['아이', '소년'].includes(c.stage(x))) && c.hoard.length > 0,
+    setup: (c) => {
+      const cheap = [...c.hoard].filter((x) => ITEMS[x.item]).sort((a, b) => (ITEMS[a.item].value || 0) - (ITEMS[b.item].value || 0));
+      return { id: c.pick(c.humans.filter((x) => ['아이', '소년'].includes(c.stage(x)))).id, item: cheap[0].item };
+    },
+    text: (c, v) => { const k = c.k(v.id); return [`${k.name}${c.josa(k.name, '이', '가')} 보물더미에서 ${ITEMS[v.item].name}${c.josa(ITEMS[v.item].name, '을', '를')} 꺼내 들고 놀고 있다.`, '반짝이는 것을 끈에 꿰어 목에 걸고는 잔뜩 뿌듯한 얼굴이다.']; },
+    choices: [
+      { label: '혼내고 보물을 되찾는다', run: (h, c, v) => {
+        const k = c.k(v.id); h.bond(k, -3);
+        h.say(`${h.name(k)} 입을 삐죽이며 보물을 돌려놓았다. (유대 −3)`);
+      } },
+      { label: '장난감으로 갖게 해 준다', run: (h, c, v) => {
+        const k = c.k(v.id); h.hoardTake(v.item, 1); h.bond(k, 10);
+        h.say(`"정말? 내 거야?" ${h.name(k)} 꼬리에 매달려 한참을 떨어지지 않았다. (유대 +10)`);
+      } },
+      { label: '함께 놀아 준다 (기력 5)', need: (c) => (c.d.en < 5 ? '기력이 모자란다.' : null), run: (h, c, v) => {
+        const k = c.k(v.id); h.en(-5); h.bond(k, 6);
+        h.say(`보물을 굴리며 한참을 놀아 주었다. 놀이가 끝나자 ${h.name(k)} 보물을 제자리에 돌려놓았다. (유대 +6)`);
+      } },
+    ],
+  },
+
+  // ── 채집하다 생기는 일 ───────────────────────────
+  {
+    id: 'hidden_spring',
+    title: '숨겨진 샘',
+    when: ['gather'],
+    weight: 3,
+    cond: (c) => !c.town,
+    text: () => ['덤불을 헤치자 바위 아래에서 맑은 샘물이 솟고 있다.', '샘가에는 빛나는 이끼가 두텁게 자랐다.'],
+    choices: [
+      { label: '실컷 마신다', run: (h) => { h.hp(40); h.en(20); h.say('차가운 샘물이 목을 타고 내려가자 온몸에 기운이 돈다. (체력 +40, 기력 +20)'); } },
+      { label: '샘가의 이끼를 캔다', run: (h) => { h.give('glow_moss', 2); h.say('샘물을 머금은 빛나는 이끼를 조심스럽게 떼어 냈다.'); } },
+      { label: '샘물에 비친 얼굴을 들여다본다', run: (h) => { h.mind(15); h.say('물 위에 비친 눈빛이 오늘따라 차분하다. (정신 +15)'); } },
+    ],
+  },
+  {
+    id: 'human_herbalist',
+    title: '약초꾼과 마주침',
+    when: ['gather'],
+    weight: 3,
+    cond: (c) => !c.town,
+    text: () => ['같은 약초밭에서 바구니를 든 인간 약초꾼과 눈이 마주쳤다.', '약초꾼은 바구니를 끌어안은 채 뒷걸음질 친다.'],
+    choices: [
+      { label: '약초밭을 나눠 쓴다', run: (h) => {
+        h.rep(h.nearestTown(), 6); h.give('honey_salve');
+        h.say('한쪽으로 비켜서자 약초꾼이 놀란 눈으로 고개를 숙이고, 답례로 꿀 고약을 놓고 갔다.');
+      } },
+      { label: '겁을 줘 쫓아낸다', run: (h, c) => {
+        h.give(pick(['glow_moss', 'poison_herb', 'wild_honey']), 2); h.rep(h.nearestTown(), -4); if (c.stance === 'hostile') h.fame(1);
+        h.say('으르렁거리자 약초꾼이 바구니를 떨어뜨리고 달아났다. 바구니의 약초는 이제 내 것이다.');
+      } },
+      { label: '모른 척한다', run: (h) => h.say('서로 못 본 척 각자의 약초를 캤다.') },
+    ],
+  },
+
+  // ── 대륙의 재앙·입양과 엮인 일 ───────────────────
+  {
+    id: 'calamity_trace',
+    title: '재앙이 지나간 자리',
+    when: ['explore'],
+    weight: 6,
+    cond: (c) => !!c.bossTrace,
+    setup: (c) => ({ name: c.bossTrace.name, won: c.bossTrace.won }),
+    text: (c, v) => v.won
+      ? [`${v.name}${c.josa(v.name, '이', '가')} 쓰러진 자리다. 땅이 깊게 패이고, 거대한 비늘 조각이 여기저기 흩어져 있다.`]
+      : [`${v.name}${c.josa(v.name, '이', '가')} 휩쓸고 지나간 자리다. 부러진 나무와 갈라진 땅이 끝없이 이어진다.`],
+    choices: [
+      { label: '잔해를 뒤진다', run: (h, c) => {
+        const loot = REGION_LOOT[c.region] || { uncommon: ['sharp_fang'] };
+        const id1 = pick(loot.uncommon), id2 = Math.random() < 0.35 ? pick(loot.rare || loot.uncommon) : pick(loot.uncommon);
+        const g = randInt(10, 30);
+        h.give(id1); h.give(id2); h.gold(g);
+        h.say(`잔해 속에서 ${ITEMS[id1].name}, ${ITEMS[id2].name}${h.josa(ITEMS[id2].name, '과', '와')} 금화 ${g}닢을 찾아냈다.`);
+      } },
+      { label: '고개를 숙이고 지나간다', run: (h) => { h.fame(1); h.mind(10); h.say('맞서 싸운 드래곤들을 떠올리며 잠시 머리를 숙였다. (정신 +10)'); } },
+    ],
+  },
+  {
+    id: 'old_nest_letter',
+    title: '옛 둥지를 그리워하는 아이',
+    when: ['wake'],
+    weight: 4,
+    cond: (c) => c.humans.some((x) => x.data.adoptedFrom && x.data.adoptedFromId),
+    setup: (c) => { const k = c.pick(c.humans.filter((x) => x.data.adoptedFrom && x.data.adoptedFromId)); return { id: k.id, from: k.data.adoptedFrom, fromId: k.data.adoptedFromId }; },
+    text: (c, v) => { const k = c.k(v.id); return [`${k.name}${c.josa(k.name, '이', '가')} 둥지 가장자리에 앉아 먼 하늘을 바라보고 있다.`, `"${v.from}… 잘 지낼까?"`]; },
+    choices: [
+      { label: '텔레파시로 소식을 전해 준다', run: (h, c, v) => {
+        const k = c.k(v.id); h.bond(k, 8);
+        h.notify(v.fromId, `${c.me}의 둥지에서 지내는 ${k.name}${c.josa(k.name, '이', '가')} 잘 지낸다는 소식이 마음에 닿았다. "보고 싶어요."`, '옛 식구의 소식');
+        h.say(`${v.from}에게 ${k.name}의 소식을 전했다. ${h.name(k)} 환하게 웃었다. (유대 +8)`);
+      } },
+      { label: '새 둥지에 마음을 붙이게 한다', run: (h, c, v) => {
+        const k = c.k(v.id); h.bond(k, 4);
+        h.say(`날개로 감싸 안고 새 둥지의 별자리를 하나하나 알려 주었다. (유대 +4)`);
+      } },
+      { label: '모른 척한다', run: (h, c, v) => { h.bond(c.k(v.id), -2); h.say('아이는 한참을 혼자 앉아 있었다. (유대 −2)'); } },
+    ],
+  },
+  // ── 동료와의 관계 ──
+  {
+    id: 'mentor_marks',
+    title: '스승의 흔적',
+    when: ['explore'],
+    weight: 4,
+    cond: (c) => !!c.ties.mentor,
+    setup: (c) => ({ id: c.ties.mentor.id, name: c.ties.mentor.name, xp: 20 + c.level * 4 }),
+    text: (c, v) => [
+      `바위 벽에 깊게 패인 발톱 자국이 줄지어 있다. 스승 ${v.name}의 것이다.`,
+      '자국마다 힘을 싣는 각도와 물러서는 발놀림이 그대로 남아 있다.',
+    ],
+    choices: [
+      { label: (c, v) => `자국을 따라 수련한다 (기력 8)`, need: (c) => (c.d.en < 8 ? '기력이 모자란다.' : null), run: (h, c, v) => {
+        h.en(-8); h.xp(v.xp);
+        h.say(`스승의 발놀림을 하나하나 따라 해 보았다. 해가 질 무렵에는 몸이 먼저 움직였다. (경험치 +${v.xp})`);
+      } },
+      { label: '옆에 내 발톱 자국을 남긴다', run: (h, c, v) => {
+        h.mind(8);
+        h.notify(v.id, `제자 ${c.me}${h.josa(c.me, '이', '가')} ${c.regionName}의 바위 벽, 당신의 발톱 자국 옆에 자기 자국을 나란히 새겨 두었다.`, '제자의 흔적');
+        h.say(`스승의 자국 옆에 내 자국을 새겼다. 언젠가 ${v.name}도 보게 될 것이다. (정신 +8)`);
+      } },
+      { label: '그냥 지나간다', run: (h, c, v) => h.say(`${v.name}의 자국을 한 번 쓸어 보고 날개를 폈다.`) },
+    ],
+  },
+  {
+    id: 'lover_gift',
+    title: '마음에 둔 선물',
+    when: ['gather'],
+    weight: 4,
+    cond: (c) => !!c.ties.heart,
+    setup: (c) => ({ id: c.ties.heart.id, name: c.ties.heart.name, bond: c.ties.heart.bond, item: c.pick(['silver_clover', 'wild_honey', 'glow_moss', 'deep_pearl', 'gold_ore', 'heartwood']) }),
+    text: (c, v) => {
+      const it = ITEMS[v.item].name;
+      return [`풀숲 사이에서 ${c.josa(it, '이', '가')} 반짝였다.`, `문득 ${v.name}의 얼굴이 떠오른다. ${v.bond === 'partner' ? '반려' : '연인'}에게 주면 좋아하지 않을까.`];
+    },
+    choices: [
+      { label: (c, v) => `${v.name}에게 보낸다`, run: (h, c, v) => {
+        h.send(v.id, [{ id: v.item, qty: 1 }], '오늘 찾은 거야. 네 생각이 나서.');
+        h.mind(10);
+        h.say(`${ITEMS[v.item].name}${h.josa(ITEMS[v.item].name, '을', '를')} 곱게 싸서 ${v.name}에게 보냈다. 생각만 해도 마음이 따뜻해진다. (정신 +10)`);
+      } },
+      { label: '보물더미에 간직한다', show: (c) => !!c.nest, run: (h, c, v) => {
+        h.hoardGive(v.item);
+        h.say(`언젠가 직접 건네려고 ${ITEMS[v.item].name}${h.josa(ITEMS[v.item].name, '을', '를')} 보물더미 깊숙이 넣어 두었다.`);
+      } },
+      { label: '내가 쓴다', run: (h, c, v) => { h.give(v.item); h.say(`${ITEMS[v.item].name}${h.josa(ITEMS[v.item].name, '을', '를')} 챙겼다. 조금 미안한 마음이 든다.`); } },
+    ],
+  },
+  {
+    id: 'nemesis_trap',
+    title: '원수의 덫',
+    when: ['explore', 'gather'],
+    weight: 5,
+    cond: (c) => c.ties.nemesis.some((x) => x.nest === c.region),
+    setup: (c) => { const n = c.pick(c.ties.nemesis.filter((x) => x.nest === c.region)); return { id: n.id, name: n.name, dmg: 8 + c.level }; },
+    text: (c, v) => [
+      `발밑에서 무언가 철컥 닫혔다. ${v.name}의 영역에 깔린 덫이다.`,
+      `쇠 이빨이 비늘 사이를 파고든다. (체력 −${v.dmg})`,
+      `덫 주변에 ${v.name}의 냄새가 짙게 배어 있다.`,
+    ],
+    choices: [
+      { label: '덫을 박살 내고 흔적을 남긴다', run: (h, c, v) => {
+        h.hp(-v.dmg - 5); h.fame(3);
+        h.notify(v.id, `${c.me}${h.josa(c.me, '이', '가')} 당신의 영역에 깔린 덫을 산산조각 내고, 그 자리에 발톱 자국을 남겼다.`, '원수');
+        h.say(`덫을 물어뜯어 부수고, 보란 듯이 발톱 자국을 남겼다. ${v.name}도 알게 될 것이다. (체력 −${v.dmg + 5}, 용족 명성 +3)`);
+      } },
+      { label: '조용히 빠져나온다', run: (h, c, v) => {
+        h.hp(-Math.ceil(v.dmg / 2));
+        h.say(`이를 악물고 덫을 벌려 다리를 빼냈다. 상처가 덜 벌어졌다. (체력 −${Math.ceil(v.dmg / 2)})`);
+      } },
+      { label: '부서진 쇠붙이를 챙긴다', run: (h, c, v) => {
+        h.hp(-v.dmg); h.give('bog_iron', 2);
+        h.say(`덫을 뜯어내 쓸 만한 쇠붙이를 챙겼다. 원수의 물건이라도 쇠는 쇠다. (체력 −${v.dmg}, 늪철 2개)`);
+      } },
+    ],
+  },
+  {
+    id: 'departed_news',
+    title: '바람에 실려 온 소식',
+    when: ['explore', 'wake'],
+    weight: 3,
+    cond: (c) => c.ties.departed.length > 0,
+    setup: (c) => { const x = c.pick(c.ties.departed); return { name: x.name, words: x.words, heir: !!x.heir, id: x.id }; },
+    text: (c, v) => [
+      `먼 하늘에서 낯익은 바람이 불어왔다. ${v.heir ? '내게 의지를 물려준 ' : '먼 여행을 떠난 '}${v.name}의 냄새가 실려 있다.`,
+      v.words ? `바람 속에서 그 말이 다시 들리는 듯하다. "${v.words}"` : '아무 말도 없지만, 어딘가에서 잘 지내고 있다는 것만은 알 수 있었다.',
+    ],
+    choices: [
+      { label: '바람에 대고 답한다', run: (h, c, v) => {
+        h.mind(15);
+        h.say(`"나도 잘 지내고 있어." 바람은 그 말을 싣고 ${v.name}에게로 흘러갔다. (정신 +15)`);
+      } },
+      { label: '바람이 떨어뜨린 것을 줍는다', run: (h, c, v) => {
+        const id = Math.random() < 0.35 ? 'ancient_relic' : pick(['silver_clover', 'rune_stone', 'old_scroll', 'travel_map']);
+        h.give(id);
+        h.say(`바람이 지나간 자리에 ${ITEMS[id].name}${h.josa(ITEMS[id].name, '이', '가')} 놓여 있었다. 먼 곳에서 보낸 선물 같다.`);
+      } },
+    ],
+  },
+
+  // ── 식구: 입양 보낸 아이, 여럿의 다툼, 독립 ──
+  {
+    id: 'adopted_letter',
+    title: '먼 둥지에서 온 안부',
+    when: ['wake', 'explore'],
+    weight: 4,
+    cond: (c) => c.ties.adoptedOut.some((x) => x.status === 'home'),
+    setup: (c) => { const k = c.pick(c.ties.adoptedOut.filter((x) => x.status === 'home')); return { name: k.name, type: k.type, owner: k.owner, ownerId: k.owner_id, stage: c.stage(k) }; },
+    text: (c, v) => v.type === 'human'
+      ? [`${v.owner}의 둥지로 보낸 ${v.name}에게서 편지가 왔다.`, `삐뚤빼뚤한 글씨로 "잘 먹고 잘 자요. 가끔 보고 싶어요." 라고 적혀 있다. 어느새 '${v.stage}'${c.josa(v.stage, '이', '가')} 되었다고 한다.`]
+      : [`${v.owner}의 둥지로 보낸 ${v.name}${c.josa(v.name, '이', '가')} 반짝이는 비늘 한 조각을 바람에 실어 보냈다.`, `벌써 '${v.stage}'${c.josa(v.stage, '이', '가')} 되었다고 한다. 비늘에서 익숙한 온기가 느껴진다.`],
+    choices: [
+      { label: '답장을 보낸다', run: (h, c, v) => {
+        h.mind(10);
+        h.notify(v.ownerId, `${c.me}${h.josa(c.me, '이', '가')} ${v.name}에게 답장을 보내왔다. "잘 지내라. 언제나 응원하고 있다."`, '먼 둥지의 안부');
+        h.say(`${v.name}에게 짧은 답장을 써서 ${v.owner}의 둥지로 보냈다. (정신 +10)`);
+      } },
+      { label: '소중히 간직한다', run: (h, c, v) => {
+        h.mind(5);
+        if (c.nest) h.hoardGive('kin_letter'); else h.give('kin_letter');
+        h.say(`${v.type === 'human' ? '편지를' : '비늘을'} ${c.nest ? '보물더미 한쪽에' : '품속 깊이'} 넣어 두었다. (정신 +5, 먼 둥지의 편지)`);
+      } },
+    ],
+  },
+  {
+    id: 'kin_squabble',
+    title: '셋이 모이면',
+    when: ['wake', 'explore'],
+    weight: 3,
+    cond: (c) => c.grown.length >= 3,
+    setup: (c) => { const [a, b, m] = [...c.grown].sort(() => Math.random() - 0.5); return { a: a.id, b: b.id, m: m.id, what: c.pick(['둥지의 가장 높은 자리', '마지막 남은 꿀단지', '반짝이는 조약돌', '이야기를 먼저 들을 차례']) }; },
+    text: (c, v) => {
+      const a = c.k(v.a), b = c.k(v.b), m = c.k(v.m);
+      return [`${a.name}${c.josa(a.name, '과', '와')} ${b.name}${c.josa(b.name, '이', '가')} ${v.what}${c.josa(v.what, '을', '를')} 두고 다투고 있다.`, `${m.name}${c.josa(m.name, '은', '는')} 어쩔 줄 몰라 둘 사이를 오간다. 모두의 눈이 나를 향했다.`];
+    },
+    choices: [
+      { label: (c, v) => `${c.k(v.a).name} 편을 든다`, run: (h, c, v) => {
+        const a = c.k(v.a), b = c.k(v.b);
+        h.bond(a, 8); h.bond(b, -6);
+        if (a.type === 'drake') h.nudge(a, 'hostile', 1); else h.lean(a, 'guard', 2);
+        h.say(`${h.name(a)} 의기양양하게 꼬리를 세웠다. ${b.name}${h.josa(b.name, '은', '는')} 구석에서 토라졌다. (${a.name} 유대 +8, ${b.name} 유대 −6)`);
+      } },
+      { label: (c, v) => `${c.k(v.b).name} 편을 든다`, run: (h, c, v) => {
+        const a = c.k(v.a), b = c.k(v.b);
+        h.bond(b, 8); h.bond(a, -6);
+        if (b.type === 'drake') h.nudge(b, 'hostile', 1); else h.lean(b, 'guard', 2);
+        h.say(`${h.name(b)} 의기양양하게 가슴을 폈다. ${a.name}${h.josa(a.name, '은', '는')} 구석에서 토라졌다. (${b.name} 유대 +8, ${a.name} 유대 −6)`);
+      } },
+      { label: (c, v) => `${c.k(v.m).name}에게 정하게 한다`, run: (h, c, v) => {
+        const a = c.k(v.a), b = c.k(v.b), m = c.k(v.m);
+        h.bond(m, 6); h.bond(a, 2); h.bond(b, 2);
+        if (m.type === 'drake') h.nudge(m, 'friendly', 1); else h.lean(m, 'herbalist', 2);
+        h.say(`${h.name(m)} 한참 고민하더니 똑같이 나누자고 했다. 둘은 머쓱하게 웃었다. (${m.name} 유대 +6, 둘 유대 +2)`);
+      } },
+      { label: '셋을 모아 화해시킨다 (기력 6)', need: (c) => (c.d.en < 6 ? '기력이 모자란다.' : null), run: (h, c, v) => {
+        const a = c.k(v.a), b = c.k(v.b), m = c.k(v.m);
+        h.en(-6); h.mind(5);
+        for (const k of [a, b, m]) h.bond(k, 4);
+        h.say('셋을 날개 아래 모아 놓고 오래된 이야기를 들려주었다. 이야기가 끝날 즈음엔 서로 기대어 잠들어 있었다. (모두 유대 +4, 정신 +5)');
+      } },
+    ],
+  },
+  {
+    id: 'kin_leaving',
+    title: '둥지를 떠나고 싶은 마음',
+    when: ['wake'],
+    weight: 4,
+    // 갈 길을 정한 어른 인간, 또는 독립할 때가 된 새끼. 한 번 붙잡으면 이틀은 다시 묻지 않음
+    cond: (c) => c.grown.some((k) => !k.data.onExp && (!k.data.stayAsk || c.now - k.data.stayAsk > 2 * 864e5)
+      && (k.type === 'human' ? !!k.data.path && c.age(k) >= 11 : c.age(k) >= 18)),
+    setup: (c) => ({ id: c.pick(c.grown.filter((k) => !k.data.onExp && (!k.data.stayAsk || c.now - k.data.stayAsk > 2 * 864e5)
+      && (k.type === 'human' ? !!k.data.path && c.age(k) >= 11 : c.age(k) >= 18))).id }),
+    text: (c, v) => {
+      const k = c.k(v.id);
+      return k.type === 'human'
+        ? [`${k.name}${c.josa(k.name, '이', '가')} 둥지 입구에 앉아 멀리 인간 마을의 불빛을 바라보고 있다.`, '"이제… 저도 저 아래에서 제 힘으로 살아 보고 싶어요."']
+        : [`${k.name}${c.josa(k.name, '이', '가')} 둥지 끝에 서서 날개를 활짝 편 채 먼 하늘을 바라보고 있다.`, '이제 이 둥지는 그 날개에 비해 너무 작아 보인다.'];
+    },
+    choices: [
+      { label: '등을 떠밀어 보내 준다', run: (h, c, v) => {
+        const k = c.k(v.id);
+        if (k.type === 'drake') h.free(k);
+        else {
+          const t = k.data.town || h.nearestTown();
+          h.rep(t, 15); h.fame(2); h.leave(k, 'returned');
+          h.say(`${h.name(k)} 몇 번이고 뒤돌아보며 손을 흔들었다. ${REGIONS[t].name}에서 새 삶을 꾸릴 것이다.`, `${REGIONS[t].name} 평판 +15, 용족 명성 +2`);
+        }
+        h.mind(8); h.count('sendoff');
+        h.say('둥지가 조금 넓어졌다. 허전하지만 자랑스럽다. (정신 +8)');
+      } },
+      { label: '조금만 더 곁에 있어 달라고 한다', run: (h, c, v) => {
+        const k = c.k(v.id);
+        k.data.stayAsk = c.now; h.bond(k, 8); h.mind(4);
+        h.say(`${h.name(k)} 잠시 망설이다 고개를 끄덕였다. "조금만 더요." (유대 +8, 정신 +4)`);
+      } },
+    ],
+  },
+
+  // ── 밤하늘과 안개 ──
+  {
+    id: 'meteor_shower',
+    title: '유성우의 밤',
+    when: ['explore', 'wake'],
+    weight: 5,
+    cond: (c) => c.weather === 'clear' && (c.hour >= 20 || c.hour < 5),
+    text: () => ['맑은 밤하늘에 별똥별이 쏟아지기 시작했다.', '하나, 둘… 셀 수 없이 많은 빛줄기가 지평선 너머로 떨어진다.'],
+    choices: [
+      { label: '떨어진 별조각을 찾아 나선다 (기력 6)', need: (c) => (c.d.en < 6 ? '기력이 모자란다.' : null), run: (h, c) => {
+        h.en(-6);
+        if (Math.random() < 0.65) { h.give('star_shard'); h.say('식어 가는 구덩이 한가운데서 희미하게 빛나는 별조각을 찾았다. (별조각)'); }
+        else { h.give('rune_stone'); h.say('밤새 헤맸지만 찾은 건 그을린 돌멩이뿐이었다. 그래도 하늘은 아름다웠다.'); }
+      } },
+      { label: '소원을 빈다', run: (h, c) => {
+        const r = Math.random();
+        if (r < 0.4) { h.mind(20); h.say('조용히 눈을 감고 소원을 빌었다. 마음이 맑게 갠다. (정신 +20)'); }
+        else if (r < 0.7) { h.buff('lucky', 60); h.say('별똥별 하나가 유난히 가까이 떨어졌다. 좋은 일이 생길 것 같다. (행운 60분)'); }
+        else { h.hp(30); h.en(15); h.say('별빛을 받으며 소원을 빌자 몸 깊은 곳까지 따뜻해졌다. (체력 +30, 기력 +15)'); }
+      } },
+      { label: (c) => `${c.ties.heart?.name || '연인'}에게 함께 보자고 한다`, show: (c) => !!c.ties.heart, run: (h, c) => {
+        const t = c.ties.heart;
+        h.mind(15);
+        h.notify(t.id, `${c.me}${h.josa(c.me, '이', '가')} ${c.regionName}의 밤하늘에 유성우가 쏟아진다며, 같이 보고 싶다고 전해 왔다.`, '유성우의 밤');
+        h.say(`${t.name}에게 별이 쏟아진다고 전했다. 같은 하늘 아래 있다는 것만으로도 충분하다. (정신 +15)`);
+      } },
+    ],
+  },
+  {
+    id: 'fog_merchant',
+    title: '안개 속의 상인',
+    when: ['explore'],
+    weight: 5,
+    cond: (c) => c.weather === 'fog',
+    setup: () => {
+      const id = pick(['ancient_relic', 'eternal_ice', 'heartwood', 'bog_pearl', 'sun_stone', 'deep_pearl', 'fire_crystal', 'star_shard']);
+      return { item: id, price: Math.round(ITEMS[id].value * (0.5 + Math.random() * 0.4)), fake: Math.random() < 0.3 };
+    },
+    text: (c, v) => [
+      '짙은 안개 속에서 등불 하나가 흔들리며 다가왔다. 얼굴이 보이지 않는 상인이다.',
+      `"귀한 ${ITEMS[v.item].name}${c.josa(ITEMS[v.item].name, '이', '가')} 있소. 금화 ${v.price}닢이면 드리지. …아니면, 금화 대신 기억 한 조각을 주시겠소?"`,
+    ],
+    choices: [
+      { label: (c, v) => `금화 ${v.price}닢에 산다`, need: (c, v) => (c.d.gold < v.price ? '금화가 모자란다.' : null), run: (h, c, v) => {
+        h.gold(-v.price);
+        if (v.fake) { h.give('rune_stone'); h.say('물건을 받아 드는 순간 안개가 걷혔다. 손에 남은 것은 평범한 돌멩이였다. 상인은 어디에도 없다.'); }
+        else { h.give(v.item); h.say(`금화를 건네자 상인은 ${ITEMS[v.item].name}${h.josa(ITEMS[v.item].name, '을', '를')} 내밀고 안개 속으로 사라졌다.`); }
+      } },
+      { label: '기억 한 조각을 내준다 (정신 −20)', need: (c) => ((c.d.mind ?? 100) < 25 ? '정신이 너무 흐려 내줄 기억이 없다.' : null), run: (h, c, v) => {
+        h.mind(-20); h.give(v.item);
+        h.say(`상인이 이마에 손을 얹자, 어떤 하루가 통째로 흐릿해졌다. 손에는 진짜 ${ITEMS[v.item].name}${h.josa(ITEMS[v.item].name, '이', '가')} 들려 있었다. (정신 −20)`);
+      } },
+      { label: '등불을 피해 지나간다', run: (h) => h.say('등불은 한동안 뒤를 따라오다가, 안개 속으로 스르르 꺼졌다.') },
+    ],
+  },
+  // ── 식구: 자라는 순간들 ──
+  {
+    id: 'egg_stir',
+    title: '알 속의 두근거림',
+    when: ['wake'],
+    weight: 5,
+    cond: (c) => c.eggs.some((x) => x.data.incubateAt && !x.data.stirred),
+    setup: (c) => { const k = c.pick(c.eggs.filter((x) => x.data.incubateAt && !x.data.stirred)); return { id: k.id, need: KIN.eggNeeds[k.data.kind], stat: bestStat(k.data.kind) }; },
+    text: (c, v) => { const k = c.k(v.id); return [`품고 있던 ${KINDS[k.data.kind].name}의 알이 톡, 톡 흔들렸다.`, '껍질 너머에서 작은 심장 소리가 들린다. 곧 세상에 나올 모양이다.']; },
+    choices: [
+      { label: '노래를 불러 준다', run: (h, c, v) => {
+        const k = c.k(v.id); k.data.stirred = true; k.data.preBond = 15;
+        h.mind(5);
+        h.say('낮게 울리는 용의 노래를 불러 주자, 흔들림이 잦아들며 알이 따뜻해졌다.', '깨어나면 처음부터 나를 잘 따를 것이다. (깨어날 때 유대 +15, 정신 +5)');
+      } },
+      { label: (c, v) => `${ITEMS[v.need].name}${c.josa(ITEMS[v.need].name, '을', '를')} 곁에 더 놓아 준다`, need: (c, v) => (c.have(v.need) < 1 ? `${ITEMS[v.need].name}${c.josa(ITEMS[v.need].name, '이', '가')} 없다.` : null), run: (h, c, v) => {
+        const k = c.k(v.id); k.data.stirred = true; k.data.preStat = v.stat;
+        h.take(v.need);
+        h.say(`${ITEMS[v.need].name}의 기운이 껍질 속으로 스며들었다.`, `깨어나면 ${statName(v.stat)}${h.josa(statName(v.stat), '이', '가')} 남다를 것이다. (깨어날 때 ${statName(v.stat)} +1)`);
+      } },
+      { label: '조용히 지켜본다', run: (h, c, v) => { c.k(v.id).data.stirred = true; h.say('알은 한참 흔들리다 다시 잠잠해졌다.'); } },
+    ],
+  },
+  {
+    id: 'hatchling_spark',
+    title: '해츨링의 첫 불씨',
+    when: ['wake', 'explore'],
+    weight: 4,
+    cond: (c) => !!c.nest && c.drakes.some((x) => c.stage(x) === '해츨링' && !x.data.sparked),
+    setup: (c) => ({ id: c.pick(c.drakes.filter((x) => c.stage(x) === '해츨링' && !x.data.sparked)).id }),
+    text: (c, v) => { const k = c.k(v.id); return [`${k.name}${c.josa(k.name, '이', '가')} 에취! 하고 재채기를 하자 작은 불씨가 튀었다.`, '불씨가 보물더미 위로 떨어져 금화 몇 닢이 그을렸다. 새끼는 놀라 눈만 끔뻑인다.']; },
+    choices: [
+      { label: '웃어넘긴다', run: (h, c, v) => { const k = c.k(v.id); k.data.sparked = true; h.bond(k, 6); h.say(`${h.name(k)} 안심한 듯 꼬리를 흔들며 품으로 파고들었다. (유대 +6)`); } },
+      { label: '숨결 다루는 법을 가르친다', run: (h, c, v) => {
+        const k = c.k(v.id); k.data.sparked = true; h.train(k, 'wisdom'); h.bond(k, -2);
+        h.say(`숨을 고르고 불씨를 모으는 법을 엄하게 가르쳤다. ${h.name(k)} 시무룩하지만 제법 따라 한다. (지혜 +1, 유대 −2)`);
+      } },
+    ],
+  },
+  {
+    id: 'first_word',
+    title: '첫 마디',
+    when: ['wake'],
+    weight: 5,
+    cond: (c) => c.humans.some((x) => c.stage(x) === '아기' && !x.data.firstWord),
+    setup: (c) => ({ id: c.pick(c.humans.filter((x) => c.stage(x) === '아기' && !x.data.firstWord)).id }),
+    text: (c, v) => { const k = c.k(v.id); return [`${k.name}${c.josa(k.name, '이', '가')} 옹알이를 하다 나를 똑바로 올려다보았다.`, '작은 입술이 달싹인다. 무언가 말하려는 것 같다. 어떤 말을 들려줄까?']; },
+    choices: [
+      { label: '"꽃"을 들려준다', run: (h, c, v) => { const k = c.k(v.id); k.data.firstWord = '꽃'; h.bond(k, 6); h.lean(k, 'herbalist', 2); h.say(`"꼬…꽃!" ${h.name(k)} 둥지 가장자리의 들꽃을 가리키며 까르르 웃었다. (유대 +6, 약초꾼 쪽으로)`); } },
+      { label: '"불"을 들려준다', run: (h, c, v) => { const k = c.k(v.id); k.data.firstWord = '불'; h.bond(k, 6); h.lean(k, 'smith', 2); h.say(`"부…불!" ${h.name(k)} 내 숨결의 불빛을 보며 손뼉을 쳤다. (유대 +6, 대장장이 쪽으로)`); } },
+      { label: '"용"을 들려준다', run: (h, c, v) => { const k = c.k(v.id); k.data.firstWord = '용'; h.bond(k, 8); h.lean(k, 'guard', 2); h.say(`"요…용!" ${h.name(k)} 내 발톱을 꼭 붙잡았다. 처음 한 말이 나라니. (유대 +8, 파수꾼 쪽으로)`); } },
+    ],
+  },
+  {
+    id: 'nightmare',
+    title: '악몽 꾸는 밤',
+    when: ['wake'],
+    weight: 5,
+    cond: (c) => (c.hour >= 21 || c.hour < 5) && c.humans.some((x) => ['아이', '소년'].includes(c.stage(x))),
+    setup: (c) => ({ id: c.pick(c.humans.filter((x) => ['아이', '소년'].includes(c.stage(x)))).id }),
+    text: (c, v) => { const k = c.k(v.id); return [`한밤중, ${k.name}${c.josa(k.name, '이', '가')} 울먹이며 잠에서 깼다.`, '"무서운 꿈을 꿨어요… 커다란 그림자가 쫓아왔어요."']; },
+    choices: [
+      { label: '날개로 감싸고 자장가를 불러 준다', run: (h, c, v) => { const k = c.k(v.id); h.bond(k, 7); h.mind(8); h.say(`날개 아래에서 노래를 듣던 ${h.name(k)} 이내 새근새근 잠들었다. 나도 마음이 편안해진다. (유대 +7, 정신 +8)`); } },
+      { label: '그림자를 쫓아내는 이야기를 해 준다', run: (h, c, v) => { const k = c.k(v.id); h.bond(k, 5); h.lean(k, 'guard', 2); h.say(`"그림자가 오면 내가 불을 뿜어 줄게." ${h.name(k)} 주먹을 꼭 쥐고 다시 누웠다. (유대 +5, 파수꾼 쪽으로)`); } },
+      { label: '혼자 이겨 내도록 둔다', run: (h, c, v) => { const k = c.k(v.id); h.bond(k, -2); h.lean(k, 'guard', 1); h.say(`${h.name(k)} 한참을 뒤척이다 혼자 잠들었다. 조금 더 단단해졌을지도 모른다. (유대 −2)`); } },
+    ],
+  },
+  {
+    id: 'runaway_kid',
+    title: '사라진 아이',
+    when: ['wake'],
+    weight: 4,
+    cond: (c) => c.humans.some((x) => c.stage(x) === '소년' && !x.data.onExp && ready(x.data.ranAt, D3)),
+    setup: (c) => ({ id: c.pick(c.humans.filter((x) => c.stage(x) === '소년' && !x.data.onExp && ready(x.data.ranAt, D3))).id }),
+    text: (c, v) => { const k = c.k(v.id); return [`깨어나 보니 ${k.name}의 자리가 비어 있다.`, '둥지 밖으로 작은 발자국이 이어진다. 한쪽은 숲으로, 한쪽은 마을 쪽으로 흐려져 있다.']; },
+    choices: [
+      { label: '숲 쪽을 찾아본다 (기력 8)', need: (c) => (c.d.en < 8 ? '기력이 모자란다.' : null), run: (h, c, v) => {
+        const k = c.k(v.id); k.data.ranAt = c.now; h.en(-8); h.bond(k, 8); h.lean(k, 'guard', 2);
+        h.say(`덤불 속 커다란 바위 위에서 ${h.name(k)} 막대기를 들고 '용사 놀이'를 하고 있었다. 혼날 줄 알고 움찔했지만, 등에 태워 돌아오는 내내 신이 나 있었다. (유대 +8, 파수꾼 쪽으로)`);
+      } },
+      { label: '마을 쪽을 찾아본다 (기력 8)', need: (c) => (c.d.en < 8 ? '기력이 모자란다.' : null), run: (h, c, v) => {
+        const k = c.k(v.id); k.data.ranAt = c.now; h.en(-8); h.bond(k, 6); h.lean(k, 'herbalist', 2);
+        const t = h.nearestTown(); h.rep(t, 3);
+        h.say(`마을 어귀 약초 가게 앞에서 ${h.name(k)} 할머니에게 풀 이름을 배우고 있었다. 할머니는 아이를 잘 키웠다며 고개를 숙였다. (유대 +6, 약초꾼 쪽으로, ${REGIONS[t].name} 평판 +3)`);
+      } },
+      { label: '돌아올 때까지 기다린다', run: (h, c, v) => {
+        const k = c.k(v.id); k.data.ranAt = c.now;
+        if (Math.random() < 0.6) { h.give('brass_button'); h.bond(k, 2); h.say(`해 질 녘, ${h.name(k)} 주머니 가득 반짝이는 단추를 들고 돌아왔다. "선물이에요!" (유대 +2, 낡은 놋쇠 단추)`); }
+        else { h.bond(k, -5); h.say(`밤이 깊어서야 ${h.name(k)} 무릎이 까진 채 절뚝이며 돌아왔다. 왜 찾으러 오지 않았냐는 눈빛이다. (유대 −5)`); }
+      } },
+    ],
+  },
+  {
+    id: 'first_love',
+    title: '청년의 첫사랑',
+    when: ['wake', 'explore'],
+    weight: 3,
+    cond: (c) => c.humans.some((x) => c.stage(x) === '청년' && !x.data.firstLove),
+    setup: (c) => ({ id: c.pick(c.humans.filter((x) => c.stage(x) === '청년' && !x.data.firstLove)).id, other: c.pick(['리라', '한별', '에린', '도윤', '마루', '시아']) }),
+    text: (c, v) => { const k = c.k(v.id); return [`요즘 ${k.name}${c.josa(k.name, '이', '가')} 자꾸 마을 쪽 하늘만 바라본다.`, `마을에 사는 ${v.other}${c.josa(v.other, '과', '와')} 강가에서 몰래 만난다는 걸 알게 되었다. 들킨 줄 알자 얼굴이 새빨개졌다.`]; },
+    choices: [
+      { label: '만나러 가도 된다고 한다', run: (h, c, v) => {
+        const k = c.k(v.id); k.data.firstLove = v.other; const t = k.data.town || h.nearestTown();
+        h.bond(k, 8); h.rep(t, 8);
+        h.say(`${h.name(k)} 환하게 웃으며 마을로 달려갔다. 용이 키운 아이가 착하다는 소문이 ${REGIONS[t].name}에 돌았다. (유대 +8, ${REGIONS[t].name} 평판 +8)`);
+      } },
+      { label: '직접 만나 보겠다고 한다', run: (h, c, v) => {
+        const k = c.k(v.id); k.data.firstLove = v.other; const t = k.data.town || h.nearestTown();
+        h.bond(k, 3); h.rep(t, 3); h.fame(1);
+        h.say(`강가에 내려앉자 ${v.other}${h.josa(v.other, '은', '는')} 하얗게 질렸다가, 떨리는 목소리로 인사를 건넸다. 제법 용감한 아이다. (유대 +3, 평판 +3, 명성 +1)`);
+      } },
+      { label: '만나지 말라고 한다', run: (h, c, v) => {
+        const k = c.k(v.id); k.data.firstLove = '-'; h.bond(k, -8);
+        h.say(`${h.name(k)} 아무 말 없이 등을 돌렸다. 며칠 동안 눈을 마주치지 않을 것 같다. (유대 −8)`);
+      } },
+    ],
+  },
+  {
+    id: 'talent_show',
+    title: '재주 자랑',
+    when: ['wake'],
+    weight: 4,
+    cond: (c) => c.humans.some((x) => x.data.talent && !x.data.onExp && ready(x.data.showAt, D3)),
+    setup: (c) => {
+      const k = c.pick(c.humans.filter((x) => x.data.talent && !x.data.onExp && ready(x.data.showAt, D3)));
+      const item = { herbalist: pick(['silver_clover', 'glow_moss', 'honey_salve']), smith: pick(['fang_necklace', 'rune_charm', 'scout_knot', 'horn_tailring']), guard: 'thorn_trap' }[k.data.talent];
+      return { id: k.id, item };
+    },
+    text: (c, v) => {
+      const k = c.k(v.id), it = ITEMS[v.item].name;
+      return {
+        herbalist: [`${k.name}${c.josa(k.name, '이', '가')} 이슬 젖은 바구니를 들고 돌아왔다.`, `"새벽에 산 너머까지 다녀왔어요!" 바구니 맨 위에 ${it}${c.josa(it, '이', '가')} 놓여 있다.`],
+        smith: [`${k.name}${c.josa(k.name, '이', '가')} 그을음투성이 얼굴로 무언가를 내밀었다.`, `"밤새 두드려 만들었어요. 받아 주실래요?" 손에 ${it}${c.josa(it, '이', '가')} 들려 있다.`],
+        guard: [`${k.name}${c.josa(k.name, '이', '가')} 둥지 아래 길목을 가리켰다.`, '"어젯밤 수상한 놈들이 기웃거리길래 쫓아냈어요. 다시는 못 오게 가시 덫도 하나 만들어 뒀어요."'],
+      }[k.data.talent];
+    },
+    choices: [
+      { label: '크게 칭찬하고 받는다', run: (h, c, v) => {
+        const k = c.k(v.id); k.data.showAt = c.now; h.bond(k, 6); h.give(v.item);
+        h.say(`${h.name(k)} 어깨를 으쓱하며 뿌듯해했다. (유대 +6, ${ITEMS[v.item].name})`);
+      } },
+      { label: '마을에 내다 팔게 한다', run: (h, c, v) => {
+        const k = c.k(v.id); k.data.showAt = c.now; const g = Math.max(8, Math.round(ITEMS[v.item].value * 0.8)); const t = k.data.town || h.nearestTown();
+        h.gold(g); h.rep(t, 3); h.bond(k, 2);
+        h.say(`${h.name(k)} 마을에서 제값을 받아 왔다. 솜씨 좋은 아이라는 칭찬도 함께. (금화 +${g}, ${REGIONS[t].name} 평판 +3, 유대 +2)`);
+      } },
+    ],
+  },
+  {
+    id: 'elder_wish',
+    title: '노년의 마지막 소원',
+    when: ['wake'],
+    weight: 5,
+    cond: (c) => c.humans.some((x) => c.stage(x) === '노년' && !x.data.lastWish),
+    setup: (c) => { const k = c.pick(c.humans.filter((x) => c.stage(x) === '노년' && !x.data.lastWish)); return { id: k.id, town: k.data.town || null }; },
+    text: (c, v) => { const k = c.k(v.id); const home = v.town && REGIONS[v.town] ? REGIONS[v.town].name : '마을'; return [`허리가 굽은 ${k.name}${c.josa(k.name, '이', '가')} 둥지 끝에 앉아 먼 곳을 바라본다.`, `"죽기 전에… 제가 태어난 ${home}${c.josa(home, '을', '를')} 한 번만 더 보고 싶어요. 당신 등에 타고."`]; },
+    choices: [
+      { label: '등에 태워 다녀온다 (기력 15)', need: (c) => (c.d.en < 15 ? '기력이 모자란다.' : null), run: (h, c, v) => {
+        const k = c.k(v.id); k.data.lastWish = 'went'; h.en(-15); h.bond(k, 15); h.mind(20);
+        if (c.nest) h.hoardGive('elder_keepsake'); else h.give('elder_keepsake');
+        h.say(`바람을 가르며 날아가는 동안 ${h.name(k)} 어린아이처럼 웃었다. 옛 골목을 내려다보며 오래오래 눈을 감았다.`, `돌아오는 길, 고향 강가에서 주운 조약돌을 손에 쥐여 주었다. "고마워요. 정말로." (유대 +15, 정신 +20, 고향의 조약돌)`);
+      } },
+      { label: '대신 옛이야기를 들어 준다', run: (h, c, v) => {
+        const k = c.k(v.id); k.data.lastWish = 'told'; h.bond(k, 6); h.mind(6);
+        h.say(`${h.name(k)} 고향 이야기를 밤새 들려주었다. 이야기만으로도 그곳에 다녀온 것 같다고 웃었다. (유대 +6, 정신 +6)`);
+      } },
+      { label: '너무 멀다고 거절한다', run: (h, c, v) => { const k = c.k(v.id); k.data.lastWish = 'no'; h.bond(k, -6); h.say(`"…그렇지요. 괜한 말을 했네요." ${h.name(k)} 쓸쓸하게 웃었다. (유대 −6)`); } },
+    ],
+  },
+  {
+    id: 'molting',
+    title: '비늘 갈이',
+    when: ['wake', 'explore'],
+    weight: 4,
+    cond: (c) => c.drakes.some((x) => c.stage(x) === '어린 용' && !x.data.molted),
+    setup: (c) => { const k = c.pick(c.drakes.filter((x) => c.stage(x) === '어린 용' && !x.data.molted)); return { id: k.id, need: KIN.eggNeeds[k.data.kind] }; },
+    text: (c, v) => { const k = c.k(v.id); return [`${k.name}${c.josa(k.name, '이', '가')} 바위에 몸을 비비며 끙끙댄다. 낡은 비늘이 들뜨기 시작했다.`, '비늘 갈이다. 새 비늘이 단단히 자리 잡으려면 도움이 필요하다.']; },
+    choices: [
+      { label: (c, v) => `${ITEMS[v.need].name}${c.josa(ITEMS[v.need].name, '을', '를')} 갈아 발라 준다`, need: (c, v) => (c.have(v.need) < 1 ? `${ITEMS[v.need].name}${c.josa(ITEMS[v.need].name, '이', '가')} 없다.` : null), run: (h, c, v) => {
+        const k = c.k(v.id); k.data.molted = true; h.take(v.need); h.train(k, 'scale'); h.bond(k, 4);
+        h.say(`고향의 기운이 스며들자 새 비늘이 윤기 있게 돋아났다. (비늘 +1, 유대 +4)`);
+      } },
+      { label: '등을 긁어 준다 (기력 5)', need: (c) => (c.d.en < 5 ? '기력이 모자란다.' : null), run: (h, c, v) => {
+        const k = c.k(v.id); k.data.molted = true; h.en(-5); h.bond(k, 6);
+        h.say(`발톱 끝으로 들뜬 비늘을 살살 긁어 주자 ${h.name(k)} 눈을 가늘게 뜨고 그르렁거렸다. (유대 +6)`);
+      } },
+      { label: '스스로 견디게 둔다', run: (h, c, v) => { const k = c.k(v.id); k.data.molted = true; h.bond(k, -3); h.say(`${h.name(k)} 며칠을 가려움에 뒤척였다. (유대 −3)`); } },
+    ],
+  },
+  {
+    id: 'hunt_blunder',
+    title: '젊은 용의 사냥 실수',
+    when: ['wake'],
+    weight: 4,
+    cond: (c) => c.drakes.some((x) => c.stage(x) === '젊은 용' && !x.data.onExp && ready(x.data.blunderAt, D3)),
+    setup: (c) => ({ id: c.pick(c.drakes.filter((x) => c.stage(x) === '젊은 용' && !x.data.onExp && ready(x.data.blunderAt, D3))).id }),
+    text: (c, v) => { const k = c.k(v.id); return [`${k.name}${c.josa(k.name, '이', '가')} 의기양양하게 사냥감을 물고 돌아왔다.`, '…그런데 목에 방울이 달려 있다. 인간 마을의 양이다. 멀리서 목동의 고함이 들린다.']; },
+    choices: [
+      { label: '양값을 물어 주고 사과한다 (금화 15)', need: (c) => (c.d.gold < 15 ? '금화가 모자란다.' : null), run: (h, c, v) => {
+        const k = c.k(v.id); k.data.blunderAt = c.now; const t = h.nearestTown();
+        h.gold(-15); h.rep(t, 4); h.bond(k, -2);
+        h.say(`목동에게 금화를 건네고 고개를 숙였다. ${h.name(k)} 풀이 죽어 꼬리를 늘어뜨렸다. (금화 −15, ${REGIONS[t].name} 평판 +4, 유대 −2)`);
+      } },
+      { label: '직접 사과하게 한다', run: (h, c, v) => {
+        const k = c.k(v.id); k.data.blunderAt = c.now; const t = h.nearestTown();
+        h.rep(t, 2); h.bond(k, 2); h.nudge(k, 'friendly', 2);
+        h.say(`${h.name(k)} 머뭇거리며 목동 앞에 고개를 숙였다. 목동은 겁에 질렸지만, 이내 웃음을 터뜨렸다. (평판 +2, 유대 +2, 새끼 우호 쪽으로)`);
+      } },
+      { label: '훌륭한 사냥이라고 칭찬한다', run: (h, c, v) => {
+        const k = c.k(v.id); k.data.blunderAt = c.now; const t = h.nearestTown();
+        h.rep(t, -5); h.fame(2); h.bond(k, 5); h.nudge(k, 'hostile', 2);
+        h.say(`"잘했다." ${h.name(k)} 양을 뜯으며 으쓱했다. 마을에서는 용이 가축을 노린다는 소문이 돌 것이다. (평판 −5, 명성 +2, 유대 +5, 새끼 적대 쪽으로)`);
+      } },
+    ],
+  },
+  {
+    id: 'grown_return',
+    title: '독립한 새끼의 귀환',
+    when: ['wake', 'explore'],
+    weight: 3,
+    cond: (c) => c.gone.some((x) => ready(x.data.visitAt, D3)),
+    setup: (c) => {
+      const k = c.pick(c.gone.filter((x) => ready(x.data.visitAt, D3)));
+      const r = Math.random();
+      return { id: k.id, name: k.name, kind: k.data.kind, mode: r < 0.5 ? 'gift' : r < 0.75 ? 'egg' : 'help', item: KIN.eggNeeds[k.data.kind] || 'ancient_relic' };
+    },
+    text: (c, v) => {
+      const kn = KINDS[v.kind]?.name || '용';
+      const head = `커다란 그림자가 둥지 위를 맴돌다 내려앉았다. 다 자란 ${kn}, ${v.name}${c.josa(v.name, '이다', '다')}.`;
+      if (v.mode === 'gift') return [head, `발톱에 ${ITEMS[v.item].name}${c.josa(ITEMS[v.item].name, '을', '를')} 쥐고 있다. 머리를 내 어깨에 비비며 그르렁거린다.`];
+      if (v.mode === 'egg') return [head, '품에 작은 알 하나를 소중히 안고 있다. 자기 둥지에서 낳은 알을 보여 주러 온 것이다.'];
+      return [head, '옆구리에 화살이 박혀 있다. "용사냥꾼들이 내 둥지를 노려요. 도와줄 수 있나요?"'];
+    },
+    choices: [
+      { label: '반갑게 맞는다', show: (c, v) => v.mode !== 'help', run: (h, c, v) => {
+        const k = c.gone.find((x) => x.id === v.id); if (k) k.data.visitAt = c.now;
+        h.mind(12);
+        if (v.mode === 'gift') { h.give(v.item); h.say(`${v.name}${h.josa(v.name, '은', '는')} 선물을 내려놓고 하룻밤을 둥지에서 함께 보냈다. (정신 +12, ${ITEMS[v.item].name})`); }
+        else { h.fame(3); h.say(`알을 들여다보는 동안 가슴이 벅차올랐다. 내 계보가 이어지고 있다. 용족 사이에 소문이 퍼졌다. (정신 +12, 명성 +3)`); }
+      } },
+      { label: '함께 둥지를 지키러 간다 (체력 15, 기력 10)', show: (c, v) => v.mode === 'help', need: (c) => (c.d.en < 10 ? '기력이 모자란다.' : c.d.hp <= 15 ? '체력이 모자란다.' : null), run: (h, c, v) => {
+        const k = c.gone.find((x) => x.id === v.id); if (k) k.data.visitAt = c.now;
+        h.hp(-15); h.en(-10); h.fame(4); h.give('sharp_fang', 2);
+        h.say(`둘이 함께 포효하자 사냥꾼들은 무기를 버리고 달아났다. ${v.name}${h.josa(v.name, '이', '가')} 고개 숙여 고마움을 전했다. (체력 −15, 기력 −10, 명성 +4, 날카로운 송곳니 2)`);
+      } },
+      { label: '상처만 돌봐 주고 보낸다', show: (c, v) => v.mode === 'help', run: (h, c, v) => {
+        const k = c.gone.find((x) => x.id === v.id); if (k) k.data.visitAt = c.now;
+        h.en(-5); h.mind(3);
+        h.say(`화살을 뽑고 상처를 핥아 주었다. ${v.name}${h.josa(v.name, '은', '는')} 혼자 해 보겠다며 날아갔다. (기력 −5, 정신 +3)`);
+      } },
     ],
   },
 ];

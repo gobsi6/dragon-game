@@ -11,7 +11,7 @@ const db = require('./db');
 const {
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, CREATURES, RULES, SLOTS, RECIPES, SHOPS, repTier, TRADE, NEST,
   STANCE_RULES, FAME_TIERS, fameTier, KIN, TALENTS, TRAITS, TRAIT_EARN, TRAIT_COUNTS,
-  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, STATUS, CREATURE_COMBAT, MIND, PLACES, REGION_PLACES, PLACE_RULES, HOARD_TIERS, RAID, SEASONS, WEATHERS,
+  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, STATUS, CREATURE_COMBAT, MIND, PLACES, REGION_PLACES, PLACE_RULES, HOARD_TIERS, RAID, SEASONS, WEATHERS, DEPART,
 } = require('./game-data');
 const logic = require('./game-logic');
 const life = require('./game-life');
@@ -166,6 +166,10 @@ const meOf = (d) => ({
   nestTier: d.nest ? logic.nestInfo(d).tier : 0,
   maxKin: logic.maxKinOf(d),
   raid: logic.raidView(d),                 // 보물 도둑 (쫓을 수 있는 동안)
+  kinOffersIn: db.offersToCount(d.id),     // 받은 식구 입양 제안 수
+  heir: (() => { try { return d.heir ? JSON.parse(d.heir) : null; } catch { return null; } })(), // 이어받은 의지
+  love: (() => { const id = heartId(d.id); if (!id) return null; const o = online.get(id)?.dragon || db.getDragon(id); return o ? { id, name: o.name, bond: db.relBond(d.id, id), together: !!logic.hooks.together(d) } : null; })(),
+  partnerNest: logic.hooks.partnerNest(d),
   fame: { value: d.fame || 0, name: fameTier(d.fame || 0).name, majesty: fameTier(d.fame || 0).majesty },
   bounty: logic.hasBounty(d),
   event: pendingId(d),                // 선택을 기다리는 이벤트가 있는지
@@ -393,6 +397,49 @@ wxTicker.unref?.();
 
 // 대륙의 재앙: 모두가 함께 맞서는 거대한 적 (boss.js)
 const boss = require('./boss')({ io, db, online, logic, combat, arena, sendMe });
+// 이벤트가 볼 수 있게: 보물더미, 최근 재앙의 흔적
+logic.hooks.hoard = (id) => db.hoard(id);
+logic.hooks.bossTrace = (region) => boss.trace(region);
+// 관계: 연인·반려와 같은 지역에 함께 있는지 (둘 다 접속), 반려의 둥지
+const heartId = (id) => db.relByBond(id, 'partner')[0] || db.relByBond(id, 'lover')[0] || null;
+logic.hooks.together = (d) => {
+  const id = heartId(d.id);
+  const e = id && online.get(id);
+  return e && online.has(d.id) && e.dragon.region === d.region && !e.dragon.exp_end && !d.exp_end ? e.dragon.name : null;
+};
+logic.hooks.partnerNest = (d) => {
+  const id = db.relByBond(d.id, 'partner')[0];
+  if (!id) return null;
+  const e = online.get(id);
+  const p = e ? e.dragon : db.getDragon(id);
+  return p && !p.dead_at && p.nest ? { id, name: p.name, region: p.nest } : null;
+};
+// 관계 이벤트가 볼 수 있게: 스승·제자, 연인·반려, 원수, 동료, 먼 여행을 떠난 드래곤, 입양 보낸 식구
+logic.hooks.ties = (d) => {
+  const look = (id) => online.get(id)?.dragon || db.getDragon(id);
+  const fallenOf = (x) => { let f = x.fallen; if (typeof f === 'string') { try { f = JSON.parse(f); } catch { f = null; } } return f; };
+  const t = { mentor: null, students: [], heart: null, nemesis: [], friends: [], departed: [], adoptedOut: [] };
+  for (const r of db.relList(d.id)) {
+    const x = look(r.id);
+    if (!x) continue;
+    const one = { id: x.id, name: x.name, level: x.level, region: x.region, nest: x.nest };
+    if (x.dead_at) {
+      const f = fallenOf(x);
+      if (f?.departed && r.kind === 'friend') t.departed.push({ ...one, words: f.words || '', at: f.at });
+      continue;
+    }
+    if (r.kind === 'nemesis') t.nemesis.push(one);
+    if (r.kind !== 'friend') continue;
+    if (r.bond === 'mentor') t.mentor = one;
+    else if (r.bond === 'student') t.students.push(one);
+    else if (r.bond === 'partner' || (r.bond === 'lover' && !t.heart)) t.heart = { ...one, bond: r.bond };
+    else t.friends.push({ ...one, bond: r.bond });
+  }
+  // 의지를 물려준 드래곤도 먼 여행을 떠난 드래곤
+  try { const h = d.heir && JSON.parse(d.heir); if (h?.name) t.departed.push({ id: null, name: h.name, words: h.words || '', at: h.at, heir: true }); } catch {}
+  t.adoptedOut = db.kinAdoptedOut(d.id);
+  return t;
+};
 arena.setFall(death.fall);
 const FALLEN = '쓰러져 있다. 일어설지, 긴 잠에 들지 먼저 정해야 한다.';
 
@@ -449,6 +496,8 @@ io.on('connection', (socket) => {
   socket.emit('init', {
     me: { username: user.username, isGm: !!user.is_gm },
     dragon: dragon ? (logic.regen(dragon), meOf(dragon)) : null,
+    legacy: dragon ? null : db.legacyGet(user.id),   // 먼 여행을 떠난 드래곤이 남긴 의지 (새 드래곤에게)
+    departRules: DEPART,
     version: clientVersion(),
     kinds: KINDS,
     regions: REGIONS,
@@ -465,6 +514,7 @@ io.on('connection', (socket) => {
     death: { waitMs: require('./game-data').DEATH.waitMs, helpAp: require('./game-data').DEATH.helpAp, helpEn: require('./game-data').DEATH.helpEn },
     shops: Object.keys(SHOPS),
     trade: TRADE,
+    bonds: require('./game-data').BONDS, marks: require('./game-data').MARKS, bondRules: require('./game-data').BOND_RULES,
     nestRules: NEST, hoardTiers: HOARD_TIERS,
     seasons: SEASONS.map((x) => ({ id: x.id, name: x.name, desc: x.desc, prose: logic.fxProse(x.fx), ...logic.fxText(x.fx) })),
     weathers: Object.fromEntries(Object.entries(WEATHERS).map(([id, w]) => [id, { name: w.name, desc: w.desc, ...logic.fxText(w.fx) }])),
@@ -520,7 +570,17 @@ io.on('connection', (socket) => {
     const { hpMax, enMax } = derive(final);
     const created = db.createDragon(user.id, name, kind, KINDS[kind].home, final, hpMax, enMax);
     logic.chooseTraits(created, good, bad);
-    created.hp = logic.hpCap(created); created.en = logic.enCap(created);
+    created.hp = logic.hpCap(created); created.en = logic.enCap(created); created.ap = logic.apCap(created); // 처음엔 행동력도 가득
+    // 먼 여행을 떠난 드래곤의 의지: 능력치 포인트와 칭호
+    const legacy = db.legacyGet(user.id);
+    if (legacy) {
+      created.stat_pts = (created.stat_pts || 0) + (legacy.pts || 0);
+      logic.traitCount(created, 'heir');
+      logic.chron(created, 'mark', `먼 여행을 떠난 ${legacy.name}(레벨 ${legacy.level} ${KINDS[legacy.kind]?.name || ''})의 의지를 이어받았다. 능력치 포인트 +${legacy.pts}`);
+      created.heir = JSON.stringify(legacy);
+      db.setHeir(created.id, legacy);
+      db.legacySet(user.id, null);
+    }
     db.saveState(created);
     ack({ ok: true, dragon: meOf(created) });
     enterWorld(socket, created);
@@ -765,8 +825,9 @@ io.on('connection', (socket) => {
       const res = run(d, payload || {}, have, kin);
       if (res.error) return ack(res);
       // 이벤트가 다른 드래곤에게 남긴 소식 (라이벌 이벤트)
-      for (const t of res.tells || []) social.tellRival(t.id, t.text);
-      delete res.tells;
+      for (const t of res.tells || []) social.tellRival(t.id, t.text, t.title);
+      for (const g of res.sends || []) social.eventGift(d, g.id, g.items, g.msg); // 이벤트로 보낸 선물
+      delete res.tells; delete res.sends;
       // 지나온 이야기에 남길 선택·사건
       const cr = CHRON_ON[event];
       if (cr) { const [k, t] = cr(d, res, payload || {}) || []; if (t) logic.chron(d, k, t); }
@@ -882,6 +943,7 @@ io.on('connection', (socket) => {
         wards: { trap: logic.nestInfo(d).wards.trap || 0, stone: logic.nestInfo(d).wards.stone || 0 },
         raid: logic.raidView(d),
         guard: d.perks?.guard || null,
+        offers: social.kinOffers(d),            // 식구 입양 제안 (받은 것·보낸 것)
       },
     });
   });
@@ -1016,6 +1078,52 @@ io.on('connection', (socket) => {
     socket.data.kicked = true;
     ack({ ok: true });
     socket.disconnect(true);
+  });
+
+  // ── 먼 여행: 지금 드래곤은 대륙을 떠나고(기록은 남음), 같은 계정으로 새 드래곤을 만듦 ──
+  // 레벨 DEPART.minLevel 이상이면 새 드래곤에게 의지(능력치 포인트·칭호)를 이어 줌. 재산·둥지·식구는 함께 떠남
+  socket.on('dragon:depart', (payload, ack) => {
+    if (typeof ack !== 'function') ack = () => {};
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '떠날 드래곤이 없다.' });
+    const d = entry.dragon;
+    if (str(payload?.name) !== d.name) return ack({ error: `확인을 위해 드래곤 이름 '${d.name}'${josa(d.name, '을', '를')} 그대로 적어야 한다.` });
+    if (arena.inBattle(d.id)) return ack({ error: '싸우는 중에는 떠날 수 없다.' });
+    if (logic.berserkOf(d)) return ack({ error: BERSERK });
+    if (logic.isFallen(d)) return ack({ error: '쓰러진 채로는 떠날 수 없다. 먼저 일어서거나 긴 잠을 정하자.' });
+    if (d.exp_end) return ack({ error: '원정에서 돌아온 뒤에 떠나자.' });
+    const now = Date.now();
+    const words = str(payload?.words).replace(/\s+/g, ' ').slice(0, DEPART.wordsMax);
+    const legacy = d.level >= DEPART.minLevel
+      ? { name: d.name, kind: d.kind, level: d.level, pts: Math.min(DEPART.max, Math.floor(d.level * DEPART.perLevel)), at: now, words: str(payload?.words).replace(/\s+/g, ' ').slice(0, DEPART.wordsMax) }
+      : null;
+    logic.regen(d, now);
+    d.rest_at = null;
+    d.fallen = { departed: true, closed: true, at: now, region: d.region, words };
+    logic.chron(d, 'mark', `먼 여행을 떠났다.${legacy ? ' 의지는 새로운 드래곤에게 이어진다.' : ''}`);
+    db.saveState(d);
+    db.depart(d);
+    d.dead_at = now;
+    if (legacy) db.legacySet(user.id, legacy);
+    for (const o of db.offersTo(d.id)) db.offerDel(o.id); // 받은 입양 제안은 지움 (보낸 제안은 동료가 받아 줄 수 있게 둠)
+    social.onLeave(d.id);
+    arena.onLeave(d.id);
+    online.delete(d.id);
+    socket.leave(d.region);
+    socket.data.dragonId = null;
+    const ga = `${d.name}${josa(d.name, '이', '가')}`;
+    io.emit('system', { text: `[먼 여행] ${ga} 먼 여행을 떠났다.${words ? ` "${words}"` : ''}${legacy ? ' 그 의지는 새로운 드래곤에게 이어진다.' : ''}`, at: now });
+    for (const r of db.relList(d.id)) {
+      if (r.kind !== 'friend') continue;
+      const text = `동료 ${ga} 먼 여행을 떠났다.${words ? ` 남긴 말: "${words}"` : ''}`;
+      const e = online.get(r.id);
+      if (e) e.socket.emit('notice', { title: '먼 여행', lines: [text] });
+      else db.noteAdd(r.id, text);
+    }
+    broadcastPresence(d.region);
+    broadcastCounts();
+    io.emit('rescue:list', death.rescues());
+    ack({ ok: true, legacy });
   });
 
   // GM: 내 드래곤을 정리하고 같은 계정으로 처음부터 다시 만들기 (GM 권한은 그대로)

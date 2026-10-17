@@ -3,7 +3,7 @@
 // - 실시간 결투: 둘 다 접속해 있을 때. 신청 → 수락 → 둘 다 고르면 한 턴. 시간을 넘기면 자동으로 고름
 // - 자동 결투: 상대가 '자동 결투 허용'을 켜 두었으면, 접속하지 않았어도 서로의 스킬 구성대로 자동으로 싸움
 // 결투에서는 다치지 않음 (가득 찬 상태로 싸우고, 끝나면 원래대로). 전적과 명성, 경험치만 남음
-const { COMBAT, MIND, REGIONS } = require('./game-data');
+const { COMBAT, MIND, REGIONS, BOND_RULES } = require('./game-data');
 
 const str = (v) => (typeof v === 'string' ? v.trim() : '');
 function josa(word, a, b) {
@@ -271,12 +271,14 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
       cw.lastWin[l.id] = now;
       let fame = COMBAT.fameWin;
       if (db.relGet(w.id, l.id) === 'rival') { fame += COMBAT.fameRival; lines[w.id].push('라이벌을 꺾었다! 명성이 더 오른다.'); }
+      const nemesis = db.relGet(w.id, l.id) === 'nemesis';
+      if (nemesis) { fame += BOND_RULES.nemesis.fame; lines[w.id].push('원수를 꺾었다! 오랜 원한이 조금 풀린다.'); }
       lines[w.id].push(`용족 명성 +${fame}`);
       lines[l.id].push(`용족 명성 ${COMBAT.fameLose}`);
       const f1 = logic.addFame(w, fame); if (f1) lines[w.id].push(f1);
       const f2 = logic.addFame(l, COMBAT.fameLose); if (f2) lines[l.id].push(f2);
       // 상대 레벨이 높을수록 더 많이 오름
-      const xpWin = COMBAT.xpWin + l.level * (COMBAT.xpWinPerLv || 0);
+      const xpWin = Math.round((COMBAT.xpWin + l.level * (COMBAT.xpWinPerLv || 0)) * (nemesis ? BOND_RULES.nemesis.xp : 1));
       const xpLose = COMBAT.xpLose + w.level * (COMBAT.xpLosePerLv || 0);
       for (const [d, xp] of [[w, xpWin], [l, xpLose]]) {
         const x = logic.xpOf(d, xp);

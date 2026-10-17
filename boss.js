@@ -101,6 +101,7 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
   function defeat(lastId) {
     const T = BOSSES[st.key];
     st.done = 'win';
+    st.doneAt = Date.now();
     st.last = lastId;
     const sum = total() || 1;
     const r = ranking();
@@ -114,6 +115,7 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
   function gone() {
     const T = BOSSES[st.key];
     st.done = 'gone';
+    st.doneAt = Date.now();
     nextAt = Date.now() + rand(...BOSS.gapHours) * HOUR;
     save();
     shout(`[대륙의 재앙] ${ga(T.name)} ${REGIONS[st.region].name}${josa(REGIONS[st.region].name, '을', '를')} 휩쓸고 어디론가 떠났다. 남은 체력 ${Math.round((st.hp / st.hpMax) * 100)}%.`);
@@ -247,5 +249,11 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
     });
   }
 
-  return { attach, view, spawn, nextAt: () => nextAt, _state: () => st };
+  // 재앙이 쓰러지거나 떠난 지 하루가 안 된 지역이면 그 흔적 (이벤트 '재앙이 지나간 자리')
+  function trace(region) {
+    if (!st || !st.done || st.region !== region || !st.doneAt || Date.now() - st.doneAt > 24 * HOUR) return null;
+    return { name: BOSSES[st.key].name, won: st.done === 'win' };
+  }
+
+  return { attach, view, spawn, trace, nextAt: () => nextAt, _state: () => st };
 };

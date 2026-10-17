@@ -192,6 +192,9 @@ db.exec(`
     at        INTEGER NOT NULL
   );
 `);
+// 관계 이름: 서로 맺은 관계(kind = friend)가 어떤 사이인지 (비어 있으면 동료). 요청에도 청한 관계를 적음
+if (!db.prepare('PRAGMA table_info(relations)').all().some((c) => c.name === 'bond')) db.exec('ALTER TABLE relations ADD COLUMN bond TEXT');
+if (!db.prepare('PRAGMA table_info(friend_requests)').all().some((c) => c.name === 'bond')) db.exec('ALTER TABLE friend_requests ADD COLUMN bond TEXT');
 // 관계 메모를 상대도 볼 수 있게 됨. 예전에 '나만 본다'로 쓴 메모는 그대로 비공개(0)로 두고,
 // 새로 저장하는 메모부터 공개(1)로 함
 if (!db.prepare('PRAGMA table_info(rel_memos)').all().some((c) => c.name === 'shared')) {
@@ -318,14 +321,21 @@ const q = {
   memoAll:      db.prepare('SELECT to_id AS id, text FROM rel_memos WHERE from_id = ?'),
   memoAbout:    db.prepare('SELECT from_id AS id, text FROM rel_memos WHERE to_id = ? AND shared = 1'),
   rivalFans:    db.prepare("SELECT from_id AS id FROM relations WHERE to_id = ? AND kind = 'rival'"),
-  relList:      db.prepare(`SELECT r.to_id AS id, r.kind, d.name, d.kind AS dkind, d.level, d.region, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar
+  relBond:      db.prepare('SELECT bond FROM relations WHERE from_id = ? AND to_id = ? AND kind = \'friend\''),
+  relBondSet:   db.prepare('UPDATE relations SET bond = ? WHERE from_id = ? AND to_id = ?'),
+  relByBond:    db.prepare("SELECT to_id AS id FROM relations WHERE from_id = ? AND kind = 'friend' AND bond = ?"),
+  reqBond:      db.prepare('SELECT bond FROM friend_requests WHERE from_id = ? AND to_id = ?'),
+  reqAddBond:   db.prepare('INSERT OR REPLACE INTO friend_requests (from_id, to_id, at, bond) VALUES (?, ?, ?, ?)'),
+  kinAdoptedOut: db.prepare(`SELECT k.id, k.type, k.status, k.name, k.data, k.dragon_id AS owner_id, d.name AS owner FROM kin k JOIN dragons d ON d.id = k.dragon_id
+    WHERE k.status IN ('home', 'egg') AND d.dead_at IS NULL AND json_extract(k.data, '$.adoptedFromId') = ?`),
+  relList:      db.prepare(`SELECT r.to_id AS id, r.kind, r.bond, d.name, d.kind AS dkind, d.level, d.region, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar
                             FROM relations r JOIN dragons d ON d.id = r.to_id WHERE r.from_id = ? ORDER BY d.name`),
   reqGet:       db.prepare('SELECT at FROM friend_requests WHERE from_id = ? AND to_id = ?'),
   reqAdd:       db.prepare('INSERT OR IGNORE INTO friend_requests (from_id, to_id, at) VALUES (?, ?, ?)'),
   reqDel:       db.prepare('DELETE FROM friend_requests WHERE from_id = ? AND to_id = ?'),
-  reqIn:        db.prepare(`SELECT r.from_id AS id, d.name, d.kind AS dkind, d.level, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar
+  reqIn:        db.prepare(`SELECT r.from_id AS id, r.bond, d.name, d.kind AS dkind, d.level, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar
                             FROM friend_requests r JOIN dragons d ON d.id = r.from_id WHERE r.to_id = ? ORDER BY r.at`),
-  reqOut:       db.prepare(`SELECT r.to_id AS id, d.name, d.kind AS dkind, d.level, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar
+  reqOut:       db.prepare(`SELECT r.to_id AS id, r.bond, d.name, d.kind AS dkind, d.level, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar
                             FROM friend_requests r JOIN dragons d ON d.id = r.to_id WHERE r.from_id = ? ORDER BY r.at`),
   reqInCount:   db.prepare('SELECT COUNT(*) AS n FROM friend_requests WHERE to_id = ?'),
   tpAdd:        db.prepare('INSERT INTO telepathy (from_id, to_id, text, at) VALUES (?, ?, ?, ?)'),
@@ -474,6 +484,8 @@ module.exports = {
   relSet: (a, b, kind) => q.relSet.run(a, b, kind, Date.now()),
   relDel: (a, b) => q.relDel.run(a, b),
   relList: (id) => q.relList.all(id),
+  // 내가 입양 보낸 식구 (다른 둥지에서 아직 함께 사는)
+  kinAdoptedOut: (id) => q.kinAdoptedOut.all(id).map((r) => { let data = {}; try { data = JSON.parse(r.data); } catch {} return { ...r, data }; }),
   // 관계 메모: a가 b에 대해 쓴 글. 상대(b)도 볼 수 있음 (예전에 쓴 비공개 메모는 다시 저장하기 전까지 a만 봄). 비우면 지워짐
   memoGet: (a, b) => { const r = q.memoGet.get(a, b); return { text: r?.text || '', shared: !!r?.shared }; },
   memoShared: (a, b) => { const r = q.memoGet.get(a, b); return r?.shared ? r.text : ''; },   // b가 볼 수 있는 a의 메모
@@ -488,10 +500,16 @@ module.exports = {
   reqOut: (id) => q.reqOut.all(id),
   reqInCount: (id) => q.reqInCount.get(id).n,
   // 동료 맺기·끊기는 양쪽을 한 번에
-  befriend: db.transaction((a, b) => {
+  // 서로 맺음: bond는 a에게 b가 무엇인지 (b 쪽에는 그 반대: 스승 ↔ 제자). 이미 맺은 사이면 관계만 바뀜
+  befriend: db.transaction((a, b, bond = 'comrade', inv = bond) => {
     q.relSet.run(a, b, 'friend', Date.now()); q.relSet.run(b, a, 'friend', Date.now());
+    q.relBondSet.run(bond, a, b); q.relBondSet.run(inv, b, a);
     q.reqDel.run(a, b); q.reqDel.run(b, a);
   }),
+  relBond: (a, b) => { const r = q.relBond.get(a, b); return r ? r.bond || 'comrade' : null; },
+  relByBond: (a, bond) => q.relByBond.all(a, bond).map((r) => r.id),
+  reqBond: (a, b) => { const r = q.reqBond.get(a, b); return r ? r.bond || 'comrade' : null; },
+  reqAddBond: (a, b, bond) => q.reqAddBond.run(a, b, Date.now(), bond),
   unfriend: db.transaction((a, b) => { q.relDel.run(a, b); q.relDel.run(b, a); }),
   // 텔레파시
   tpSend: db.transaction((a, b, text) => {

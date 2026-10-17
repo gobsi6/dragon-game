@@ -4,7 +4,7 @@
 // 저장은 부르는 쪽(server.js)이 db.saveState(d, items)로 합니다.
 
 const {
-  REGIONS, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, RECIPES, SLOTS, STANCES, SHOPS, repTier, TRADE, NEST, hoardTier, RAID, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, ELEMENTS,
+  REGIONS, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, RECIPES, SLOTS, STANCES, SHOPS, repTier, TRADE, NEST, hoardTier, RAID, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, ELEMENTS,
   SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES,
 } = require('./game-data');
 
@@ -383,7 +383,7 @@ function regen(d, now = Date.now()) {
   // 정신: 광폭화 중에는 차지 않음. 둥지에서 쉬면 빨리, 은둔이면 조금 더 빨리
   if (d.mind == null) d.mind = MIND.max;
   if (berserkOf(d)) d.mind_at = now;
-  else tick('mind', MIND.max, 'mind_at', MIND.regenEvery / ((d.rest_at ? MIND.restMult * (hoardTier(nestInfo(d).value || 0)?.mind || 1) : 1) * (d.stance === 'hermit' ? MIND.hermitMult : 1) * shelter(wx.mindRegen)));
+  else tick('mind', MIND.max, 'mind_at', MIND.regenEvery / ((d.rest_at ? MIND.restMult * (hoardTier(nestInfo(d).value || 0)?.mind || 1) : 1) * (d.stance === 'hermit' ? MIND.hermitMult : 1) * shelter(wx.mindRegen) * (hooks.together?.(d) ? BOND_RULES.together.mind : 1)));
 }
 
 // ── 장소 ───────────────────────────────────────────
@@ -1233,10 +1233,12 @@ function flyHome(d) {
 function startRest(d, now = Date.now()) {
   if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
   if (d.rest_at) return { error: '이미 쉬고 있다.' };
-  if (!d.nest || d.region !== d.nest) return { error: '둥지에 있을 때만 쉴 수 있다.' };
+  const pn = hooks.partnerNest?.(d); // 반려의 둥지에서도 쉴 수 있음
+  const atOwn = !!d.nest && d.region === d.nest;
+  if (!atOwn && !(pn && pn.region === d.region)) return { error: '둥지에 있을 때만 쉴 수 있다.' };
   regen(d, now);
   d.rest_at = now;
-  return { title: '둥지', lines: ['둥지에 몸을 말고 눈을 감았다.'] };
+  return { title: '둥지', lines: [atOwn ? '둥지에 몸을 말고 눈을 감았다.' : `반려 ${pn.name}의 둥지에 몸을 말고 눈을 감았다.`] };
 }
 function stopRest(d, now = Date.now()) {
   if (!d.rest_at) return { error: '쉬고 있지 않다.' };
@@ -1392,7 +1394,11 @@ function chaseCheck(d) {
   return null;
 }
 
+// 다른 모듈(서버)이 채워 주는 것: hoard(드래곤 id) → 보물더미 물건, bossTrace(지역) → 최근 재앙의 흔적
+const hooks = {};
+
 module.exports = {
+  hooks, BOND_TOGETHER: BOND_RULES.together,
   seasonAt, weatherOf, weatherIdAt, weatherFx, fxText, fxProse, weatherDebug, SLOT_MS,
   nestInfo, nestTier, maxKinOf, expandNest, checkRaid, raidView, chaseCheck,
   regen, gather, explore, hunt, startExpedition, finishExpedition, chooseFork, forkView, expInfo,

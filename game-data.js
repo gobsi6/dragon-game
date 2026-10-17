@@ -246,6 +246,11 @@ const ITEMS = {
   magma_tail:   { name: '용암 심장 꼬리날', rarity: 'rare',     type: 'equip', slot: 'tail',  bonus: { claw: 2, majesty: 1 },   desc: '꼬리 끝에서 용암이 끓는다.' },
 
   // 대륙의 재앙을 쓰러뜨리면 나오는 것
+  // 이벤트에서 얻는 물건
+  star_shard:   { name: '별조각',           rarity: 'rare',     value: 45, desc: '유성우가 내린 밤, 땅에 박힌 채 아직도 희미하게 빛난다.' },
+  elder_keepsake:{ name: '고향의 조약돌',  rarity: 'common',   value: 2,  desc: '늙은 식구가 마지막으로 고향에 다녀오며 주워 온 조약돌. 손때가 묻어 반들반들하다.' },
+  kin_letter:   { name: '먼 둥지의 편지',   rarity: 'common',   value: 2,  desc: '입양 보낸 식구가 보내온 안부. 값어치는 없지만 버릴 수가 없다.' },
+  whisper_ring: { name: '속삭이는 반지',   rarity: 'rare',     type: 'equip', slot: 'charm', bonus: { majesty: 3 }, mindWard: 1.3, value: 60, desc: '보물더미 깊은 곳에서 나온 반지. 끼면 위엄이 차오르지만, 밤마다 속삭임이 정신을 갉아먹는다. (깎이는 정신 +30%)' },
   calamity_core:{ name: '재앙의 핵',        rarity: 'rare',     cat: 'trophy', value: 120, desc: '쓰러진 재앙의 가슴에서 꺼낸, 아직 고동치는 검붉은 핵. 대륙에 몇 개 없는 물건이다.' },
   calamity_charm:{ name: '재앙을 이긴 증표', rarity: 'rare',    type: 'equip', slot: 'charm', bonus: { claw: 2, scale: 2, wing: 1, wisdom: 1, majesty: 2 }, desc: '재앙의 핵을 고대의 유물에 박아 넣었다. 지닌 드래곤의 이름이 대륙에 울린다.' },
 
@@ -505,7 +510,7 @@ const DRAKE_NAMES = ['아르', '벨카', '시엘', '모라크', '카이렌', '�
 
 // 이벤트: 행동마다 일어날 확률 (시험 단계라 넉넉하게)
 const EVENT_RULES = {
-  chance: { explore: 0.3, gather: 0.15, expedition: 0.6, wake: 0.5, intimidate: 1 },
+  chance: { explore: 0.3, gather: 0.15, expedition: 0.6, wake: 0.5, intimidate: 1, hunt: 0.15 },
 };
 
 // ── 성향별 장점과 단점 ─────────────────────────────
@@ -744,8 +749,12 @@ const TITLES = [
   { id: 'rescuer',   name: '손을 내미는 자',   cond: { count: 'rescue', at: 3 },    mod: { helpHp: 0.15 },   eff: '일으켜 줄 때 체력 +15%' },
   { id: 'mender',    name: '치유의 손길',      cond: { count: 'healother', at: 15 }, mod: { heal: 1.1, helpHp: 0.05 }, eff: '치유 +10%, 일으켜 줄 때 체력 +5%' },
   { id: 'calmer',    name: '광기를 잠재우는 자', cond: { count: 'calm', at: 3 },     mod: { mindWard: 0.8 },  eff: '깎이는 정신 −20%' },
+  // 관계
+  { id: 'teacher',   name: '이름난 스승',      cond: { count: 'teach', at: 20 },    mod: { xp: 1.03 },       eff: '경험치 +3%' },
+  { id: 'surpass',   name: '청출어람',         cond: { count: 'surpass', at: 1 },   mod: { atk: 1.03 },      eff: '사냥 공격 +3%' },
   // 이어받은 의지
   { id: 'heir',      name: '의지를 이은 자',   cond: { count: 'heir', at: 1 },      mod: { xp: 1.05 },       eff: '경험치 +5%' },
+  { id: 'sendoff',   name: '둥지를 떠나보낸 자', cond: { count: 'sendoff', at: 3 }, mod: { xp: 1.03 },     eff: '경험치 +3%' },
   // 대륙의 재앙
   { id: 'boss1',     name: '재앙에 맞선 자',   cond: { count: 'bosswin', at: 1 },   mod: { eliteAtk: 1.04 }, eff: '강적과 싸울 때 공격 +4%' },
   { id: 'boss2',     name: '대륙의 방패',      cond: { count: 'bosswin', at: 10 },  mod: { atk: 1.04, taken: 0.97 }, eff: '사냥 공격 +4%, 받는 피해 −3%' },
@@ -757,7 +766,7 @@ const TITLES = [
   { id: 'scarred',   name: '상흔투성이',       cond: { scars: 3 },                  mod: { taken: 0.95 },    eff: '사냥 받는 피해 −5%' },
 ];
 // 칭호 조건을 사람이 읽는 글로
-const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: '둥지에서 {n}번 쉬기', craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격', heir: '먼 여행을 떠난 드래곤의 의지를 잇기' };
+const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: '둥지에서 {n}번 쉬기', craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격', heir: '먼 여행을 떠난 드래곤의 의지를 잇기', teach: '제자를 {n}번 가르치기', surpass: '스승의 레벨을 따라잡기', sendoff: '다 자란 식구를 {n}번 떠나보내기' };
 
 // ── 장소와 사냥터 난이도 ───────────────────────────
 // 야생 지역마다 장소가 셋. 입구는 쉽고 안쪽일수록 사냥터 난이도(Lv.1~12)가 높다.
@@ -940,6 +949,34 @@ const COMBOS = {
 // 강적의 분노: 체력이 이 비율 아래로 떨어지면 한 번
 const ENRAGE = { below: 0.5, atk: 1.25, every: 2 };
 
+// ── 관계 ───────────────────────────────────────────
+// 서로 맺는 관계(상대가 받아들여야 함). 한 상대와는 하나만. 이름은 '상대가 나에게 무엇인지'
+// inv: 상대 쪽에서 본 이름 (스승 ↔ 제자), ask: 청할 때 상대에게 보이는 말, label: 청하는 버튼
+const BONDS = {
+  acquaint: { name: '지인', label: '지인으로 지내자', ask: '지인으로 지내자고 청했다' },
+  comrade:  { name: '동료', label: '동료가 되자', ask: '동료가 되자고 청했다' },
+  friend:   { name: '친구', label: '친구가 되자', ask: '친구가 되자고 청했다' },
+  mentor:   { name: '스승', inv: 'student', label: '스승으로 모시기', ask: '스승으로 모시고 싶어 한다' },
+  student:  { name: '제자', inv: 'mentor', label: '제자로 삼기', ask: '제자로 받아 주겠다고 한다' },
+  family:   { name: '가족', label: '가족이 되자', ask: '가족이 되자고 청했다' },
+  relative: { name: '친척', label: '친척으로 지내자', ask: '친척으로 지내자고 청했다' },
+  lover:    { name: '연인', label: '마음을 고백하기', ask: '마음을 고백했다' },
+  partner:  { name: '반려', label: '반려가 되어 달라', ask: '반려가 되어 달라고 청했다', needs: 'lover' },
+};
+// 혼자 붙이는 표시 (상대는 라이벌·원수만 알게 됨)
+const MARKS = { rival: '라이벌', wary: '경계', nemesis: '원수' };
+const BOND_RULES = {
+  hearts: ['lover', 'partner'],      // 연인·반려는 한 번에 한 상대
+  mentorGap: 3,                      // 스승은 제자보다 이만큼 레벨이 높아야
+  studentsMax: 3,                    // 스승 하나가 둘 수 있는 제자 수 (제자는 스승 하나)
+  // 가르치기: 스승이 같은 지역의 제자에게. 제자는 경험치, 스승은 명성
+  teach: { ap: 2, en: 8, cooldown: 4 * 60 * 60 * 1000, xpBase: 20, xpPerLv: 4, fame: 1 },
+  // 연인·반려와 같은 지역에 함께 있으면 (둘 다 접속): 정신 회복 배율, 사냥·전투에서 받는 피해 배율
+  together: { mind: 1.5, taken: 0.95 },
+  // 원수를 결투에서 이기면: 명성 더, 경험치 배율
+  nemesis: { fame: 3, xp: 1.5 },
+};
+
 // ── 먼 여행: 지금 드래곤이 대륙을 떠나고, 같은 계정으로 새 드래곤을 만듦 ──
 // minLevel 이상이면 새 드래곤에게 의지를 이어 줌: 능력치 포인트(레벨 × perLevel, 최대 max)와 칭호 '의지를 이은 자'
 // 재산(금화·물건·보물더미)과 둥지, 식구는 함께 떠남 (남기고 싶은 식구는 먼저 동료에게 입양 보내기)
@@ -1070,5 +1107,5 @@ module.exports = {
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, TITLES, TITLE_COUNT_NAMES,
   SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
   DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
-  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, DEPART, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES,
+  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, DEPART, BONDS, MARKS, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES,
 };

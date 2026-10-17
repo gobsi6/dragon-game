@@ -71,11 +71,12 @@ function fromDragon(d, context) {
   // 강화 음식: 사냥·강적 전투에서만 (결투장에는 적용되지 않음)
   const bf = hunt ? logic.buffOf(d) : null;
   const ti = hunt ? logic.titleMods(d) : {}; // 칭호 효과 (결투장에는 없음)
+  const love = hunt && logic.hooks.together?.(d) ? logic.BOND_TOGETHER.taken : 1; // 연인·반려와 함께 있으면 받는 피해가 줌
   return {
     id: d.id, name: d.name, kind: d.kind, creature: false,
     hp: hunt ? d.hp : hpMax, hpMax, en: hunt ? d.en : enMax, enMax,
     atk: atk * (bf?.atk || 1) * (ti.atk || 1), def: st.scale, spd: st.wing + (bf?.spd || 0), mag: st.wisdom * (bf?.mag || 1), maj: st.majesty,
-    taken: (hunt ? tm.huntDmg * (d.perks?.knight ? 0.7 : 1) : 1) * (bf?.taken || 1) * (ti.taken || 1), // 받는 피해 배율
+    taken: (hunt ? tm.huntDmg * (d.perks?.knight ? 0.7 : 1) : 1) * (bf?.taken || 1) * (ti.taken || 1) * love, // 받는 피해 배율
     healMult: ti.heal || 1,
     buff: bf?.id || null,
     element: BREATHS[d.kind]?.element || null,
