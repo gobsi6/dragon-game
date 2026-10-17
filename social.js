@@ -100,6 +100,10 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     if (!t && !db.getDragon(id)) return;
     if (t) db.saveState(t.dragon, items); else db.giftOffline(id, 0, items);
     const gid = db.giftIn(id, from, 0, items, msg);
+    // 주고받은 기록 (이벤트로 오간 선물)
+    const to = t ? t.dragon : db.getDragon(id);
+    db.ledgerAdd(id, { kind: 'gift_in', other: { id: from.id, name: from.name, kind: from.kind }, itemsIn: items, msg, note: '이벤트' });
+    db.ledgerAdd(from.id, { kind: 'gift_out', other: { id, name: to?.name || '', kind: to?.kind }, itemsOut: items, msg, note: '이벤트' });
     if (t) {
       t.socket.emit('gift:got', { id: gid, from: { id: from.id, name: from.name, kind: from.kind }, gold: 0, items, msg, at: Date.now() });
       sendMe(t.socket, t.dragon);
@@ -302,6 +306,9 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     const move = (from, to) => [...from.items.map((x) => ({ id: x.id, qty: -x.qty })), ...to.items.map((x) => ({ id: x.id, qty: x.qty }))];
     db.saveMany([[a, move(sa, sb)], [b, move(sb, sa)]]);
     trades.delete(t.id);
+    // 주고받은 기록 (교환)
+    db.ledgerAdd(a.id, { kind: 'trade', other: { id: b.id, name: b.name, kind: b.kind }, goldOut: sa.gold, itemsOut: sa.items, goldIn: sb.gold, itemsIn: sb.items });
+    db.ledgerAdd(b.id, { kind: 'trade', other: { id: a.id, name: a.name, kind: a.kind }, goldOut: sb.gold, itemsOut: sb.items, goldIn: sa.gold, itemsIn: sa.items });
     const done = (me, gave, got, them) => ({
       id: t.id, title: '교환',
       lines: [`${them.name}${josa(them.name, '과', '와')} 교환했다.`,
@@ -380,7 +387,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     const me = () => entryOf(socket)?.dragon || null;
     // 보기만 하는 요청(목록·프로필 읽기)은 간격 제한을 두지 않음.
     // 관계를 바꾼 직후 화면이 목록과 프로필을 다시 불러오는데, 여기에 걸리면 화면이 바뀌지 않고 멈춰 있었음
-    const READ_ONLY = new Set(['dragon:profile', 'rel:list', 'gift:inbox', 'gift:seen', 'tp:threads', 'tp:open', 'tp:heard']);
+    const READ_ONLY = new Set(['dragon:profile', 'rel:list', 'gift:inbox', 'gift:seen', 'ledger:list', 'tp:threads', 'tp:open', 'tp:heard']);
     const on = (event, fn) => socket.on(event, (payload, ack) => {
       if (typeof ack !== 'function') ack = () => {};
       const d = me();
@@ -685,6 +692,10 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       }
       // 받은 선물 상자에 넣음: 받은 쪽이 '확인'을 누를 때까지 남는 알림 (접속하지 않았으면 다음 접속 때)
       const gid = db.giftIn(id, d, gold, items, msg);
+      // 주고받은 기록 (선물)
+      const to = t ? t.dragon : db.getDragon(id);
+      db.ledgerAdd(d.id, { kind: 'gift_out', other: { id, name, kind: to?.kind }, goldOut: gold, itemsOut: items, msg });
+      db.ledgerAdd(id, { kind: 'gift_in', other: { id: d.id, name: d.name, kind: d.kind }, goldIn: gold, itemsIn: items, msg });
       if (t) {
         t.socket.emit('gift:got', { id: gid, from: { id: d.id, name: d.name, kind: d.kind }, gold, items, msg, at: Date.now() });
         sendMe(t.socket, t.dragon);
@@ -696,6 +707,8 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     // 받은 선물 확인 (상자에서 지움)
     on('gift:seen', (d, p) => ({ ok: db.giftSeen(Number(p.id), d.id) }));
     on('gift:inbox', (d) => ({ ok: true, list: db.giftList(d.id) }));
+    // 주고받은 기록: 선물·교환·이벤트 선물·GM 지급 (최근 것부터)
+    on('ledger:list', (d) => ({ ok: true, list: db.ledgerList(d.id, 150) }));
 
     // ── 텔레파시 ──
     on('tp:threads', (d) => ({

@@ -1243,6 +1243,28 @@
 
   /* 한 메뉴 안의 탭 (소지품·제작, 동료·텔레파시) */
   .seg.dtabs { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 12px; margin-bottom: 4px; }
+  .seg.dtabs.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  /* 주고받은 기록 */
+  .lg-list { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+  .lg-day { margin: 10px 2px 2px; font: 700 12.5px/1.3 var(--serif); color: var(--steel-d); display: flex; align-items: center; gap: 8px; }
+  .lg-day::after { content: ""; flex: 1; height: 1px; background: var(--line-soft); }
+  .lg-row { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px 10px 14px; background: var(--surface-2); border: 1px solid var(--line-in); border-left: 3px solid var(--lg-c, #9A9C98); border-radius: 3px; }
+  .lg-row.gift_in { --lg-c: #3A7A55; } .lg-row.gift_out { --lg-c: #A0574B; } .lg-row.trade { --lg-c: #3C5A73; } .lg-row.gm { --lg-c: #B8913A; }
+  .lg-top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .lg-top .k { font: 600 11.5px/18px var(--sans); padding: 0 7px; border-radius: 9px; color: #fff; background: var(--lg-c, #9A9C98); }
+  .lg-top b { font: 700 14px/1.3 var(--serif); color: var(--ink); }
+  .lg-top .note2 { font-size: 11.5px; color: var(--muted); }
+  .lg-top .t { margin-left: auto; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .lg-flow { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; }
+  .lg-flow .ln { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+  .lg-flow .lb { flex: none; min-width: 44px; font-weight: 600; }
+  .lg-flow .ln.in .lb { color: #2F6B49; } .lg-flow .ln.out .lb { color: #8E4A40; }
+  .lg-chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border: 1px solid var(--line-in); border-radius: 10px; background: #fff; color: var(--ink-2); font-size: 12px; line-height: 18px; }
+  .lg-chip::before { content: ""; width: 6px; height: 6px; transform: rotate(45deg); background: var(--r, #9A9C98); flex: none; }
+  .lg-chip.common { --r: #9A9C98; } .lg-chip.uncommon { --r: #3C5A73; } .lg-chip.rare { --r: #B8913A; }
+  .lg-chip.gold { color: #6A4E12; border-color: #E2D2A6; background: #FBF6E8; }
+  .lg-chip.gold::before { display: none; }
+  .lg-msg { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--ink-2); padding-left: 8px; border-left: 2px solid var(--line-soft); }
   .seg.ctabs { grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 14px 0 8px; }
   .seg.ctabs button { padding: 6px 4px; line-height: 1.25; word-break: keep-all; }
   /* 메뉴 칸 안도 창 본문처럼 위아래 12px 간격 (나누기 전과 같게) */
@@ -2036,7 +2058,7 @@
       <button type="button" id="dock-map" aria-current="page"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20l5-12 4 6 3-4 6 10z"/><circle cx="17" cy="6" r="2"/></svg></span><span class="lbl">대륙</span></button>
       <button type="button" id="dock-char" data-dlg="char-dlg"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12c3-5 6.5-7 9.5-7s6.5 2 9.5 7c-3 5-6.5 7-9.5 7s-6.5-2-9.5-7z"/><path d="M12 8c-1.2 1.4-1.2 6.6 0 8 1.2-1.4 1.2-6.6 0-8z"/></svg></span><span class="lbl">상태</span></button>
       <button type="button" id="dock-nest" data-dlg="nest-dlg"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><path d="M5 20V10a7 7 0 0 1 14 0v10"/><path d="M10 20v-5a2 2 0 0 1 4 0v5"/></svg></span><span class="lbl">둥지</span></button>
-      <button type="button" id="inv-open" data-dlg="inv-dlg craft-dlg"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8h12l-1 12H7z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></span><span class="lbl">소지품</span></button>
+      <button type="button" id="inv-open" data-dlg="inv-dlg craft-dlg ledger-dlg"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8h12l-1 12H7z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></span><span class="lbl">소지품</span></button>
       <button type="button" id="dock-arena" data-dlg="arena-dlg"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 9l6 6M15 9l-6 6"/></svg><span class="badge" id="arena-badge" hidden></span></span><span class="lbl">결투장</span></button>
       <button type="button" id="dock-friends" data-dlg="friends-dlg"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="9" r="3"/><circle cx="16" cy="10" r="2.5"/><path d="M3 20c0-3.5 3-6 6-6s6 2.5 6 6"/><path d="M15 15c3 0 6 2 6 5"/></svg><span class="badge" id="friends-badge" hidden></span></span><span class="lbl">동료</span></button>
     </div>
@@ -2073,7 +2095,7 @@
 <dialog class="frame dlg wide" id="craft-dlg" aria-labelledby="craft-dlg-title">
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="craft-dlg-title">제작</h2></div>
-  <div class="seg dtabs" role="group" aria-label="소지품 메뉴"><button type="button" data-go="inv">소지품</button><button type="button" data-go="craft" class="on">제작</button></div>
+  <div class="seg dtabs three" role="group" aria-label="소지품 메뉴"><button type="button" data-go="inv">소지품</button><button type="button" data-go="craft" class="on">제작</button><button type="button" data-go="log">주고받은 기록</button></div>
   <div class="body">
     <p class="note" id="craft-status"></p>
     <div id="craft-list"></div>
@@ -2423,13 +2445,25 @@
 <dialog class="frame dlg wide" id="inv-dlg" aria-labelledby="inv-dlg-title">
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="inv-dlg-title">소지품</h2></div>
-  <div class="seg dtabs" role="group" aria-label="소지품 메뉴"><button type="button" data-go="inv" class="on">소지품</button><button type="button" data-go="craft">제작</button></div>
+  <div class="seg dtabs three" role="group" aria-label="소지품 메뉴"><button type="button" data-go="inv" class="on">소지품</button><button type="button" data-go="craft">제작</button><button type="button" data-go="log">주고받은 기록</button></div>
   <div class="body">
     <h3>착용 중인 장신구</h3>
     <div class="inv-gear" id="inv-gear"></div>
     <h3>가진 물건</h3>
     <div class="inv" id="inv-list"></div>
     <div class="row"><button class="btn" type="button" id="inv-close">닫기</button></div>
+  </div>
+</dialog>
+
+<dialog class="frame dlg wide" id="ledger-dlg" aria-labelledby="ledger-dlg-title">
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="ledger-dlg-title">주고받은 기록</h2></div>
+  <div class="seg dtabs three" role="group" aria-label="소지품 메뉴"><button type="button" data-go="inv">소지품</button><button type="button" data-go="craft">제작</button><button type="button" data-go="log" class="on">주고받은 기록</button></div>
+  <div class="body">
+    <p class="note" style="margin: 0">선물, 교환, 이벤트로 오간 선물, GM 지급이 남는다. 최근 90일 동안 300개까지 보관한다.</p>
+    <div class="mk-tabs" id="ledger-filter" role="tablist" aria-label="기록 거르기"><button type="button" role="tab" data-f="all" class="on">전체</button><button type="button" role="tab" data-f="in">받은 것</button><button type="button" role="tab" data-f="out">보낸 것</button><button type="button" role="tab" data-f="trade">교환</button></div>
+    <div class="lg-list" id="ledger-list"></div>
+    <div class="row"><button class="btn" type="button" id="ledger-close">닫기</button></div>
   </div>
 </dialog>
 
@@ -3563,6 +3597,78 @@
     }
   }
   function openInv() { fetchInv(() => { renderInv(); openPanel('inv-dlg'); }); }
+  // ── 주고받은 기록 ──
+  let ledgerF = 'all';
+  const LEDGER_KIND = { gift_in: '받은 선물', gift_out: '보낸 선물', trade: '교환', gm: 'GM 지급' };
+  function ledgerChips(host, gold, items) {
+    if (gold) { const c = document.createElement('span'); c.className = 'lg-chip gold'; c.innerHTML = '<i class="coin" aria-hidden="true"></i>'; c.append(`금화 ${gold.toLocaleString()}닢`); host.appendChild(c); }
+    for (const x of items || []) {
+      const it = S.items[x.id];
+      const c = document.createElement('span');
+      c.className = `lg-chip ${it?.rarity || 'common'}`;
+      c.textContent = `${it?.name || x.id} ×${x.qty}`;
+      host.appendChild(c);
+    }
+  }
+  function renderLedger(list) {
+    const box = $('ledger-list');
+    box.replaceChildren();
+    for (const t of $('ledger-filter').children) { const on = t.dataset.f === ledgerF; t.classList.toggle('on', on); t.setAttribute('aria-selected', String(on)); }
+    const hasIn = (e) => e.goldIn > 0 || e.itemsIn.length > 0, hasOut = (e) => e.goldOut > 0 || e.itemsOut.length > 0;
+    const rows = list.filter((e) => ledgerF === 'all' || (ledgerF === 'trade' ? e.kind === 'trade' : ledgerF === 'in' ? hasIn(e) && e.kind !== 'trade' : hasOut(e) && e.kind !== 'trade'));
+    if (!rows.length) {
+      const e = document.createElement('div'); e.className = 'mk-empty';
+      e.textContent = list.length ? '이 조건에 맞는 기록이 없다.' : '아직 주고받은 기록이 없다. 동료에게 선물을 보내거나 교환하면 여기에 남는다.';
+      box.appendChild(e); return;
+    }
+    const dayKey = (t) => { const d = new Date(t); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; };
+    const today = dayKey(Date.now()), yest = dayKey(Date.now() - 86400000);
+    let last = '';
+    for (const e of rows) {
+      const k = dayKey(e.at);
+      if (k !== last) {
+        last = k;
+        const h = document.createElement('div'); h.className = 'lg-day';
+        const d = new Date(e.at);
+        h.textContent = `${d.getMonth() + 1}월 ${d.getDate()}일 (${'일월화수목금토'[d.getDay()]})${k === today ? ' · 오늘' : k === yest ? ' · 어제' : ''}`;
+        box.appendChild(h);
+      }
+      const r = document.createElement('div'); r.className = `lg-row ${e.kind}`;
+      const top = document.createElement('div'); top.className = 'lg-top';
+      const kk = document.createElement('span'); kk.className = 'k'; kk.textContent = LEDGER_KIND[e.kind] || e.kind;
+      const nm = document.createElement('b'); nm.textContent = e.other?.name || '';
+      top.append(kk, nm);
+      if (e.note) { const n = document.createElement('span'); n.className = 'note2'; n.textContent = e.note; top.appendChild(n); }
+      const tm = document.createElement('span'); tm.className = 't'; tm.textContent = chatTime(e.at); top.appendChild(tm);
+      r.appendChild(top);
+      const flow = document.createElement('div'); flow.className = 'lg-flow';
+      const line = (cls, label, gold, items, empty) => {
+        if (!gold && !(items || []).length && !empty) return;
+        const l = document.createElement('div'); l.className = `ln ${cls}`;
+        const lb = document.createElement('span'); lb.className = 'lb'; lb.textContent = label;
+        l.appendChild(lb);
+        if (gold || (items || []).length) ledgerChips(l, gold, items); else l.append('없음');
+        flow.appendChild(l);
+      };
+      const tr = e.kind === 'trade';
+      line('in', e.kind === 'gm' ? '받음' : '받은 것', e.goldIn, e.itemsIn, tr);
+      line('out', e.kind === 'gm' ? '회수' : tr ? '건넨 것' : '보낸 것', e.goldOut, e.itemsOut, tr);
+      r.appendChild(flow);
+      if (e.msg) { const m = document.createElement('p'); m.className = 'lg-msg'; m.textContent = `"${e.msg}"`; r.appendChild(m); }
+      box.appendChild(r);
+    }
+  }
+  let ledgerCache = [];
+  function openLedger() {
+    socket.emit('ledger:list', {}, (res) => {
+      if (res.error) return toast(res.error);
+      ledgerCache = res.list || [];
+      renderLedger(ledgerCache);
+      openPanel('ledger-dlg');
+    });
+  }
+  $('ledger-filter').addEventListener('click', (e) => { const b = e.target.closest('button[data-f]'); if (!b) return; ledgerF = b.dataset.f; renderLedger(ledgerCache); });
+  $('ledger-close').addEventListener('click', () => $('ledger-dlg').close());
   $('inv-open').addEventListener('click', openInv);
 
   // ── 둥지 ──
@@ -6652,7 +6758,7 @@
 
   // ── 하단 메뉴 화면: 가운데 칸에 펼치기 ──
   // 팝업(모달) 대신 지역 카드와 지도 자리에 보여 준다. 다른 메뉴를 열면 바뀌고, '대륙'이나 닫기로 돌아간다
-  const PANELS = ['char-dlg', 'nest-dlg', 'inv-dlg', 'craft-dlg', 'friends-dlg', 'arena-dlg']; // 텔레파시는 지금 화면 위에 팝업으로
+  const PANELS = ['char-dlg', 'nest-dlg', 'inv-dlg', 'craft-dlg', 'ledger-dlg', 'friends-dlg', 'arena-dlg']; // 텔레파시는 지금 화면 위에 팝업으로
   function openPanel(id) {
     const dlg = $(id);
     if (dlg.open) return;
@@ -8673,7 +8779,7 @@
       // 결투 신청 / 넘어간다. 고르지 않으면 20초 뒤 저절로 사라짐
       toast(text, { label: '결투 신청', run: () => { hideToast(); challenge({ id: x.id, name: x.name }, 'live'); }, alt: { label: '넘어간다' }, ttl: 20000 });
     });
-    socket.on('gift:got', (g) => { SFX.play('notice'); giftQ.push(g); fetchInv(); showGift(); });
+    socket.on('gift:got', (g) => { SFX.play('notice'); giftQ.push(g); fetchInv(); showGift(); if ($('ledger-dlg').open) openLedger(); });
     // 다른 드래곤이 치유해 줌
     socket.on('healed', (h) => toast(h.text, { label: '고맙다고 전하기', run: () => openTp(h.by.id) }));
     socket.on('gift:inbox', (l) => { giftQ = l || []; showGift(); });
@@ -8691,7 +8797,7 @@
     socket.on('gm:kicked', () => toast('GM이 접속을 끊었다. 새로고침하면 다시 들어올 수 있다.', { label: '다시 접속', run: () => { hideToast(); socket.connect(); } }));
     socket.on('trade:error', (e) => toast(e.error));
     socket.on('trade:closed', (e) => { endTrade(); toast(e.reason); });
-    socket.on('trade:done', (r) => { endTrade(); showResult(r); fetchInv(); });
+    socket.on('trade:done', (r) => { endTrade(); showResult(r); fetchInv(); if ($('ledger-dlg').open) openLedger(); });
     socket.on('system', (m) => addSystem(m.text));
   }
 
@@ -8719,7 +8825,7 @@
 
   // ── 아래 메뉴: 열려 있는 창의 메뉴에 선택 표시 (닫히면 '대륙'으로) ──
   // 창 안의 탭: 지금 창을 닫고 옆 창을 연다 (아래 메뉴는 같은 칸이 계속 눌린 채)
-  const TAB_OPEN = { inv: () => openInv(), craft: () => openCraft(), friends: () => openFriends(), tp: () => openTpList() };
+  const TAB_OPEN = { inv: () => openInv(), craft: () => openCraft(), log: () => openLedger(), friends: () => openFriends(), tp: () => openTpList() };
   document.addEventListener('click', (e) => {
     const b = e.target.closest('.dtabs [data-go]');
     if (!b || b.classList.contains('on')) return;

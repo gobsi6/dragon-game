@@ -197,6 +197,27 @@ db.exec(`
     at        INTEGER NOT NULL
   );
 `);
+// 주고받은 기록: 선물(보냄·받음), 교환, 이벤트로 오간 선물, GM 지급. 드래곤마다 따로 한 줄씩 (최근 LEDGER.keep개, LEDGER.days일)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS ledger (
+    id         INTEGER PRIMARY KEY,
+    dragon_id  INTEGER NOT NULL REFERENCES dragons(id) ON DELETE CASCADE,
+    at         INTEGER NOT NULL,
+    kind       TEXT NOT NULL,              -- gift_out / gift_in / trade / gm
+    other_id   INTEGER,                    -- 상대 드래곤 (GM 지급은 NULL)
+    other_name TEXT NOT NULL DEFAULT '',
+    other_kind TEXT,
+    gold_in    INTEGER NOT NULL DEFAULT 0,
+    gold_out   INTEGER NOT NULL DEFAULT 0,
+    items_in   TEXT NOT NULL DEFAULT '[]',
+    items_out  TEXT NOT NULL DEFAULT '[]',
+    msg        TEXT NOT NULL DEFAULT '',
+    note       TEXT NOT NULL DEFAULT ''    -- '이벤트' 같은 덧붙임
+  );
+  CREATE INDEX IF NOT EXISTS ledger_dragon ON ledger(dragon_id, id);
+`);
+const LEDGER = { keep: 300, days: 90 };
+
 // 관계 이름: 서로 맺은 관계(kind = friend)가 어떤 사이인지 (비어 있으면 동료). 요청에도 청한 관계를 적음
 if (!db.prepare('PRAGMA table_info(relations)').all().some((c) => c.name === 'bond')) db.exec('ALTER TABLE relations ADD COLUMN bond TEXT');
 if (!db.prepare('PRAGMA table_info(friend_requests)').all().some((c) => c.name === 'bond')) db.exec('ALTER TABLE friend_requests ADD COLUMN bond TEXT');
@@ -364,6 +385,10 @@ const q = {
                             AND id <= (SELECT id FROM telepathy WHERE (from_id = @a AND to_id = @b) OR (from_id = @b AND to_id = @a)
                                        ORDER BY id DESC LIMIT 1 OFFSET 200)`),
   noteAdd:      db.prepare('INSERT INTO notes (dragon_id, text, at) VALUES (?, ?, ?)'),
+  ledgerAdd:    db.prepare(`INSERT INTO ledger (dragon_id, at, kind, other_id, other_name, other_kind, gold_in, gold_out, items_in, items_out, msg, note)
+                            VALUES (@dragon_id, @at, @kind, @other_id, @other_name, @other_kind, @gold_in, @gold_out, @items_in, @items_out, @msg, @note)`),
+  ledgerList:   db.prepare('SELECT * FROM ledger WHERE dragon_id = ? ORDER BY id DESC LIMIT ?'),
+  ledgerPrune:  db.prepare(`DELETE FROM ledger WHERE dragon_id = @d AND (at < @old OR id <= (SELECT id FROM ledger WHERE dragon_id = @d ORDER BY id DESC LIMIT 1 OFFSET @keep))`),
   giftIn:       db.prepare('INSERT INTO gift_inbox (to_id, from_id, from_name, from_kind, gold, items, msg, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'),
   giftList:     db.prepare('SELECT * FROM gift_inbox WHERE to_id = ? ORDER BY id'),
   giftSeen:     db.prepare('DELETE FROM gift_inbox WHERE id = ? AND to_id = ?'),
@@ -539,6 +564,25 @@ module.exports = {
   tpUnread: (me) => q.tpUnread.get(me).n,
   tpThreads: (me) => q.tpThreads.all({ me }),
   noteAdd: (id, text) => q.noteAdd.run(id, text, Date.now()),
+  // 주고받은 기록 한 줄. e: { kind, other: { id, name, kind } | null, goldIn, goldOut, itemsIn, itemsOut, msg, note }
+  ledgerAdd: (dragonId, e) => {
+    const clean = (l) => JSON.stringify((l || []).filter((x) => x && x.id && x.qty > 0).map((x) => ({ id: x.id, qty: x.qty })));
+    q.ledgerAdd.run({
+      dragon_id: dragonId, at: Date.now(), kind: e.kind,
+      other_id: e.other?.id ?? null, other_name: e.other?.name || '', other_kind: e.other?.kind || null,
+      gold_in: Math.max(0, e.goldIn || 0), gold_out: Math.max(0, e.goldOut || 0),
+      items_in: clean(e.itemsIn), items_out: clean(e.itemsOut), msg: e.msg || '', note: e.note || '',
+    });
+    q.ledgerPrune.run({ d: dragonId, old: Date.now() - LEDGER.days * 86400000, keep: LEDGER.keep });
+  },
+  ledgerList: (dragonId, n = 100) => q.ledgerList.all(dragonId, n).map((r) => {
+    const parse = (s) => { try { return JSON.parse(s || '[]'); } catch { return []; } };
+    return {
+      id: r.id, at: r.at, kind: r.kind, note: r.note, msg: r.msg,
+      other: r.other_id || r.other_name ? { id: r.other_id, name: r.other_name, kind: r.other_kind } : null,
+      goldIn: r.gold_in, goldOut: r.gold_out, itemsIn: parse(r.items_in), itemsOut: parse(r.items_out),
+    };
+  }),
   // 받은 선물 상자 (확인할 때까지 남는 알림)
   giftIn: (to, from, gold, items, msg) => Number(q.giftIn.run(to, from.id, from.name, from.kind, gold, JSON.stringify(items), msg, Date.now()).lastInsertRowid),
   giftList: (to) => q.giftList.all(to).map((r) => ({ id: r.id, from: { id: r.from_id, name: r.from_name, kind: r.from_kind }, gold: r.gold, items: JSON.parse(r.items || '[]'), msg: r.msg, at: r.at })),

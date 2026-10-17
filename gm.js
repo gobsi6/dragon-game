@@ -35,6 +35,7 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
     if (r.error) return r;
     refreshKin(d, kin);
     db.saveState(d, [...before.items, ...(r.items || [])], before.hoardItems);
+    if (r.ledger) db.ledgerAdd(d.id, { kind: 'gm', other: { id: null, name: '대륙의 목소리' }, ...r.ledger }); // 주고받은 기록 (GM 지급·회수)
     if (!entry && d._forceRaid && nestSync) nestSync(null, d); // 접속하지 않은 드래곤의 둥지에도 도둑을 보냄
     // 식구를 손봤으면 바뀐 나이대로 한 번 더 흘려서 성장·부화 소식을 바로 만듦
     let lines = before.lines;
@@ -103,6 +104,7 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
       d.gold = Math.max(0, d.gold + n);
       const real = d.gold - before;
       return {
+        ledger: real > 0 ? { goldIn: real } : { goldOut: -real },
         log: `금화 ${real > 0 ? '+' : ''}${real}`,
         tell: real > 0 ? `하늘에서 금화 ${real}닢이 내려왔다.` : `금화 ${-real}닢이 바람에 흩어졌다.`,
       };
@@ -117,6 +119,7 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
       const nm = ITEMS[id].name;
       return {
         items: [{ id, qty: n }],
+        ledger: n > 0 ? { itemsIn: [{ id, qty: n }] } : { itemsOut: [{ id, qty: -n }] },
         log: `${nm} ${n > 0 ? '+' : ''}${n}`,
         tell: n > 0 ? `하늘에서 ${nm} ${n}개가 내려왔다.` : `${nm} ${-n}개가 소지품에서 사라졌다.`,
       };
@@ -416,7 +419,7 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
       const tell = msg ? `${msg} (받은 물건: ${list})` : `하늘에서 ${list}가 내려왔다.`;
       let given = 0, skipped = 0;
       for (const id of ids) {
-        const r = withTarget(id, true, (d) => (d.dead_at ? { error: 'dead' } : { items: items.map((x) => ({ ...x })), tell }));
+        const r = withTarget(id, true, (d) => (d.dead_at ? { error: 'dead' } : { items: items.map((x) => ({ ...x })), tell, ledger: { itemsIn: items, msg } }));
         if (r.error) skipped += 1; else given += 1;
       }
       if (!given) return { error: '받을 수 있는 드래곤이 없었다.' };
