@@ -8319,14 +8319,10 @@
   // 용언 모드: 켜면 다음 한 번의 말이 대륙 전체로 감 (보내고 나면 다시 꺼짐)
   let shoutOn = false;
   function renderSayMode() {
-    const left = S.me?.shoutLeft ?? 0, max = S.me?.shoutMax ?? 15;
     const b = $('say-mode');
-    if (!left) shoutOn = false;
-    b.disabled = !left;
     b.setAttribute('aria-pressed', String(shoutOn));
-    b.title = left ? `용언: 대륙의 모든 드래곤에게 닿는 말 (오늘 ${left}/${max}번 남음)` : `오늘은 용언을 ${max}번 모두 썼다`;
     $('say').classList.toggle('shout', shoutOn);
-    $('say-input').placeholder = shoutOn ? `모두에게 · ${left}번 남음` : '말하기';
+    $('say-input').placeholder = shoutOn ? '모두에게 외치기' : '말하기';
     const sb = $('say-send');
     sb.setAttribute('aria-label', shoutOn ? '외치기' : '보내기');
     sb.title = shoutOn ? '외치기' : '보내기';
@@ -8343,7 +8339,6 @@
     if (shoutOn) {
       socket.emit('shout', { text }, (res) => {
         if (res.error) return toast(res.error);
-        if (S.me) S.me.shoutLeft = res.left;
         shoutOn = false;
         renderSayMode();
       });

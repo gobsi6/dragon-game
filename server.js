@@ -23,8 +23,7 @@ const PORT = process.env.PORT || 3000;
 const MOVE_COOLDOWN = 1500; // ms, 연속 이동 방지
 const CHAT_COOLDOWN = 700;  // ms, 도배 방지
 const CHAT_MAX = 200;       // 글자 수
-// 용언: 지역과 관계없이 대륙의 모든 드래곤에게 닿는 말. 한국 날짜 기준 하루 SHOUT_PER_DAY번
-const SHOUT_PER_DAY = 15;
+// 용언: 지역과 관계없이 대륙의 모든 드래곤에게 닿는 말 (횟수 제한 없음, 도배 방지 간격만)
 const SHOUT_REGION = '*';   // 채팅 기록에서 용언을 담는 자리
 const SHOUT_HISTORY = 10;   // 지역에 들어갈 때 함께 보여 줄 지난 용언 수
 const HISTORY = 30;         // 지역에 들어갈 때 보여줄 지난 대화 수
@@ -140,13 +139,6 @@ const publicDragon = (d) => ({
 });
 
 // 내 드래곤의 전체 정보 (나에게만 보냄)
-// 오늘 쓴 용언 수 (world 표의 'shouts'에 { day, n: { 드래곤 id: 횟수 } }로 보관, 날이 바뀌면 비움)
-function shoutBook() {
-  const day = logic.dayIdx();
-  const b = db.worldGet('shouts', null);
-  return b && b.day === day ? b : { day, n: {} };
-}
-const shoutLeft = (d) => Math.max(0, SHOUT_PER_DAY - (shoutBook().n[d.id] || 0));
 
 const meOf = (d) => ({
   duelUnseen: db.duelUnseen(d.id),       // 아직 확인하지 않은, 받은 자동 결투 수
@@ -154,7 +146,6 @@ const meOf = (d) => ({
   level: d.level, xp: d.xp, xpMax: logic.xpNeed(d.level), levelMax: logic.atMaxLevel(d),
   hp: d.hp, hpMax: logic.hpCap(d), en: d.en, enMax: logic.enCap(d),
   ap: d.ap, apMax: logic.apCap(d), gold: d.gold,
-  shoutLeft: shoutLeft(d), shoutMax: SHOUT_PER_DAY,
   stats: logic.statsOf(d),                 // 장신구까지 더한 값
   base: { claw: d.claw, scale: d.scale, wing: d.wing, wisdom: d.wisdom, majesty: d.majesty }, // 타고난 값 (포인트를 나눈 값 포함)
   statPts: d.stat_pts || 0,                // 아직 나누지 않은 능력치 포인트
@@ -1234,7 +1225,7 @@ io.on('connection', (socket) => {
     io.to(d.region).emit('chat', { ...msg, title: logic.titleName(d), av: d.has_avatar ? d.avatar_ver : 0 });
   });
 
-  // 용언: 대륙의 모든 드래곤에게 텔레파시로 외침. 하루 SHOUT_PER_DAY번
+  // 용언: 대륙의 모든 드래곤에게 텔레파시로 외침
   socket.on('shout', (payload, ack) => {
     if (typeof ack !== 'function') ack = () => {};
     const entry = entryOf(socket);
@@ -1244,17 +1235,11 @@ io.on('connection', (socket) => {
     const now = Date.now();
     if (now - (socket.data.lastChat || 0) < CHAT_COOLDOWN) return ack({ error: '숨을 고르고 다시 외치자.' });
     const d = entry.dragon;
-    const book = shoutBook();
-    const used = book.n[d.id] || 0;
-    if (used >= SHOUT_PER_DAY) return ack({ error: `오늘은 용언을 ${SHOUT_PER_DAY}번 모두 썼다. 내일 다시 외칠 수 있다.` });
-    book.n[d.id] = used + 1;
-    db.worldSet('shouts', book);
     socket.data.lastChat = now;
     const msg = { dragonId: d.id, name: d.name, kind: d.kind, text, at: now };
     msg.id = db.addChat(SHOUT_REGION, msg);
     io.emit('chat', { ...msg, shout: true, title: logic.titleName(d), av: d.has_avatar ? d.avatar_ver : 0 });
-    sendMe(socket, d);
-    ack({ ok: true, left: SHOUT_PER_DAY - book.n[d.id] });
+    ack({ ok: true });
   });
 
   // 내가 한 말 지우기 (GM은 누구의 말이든)
