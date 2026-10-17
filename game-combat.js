@@ -94,14 +94,15 @@ function fromCreature(place, elite, corrupted = false, minion = null) {
   const lv = pl.level + (elite ? 1 : 0);
   const K = COMBAT.creature; // 사냥터 난이도별 사냥감 세기
   const G = COMBAT.group;
-  const hpMax = Math.round((K.hp[0] + lv * K.hp[1]) * (elite ? K.eliteHp : 1) * (minion ? G.hp : 1));
+  const DF = COMBAT.difficulty || { hp: 1, atk: 1 }; // 난이도 배율
+  const hpMax = Math.round((K.hp[0] + lv * K.hp[1]) * (elite ? K.eliteHp : 1) * (minion ? G.hp : 1) * DF.hp);
   const name = `${minion ? `${minion} ` : ''}${elite ? pl.elite : pl.creature}`;
   return {
     id: null, name: corrupted ? `오염된 ${name}` : name, kind: null, creature: true, region: pl.region, place, elite: !!elite, minion: !!minion, level: lv,
     type: (elite && pl.eliteType) || pl.type || null, // 화면 아이콘 계통
     corrupted, mindDrain: corrupted ? MIND.monster : 0,
     hp: hpMax, hpMax, en: 0, enMax: 0,
-    atk: (K.atk[0] + lv * K.atk[1]) * (elite ? K.eliteAtk : 1) * (corrupted ? MIND.monsterAtk : 1) * (minion ? G.atk : 1), def: K.def[0] + lv * K.def[1], spd: 6 + lv * 2, mag: 4 + lv * 2, maj: 6 + lv * 2,
+    atk: (K.atk[0] + lv * K.atk[1]) * (elite ? K.eliteAtk : 1) * (corrupted ? MIND.monsterAtk : 1) * (minion ? G.atk : 1) * DF.atk, def: K.def[0] + lv * K.def[1], spd: 6 + lv * 2, mag: 4 + lv * 2, maj: 6 + lv * 2,
     taken: 1, element: cc.special.element || null,
     breath: null, skills: [], special: cc.special,
     weak: cc.weak, resist: cc.resist,

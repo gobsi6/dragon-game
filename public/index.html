@@ -1058,6 +1058,11 @@
   .sfx-vol input[type=range] { flex: 1; min-width: 0; accent-color: var(--forest); }
   .sfx-vol span { width: 28px; text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
   .sfx-vol .btn { min-height: 30px; padding: 0 10px; font-size: 12.5px; }
+  .pw-box { display: flex; flex-direction: column; gap: 8px; }
+  .pw-box .linkbtn { align-self: flex-start; }
+  .pw-form { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: #fff; border: 1px solid var(--line-in); }
+  .pw-form[hidden] { display: none; }
+  .pw-form .error:empty { display: none; }
   .setopt { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; background: #fff; border: 1px solid var(--line-in); cursor: pointer; }
   .setopt input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--forest); flex: none; }
   .setopt b { display: block; font-size: 14px; }
@@ -2132,6 +2137,16 @@
     <label class="setopt"><input type="checkbox" id="set-sfx"><span><b>효과음</b><small>버튼을 누를 때, 사고팔 때, 전투가 끝날 때, 소식이 올 때 짧은 소리가 난다.</small></span></label>
     <div class="sfx-vol"><label for="set-sfx-vol">크기</label><input type="range" id="set-sfx-vol" min="0" max="100" step="5"><span id="set-sfx-n"></span><button class="btn" type="button" id="set-sfx-try">들어 보기</button></div>
     <h3>계정</h3>
+    <div class="pw-box">
+      <button class="linkbtn" type="button" id="pw-open">비밀번호 바꾸기</button>
+      <div class="pw-form" id="pw-form" hidden>
+        <label class="field"><span>지금 비밀번호</span><input class="input" type="password" id="pw-cur" autocomplete="current-password"></label>
+        <label class="field"><span>새 비밀번호 <small>4~64자</small></span><input class="input" type="password" id="pw-new" autocomplete="new-password"></label>
+        <label class="field"><span>새 비밀번호 한 번 더</span><input class="input" type="password" id="pw-new2" autocomplete="new-password"></label>
+        <p class="error" id="pw-error" role="alert"></p>
+        <div class="row"><button class="btn" type="button" id="pw-cancel">그만두기</button><button class="btn primary" type="button" id="pw-go">바꾸기</button></div>
+      </div>
+    </div>
     <div class="leave">
       <button class="linkbtn danger" type="button" id="leave-open">계정 탈퇴</button>
       <div class="leave-box" id="leave-box" hidden>
@@ -6602,6 +6617,21 @@
     });
   }
   $('settings-open').addEventListener('click', openSettings);
+  // 비밀번호 바꾸기
+  const closePw = () => { $('pw-form').hidden = true; $('pw-open').hidden = false; for (const id of ['pw-cur', 'pw-new', 'pw-new2']) $(id).value = ''; $('pw-error').textContent = ''; };
+  $('pw-open').addEventListener('click', () => { $('pw-form').hidden = false; $('pw-open').hidden = true; $('pw-cur').focus(); });
+  $('pw-cancel').addEventListener('click', closePw);
+  $('settings-dlg').addEventListener('close', closePw);
+  $('pw-go').addEventListener('click', () => {
+    const cur = $('pw-cur').value, next = $('pw-new').value;
+    if (next !== $('pw-new2').value) { $('pw-error').textContent = '새 비밀번호 두 칸이 서로 다르다.'; return; }
+    if (next.length < 4) { $('pw-error').textContent = '새 비밀번호는 4자 이상이어야 한다.'; return; }
+    socket.emit('account:password', { current: cur, next }, (res) => {
+      if (res.error) { $('pw-error').textContent = res.error; return; }
+      closePw();
+      toast('비밀번호를 바꿨다. 다른 기기에서는 새 비밀번호로 다시 들어와야 한다.');
+    });
+  });
   $('settings-close').addEventListener('click', () => $('settings-dlg').close());
 
   // ── 드래곤 창: 전투 스킬 고르기 ──
@@ -6786,6 +6816,12 @@
     head.appendChild(who);
     const ha = gEl('div', 'gm-r');
     if (d.online) gBtn(ha, '접속 끊기', () => { if (confirm(`${d.name}의 접속을 끊을까?`)) gmCall('gm:kick', { id: d.id }, () => toast('접속을 끊었다.')); }, 'warn');
+    gBtn(ha, '임시 비밀번호', () => {
+      if (!confirm(`${d.name}(아이디 ${d.username})의 비밀번호를 임시 비밀번호로 바꿀까? 지금 비밀번호로는 더 이상 들어올 수 없고, 접속 중이면 끊긴다.`)) return;
+      gmCall('gm:pwreset', { id: d.id }, (res) => {
+        prompt(`아이디 ${res.username}의 임시 비밀번호. 복사해서 본인에게만 전해 주세요. (이 창을 닫으면 다시 볼 수 없다)\n들어온 뒤 설정 > 계정에서 비밀번호를 바꾸게 해 주세요.`, res.temp);
+      });
+    }, 'warn');
     if (!d.isGm) gBtn(ha, 'GM 권한 주기', () => { if (confirm(`${d.name}(${d.username})에게 GM 권한을 줄까? GM 도구를 모두 쓸 수 있게 된다.`)) gmCall('gm:role', { id: d.id, on: true }, () => toast('GM 권한을 주었다.')); });
     else if (d.id !== S.me?.id) gBtn(ha, 'GM 권한 거두기', () => gmCall('gm:role', { id: d.id, on: false }, () => toast('GM 권한을 거두었다.')), 'warn');
     head.appendChild(ha);

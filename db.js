@@ -261,6 +261,8 @@ const q = {
   createSess:   db.prepare('INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)'),
   sessUser:     db.prepare('SELECT u.id, u.username, u.is_gm FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?'),
   deleteSess:   db.prepare('DELETE FROM sessions WHERE token = ?'),
+  setPw:        db.prepare('UPDATE users SET pw_hash = ? WHERE id = ?'),
+  delSessOf:    db.prepare('DELETE FROM sessions WHERE user_id = ?'),
   dragonByUser: db.prepare(`SELECT ${DRAGON_FIELDS} FROM dragons WHERE user_id = ?`),
   dragonByName: db.prepare('SELECT id FROM dragons WHERE name = ?'),
   setNameKind:  db.prepare('UPDATE dragons SET name = ?, kind = ? WHERE id = ?'),
@@ -438,6 +440,13 @@ function saveStateRaw(d, items = [], hoardItems = []) {
 module.exports = {
   countUsers: () => q.countUsers.get().n,
   getUserByName: (name) => q.userByName.get(name),
+  // 비밀번호 바꾸기. keepToken이 있으면 그 접속만 남기고 다른 기기의 로그인은 모두 끊음
+  setPassword: (userId, hash, keepToken = null) => {
+    q.setPw.run(hash, userId);
+    const keep = keepToken ? q.sessUser.get(keepToken) : null;
+    q.delSessOf.run(userId);
+    if (keep && keep.id === userId) q.createSess.run(keepToken, userId, Date.now());
+  },
   createUser: (name, hash, isGm) => q.createUser.run(name, hash, isGm ? 1 : 0, Date.now()).lastInsertRowid,
   createSession: (token, userId) => q.createSess.run(token, userId, Date.now()),
   getSessionUser: (token) => q.sessUser.get(token),

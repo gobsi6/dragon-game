@@ -1065,6 +1065,19 @@ io.on('connection', (socket) => {
     ack({ ok: true });
   });
 
+  // 비밀번호 바꾸기: 지금 비밀번호를 확인하고 새 비밀번호로. 이 기기만 로그인을 유지하고 다른 기기는 끊김
+  socket.on('account:password', (payload, ack) => {
+    if (typeof ack !== 'function') ack = () => {};
+    const u = db.getUserByName(user.username);
+    const cur = typeof payload?.current === 'string' ? payload.current : '';
+    const next = typeof payload?.next === 'string' ? payload.next : '';
+    if (!u || !cur || !bcrypt.compareSync(cur, u.pw_hash)) return ack({ error: '지금 비밀번호가 맞지 않는다.' });
+    if (next.length < 4 || next.length > 64) return ack({ error: '새 비밀번호는 4~64자로 정해야 한다.' });
+    if (next === cur) return ack({ error: '지금 비밀번호와 다른 비밀번호를 정하자.' });
+    db.setPassword(u.id, bcrypt.hashSync(next, 10), socket.handshake.auth?.token || null);
+    ack({ ok: true });
+  });
+
   // 계정 탈퇴: 비밀번호를 다시 확인하고, 계정과 드래곤을 모두 지움 (되돌릴 수 없음)
   socket.on('account:delete', (payload, ack) => {
     if (typeof ack !== 'function') ack = () => {};

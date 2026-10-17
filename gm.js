@@ -5,6 +5,8 @@
 // (DB만 고치면 그 드래곤이 다음에 저장할 때 옛 값으로 덮어씀)
 const { REGIONS, ITEMS, STANCES, KINDS, KIN, DAY, TRAITS, STATS, NEST } = require('./game-data');
 const EVENTS = require('./game-events');
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 const str = (v) => (typeof v === 'string' ? v.trim() : '');
 const int = (v) => (Number.isFinite(Number(v)) ? Math.trunc(Number(v)) : NaN);
@@ -439,6 +441,20 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
       const name = db.getDragon(id).name;
       db.gmLog(gmName(), name, onRole ? 'GM 권한 줌' : 'GM 권한 거둠');
       return { ok: true, dragon: detail(id), log: db.gmLogList(40) };
+    });
+
+    // 비밀번호를 잃어버린 멤버에게 임시 비밀번호 발급 (그 계정의 모든 로그인은 끊김). 비밀번호는 기록에 남기지 않음
+    on('gm:pwreset', (p) => {
+      const id = int(p.id);
+      const u = db.gmUserOf(id);
+      if (!u || u.username.startsWith('#')) return { error: '계정이 있는 드래곤이 아니다. (긴 잠·먼 여행을 떠난 드래곤)' };
+      const ABC = 'abcdefghjkmnpqrstuvwxyz23456789'; // 헷갈리는 글자(0 o 1 l i) 뺌
+      const temp = Array.from(crypto.randomBytes(8), (b) => ABC[b % ABC.length]).join('');
+      db.setPassword(u.id, bcrypt.hashSync(temp, 10));
+      const entry = online.get(id);
+      if (entry && entry.socket !== socket) kick(entry.socket);
+      db.gmLog(gmName(), db.getDragon(id).name, `임시 비밀번호 발급 (아이디 ${u.username})`);
+      return { ok: true, username: u.username, temp, dragon: detail(id), log: db.gmLogList(40) };
     });
 
     on('gm:kick', (p) => {
