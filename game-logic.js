@@ -900,7 +900,12 @@ function finishExpedition(d, now = Date.now(), companions = 0) {
 const craftEn = (d, r) => Math.ceil(r.en * (d.perks?.smith ? 0.7 : 1) * (titleMods(d).craftEn || 1) * (atForge(d) ? CRAFT.forge.en : 1) - 1e-9);
 // ── 제작 확장: 걸작·강화·각인(장신구별 기록), 숨겨진 제작법, 공방 ──
 // 전투 설정(combat JSON)에 { gear: { 아이템id: { plus, mw, elem } }, recipes: [찾아낸 제작법], orders: { day, done } }
-const gearOf = (d) => { const c = combatJson(d); if (!c.gear || typeof c.gear !== 'object') c.gear = {}; return c.gear; };
+const gearOf = (d) => {
+  const c = combatJson(d);
+  if (!c.gear || typeof c.gear !== 'object') c.gear = {};
+  for (const g of Object.values(c.gear)) if (g && g.plus > CRAFT.enhance.length) g.plus = CRAFT.enhance.length; // 최대 강화가 줄었을 때 예전 기록을 맞춤
+  return c.gear;
+};
 const mainStat = (it) => Object.entries(it.bonus || {}).sort((a, b) => b[1] - a[1])[0]?.[0] || null; // 가장 크게 올려 주는 능력치
 const knownRecipes = (d) => { const c = combatJson(d); if (!Array.isArray(c.recipes)) c.recipes = []; return c.recipes; };
 const recipeKnown = (d, r) => !r.hidden || knownRecipes(d).includes(r.out);
@@ -1015,7 +1020,7 @@ function enhanceGear(d, id, have) {
   const g = gearOf(d);
   const lv = g[id]?.plus || 0;
   const step = CRAFT.enhance[lv];
-  if (!step) return { error: '더는 강화할 수 없다. (+3이 끝)' };
+  if (!step) return { error: `더는 강화할 수 없다. (+${CRAFT.enhance.length}이 끝)` };
   if (d.gold < step.gold) return { error: `금화가 모자란다. (${step.gold}닢 필요)` };
   for (const [x, n] of Object.entries(step.items)) if (have(x) < n) return { error: `${ITEMS[x].name}${josa(ITEMS[x].name, '이', '가')} 모자란다. (${n}개 필요)` };
   d.gold -= step.gold;
@@ -1025,7 +1030,7 @@ function enhanceGear(d, id, have) {
   if (Math.random() < rate) {
     g[id] = { ...(g[id] || {}), plus: lv + 1 };
     lines.push(`망치 소리가 울려 퍼졌다. ${it.name}${josa(it.name, '이', '가')} +${lv + 1}로 강화되었다! (${STATS.find((x) => x.key === mainStat(it))?.name || '능력치'} +1)`);
-    if (lv + 1 === 3) chron(d, 'mark', `${it.name}${josa(it.name, '을', '를')} +3까지 강화했다.`);
+    if (lv + 1 === CRAFT.enhance.length) chron(d, 'mark', `${it.name}${josa(it.name, '을', '를')} +${lv + 1}까지 강화했다.`);
   } else {
     lines.push(`불꽃이 튀며 금이 갔던 룬이 사라졌다. 강화에 실패했다. (${it.name}${josa(it.name, '은', '는')} +${lv} 그대로)`);
   }

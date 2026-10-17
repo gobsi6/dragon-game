@@ -963,10 +963,10 @@ const CRAFT = {
   experiment: { en: 4 },                  // 실험에 드는 기력 (고른 재료는 하나씩 사라짐)
   scrollChance: { explore: 0.04, elite: 0.1 }, // 바랜 제작서가 나올 확률
   // 장신구 강화: 단계마다 성공 확률·재료·금화. 실패하면 재료와 금화만 사라짐. 한 단계마다 그 장신구의 주 능력치 +1
+  // 단계 수가 곧 최대 강화 (지금 +2). 줄을 더하면 +3도 열림
   enhance: [
-    { rate: 1.0,  gold: 40,  items: { rune_stone: 2 } },
-    { rate: 0.75, gold: 100, items: { rune_stone: 3, old_scroll: 1 } },
-    { rate: 0.5,  gold: 220, items: { rune_stone: 4, ancient_relic: 1 } },
+    { rate: 1.0, gold: 60,  items: { rune_stone: 3 } },
+    { rate: 0.5, gold: 300, items: { rune_stone: 5, old_scroll: 1, ancient_relic: 1 } },
   ],
   forgeRate: 0.1,                         // 공방이 있는 둥지에서 강화하면 성공 확률 +10%
   // 속성 각인: 그 속성 공격(숨결·스킬) 피해 배율. 재료는 속성마다 다름
@@ -1004,7 +1004,7 @@ const COMBAT = {
   xpWin: 20, xpLose: 8,
   xpWinPerLv: 4, xpLosePerLv: 2,
   // 사냥감 세기: [기본, 사냥터 Lv.1당]. 강적은 체력·공격에 배율
-  creature: { hp: [27, 4.2], atk: [8, 0.85], def: [3.5, 0.4], eliteHp: 1.8, eliteAtk: 1.2 },
+  creature: { hp: [34, 3.3], atk: [12, 0.45], def: [3.5, 0.4], eliteHp: 1.8, eliteAtk: 1.3 }, // 초반은 조금 더 아프게, 레벨당 오르는 폭은 줄여 후반 벽을 낮춤 (예전: hp [27, 4.2], atk [8, 0.85], 강적 공격 1.2)
   // 난이도: 사냥·강적의 사냥감 세기 배율 (1이면 예전과 같음). 올리면 사냥감이 더 단단하고 아프게 문다
   difficulty: { hp: 1.08, atk: 1.08 },
   // 무리 조우: 사냥하다 여러 마리를 한꺼번에 만남. 함께 나온 사냥감은 조금 약하고(체력·공격 배율), 쓰러뜨린 만큼 전리품이 더 나옴

@@ -8,6 +8,7 @@ const MOB_RULES = {
   offers: 2,       // 드래곤마다 하루에 내미는 의뢰 수 (한국 시간 자정에 바뀜)
   maxActive: 3,    // 동시에 맡을 수 있는 의뢰 수 (건네기 의뢰는 맡지 않고 바로 끝냄)
   tradeDaily: 3,   // 교환 하나당 하루 횟수
+  fameCap: 30,     // 의뢰·이야기로 오르는 용족 명성은 여기('존중')까지만. 그 위는 결투·재앙·위협 같은 원래 길로
   // 의뢰 난이도별 보상
   tiers: {
     1: { gold: 35,  xp: 25,  fame: 2 },
@@ -343,9 +344,10 @@ function payReward(d, tier, extra = {}) {
   d.gold += gold;
   const xp = logic.xpOf(d, r.xp);
   const up = logic.gainXp(d, xp);
-  const lines = [`금화 ${gold}닢, 경험치 +${xp}, 용족 명성 +${r.fame}${up ? ' · 레벨이 올랐다!' : ''}`];
-  const f = logic.addFame(d, r.fame);
-  if (f) lines.push(f);
+  const fame = Math.max(0, Math.min(r.fame, MOB_RULES.fameCap - (d.fame || 0)));
+  const lines = [`금화 ${gold}닢, 경험치 +${xp}${fame > 0 ? `, 용족 명성 +${fame}` : ''}${up ? ' · 레벨이 올랐다!' : ''}`];
+  if (fame > 0) { const f = logic.addFame(d, fame); if (f) lines.push(f); }
+  else if ((d.fame || 0) >= MOB_RULES.fameCap) lines.push(`(심부름으로 쌓는 명성은 '존중'까지다. 그 위는 결투나 재앙에서 이름을 떨쳐야 한다.)`);
   const items = [];
   if (extra.item) {
     items.push({ id: extra.item, qty: 1 });
