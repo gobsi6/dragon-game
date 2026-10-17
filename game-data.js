@@ -422,7 +422,7 @@ const repTier = (v) => REP_TIERS.find((t) => v >= t.min).name;
 // 둥지
 const NEST = {
   moveCost: 30,                     // 둥지를 옮길 때 드는 금화 (처음 틀 때는 무료)
-  homeFlightAp: 1,                  // 어디서든 둥지로 곧장 날아갈 때 드는 행동력
+  homeFlightAp: 0,                  // 어디서든 둥지로 곧장 날아갈 때 드는 행동력 (0이면 들지 않음)
   rest: { hp: 4, en: 4, ap: 2 },    // 쉬는 동안 회복이 몇 배 빨라지는지
   // 둥지 단계: 넓힐수록 식구가 늘고 쉬는 회복이 빨라짐. 둥지를 옮기면 한 단계 낮아짐 (설치한 덫·결계도 남겨 두고 감)
   // kin: 함께 살 식구 수, rest: 쉬는 회복 배율(위 rest에 곱함), raidLoss: 도둑이 들었을 때 잃는 양 배율, cost: 넓히는 데 드는 것

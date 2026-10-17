@@ -2449,7 +2449,7 @@
     b.hidden = !action;
     if (action) { b.textContent = action.label; b.onclick = action.run; }
     b2.hidden = !action?.alt;
-    $('toast-x').hidden = !action; // 버튼이 있는 알림은 저절로 사라지지 않을 수 있으니 닫기 버튼
+    $('toast-x').hidden = !action || !!action.alt; // 버튼이 있는 알림은 닫기 버튼 (두 번째 버튼이 있으면 그걸로 닫으므로 뺌)
     if (action?.alt) { b2.textContent = action.alt.label; b2.onclick = () => { hideToast(); action.alt.run?.(); }; }
     // 남은 시간을 아래 가는 막대로 보여 줌
     tm.hidden = !action?.ttl;
@@ -3816,11 +3816,11 @@
             note.textContent = me.restAt ? '지금 둥지에서 쉬고 있다.' : '둥지에서 쉬면 회복이 빨라진다. 쉬는 동안에는 채팅과 제작, 보물더미 정리만 할 수 있다.';
             row.appendChild(me.restAt ? btn('깨어나기', () => nestAct('rest:stop'), true) : btn('둥지에서 쉬기', () => nestAct('rest:start'), true, !!me.exp));
           } else {
-            note.textContent = `어디서든 둥지로 곧장 날아갈 수 있다. 행동력 ${S.nestRules.homeFlightAp}이 든다.`;
+            note.textContent = S.nestRules.homeFlightAp > 0 ? `어디서든 둥지로 곧장 날아갈 수 있다. 행동력 ${S.nestRules.homeFlightAp}이 든다.` : '어디서든 둥지로 곧장 날아갈 수 있다. 행동력은 들지 않는다.';
             // 반려의 둥지에 와 있으면 그곳에서도 쉴 수 있음
             const pn = me.partnerNest;
             if (pn && pn.region === S.region) row.appendChild(me.restAt ? btn('깨어나기', () => nestAct('rest:stop'), true) : btn(`반려 ${pn.name}의 둥지에서 쉬기`, () => nestAct('rest:start'), true, !!me.exp));
-            row.appendChild(btn(`둥지로 날아가기 −${S.nestRules.homeFlightAp}`, () => { nestAct('nest:home'); }, true, !!me.exp || !!me.restAt || me.ap < S.nestRules.homeFlightAp));
+            row.appendChild(btn(`둥지로 날아가기${S.nestRules.homeFlightAp > 0 ? ` −${S.nestRules.homeFlightAp}` : ''}`, () => { nestAct('nest:home'); }, true, !!me.exp || !!me.restAt || me.ap < S.nestRules.homeFlightAp));
             if (!town) row.appendChild(btn(`여기로 둥지 옮기기 (금화 ${S.nestRules.moveCost})`, () => {
               const tierNote = (n.tier || 0) > 0 ? ` 넓혀 둔 둥지는 한 단계 낮아져 ${S.nestRules.tiers[n.tier - 1].name}${ro(S.nestRules.tiers[n.tier - 1].name)} 된다.` : '';
               const wardNote = n.wards && (n.wards.trap || n.wards.stone) ? ' 설치한 덫과 결계는 두고 간다.' : '';
@@ -3857,7 +3857,7 @@
           rc.querySelector('.when').textContent = `${dur(r.until - Date.now())} 안에 쫓아가 이기면 모두 되찾는다. 지면 쓰러지고, 물러나면 다시 쫓을 수 있다.`;
           const row2 = rc.querySelector('.row');
           if (n.here) row2.appendChild(btn(`도둑 쫓기 −${S.raidRules.chaseAp}`, raidChase, true, !!me.exp || !!me.restAt || me.ap < S.raidRules.chaseAp));
-          else row2.appendChild(btn(`둥지로 날아가기 −${S.nestRules.homeFlightAp}`, () => nestAct('nest:home'), true, !!me.exp || !!me.restAt || me.ap < S.nestRules.homeFlightAp));
+          else row2.appendChild(btn(`둥지로 날아가기${S.nestRules.homeFlightAp > 0 ? ` −${S.nestRules.homeFlightAp}` : ''}`, () => nestAct('nest:home'), true, !!me.exp || !!me.restAt || me.ap < S.nestRules.homeFlightAp));
         }
 
         // 탭: 둥지(단계·넓히기·지키기) / 식구 / 보물더미. 탭 이름 아래에 요약을 작게

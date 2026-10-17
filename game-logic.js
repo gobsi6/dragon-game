@@ -1440,7 +1440,7 @@ function flyHome(d) {
   if (!d.nest) return { error: '아직 둥지가 없다.' };
   if (d.region === d.nest) return { error: '이미 둥지에 있다.' };
   if (d.ap < NEST.homeFlightAp) return { error: `행동력이 모자란다. (${NEST.homeFlightAp} 필요)` };
-  spendAp(d, NEST.homeFlightAp);
+  if (NEST.homeFlightAp > 0) spendAp(d, NEST.homeFlightAp);
   const from = d.region;
   d.region = d.nest;
   return { title: '둥지', lines: [`${REGIONS[d.nest].name}의 둥지로 곧장 날아왔다.`], from };
