@@ -4,6 +4,7 @@ const path = require('path');
 const http = require('http');
 const crypto = require('crypto');
 const express = require('express');
+const compression = require('compression');
 const bcrypt = require('bcryptjs');
 const { Server } = require('socket.io');
 
@@ -26,6 +27,7 @@ const AVATAR_MAX = 400000;  // 프로필 그림 최대 크기 (base64 글자 수
 const AVATAR_COOLDOWN = 5000;
 
 const app = express();
+app.use(compression()); // 화면 파일을 압축해서 보냄 (index.html 480KB → 약 120KB)
 app.use(express.json({ limit: '10kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 

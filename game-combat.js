@@ -3,7 +3,7 @@
 // - 강적·결투장: 매 턴 직접 고름 (실시간 결투에서 시간을 넘기면 자동으로 고름)
 // 전투 하나 = battle { kind, turn, a, b, log, over, winner }. a·b는 싸우는 쪽(fighter)
 const {
-  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, STATUS, CREATURE_COMBAT, ELITES, CREATURES, ITEMS, RULES, STANCE_RULES, KINDS, MIND, PLACES, PLACE_RULES, COMBOS, ENRAGE, RAID, BOSSES, BOSS,
+  COMBAT, BREATHS, BREATH_COST, SKILLS, STATUS, ITEMS, RULES, STANCE_RULES, MIND, PLACES, PLACE_RULES, COMBOS, ENRAGE, RAID, BOSSES, BOSS,
 } = require('./game-data');
 const logic = require('./game-logic');
 
@@ -222,7 +222,11 @@ function damage(att, def, power, opt = {}) {
 }
 // 피하기: 날개(속도) 차이와 안개·돌풍
 function dodged(att, def, lines) {
-  if (has(def, 'dodge')) { def.st.dodge = 0; lines.push(`${ga(def)} 돌풍을 타고 공격을 흘려보냈다.`); return true; }
+  if (has(def, 'dodge')) {
+    def.st.dodge = 0; // 돌풍: 다음 공격 한 번을 높은 확률로 흘려보냄
+    if (Math.random() < COMBAT.gustDodge) { lines.push(`${ga(def)} 돌풍을 타고 공격을 흘려보냈다.`); return true; }
+    lines.push(`${ga(def)} 돌풍을 탔지만 공격이 스쳤다.`);
+  }
   if (has(att, 'blind') && Math.random() < 0.25) { lines.push(`${ga(att)} 앞이 보이지 않아 헛손질했다.`); return true; } // 흙먼지
   const p = has(def, 'soak') ? 0.02 : clamp(0.05 + (spdOf(def) - spdOf(att)) * 0.015, 0.03, 0.3) + (has(def, 'evade') ? 0.4 : 0);
   if (Math.random() < p) { lines.push(`${ga(def)} 날렵하게 피했다.`); return true; }

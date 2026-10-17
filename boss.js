@@ -4,7 +4,7 @@
 // - 한 번 맞설 때마다 입힌 피해만큼 경험치·금화. 쓰러뜨리면 입힌 피해 비율에 따라 모두에게 큰 보상
 // - BOSS.lastsHours 안에 쓰러뜨리지 못하면 떠나 버림
 // 상태는 world 표의 'boss'(지금 재앙)와 'boss_next'(다음 재앙이 오는 시각)에 저장
-const { BOSSES, BOSS, REGIONS, ITEMS, SHOPS, RULES } = require('./game-data');
+const { BOSSES, BOSS, REGIONS, SHOPS, RULES } = require('./game-data');
 
 const HOUR = 3600000;
 const str = (v) => (typeof v === 'string' ? v.trim() : '');

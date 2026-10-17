@@ -982,6 +982,7 @@
   .bt-intent.debuff .k { background: #6B4FA0; }
   .bt-intent.self { border-left-color: #A87A1C; background: #FBF6E8; border-color: #E2CF9E; }
   .bt-intent.self .k { background: #A87A1C; }
+  .bt-acts .bt-note { grid-column: 1 / -1; margin: 2px 0 0; font-size: 12px; line-height: 1.5; color: var(--muted); text-align: center; }
   .bt-acts .btn.combo { border-color: #C29A3E; box-shadow: inset 0 0 0 1px #C29A3E, 0 0 0 3px rgba(194, 154, 62, .18); background: #FFFBF0; }
   .bt-acts .btn.combo small { color: #8A6516; font-weight: 700; }
   .bt-acts .btn.primary.combo { background: var(--steel-d); }
@@ -1608,6 +1609,7 @@
     .chat-h b { font: 700 15px/1.3 var(--serif); }
     .chat-x { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; padding: 0; background: transparent; border: 1px solid var(--line-in); border-radius: 3px; color: var(--steel-d); cursor: pointer; }
     .chat-x:active { background: rgba(60, 90, 115, .08); }
+    .main { padding-bottom: 72px; } /* 오른쪽 아래 이야기 버튼에 마지막 칸이 가리지 않게 */
     .chat-fab {
       display: flex; align-items: center; justify-content: center; position: fixed; z-index: 15; right: 12px; bottom: calc(var(--dock-h, 56px) + 12px);
       width: 48px; height: 48px; padding: 0; border: 0; border-radius: 50%; background: var(--steel); color: #F4F7FA; cursor: pointer;
@@ -4053,15 +4055,6 @@
     row.querySelector('small').textContent = it.desc;
     return row;
   }
-  function mkButton(text, onClick, disabled, primary) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = primary ? 'btn primary' : 'btn';
-    b.textContent = text;
-    b.disabled = !!disabled;
-    b.addEventListener('click', onClick);
-    return b;
-  }
   // 개수 고르기 (− n +) 와 합계가 적힌 버튼. 개수를 바꿔도 창을 다시 그리지 않고 그 줄만 바꿈
   const mkQty = new Map();
   function mkControls(row, key, unit, max, label, onGo, canAfford) {
@@ -6395,6 +6388,12 @@
           b.innerHTML = '<span>나머지는 자동으로</span><small>알아서 싸우고, 위험하면 물러난다</small>';
           b.addEventListener('click', btAuto);
           acts.appendChild(b);
+        } else if (v.kind !== 'duel') {
+          // 자동 버튼이 없는 싸움: 왜 없는지 작게 알려 줌
+          const note = document.createElement('p');
+          note.className = 'bt-note';
+          note.textContent = v.boss ? '재앙은 자동으로 맡길 수 없다.' : v.kind === 'calm' ? '폭주한 드래곤은 자동으로 맡길 수 없다.' : '강적은 자동으로 맡길 수 없다.';
+          acts.appendChild(note);
         }
       }
     }

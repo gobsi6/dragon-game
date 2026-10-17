@@ -25,7 +25,7 @@
 //           nearestTown() name(식구 → '미르가') josa(말, 받침, 없음)
 //           mind(n) buff(강화 id, 분) notify(드래곤 id, 글, 제목) hoardTake(id, n)(보물더미에서, 있는 만큼만) hoardGive(id, n)
 
-const { ITEMS, KINDS, REGIONS, SHOPS, PLACES, REGION_LOOT, KIN, STATS } = require('./game-data');
+const { ITEMS, KINDS, REGIONS, PLACES, REGION_LOOT, KIN, STATS } = require('./game-data');
 
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const randInt = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
