@@ -24,7 +24,7 @@ const MOVE_COOLDOWN = 1500; // ms, 연속 이동 방지
 const CHAT_COOLDOWN = 700;  // ms, 도배 방지
 const CHAT_MAX = 200;       // 글자 수
 // 용언: 지역과 관계없이 대륙의 모든 드래곤에게 닿는 말. 한국 날짜 기준 하루 SHOUT_PER_DAY번
-const SHOUT_PER_DAY = 10;
+const SHOUT_PER_DAY = 15;
 const SHOUT_REGION = '*';   // 채팅 기록에서 용언을 담는 자리
 const SHOUT_HISTORY = 10;   // 지역에 들어갈 때 함께 보여 줄 지난 용언 수
 const HISTORY = 30;         // 지역에 들어갈 때 보여줄 지난 대화 수

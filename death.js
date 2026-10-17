@@ -45,8 +45,18 @@ module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broa
       scars: scarsOf(d), canRevive: canRevive(d), kin: (d.kinSummary?.home || []).length,
       waiting: waitingOf(d) ? f.wait.until : null, // 도움을 기다리는 중이면 끝나는 시각
       waited: !!f.waited,                         // 이번에 쓰러져서 이미 기다려 봤는지
+      helpLeft: helpLeft(d), helpMax: DEATH.helpPerDay, // 오늘 남의 도움으로 더 일어설 수 있는 횟수
     };
   }
+
+  // ── 도움으로 일어선 횟수 (하루 DEATH.helpPerDay번) ───
+  // world 표의 'rescued'에 { day, n: { 드래곤 id: 횟수 } }로 보관, 날이 바뀌면 비움
+  function rescuedBook() {
+    const day = logic.dayIdx();
+    const b = db.worldGet('rescued', null);
+    return b && b.day === day ? b : { day, n: {} };
+  }
+  const helpLeft = (d) => Math.max(0, DEATH.helpPerDay - (rescuedBook().n[d.id] || 0));
 
   // ── 도움을 기다림 ──────────────────────────────────
   const waitingOf = (d) => { const f = fallenOf(d); return f && f.wait && f.wait.until > Date.now() ? f.wait : null; };
@@ -61,6 +71,7 @@ module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broa
     if (!f) return { error: '쓰러져 있지 않다.' };
     if (waitingOf(d)) return { error: '이미 도움을 기다리고 있다.' };
     if (f.waited) return { error: '이번에는 이미 기다려 보았다. 이제 스스로 정해야 한다.' };
+    if (!helpLeft(d)) return { error: `오늘은 이미 ${DEATH.helpPerDay}번 도움을 받아 일어섰다. 이번에는 스스로 정해야 한다.` };
     const until = Date.now() + DEATH.waitMs;
     d.fallen = { ...f, region: f.region || d.region, wait: { until }, waited: true };
     logic.chron(d, 'choice', '쓰러진 채 다른 드래곤의 도움을 기다리기로 했다.');
@@ -87,6 +98,7 @@ module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broa
     if (helper.region !== where) return { error: `${REGIONS[where].name}에 가야 일으켜 줄 수 있다.` };
     if (fallenOf(helper) || logic.berserkOf(helper)) return { error: '지금은 할 수 없다.' };
     if (helper.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
+    if (!helpLeft(t)) return { error: `${ga(t.name)} 오늘은 이미 ${DEATH.helpPerDay}번 도움을 받아 일어섰다.` };
     if (helper.ap < DEATH.helpAp) return { error: `행동력이 모자란다. (${DEATH.helpAp} 필요)` };
     if (helper.en < DEATH.helpEn) return { error: `기력이 모자란다. (${DEATH.helpEn} 필요)` };
     logic.spendAp(helper, DEATH.helpAp);
@@ -97,6 +109,9 @@ module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broa
     const hpPct = Math.min(1, (healer ? DEATH.healHp : DEATH.helpHp) + (logic.titleMods(helper).helpHp || 0)); // 칭호: 손을 내미는 자
     t.fallen = null;
     t.hp = Math.max(1, Math.round(logic.hpCap(t) * hpPct));
+    const book = rescuedBook(); // 오늘 도움으로 일어선 횟수 +1
+    book.n[t.id] = (book.n[t.id] || 0) + 1;
+    db.worldSet('rescued', book);
     logic.chron(t, 'mark', `${ga(helper.name)} 찾아와 일으켜 주었다. 상흔 없이 다시 일어섰다.`);
     logic.chron(helper, 'mark', `쓰러진 ${eul(t.name)} 일으켜 세웠다.`);
     t.hp_at = Date.now();

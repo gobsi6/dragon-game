@@ -6334,13 +6334,16 @@
     S.fallOpenAnyway = false;
     const waitH = Math.round(S.deathCfg.waitMs / 3600000);
     const waiting = f.waiting && f.waiting > Date.now();
-    $('fall-wait').disabled = f.waited && !waiting;
+    const noHelp = !waiting && f.helpLeft === 0; // 오늘 남의 도움으로 일어설 수 있는 횟수를 다 씀
+    $('fall-wait').disabled = (f.waited && !waiting) || noHelp;
     $('fall-wait').querySelector('b').textContent = waiting ? '계속 기다린다' : '도움을 기다린다';
     $('fall-wait-desc').textContent = waiting
       ? `도움을 기다리는 중이다. 남은 시간 ${fmtLeft(f.waiting)}.`
+      : noHelp
+        ? `오늘은 이미 ${f.helpMax}번 도움을 받아 일어섰다. 내일이 되기 전까지는 스스로 정해야 한다.`
       : f.waited
         ? '이미 기다려 보았지만 아무도 오지 않았다. 이제 스스로 정해야 한다.'
-        : `${waitH}시간 동안 다른 드래곤이 와서 일으켜 주기를 기다린다. 누군가 이곳에 와 주면 상흔 없이 일어선다. 오지 않으면 그때 다시 고른다. (쓰러질 때마다 한 번)`;
+        : `${waitH}시간 동안 다른 드래곤이 와서 일으켜 주기를 기다린다. 누군가 이곳에 와 주면 상흔 없이 일어선다. 오지 않으면 그때 다시 고른다. (쓰러질 때마다 한 번 · 하루 ${f.helpMax}번까지, 오늘 ${f.helpLeft}번 남음)`;
     $('fall-revive').disabled = !f.canRevive;
     $('fall-revive-desc').textContent = f.canRevive
       ? `상흔이 없는 능력치 하나가 무작위로 영구히 1 줄어든다. 체력 30%로 일어난다. (상흔 ${f.scars.length} / ${S.stats.length})`
@@ -8316,7 +8319,7 @@
   // 용언 모드: 켜면 다음 한 번의 말이 대륙 전체로 감 (보내고 나면 다시 꺼짐)
   let shoutOn = false;
   function renderSayMode() {
-    const left = S.me?.shoutLeft ?? 0, max = S.me?.shoutMax ?? 10;
+    const left = S.me?.shoutLeft ?? 0, max = S.me?.shoutMax ?? 15;
     const b = $('say-mode');
     if (!left) shoutOn = false;
     b.disabled = !left;
