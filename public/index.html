@@ -306,6 +306,13 @@
   .gw-worn { background: #EEF2F6; color: var(--steel-d); border: 1px solid #C9D6E1; }
   .gw-elems { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 5px; padding: 8px; background: #fff; border: 1px solid var(--line-in); border-radius: 3px; }
   .gw-elems .chipbtn { min-height: 28px; font-size: 12px; }
+  @media (max-width: 560px) {
+    .recipe.gearw { grid-template-columns: minmax(0, 1fr); }
+    .recipe.gearw .nm b { flex-wrap: wrap; row-gap: 4px; }
+    .recipe.gearw .gw-acts { order: 2; }
+    .recipe.gearw .gw-acts .btn { flex: 1; }
+    .recipe.gearw .gw-elems { order: 3; }
+  }
   .gw-elems .chipbtn:disabled { opacity: .45; }
   .gw-elems small { flex-basis: 100%; font-size: 11.5px; color: var(--muted); }
   .forge-track { position: relative; height: 34px; margin: 6px 4px; border-radius: 17px; background: linear-gradient(90deg, #3A2A1E, #6B3B22 50%, #3A2A1E); box-shadow: inset 0 0 0 1px #2A1E15; overflow: hidden; }
@@ -329,6 +336,9 @@
   .inv-box { display: flex; flex-direction: column; background: var(--surface-2); border: 1px solid var(--line-in); border-radius: 4px; }
   .inv-box > .it:first-child, .inv-box > .empty:first-child { border-top: 0; }
   .inv-box > .empty { padding: 16px 14px; }
+  .inv-box > .recipe { padding: 12px 14px; }
+  .inv-box > .recipe:first-child { border-top: 0; }
+  .dlg .craft-bar + h3.inv-h, .dlg .note + h3.inv-h { margin-top: 4px; }
   .inv .it > b, .inv .it > small, .inv .it > .eff { grid-column: 1; min-width: 0; }
   .inv .it b { font: 700 14.5px/1.3 var(--serif); display: flex; flex-wrap: wrap; align-items: center; gap: 2px 7px; }
   .inv .it b::before { content: ""; width: 7px; height: 7px; transform: rotate(45deg); background: var(--r); flex: none; }
@@ -4996,8 +5006,16 @@
       if (!rs.length) continue;
       shown += rs.length;
       const h = document.createElement('h3');
+      h.className = 'inv-h';
       h.textContent = title;
+      const hn = document.createElement('span');
+      hn.className = 'inv-hn';
+      hn.textContent = `${rs.length}개`;
+      h.appendChild(hn);
       box.appendChild(h);
+      const grp = document.createElement('div');
+      grp.className = 'inv-box';
+      box.appendChild(grp);
       for (const r of rs) {
         const it = S.items[r.out];
         const row = document.createElement('div');
@@ -5022,7 +5040,7 @@
         bt.disabled = !ok || !!me.exp;
         // 장신구는 불 조절(두드리기)을 거쳐 만듦. 잘 맞추면 대성공 확률이 오름
         bt.addEventListener('click', () => (it.type === 'equip' ? openForgeGame(r.out) : itemAct('craft', { recipe: r.out })));
-        box.appendChild(row);
+        grp.appendChild(row);
       }
     }
     if (!shown) {
@@ -5095,7 +5113,25 @@
     const worn = Object.values(S.me.equip || {});
     const ids = [...new Set([...worn, ...Object.keys(invCache).filter((id) => invCache[id] > 0 && S.items[id]?.type === 'equip')])].filter((id) => S.items[id]);
     if (!ids.length) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = '다듬을 장신구가 없다. 먼저 장신구를 만들거나 구해 오자.'; box.appendChild(e); return; }
+    const outer = box, grpOf = {};
+    for (const [key, title, list] of [['worn', '착용 중인 장신구', ids.filter((x) => worn.includes(x))], ['bag', '가진 장신구', ids.filter((x) => !worn.includes(x))]]) {
+      if (!list.length) continue;
+      const h = document.createElement('h3');
+      h.className = 'inv-h';
+      h.textContent = title;
+      const hn = document.createElement('span');
+      hn.className = 'inv-hn';
+      hn.textContent = `${list.length}개`;
+      h.appendChild(hn);
+      outer.appendChild(h);
+      const g = document.createElement('div');
+      g.className = 'inv-box';
+      outer.appendChild(g);
+      for (const x of list) grpOf[x] = g;
+    }
+    ids.sort((a, b) => (worn.includes(b) ? 1 : 0) - (worn.includes(a) ? 1 : 0));
     for (const id of ids) {
+      const box = grpOf[id];
       const it = S.items[id];
       const g = ci.gear[id] || {};
       const row = document.createElement('div');

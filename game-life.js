@@ -399,7 +399,12 @@ function care(d, kin, id, item, have, now = Date.now(), opt = {}) {
   const c = KIN.care[item];
   if (!c) return { error: '그 물건으로는 돌볼 수 없다.' };
   if (have(item) < 1) return { error: '가지고 있지 않다.' };
-  if (now - k.data.lastCare < H.careCooldown) return { error: `${ga(k)} 아직 배부르다. 조금 뒤에 다시 돌보자.` };
+  const careLeft = k.data.lastCare + H.careCooldown - now;
+  if (careLeft > 0) {
+    const m = Math.ceil(careLeft / 60000), h = Math.floor(m / 60);
+    const left = h ? `${h}시간${m % 60 ? ` ${m % 60}분` : ''}` : `${m}분`;
+    return { error: `${k.name}${josa(k.name, '은', '는')} 방금 돌봐 줬다. ${left} 뒤에 다시 돌보자.` };
+  }
   satUpdate(k, now, hasKeeper(kin, k));
   const food = isFood(item);
   const hungry = k.data.sat < HG.hungry;
