@@ -1,6 +1,7 @@
 // 용의 대륙 — 1단계 서버
 // 계정, 드래곤 생성, 지역 이동, 지역 채팅
 const path = require('path');
+const fs = require('fs');
 const http = require('http');
 const crypto = require('crypto');
 const express = require('express');
@@ -45,6 +46,43 @@ function clientVersion() {
   } catch { /* 파일이 없으면 그대로 */ }
   return verCache.v;
 }
+// ── GM 백업: 저장 파일 내려받기 · 되돌리기 (요청 머리의 Authorization: Bearer <로그인 토큰>, GM만) ──
+const os = require('os');
+const gmFromReq = (req) => {
+  const token = str((req.get('authorization') || '').replace(/^Bearer\s+/i, ''));
+  const user = token ? db.getSessionUser(token) : null;
+  return user && user.is_gm ? user : null;
+};
+const kstStamp = () => new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 16).replace(/[-:]/g, '').replace('T', '-');
+app.get('/api/gm/backup', (req, res) => {
+  const gm = gmFromReq(req);
+  if (!gm) return res.status(403).json({ error: 'GM만 쓸 수 있다.' });
+  const tmp = path.join(os.tmpdir(), `dragon-backup-${Date.now()}.db`);
+  try {
+    db.snapshot(tmp);
+  } catch (e) {
+    return res.status(500).json({ error: `사본을 만들지 못했다. (${e.message})` });
+  }
+  db.gmLog(gm.username, null, '저장 파일을 내려받음');
+  res.download(tmp, `dragon-continent-${kstStamp()}.db`, () => fs.unlink(tmp, () => {}));
+});
+app.post('/api/gm/restore', express.raw({ type: 'application/octet-stream', limit: '200mb' }), (req, res) => {
+  const gm = gmFromReq(req);
+  if (!gm) return res.status(403).json({ error: 'GM만 쓸 수 있다.' });
+  if (!Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: '파일이 비어 있다.' });
+  const tmp = path.join(os.tmpdir(), `dragon-restore-${Date.now()}.db`);
+  fs.writeFileSync(tmp, req.body);
+  const chk = db.checkBackup(tmp);
+  if (chk.error) { fs.unlink(tmp, () => {}); return res.status(400).json(chk); }
+  db.stageRestore(tmp);
+  fs.unlink(tmp, () => {});
+  db.gmLog(gm.username, null, `저장 파일 되돌리기 (드래곤 ${chk.dragons}마리, 계정 ${chk.users}개)`);
+  res.json({ ok: true, ...chk });
+  // 모두에게 알리고 서버를 다시 켬 (Railway가 자동으로 다시 켜도록 실패 코드로 끝냄. 켜질 때 파일을 바꿔 끼움)
+  io.emit('gm:announce', { text: 'GM이 저장 파일을 되돌리는 중이다. 잠시 뒤 다시 연결된다.', at: Date.now() });
+  setTimeout(() => { db.closeDb(); process.exit(1); }, 800);
+});
+
 app.get('/api/version', (req, res) => {
   res.set('Cache-Control', 'no-store');
   res.json({ v: clientVersion() });

@@ -942,6 +942,7 @@
   .corrupt-note b { font-weight: 600; }
   .corrupt-note .cn-gain { color: #5B3E8C; }
   /* 환영 공지: 줄마다 문단, 빈 줄 뒤의 묶음은 작은 안내로 */
+  .gm-bk.warn { color: #A63E4B; font-weight: 600; }
   .wl-text { display: flex; flex-direction: column; gap: 10px; }
   /* 업데이트 노트 */
   .menu-dot { width: 8px; height: 8px; border-radius: 50%; background: #A63E4B; box-shadow: 0 0 0 2px #FAFAF9; }
@@ -8490,7 +8491,54 @@
     body.appendChild(box);
   }
 
+  // ── 저장 파일 백업: 내려받기 · 되돌리기 ──
+  const BACKUP_KEY = 'dragon-last-backup';
+  function renderGmBackup(body) {
+    const last = (() => { try { return Number(localStorage.getItem(BACKUP_KEY)) || 0; } catch { return 0; } })();
+    const days = last ? Math.floor((Date.now() - last) / 86400000) : null;
+    const sec = gmSection(body, '저장 파일 (백업)', '모든 계정·드래곤·식구·둥지가 담긴 저장 파일이다. 가끔 내려받아 컴퓨터나 드라이브에 보관해 두면, 문제가 생겼을 때 그 시점으로 되돌릴 수 있다.');
+    const info = gEl('p', `note gm-bk${days == null || days >= 7 ? ' warn' : ''}`,
+      last ? `이 기기에서 마지막으로 내려받은 때: ${new Date(last).toLocaleString('ko-KR')} (${days ? `${days}일 전` : '오늘'})${days >= 7 ? ' · 새로 받아 둘 때가 되었다.' : ''}` : '이 기기에서는 아직 내려받은 적이 없다.');
+    sec.appendChild(info);
+    const r = gmRow(sec);
+    const dl = gBtn(r, '저장 파일 내려받기', async () => {
+      dl.disabled = true;
+      try {
+        const res = await fetch('/api/gm/backup', { headers: { Authorization: `Bearer ${store.get()}` } });
+        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `내려받지 못했다. (${res.status})`);
+        const name = (res.headers.get('content-disposition') || '').match(/filename="?([^";]+)"?/)?.[1] || 'dragon-continent.db';
+        const url = URL.createObjectURL(await res.blob());
+        const a = document.createElement('a');
+        a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+        try { localStorage.setItem(BACKUP_KEY, String(Date.now())); } catch {}
+        toast('저장 파일을 내려받았다.');
+        renderGm();
+      } catch (e) { toast(e.message); dl.disabled = false; }
+    }, 'primary');
+    const file = gEl('input');
+    file.type = 'file'; file.accept = '.db,application/octet-stream'; file.hidden = true;
+    sec.appendChild(file);
+    gBtn(r, '저장 파일 되돌리기…', () => file.click(), 'link');
+    file.addEventListener('change', async () => {
+      const f = file.files[0];
+      file.value = '';
+      if (!f) return;
+      if (!confirm(`'${f.name}' 파일로 되돌릴까?\n\n대륙의 모든 계정·드래곤이 이 파일을 받은 시점으로 돌아간다. 그 뒤에 생긴 일은 사라진다.\n서버가 잠깐 다시 켜지고, 접속한 모두가 다시 연결된다.`)) return;
+      if (!confirm('정말 되돌릴까? (지금 데이터는 서버에 한 벌 남겨 두지만, 되돌리기 전에 지금 파일을 먼저 내려받아 두는 것이 안전하다)')) return;
+      try {
+        const res = await fetch('/api/gm/restore', { method: 'POST', headers: { Authorization: `Bearer ${store.get()}`, 'Content-Type': 'application/octet-stream' }, body: f });
+        const j = await res.json().catch(() => ({}));
+        if (!res.ok || j.error) throw new Error(j.error || `되돌리지 못했다. (${res.status})`);
+        toast(`되돌리는 중이다. (드래곤 ${j.dragons}마리) 잠시 뒤 다시 연결된다.`);
+        $('gm-dlg').close();
+      } catch (e) { toast(e.message); }
+    });
+  }
+
   function renderGmLog(body) {
+    renderGmBackup(body);
+    body.appendChild(gEl('h3', null, 'GM 기록'));
     body.appendChild(gEl('p', 'note', 'GM이 한 일의 최근 기록. 최대 500줄까지 남는다.'));
     const ul = gEl('ul', 'gm-log');
     for (const l of GM.meta.log) {

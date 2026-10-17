@@ -6,6 +6,20 @@ const Database = require('better-sqlite3');
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'data', 'game.db');
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
+// GM이 '저장 파일 되돌리기'로 올린 파일이 있으면, 서버를 켜는 이 순간 바꿔 끼움
+// 바꾸기 전의 파일은 game.db.before-restore로 하나 남겨 둠
+const RESTORE_PATH = `${DB_PATH}.restore`;
+if (fs.existsSync(RESTORE_PATH)) {
+  try {
+    if (fs.existsSync(DB_PATH)) fs.copyFileSync(DB_PATH, `${DB_PATH}.before-restore`);
+    for (const ext of ['-wal', '-shm']) if (fs.existsSync(DB_PATH + ext)) fs.unlinkSync(DB_PATH + ext);
+    fs.renameSync(RESTORE_PATH, DB_PATH);
+    console.log('[되돌리기] 올려 둔 저장 파일로 바꿔 끼웠다. 이전 파일은 .before-restore로 남겨 두었다.');
+  } catch (e) {
+    console.error('[되돌리기] 저장 파일을 바꾸지 못했다:', e.message);
+  }
+}
+
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
@@ -470,7 +484,39 @@ function saveStateRaw(d, items = [], hoardItems = []) {
   for (const { id, qty } of hoardItems) q.hoardAdd.run(d.id, id, qty);
 }
 
+// ── 백업: 지금 순간의 사본을 파일로 (게임이 돌아가는 중에도 깨지지 않게 VACUUM INTO) ──
+function snapshot(to) {
+  if (fs.existsSync(to)) fs.unlinkSync(to);
+  db.exec(`VACUUM INTO '${to.replace(/'/g, "''")}'`);
+  return to;
+}
+// 올린 파일이 이 게임의 저장 파일이 맞는지 살펴봄 (SQLite이고, 드래곤·계정 표가 있는지)
+function checkBackup(file) {
+  const buf = fs.readFileSync(file);
+  if (buf.length < 100 || buf.subarray(0, 16).toString('latin1') !== 'SQLite format 3\u0000') return { error: '저장 파일(.db)이 아니다.' };
+  let t;
+  try {
+    t = new Database(file, { readonly: true, fileMustExist: true });
+    const names = new Set(t.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((r) => r.name));
+    if (!names.has('dragons') || !names.has('users')) return { error: '용의 대륙의 저장 파일이 아니다.' };
+    const ok = t.pragma('quick_check', { simple: true });
+    if (ok !== 'ok') return { error: '저장 파일이 깨져 있다.' };
+    return { ok: true, dragons: t.prepare('SELECT COUNT(*) AS n FROM dragons').get().n, users: t.prepare('SELECT COUNT(*) AS n FROM users').get().n };
+  } catch (e) {
+    return { error: `저장 파일을 읽지 못했다. (${e.message})` };
+  } finally {
+    if (t) t.close();
+  }
+}
+// 되돌릴 파일을 자리에 놓음. 실제로 바꾸는 건 서버를 다시 켤 때 (위의 RESTORE_PATH)
+function stageRestore(file) {
+  fs.copyFileSync(file, RESTORE_PATH);
+}
+const closeDb = () => { try { db.pragma('wal_checkpoint(TRUNCATE)'); db.close(); } catch {} };
+const dbFileSize = () => { try { return fs.statSync(DB_PATH).size + (fs.existsSync(`${DB_PATH}-wal`) ? fs.statSync(`${DB_PATH}-wal`).size : 0); } catch { return 0; } };
+
 module.exports = {
+  DB_PATH, snapshot, checkBackup, stageRestore, closeDb, dbFileSize,
   countUsers: () => q.countUsers.get().n,
   getUserByName: (name) => q.userByName.get(name),
   // 비밀번호 바꾸기. keepToken이 있으면 그 접속만 남기고 다른 기기의 로그인은 모두 끊음
