@@ -1338,4 +1338,82 @@ module.exports = [
       } },
     ],
   },
+  // ── 오염된 땅 ──
+  {
+    id: 'void_tomb',
+    title: '오염에 잠긴 옛 용의 무덤',
+    when: ['explore'],
+    weight: 5,
+    cond: (c) => c.corrupted,
+    text: () => [
+      '검붉은 안개 사이로 거대한 뼈가 드러났다. 오래전 이 땅에서 쓰러진 용의 무덤이다.',
+      '갈비뼈 사이에 무언가 반짝인다. 하지만 무덤 전체가 검은 기운으로 고동치고 있다.',
+    ],
+    choices: [
+      { label: '무덤을 파헤친다 (정신 −15)', run: (h) => {
+        h.mind(-15);
+        const g = randInt(30, 70);
+        h.gold(g); h.give('blackened_scale', 2);
+        if (Math.random() < 0.2) { h.give('ancient_relic'); h.say('뼈 무더기 아래에서 고대의 유물까지 나왔다.'); }
+        h.say(`손끝이 얼어붙을 듯한 냉기를 견디며 뒤졌다. 금화 ${g}닢과 검게 물든 비늘 2장을 챙겼다. (정신 −15)`);
+      } },
+      { label: '옛 용의 넋을 기린다', run: (h) => {
+        h.mind(10); h.purify(12);
+        h.say('무덤 앞에 고개를 숙이고 오래 머물렀다. 고동치던 검은 기운이 조금 잦아들었다. (정신 +10, 정화 기여 +12)');
+      } },
+      { label: '건드리지 않고 지나간다', run: (h) => h.say('죽은 자는 쉬게 두는 법이다. 날개를 접고 조용히 지나쳤다.') },
+    ],
+  },
+  {
+    id: 'void_whisper',
+    title: '속삭이는 목소리',
+    when: ['explore', 'gather'],
+    weight: 4,
+    cond: (c) => c.corrupted && (c.d.mind ?? 100) >= 30,
+    text: () => [
+      '머릿속에서 낯선 목소리가 속삭인다. "네 정신 한 조각만 내게 다오. 그러면 원하는 것을 주마."',
+      '목소리는 달콤하고, 거절하기 어려울 만큼 가깝다.',
+    ],
+    choices: [
+      { label: '힘을 원한다 (정신 −25)', run: (h) => {
+        h.mind(-25); h.buff('frenzy', 60);
+        h.say('검은 기운이 혈관을 타고 흘러들었다. 발톱 끝까지 힘이 끓어오른다. (광기 60분: 공격 +25%, 받는 피해 +10%, 정신 −25)');
+      } },
+      { label: '부를 원한다 (정신 −25)', run: (h) => {
+        const g = randInt(60, 110);
+        h.mind(-25); h.gold(g);
+        h.say(`발밑의 흙이 금빛으로 일렁이더니 금화 ${g}닢이 솟아올랐다. 머릿속이 지끈거린다. (정신 −25)`);
+      } },
+      { label: '목소리를 떨쳐 낸다', run: (h) => {
+        h.mind(6); h.purify(5);
+        h.say('크게 포효해 목소리를 떨쳐 냈다. 머릿속이 조금 맑아졌다. (정신 +6, 정화 기여 +5)');
+      } },
+    ],
+  },
+  {
+    id: 'void_trapped_human',
+    title: '오염에 갇힌 사람',
+    when: ['explore', 'gather'],
+    weight: 4,
+    cond: (c) => c.corrupted,
+    text: () => [
+      '검은 덩굴에 휘감긴 인간 약초꾼이 정신을 잃고 쓰러져 있다.',
+      '덩굴이 천천히 숨통을 조여 온다. 이대로 두면 오래 버티지 못할 것이다.',
+    ],
+    choices: [
+      { label: '덩굴을 태워 구해 낸다 (기력 10, 정신 −8)', need: (c) => (c.d.en < 10 ? '기력이 모자란다.' : null), run: (h, c) => {
+        const t = h.nearestTown();
+        h.en(-10); h.mind(-8); h.rep(t, 10); h.purify(8);
+        if (c.stance === 'friendly') h.fame(-1);
+        h.give('purify_incense');
+        h.say(`숨결로 덩굴을 태워 약초꾼을 끌어냈다. 깨어난 약초꾼은 떨리는 손으로 정화의 향을 건넸다. "${REGIONS[t].name}에 꼭 알리겠습니다." (${REGIONS[t].name} 평판 +10, 정화 기여 +8)`);
+      } },
+      { label: '짐을 털어 간다', show: (c) => c.stance === 'hostile', run: (h) => {
+        const g = randInt(15, 35);
+        h.gold(g); h.give('glow_moss', 2); h.rep(h.nearestTown(), -6); h.fame(1);
+        h.say(`쓰러진 약초꾼의 짐에서 금화 ${g}닢과 빛나는 이끼를 챙겼다. 덩굴은 그대로 두었다.`);
+      } },
+      { label: '못 본 척 지나간다', run: (h) => { h.mind(-3); h.say('뒤에서 가느다란 신음이 따라왔다. 마음이 무겁다. (정신 −3)'); } },
+    ],
+  },
 ];

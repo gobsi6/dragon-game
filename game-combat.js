@@ -614,6 +614,13 @@ function huntReward(d, b, c) {
     gold += randInt(0, 3) * c.level * (hostile ? STANCE_RULES.hostile.huntGold : 1) * (ti.huntGold || 1) * wx.huntGold * (extra ? G.gold : 1);
     xp += (12 + c.level * 6) * (extra ? G.xp : 1);
   }
+  // 오염된 땅의 사냥감: 경험치·금화가 더 많음, 검게 물든 비늘이 나옴
+  const corrupt = foeCorrupt(b);
+  if (corrupt) {
+    gold *= MIND.reward.gold;
+    xp *= MIND.reward.xp;
+    for (let i = 0; i < killed.length; i++) if (Math.random() < MIND.scale.hunt) ids.push('blackened_scale');
+  }
   gold = Math.round(gold);
   let items = logic.bundle(ids);
   const names = (l) => { const t = l.map((f) => f.name).join(', '); return `${t}${josa(t, '을', '를')}`; };
@@ -636,9 +643,11 @@ function huntReward(d, b, c) {
   if (!killed.length) xp = 4;
   lines.push(`체력을 ${Math.round(lost)} 잃었다.`);
   // 오염된 몬스터: 오염 결정이 나오기도 하고, 맞은 만큼 정신이 깎임
-  if (foeCorrupt(b)) {
+  if (corrupt) {
     if (killed.length && Math.random() < MIND.crystal.hunt) { items = logic.bundle([...items.flatMap((x) => Array(x.qty).fill(x.id)), 'corrupt_crystal']); lines.push('쓰러진 몸에서 오염 결정이 굴러 나왔다.'); }
+    if (killed.length) lines.push(`오염된 사냥감이라 경험치와 금화를 더 얻었다. (×${MIND.reward.xp})`);
     lines.push(...logic.loseMind(d, me.mindLoss || 0));
+    if (win && logic.hooks.purify) lines.push(...logic.hooks.purify(d, 'hunt'));
   }
   d.gold += gold;
   xp = logic.xpOf(d, Math.round(xp));
@@ -670,8 +679,12 @@ function eliteReward(d, b) {
     const ids = ['beast_hide', 'beast_hide', 'sharp_fang', ...(drop ? [drop, drop] : []),
       logic.rollItem(b.region, { uncommon: 0.6, rare: 0.3 + lv * 0.02 }), logic.rollItem(b.region, { uncommon: 0.6, rare: 0.15 + lv * 0.02 })];
     items = logic.bundle(ids);
-    gold = Math.round(randInt(20, 40) * lv * (logic.titleMods(d).huntGold || 1) * logic.weatherFx(b.region).huntGold);
-    xp = (12 + lv * 6) * 3;
+    gold = Math.round(randInt(20, 40) * lv * (logic.titleMods(d).huntGold || 1) * logic.weatherFx(b.region).huntGold * (b.corrupted ? MIND.reward.gold : 1));
+    xp = (12 + lv * 6) * 3 * (b.corrupted ? MIND.reward.xp : 1);
+    // 오염된 강적: 검게 물든 비늘, 낮은 확률로 전설 장신구
+    if (b.corrupted) {
+      items = logic.bundle([...items.flatMap((x) => Array(x.qty).fill(x.id)), ...Array(MIND.scale.elite).fill('blackened_scale'), ...(Math.random() < MIND.legend.chance ? [MIND.legend.item] : [])]);
+    }
     logic.traitCount(d, 'elite');
     logic.traitCount(d, 'huntwin');
     logic.traitCount(d, `huntwin:${PLACES[b.place]?.region || d.region}`);
@@ -689,7 +702,15 @@ function eliteReward(d, b) {
     xp = 8;
   }
   if (b.corrupted) {
-    if (b.winner === me) { items = logic.bundle([...items.flatMap((x) => Array(x.qty).fill(x.id)), ...Array(MIND.crystal.elite).fill('corrupt_crystal')]); lines.push(`오염 결정 ${MIND.crystal.elite}개를 거두었다.`); }
+    if (b.winner === me) {
+      items = logic.bundle([...items.flatMap((x) => Array(x.qty).fill(x.id)), ...Array(MIND.crystal.elite).fill('corrupt_crystal')]);
+      lines.push(`오염 결정 ${MIND.crystal.elite}개를 거두었다. 오염된 강적이라 경험치와 금화를 더 얻었다.`);
+      if (items.some((x) => x.id === MIND.legend.item)) {
+        lines.push(`쓰러진 강적의 머리에서 검은 왕관이 굴러떨어졌다… ${ITEMS[MIND.legend.item].name}!`);
+        logic.chron(d, 'mark', `오염된 강적에게서 ${ITEMS[MIND.legend.item].name}${josa(ITEMS[MIND.legend.item].name, '을', '를')} 얻었다.`);
+      }
+      if (logic.hooks.purify) lines.push(...logic.hooks.purify(d, 'elite'));
+    }
     lines.push(...logic.loseMind(d, me.mindLoss || 0));
   }
   xp = logic.xpOf(d, xp);

@@ -11,7 +11,7 @@ const db = require('./db');
 const {
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, CREATURES, RULES, SLOTS, RECIPES, SHOPS, repTier, TRADE, NEST,
   STANCE_RULES, FAME_TIERS, fameTier, KIN, TALENTS, TRAITS, TRAIT_EARN, TRAIT_COUNTS,
-  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, STATUS, CREATURE_COMBAT, MIND, PLACES, REGION_PLACES, PLACE_RULES, HOARD_TIERS, RAID, SEASONS, WEATHERS, DEPART,
+  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, STATUS, CREATURE_COMBAT, MIND, PURIFY, PLACES, REGION_PLACES, PLACE_RULES, HOARD_TIERS, RAID, SEASONS, WEATHERS, DEPART,
 } = require('./game-data');
 const logic = require('./game-logic');
 const life = require('./game-life');
@@ -143,7 +143,7 @@ const meOf = (d) => ({
   statPts: d.stat_pts || 0,                // 아직 나누지 않은 능력치 포인트
   mind: d.mind ?? MIND.max, mindMax: MIND.max, mindAt: d.mind_at || 0, mindEvery: MIND.regenEvery,
   berserkInfo: (() => { const b = logic.berserkOf(d); return b ? { until: b.until, region: b.region, hp: b.hp, hpMax: b.hpMax } : null; })(),
-  corrupt: { region: logic.corruptedRegion(), until: logic.corruptUntil() },
+  corrupt: { region: logic.isCorrupted(logic.corruptedRegion()) ? logic.corruptedRegion() : null, until: logic.corruptUntil(), purify: purify.view(d) },
   fallen: logic.isFallen(d) ? death.view(d) : null,
   titles: logic.titlesView(d),
   craftMult: logic.titleMods(d).craftEn || 1,
@@ -397,6 +397,62 @@ wxTicker.unref?.();
 
 // 대륙의 재앙: 모두가 함께 맞서는 거대한 적 (boss.js)
 const boss = require('./boss')({ io, db, online, logic, combat, arena, sendMe });
+// ── 정화: 오염된 땅에서 행동할수록 모두의 기여가 쌓이고, 목표에 닿으면 그 땅의 오염이 일찍 걷힘 ──
+const purify = (() => {
+  const period = (now = Date.now()) => Math.floor(now / MIND.rotateMs);
+  let st = db.worldGet('purify');
+  const cur = (now = Date.now()) => {
+    const p = period(now);
+    if (!st || st.period !== p) { st = { period: p, region: logic.corruptedRegion(now), pts: {}, names: {}, total: 0, done: false }; db.worldSet('purify', st); }
+    return st;
+  };
+  // 오염된 땅에서 한 행동만큼 기여. 정화되면 모두에게 보상 (돌려주는 건 이 행동의 결과에 붙일 문장)
+  function add(d, kind, n = null) {
+    const s = cur();
+    if (s.done || d.region !== s.region) return [];
+    const v = n ?? PURIFY.pts[kind] ?? 0;
+    if (!v) return [];
+    s.pts[d.id] = (s.pts[d.id] || 0) + v;
+    s.names[d.id] = d.name;
+    s.total += v;
+    const lines = [];
+    if (s.total >= PURIFY.goal) { lines.push('마지막 한 줌의 검은 기운이 흩어졌다. 이 땅의 오염이 걷힌다!'); setImmediate(finish); }
+    db.worldSet('purify', s);
+    return lines;
+  }
+  function finish() {
+    const s = cur();
+    if (s.done) return;
+    s.done = true;
+    s.doneAt = Date.now();
+    db.worldSet('purify', s);
+    const R = PURIFY.reward;
+    const ids = Object.keys(s.pts).map(Number).filter((id) => s.pts[id] >= PURIFY.minPts);
+    const regionName = REGIONS[s.region]?.name || '';
+    io.emit('system', { text: `[정화] ${regionName}의 오염이 걷혔다! ${ids.length}마리의 드래곤이 함께 정화했다. 다음 오염이 퍼질 때까지 이 땅은 맑다.`, at: Date.now() });
+    for (const id of ids) {
+      const e = online.get(id);
+      const d = e ? e.dragon : db.getDragon(id);
+      if (!d || d.dead_at) continue;
+      const mine = s.pts[id];
+      const gold = Math.min(R.goldMax, R.goldBase + mine * R.goldPer);
+      d.gold += gold;
+      const lines = [`${regionName}의 오염을 함께 걷어 냈다. 나의 기여 ${mine} (전체 ${s.total})`, `금화 ${gold}닢을 받았다.`];
+      const f = logic.addFame(d, R.fame); if (f) lines.push(f);
+      const up = logic.gainXp(d, logic.xpOf(d, R.xp)); lines.push(`경험치 +${logic.xpOf(d, R.xp)}${up ? ' · 레벨이 올랐다!' : ''}`);
+      lines.push(...logic.traitCount(d, 'purify'));
+      logic.chron(d, 'mark', `${regionName}의 오염을 함께 정화했다.`);
+      db.saveState(d);
+      if (e) { sendMe(e.socket, d); e.socket.emit('notice', { title: '정화', lines }); } else for (const l of lines) db.noteAdd(id, l);
+    }
+    for (const e of online.values()) sendMe(e.socket, e.dragon); // 오염 표시가 사라지게
+  }
+  const view = (d) => { const s = cur(); return { region: s.region, total: s.total, goal: PURIFY.goal, mine: s.pts[d.id] || 0, done: s.done, people: Object.keys(s.pts).length }; };
+  return { add, view, purified: (now = Date.now()) => { const s = cur(now); return s.period === period(now) && s.done; }, debugSet: (n) => { const s = cur(); s.total = n; db.worldSet('purify', s); } };
+})();
+logic.hooks.purified = purify.purified;
+logic.hooks.purify = (d, kind) => purify.add(d, kind);
+logic.hooks.purifyDebug = purify.debugSet; // 시험용: 정화 진행을 바로 정함
 // 이벤트가 볼 수 있게: 보물더미, 최근 재앙의 흔적
 logic.hooks.hoard = (id) => db.hoard(id);
 logic.hooks.bossTrace = (region) => boss.trace(region);
@@ -716,7 +772,9 @@ io.on('connection', (socket) => {
     if (logic.isCorrupted(d.region)) {
       if (type !== 'hunt') {
         if (Math.random() < MIND.crystal[type]) { res.items = [...(res.items || []), { id: 'corrupt_crystal', qty: 1 }]; res.lines.push('검붉게 빛나는 오염 결정을 주웠다.'); }
+        if (Math.random() < (MIND.scale[type] || 0)) { res.items = [...(res.items || []), { id: 'blackened_scale', qty: 1 }]; res.lines.push('검게 물든 비늘 한 장이 바위틈에 박혀 있었다.'); }
         res.lines.push(...logic.loseMind(d, MIND.drain[type]));
+        res.lines.push(...purify.add(d, type));
       }
       res.lines.push(...logic.traitCount(d, 'corrupt'));
     }
@@ -827,7 +885,8 @@ io.on('connection', (socket) => {
       // 이벤트가 다른 드래곤에게 남긴 소식 (라이벌 이벤트)
       for (const t of res.tells || []) social.tellRival(t.id, t.text, t.title);
       for (const g of res.sends || []) social.eventGift(d, g.id, g.items, g.msg); // 이벤트로 보낸 선물
-      delete res.tells; delete res.sends;
+      if (res.purify) res.lines = [...(res.lines || []), ...purify.add(d, 'event', res.purify)]; // 이벤트로 쌓은 정화 기여
+      delete res.tells; delete res.sends; delete res.purify;
       // 지나온 이야기에 남길 선택·사건
       const cr = CHRON_ON[event];
       if (cr) { const [k, t] = cr(d, res, payload || {}) || []; if (t) logic.chron(d, k, t); }
@@ -841,7 +900,7 @@ io.on('connection', (socket) => {
     });
   };
   itemAction('craft', (d, p, have) => logic.craft(d, str(p.recipe), have));
-  itemAction('item:use', (d, p, have) => logic.useItem(d, str(p.item), have));
+  itemAction('item:use', (d, p, have) => logic.useItem(d, str(p.item), have), (d) => arena.checkMind(d)); // 광기의 묘약으로 정신이 다 깎일 수 있음
   // 소지품 버리기: 버린 물건은 사라짐
   itemAction('item:drop', (d, p, have) => {
     const id = str(p.item);
@@ -935,7 +994,7 @@ io.on('connection', (socket) => {
     if (had && !event) { db.saveState(d); sendMe(socket, d); } // 지나가 버린 이벤트
     ack(event ? { ok: true, event } : { error: '그 일은 이미 지나갔다.' });
   });
-  itemAction('event:choose', (d, p, have, kin) => life.chooseEvent(d, kin, have, p.i));
+  itemAction('event:choose', (d, p, have, kin) => life.chooseEvent(d, kin, have, p.i), (d) => arena.checkMind(d)); // 오염 이벤트로 정신이 다 깎일 수 있음
 
   socket.on('nest:get', (payload, ack) => {
     if (typeof ack !== 'function') return;

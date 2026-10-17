@@ -834,6 +834,13 @@
   .bt-wx { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; font-size: 12px; color: var(--muted); }
   .corrupt-note { padding: 9px 12px; background: #F3EEFA; border: 1px solid #D7CBEA; color: #3E3466; font-size: 13px; line-height: 1.55; }
   .corrupt-note b { font-weight: 600; }
+  .corrupt-note .cn-gain { color: #5B3E8C; }
+  .corrupt-note.clean { background: #EEF4EF; border-color: #A9C4B2; color: #2F5D45; }
+  .cn-purify { display: flex; flex-direction: column; gap: 5px; margin-top: 9px; padding-top: 9px; border-top: 1px dashed #D7CBEA; }
+  .cn-purify .cn-l { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; font-weight: 600; }
+  .cn-purify .cn-bar { height: 7px; border-radius: 4px; background: #E4DCF2; overflow: hidden; }
+  .cn-purify .cn-bar i { display: block; height: 100%; background: linear-gradient(90deg, #8A7FB8, #CFC6EA); }
+  .cn-purify small { font-size: 11.5px; color: #5C527E; line-height: 1.5; }
   .rampage-bars { display: flex; flex-direction: column; gap: 6px; }
   .rampage-bars:empty { display: none; }
   .rampage { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; padding: 9px 10px 9px 12px; background: #FBF0F0; border: 1px solid #E3B8BC; color: #6E2229; font-size: 13px; }
@@ -5821,14 +5828,35 @@
   function renderCorrupt() {
     const c = S.me?.corrupt;
     const on = !!c && c.region === S.region;
-    $('corrupt-note').hidden = !on;
+    const pu = c?.purify;
+    const clean = !on && pu && pu.done && pu.region === S.region; // 정화된 땅
+    const box = $('corrupt-note');
+    box.hidden = !on && !clean;
+    box.classList.toggle('clean', !!clean);
     let tag = document.querySelector('.title .tag.corrupt');
     if (on && !tag) { tag = document.createElement('span'); tag.className = 'tag corrupt'; tag.textContent = '오염된 땅'; $('region-tag').after(tag); }
     if (!on && tag) tag.remove();
+    const h = c ? Math.max(1, Math.round((c.until - Date.now()) / 3600000)) : 0;
     if (on) {
-      const h = Math.max(1, Math.round((c.until - Date.now()) / 3600000));
-      $('corrupt-note').innerHTML = '<b>오염된 땅이다.</b> 탐사·채집할 때마다 정신이 깎이고, 사냥감도 오염되어 맞을 때마다 정신이 깎인다. 대신 오염 결정이 나온다. ';
-      $('corrupt-note').append(`(약 ${h}시간 뒤 다른 곳으로 옮겨 간다)`);
+      box.innerHTML = '<b>오염된 땅이다.</b> 탐사·채집할 때마다, 오염된 사냥감에게 맞을 때마다 정신이 깎인다. '
+        + '<span class="cn-gain">대신 사냥 경험치·금화 ×1.5, 오염 결정과 검게 물든 비늘이 나오고, 오염된 강적은 드물게 전설의 왕관을 떨어뜨린다.</span>';
+      box.append(` (약 ${h}시간 뒤 다른 곳으로 옮겨 간다)`);
+      if (pu) {
+        const pr = document.createElement('div');
+        pr.className = 'cn-purify';
+        const pct = Math.min(100, Math.round((pu.total / pu.goal) * 100));
+        pr.innerHTML = '<div class="cn-l"><span></span><span></span></div><div class="cn-bar"><i></i></div>';
+        pr.querySelector('.cn-l span').textContent = `정화 ${pu.total} / ${pu.goal} · 함께하는 드래곤 ${pu.people}`;
+        pr.querySelector('.cn-l span + span').textContent = `내 기여 ${pu.mine}`;
+        pr.querySelector('.cn-bar i').style.width = `${pct}%`;
+        const tip = document.createElement('small');
+        tip.textContent = '이곳에서 탐사·채집하거나 사냥·강적을 이기면 정화 기여가 쌓인다. 다 모이면 오염이 일찍 걷히고, 기여한 드래곤 모두 보상을 받는다.';
+        pr.appendChild(tip);
+        box.appendChild(pr);
+      }
+    } else if (clean) {
+      box.innerHTML = '<b>정화된 땅이다.</b> 드래곤들이 힘을 모아 검은 기운을 걷어 냈다. ';
+      box.append(`(약 ${h}시간 뒤 오염이 다른 곳에 다시 퍼진다)`);
     }
   }
   // ── 대륙의 재앙 ──

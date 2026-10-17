@@ -503,6 +503,7 @@ function ctxOf(d, kin, have, trigger, now, region = d.region) {
     // 동료와의 관계 (관계 이벤트). 처음 볼 때 한 번만 불러옴
     get ties() { return this._ties || (this._ties = (logic.hooks.ties && safe(() => logic.hooks.ties(d))) || NO_TIES); },
     hour: new Date(now + 9 * 3600000).getUTCHours(), // 한국 시각 (밤 이벤트)
+    corrupted: logic.isCorrupted(region, now), // 오염된 땅 (오염 이벤트)
   };
 }
 const NO_TIES = { mentor: null, students: [], heart: null, nemesis: [], friends: [], departed: [], adoptedOut: [] };
@@ -578,7 +579,7 @@ function chooseEvent(d, kin, have, idx, now = Date.now()) {
   const reason = ch.need ? ch.need(c, vars) : null;
   if (reason) return { error: reason };
 
-  const out = { lines: [], items: [], hoardItems: [], gold: 0, tells: [], sends: [] };
+  const out = { lines: [], items: [], hoardItems: [], gold: 0, tells: [], sends: [], purify: 0 };
   const town = SHOPS[c.region] ? c.region : nearestTown(c.region);
   const h = {
     say: (...l) => out.lines.push(...l),
@@ -618,7 +619,8 @@ function chooseEvent(d, kin, have, idx, now = Date.now()) {
       return n;
     },
     hoardGive: (id, qty = 1) => out.hoardItems.push({ id, qty }),
-    send: (id, items, msg = '') => out.sends.push({ id, items, msg }), // 다른 드래곤에게 물건을 보냄 (받은 선물 상자로)
+    send: (id, items, msg = '') => out.sends.push({ id, items, msg }),
+    purify: (n) => { out.purify += n; }, // 오염된 땅의 정화 기여 // 다른 드래곤에게 물건을 보냄 (받은 선물 상자로)
     xp: (n) => { const lv = d.level; logic.gainXp(d, n); if (d.level > lv) out.lines.push(`레벨 ${d.level}${[2, 4, 5, 9].includes(d.level % 10) ? '가' : '이'} 되었다!`); },
     count: (key) => out.lines.push(...logic.traitCount(d, key)), // 칭호·특성에 쓰는 셈
     free: (k) => { if (k && k.type === 'drake' && k.status === 'home') out.lines.push(...freeDrake(d, kin, k, now)); },
@@ -630,7 +632,7 @@ function chooseEvent(d, kin, have, idx, now = Date.now()) {
   ch.run(h, c, vars);
   d.pending_event = null;
   const label = typeof ch.label === 'function' ? ch.label(c, vars) : ch.label;
-  return { title: e.title, lines: out.lines, items: out.items, hoardItems: out.hoardItems, gold: out.gold, choice: label, tells: out.tells, sends: out.sends };
+  return { title: e.title, lines: out.lines, items: out.items, hoardItems: out.hoardItems, gold: out.gold, choice: label, tells: out.tells, sends: out.sends, purify: out.purify };
 }
 
 module.exports = {

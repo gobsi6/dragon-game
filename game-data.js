@@ -169,7 +169,13 @@ const ITEMS = {
   fire_crystal: { name: '불의 결정',        rarity: 'rare',     desc: '안에서 작은 불꽃이 흔들린다.' },
   beast_hide:   { name: '짐승 가죽',        rarity: 'common',   desc: '질기고 두꺼운 가죽이다.' },
   sharp_fang:   { name: '날카로운 송곳니',  rarity: 'uncommon', desc: '사냥한 짐승에게서 얻었다.' },
-  corrupt_crystal:{ name: '오염 결정',      rarity: 'rare', value: 35, desc: '오염된 땅에서만 맺히는 검붉은 결정. 오래 쥐고 있으면 머릿속이 웅웅거린다.' },
+  corrupt_crystal:{ name: '오염 결정',      rarity: 'rare', value: 55, desc: '오염된 땅에서만 맺히는 검붉은 결정. 오래 쥐고 있으면 머릿속이 웅웅거린다.' },
+  blackened_scale:{ name: '검게 물든 비늘', rarity: 'rare', value: 45, desc: '오염된 땅의 짐승에게서만 벗겨지는 비늘. 차갑고, 쇠보다 단단하다.' },
+  frenzy_draught: { name: '광기의 묘약',   rarity: 'uncommon', type: 'use', use: { buff: 'frenzy', mindCost: 15 }, desc: '오염 결정을 녹인 검붉은 물약. 마시면 힘이 끓어오르지만 머릿속이 웅웅거린다. (마실 때 정신 −15)' },
+  purify_incense: { name: '정화의 향',     rarity: 'rare',     type: 'use', use: { mind: 60 }, desc: '오염 결정을 꿀과 이끼로 감싸 태우면, 검은 기운이 하얀 연기로 바뀐다.' },
+  abyss_pendant:  { name: '심연의 펜던트', rarity: 'rare',     type: 'equip', slot: 'neck', bonus: { wisdom: 2, majesty: 1 }, mindWard: 0.7, desc: '오염을 오염으로 막는다. 깎이는 정신 −30%.' },
+  blackscale_guard:{ name: '검은 비늘 꼬리갑', rarity: 'rare',  type: 'equip', slot: 'tail', bonus: { scale: 3, claw: 1 }, desc: '검게 물든 비늘을 겹겹이 엮었다.' },
+  abyss_crown:    { name: '심연의 왕관',   rarity: 'rare',     type: 'equip', slot: 'head', bonus: { claw: 3, wisdom: 3, majesty: 2 }, mindWard: 1.15, value: 220, desc: '오염된 강적의 머리에서 굴러떨어진 검은 왕관. 엄청난 힘이 깃들었지만 속삭임이 그치지 않는다. (깎이는 정신 +15%)' },
 
 
   // ── 사냥 전리품: 장소마다 사냥감에게서 얻는 재료 (cat: 'trophy') ──
@@ -299,6 +305,7 @@ const SLOTS = [
 const BUFFS = {
   minutes: 60,
   might: { name: '투지',   desc: '공격 +15%',          atk: 1.15 },
+  frenzy: { name: '광기',   desc: '공격 +25%, 받는 피해 +10%', atk: 1.25, taken: 1.1 },
   iron:  { name: '단단함', desc: '받는 피해 −15%',     taken: 0.85 },
   swift: { name: '날렵함', desc: '날개(속도) +4',      spd: 4 },
   focus: { name: '집중',   desc: '숨결·치유 +20%',     mag: 1.2 },
@@ -329,6 +336,10 @@ const RECIPES = [
   { out: 'calm_incense',  needs: { glow_moss: 1, wild_honey: 1 },                      en: 5,  wis: 8 },
   { out: 'void_claw',     needs: { corrupt_crystal: 3, obsidian: 1 },                  en: 14, wis: 11 },
   { out: 'pure_amulet',   needs: { corrupt_crystal: 2, rune_stone: 2, silver_clover: 1 }, en: 14, wis: 12 },
+  { out: 'frenzy_draught', needs: { corrupt_crystal: 1, poison_herb: 2 },               en: 6,  wis: 9 },
+  { out: 'purify_incense', needs: { corrupt_crystal: 1, glow_moss: 2, wild_honey: 1 },  en: 8,  wis: 10 },
+  { out: 'abyss_pendant',  needs: { corrupt_crystal: 2, blackened_scale: 2, silver_chain: 1 }, en: 14, wis: 12 },
+  { out: 'blackscale_guard', needs: { blackened_scale: 4, beast_hide: 2 },              en: 12, wis: 10 },
   // 사냥 전리품으로 만드는 것
   { out: 'hunter_stew',   needs: { salamander_tail: 1, grass_seed: 2 },                en: 4,  wis: 0 },
   { out: 'hydra_tonic',   needs: { hydra_blood: 2, glow_moss: 1 },                     en: 9,  wis: 11 },
@@ -753,6 +764,8 @@ const TITLES = [
   { id: 'teacher',   name: '이름난 스승',      cond: { count: 'teach', at: 20 },    mod: { xp: 1.03 },       eff: '경험치 +3%' },
   { id: 'surpass',   name: '청출어람',         cond: { count: 'surpass', at: 1 },   mod: { atk: 1.03 },      eff: '사냥 공격 +3%' },
   // 이어받은 의지
+  { id: 'voidwalker', name: '어둠을 걷는 자',  cond: { count: 'corrupt', at: 100 }, mod: { mindWard: 0.85 }, eff: '깎이는 정신 −15%' },
+  { id: 'cleanser',  name: '오염을 걷어 낸 자', cond: { count: 'purify', at: 1 },     mod: { xp: 1.03 },       eff: '경험치 +3%' },
   { id: 'heir',      name: '의지를 이은 자',   cond: { count: 'heir', at: 1 },      mod: { xp: 1.05 },       eff: '경험치 +5%' },
   { id: 'sendoff',   name: '둥지를 떠나보낸 자', cond: { count: 'sendoff', at: 3 }, mod: { xp: 1.03 },     eff: '경험치 +3%' },
   // 대륙의 재앙
@@ -766,7 +779,7 @@ const TITLES = [
   { id: 'scarred',   name: '상흔투성이',       cond: { scars: 3 },                  mod: { taken: 0.95 },    eff: '사냥 받는 피해 −5%' },
 ];
 // 칭호 조건을 사람이 읽는 글로
-const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: '둥지에서 {n}번 쉬기', craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격', heir: '먼 여행을 떠난 드래곤의 의지를 잇기', teach: '제자를 {n}번 가르치기', surpass: '스승의 레벨을 따라잡기', sendoff: '다 자란 식구를 {n}번 떠나보내기' };
+const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: '둥지에서 {n}번 쉬기', craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격', heir: '먼 여행을 떠난 드래곤의 의지를 잇기', teach: '제자를 {n}번 가르치기', surpass: '스승의 레벨을 따라잡기', sendoff: '다 자란 식구를 {n}번 떠나보내기', corrupt: '오염된 땅에서 {n}번 행동하기', purify: '오염된 땅을 {n}번 정화하기' };
 
 // ── 장소와 사냥터 난이도 ───────────────────────────
 // 야생 지역마다 장소가 셋. 입구는 쉽고 안쪽일수록 사냥터 난이도(Lv.1~12)가 높다.
@@ -864,6 +877,17 @@ const MIND = {
   afterTimeout: 30,            // 광폭화가 끝난 뒤 정신
   afterCalm: 50,
   calmFame: 4, calmXp: 30,     // 진정시킨 드래곤이 받는 것
+  // 오염된 땅의 보상
+  reward: { xp: 1.5, gold: 1.5 },                             // 오염된 사냥감·강적: 경험치·금화 배율
+  scale: { explore: 0.12, gather: 0.15, hunt: 0.25, elite: 2 }, // 검게 물든 비늘이 나올 확률 (강적은 개수)
+  legend: { item: 'abyss_crown', chance: 0.08 },               // 오염된 강적이 떨어뜨리는 전설 장신구
+};
+// 정화: 오염된 땅에서 행동할수록 모두의 정화 기여가 쌓이고, 목표에 닿으면 그 땅의 오염이 일찍 걷힘
+const PURIFY = {
+  goal: 250,                                   // 모두 합쳐 이만큼 모이면 정화
+  pts: { explore: 3, gather: 2, hunt: 4, elite: 15 }, // 행동마다 쌓이는 기여 (사냥·강적은 이겼을 때)
+  minPts: 5,                                   // 이만큼은 기여해야 보상
+  reward: { goldBase: 40, goldPer: 2, goldMax: 300, fame: 3, xp: 60 },
 };
 
 // ── 전투 ───────────────────────────────────────────
@@ -1107,7 +1131,7 @@ const ELITES = {
 
 module.exports = {
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, TITLES, TITLE_COUNT_NAMES,
-  SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
+  PURIFY, SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
   DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
   COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, DEPART, BONDS, MARKS, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES,
 };

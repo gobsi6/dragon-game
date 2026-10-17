@@ -426,7 +426,8 @@ function corruptedRegion(now = Date.now()) {
   return w[Math.floor(now / MIND.rotateMs) % w.length];
 }
 const corruptUntil = (now = Date.now()) => (Math.floor(now / MIND.rotateMs) + 1) * MIND.rotateMs;
-const isCorrupted = (region, now = Date.now()) => region === corruptedRegion(now);
+// 정화되었으면 다음 곳으로 옮겨 갈 때까지 오염이 걷혀 있음 (hooks.purified: 서버가 정화 상태를 알려 줌)
+const isCorrupted = (region, now = Date.now()) => region === corruptedRegion(now) && !(hooks.purified && hooks.purified(now));
 // 광폭화 상태 { at, until, region, hp, hpMax } (없으면 null)
 function berserkOf(d) {
   if (!d.berserk) return null;
@@ -956,6 +957,7 @@ function useItem(d, id, have) {
     combatJson(d).buff = { id: u.buff, until: Date.now() + BUFFS.minutes * 60000 };
     lines.push(`${BUFFS.minutes}분 동안 ${B.name} 상태가 된다. (사냥·강적 전투에서 ${B.desc})`);
     if (old && old.id !== u.buff) lines.push(`먼저 있던 ${old.name}의 효과는 사라졌다.`);
+    if (u.mindCost) lines.push(...loseMind(d, u.mindCost)); // 광기의 묘약: 정신이 깎임
     return { title: it.name, lines, items: [{ id, qty: -1 }] };
   }
   // 여러 효과가 있는 물건은 하나라도 쓸모가 있으면 씀
