@@ -1000,8 +1000,15 @@ const SKILLS = {
   roar:   { name: '포효',         lv: 3, en: 6,  cd: 3, debuff: { weaken: 3 }, majesty: true, desc: '세 턴 동안 상대의 공격을 30% 꺾는다. 위엄이 높을수록 잘 통한다. 적이 여럿이면 모두에게 울린다.' },
   mend:   { name: '치유',         lv: 4, en: 8,  cd: 4, heal: { base: 6, mag: 0.9, pct: 0.12 }, cleanse: true, desc: '치유 마법으로 상처를 아물게 해 체력을 되찾고 화상·중독·출혈을 씻어 낸다. 지혜가 높을수록 많이 회복한다. 쓰러진 드래곤을 일으킬 때도 더 많이 회복시킨다.' },
   gust:   { name: '날개 돌풍',    lv: 5, en: 6,  cd: 3, power: 0.8, self: { dodge: 1 }, desc: '거센 바람으로 피해 ×0.8, 다음 공격 한 번을 반드시 피한다.' },
+  headbutt: { name: '박치기',     lv: 6, en: 7,  cd: 3, power: 1.0, debuff: { stun: 1 }, chance: 0.3, desc: '뿔로 들이받아 피해 ×1.0, 30% 확률로 한 턴 마비시킨다. 마비되면 급소 찌르기로 이어진다.' },
   rend:   { name: '찢어발기기',   lv: 7, en: 8,  cd: 3, power: 1.2, debuff: { bleed: 3 }, desc: '발톱으로 깊이 찢어 피해 ×1.2, 세 턴 동안 피를 흘리게 한다.' },
+  dust:   { name: '흙먼지 날리기', lv: 8, en: 6, cd: 4, power: 0.5, debuff: { blind: 2 }, desc: '날갯짓으로 흙먼지를 일으켜 피해 ×0.5, 눈을 가려 이번 턴과 다음 턴에 공격이 네 번에 한 번꼴로 빗나가게 한다.' },
   devour: { name: '포식',         lv: 9, en: 10, cd: 4, power: 1.0, drain: 0.5, desc: '물어뜯어 입힌 피해의 절반만큼 체력을 되찾는다.' },
+  flurry: { name: '연속 할퀴기',  lv: 10, en: 9, cd: 3, power: 0.5, hits: 3, desc: '양 발톱으로 세 번 연달아 할퀸다. 한 번에 피해 ×0.5. 피하기 잘하는 적에게도 한두 번은 닿는다.' },
+  focus:  { name: '숨 고르기',    lv: 11, en: 0, cd: 4, enGain: 12, self: { opening: 2 }, desc: '숨을 깊이 골라 기력을 12 되찾고, 다음 공격이 ×1.5로 들어간다.' },
+  quake:  { name: '땅울림',       lv: 12, en: 10, cd: 4, power: 0.9, aoe: true, debuff: { dazed: 2 }, desc: '땅을 내리쳐 모든 적에게 피해 ×0.9, 한 턴 휘청이게 한다 (급소 찌르기로 이어짐). 무리와 싸울 때 강하다.' },
+  fury:   { name: '역린',         lv: 14, en: 8, cd: 4, self: { fury: 3 }, desc: '분노로 비늘을 곤두세워 세 턴 동안 주는 피해 +35%. 대신 받는 피해도 +10%.' },
+  dive:   { name: '하늘 낙하',    lv: 16, en: 14, cd: 5, power: 1.9, self: { exposed: 2 }, desc: '높이 솟구쳤다가 내리꽂아 피해 ×1.9. 내려앉은 뒤 한동안 빈틈이 생겨 받는 피해 +25%. 눈이 먼 적에게는 반드시 급소.' },
 };
 // 상태 이름 (화면 표시용)
 const STATUS = {
@@ -1009,6 +1016,7 @@ const STATUS = {
   weaken: '움츠러듦', harden: '비늘 세움', evade: '안개', dodge: '돌풍',
   brittle: '얼음 금', dazed: '휘청임', opening: '반격 기회',
   soak: '흠뻑 젖음', stone: '돌 비늘',
+  blind: '눈 멂', fury: '역린', exposed: '빈틈',
 };
 // 연계: 상대의 상태에 맞는 스킬을 쓰면 추가 효과
 // (얼어붙음·마비가 풀린 다음 턴에도 '얼음 금'·'휘청임'이 남아 연계를 이을 수 있다)
@@ -1019,6 +1027,7 @@ const COMBOS = {
   flay:     { name: '녹은 비늘 찢기', skill: ['rend'],                 when: ['acid'],              desc: '비늘이 녹은 적에게 찢어발기기: 출혈 피해 ×2' },
   surge:    { name: '물살 휩쓸기',   skill: ['tail'],                  when: ['soak'],              desc: '흠뻑 젖은 적에게 꼬리치기: 미끄러져 한 턴 마비 (급소 찌르기로 이어짐)' },
   spread:   { name: '독 퍼뜨리기',   skill: ['tail', 'devour'],        when: ['poison'],            desc: '중독된 적에게 꼬리치기·포식: 독 피해 +50%, 중독 2턴 연장' },
+  pounce:   { name: '사각에서 덮치기', skill: ['dive', 'flurry'],      when: ['blind'],             desc: '눈이 먼 적에게 하늘 낙하·연속 할퀴기: 반드시 급소', crit: true },
 };
 // 강적의 분노: 체력이 이 비율 아래로 떨어지면 한 번
 const ENRAGE = { below: 0.5, atk: 1.25, every: 2 };

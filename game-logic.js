@@ -5,7 +5,7 @@
 
 const {
   REGIONS, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, RECIPES, SLOTS, STANCES, SHOPS, REP_TIERS, repTier, TRADE, NEST, hoardTier, RAID, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, ELEMENTS,
-  SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES,
+  SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, SKILLS, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES,
 } = require('./game-data');
 
 const SR = STANCE_RULES;
@@ -531,6 +531,7 @@ function townArrows(d) {
 function gainXp(d, xp) {
   d.xp += xp;
   const apBefore = apCap(d);
+  const lvBefore = d.level;
   let up = 0;
   while (d.xp >= d.level * 100) {
     d.xp -= d.level * 100;
@@ -542,6 +543,9 @@ function gainXp(d, xp) {
   if (up) {
     chron(d, 'mark', `레벨 ${d.level}${[2, 4, 5, 9].includes(d.level % 10) ? '가' : '이'} 되었다.`);
     d.stat_pts = (d.stat_pts || 0) + STAT_POINTS.perLevel * up; // 나눌 능력치 포인트
+    for (const s of Object.values(SKILLS)) {
+      if (s.lv > lvBefore && s.lv <= d.level) chron(d, 'mark', `새 스킬 '${s.name}'${josa(s.name, '을', '를')} 배웠다.`);
+    }
     if (apCap(d) > apBefore) chron(d, 'mark', `최대 행동력이 ${apCap(d)}${[0, 3, 6].includes(apCap(d) % 10) ? '으로' : '로'} 늘었다.`);
     d.hp = hpCap(d);
     d.en = enCap(d);

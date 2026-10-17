@@ -202,7 +202,7 @@ const STATUS_LIST = (ks) => ks.map((k) => STATUS[k]).join('·');
 // 피해 계산. magic: 숨결처럼 비늘을 덜 타는 공격
 function damage(att, def, power, opt = {}) {
   const { magic = false, element = null } = opt;
-  let atk = att.atk * (has(att, 'weaken') ? 0.7 : 1);
+  let atk = att.atk * (has(att, 'weaken') ? 0.7 : 1) * (has(att, 'fury') ? 1.35 : 1); // 역린
   let armor = def.def * (has(def, 'acid') ? 0.5 : 1);
   let raw = magic ? (att.mag * 1.0 + atk * 0.5) * power - armor * 0.25 : atk * power - armor * 0.5;
   raw *= rand(0.85, 1.15);
@@ -215,12 +215,15 @@ function damage(att, def, power, opt = {}) {
   if (def.guarding) raw *= opt.special ? 0.25 : 0.5; // 예고된 특기를 방어하면 4분의 1
   if (has(def, 'harden')) raw *= 0.5;
   if (has(def, 'stone')) raw *= 0.7; // 브론즈: 돌 비늘
+  if (has(def, 'fury')) raw *= 1.1;    // 역린: 받는 피해도 늘어남
+  if (has(def, 'exposed')) raw *= 1.25; // 하늘 낙하 뒤의 빈틈
   raw *= def.taken;
   return { dmg: Math.max(1, Math.round(raw)), note };
 }
 // 피하기: 날개(속도) 차이와 안개·돌풍
 function dodged(att, def, lines) {
   if (has(def, 'dodge')) { def.st.dodge = 0; lines.push(`${ga(def)} 돌풍을 타고 공격을 흘려보냈다.`); return true; }
+  if (has(att, 'blind') && Math.random() < 0.25) { lines.push(`${ga(att)} 앞이 보이지 않아 헛손질했다.`); return true; } // 흙먼지
   const p = has(def, 'soak') ? 0.02 : clamp(0.05 + (spdOf(def) - spdOf(att)) * 0.015, 0.03, 0.3) + (has(def, 'evade') ? 0.4 : 0);
   if (Math.random() < p) { lines.push(`${ga(def)} 날렵하게 피했다.`); return true; }
   return false;
@@ -286,6 +289,7 @@ function perform(b, f, foe, act, lines) {
       (f.used ||= []).push(s.name);
       f.cd[act.id] = s.cd + 1; // 이번 턴 끝에 하나 줄어듦
       if (s.self) for (const [k, n] of Object.entries(s.self)) f.st[k] = n;
+      if (s.enGain) { const before = f.en; f.en = Math.min(f.enMax, f.en + s.enGain); lines.push(`${ga(f)} 숨을 깊이 골랐다. 기력을 ${Math.round(f.en - before)} 되찾았다.`); }
       if (s.heal) {
         const h = healAmount(f, s);
         const before = f.hp;
@@ -302,7 +306,17 @@ function perform(b, f, foe, act, lines) {
         const cb = comboOf(foe, act.id);
         const pw = s.power * (cb?.key === 'shatter' ? 2 : 1);
         if (cb) lines.push(`연계! ${cb.name}`);
-        const dealt = hit(f, foe, pw, { magic: !!s.isBreath, element: s.isBreath ? s.element : null, crit: cb?.key === 'vital' }, lines, `${ga(f)} ${s.name}!`);
+        let dealt = 0;
+        for (let i = 0; i < (s.hits || 1) && foe.hp > 0; i++) {
+          dealt += hit(f, foe, pw, { magic: !!s.isBreath, element: s.isBreath ? s.element : null, crit: cb?.key === 'vital' || !!cb?.crit }, lines, i ? '또 한 번' : `${ga(f)} ${s.name}!`);
+        }
+        // 땅울림: 무리의 다른 적에게도 같은 피해와 상태 (결투에서는 상대 하나)
+        if (s.aoe && f === b.a) {
+          for (const o of foesOf(b)) {
+            if (o === foe || !alive(o)) continue;
+            if (hit(f, o, s.power, {}, lines, `땅이 흔들려 ${o.name}에게도`)) applyDebuff(f, o, s.debuff, s.chance, null, lines);
+          }
+        }
         if (dealt && cb) comboAfter(f, foe, cb, lines);
         // 숨결은 무리의 다른 적에게도 번짐 (피해 일부, 상태 이상은 없음)
         if (s.isBreath && f === b.a && foesOf(b).length > 1) {
@@ -318,7 +332,7 @@ function perform(b, f, foe, act, lines) {
           applyDebuff(f, foe, s.debuff, chance, s.isBreath ? s.element : null, lines);
         }
       } else {
-        lines.push(`${ga(f)} ${s.name}!`);
+        if (!s.enGain) lines.push(`${ga(f)} ${s.name}!`);
         if (s.debuff) {
           // 위엄으로 거는 것(포효)은 적이 여럿이면 모두에게
           const targets = s.majesty && f === b.a ? foesOf(b).filter(alive) : [foe];
@@ -439,7 +453,7 @@ function round(b, actA, actB) {
 
 // ── 자동으로 고르기 ────────────────────────────────
 // reserve: 이만큼의 기력은 남겨 둠 (자동 사냥). flee: 체력이 이 비율 아래면 물러남
-function aiPick(f, foe, { reserve = 0, flee = 0, danger: danger0 } = {}) {
+function aiPick(f, foe, { reserve = 0, flee = 0, danger: danger0, many = false } = {}) {
   if (f.creature) return f.next || { type: 'attack' }; // 미리 정해 둔 행동
   if (flee && f.hp < f.hpMax * flee) return { type: 'flee' };
   const can = (id) => {
@@ -469,6 +483,14 @@ function aiPick(f, foe, { reserve = 0, flee = 0, danger: danger0 } = {}) {
   if (hpr < 0.6 && can('devour')) return { type: 'skill', id: 'devour' };
   if (can('roar') && !has(foe, 'weaken')) return { type: 'skill', id: 'roar' };
   if (can('rend') && !has(foe, 'bleed')) return { type: 'skill', id: 'rend' };
+  // 새 스킬들
+  if (can('quake') && (many || Math.random() < 0.3)) return { type: 'skill', id: 'quake' };
+  if (can('focus') && f.en < 8) return { type: 'skill', id: 'focus' };
+  if (can('fury') && !has(f, 'fury') && hpr > 0.6) return { type: 'skill', id: 'fury' };
+  if (can('dive') && (has(foe, 'blind') || foe.hp / foe.hpMax < 0.5) && hpr > 0.35) return { type: 'skill', id: 'dive' };
+  if (can('dust') && !has(foe, 'blind') && Math.random() < 0.6) return { type: 'skill', id: 'dust' };
+  if (can('headbutt') && !has(foe, 'stun') && !has(foe, 'dazed') && Math.random() < 0.6) return { type: 'skill', id: 'headbutt' };
+  if (can('flurry')) return { type: 'skill', id: 'flurry' };
   if (can('gust') && !has(f, 'dodge') && Math.random() < 0.5) return { type: 'skill', id: 'gust' };
   if (can('tail')) return { type: 'skill', id: 'tail' };
   return { type: 'attack' };
@@ -482,7 +504,7 @@ function autoAct(b, opt = {}) {
   let t = live.find((x) => [...(f.breath ? ['breath'] : []), ...f.skills, 'attack'].some((id) => comboOf(x, id)))
     || live.reduce((m, x) => (x.hp / x.hpMax < m.hp / m.hpMax ? x : m), live[0]);
   // 여럿에게 둘러싸이면 조금 더 일찍 물러남
-  const act = aiPick(f, t, { ...opt, danger: heavy, flee: opt.flee ? opt.flee + 0.08 * (live.length - 1) : 0 });
+  const act = aiPick(f, t, { ...opt, danger: heavy, many: true, flee: opt.flee ? opt.flee + 0.08 * (live.length - 1) : 0 });
   return { ...act, t: foesOf(b).indexOf(t) };
 }
 function runAuto(b, optA = {}, optB = {}) {
