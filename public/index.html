@@ -897,6 +897,32 @@
   .corrupt-note .cn-gain { color: #5B3E8C; }
   /* 환영 공지: 줄마다 문단, 빈 줄 뒤의 묶음은 작은 안내로 */
   .wl-text { display: flex; flex-direction: column; gap: 10px; }
+  /* 업데이트 노트 */
+  .menu-dot { width: 8px; height: 8px; border-radius: 50%; background: #A63E4B; box-shadow: 0 0 0 2px #FAFAF9; }
+  #menu-btn { position: relative; }
+  #menu-btn .menu-dot { position: absolute; top: 6px; right: 6px; }
+  #notes-open { display: flex; align-items: center; gap: 8px; }
+  .menu-dot[hidden] { display: none; }
+  .nt-welcome { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; text-align: left; background: #F2F5F8; border: 1px solid #C9D6E1; border-radius: 3px; color: var(--steel-d); cursor: pointer; }
+  .nt-welcome:hover { background: #E8EEF3; }
+  .nt-welcome span { display: flex; flex-direction: column; gap: 2px; }
+  .nt-welcome b { font: 700 14.5px/1.3 var(--serif); }
+  .nt-welcome small { font-size: 12px; color: #4A6478; }
+  .nt-list { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+  .nt { background: var(--surface-2); border: 1px solid var(--line-in); border-radius: 3px; }
+  .nt summary { display: flex; align-items: baseline; gap: 8px; padding: 11px 14px; cursor: pointer; list-style: none; }
+  .nt summary::-webkit-details-marker { display: none; }
+  .nt summary::before { content: ""; flex: none; width: 6px; height: 6px; transform: rotate(45deg); background: #9A9C98; align-self: center; transition: transform .15s; }
+  .nt[open] summary::before { background: var(--steel); }
+  .nt summary b { flex: 1; min-width: 0; font: 700 14.5px/1.4 var(--serif); }
+  .nt summary time { flex: none; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .nt .new { flex: none; padding: 0 6px; font: 600 10.5px/18px var(--sans); color: #fff; background: #A63E4B; border-radius: 9px; }
+  .nt-body { display: flex; flex-direction: column; gap: 6px; padding: 0 14px 13px 28px; }
+  .nt-body p { margin: 0; font-size: 13.5px; line-height: 1.7; color: var(--ink); word-break: keep-all; }
+  .nt-body ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+  .nt-body li { position: relative; padding-left: 13px; font-size: 13.5px; line-height: 1.65; color: var(--ink); word-break: keep-all; }
+  .nt-body li::before { content: ""; position: absolute; left: 0; top: .68em; width: 4px; height: 4px; transform: rotate(45deg); background: var(--steel); }
+  .nt-empty { margin: 0; font-size: 13px; color: var(--muted); }
   .gm-chk { display: inline-flex; align-items: center; gap: 6px; margin-right: auto; font-size: 13px; color: var(--ink-2); }
   .wl-text p { margin: 0; font-size: 14.5px; line-height: 1.75; color: var(--ink); word-break: keep-all; }
   .wl-text p:first-child { font: 700 16px/1.6 var(--serif); color: var(--steel-d); }
@@ -1817,10 +1843,10 @@
         <div class="chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7E8389" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/></svg><span class="l">금화</span><span class="v" id="gold"></span></div>
         <button class="iconbtn tp-btn" id="tp-open" type="button" aria-label="텔레파시" title="텔레파시"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="2.2"/><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7"/><path d="M5.5 5.5a9.2 9.2 0 0 0 0 13M18.5 5.5a9.2 9.2 0 0 1 0 13"/></svg><span class="tp-n" id="tp-badge" hidden></span></button>
         <div class="menu-wrap">
-          <button class="iconbtn" id="menu-btn" type="button" aria-label="설정" aria-expanded="false" aria-controls="menu"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+          <button class="iconbtn" id="menu-btn" type="button" aria-label="설정" aria-expanded="false" aria-controls="menu"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="menu-dot" id="menu-dot" hidden></span></button>
           <div class="menu frame" id="menu" hidden>
             <button type="button" id="settings-open">설정</button>
-            <button type="button" id="welcome-open">환영 공지 다시 보기</button>
+            <button type="button" id="notes-open">업데이트 노트<span class="menu-dot" id="notes-dot" hidden></span></button>
             <button type="button" id="gm-open" hidden>GM 도구</button>
             <button type="button" id="logout">로그아웃</button>
           </div>
@@ -2082,6 +2108,15 @@
   </div>
 </dialog>
 
+<dialog class="frame dlg" id="notes-dlg" aria-labelledby="notes-dlg-title">
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="notes-dlg-title">업데이트 노트</h2></div>
+  <div class="body">
+    <button class="nt-welcome" type="button" id="notes-welcome"><span><b>환영 공지</b><small>처음 대륙에 들어올 때 본 안내를 다시 본다</small></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+    <div class="nt-list" id="notes-list"></div>
+    <div class="row"><button class="btn" type="button" id="notes-close">닫기</button></div>
+  </div>
+</dialog>
 <dialog class="frame dlg" id="welcome-dlg" aria-labelledby="welcome-dlg-title">
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="welcome-dlg-title">용의 대륙</h2></div>
@@ -3640,7 +3675,8 @@
           ? { returned: '마을로 돌아갔다', dead: `${v.age}일을 살고 떠났다` }[v.status]
           : v.status === 'cold' ? `${kindName(v.kind)}의 알 · 식어 버렸다`
           : `${kindName(v.kind)} · 독립 · ${{ friendly: '우호', hermit: '은둔', hostile: '적대' }[v.personality] || ''} 성격`;
-        row.querySelector('span').textContent = what || '';
+        const fam = familyText(v);
+        row.querySelector('span').textContent = [what, fam].filter(Boolean).join(' · ');
         list.appendChild(row);
       }
       wrap.appendChild(list);
@@ -3681,6 +3717,13 @@
     return w;
   }
   // partner: 반려의 식구를 보는 중이면 { id, name } (돌보기·가르치기만 할 수 있음)
+  // "짝 리라 · 자녀 오웬, 하나" / "짝 이즈(골드 드래곤)"
+  function familyText(v) {
+    const bits = [];
+    if (v.mate) bits.push(`짝 ${v.mate.name}${v.mate.kind ? `(${kindName(v.mate.kind)})` : ''}`);
+    if (v.kids?.length) bits.push(`자녀 ${v.kids.join(', ')}`);
+    return bits.join(' · ');
+  }
   function kinCard(v, canAct, partner = null) {
     const R = S.kinRules;
     const card = document.createElement('div');
@@ -3754,6 +3797,9 @@
     }
     const meta = (t, cls) => { const p = document.createElement('p'); p.className = `kin-meta ${cls || ''}`; p.innerHTML = t; card.appendChild(p); return p; };
     const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    // 짝과 자녀 (식구 이벤트로 생김)
+    const family = familyText(v);
+    if (family) meta(esc(family), 'family');
     const acts = document.createElement('div');
     acts.className = 'kin-acts';
     const btn = (text, fn, disabled, title) => {
@@ -4492,7 +4538,66 @@
     $('welcome-dlg').close();
   });
   $('welcome-dlg').addEventListener('cancel', (e) => { if ($('welcome-dlg').dataset.mark) e.preventDefault(); }); // 처음엔 Esc로 닫지 않고 확인을 눌러야
-  $('welcome-open').addEventListener('click', () => { $('menu').hidden = true; openWelcome(false); });
+  // ── 업데이트 노트: 메뉴에서. 읽지 않은 새 노트가 있으면 메뉴에 빨간 점 (읽은 판은 이 기기에 기억) ──
+  const NOTES_KEY = 'dragon-notes-seen';
+  const notesSeen = () => { try { return Number(localStorage.getItem(NOTES_KEY)) || 0; } catch { return 0; } };
+  function renderNotesDot() {
+    const unread = (S.notesLatest || 0) > notesSeen();
+    $('menu-dot').hidden = !unread;
+    $('notes-dot').hidden = !unread;
+  }
+  // 본문: 줄마다 문단, '- '로 시작하는 줄은 목록
+  function noteBody(text) {
+    const box = document.createElement('div');
+    box.className = 'nt-body';
+    let ul = null;
+    for (const raw of String(text || '').split('\n')) {
+      const line = raw.trim();
+      if (!line) { ul = null; continue; }
+      if (/^[-·•]\s*/.test(line)) {
+        if (!ul) { ul = document.createElement('ul'); box.appendChild(ul); }
+        const li = document.createElement('li'); li.textContent = line.replace(/^[-·•]\s*/, ''); ul.appendChild(li);
+      } else {
+        ul = null;
+        const p = document.createElement('p'); p.textContent = line; box.appendChild(p);
+      }
+    }
+    return box;
+  }
+  function drawNotes(list) {
+    const box = $('notes-list');
+    box.replaceChildren();
+    if (!list.length) { const p = document.createElement('p'); p.className = 'nt-empty'; p.textContent = '아직 올라온 노트가 없다.'; box.appendChild(p); return; }
+    const seen = notesSeen();
+    list.forEach((n, i) => {
+      const d = document.createElement('details');
+      d.className = 'nt';
+      d.open = i === 0;
+      const sm = document.createElement('summary');
+      const b = document.createElement('b'); b.textContent = n.title;
+      const t = document.createElement('time'); t.textContent = n.date || '';
+      sm.append(b);
+      if (n.id > seen) { const nw = document.createElement('span'); nw.className = 'new'; nw.textContent = '새 소식'; sm.append(nw); }
+      sm.append(t);
+      d.append(sm, noteBody(n.body));
+      box.appendChild(d);
+    });
+  }
+  function openNotes() {
+    $('menu').hidden = true;
+    socket.emit('notes:get', {}, (res) => {
+      if (res.error) return toast(res.error);
+      drawNotes(res.list);
+      if (!$('notes-dlg').open) $('notes-dlg').showModal();
+      const top = res.list[0]?.id || 0;
+      S.notesLatest = Math.max(S.notesLatest || 0, top);
+      try { localStorage.setItem(NOTES_KEY, String(S.notesLatest)); } catch {}
+      renderNotesDot();
+    });
+  }
+  $('notes-open').addEventListener('click', openNotes);
+  $('notes-close').addEventListener('click', () => $('notes-dlg').close());
+  $('notes-welcome').addEventListener('click', () => openWelcome(false));
 
   // ── 모브 드래곤: 의뢰 · 이야기 · 교환 ──
   let mobTab = 'quest';
@@ -7961,6 +8066,41 @@
     }, 'primary');
     wsec.appendChild(wlRow);
 
+    // 업데이트 노트: 새로 올리기·고치기·지우기
+    const nsec = gmSection(body, '업데이트 노트', "메뉴의 '업데이트 노트'에 새것부터 쌓인다. 새로 올리면 모두의 메뉴에 빨간 점이 뜬다. 줄마다 문단이 되고, '- '로 시작하는 줄은 목록이 된다.");
+    GM.note ||= { id: 0, title: '', body: '' };
+    const ntTitle = gEl('input', 'input');
+    ntTitle.maxLength = 60; ntTitle.placeholder = '제목 (예: 10월 20일 업데이트)'; ntTitle.value = GM.note.title;
+    ntTitle.setAttribute('aria-label', '노트 제목');
+    ntTitle.addEventListener('input', () => { GM.note.title = ntTitle.value; });
+    const ntBody = gEl('textarea', 'input gm-ta');
+    ntBody.maxLength = 3000; ntBody.rows = 8; ntBody.value = GM.note.body;
+    ntBody.placeholder = '- 바뀐 점 하나\n- 바뀐 점 둘';
+    ntBody.setAttribute('aria-label', '노트 내용');
+    ntBody.addEventListener('input', () => { GM.note.body = ntBody.value; });
+    nsec.append(ntTitle, ntBody);
+    const ntRow = gEl('div', 'gm-r');
+    if (GM.note.id) gBtn(ntRow, '고치기 그만두기', () => { GM.note = { id: 0, title: '', body: '' }; renderGm(); }, 'link');
+    gBtn(ntRow, GM.note.id ? '고친 내용 저장' : '새로 올리기', () => {
+      if (!GM.note.id && !confirm('업데이트 노트를 올릴까? 모두의 메뉴에 새 소식 표시가 뜬다.')) return;
+      gmCall('gm:note:save', { id: GM.note.id, title: GM.note.title, body: GM.note.body }, (res) => {
+        toast(GM.note.id ? '노트를 고쳤다.' : '노트를 올렸다.');
+        GM.note = { id: 0, title: '', body: '' };
+        GM.notes = res.list;
+        renderGm();
+      });
+    }, 'primary');
+    nsec.appendChild(ntRow);
+    if (!GM.notes) socket.emit('notes:get', {}, (res) => { if (res.ok) { GM.notes = res.list; if (GM.tab === 'announce') renderGm(); } });
+    for (const n of GM.notes || []) {
+      const r = gmRow(nsec, `${n.date || ''} · ${n.title}`);
+      gBtn(r, '고치기', () => { GM.note = { id: n.id, title: n.title, body: n.body }; renderGm(); }, 'link');
+      gBtn(r, '지우기', () => {
+        if (!confirm(`'${n.title}' 노트를 지울까?`)) return;
+        gmCall('gm:note:delete', { id: n.id }, (res) => { GM.notes = res.list; toast('노트를 지웠다.'); renderGm(); });
+      }, 'link');
+    }
+
     // 대륙의 재앙
     const sec = gmSection(body, '대륙의 재앙', S.boss ? `지금: ${S.boss.name} (${S.regions[S.boss.region]?.name}) · 체력 ${S.boss.hp.toLocaleString()} / ${S.boss.hpMax.toLocaleString()} · 맞선 드래곤 ${S.boss.fighters}` : '지금은 없다. 비워 두면 최근 접속한 드래곤 수와 평균 레벨로 정한다.');
     if (!S.boss) {
@@ -8435,6 +8575,7 @@
       }
     });
     socket.on('me', (me) => { setMe(me); renderSayMode(); maybeWelcome(); });
+    socket.on('notes:latest', ({ id }) => { S.notesLatest = id || 0; renderNotesDot(); });
     socket.on('welcome', (w) => {
       S.welcome = { text: w.text, ver: w.ver, seen: w.seen < 0 ? 0 : w.seen, shown: false };
       maybeWelcome();

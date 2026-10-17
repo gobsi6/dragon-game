@@ -139,7 +139,21 @@ function weatherize(b, region, noHp = false) {
   return b;
 }
 // extras: 함께 싸우는 다른 사냥감 (무리). 싸우는 상대 목록은 foes, 지금 노리는 상대는 b.b (= foes[target])
+// 결투 보정: 두 드래곤의 수치를 둘의 가운데 쪽으로 당겨 격차를 COMBAT.duelGap 배로 줄임
+const DUEL_KEYS = ['atk', 'def', 'spd', 'mag', 'maj', 'hpMax', 'enMax'];
+function evenOut(a, b, k = COMBAT.duelGap) {
+  if (a.creature || b.creature || !(k < 1)) return;
+  for (const key of DUEL_KEYS) {
+    if (typeof a[key] !== 'number' || typeof b[key] !== 'number') continue;
+    const mid = (a[key] + b[key]) / 2;
+    const round = key === 'hpMax' || key === 'enMax' ? Math.round : (x) => x;
+    a[key] = round(mid + (a[key] - mid) * k);
+    b[key] = round(mid + (b[key] - mid) * k);
+  }
+  for (const f of [a, b]) { f.hp = f.hpMax; f.hp0 = f.hpMax; f.en = f.enMax; f.swing = COMBAT.duelSwing; } // 결투는 늘 가득 찬 채로 시작
+}
 function newBattle(kind, a, b, extras = []) {
+  if (kind === 'duel') evenOut(a, b);
   const bt = { kind, turn: 0, a, b, foes: [b, ...extras], target: 0, log: [], over: false, winner: null, fled: null };
   for (const f of [a, ...bt.foes]) if (f.creature) plan(f);
   return bt;
@@ -217,7 +231,7 @@ function damage(att, def, power, opt = {}) {
   let atk = att.atk * (has(att, 'weaken') ? 0.7 : 1) * (has(att, 'fury') ? 1.35 : 1); // 역린
   let armor = def.def * (has(def, 'acid') ? 0.5 : 1);
   let raw = magic ? (att.mag * 1.0 + atk * 0.5) * power - armor * 0.25 : atk * power - armor * 0.5;
-  raw *= rand(0.85, 1.15);
+  raw *= att.swing ? rand(1 - att.swing, 1 + att.swing) : rand(0.85, 1.15); // 결투는 흔들림이 더 커서 약한 쪽에도 기회가 생김
   let note = '';
   if (element && att.elemW?.[element]) raw *= att.elemW[element]; // 날씨: 비에는 불이 약해지고 번개가 세짐
   if (element && att.engrave?.[element]) raw *= att.engrave[element]; // 장신구 각인

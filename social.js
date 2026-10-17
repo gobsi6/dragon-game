@@ -184,7 +184,9 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       mind: d.mind ?? MIND.max, mindMax: MIND.max,
     };
     // 능력치는 숫자 대신 다섯 단계로만 알려 줌 (정확한 값은 본인만 봄)
-    const tierOf = (v) => (v >= 19 ? 5 : v >= 15 ? 4 : v >= 12 ? 3 : v >= 9 ? 2 : 1);
+    // 단계는 '그 레벨의 드래곤에게 흔한 값'에 견줘서 정함. 레벨이 오르면 모두가 '압도적'이 되지 않게
+    const ref = 10 + 0.7 * Math.min(d.level || 1, 25);  // 레벨별로 흔한 능력치 (장신구 포함)
+    const tierOf = (v) => { const r = v / ref; return r >= 1.45 ? 5 : r >= 1.15 ? 4 : r >= 0.9 ? 3 : r >= 0.7 ? 2 : 1; };
     const st = logic.statsOf(d);
     const statTiers = Object.fromEntries(['claw', 'scale', 'wing', 'wisdom', 'majesty'].map((k) => [k, tierOf(st[k])]));
     return {

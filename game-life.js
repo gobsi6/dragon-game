@@ -311,6 +311,9 @@ function view(k, now, d) {
   const a = ageOf(k, isHome(k) ? now : k.data.ended || now); // 떠난 식구는 떠난 날의 나이
   v.age = Math.floor(a);
   v.bond = Math.round(k.data.bond);
+  // 짝과 자녀 (식구 이벤트로 생김)
+  if (k.data.mate) v.mate = { name: k.data.mate.name, kind: k.data.mate.kind || null };
+  if (k.data.kids?.length) v.kids = k.data.kids.slice();
   if (k.data.sex) {
     v.sex = k.data.sex;
     v.sexName = KIN_LOOKS.sex[k.type][k.data.sex];
@@ -569,7 +572,9 @@ function ctxOf(d, kin, have, trigger, now, region = d.region) {
     ...hk,                                        // home humans drakes eggs full
     grown: [...hk.humans, ...hk.drakes],          // 알을 뺀 식구
     gone: kin.filter((x) => x.type === 'drake' && x.status === 'independent'), // 독립한 새끼
+    past: kin.filter((x) => x.type === 'human' && x.status === 'dead'),     // 긴 잠에 든 인간 식구
     k: (id) => hk.home.find((x) => x.id === id) || null, // 이벤트가 고른 식구 (떠났으면 null)
+    kAny: (id) => kin.find((x) => x.id === id) || null, // 떠난 식구까지 (독립한 새끼, 긴 잠에 든 식구)
     age: (x) => (x && x.data.born ? (now - x.data.born) / DAY : -1),
     stage: (x) => stageOf(x, now).name,          // '아기' '아이' … '어린 용' …
     canTravel: (x) => ageOf(x, now) >= (x.type === 'human' ? H.expeditionFrom : R.expeditionFrom),
@@ -610,17 +615,39 @@ function eventView(e, c, vars) {
 }
 
 // 행동 뒤에 이벤트가 일어나는지 굴림. 일어나면 선택 창에 보낼 내용을 돌려줌
+// 최근에 겪은 이벤트 [[id, 시각], …] 와, 그 이벤트가 지금 얼마나 덜 뜰지 (1 = 그대로)
+function recentOf(d) {
+  if (Array.isArray(d.ev_recent)) return d.ev_recent;
+  try { return JSON.parse(d.ev_recent || '[]'); } catch { return []; }
+}
+function recentFactor(recent, id, now) {
+  const hit = recent.find((x) => x[0] === id);
+  if (!hit) return 1;
+  const step = EVENT_RULES.recent.steps.find(([gap]) => now - hit[1] < gap);
+  return step ? step[1] : 1;
+}
+function rememberEvent(d, id, now) {
+  const list = [[id, now], ...recentOf(d).filter((x) => x[0] !== id)].slice(0, EVENT_RULES.recent.keep);
+  d.ev_recent = JSON.stringify(list);
+}
+
 function rollEvent(d, kin, have, trigger, now = Date.now(), force = false) {
   if (pending(d)) return null;
   if (!force && Math.random() >= (EVENT_RULES.chance[trigger] || 0)) return null;
   const c = ctxOf(d, kin, have, trigger, now);
   const list = EVENTS.filter((e) => e.when.includes(trigger) && safe(() => e.cond(c)) && weightOf(e, c) > 0);
   if (!list.length) return null;
-  const total = list.reduce((a, e) => a + weightOf(e, c), 0);
+  // 최근에 본 이벤트는 무게를 줄임. 후보가 모두 최근 것뿐이면 그만큼 아예 덜 일어남
+  const recent = recentOf(d);
+  const w = new Map(list.map((e) => [e, weightOf(e, c) * recentFactor(recent, e.id, now)]));
+  const base = list.reduce((a, e) => a + weightOf(e, c), 0);
+  const total = list.reduce((a, e) => a + w.get(e), 0);
+  if (!force && Math.random() >= Math.max(EVENT_RULES.recent.floor, total / base)) return null;
   let r = Math.random() * total;
-  const e = list.find((x) => (r -= weightOf(x, c)) < 0) || list[list.length - 1];
+  const e = list.find((x) => (r -= w.get(x)) < 0) || list[list.length - 1];
   const vars = e.setup ? e.setup(c) : {};
   d.pending_event = JSON.stringify({ id: e.id, vars, at: now, region: d.region, trigger });
+  rememberEvent(d, e.id, now);
   return eventView(e, c, vars);
 }
 

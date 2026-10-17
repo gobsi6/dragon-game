@@ -488,6 +488,21 @@ const WELCOME_DEFAULT = `안녕하세요. 용의 대륙에 오신 것을 환영�
 본 게임은 캐릭터 이입을 통한 플레이를 권장합니다. 처음 만나는 사이라도 상냥하게 대해주세요.
 
 본 게임은 바이브 코딩을 통해 제작되었습니다. 따라서 일부 기능이 원활하게 작동하지 않거나 예상치 못한 오류가 발생할 수 있습니다. 너그러운 마음으로 양해 부탁드리며, 플레이 중 문제가 발생한다면 GM(청우)에게 편하게 제보해주세요. 감사합니다!`;
+// ── 업데이트 노트: GM이 쓰고, 모두가 메뉴에서 읽음. world 표의 'notes'에 새것부터 [{ id, title, date, body }]
+const NOTE = { max: 60, titleMax: 60, bodyMax: 3000 };
+const NOTES_DEFAULT = [{
+  id: 1, date: '2026-10-17', title: '용언과 업데이트 노트',
+  body: [
+    '- 용언이 생겼다. 채팅 입력칸 왼쪽의 \'용언\'을 켜고 말하면, 지역과 관계없이 대륙의 모든 드래곤에게 닿는다.',
+    '- 채팅 보내기 버튼이 둥근 화살표로 바뀌었다. 글을 쓰면 색이 들어온다.',
+    '- 착용 중인 장신구에도 등급 마름모가 보인다. 희귀한 장신구는 칸이 금빛이 된다.',
+    '- 남의 도움으로 일어서는 건 하루 2번까지로 바뀌었다.',
+    '- 업데이트 노트가 생겼다. 메뉴에서 언제든 다시 볼 수 있고, 환영 공지도 여기서 다시 볼 수 있다.',
+  ].join('\n'),
+}];
+const notesOf = () => db.worldGet('notes', null) ?? NOTES_DEFAULT;
+const kstDate = (t = Date.now()) => new Date(t + 9 * 3600000).toISOString().slice(0, 10); // 한국 날짜 YYYY-MM-DD
+
 const welcomeOf = () => { const w = db.worldGet('welcome', null); return w && w.text ? { text: w.text, ver: w.ver || 1 } : { text: WELCOME_DEFAULT, ver: 1 }; };
 
 // 관계: 연인·반려와 같은 지역에 함께 있는지 (둘 다 접속), 반려의 둥지
@@ -621,6 +636,7 @@ io.on('connection', (socket) => {
   });
   if (dragon) enterWorld(socket, dragon);
   socket.emit('welcome', { ...welcomeOf(), seen: db.welcomeSeen(user.id) }); // 환영 공지 (읽지 않은 판이면 화면이 띄움)
+  socket.emit('notes:latest', { id: notesOf()[0]?.id || 0 }); // 가장 새 업데이트 노트 (읽지 않았으면 메뉴에 점)
   socket.emit('rampage:list', arena.rampages());
   socket.emit('boss', boss.view());
   socket.emit('weather', weatherAll());
@@ -1169,6 +1185,44 @@ io.on('connection', (socket) => {
     db.gmLog(socket.data.user.username, null, `환영 공지를 고침${p?.again ? ' (모두에게 다시 띄움)' : ''}`);
     if (p?.again) io.emit('welcome', { ...w, seen: -1 }); // 접속 중인 모두에게 바로 (seen −1: 다시 띄우라는 뜻)
     ack({ ok: true, welcome: w });
+  });
+
+  // ── 업데이트 노트 ──
+  socket.on('notes:get', (p, ack) => { if (typeof ack === 'function') ack({ ok: true, list: notesOf() }); });
+  // 새로 올리기(id 없음) 또는 고치기(id 있음)
+  socket.on('gm:note:save', (p, ack) => {
+    if (typeof ack !== 'function') return;
+    if (!socket.data.user?.is_gm) return ack({ error: 'GM만 쓸 수 있다.' });
+    const title = str(p?.title).replace(/\s+/g, ' ').slice(0, NOTE.titleMax);
+    const body = (typeof p?.body === 'string' ? p.body : '').replace(/\r/g, '').replace(/[ \t]+\n/g, '\n').trim().slice(0, NOTE.bodyMax);
+    if (!title) return ack({ error: '제목을 적자.' });
+    if (!body) return ack({ error: '내용을 적자.' });
+    const list = notesOf().slice();
+    const id = Number(p?.id) || 0;
+    if (id) {
+      const i = list.findIndex((n) => n.id === id);
+      if (i < 0) return ack({ error: '그 노트를 찾지 못했다.' });
+      list[i] = { ...list[i], title, body };
+      db.worldSet('notes', list);
+      db.gmLog(socket.data.user.username, null, `업데이트 노트를 고침: ${title}`);
+      return ack({ ok: true, list });
+    }
+    const n = { id: Date.now(), date: kstDate(), title, body };
+    list.unshift(n);
+    db.worldSet('notes', list.slice(0, NOTE.max));
+    db.gmLog(socket.data.user.username, null, `업데이트 노트를 올림: ${title}`);
+    io.emit('notes:latest', { id: n.id });
+    ack({ ok: true, list: notesOf() });
+  });
+  socket.on('gm:note:delete', (p, ack) => {
+    if (typeof ack !== 'function') return;
+    if (!socket.data.user?.is_gm) return ack({ error: 'GM만 쓸 수 있다.' });
+    const list = notesOf();
+    const n = list.find((x) => x.id === Number(p?.id));
+    if (!n) return ack({ error: '그 노트를 찾지 못했다.' });
+    db.worldSet('notes', list.filter((x) => x !== n));
+    db.gmLog(socket.data.user.username, null, `업데이트 노트를 지움: ${n.title}`);
+    ack({ ok: true, list: notesOf() });
   });
 
   socket.on('weather:get', (p, ack) => { if (typeof ack === 'function') ack({ ok: true, weather: weatherAll() }); });
