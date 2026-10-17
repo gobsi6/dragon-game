@@ -884,6 +884,50 @@
   .corrupt-note { padding: 9px 12px; background: #F3EEFA; border: 1px solid #D7CBEA; color: #3E3466; font-size: 13px; line-height: 1.55; }
   .corrupt-note b { font-weight: 600; }
   .corrupt-note .cn-gain { color: #5B3E8C; }
+  /* 모브 드래곤 */
+  .mob-bar { display: flex; align-items: center; gap: 12px; padding: 9px 10px 9px 12px; background: #F4F7FA; border: 1px solid #C9D6E2; }
+  .mob-bar .mob-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+  .mob-bar b { font: 700 14.5px/1.3 var(--serif); color: var(--ink); }
+  .mob-bar small { font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+  .mob-bar small .rd { color: #2F5D45; font-weight: 600; }
+  .mob-bar .btn { min-height: 34px; padding: 0 14px; font-size: 13px; flex: none; }
+  .mob-em { flex: none; display: inline-flex; }
+  .mob-em .emblem { display: block; }
+  .mob-track { display: flex; flex-direction: column; gap: 4px; padding: 8px 12px; border: 1px dashed var(--line-soft); font-size: 12.5px; color: var(--ink-2); }
+  .mob-track .mt-h { font-size: 11.5px; letter-spacing: .04em; color: var(--muted); }
+  .mob-track .mt-r { display: flex; gap: 8px; align-items: baseline; }
+  .mob-track .mt-r span:first-child { flex: 1; min-width: 0; }
+  .mob-track .mt-r .p { font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
+  .mob-track .mt-r.ready .p { color: #2F5D45; font-weight: 600; }
+  .mob-head { display: flex; gap: 14px; align-items: flex-start; padding: 14px 16px; background: var(--steel-d); color: #F4F7FA; border-radius: 4px; }
+  .mob-who { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .mob-who .mob-k { font-size: 11.5px; letter-spacing: .06em; color: #B9C7D3; }
+  .mob-who b { font: 700 17px/1.4 var(--serif); }
+  .mob-who small { font-size: 12.5px; line-height: 1.55; color: #D5E0EA; }
+  .mob-body { display: flex; flex-direction: column; gap: 8px; }
+  .mob-card { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; background: var(--surface-2); border: 1px solid var(--line-in); border-radius: 4px; }
+  .mob-card.ready { background: #F1F6F2; border-color: #A9C4B2; }
+  .mob-card.done { opacity: .6; }
+  .mob-card .mc-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .mob-card .mc-goal { font: 700 14.5px/1.4 var(--serif); color: var(--ink); }
+  .mob-card .tier { font: 600 11px/18px var(--sans); padding: 0 6px; border-radius: 2px; border: 1px solid var(--line-in); color: var(--ink-2); background: #fff; }
+  .mob-card .tier.t2 { color: #3C5A73; border-color: #9DB3C6; background: #EEF2F6; }
+  .mob-card .tier.t3 { color: #7A5A16; border-color: #E2D2A6; background: #FBF6E8; }
+  .mob-card .mc-say { font-size: 12.5px; line-height: 1.55; color: var(--muted); }
+  .mob-card .mc-foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .mob-card .mc-foot .sp { flex: 1; }
+  .mob-card .mc-foot .btn { min-height: 32px; padding: 0 14px; font-size: 13px; }
+  .mob-card .cost-list { margin: 2px 0 0; }
+  .mob-card .prog { font: 600 12.5px/1 var(--sans); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .mob-card.ready .prog { color: #2F5D45; }
+  .mob-card .linkbtn { min-height: 28px; padding: 0 4px; border: 0; font-size: 12.5px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+  .mob-card .mc-foot .cost-list { margin: 0; }
+  .mob-card .gift { font: 600 12.5px/1.4 var(--sans); color: #7A5A16; }
+  .mob-chs { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
+  .mob-chs i { width: 9px; height: 9px; transform: rotate(45deg); border: 1px solid var(--steel-d); background: #fff; }
+  .mob-chs i.on { background: var(--steel-d); }
+  .mob-past { font-size: 12.5px; line-height: 1.6; color: var(--muted); padding-left: 10px; border-left: 2px solid var(--line-soft); }
+  .mob-arrow { color: var(--muted); font-size: 13px; }
   .corrupt-note.clean { background: #EEF4EF; border-color: #A9C4B2; color: #2F5D45; }
   .cn-purify { display: flex; flex-direction: column; gap: 5px; margin-top: 9px; padding-top: 9px; border-top: 1px dashed #D7CBEA; }
   .cn-purify .cn-l { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; font-weight: 600; }
@@ -1812,6 +1856,12 @@
         <div class="rampage-bars" id="grave-bars"></div>
         <div class="rampage-bars" id="rescue-bars"></div>
         <div class="corrupt-note" id="corrupt-note" hidden></div>
+        <div class="mob-bar" id="mob-bar" hidden>
+          <span class="mob-em" id="mob-em"></span>
+          <div class="mob-t"><b id="mob-name"></b><small id="mob-sub"></small></div>
+          <button class="btn" type="button" id="mob-open">말 걸기</button>
+        </div>
+        <div class="mob-track" id="mob-track" hidden></div>
         <div class="event-bar raid-bar" id="raid-bar" hidden><span>둥지에 도둑이 들었다. <b id="raid-bar-t"></b></span><button class="btn primary" type="button" id="raid-bar-open">둥지 보기</button></div>
         <div class="event-bar" id="event-bar" hidden><span>일이 생겼다. <b id="event-bar-title"></b></span><button class="btn primary" type="button" id="event-bar-open">살펴보기</button></div>
         <div class="actions" id="actions">
@@ -1980,6 +2030,20 @@
     <div class="mk-tabs" id="mk-tabs" role="tablist" aria-label="시장"><button type="button" role="tab" data-t="buy" class="on">사기<span class="mk-n" id="mk-n-buy"></span></button><button type="button" role="tab" data-t="sell">팔기<span class="mk-n" id="mk-n-sell"></span></button><button type="button" role="tab" data-t="order">제작 의뢰<span class="mk-n" id="mk-n-order"></span></button></div>
     <div id="mk-body"></div>
     <div class="row"><button class="btn" type="button" id="market-close">닫기</button></div>
+  </div>
+</dialog>
+
+<dialog class="frame dlg wide" id="mob-dlg" aria-labelledby="mob-dlg-title">
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="mob-dlg-title">드래곤</h2></div>
+  <div class="body">
+    <div class="mob-head">
+      <span class="mob-em" id="mobd-em"></span>
+      <div class="mob-who"><span class="mob-k" id="mobd-k"></span><b id="mobd-say"></b><small id="mobd-desc"></small></div>
+    </div>
+    <div class="mk-tabs" id="mob-tabs" role="tablist" aria-label="모브 드래곤"><button type="button" role="tab" data-t="quest" class="on">의뢰<span class="mk-n" id="mob-n-quest"></span></button><button type="button" role="tab" data-t="story">이야기<span class="mk-n" id="mob-n-story"></span></button><button type="button" role="tab" data-t="trade">교환</button></div>
+    <div id="mob-body" class="mob-body"></div>
+    <div class="row"><button class="btn" type="button" id="mob-close">닫기</button></div>
   </div>
 </dialog>
 
@@ -2821,6 +2885,7 @@
     $('market-open').hidden = !town;
     $('intimidate').hidden = !town || me.stance !== 'hostile';
     $('intimidate').disabled = me.ap < S.trade.intimidateCost;
+    renderMobBar();
   }
   // 머리 띠 아이콘: 승리 체크 · 패배 느낌표 · 그 밖은 마름모
   const RESULT_ICO = {
@@ -4311,6 +4376,198 @@
       setTimeout(openMarket, 50);
     });
   }
+  // ── 모브 드래곤: 의뢰 · 이야기 · 교환 ──
+  let mobTab = 'quest';
+  const MOB_TIER = { 1: '쉬움', 2: '보통', 3: '어려움' };
+  function renderMobBar() {
+    const me = S.me;
+    if (!me || !S.mobs) return;
+    const mb = S.mobs[S.region];
+    const act = me.mob?.act || [];
+    const bar = $('mob-bar');
+    bar.hidden = !mb || !!me.exp;
+    if (mb) {
+      $('mob-em').innerHTML = emblem(mb.kind, 34);
+      $('mob-name').textContent = mb.name;
+      const sub = $('mob-sub');
+      sub.replaceChildren(mb.who);
+      const ready = act.filter((a) => a.region === S.region && a.ready).length;
+      if (ready) { const r = document.createElement('span'); r.className = 'rd'; r.textContent = ` · 알릴 의뢰 ${ready}개`; sub.appendChild(r); }
+    }
+    // 맡은 의뢰 진행도 (어디서든)
+    const tr = $('mob-track');
+    tr.hidden = !act.length || !!me.exp;
+    tr.replaceChildren();
+    if (act.length) {
+      const h = document.createElement('span'); h.className = 'mt-h'; h.textContent = `맡은 의뢰 ${act.length}/${me.mob.max}`;
+      tr.appendChild(h);
+      for (const a of act) {
+        const r = document.createElement('div'); r.className = `mt-r${a.ready ? ' ready' : ''}`;
+        const t = document.createElement('span'); t.textContent = `${a.name} · ${a.text}`;
+        const p = document.createElement('span'); p.className = 'p';
+        p.textContent = a.ready ? `다 했다 · ${a.regionName}의 ${a.name}에게` : `${a.have}/${a.n}`;
+        r.append(t, p); tr.appendChild(r);
+      }
+    }
+  }
+  const mobChips = (list, gold) => {
+    const cl = document.createElement('div'); cl.className = 'cost-list';
+    for (const x of list || []) { const sp = document.createElement('span'); sp.textContent = `${S.items[x.id]?.name || x.id} ${x.have ?? 0}/${x.n}`; if ((x.have ?? 0) < x.n) sp.className = 'lack'; cl.appendChild(sp); }
+    if (gold) { const sp = document.createElement('span'); sp.textContent = `금화 ${S.me.gold}/${gold}`; if (S.me.gold < gold) sp.className = 'lack'; cl.appendChild(sp); }
+    return cl;
+  };
+  const mobReward = (rw, item) => {
+    const s = document.createElement('span'); s.className = 'ord-rw';
+    const c = document.createElement('i'); c.className = 'coin'; c.setAttribute('aria-hidden', 'true');
+    s.append(c, `${rw.gold}닢 · 경험 +${rw.xp} · 명성 +${rw.fame}`);
+    if (item) { const g = document.createElement('span'); g.className = 'gift'; g.textContent = ` · ${item.name}`; s.appendChild(g); }
+    return s;
+  };
+  const mobBtn = (text, primary, disabled, fn) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = `btn${primary ? ' primary' : ''}`; b.textContent = text; b.disabled = !!disabled;
+    b.addEventListener('click', fn); return b;
+  };
+  const mobDrop = (mob, i) => {
+    const ab = document.createElement('button'); ab.type = 'button'; ab.className = 'linkbtn'; ab.textContent = '내려놓기';
+    ab.addEventListener('click', () => { if (confirm('이 의뢰를 내려놓을까요? 오늘은 다시 맡을 수 없어요.')) mobAct('mob:abandon', { mob, i }); });
+    return ab;
+  };
+  // big: 보상을 받는 일은 창을 닫고 결과 띠에 보여 줌
+  function mobAct(event, payload, big) {
+    socket.emit(event, payload, (res) => {
+      if (res.error) { SFX.play('error'); return toast(res.error); }
+      if (big) { SFX.play('coin'); $('mob-dlg').close(); showResult(res.result); return; }
+      if (event === 'mob:trade') SFX.play('coin');
+      toast(res.result.lines.join(' '));
+      fetchInv(() => openMob());
+    });
+  }
+  function openMob() {
+    socket.emit('mob:get', {}, (res) => {
+      if (res.error) return toast(res.error);
+      const m = res.mob;
+      const dlg = $('mob-dlg'), scroller = dlg.querySelector('.body');
+      const keep = [dlg.scrollTop, scroller.scrollTop];
+      $('mob-dlg-title').textContent = m.name;
+      $('mobd-em').innerHTML = emblem(m.kind, 52);
+      $('mobd-k').textContent = `${S.regions[m.region].name} · ${m.who}${m.fame ? ` · 내 용족 명성 '${m.fame}'` : ''}`;
+      $('mobd-say').textContent = `"${m.greet}"`;
+      $('mobd-desc').textContent = m.desc;
+      $('mob-n-quest').textContent = m.offers.filter((o) => o.state === 'open' || o.state === 'ready').length || '';
+      $('mob-n-story').textContent = m.story.cur ? `${m.story.ch + 1}/${m.story.total}` : '끝';
+      for (const t of $('mob-tabs').children) { const on = t.dataset.t === mobTab; t.classList.toggle('on', on); t.setAttribute('aria-selected', on); }
+      const body = $('mob-body');
+      body.replaceChildren();
+      const note = (text) => { const n = document.createElement('div'); n.className = 'mk-sum'; n.innerHTML = '<span></span><span></span>'; n.firstChild.textContent = text; body.appendChild(n); return n; };
+      if (mobTab === 'quest') {
+        const left = Math.max(1, Math.round((m.resetAt - Date.now()) / 3600000));
+        const n = note(`성향과 상관없이 받을 수 있는 의뢰. 맡은 의뢰 ${m.act.length}/${m.max}`);
+        n.lastChild.textContent = `약 ${left}시간 뒤 새 의뢰`;
+        for (const o of m.offers) {
+          const c = document.createElement('div'); c.className = `mob-card ${o.state}`;
+          const top = document.createElement('div'); top.className = 'mc-top';
+          const tg = document.createElement('span'); tg.className = `tier t${o.t}`; tg.textContent = MOB_TIER[o.t];
+          const g = document.createElement('span'); g.className = 'mc-goal'; g.textContent = o.text;
+          top.append(tg, g);
+          const say = document.createElement('span'); say.className = 'mc-say'; say.textContent = `"${o.say}"`;
+          c.append(top, say);
+          if (o.bring) c.appendChild(mobChips(o.needs));
+          const foot = document.createElement('div'); foot.className = 'mc-foot';
+          foot.appendChild(mobReward(o.reward));
+          const sp = document.createElement('span'); sp.className = 'sp'; foot.appendChild(sp);
+          if (o.state === 'done') foot.appendChild(mobBtn('오늘 마침', false, true));
+          else if (o.bring) foot.appendChild(mobBtn('건네기', true, o.needs.some((x) => x.have < x.n), () => mobAct('mob:turnin', { mob: m.id, i: o.i }, true)));
+          else if (o.state === 'open') foot.appendChild(mobBtn('맡기', true, m.act.length >= m.max, () => mobAct('mob:accept', { mob: m.id, i: o.i })));
+          else {
+            const pg = document.createElement('span'); pg.className = 'prog'; pg.textContent = `${o.have}/${o.n}`;
+            foot.append(mobDrop(m.id, o.i), pg, mobBtn(o.state === 'ready' ? '해냈다고 알리기' : '하는 중', o.state === 'ready', o.state !== 'ready', () => mobAct('mob:turnin', { mob: m.id, i: o.i }, true)));
+          }
+          c.appendChild(foot);
+          body.appendChild(c);
+        }
+        const others = m.act.filter((a) => a.mob !== m.id);
+        if (others.length) {
+          const h = document.createElement('h3'); h.className = 'inv-h'; h.textContent = '다른 드래곤에게 맡은 의뢰'; body.appendChild(h);
+          for (const a of others) {
+            const c = document.createElement('div'); c.className = `mob-card${a.ready ? ' ready' : ''}`;
+            const top = document.createElement('div'); top.className = 'mc-top';
+            const g = document.createElement('span'); g.className = 'mc-goal'; g.textContent = a.text;
+            top.appendChild(g);
+            const foot = document.createElement('div'); foot.className = 'mc-foot';
+            const who = document.createElement('span'); who.className = 'mc-say'; who.textContent = `${a.regionName}의 ${a.name}`;
+            const sp = document.createElement('span'); sp.className = 'sp';
+            const pg = document.createElement('span'); pg.className = 'prog'; pg.textContent = a.ready ? '다 했다' : `${a.have}/${a.n}`;
+            foot.append(who, sp, pg, mobDrop(a.mob, a.i));
+            c.append(top, foot);
+            body.appendChild(c);
+          }
+        }
+      } else if (mobTab === 'story') {
+        const st = m.story;
+        const head = note(`'${st.title}'`);
+        const chs = document.createElement('span'); chs.className = 'mob-chs';
+        for (let k = 0; k < st.total; k++) { const i = document.createElement('i'); if (k < st.ch) i.className = 'on'; chs.appendChild(i); }
+        chs.append(` ${Math.min(st.ch + 1, st.total)}장 / ${st.total}장`);
+        head.lastChild.replaceWith(chs);
+        for (const t of st.past) { const p = document.createElement('p'); p.className = 'mob-past'; p.style.margin = '0'; p.textContent = t; body.appendChild(p); }
+        if (!st.cur) {
+          const e = document.createElement('div'); e.className = 'mk-empty'; e.textContent = '이 드래곤의 이야기를 끝까지 들었다.'; body.appendChild(e);
+        } else {
+          const cu = st.cur;
+          const c = document.createElement('div'); c.className = `mob-card${cu.accepted && (cu.bring ? !cu.needs.some((x) => x.have < x.n) : cu.prog && cu.prog.have >= cu.prog.n) ? ' ready' : ''}`;
+          const top = document.createElement('div'); top.className = 'mc-top';
+          const tg = document.createElement('span'); tg.className = 'tier t2'; tg.textContent = `${st.ch + 1}장`;
+          const g = document.createElement('span'); g.className = 'mc-goal'; g.textContent = cu.accepted ? cu.text : '아직 듣지 않은 이야기';
+          top.append(tg, g);
+          c.appendChild(top);
+          if (cu.accepted) {
+            const say = document.createElement('span'); say.className = 'mc-say'; say.textContent = `"${cu.intro}"`; c.appendChild(say);
+            if (cu.bring) c.appendChild(mobChips(cu.needs));
+          } else {
+            const say = document.createElement('span'); say.className = 'mc-say'; say.textContent = `${m.name}${josa(m.name, '이', '가')} 무언가 말하고 싶은 눈치다.`; c.appendChild(say);
+          }
+          const foot = document.createElement('div'); foot.className = 'mc-foot';
+          foot.appendChild(mobReward(cu.reward, cu.item));
+          const sp = document.createElement('span'); sp.className = 'sp'; foot.appendChild(sp);
+          if (!cu.accepted) foot.appendChild(mobBtn('이야기 듣기', true, false, () => mobAct('mob:story', { mob: m.id })));
+          else if (cu.bring) foot.appendChild(mobBtn('건네기', true, cu.needs.some((x) => x.have < x.n), () => mobAct('mob:storyturn', { mob: m.id }, true)));
+          else {
+            const pg = document.createElement('span'); pg.className = 'prog'; pg.textContent = `${cu.prog.have}/${cu.prog.n}`;
+            const rd = cu.prog.have >= cu.prog.n;
+            foot.append(pg, mobBtn(rd ? '해냈다고 알리기' : '하는 중', rd, !rd, () => mobAct('mob:storyturn', { mob: m.id }, true)));
+          }
+          c.appendChild(foot);
+          body.appendChild(c);
+        }
+      } else {
+        note(`인간 시장을 쓰지 못해도 드래곤끼리는 물건을 바꿀 수 있다. 교환마다 하루 횟수가 정해져 있다.`);
+        for (const o of m.trades) {
+          const c = document.createElement('div'); c.className = `mob-card${o.left <= 0 ? ' done' : ''}`;
+          const top = document.createElement('div'); top.className = 'mc-top';
+          const give = [...o.give.map((x) => `${S.items[x.id].name} ${x.n}개`), ...(o.gold ? [`금화 ${o.gold}닢`] : [])].join(' + ');
+          const get = [...o.get.map((x) => `${S.items[x.id].name}${x.n > 1 ? ` ${x.n}개` : ''}`), ...(o.getGold ? [`금화 ${o.getGold}닢`] : [])].join(' + ');
+          const g = document.createElement('span'); g.className = 'mc-goal'; g.textContent = get;
+          const ar = document.createElement('span'); ar.className = 'mob-arrow'; ar.textContent = `← ${give}`;
+          top.append(g, ar);
+          c.appendChild(top);
+          const it = o.get[0] && S.items[o.get[0].id];
+          if (it) { const say = document.createElement('span'); say.className = 'mc-say'; say.textContent = it.type ? `${effectText(it)} · ${it.desc}` : it.desc; c.appendChild(say); }
+          const foot = document.createElement('div'); foot.className = 'mc-foot';
+          const lf = document.createElement('span'); lf.className = 'prog'; lf.textContent = o.left > 0 ? `오늘 ${o.left}번 남음` : '오늘은 끝';
+          const sp = document.createElement('span'); sp.className = 'sp';
+          const lack = o.give.some((x) => x.have < x.n) || (o.gold && S.me.gold < o.gold);
+          foot.append(mobChips(o.give, o.gold), sp, lf, mobBtn('바꾸기', true, o.left <= 0 || lack, () => mobAct('mob:trade', { mob: m.id, i: o.i })));
+          c.appendChild(foot);
+          body.appendChild(c);
+        }
+      }
+      if (!dlg.open) dlg.showModal();
+      else { dlg.scrollTop = keep[0]; scroller.scrollTop = keep[1]; }
+    });
+  }
+  $('mob-open').addEventListener('click', () => { mobTab = 'quest'; fetchInv(() => openMob()); });
+  $('mob-tabs').addEventListener('click', (e) => { const b = e.target.closest('button[data-t]'); if (!b) return; mobTab = b.dataset.t; openMob(); });
+  $('mob-close').addEventListener('click', () => $('mob-dlg').close());
   $('market-open').addEventListener('click', () => { mkTab = 'buy'; mkQty.clear(); openMarket(); });
   $('market-close').addEventListener('click', () => $('market-dlg').close());
   $('intimidate').addEventListener('click', () => {
@@ -7956,6 +8213,7 @@
       for (const [k, v] of Object.entries(S.items || {})) v.id = k;
       S.recipes = data.recipes;
       S.craftRules = data.craftRules || null;
+      S.mobs = data.mobs || {}; // 지역마다 머무는 모브 드래곤
       S.buffs = data.buffs || {};
       S.expGoals = data.expGoals || {};
       S.deathCfg = data.death || { waitMs: 3 * 3600000, helpAp: 2, helpEn: 8 };
