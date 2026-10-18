@@ -790,6 +790,50 @@ function startExpedition(d, minutes, goal = 'gather', now = Date.now()) {
   d.exp_info = { goal, fork: { id: pick(forks).id, at, pick: null }, last: expInfo(d).last || null };
   return { ok: true };
 }
+// ── 원정의 시간표: 떠날 때 길 위에서 주울 것·만날 싸움·다칠 일을 미리 정해 둠 ──
+// 팝업은 이 시간표를 보여 주고, 돌아오면 그 시각까지 일어난 일만 그대로 받음 (일찍 불러도 그때까지 주운 것만)
+// 정해 두는 양은 예전 계산(돌아올 때 한꺼번에)과 같은 기댓값이 되도록 맞춤
+function planExpedition(d, companions = 0) {
+  const info = expInfo(d);
+  const G = EXP_GOALS[info.goal] || EXP_GOALS.gather;
+  const st = statsOf(d);
+  const extra = bonusOf(d).expRare + (titleMods(d).expRare || 0);
+  const hermit = d.stance === 'hermit';
+  const planned = (d.exp_end - d.exp_start) / 60000;
+  const region = d.exp_region || d.region;
+  const hours = planned / 60;
+  const ev = [];
+  const at = () => Math.round(rand(0.03, 0.97) * planned * 60000); // 출발부터 몇 ms 뒤
+  let rolls = Math.floor(planned / 10 * (1 + companions * KIN.companionBonus) * traitMods(d).expRolls * G.rolls);
+  if (G.miss && rolls > 0 && Math.random() < G.miss) { rolls = Math.floor(rolls / 2); ev.push({ t: at(), k: 'miss' }); }
+  for (let i = 0; i < rolls; i++) {
+    ev.push({ t: at(), k: 'item', id: rollItem(region, {
+      uncommon: (0.16 + hours * 0.03 + st.wisdom * 0.004 + (hermit ? SR.hermit.expUncommon : 0)) * G.uncommon,
+      rare: (0.015 + hours * 0.012 + st.wisdom * 0.001 + extra + (hermit ? SR.hermit.expRare : 0)) * G.rare,
+    }) });
+  }
+  // 싸움: 사냥 원정은 20분마다 사냥감을 만나 쓰러뜨림 (전리품). 다치는 만큼은 싸움에 나눠 담음
+  const trophyN = Math.floor(planned / 20) * (G.trophy || 0);
+  const huntable = (REGION_PLACES[region] || []).filter((id) => PLACES[id].level <= d.level + PLACE_RULES.tooHard);
+  const cap = hpCap(d);
+  const hurtAll = Math.max(0, (G.hurt || 0) * (planned / 30)) * cap; // 전체 원정에서 깎일 체력
+  const fights = [];
+  for (let i = 0; i < trophyN && huntable.length; i++) { const p = PLACES[pick(huntable)]; fights.push({ t: at(), k: 'fight', foe: p.creature, id: p.drop }); }
+  if (hurtAll > 0) {
+    if (!fights.length) for (let i = 0; i < Math.max(1, Math.round(planned / 40)); i++) fights.push({ t: at(), k: 'scrape' }); // 사냥이 아니면 길에서 다침
+    const each = hurtAll / fights.length;
+    for (const f of fights) f.hp = Math.max(1, Math.round(each * rand(0.6, 1.4)));
+  }
+  ev.push(...fights);
+  // 쉬어 가는 원정(다치는 대신 회복)이면 회복도 나눠 담음
+  if ((G.hurt || 0) < 0) { const n = Math.max(1, Math.round(planned / 30)); const each = Math.round((-G.hurt * (planned / 30) * cap) / n); for (let i = 0; i < n; i++) ev.push({ t: at(), k: 'heal', hp: each }); }
+  ev.sort((a, b) => a.t - b.t);
+  info.plan = ev;
+  return ev;
+}
+// 화면에 보낼 시간표 (이름은 화면에서 붙임)
+const planView = (d) => (expInfo(d).plan || null);
+
 // 갈림길을 고름 (key: 'a'/'b'). auto: 돌아올 때까지 고르지 않아 저절로 고름
 function resolveFork(d, key, auto = false) {
   const f = expInfo(d).fork;
@@ -854,24 +898,39 @@ function finishExpedition(d, now = Date.now(), companions = 0) {
   const journal = [G.open(where)];
   const lines = [];
 
-  let rolls = Math.floor(done / 10 * (1 + companions * KIN.companionBonus) * traitMods(d).expRolls * G.rolls * (fr?.rolls || 1));
-  let missed = false;
-  if (G.miss && rolls > 0 && Math.random() < G.miss) { rolls = Math.floor(rolls / 2); missed = true; }
+  const plan = info.plan;
+  const doneMs = done * 60000;
+  const past = plan ? plan.filter((e) => e.t <= doneMs) : null; // 돌아오기 전까지 일어난 일
+  let rolls, missed = false;
   const hours = planned / 60;
   const ids = [];
-  for (let i = 0; i < rolls; i++) {
-    ids.push(rollItem(region, {
-      uncommon: (0.16 + hours * 0.03 + st.wisdom * 0.004 + (hermit ? SR.hermit.expUncommon : 0)) * G.uncommon,
-      rare: (0.015 + hours * 0.012 + st.wisdom * 0.001 + extra + (hermit ? SR.hermit.expRare : 0)) * G.rare + (fr?.rare || 0),
-    }));
+  if (past) {
+    // 시간표대로: 주운 것과 싸워서 얻은 전리품 (갈림길에서 '더 많이 찾기'를 골랐으면 그만큼 더)
+    const found = past.filter((e) => e.k === 'item');
+    rolls = found.length;
+    missed = past.some((e) => e.k === 'miss');
+    for (const e of found) ids.push(e.id);
+    const more = Math.floor(found.length * ((fr?.rolls || 1) - 1));
+    for (let i = 0; i < more; i++) ids.push(rollItem(region, { uncommon: 0.25, rare: 0.03 + (fr?.rare || 0) }));
+  } else {
+    rolls = Math.floor(done / 10 * (1 + companions * KIN.companionBonus) * traitMods(d).expRolls * G.rolls * (fr?.rolls || 1));
+    if (G.miss && rolls > 0 && Math.random() < G.miss) { rolls = Math.floor(rolls / 2); missed = true; }
+    for (let i = 0; i < rolls; i++) {
+      ids.push(rollItem(region, {
+        uncommon: (0.16 + hours * 0.03 + st.wisdom * 0.004 + (hermit ? SR.hermit.expUncommon : 0)) * G.uncommon,
+        rare: (0.015 + hours * 0.012 + st.wisdom * 0.001 + extra + (hermit ? SR.hermit.expRare : 0)) * G.rare + (fr?.rare || 0),
+      }));
+    }
   }
   // 갈림길에서 얻은 것
   for (let i = 0; i < (fr?.loot || 0); i++) ids.push(rollItem(region, { uncommon: 0.5, rare: 0.12 + (fr?.rare || 0) }));
   if (fr?.item) ids.push(fr.item);
   // 사냥 원정·갈림길의 사냥: 그 지역 장소의 전리품 (갈 수 있는 장소에서)
-  const trophyN = Math.floor(done / 20) * (G.trophy || 0) + (fr?.trophy || 0);
   const huntable = (REGION_PLACES[region] || []).filter((id) => PLACES[id].level <= d.level + PLACE_RULES.tooHard);
-  for (let i = 0; i < trophyN && huntable.length; i++) ids.push(PLACES[pick(huntable)].drop);
+  const pastFights = past ? past.filter((e) => e.k === 'fight') : [];
+  const trophyN = past ? pastFights.length + (fr?.trophy || 0) : Math.floor(done / 20) * (G.trophy || 0) + (fr?.trophy || 0);
+  if (past) { for (const e of pastFights) ids.push(e.id); for (let i = 0; i < (fr?.trophy || 0) && huntable.length; i++) ids.push(PLACES[pick(huntable)].drop); }
+  else for (let i = 0; i < trophyN && huntable.length; i++) ids.push(PLACES[pick(huntable)].drop);
   // 2시간 이상 원정을 끝까지 다녀오면: 별똥별 조각 (멸망한 대륙이면 잿빛 심장도)
   let longFind = null;
   const plannedMin = Math.round(planned);
@@ -906,7 +965,10 @@ function finishExpedition(d, now = Date.now(), companions = 0) {
 
   // 몸과 마음에 남은 것
   const cap = hpCap(d);
-  const hurt = (G.hurt || 0) * (done / 30) + (fr?.hurt || 0);
+  // 시간표가 있으면 실제로 다친 만큼(싸움·긁힘)과 쉬어 간 만큼
+  const hurt = past
+    ? (past.reduce((a, e) => a + (e.k === 'fight' || e.k === 'scrape' ? e.hp || 0 : e.k === 'heal' ? -(e.hp || 0) : 0), 0) / cap) + (fr?.hurt || 0)
+    : (G.hurt || 0) * (done / 30) + (fr?.hurt || 0);
   if (hurt > 0) {
     const before = d.hp;
     d.hp = Math.max(1, Math.round(d.hp - cap * hurt));
@@ -1803,6 +1865,6 @@ module.exports = {
   corruptedRegion, corruptUntil, corruptPeriod, isCorrupted, isRuin, berserkOf, loseMind, nearestTown,
   placeOf, goPlace, isFallen, chron, chronOf,
   titlesOf, titleOn, titleName, titleMods, checkTitles, setTitle, titlesView,
-  combatJson, dayIdx, gearMods, clampVitals, facOf, facSlots, facPower, buildFacility, removeFacility, // 모브 드래곤(game-mobs.js)이 씀
+  combatJson, dayIdx, gearMods, clampVitals, planExpedition, planView, facOf, facSlots, facPower, buildFacility, removeFacility, // 모브 드래곤(game-mobs.js)이 씀
   xpNeed, atMaxLevel,
 };

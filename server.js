@@ -260,7 +260,7 @@ const meOf = (d) => ({
   battle: arena ? arena.inBattle(d.id) : false,
   perks: d.perks || {},
   cost: { explore: logic.actionCost(d, 'explore'), gather: logic.actionCost(d, 'gather'), hunt: logic.actionCost(d, 'hunt') },
-  exp: d.exp_end ? { region: d.exp_region, start: d.exp_start, end: d.exp_end, goal: logic.expInfo(d).goal || 'gather', fork: logic.forkView(d) } : null,
+  exp: d.exp_end ? { region: d.exp_region, start: d.exp_start, end: d.exp_end, goal: logic.expInfo(d).goal || 'gather', fork: logic.forkView(d), plan: logic.planView(d), went: logic.expInfo(d).went || [] } : null,
   expLast: d.exp_end ? null : (logic.expInfo(d).last || null), // 지난 원정 일지
 });
 
@@ -404,6 +404,7 @@ function sendRegionState(socket, dragon) {
     region: dragon.region,
     occupants: occupants(dragon.region),
     // 이 지역의 대화에 지난 용언을 시각 순서대로 섞어 보여 줌
+    more: true, // 위로 올리면 더 불러올 수 있음 (불러와 보고 없으면 버튼을 숨김)
     history: withTitles([
       ...db.recentChat(dragon.region, HISTORY),
       ...db.recentChat(SHOUT_REGION, SHOUT_HISTORY).map((m) => ({ ...m, shout: true })),
@@ -989,6 +990,8 @@ io.on('connection', (socket) => {
     const res = logic.startExpedition(d, Number(payload?.minutes), str(payload?.goal) || 'gather');
     if (res.error) return ack(res);
     const went = life.expStart(kin);
+    logic.planExpedition(d, life.companions(kin)); // 길 위의 일을 미리 정해 둠 (팝업에 보여 주고, 돌아오면 그대로 받음)
+    logic.expInfo(d).went = went; // 함께 간 식구 이름 (원정 길 이야기에)
     refreshKin(d, kin);
     db.saveState(d);
     sendMe(socket, d);
@@ -1425,6 +1428,21 @@ io.on('connection', (socket) => {
     io.emit('system', { text: `[오염] ${REGIONS[region].name}에 검은 기운이 번졌다! 함께 정화하자.`, at: now });
     for (const e of online.values()) sendMe(e.socket, e.dragon);
     ack({ ok: true, region, until: logic.corruptUntil(now) });
+  });
+
+  // 이야기 창: 위로 올려서 지난 말 더 불러오기 (지금 지역의 말과 용언을 섞어 before보다 앞의 것)
+  socket.on('chat:older', (p, ack) => {
+    if (typeof ack !== 'function') return;
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+    const before = Math.floor(Number(p?.before));
+    if (!(before > 0)) return ack({ error: '불러올 곳을 모르겠다.' });
+    const N = HISTORY;
+    const list = [
+      ...db.olderChat(entry.dragon.region, before, N),
+      ...db.olderChat(SHOUT_REGION, before, N).map((m) => ({ ...m, shout: true })),
+    ].sort((a, b) => a.id - b.id).slice(-N);
+    ack({ ok: true, history: withTitles(list), more: list.length >= N });
   });
 
   socket.on('weather:get', (p, ack) => { if (typeof ack === 'function') ack({ ok: true, weather: weatherAll() }); });
