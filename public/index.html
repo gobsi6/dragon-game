@@ -440,6 +440,13 @@
   .mk-go .coin::after { width: 6px; height: 6px; }
   .ord-rw { display: inline-flex; align-items: center; gap: 5px; font: 600 12.5px/1 var(--sans); color: #6A4E12; white-space: nowrap; }
   .mk-row .lock { font-size: 12px; color: var(--muted); text-align: right; }
+  /* 물건 태그 */
+  .itags { display: inline-flex; gap: 3px; margin-left: 6px; vertical-align: 1px; white-space: nowrap; }
+  .itag { padding: 0 5px; font: 500 10.5px/16px var(--sans); letter-spacing: 0; border-radius: 3px; border: 1px solid #D5D8D4; background: #F2F3F1; color: #5B6066; }
+  .itag.cat-equip { border-color: #B9C7D3; background: #EEF2F6; color: #2E4A60; }
+  .itag.cat-treasure { border-color: #E2CF9E; background: #FBF6E8; color: #6B4E12; }
+  .itag.r-uncommon { border-color: #B9C7D3; background: #fff; color: #3C5A73; }
+  .itag.r-rare { border-color: #D9B865; background: #fff; color: #8C6A1E; font-weight: 600; }
   /* 멸망한 대륙 */
   .corrupt-note.ruin, #corrupt-note.ruin { background: #EFEBF3; border-color: #B7AEC6; }
   #corrupt-note .ruin-top { margin-top: 6px; font-size: 12px; color: #4A3F5E; }
@@ -3494,6 +3501,28 @@
   // ── 물건 설명 ──
   const statName = (k) => S.stats.find((x) => x.key === k)?.name || k;
   const slotName = (k) => S.slots.find((x) => x.key === k)?.name || k;
+  // 물건 이름 옆 태그: 분류(장신구·회복약…)와 등급(흔함·드묾·희귀)
+  const RARITY_NAME = { common: '흔함', uncommon: '드묾', rare: '희귀' };
+  function itemCatName(it) {
+    if (!it) return '';
+    if (it.type === 'equip') return '장신구';
+    if (it.type === 'use') return it.use?.buff ? '강화 음식' : '회복약';
+    return { meal: '식구 요리', bait: '미끼', fish: '물고기', treasure: '보물', trophy: '전리품' }[it.cat] || '재료';
+  }
+  const itemTagText = (it) => (it ? `${itemCatName(it)} · ${RARITY_NAME[it.rarity] || '흔함'}` : '');
+  function itemTags(it) {
+    const w = document.createElement('span');
+    w.className = 'itags';
+    if (!it) return w;
+    const c = document.createElement('span');
+    c.className = `itag cat-${it.type === 'equip' ? 'equip' : it.cat === 'treasure' ? 'treasure' : 'other'}`;
+    c.textContent = itemCatName(it);
+    const r = document.createElement('span');
+    r.className = `itag r-${it.rarity || 'common'}`;
+    r.textContent = RARITY_NAME[it.rarity] || '흔함';
+    w.append(c, r);
+    return w;
+  }
   function effectText(it) {
     if (it.type === 'use') {
       const u = it.use, out = [];
@@ -3649,6 +3678,7 @@
       row.innerHTML = '<b><span class="nm"></span><span class="q"></span></b><small></small>';
       const gmod = it.type === 'equip' ? S.me.craft?.gear?.[id] : null;
       row.querySelector('.nm').textContent = `${it.name}${gmod?.plus ? ` +${gmod.plus}` : ''}`;
+      row.querySelector('.nm').append(itemTags(it));
       row.querySelector('.q').textContent = `×${qty}`;
       if (gmod?.mw) { const t = document.createElement('span'); t.className = 'gw-mw'; t.textContent = '걸작'; row.querySelector('b').appendChild(t); }
       if (gmod?.elem) { const t = document.createElement('span'); t.className = 'gw-el'; t.textContent = `${ELEM_NAME[gmod.elem]} 각인`; row.querySelector('b').appendChild(t); }
@@ -4389,6 +4419,7 @@
             r4.className = `it ${it.rarity}`;
             r4.innerHTML = '<b><span class="nm"></span><span class="q"></span></b><small></small><div class="acts"></div>';
             r4.querySelector('.nm').textContent = it.name;
+            r4.querySelector('.nm').append(itemTags(it));
             r4.querySelector('.q').textContent = `${n.wards?.[key] || 0}/${S.nestRules.wardMax}`;
             const own = invCache[id] || 0;
             r4.querySelector('small').textContent = `${it.desc} 제작에서 만들 수 있다.${own ? ` (가진 것 ${own})` : ''}`;
@@ -4473,6 +4504,7 @@
               r2.className = `it ${it.rarity}`;
               r2.innerHTML = '<b><span class="nm"></span><span class="q"></span></b><small></small><div class="acts"></div>';
               r2.querySelector('.nm').textContent = it.name;
+              r2.querySelector('.nm').append(itemTags(it));
               r2.querySelector('.q').textContent = `×${x.qty}`;
               r2.querySelector('small').textContent = `개당 가치 ${it.value}`;
               r2.querySelector('.acts').append(btn('1개 꺼내기', () => nestAct('hoard:take', { what: x.item, qty: 1 })));
@@ -4494,6 +4526,7 @@
               r3.className = `it ${it.rarity}`;
               r3.innerHTML = '<b><span class="nm"></span><span class="q"></span></b><small></small><div class="acts"></div>';
               r3.querySelector('.nm').textContent = it.name;
+              r3.querySelector('.nm').append(itemTags(it));
               r3.querySelector('.q').textContent = `×${q}`;
               r3.querySelector('small').textContent = `개당 가치 ${it.value}`;
               r3.querySelector('.acts').append(btn('1개 쌓기', () => nestAct('hoard:put', { what: id, qty: 1 })));
@@ -4555,6 +4588,7 @@
     row.innerHTML = '<div class="nm"><b></b><small></small></div><div class="ctl"></div>';
     const b = row.querySelector('b');
     b.textContent = it.name;
+    b.append(itemTags(it));
     if (it.type) { const e = document.createElement('span'); e.className = 'eff'; e.textContent = effectText(it); b.appendChild(e); }
     row.querySelector('small').textContent = it.desc;
     return row;
@@ -5243,6 +5277,7 @@
         row.className = `recipe ${it.rarity}`;
         row.innerHTML = '<div class="nm"><b></b><span class="eff"></span></div><button type="button" class="btn primary">만들기</button><div class="needs"></div>';
         row.querySelector('b').textContent = it.name;
+        row.querySelector('b').append(itemTags(it));
         if (r.hidden) { const t = document.createElement('span'); t.className = 'rc-found'; t.textContent = '찾아낸 제작법'; row.querySelector('b').appendChild(t); }
         row.querySelector('.eff').textContent = effectText(it);
         const needs = row.querySelector('.needs');
@@ -6079,7 +6114,7 @@
     for (const [id, q] of own.sort(([a], [b]) => S.items[a].name.localeCompare(S.items[b].name, 'ko'))) {
       const o = document.createElement('option');
       o.value = id;
-      o.textContent = `${S.items[id].name} (가진 것 ${q})`;
+      o.textContent = `${S.items[id].name} [${itemTagText(S.items[id])}] (가진 것 ${q})`;
       sel.appendChild(o);
     }
     gift.querySelector('.btn').addEventListener('click', () => {
@@ -7198,6 +7233,7 @@
         row.className = `mk-row ${it.rarity}`;
         row.innerHTML = '<div class="nm"><b></b><span class="eff"></span><small></small></div><div class="ctl"></div>';
         row.querySelector('b').textContent = it.name;
+        row.querySelector('b').append(itemTags(it));
         row.querySelector('.eff').textContent = effectText(it);
         row.querySelector('small').textContent = `정화의 결정 ${x.cost}개 · ${it.desc || ''}`;
         const bt = document.createElement('button');
@@ -8767,7 +8803,7 @@
     theirs.replaceChildren();
     const line = (text) => { const d = document.createElement('div'); d.className = 'it'; d.innerHTML = '<span></span>'; d.firstChild.textContent = text; theirs.appendChild(d); };
     if (st.them.gold) line(`금화 ${st.them.gold}닢`);
-    for (const x of st.them.items) line(`${S.items[x.id].name} ×${x.qty}`);
+    for (const x of st.them.items) line(`${S.items[x.id].name} ×${x.qty} · ${itemTagText(S.items[x.id])}`);
     if (!st.them.gold && !st.them.items.length) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = '아직 올려놓은 것이 없다.'; theirs.appendChild(e); }
     if (first) {
       fetchInv(() => {
@@ -8780,6 +8816,7 @@
           d.className = 'it';
           d.innerHTML = `<span></span><input class="input" type="number" min="0" max="${q}" value="0" data-id="${id}">`;
           d.firstChild.textContent = `${S.items[id].name} (가진 것 ${q})`;
+          d.firstChild.append(itemTags(S.items[id]));
           mine.appendChild(d);
         }
         $('tr-gold').value = 0;
