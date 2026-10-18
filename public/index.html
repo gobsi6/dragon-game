@@ -8653,11 +8653,25 @@
       }, 'link');
     }
 
+    // 오염: 지금 상태와 즉시 일으키기
+    const cr = S.me?.corrupt;
+    const cpur = cr?.purify;
+    const csec = gmSection(body, '오염', cr?.region
+      ? `지금: ${S.regions[cr.region]?.name} · ${fmtLeft(cr.until)} 뒤 다른 곳으로 옮겨 감${cpur ? ` · 정화 ${cpur.total ?? 0} / ${cpur.goal ?? ''}` : ''}`
+      : '지금은 오염된 곳이 없다 (정화되었거나 옮겨 가는 중). 12시간마다 새 곳에 생긴다.');
+    const cr1 = gmRow(csec, '지금 일으키기');
+    const cwild = Object.keys(S.regions).filter((id) => !S.shops.includes(id) && S.regions[id].realm !== 'ruin');
+    const cwhere = gSelect(cr1, '지역', [['', '다음 차례'], ...cwild.map((id) => [id, S.regions[id].name])], '');
+    gBtn(cr1, '오염 일으키기', () => {
+      if (!confirm('지금 바로 새 오염을 일으킬까? 지금의 오염과 정화 진행은 끝나고, 12시간 주기가 지금부터 다시 시작된다.')) return;
+      gmCall('gm:corrupt', { region: cwhere.value }, (res) => { toast(`${S.regions[res.region].name}에 오염을 일으켰다.`); renderGm(); });
+    }, 'primary');
+
     // 대륙의 재앙
     const sec = gmSection(body, '대륙의 재앙', S.boss ? `지금: ${S.boss.name} (${S.regions[S.boss.region]?.name}) · 체력 ${S.boss.hp.toLocaleString()} / ${S.boss.hpMax.toLocaleString()} · 맞선 드래곤 ${S.boss.fighters}` : '지금은 없다. 비워 두면 최근 접속한 드래곤 수와 평균 레벨로 정한다.');
     if (!S.boss) {
       const r2 = gmRow(sec, '부르기');
-      const wild = Object.keys(S.regions).filter((id) => !S.shops.includes(id));
+      const wild = Object.keys(S.regions).filter((id) => !S.shops.includes(id) && S.regions[id].realm !== 'ruin');
       const where = gSelect(r2, '지역', [['', '무작위'], ...wild.map((id) => [id, S.regions[id].name])], '');
       const lv = gNum(r2, '레벨', '', '64px');
       const hp = gNum(r2, '체력', '', '90px');

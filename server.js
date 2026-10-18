@@ -480,8 +480,11 @@ wxTicker.unref?.();
 // 대륙의 재앙: 모두가 함께 맞서는 거대한 적 (boss.js)
 const boss = require('./boss')({ io, db, online, logic, combat, arena, sendMe });
 // ── 정화: 오염된 땅에서 행동할수록 모두의 기여가 쌓이고, 목표에 닿으면 그 땅의 오염이 일찍 걷힘 ──
+// 오염 시계 (GM이 즉시 일으키면 바뀜). logic이 이걸 보고 지금 오염된 곳을 셈
+let corruptClock = db.worldGet('corruptClock') || { off: 0, bump: 0, force: null };
+logic.hooks.corruptClock = () => corruptClock;
 const purify = (() => {
-  const period = (now = Date.now()) => Math.floor(now / MIND.rotateMs);
+  const period = (now = Date.now()) => logic.corruptPeriod(now);
   let st = db.worldGet('purify');
   const cur = (now = Date.now()) => {
     const p = period(now);
@@ -1373,6 +1376,23 @@ io.on('connection', (socket) => {
     if (have('purify_shard') < cost) return { error: `정화의 결정이 모자란다. (${cost}개 필요)` };
     const name = ITEMS[x.id].name;
     return { title: '생존자 오르샤', lines: [`정화의 결정 ${cost}개를 건네자, 오르샤가 낡은 상자에서 ${name}${qty > 1 ? ` ${qty}개` : ''}${josa(qty > 1 ? '개' : name, '을', '를')} 꺼내 주었다.`, '"이 땅을 맑게 해 주는 대가요. 부디 무사히 돌아가시오."'], items: [{ id: 'purify_shard', qty: -cost }, { id: x.id, qty }] };
+  });
+
+  // GM: 지금 바로 새 오염을 일으킴 (region을 비우면 다음 차례 지역)
+  socket.on('gm:corrupt', (p, ack) => {
+    if (typeof ack !== 'function') return;
+    if (!socket.data.user?.is_gm) return ack({ error: 'GM만 쓸 수 있다.' });
+    const now = Date.now();
+    const next = logic.corruptPeriod(now) + 1;
+    const want = str(p?.region);
+    if (want && (!REGIONS[want] || SHOPS[want] || logic.isRuin(want))) return ack({ error: '인간 마을과 멸망한 대륙에는 일으킬 수 없다.' });
+    corruptClock = { off: now, bump: next, force: want ? { period: next, region: want } : null };
+    db.worldSet('corruptClock', corruptClock);
+    const region = logic.corruptedRegion(now);
+    db.gmLog(socket.data.user.username, null, `오염을 일으킴: ${REGIONS[region].name}`);
+    io.emit('system', { text: `[오염] ${REGIONS[region].name}에 검은 기운이 번졌다! 함께 정화하자.`, at: now });
+    for (const e of online.values()) sendMe(e.socket, e.dragon);
+    ack({ ok: true, region, until: logic.corruptUntil(now) });
   });
 
   socket.on('weather:get', (p, ack) => { if (typeof ack === 'function') ack({ ok: true, weather: weatherAll() }); });

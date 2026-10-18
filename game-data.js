@@ -1159,7 +1159,7 @@ const MIND = {
   max: 100,
   regenEvery: 3 * 60 * 1000,   // 정신 1이 차는 간격 (둥지에서 쉬면 3배, 은둔이면 1.3배 빠름)
   restMult: 3, hermitMult: 1.3,
-  rotateMs: 2 * DAY,           // 오염된 땅이 옮겨 가는 간격
+  rotateMs: 12 * 60 * 60 * 1000, // 오염된 땅이 옮겨 가는 간격 (12시간마다 새 곳에 오염이 생김)
   drain: { explore: 5, gather: 4, hunt: 0, expedition: 2 }, // 오염된 땅에서 행동할 때 깎이는 정신 (원정은 10분마다). 사냥은 몬스터가 깎음
   monster: 0.5,                // 오염된 몬스터가 입힌 피해의 이만큼 정신도 깎임
   monsterAtk: 1.15,            // 오염된 몬스터는 조금 더 셈
@@ -1203,7 +1203,7 @@ const CRAFT = {
 
 // 정화: 오염된 땅에서 행동할수록 모두의 정화 기여가 쌓이고, 목표에 닿으면 그 땅의 오염이 일찍 걷힘
 const PURIFY = {
-  goal: 250,                                   // 모두 합쳐 이만큼 모이면 정화
+  goal: 2000,                  // 정화에 필요한 모두의 기여 (12시간 안에 여럿이 힘을 모아야 닿도록)                                   // 모두 합쳐 이만큼 모이면 정화
   pts: { explore: 3, gather: 2, hunt: 4, elite: 15 }, // 행동마다 쌓이는 기여 (사냥·강적은 이겼을 때)
   minPts: 5,                                   // 이만큼은 기여해야 보상
   reward: { goldBase: 40, goldPer: 2, goldMax: 300, fame: 3, xp: 60 },

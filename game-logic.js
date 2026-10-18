@@ -425,11 +425,21 @@ function isFallen(d) {
 // 오염된 땅: 야생 지역 중 하나. 이틀마다 다음 곳으로 옮겨 감 (모두에게 같은 곳)
 const isRuin = (region) => REGIONS[region]?.realm === 'ruin'; // 멸망한 대륙 (늘 오염되어 있음)
 const WILD = () => Object.keys(REGIONS).filter((r) => !isTown(r) && !isRuin(r));
+// 오염 시계: 서버가 { off, bump, force }를 알려 줌 (GM이 '지금 오염 일으키기'를 하면 바뀜)
+//   off: 이 시각부터 rotateMs마다 새 오염 / bump: 그때까지 지난 차례 수 / force: { period, region } 그 차례에는 이 지역
+const clockOf = () => (hooks.corruptClock && hooks.corruptClock()) || { off: 0, bump: 0, force: null };
+function corruptPeriod(now = Date.now()) {
+  const c = clockOf();
+  return Math.floor((now - c.off) / MIND.rotateMs) + c.bump;
+}
 function corruptedRegion(now = Date.now()) {
   const w = WILD();
-  return w[Math.floor(now / MIND.rotateMs) % w.length];
+  const c = clockOf();
+  const p = corruptPeriod(now);
+  if (c.force && c.force.period === p && w.includes(c.force.region)) return c.force.region;
+  return w[((p % w.length) + w.length) % w.length];
 }
-const corruptUntil = (now = Date.now()) => (Math.floor(now / MIND.rotateMs) + 1) * MIND.rotateMs;
+const corruptUntil = (now = Date.now()) => { const c = clockOf(); return c.off + (Math.floor((now - c.off) / MIND.rotateMs) + 1) * MIND.rotateMs; };
 // 정화되었으면 다음 곳으로 옮겨 갈 때까지 오염이 걷혀 있음 (hooks.purified: 서버가 정화 상태를 알려 줌)
 const isCorrupted = (region, now = Date.now()) => isRuin(region) || (region === corruptedRegion(now) && !(hooks.purified && hooks.purified(now)));
 // 광폭화 상태 { at, until, region, hp, hpMax } (없으면 null)
@@ -1749,7 +1759,7 @@ module.exports = {
   actionCost, townArrows, hasBounty, addRep, addFame, craftEn, gainXp, spendStats,
   traitsOf, traitMods, hasTrait, chooseTraits, traitCount,
   check, spendAp, rollItem, bundle, itemLabel, xpOf, isTown, // 전투(game-combat.js)가 씀
-  corruptedRegion, corruptUntil, isCorrupted, isRuin, berserkOf, loseMind, nearestTown,
+  corruptedRegion, corruptUntil, corruptPeriod, isCorrupted, isRuin, berserkOf, loseMind, nearestTown,
   placeOf, goPlace, isFallen, chron, chronOf,
   titlesOf, titleOn, titleName, titleMods, checkTitles, setTitle, titlesView,
   combatJson, dayIdx, gearMods, // 모브 드래곤(game-mobs.js)이 씀
