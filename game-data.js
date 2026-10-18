@@ -952,7 +952,6 @@ const RULES = {
   enEvery: 2 * 60 * 1000,       // 기력 1 회복 간격 (2분)
   cost: { explore: 1, gather: 1, hunt: 2 },
   huntMinHp: 15,                // 이보다 체력이 낮으면 사냥 불가
-  huntMinHpPct: 0.2,            // 최대 체력의 이 비율보다 낮아도 사냥 불가 (레벨이 올라도 빈사로 나서지 않게)
   expeditionMinutes: [30, 60, 120, 180],
   levelMax: 25,                 // 레벨 상한
   // 다음 레벨까지 필요한 경험치 = 레벨 × 100. xpFrom 레벨부터는 (레벨 − xpFrom) × xpStep 배만큼 더 (Lv13 ×1.5, Lv18 ×4, Lv24 ×7)
@@ -1597,6 +1596,19 @@ const ACHIEVEMENTS = [
   { id: 'h_robbed',  hidden: true, name: '텅 빈 보물더미', desc: '보물 도둑에게 보물을 도둑맞기',           cond: { chron: '보물을 도둑맞았다' } },
   { id: 'h_sendoff', hidden: true, name: '떠나보내는 날',  desc: '다 자란 식구를 처음 떠나보내기',          cond: { count: ['sendoff', 1] } },
   { id: 'h_story',   hidden: true, name: '한 마리의 이야기', desc: '모브 드래곤의 이야기를 끝까지 듣기',     cond: { count: ['mobstory', 1] } },
+  // 엉뚱한 업적 — kills: [사냥감 키, 쓰러뜨린 수] / fishN: [물고기 id, 낚은 수] / bossKills: 한 재앙을 쓰러뜨린 수
+  //   goldAt: 지닌 금화 / goldZero: 이 레벨 이상에서 금화 0닢 / mindLow: 정신이 이 값 이하 (광폭화 아닐 때) / fameAt: 용족 명성이 이 값 이하 / hourKST: 한국 시각 이 시에 접속·행동
+  { id: 'q_mackerel', name: '고등어 박사',       desc: '고등어를 100마리 낚기',                  cond: { fishN: ['fish_mackerel', 100] } },
+  { id: 'q_bison',    name: '들소의 천적',       desc: '들소 떼를 100마리 쓰러뜨리기',           cond: { kills: ['plains_field', 100] } },
+  { id: 'q_wolfking', name: '외눈 늑대왕의 숙적', desc: '외눈 늑대왕을 10번 쓰러뜨리기',         cond: { kills: ['plains_hill!', 10] } },
+  { id: 'q_regular',  name: '재앙의 단골손님',   desc: '같은 대륙의 재앙을 10번 쓰러뜨리기',     cond: { bossKills: 10 } },
+  { id: 'q_sleepy',   name: '겨울잠',            desc: '둥지에서 200번 쉬기',                     cond: { count: ['rest', 200] } },
+  { id: 'h_broke',  hidden: true, name: '주머니가 가볍다', desc: '레벨 5가 넘어서 금화를 한 닢도 남기지 않기', cond: { goldZero: 5 } },
+  { id: 'h_rich',   hidden: true, name: '금화 이불',       desc: '금화를 5,000닢 넘게 지니고 다니기',       cond: { goldAt: 5000 } },
+  { id: 'h_dawn',   hidden: true, name: '새벽 네 시의 용', desc: '새벽 네 시에 대륙을 거닐기',              cond: { hourKST: 4 } },
+  { id: 'h_thread', hidden: true, name: '실 한 가닥',      desc: '정신이 5 이하로 남은 채 버티기',          cond: { mindLow: 5 } },
+  { id: 'h_shame',  hidden: true, name: '평판 따윈',       desc: "용족 명성이 '수치'까지 떨어지기",         cond: { fameAt: -60 } },
+  { id: 'h_eel',    hidden: true, name: '번개를 낚다',     desc: '번개 장어를 낚기',                        cond: { item: 'fish_eel' } },
 ];
 
 module.exports = {

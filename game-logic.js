@@ -222,8 +222,8 @@ function clampVitals(d) {
   d.hp = Math.min(d.hp, hpCap(d));
   d.en = Math.min(d.en, enCap(d));
 }
-// 사냥·강적·재앙·추격에 나설 수 있는 최소 체력: 고정값과 최대 체력 비율 중 큰 쪽
-const lowHp = (d) => d.hp < Math.max(RULES.huntMinHp, Math.round(hpCap(d) * (RULES.huntMinHpPct || 0)));
+// 사냥·강적·재앙·추격·진정에 나설 수 없을 만큼 기운이 없는지 (RULES.huntMinHp보다 낮으면)
+const lowHp = (d) => d.hp < RULES.huntMinHp;
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const randInt = (a, b) => Math.floor(rand(a, b + 1));
@@ -1988,6 +1988,14 @@ function achProgress(d, A) {
   if (c.nest) return [d.nest ? nestInfo(d).tier : 0, c.nest];
   if (c.count) return [traitsOf(d).counts[c.count[0]] || 0, c.count[1]];
   if (c.chron) return [chronOf(d).some((e) => typeof e.t === 'string' && e.t.includes(c.chron)) ? 1 : 0, 1];
+  if (c.kills) return [x.m[c.kills[0]]?.[1] || 0, c.kills[1]];
+  if (c.fishN) return [x.f[c.fishN[0]] || 0, c.fishN[1]];
+  if (c.bossKills) return [Math.max(0, ...Object.keys(BOSSES).map((r) => x.m[`boss:${r}`]?.[1] || 0)), c.bossKills];
+  if (c.goldAt) return [Math.min(d.gold || 0, c.goldAt), c.goldAt];
+  if (c.goldZero) return [d.level >= c.goldZero && (d.gold || 0) === 0 ? 1 : 0, 1];
+  if (c.mindLow) return [!berserkOf(d) && d.mind != null && d.mind <= c.mindLow ? 1 : 0, 1];
+  if (c.fameAt) return [(d.fame || 0) <= c.fameAt ? 1 : 0, 1];
+  if (c.hourKST != null) return [new Date(Date.now() + 9 * 3600000).getUTCHours() === c.hourKST ? 1 : 0, 1];
   return [0, 1];
 }
 // 새로 이룬 업적을 기록하고 돌려줌. 처음 판정할 때(업적이 생기기 전 기록)는 시각 0으로 조용히 채우고 개수만 돌려줌
