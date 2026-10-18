@@ -652,7 +652,17 @@
   .trip-scene { position: relative; }
   .trip-where { position: absolute; left: 10px; top: 10px; z-index: 1; margin: 0; padding: 4px 11px; border-radius: 12px; background: rgba(255, 255, 255, .85); font: 600 12.5px/1.5 var(--sans); color: #2A4256; }
   .trip-left { position: absolute; right: 10px; top: 10px; z-index: 1; padding: 4px 11px; border-radius: 12px; background: rgba(42, 66, 86, .82); font-size: 12px; line-height: 1.5; color: #fff; }
-  .trip-log { list-style: none; margin: 0; padding: 12px 10px; display: flex; flex-direction: column; gap: 10px; height: min(46vh, 380px); overflow-y: auto; background: #EEF1F3; border-radius: 4px; }
+  .trip-log { list-style: none; margin: 0; padding: 4px 12px; display: flex; flex-direction: column; height: min(46vh, 380px); overflow-y: auto; background: #fff; border: 1px solid var(--line-in); border-radius: 4px; }
+  .trip-row { display: flex; gap: 10px; padding: 9px 0; border-top: 1px solid #EEEFEC; font-size: 13.5px; line-height: 1.6; color: var(--ink); word-break: keep-all; }
+  .trip-row:first-child { border-top: 0; }
+  .trip-row time { flex: none; min-width: 3.1em; padding-top: 1px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .trip-row b { font-weight: 700; color: #2E4A60; }
+  .trip-row.rare b { color: #8C6A1E; }
+  .trip-row.fight span { color: #6A2F2A; }
+  .trip-row.fight b { color: #8A2E27; }
+  .trip-row.new { animation: trip-in .5s ease-out; }
+  .trip-b { padding: 8px 0; border-top: 1px solid #EEEFEC; }
+  .trip-b + .trip-b { border-top: 0; padding-top: 2px; }
   .trip-b { display: flex; gap: 8px; align-items: flex-end; }
   .trip-b .ava { width: 30px; height: 30px; }
   .trip-kidface { width: 30px; height: 30px; flex: none; border-radius: 50%; background: #F2F3F1; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #9EA3A7; display: grid; place-items: center; color: #5B6066; }
@@ -660,6 +670,8 @@
   .trip-bname { font-size: 11px; font-weight: 600; color: #5B6066; }
   .trip-b p { margin: 0; padding: 8px 11px; border-radius: 12px 12px 12px 3px; background: #fff; border: 1px solid #DCDDD8; font-size: 13.5px; line-height: 1.55; color: var(--ink); word-break: keep-all; }
   .trip-b.kid p { background: #FFFDF5; border-color: #E9E1C6; }
+  .trip-b.kid.adult p { background: #F4F6F8; border-color: #D3DAE0; }
+  .trip-b.kid.drake p { background: #F6F3EE; border-color: #E2D9C9; font-style: italic; color: #5B6066; }
   .trip-b.item p { background: #EEF2F6; border-color: #B9C7D3; }
   .trip-b.item p b { color: #2E4A60; }
   .trip-b.rare p { background: #FBF6E8; border-color: #E2CF9E; }
@@ -3605,7 +3617,14 @@
     volcano: ['뜨거운 공기가 날개를 밀어 올렸다.', '잿가루가 눈처럼 흩날렸다.', '땅 밑에서 낮은 울림이 올라왔다.'],
     ruin: ['잿빛 바람에 섞인 낯선 냄새에 숨을 골랐다.', '무너진 마을의 굴뚝에서 아직도 가는 연기가 오르는 것 같았다.', '어디선가 오래된 노랫소리가 들리는 것 같았다. 뒤돌아보지 않았다.', '검게 물든 숲 위를 서둘러 지나갔다.'],
   };
-  const TRIP_KIN = ['저기 봐! 저기!', '구름 만져 보고 싶어!', '우와, 엄청 높다!', '배고파… 조금만 쉬었다 가자.', '졸려… 등 위에서 자도 돼?', '바람이 간지러워!', '방금 그거 봤어? 엄청 빨랐어!', '언제 도착해?'];
+  // 함께 간 식구의 말: 나잇대마다 다르게 (child 아기~소년, young 청년, adult 어른·노년, drake 새끼 드래곤)
+  const TRIP_KIN = {
+    child: ['저기 봐! 저기!', '구름 만져 보고 싶어!', '우와, 엄청 높다!', '배고파… 조금만 쉬었다 가자.', '졸려… 등 위에서 자도 돼?', '바람이 간지러워!', '방금 그거 봤어? 엄청 빨랐어!', '언제 도착해?'],
+    young: ['이 정도 바람쯤은 아무것도 아니야.', '저 아래 길, 나중에 혼자 걸어 보고 싶어.', '다음엔 내가 길을 찾아볼게.', '조금만 더 높이 날아 줄래? 멀리까지 보고 싶어.', '여기 풍경, 꼭 기억해 둬야지.', '무서운 거 아니야. 그냥… 좀 높을 뿐이야.'],
+    adult: ['바람이 바뀌는군. 서두르지 말고 가자.', '저 구름 모양을 보니 내일은 비가 오겠어.', '이 길은 예전에도 와 본 적이 있지.', '조금 쉬어 가는 게 좋겠어. 날개가 지쳐 보여.', '저쪽은 위험하니 돌아가자.', '이렇게 함께 다니는 것도 오랜만이네.'],
+    drake: ['(꼬리를 흔들며 끼룩 하고 울었다)', '(작은 날개를 열심히 퍼덕였다)', '(저 아래를 향해 작게 불꽃을 뿜어 보았다)', '(바람을 타 보려다 비틀거렸다)', '(등에 바짝 붙어 고개를 묻었다)'],
+  };
+  const TRIP_KIN_START = { child: ['같이 가서 신나!', '꽉 잡을게!', '출발이다!'], young: ['이번엔 나도 도움이 될 거야.', '준비됐어. 가자.'], adult: ['길은 내가 봐 둘게.', '조심해서 다녀오자.'], drake: ['(신이 나서 날개를 파닥였다)'] };
   // 원정마다 같은 이야기가 나오도록, 출발 시각으로 정해지는 난수
   function tripRand(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
   // 실제로 일어난 일 (서버가 떠날 때 정해 둔 시간표)을 이야기로
@@ -3628,9 +3647,10 @@
     const r = tripRand(e.start + (S.me?.id || 0) * 7919);
     const rg = S.regions[e.region];
     const local = TRIP_REGION[rg?.realm === 'ruin' ? 'ruin' : e.region] || [];
-    const kin = e.went?.length ? e.went : TRIP_WENT;
-    const out = [{ at: e.start, parts: [`${rg?.name || '먼 곳'}${ro(rg?.name || '먼 곳')} 날개를 펼쳤다.${kin.length ? ` ${kin.join(', ')}${josa(kin.at(-1), '이', '가')} 함께 따라나섰다.` : ''}`] }];
-    if (kin.length) out.push({ at: e.start + 4000, parts: [TRIP_PICK(r, ['같이 가서 신나!', '꽉 잡을게!', '출발이다!'])], who: kin[0] });
+    // 함께 간 식구 {name, age} (예전 원정은 이름만 있음 → 아이로)
+    const kin = (e.went?.length ? e.went : TRIP_WENT).map((k) => (typeof k === 'string' ? { name: k, age: 'child' } : k));
+    const out = [{ at: e.start, parts: [`${rg?.name || '먼 곳'}${ro(rg?.name || '먼 곳')} 날개를 펼쳤다.${kin.length ? ` ${kin.map((k) => k.name).join(', ')}${josa(kin.at(-1).name, '이', '가')} 함께 따라나섰다.` : ''}`] }];
+    if (kin.length) out.push({ at: e.start + 4000, parts: [TRIP_PICK(r, TRIP_KIN_START[kin[0].age] || TRIP_KIN_START.child)], who: kin[0].name, age: kin[0].age });
     const until = Math.min(now, e.end);
     // 실제로 일어난 일
     const real = (e.plan || []).map((x) => ({ at: e.start + x.t, x })).filter((y) => y.at <= until);
@@ -3651,7 +3671,15 @@
       if (realTimes.some((a) => Math.abs(a - t) < 25000)) continue;
       const pickKin = kin.length && r() < 0.15;
       let text;
-      if (pickKin) { const k = kin[Math.floor(r() * kin.length)]; out.push({ at: t, parts: [TRIP_KIN[Math.floor(r() * TRIP_KIN.length)]], who: k }); continue; }
+      if (pickKin) { // 아이의 말: 최근에 한 말은 다시 하지 않음
+        const k = kin[Math.floor(r() * kin.length)];
+        const pool = TRIP_KIN[k.age] || TRIP_KIN.child;
+        let q = pool[Math.floor(r() * pool.length)], tries = 0;
+        while (recent.includes(q) && tries++ < 10) q = pool[Math.floor(r() * pool.length)];
+        recent.push(q); if (recent.length > 10) recent.shift();
+        out.push({ at: t, parts: [q], who: k.name, age: k.age });
+        continue;
+      }
       else {
         const pool = local.length && r() < 0.25 ? local : TRIP_ANY;
         let i = Math.floor(r() * pool.length), tries = 0;
@@ -3686,9 +3714,21 @@
     list.replaceChildren();
     items.forEach((x, i) => {
       const li = document.createElement('li');
-      li.className = `trip-b ${x.who ? 'kid' : 'me'} ${x.kind || 'plain'}${had && i >= had ? ' new' : ''}`;
+      const fresh = had && i >= had ? ' new' : '';
+      // 드래곤의 이야기: 시각과 한 줄 (목록), 아이의 말: 말풍선
+      if (!x.who) {
+        li.className = `trip-row ${x.kind || 'plain'}${fresh}`;
+        const tm = document.createElement('time');
+        tm.textContent = chatTime(x.at);
+        const sp = document.createElement('span');
+        (x.parts || [x.text]).forEach((t, k) => { if (k === 1 && x.parts.length === 3) { const b = document.createElement('b'); b.textContent = t; sp.appendChild(b); } else sp.append(t); });
+        li.append(tm, sp);
+        list.appendChild(li);
+        return;
+      }
+      li.className = `trip-b kid ${x.age || 'child'}${fresh}`;
       // 말하는 이: 드래곤은 내 프로필 그림, 아이는 이름과 얼굴
-      const face = x.who ? (() => { const f = document.createElement('span'); f.className = 'trip-kidface'; f.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8.5"/><path d="M3.65 11.4Q8.6 10.6 12 6.4Q15.4 10.6 20.35 11.4"/><circle cx="9.5" cy="14.6" r=".6" fill="currentColor"/><circle cx="14.5" cy="14.6" r=".6" fill="currentColor"/></svg>'; return f; })() : avaEl(S.me, 30);
+      const face = (() => { const f = document.createElement('span'); f.className = 'trip-kidface'; f.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8.5"/><path d="M3.65 11.4Q8.6 10.6 12 6.4Q15.4 10.6 20.35 11.4"/><circle cx="9.5" cy="14.6" r=".6" fill="currentColor"/><circle cx="14.5" cy="14.6" r=".6" fill="currentColor"/></svg>'; return f; })();
       const col = document.createElement('div');
       col.className = 'trip-bcol';
       if (x.who) { const nm = document.createElement('small'); nm.className = 'trip-bname'; nm.textContent = x.who; col.appendChild(nm); }

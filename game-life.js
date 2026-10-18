@@ -820,6 +820,13 @@ function expStart(kin, now = Date.now()) {
   }
   return went;
 }
+// 함께 간 식구의 이름·종류·나잇대 (원정 길 팝업의 말: 아이·청년·어른, 새끼 드래곤)
+const ageGroup = (k, now) => {
+  const s = stageOf(k, now).name;
+  if (k.type === 'drake') return 'drake';
+  return ['어른', '노년'].includes(s) ? 'adult' : s === '청년' ? 'young' : 'child';
+};
+const expWent = (kin, now = Date.now()) => kin.filter((k) => k.status === 'home' && k.data.onExp).map((k) => ({ name: k.name, age: ageGroup(k, now) }));
 // 함께 간 식구 수. 호기심 많은 식구는 조금 더 쳐 줌
 const companions = (kin) => kin.filter((k) => k.data.onExp && k.status === 'home').reduce((a, k) => a + 1 + (hasT(k, 'curious') ? TR.curiousBonus : 0), 0);
 function expFinish(kin, minutes) {
@@ -1053,5 +1060,5 @@ module.exports = {
   care, rename, choosePath, incubate, train, release,
   expStart, expFinish, companions, restTogether,
   rollEvent, getEvent, chooseEvent, forceEvent,
-  newHuman, newEgg, setCompanion, sendErrand, setJob, harvest, cook, cookLeft, // 시험용
+  newHuman, newEgg, setCompanion, sendErrand, setJob, harvest, cook, cookLeft, expWent, // 시험용
 };

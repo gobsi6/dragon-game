@@ -991,7 +991,7 @@ io.on('connection', (socket) => {
     if (res.error) return ack(res);
     const went = life.expStart(kin);
     logic.planExpedition(d, life.companions(kin)); // 길 위의 일을 미리 정해 둠 (팝업에 보여 주고, 돌아오면 그대로 받음)
-    logic.expInfo(d).went = went; // 함께 간 식구 이름 (원정 길 이야기에)
+    logic.expInfo(d).went = life.expWent(kin); // 함께 간 식구 (이름과 나잇대: 원정 길 이야기에)
     refreshKin(d, kin);
     db.saveState(d);
     sendMe(socket, d);
