@@ -649,11 +649,60 @@
     .trip-scene .f { animation: none; } .trip-scene .f2 { visibility: visible; }
   }
 
+
+  /* 원정 길 장면의 날씨: 하늘·구름·언덕 색과 효과 하나 */
+  .trip-scene { --s1: #1A8CBC; --s2: #7DC0D9; --s3: #D9EDF1; --s4: #EEF6F5; --cloud: #FFFFFF; --h1: #C7D3EE; --h2: #9EADE6; --h3: #6D73A1; --h4: #76709C; }
+  .trip-scene[data-wx="rain"] { --s1: #5F7F96; --s2: #8FA6B6; --s3: #B8C6CE; --s4: #C9D3D8; --cloud: #DCE2E6; --h1: #B5BFD6; --h2: #8C98C6; --h3: #5E6590; --h4: #67628A; }
+  .trip-scene[data-wx="storm"] { --s1: #2E3B4E; --s2: #4E5E72; --s3: #7C8A99; --s4: #8F9AA6; --cloud: #7D8794; --h1: #8E98B4; --h2: #6F79A3; --h3: #4A507A; --h4: #534E73; }
+  .trip-scene[data-wx="fog"] { --s1: #A9B8C0; --s2: #C5D0D5; --s3: #DCE3E6; --s4: #E8EDEF; --cloud: #F2F4F5; --h1: #D2D9E8; --h2: #BAC3E2; --h3: #9BA0BF; --h4: #A39FBA; }
+  .trip-scene[data-wx="snow"] { --s1: #8FB4CF; --s2: #B9D2E2; --s3: #DDE9F0; --s4: #F1F6F8; --cloud: #F7FAFC; --h1: #E3E9F5; --h2: #C9D3EE; --h3: #9AA3C4; --h4: #A7A3C2; }
+  .trip-scene[data-wx="heat"] { --s1: #3E9FC6; --s2: #9FD0D8; --s3: #F1E2B8; --s4: #F6E6C2; --cloud: #FFF8EA; --h1: #D8CDE6; --h2: #B3AEE0; --h3: #7C76A3; --h4: #85779B; }
+  .trip-scene[data-wx="wind"] { --s1: #2A94C0; --s2: #8CC6DB; --s3: #DCEEF2; --s4: #EEF6F5; }
+  .trip-scene[data-wx="aurora"] { --s1: #0E1A33; --s2: #1C2C4F; --s3: #2E4468; --s4: #3B5277; --h1: #3B4870; --h2: #2F3A60; --h3: #232B4A; --h4: #262848; }
+  .trip-scene[data-wx="ash"] { --s1: #5A4E5E; --s2: #7E7180; --s3: #A79AA4; --s4: #B8ADB4; --cloud: #8C8290; --h1: #9E97B0; --h2: #7E7898; --h3: #565170; --h4: #5A5068; }
+  .trip-scene .wx { display: none; }
+  .trip-scene[data-wx="rain"] .wx-rain, .trip-scene[data-wx="storm"] .wx-storm, .trip-scene[data-wx="snow"] .wx-snow, .trip-scene[data-wx="fog"] .wx-fog,
+  .trip-scene[data-wx="heat"] .wx-heat, .trip-scene[data-wx="wind"] .wx-wind, .trip-scene[data-wx="aurora"] .wx-aurora, .trip-scene[data-wx="ash"] .wx-ash { display: inline; }
+  .trip-scene[data-wx="aurora"] .wx-clouds { display: none; }
+  .trip-scene[data-wx="storm"] .wx-fall.rain { animation-duration: .35s; }
+  .trip-scene .wx-fall.rain { animation: trip-rain .5s linear infinite; }
+  @keyframes trip-rain { from { transform: translate(0, 0); } to { transform: translate(-23px, 110px); } }
+  .trip-scene .wx-fall.snow { animation: trip-snow 6s linear infinite; }
+  .trip-scene .wx-fall.snow2 { animation: trip-snow2 9s linear infinite; }
+  @keyframes trip-snow { from { transform: translate(0, 0); } to { transform: translate(-40px, 90px); } }
+  @keyframes trip-snow2 { from { transform: translate(0, 0); } to { transform: translate(-60px, 144px); } }
+  .trip-scene .wx-fall.ash { animation: trip-ash 10s linear infinite; }
+  @keyframes trip-ash { from { transform: translate(0, 0); } to { transform: translate(-70px, 110px); } }
+  .trip-scene .wx-flash { opacity: 0; animation: trip-flash 7s steps(1, end) infinite; }
+  @keyframes trip-flash { 0%, 61%, 63.5%, 100% { opacity: 0; } 61.5% { opacity: .55; } 62.5% { opacity: .3; } }
+  .trip-scene .wx-fog-a { animation: trip-fog 26s ease-in-out infinite alternate; }
+  .trip-scene .wx-fog-b { animation: trip-fog 34s ease-in-out infinite alternate-reverse; }
+  @keyframes trip-fog { from { transform: translateX(-120px); } to { transform: translateX(120px); } }
+  .trip-scene .wx-heat-band { animation: trip-heat 3.2s ease-in-out infinite; transform-origin: 800px 630px; }
+  @keyframes trip-heat { 50% { opacity: .12; transform: scaleY(1.25); } }
+  .trip-scene .wx-wind-a { animation: trip-wind 2.4s linear infinite; }
+  @keyframes trip-wind { from { transform: translateX(260px); opacity: 0; } 20% { opacity: .75; } 80% { opacity: .75; } to { transform: translateX(-420px); opacity: 0; } }
+  .trip-scene[data-wx="wind"] .far { animation-duration: 45s; } .trip-scene[data-wx="wind"] .mid { animation-duration: 26s; } .trip-scene[data-wx="wind"] .near { animation-duration: 15s; }
+  .trip-scene .wx-aur-band { animation: trip-aur 9s ease-in-out infinite alternate; }
+  .trip-scene .wx-aur-band.two { animation-duration: 13s; }
+  @keyframes trip-aur { from { transform: translateX(-60px); opacity: .7; } to { transform: translateX(60px); opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .trip-scene .wx-fall, .trip-scene .wx-flash, .trip-scene .wx-fog-a, .trip-scene .wx-fog-b, .trip-scene .wx-heat-band, .trip-scene .wx-wind-a, .trip-scene .wx-aur-band { animation: none; } }
   .trip-scene { position: relative; }
   .trip-where { position: absolute; left: 10px; top: 10px; z-index: 1; margin: 0; padding: 4px 11px; border-radius: 12px; background: rgba(255, 255, 255, .85); font: 600 12.5px/1.5 var(--sans); color: #2A4256; }
   .trip-left { position: absolute; right: 10px; top: 10px; z-index: 1; padding: 4px 11px; border-radius: 12px; background: rgba(42, 66, 86, .82); font-size: 12px; line-height: 1.5; color: #fff; }
-  .trip-log { list-style: none; margin: 0; padding: 4px 12px; display: flex; flex-direction: column; height: min(46vh, 380px); overflow-y: auto; background: #fff; border: 1px solid var(--line-in); border-radius: 4px; }
-  .trip-row { display: flex; gap: 10px; padding: 9px 0; border-top: 1px solid #EEEFEC; font-size: 13.5px; line-height: 1.6; color: var(--ink); word-break: keep-all; }
+  /* 원정 길 창: 바탕은 메인 화면처럼 회청색 그라데이션, 이야기 칸은 드래곤 기록처럼 장식 액자 */
+  dialog.trip-dlg {
+    background-color: #DDE1E3;
+    background-image:
+      radial-gradient(ellipse 110% 60% at 50% 0%, #F7F8F8 0%, rgba(247, 248, 248, 0) 65%),
+      radial-gradient(ellipse 70% 50% at 100% 100%, rgba(148, 166, 184, .28) 0%, rgba(148, 166, 184, 0) 70%),
+      linear-gradient(180deg, #ECEEEE 0%, #E1E4E5 50%, #D2D8DC 100%);
+  }
+  .trip-logbox { margin-top: 2px; padding: 6px; }
+  .trip-logbox > .tl { top: -5px; left: -5px; } .trip-logbox > .tr { top: -5px; right: -5px; }
+  .trip-logbox > .bl { bottom: -5px; left: -5px; } .trip-logbox > .br { bottom: -5px; right: -5px; }
+  .trip-log { list-style: none; margin: 0; padding: 2px 10px; display: flex; flex-direction: column; height: min(46vh, 380px); overflow-y: auto; background: transparent; }
+  .trip-row { display: flex; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line-in); font-size: 13.5px; line-height: 1.6; color: var(--ink); word-break: keep-all; }
   .trip-row:first-child { border-top: 0; }
   .trip-row time { flex: none; min-width: 3.1em; padding-top: 1px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .trip-row b { font-weight: 700; color: #2E4A60; }
@@ -661,7 +710,7 @@
   .trip-row.fight span { color: #6A2F2A; }
   .trip-row.fight b { color: #8A2E27; }
   .trip-row.new { animation: trip-in .5s ease-out; }
-  .trip-b { padding: 8px 0; border-top: 1px solid #EEEFEC; }
+  .trip-b { padding: 8px 0; border-top: 1px solid var(--line-in); }
   .trip-b + .trip-b { border-top: 0; padding-top: 2px; }
   .trip-b { display: flex; gap: 8px; align-items: flex-end; }
   .trip-b .ava { width: 30px; height: 30px; }
@@ -680,8 +729,12 @@
   .trip-b.fight p b { color: #8A2E27; }
   .trip-b time { flex: none; padding-bottom: 2px; font-size: 10.5px; color: #8A8F94; font-variant-numeric: tabular-nums; }
   .trip-b.new { animation: trip-in .5s ease-out; }
-  .trip-foot { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
-  .trip-foot .trip-got { flex: 1; font-size: 12.5px; color: #2E4A60; }
+  .trip-foot { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+  .trip-foot .trip-got { flex: 1; display: flex; align-self: stretch; background: var(--surface); border: 1px solid var(--line); box-shadow: inset 0 0 0 2px var(--surface), inset 0 0 0 3px var(--line-in); }
+  .trip-got .tg { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; padding: 4px 6px; }
+  .trip-got .tg + .tg { border-left: 1px solid var(--line-in); }
+  .trip-got .tg small { font-size: 11px; color: var(--muted); line-height: 1.3; }
+  .trip-got .tg b { font: 700 16px/1.25 var(--serif); color: var(--steel-d); }
   .trip-foot .btn { min-height: 44px; }
   @keyframes trip-in { from { opacity: 0; transform: translateY(4px); } }
   .fac-tip { margin: 0; padding: 8px 10px; background: #E2EFF3; border-radius: 4px; font-size: 12.5px; line-height: 1.55; color: #2F5F73; }
@@ -1265,6 +1318,12 @@
   .inv-h::after { content: ""; flex: 1; height: 1px; background: var(--line-in); }
   .dlg h3.inv-h:first-child, .dlg .buff-now + h3.inv-h { margin-top: 4px; }
   .craft-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 2px 0 26px; }
+  .craft-bar:has(+ .craft-sub) { margin-bottom: 10px; }
+  .craft-sub { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 22px; padding: 6px; background: #EEF1F3; border-radius: 6px; }
+  .subchip { min-height: 30px; padding: 0 11px; border: 1px solid transparent; border-radius: 4px; background: transparent; color: var(--ink-2); font-size: 12.5px; }
+  .subchip:hover { background: #fff; }
+  .subchip.on { background: #fff; border-color: #B9C7D3; color: var(--steel-d); font-weight: 600; }
+  .dlg .craft-sub + h3.inv-h { margin-top: 4px; }
   .chipbtn { min-height: 32px; padding: 0 12px; font-size: 13px; border: 1px solid var(--line-soft); background: #fff; border-radius: 16px; color: var(--ink-2); }
   .chipbtn.on { background: var(--steel-d); border-color: var(--steel-d); color: #fff; }
   .craft-can { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); cursor: pointer; }
@@ -2350,17 +2409,29 @@
     <div class="trip-scene"><h2 class="trip-where" id="trip-dlg-title">원정 길</h2><span class="trip-left" id="trip-left"></span><svg class="trip-svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" role="img" aria-label="구름이 흘러가는 하늘을 날갯짓하며 나는 드래곤">
   <defs>
     <linearGradient id="trip-sky" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#1A8CBC"/>
-      <stop offset=".45" stop-color="#7DC0D9"/>
-      <stop offset=".8" stop-color="#D9EDF1"/>
-      <stop offset="1" stop-color="#EEF6F5"/>
+      <stop offset="0" style="stop-color: var(--s1)"/>
+      <stop offset=".45" style="stop-color: var(--s2)"/>
+      <stop offset=".8" style="stop-color: var(--s3)"/>
+      <stop offset="1" style="stop-color: var(--s4)"/>
     </linearGradient>
-    <path id="trip-ca" d="M40 70 Q10 70 20 62 Q40 55 70 56 Q78 38 102 40 Q118 22 146 26 Q160 6 190 10 Q212 12 220 34 Q238 30 248 44 Q290 40 330 42 Q370 46 360 58 Q330 72 260 72 Q200 70 150 74 Q100 76 70 74 Z" fill="#FFFFFF"/>
-    <path id="trip-cb" d="M20 50 Q0 48 12 42 Q34 36 58 38 Q68 24 88 26 Q100 10 124 14 Q142 16 148 32 Q170 28 176 40 Q214 38 236 44 Q244 50 220 52 Q170 54 120 54 Q70 56 20 50 Z" fill="#FFFFFF"/>
-    <path id="trip-cc" d="M30 40 Q8 40 18 34 Q40 28 64 30 Q74 18 92 20 Q104 8 122 12 Q134 16 138 28 Q170 26 196 32 Q204 38 180 40 Q120 42 30 40 Z" fill="#FFFFFF"/>
+    <path id="trip-ca" d="M40 70 Q10 70 20 62 Q40 55 70 56 Q78 38 102 40 Q118 22 146 26 Q160 6 190 10 Q212 12 220 34 Q238 30 248 44 Q290 40 330 42 Q370 46 360 58 Q330 72 260 72 Q200 70 150 74 Q100 76 70 74 Z" style="fill: var(--cloud)"/>
+    <path id="trip-cb" d="M20 50 Q0 48 12 42 Q34 36 58 38 Q68 24 88 26 Q100 10 124 14 Q142 16 148 32 Q170 28 176 40 Q214 38 236 44 Q244 50 220 52 Q170 54 120 54 Q70 56 20 50 Z" style="fill: var(--cloud)"/>
+    <path id="trip-cc" d="M30 40 Q8 40 18 34 Q40 28 64 30 Q74 18 92 20 Q104 8 122 12 Q134 16 138 28 Q170 26 196 32 Q204 38 180 40 Q120 42 30 40 Z" style="fill: var(--cloud)"/>
+    <linearGradient id="trip-aur" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7CF2B8" stop-opacity="0"/><stop offset=".5" stop-color="#7CF2B8"/><stop offset="1" stop-color="#9B7CF2" stop-opacity="0"/></linearGradient>
+    <linearGradient id="trip-aur2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#B49BFF" stop-opacity="0"/><stop offset=".5" stop-color="#8FE3D8"/><stop offset="1" stop-color="#8FE3D8" stop-opacity="0"/></linearGradient>
+    <pattern id="trip-rainp" width="40" height="110" patternUnits="userSpaceOnUse"><line x1="20" y1="0" x2="14" y2="38" stroke="#E6EEF4" stroke-width="2.4" stroke-linecap="round" opacity=".7"/><line x1="6" y1="60" x2="0" y2="94" stroke="#E6EEF4" stroke-width="2" stroke-linecap="round" opacity=".5"/></pattern>
+    <pattern id="trip-snowp" width="90" height="90" patternUnits="userSpaceOnUse"><circle cx="20" cy="18" r="4" fill="#FFFFFF"/><circle cx="64" cy="52" r="3" fill="#FFFFFF" opacity=".85"/><circle cx="40" cy="80" r="2.4" fill="#FFFFFF" opacity=".7"/></pattern>
+    <pattern id="trip-ashp" width="110" height="110" patternUnits="userSpaceOnUse"><circle cx="24" cy="20" r="3" fill="#4A4250" opacity=".55"/><circle cx="78" cy="62" r="2.2" fill="#6A6070" opacity=".5"/><circle cx="50" cy="96" r="1.8" fill="#3F3845" opacity=".45"/></pattern>
   </defs>
   <rect width="1600" height="900" fill="url(#trip-sky)"/>
+  <!-- 오로라: 별과 오로라 띠 -->
+  <g class="wx wx-aurora" aria-hidden="true">
+    <g fill="#F2F6FF"><circle cx="197" cy="93" r="1.6" opacity="0.62"/><circle cx="394" cy="166" r="1.6" opacity="0.74"/><circle cx="591" cy="239" r="2.4" opacity="0.86"/><circle cx="788" cy="312" r="1.6" opacity="0.50"/><circle cx="985" cy="385" r="1.6" opacity="0.62"/><circle cx="1182" cy="38" r="2.4" opacity="0.74"/><circle cx="1379" cy="111" r="1.6" opacity="0.86"/><circle cx="1576" cy="184" r="1.6" opacity="0.50"/><circle cx="173" cy="257" r="2.4" opacity="0.62"/><circle cx="370" cy="330" r="1.6" opacity="0.74"/><circle cx="567" cy="403" r="1.6" opacity="0.86"/><circle cx="764" cy="56" r="2.4" opacity="0.50"/><circle cx="961" cy="129" r="1.6" opacity="0.62"/><circle cx="1158" cy="202" r="1.6" opacity="0.74"/><circle cx="1355" cy="275" r="2.4" opacity="0.86"/><circle cx="1552" cy="348" r="1.6" opacity="0.50"/><circle cx="149" cy="421" r="1.6" opacity="0.62"/><circle cx="346" cy="74" r="2.4" opacity="0.74"/><circle cx="543" cy="147" r="1.6" opacity="0.86"/><circle cx="740" cy="220" r="1.6" opacity="0.50"/><circle cx="937" cy="293" r="2.4" opacity="0.62"/><circle cx="1134" cy="366" r="1.6" opacity="0.74"/><circle cx="1331" cy="439" r="1.6" opacity="0.86"/><circle cx="1528" cy="92" r="2.4" opacity="0.50"/><circle cx="125" cy="165" r="1.6" opacity="0.62"/><circle cx="322" cy="238" r="1.6" opacity="0.74"/><circle cx="519" cy="311" r="2.4" opacity="0.86"/><circle cx="716" cy="384" r="1.6" opacity="0.50"/><circle cx="913" cy="37" r="1.6" opacity="0.62"/><circle cx="1110" cy="110" r="2.4" opacity="0.74"/><circle cx="1307" cy="183" r="1.6" opacity="0.86"/><circle cx="1504" cy="256" r="1.6" opacity="0.50"/><circle cx="101" cy="329" r="2.4" opacity="0.62"/><circle cx="298" cy="402" r="1.6" opacity="0.74"/><circle cx="495" cy="55" r="1.6" opacity="0.86"/><circle cx="692" cy="128" r="2.4" opacity="0.50"/><circle cx="889" cy="201" r="1.6" opacity="0.62"/><circle cx="1086" cy="274" r="1.6" opacity="0.74"/><circle cx="1283" cy="347" r="2.4" opacity="0.86"/><circle cx="1480" cy="420" r="1.6" opacity="0.50"/><circle cx="77" cy="73" r="1.6" opacity="0.62"/><circle cx="274" cy="146" r="2.4" opacity="0.74"/><circle cx="471" cy="219" r="1.6" opacity="0.86"/><circle cx="668" cy="292" r="1.6" opacity="0.50"/><circle cx="865" cy="365" r="2.4" opacity="0.62"/></g>
+    <g class="wx-aur-band"><path d="M-100 260 C200 140 420 300 700 200 C980 100 1200 260 1700 150 L1700 330 C1200 430 980 280 700 380 C420 470 200 310 -100 430 Z" fill="url(#trip-aur)" opacity=".55"/></g>
+    <g class="wx-aur-band two"><path d="M-100 180 C260 90 520 220 820 140 C1100 70 1300 190 1700 110 L1700 220 C1300 300 1100 180 820 250 C520 330 260 200 -100 290 Z" fill="url(#trip-aur2)" opacity=".4"/></g>
+  </g>
 
+  <g class="wx-clouds">
   <!-- 먼 구름 (작고 옅게, 느리게) -->
   <g class="loop far" opacity=".75">
     <g><use href="#trip-cc" transform="translate(120 250) scale(.8)"/><use href="#trip-cb" transform="translate(980 300) scale(.7)"/><use href="#trip-cc" transform="translate(1380 210) scale(.6)"/></g>
@@ -2377,12 +2448,17 @@
     <g transform="translate(1600 0)"><use href="#trip-ca" transform="translate(60 70) scale(1.25)"/><use href="#trip-ca" transform="translate(860 230) scale(1.45)"/></g>
   </g>
 
+  </g>
   <!-- 언덕 네 겹 (뒤에서 앞으로, 앞쪽일수록 빠르게). 한 겹은 1600 폭을 두 번 이어 끝없이 흐름 -->
-  <g class="loop hill1"><path d="M0 640 C220 690 480 720 780 690 C1040 660 1180 620 1360 650 C1480 670 1560 650 1600 640 L1600 900 L0 900 Z M1600 640 C1820 690 2080 720 2380 690 C2640 660 2780 620 2960 650 C3080 670 3160 650 3200 640 L3200 900 L1600 900 Z" fill="#C7D3EE"/></g>
-  <g class="loop hill2"><path d="M0 745 C260 770 520 790 760 760 C1000 730 1240 720 1600 745 L1600 900 L0 900 Z M1600 745 C1860 770 2120 790 2360 760 C2600 730 2840 720 3200 745 L3200 900 L1600 900 Z" fill="#9EADE6"/></g>
-  <g class="loop hill3"><path d="M0 800 C200 790 420 795 620 812 C860 780 1100 762 1320 772 C1460 778 1540 792 1600 800 L1600 900 L0 900 Z M1600 800 C1800 790 2020 795 2220 812 C2460 780 2700 762 2920 772 C3060 778 3140 792 3200 800 L3200 900 L1600 900 Z" fill="#6D73A1"/></g>
-  <g class="loop hill4"><path d="M0 840 C240 820 520 815 760 832 C980 846 1200 852 1400 842 C1500 838 1560 836 1600 840 L1600 900 L0 900 Z M1600 840 C1840 820 2120 815 2360 832 C2580 846 2800 852 3000 842 C3100 838 3160 836 3200 840 L3200 900 L1600 900 Z" fill="#76709C"/></g>
+  <g class="loop hill1"><path d="M0 640 C220 690 480 720 780 690 C1040 660 1180 620 1360 650 C1480 670 1560 650 1600 640 L1600 900 L0 900 Z M1600 640 C1820 690 2080 720 2380 690 C2640 660 2780 620 2960 650 C3080 670 3160 650 3200 640 L3200 900 L1600 900 Z" style="fill: var(--h1)"/></g>
+  <g class="loop hill2"><path d="M0 745 C260 770 520 790 760 760 C1000 730 1240 720 1600 745 L1600 900 L0 900 Z M1600 745 C1860 770 2120 790 2360 760 C2600 730 2840 720 3200 745 L3200 900 L1600 900 Z" style="fill: var(--h2)"/></g>
+  <g class="loop hill3"><path d="M0 800 C200 790 420 795 620 812 C860 780 1100 762 1320 772 C1460 778 1540 792 1600 800 L1600 900 L0 900 Z M1600 800 C1800 790 2020 795 2220 812 C2460 780 2700 762 2920 772 C3060 778 3140 792 3200 800 L3200 900 L1600 900 Z" style="fill: var(--h3)"/></g>
+  <g class="loop hill4"><path d="M0 840 C240 820 520 815 760 832 C980 846 1200 852 1400 842 C1500 838 1560 836 1600 840 L1600 900 L0 900 Z M1600 840 C1840 820 2120 815 2360 832 C2580 846 2800 852 3000 842 C3100 838 3160 836 3200 840 L3200 900 L1600 900 Z" style="fill: var(--h4)"/></g>
 
+  <!-- 날씨 효과 (하나만 보임) -->
+  <g class="wx wx-fog" aria-hidden="true"><g class="wx-fog-a"><ellipse cx="400" cy="640" rx="620" ry="70" fill="#FFFFFF" opacity=".55"/><ellipse cx="1300" cy="700" rx="560" ry="60" fill="#FFFFFF" opacity=".5"/></g><g class="wx-fog-b"><ellipse cx="900" cy="560" rx="700" ry="50" fill="#FFFFFF" opacity=".35"/><ellipse cx="200" cy="760" rx="480" ry="55" fill="#FFFFFF" opacity=".45"/></g></g>
+  <g class="wx wx-heat" aria-hidden="true"><rect class="wx-heat-band" x="0" y="560" width="1600" height="140" fill="#FFE7B0" opacity=".28"/></g>
+  <g class="wx wx-wind" aria-hidden="true"><g class="wx-wind-a" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" fill="none" opacity=".75"><path d="M100 200 Q300 180 520 205"/><path d="M700 330 Q900 310 1100 335"/><path d="M1250 160 Q1420 145 1580 165"/><path d="M300 470 Q480 450 640 472"/></g></g>
   <!-- 드래곤: 제자리에서 날갯짓, 살짝 오르내림 -->
   <g transform="translate(560 300) scale(.62)">
     <g class="bob">
@@ -2391,9 +2467,14 @@
       <g class="f f3"><path d="M315.5,356.5 L315.5,356.5 L315.5,356.5 L315.5,356.5 L315.5,356.5 L315.5,356.5 L315.5,356.5 L315.5,356.5 L315.5,356.5 L315.5,356.5 L315.9,356.1 L316.6,355.4 L317.7,354.4 L319.1,353.0 L321.0,351.2 L323.1,349.1 L325.7,346.6 L328.6,343.8 L331.7,339.7 L335.0,334.4 L338.5,327.8 L342.1,319.9 L346.0,310.7 L350.1,300.2 L354.3,288.5 L358.7,275.5 L363.3,263.3 L367.9,252.0 L372.5,241.5 L377.3,231.8 L382.1,222.9 L387.0,214.9 L392.0,207.7 L397.1,201.3 L401.6,195.3 L405.5,189.8 L408.8,184.6 L411.5,179.9 L413.6,175.5 L415.2,171.6 L416.1,168.1 L416.5,164.9 L417.2,162.0 L418.2,159.4 L419.6,156.9 L421.2,154.7 L423.2,152.7 L425.5,151.0 L428.2,149.4 L431.1,148.1 L434.6,147.1 L438.4,146.4 L442.8,146.0 L447.6,145.9 L452.8,146.1 L458.5,146.5 L464.7,147.3 L471.3,148.4 L477.3,149.2 L482.7,149.6 L487.5,149.7 L491.7,149.5 L495.3,148.9 L498.2,148.1 L500.6,146.9 L502.3,145.3 L503.8,143.6 L505.0,141.6 L506.0,139.4 L506.8,136.9 L507.3,134.2 L507.6,131.3 L507.7,128.2 L507.5,124.8 L505.8,120.8 L502.6,116.0 L497.9,110.6 L491.7,104.5 L484.0,97.7 L474.9,90.3 L464.2,82.2 L452.1,73.3 L441.3,65.7 L432.0,59.3 L424.1,54.0 L417.7,50.0 L412.6,47.1 L409.0,45.4 L406.8,44.9 L406.1,45.6 L405.6,46.7 L405.2,48.1 L405.2,50.0 L405.3,52.2 L405.7,54.8 L406.3,57.8 L407.1,61.1 L408.2,64.9 L408.7,68.2 L408.8,71.2 L408.3,73.8 L407.4,76.0 L405.9,77.8 L404.0,79.2 L401.5,80.2 L398.6,80.8 L396.0,81.4 L393.8,81.8 L391.9,82.2 L390.5,82.5 L389.4,82.8 L388.6,82.9 L388.3,83.0 L388.3,83.0 L388.3,83.0 L388.3,83.0 L388.3,83.0 L388.3,83.0 L388.3,83.0 L388.3,83.0 L388.3,83.0 L388.3,83.0 L388.4,83.2 L388.8,83.8 L389.4,84.5 L390.2,85.5 L391.2,86.8 L392.4,88.2 L393.7,90.0 L395.3,92.0 L396.2,94.1 L396.4,96.2 L396.0,98.4 L394.9,100.7 L393.1,103.0 L390.7,105.4 L387.5,107.9 L383.8,110.5 L380.0,112.6 L376.2,114.4 L372.4,115.9 L368.6,116.9 L364.8,117.6 L361.0,117.9 L357.2,117.9 L353.3,117.5 L350.1,116.7 L347.4,115.5 L345.2,114.0 L343.6,112.1 L342.5,109.8 L342.0,107.2 L342.0,104.2 L342.5,100.8 L342.1,97.9 L340.7,95.3 L338.3,93.2 L334.9,91.5 L330.5,90.3 L325.1,89.4 L318.7,89.0 L311.3,89.0 L303.5,89.7 L295.4,91.0 L286.8,93.1 L277.8,95.8 L268.3,99.3 L258.5,103.4 L248.3,108.2 L237.7,113.7 L228.2,118.9 L219.8,123.8 L212.5,128.4 L206.4,132.7 L201.4,136.7 L197.5,140.4 L194.7,143.9 L193.1,147.0 L190.8,150.3 L187.9,153.6 L184.5,157.1 L180.4,160.7 L175.8,164.4 L170.5,168.2 L164.6,172.2 L158.1,176.2 L151.5,179.7 L144.8,182.5 L138.0,184.6 L131.0,186.2 L123.9,187.1 L116.6,187.5 L109.2,187.1 L101.8,186.2 L94.7,185.9 L88.1,186.2 L81.9,187.0 L76.2,188.5 L70.9,190.6 L66.1,193.3 L61.7,196.5 L57.7,200.4 L54.3,203.8 L51.3,206.7 L48.9,209.2 L46.9,211.1 L45.4,212.5 L44.4,213.5 L43.9,214.0 L43.9,214.0 L43.9,214.0 L43.9,214.0 L43.9,214.0 L43.9,214.0 L43.9,214.0 L43.9,214.0 L43.9,214.0 L43.9,214.0 L44.7,214.4 L46.4,215.2 L48.8,216.3 L52.0,217.9 L56.0,219.8 L60.9,222.2 L66.5,224.9 L72.9,228.0 L79.0,230.5 L84.7,232.2 L90.1,233.4 L95.0,233.8 L99.6,233.6 L103.9,232.7 L107.8,231.2 L111.2,229.0 L115.8,226.6 L121.5,224.2 L128.2,221.7 L136.0,219.0 L144.9,216.3 L154.9,213.4 L165.9,210.4 L178.1,207.4 L188.8,204.9 L198.3,203.1 L206.4,202.0 L213.2,201.5 L218.6,201.6 L222.7,202.4 L225.4,203.8 L226.8,205.8 L227.8,208.2 L228.4,210.8 L228.5,213.6 L228.3,216.8 L227.6,220.2 L226.5,223.9 L225.0,227.9 L223.1,232.1 L221.4,235.8 L220.0,239.0 L218.8,241.7 L217.8,243.8 L217.1,245.4 L216.6,246.5 L216.4,247.0 L216.4,247.0 L216.4,247.0 L216.4,247.0 L216.4,247.0 L216.4,247.0 L216.4,247.0 L216.4,247.0 L216.4,247.0 L216.4,247.0 L216.9,247.0 L217.9,247.1 L219.4,247.3 L221.4,247.5 L223.9,247.7 L226.9,248.0 L230.4,248.4 L234.5,248.8 L238.3,249.4 L242.0,250.3 L245.6,251.4 L249.0,252.7 L252.3,254.2 L255.5,256.0 L258.5,258.0 L261.3,260.2 L264.4,263.1 L267.8,266.6 L271.4,270.8 L275.3,275.7 L279.5,281.2 L283.9,287.4 L288.6,294.2 L293.5,301.8 L298.0,308.8 L301.8,315.3 L305.1,321.3 L307.9,326.8 L310.1,331.9 L311.8,336.4 L312.9,340.5 L313.5,344.0 L314.0,347.1 L314.4,349.8 L314.8,352.0 L315.1,353.8 L315.3,355.1 L315.4,356.0 Z" fill="#9DB0BF" fill-rule="evenodd" stroke="#34506A" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/><path d="M355.5,245.0 L355.5,244.2 L355.5,242.6 L355.6,240.2 L355.7,237.0 L355.7,233.0 L355.8,228.3 L355.9,222.7 L356.1,216.3 L355.7,210.2 L354.9,204.2 L353.5,198.5 L351.7,193.0 L349.4,187.7 L346.6,182.7 L343.4,177.8 L339.6,173.2 L336.4,168.8 L333.6,164.6 L331.4,160.7 L329.6,157.0 L328.4,153.6 L327.6,150.4 L327.4,147.4 L327.6,144.6 L328.2,142.3 L329.2,140.3 L330.5,138.7 L332.2,137.5 L334.3,136.7 L336.7,136.3 L339.4,136.3 L342.6,136.7 L345.3,137.0 L347.6,137.3 L349.6,137.5 L351.2,137.7 L352.3,137.9 L353.1,138.0 L353.5,138.0" fill="none" stroke="#34506A" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/><path d="M193.5,169.0 L193.8,168.8 L194.3,168.3 L195.1,167.6 L196.2,166.7 L197.5,165.5 L199.1,164.1 L200.9,162.4 L203.1,160.6 L205.5,159.0 L208.2,157.8 L211.2,156.9 L214.5,156.3 L218.1,156.1 L222.0,156.2 L226.2,156.6 L230.8,157.4 L234.8,158.2 L238.4,159.0 L241.6,159.8 L244.4,160.7 L246.7,161.6 L248.6,162.5 L250.0,163.5 L251.0,164.5 L251.8,166.0 L252.4,168.1 L252.8,170.8 L253.0,174.0 L253.0,177.7 L252.7,182.0 L252.3,186.8 L251.7,192.2 L251.1,196.9 L250.7,200.9 L250.3,204.3 L250.0,207.0 L249.7,209.0 L249.6,210.3 L249.5,211.0" fill="none" stroke="#34506A" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/></g>
     </g>
   </g>
+
+  <g class="wx wx-rain wx-storm" aria-hidden="true"><g class="wx-fall rain"><rect x="-200" y="-220" width="2000" height="1340" fill="url(#trip-rainp)" transform="rotate(12 800 450)"/></g></g>
+  <g class="wx wx-snow" aria-hidden="true"><g class="wx-fall snow"><rect x="0" y="-180" width="1600" height="1080" fill="url(#trip-snowp)"/></g><g class="wx-fall snow2"><rect x="30" y="-180" width="1600" height="1080" fill="url(#trip-snowp)" transform="scale(1.6)" opacity=".7"/></g></g>
+  <g class="wx wx-ash" aria-hidden="true"><g class="wx-fall ash"><rect x="0" y="-220" width="1600" height="1120" fill="url(#trip-ashp)"/></g></g>
+  <rect class="wx wx-storm wx-flash" width="1600" height="900" fill="#FFFFFF" aria-hidden="true"/>
 </svg></div>
-    <ol class="trip-log" id="trip-log" aria-live="polite"></ol>
-    <div class="trip-foot"><small class="trip-got" id="trip-got"></small><button class="btn" type="button" id="trip-recall">불러들이기</button><button class="btn primary" type="button" id="trip-close">닫기</button></div>
+    <div class="frame trip-logbox"><i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i><ol class="trip-log" id="trip-log" aria-live="polite"></ol></div>
+    <div class="trip-foot"><div class="trip-got" id="trip-got" aria-live="polite"></div><button class="btn" type="button" id="trip-recall">불러들이기</button><button class="btn primary" type="button" id="trip-close">닫기</button></div>
   </div>
 </dialog>
 <dialog class="frame dlg" id="fish-dlg" aria-labelledby="fish-dlg-title">
@@ -3708,7 +3789,9 @@
     // 지금까지: 몇 개를 주웠고 몇 번 싸웠는지만 (무엇인지는 돌아와서)
     const found = real.filter((y) => y.x.k === 'item').length;
     const fights = real.filter((y) => y.x.k === 'fight').length;
-    $('trip-got').textContent = `주운 것 ${found}${fights ? ` · 싸움 ${fights}` : ''}`;
+    // 주운 것 · 싸움: 테두리 상자 안의 두 칸
+    const cell = (label, n) => { const c = document.createElement('span'); c.className = 'tg'; const l = document.createElement('small'); l.textContent = label; const v = document.createElement('b'); v.textContent = n; c.append(l, v); return c; };
+    $('trip-got').replaceChildren(cell('주운 것', found), cell('싸움', fights));
     const had = list.childElementCount;
     const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 30;
     list.replaceChildren();
@@ -3742,14 +3825,27 @@
     });
     if (!had || atBottom) list.scrollTop = list.scrollHeight;
   }
+  // 원정 간 지역의 지금 날씨로 장면을 바꿈 (1분마다 다시 물어봄)
+  let TRIP_WX_AT = 0;
+  function tripWeather(force) {
+    const e = S.me?.exp;
+    if (!e) return;
+    if (!force && Date.now() - TRIP_WX_AT < 60000) return;
+    TRIP_WX_AT = Date.now();
+    socket.emit('weather:get', {}, (res) => {
+      const id = res?.weather?.regions?.[e.region]?.id || 'clear';
+      document.querySelector('#trip-dlg .trip-scene').dataset.wx = id;
+    });
+  }
   function openTrip() {
     if (!S.me?.exp) return;
+    tripWeather(true);
     $('trip-log').replaceChildren();
     renderTrip();
     if (!$('trip-dlg').open) $('trip-dlg').showModal();
     $('trip-log').scrollTop = $('trip-log').scrollHeight; // 열면 가장 최근 이야기부터
     clearInterval(TRIP_TIMER);
-    TRIP_TIMER = setInterval(() => { if ($('trip-dlg').open) renderTrip(); else clearInterval(TRIP_TIMER); }, 5000);
+    TRIP_TIMER = setInterval(() => { if ($('trip-dlg').open) { renderTrip(); tripWeather(); } else clearInterval(TRIP_TIMER); }, 5000);
   }
   $('trip-close').addEventListener('click', () => $('trip-dlg').close());
   $('trip-recall').addEventListener('click', () => { $('trip-dlg').close(); $('exp-recall').click(); });
@@ -5887,6 +5983,23 @@
     cb.addEventListener('change', () => { craftCan = cb.checked; renderCraft(); });
     bar.appendChild(lab);
     box.appendChild(bar);
+    // 장신구 탭: 부위별 소분류 (전체 · 머리 · 목 · 발톱 · 부적 · 날개 · 꼬리)
+    if (craftTab === 'equip') {
+      const sub = document.createElement('div');
+      sub.className = 'craft-sub';
+      sub.setAttribute('role', 'group');
+      sub.setAttribute('aria-label', '장신구 부위');
+      for (const [k, label] of [['all', '전체'], ...S.slots.map((sl) => [sl.key, sl.name])]) {
+        const bt = document.createElement('button');
+        bt.type = 'button';
+        bt.className = `subchip${craftSlot === k ? ' on' : ''}`;
+        bt.setAttribute('aria-pressed', String(craftSlot === k));
+        bt.textContent = label;
+        bt.addEventListener('click', () => { craftSlot = k; renderCraft(); });
+        sub.appendChild(bt);
+      }
+      box.appendChild(sub);
+    }
     // 숨겨진 제작법은 찾아낸 것만 (재료는 me.craft.needs에서)
     const recipes = S.recipes.filter((r) => !r.hidden || ci.known.includes(r.out)).map((r) => (r.hidden ? { ...r, needs: ci.needs[r.out] || {} } : r));
     const hasAll = (r) => Object.entries(r.needs).every(([id, n]) => (invCache[id] || 0) >= n);
@@ -5895,7 +6008,7 @@
       ['강화 음식', (it) => itemCat(it) === 'buff', 'buff'],
       ['식구 요리', (it) => itemCat(it) === 'meal', 'meal'],
       ['낚시 미끼', (it) => itemCat(it) === 'fish', 'fish'],
-      ...S.slots.map((sl) => [`장신구 · ${sl.name}`, (it) => it.type === 'equip' && it.slot === sl.key, 'equip']),
+      ...S.slots.filter((sl) => craftTab !== 'equip' || craftSlot === 'all' || craftSlot === sl.key).map((sl) => [`장신구 · ${sl.name}`, (it) => it.type === 'equip' && it.slot === sl.key, 'equip']),
     ];
     let shown = 0;
     for (const [title, test, tab] of groups) {
@@ -6139,7 +6252,7 @@
     itemAct('craft', { recipe: out });
   });
   $('forge-dlg').addEventListener('close', () => { if (forgeGame) { forgeGame.done = true; cancelAnimationFrame(forgeGame.raf); } });
-  let craftTab = 'all', craftCan = false;
+  let craftTab = 'all', craftCan = false, craftSlot = 'all'; // craftSlot: 장신구 탭의 부위
   function openCraft() { fetchInv(() => { renderCraft(); openPanel('craft-dlg'); }); }
   $('craft-close').addEventListener('click', () => $('craft-dlg').close());
 
