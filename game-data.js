@@ -281,6 +281,11 @@ const ITEMS = {
   sea_scale:     { name: '바다 용의 비늘', rarity: 'rare',     cat: 'fish', value: 70, desc: '낚싯줄에 걸려 올라온 커다란 비늘. 깊은 바다에 무언가가 산다.' },
   salmon_grill:  { name: '연어 구이',     rarity: 'uncommon', cat: 'meal', value: 16, desc: '소금을 뿌려 구운 은비늘 연어. 한 입만 먹어도 든든하다. (파수꾼 쪽)' },
   // ── 만든 물건: 식구 요리 (cat: meal. 인간 식구에게 건네면 배가 부르고 유대가 오름. 둥지 식구 칸에서 건넴) ──
+  // 새끼 드래곤 먹이 (cat: meal)
+  roast_meat:     { name: '화덕 구운 고기', rarity: 'common', cat: 'meal', value: 9,  desc: '붉은 점토 화덕에 겉만 바삭하게 구운 고기. 새끼 드래곤이 가장 반긴다.' },
+  ember_snack:    { name: '불씨 간식',      rarity: 'common', cat: 'meal', value: 8,  desc: '화산재를 묻혀 그을린 고기 조각. 씹으면 작은 불똥이 튄다.' },
+  fish_skewer:    { name: '생선 꼬치',      rarity: 'common', cat: 'meal', value: 8,  desc: '소금을 뿌린 고등어를 통째로 꿴 꼬치. 새끼가 꼬리째 삼킨다.' },
+  dragon_feast:   { name: '새끼 용의 잔칫상', rarity: 'uncommon', cat: 'meal', value: 22, desc: '고기와 연어와 꿀을 한가득 쌓은 상. 새끼 드래곤의 배가 빵빵해진다.' },
   honey_cake:     { name: '꿀떡',     rarity: 'common',   cat: 'meal', value: 6,  desc: '야생 꿀을 바른 쫀득한 떡. 아이들이 가장 반긴다. (약초꾼 쪽)' },
   moss_soup:      { name: '이끼 수프', rarity: 'common',   cat: 'meal', value: 5,  desc: '빛나는 이끼를 넣어 은은하게 빛나는 수프. 먹으면 속이 따뜻해진다. (약초꾼 쪽)' },
   fish_porridge:  { name: '생선 죽',   rarity: 'common',   cat: 'meal', value: 7,  desc: '절인 생선을 곱게 풀어 끓인 죽. 든든해서 오래 배부르다. (파수꾼 쪽)' },
@@ -405,6 +410,11 @@ const BUFFS = {
 
 // 제작법. needs: 재료와 개수, en: 쓰는 기력, wis: 필요한 지혜
 const RECIPES = [
+  // 새끼 드래곤 먹이
+  { out: 'roast_meat',    needs: { bait_meat: 2, red_clay: 1 },                          en: 3,  wis: 0 },
+  { out: 'ember_snack',   needs: { bait_meat: 1, volcanic_ash: 1 },                      en: 3,  wis: 0 },
+  { out: 'fish_skewer',   needs: { fish_mackerel: 2, salt_crystal: 1 },                  en: 3,  wis: 0 },
+  { out: 'dragon_feast',  needs: { bait_meat: 2, fish_salmon: 1, wild_honey: 1 },        en: 6,  wis: 0 },
   // 멸망한 대륙의 장비 (지혜 18 이상)
   { out: 'purified_crown', needs: { ashen_core: 2, faded_crest: 4, purify_shard: 20 },  en: 20, wis: 18 },
   { out: 'carnem_claw',    needs: { carnem_steel: 4, ashen_core: 1, sharp_fang: 5 },     en: 20, wis: 18 },
@@ -694,6 +704,22 @@ const KIN = {
     salted_fish: { bond: 6, talent: 'guard', sat: 30 }, beast_hide: { bond: 4, talent: 'guard' }, sharp_fang: { bond: 5, talent: 'guard' },
   },
   tripTalent: 2,                      // 원정에 한 번 따라갈 때마다 파수꾼 쪽으로
+  // 새끼 드래곤의 먹이와 포만감. 배부르면 가르칠 때 유대가 더 오르고 가르치기 간격이 짧아짐
+  drakeFood: {
+    items: {
+      fish_mackerel: { bond: 3, sat: 25 }, fish_flounder: { bond: 3, sat: 25 }, fish_salmon: { bond: 6, sat: 45 }, fish_eel: { bond: 6, sat: 40 },
+      bait_meat: { bond: 4, sat: 30 }, salted_fish: { bond: 4, sat: 30 },
+      roast_meat: { bond: 8, sat: 60 }, ember_snack: { bond: 7, sat: 45 }, fish_skewer: { bond: 8, sat: 55 }, dragon_feast: { bond: 14, sat: 100 },
+    },
+    // 종류마다 가장 좋아하는 먹이 (먹여 보면 알게 됨)
+    kindFav: { red: 'roast_meat', gold: 'roast_meat', bronze: 'ember_snack', volcano: 'ember_snack', black: 'bait_meat', blue: 'fish_skewer', silver: 'fish_skewer', white: 'fish_skewer', green: 'fish_salmon', purple: 'fish_eel' },
+    start: 80, perHour: 4, hungry: 30, full: 70,
+    fullBondEvery: 3 * 60 * 60 * 1000,   // 배부른 동안 이 간격마다 유대 +1
+    cooldown: 2 * 60 * 60 * 1000,        // 먹이를 주고 다음에 줄 수 있을 때까지
+    favBond: 4,                          // 좋아하는 먹이면 유대 +
+    fullTrainBond: 2, fullTrainCd: 0.75, // 배부르면: 가르칠 때 유대 +2, 가르치기 간격 ×0.75
+    selfFeed: ['젊은 용', '다 자란 용'], selfFloor: 60, // 이만큼 자라면 스스로 사냥해 배를 채움 (포만감이 이 아래로 떨어지지 않음)
+  },
   // 인간 식구의 포만감 (0~100). 배고프다고 아프거나 떠나지는 않음. 배부르면 좋은 일만 생김
   hunger: {
     start: 80,                        // 처음 데려왔을 때

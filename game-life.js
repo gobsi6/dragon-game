@@ -101,24 +101,28 @@ function introOf(k) {
 const HG = KIN.hunger;
 const isFood = (item) => (KIN.care[item]?.sat || 0) > 0;
 // 지금 포만감으로 맞추고, 배부른 동안 쌓인 유대를 돌려줌. keeper: 둥지에 남은 약초꾼 어른이 돌봐 주는지
-function satUpdate(k, now, keeper) {
-  if (k.data.sat == null) { k.data.sat = HG.start; k.data.satAt = now; }
+// R: 포만감 규칙 (인간 HG, 새끼 드래곤 DF). floor: 이 아래로 떨어지지 않음 (돌봐 주는 어른·스스로 사냥)
+function satUpdate(k, now, keeper, R = HG, floor = keeper ? HG.keeperFloor : 0) {
+  if (k.data.sat == null) { k.data.sat = R.start; k.data.satAt = now; }
   const s0 = k.data.sat;
   const hours = Math.max(0, (now - (k.data.satAt || now)) / 3600000);
-  let s = s0 - hours * HG.perHour;
-  if (keeper) s = Math.max(s, Math.min(s0, HG.keeperFloor));
+  let s = s0 - hours * R.perHour;
+  if (floor) s = Math.max(s, Math.min(s0, floor));
   s = Math.max(0, s);
   // 배부름(full 위)에 머문 시간만큼 유대
-  const fullMs = s0 > HG.full ? Math.min(hours, (s0 - HG.full) / HG.perHour) * 3600000 : 0;
+  const fullMs = s0 > R.full ? Math.min(hours, (s0 - R.full) / R.perHour) * 3600000 : 0;
   k.data.fullAcc = (k.data.fullAcc || 0) + fullMs;
   let up = 0;
-  while (k.data.fullAcc >= HG.fullBondEvery) { k.data.fullAcc -= HG.fullBondEvery; up++; }
+  while (k.data.fullAcc >= R.fullBondEvery) { k.data.fullAcc -= R.fullBondEvery; up++; }
   if (up) k.data.bond = clamp(k.data.bond + up);
   k.data.sat = Math.round(s * 10) / 10;
   k.data.satAt = now;
   return up;
 }
 const satWord = (s) => (s >= HG.full ? '배부름' : s >= 50 ? '든든함' : s >= HG.hungry ? '출출함' : '배고픔');
+const DF = KIN.drakeFood;
+const drakeFloor = (k, now) => (DF.selfFeed.includes(stageOf(k, now).name) ? DF.selfFloor : 0); // 젊은 용부터는 스스로 사냥
+const drakeFull = (k) => (k.data.sat ?? 0) >= DF.full;
 const hasKeeper = (kin, k) => kin.some((x) => x !== k && x.type === 'human' && x.status === 'home' && x.data.path === 'stay' && x.data.talent === 'herbalist');
 
 // ── 새 식구 ────────────────────────────────────────
@@ -184,6 +188,11 @@ function tick(d, kin, now = Date.now()) {
   for (const k of kin) {
     // 모습이 정해지기 전에 들어온 식구 (이 기능이 생기기 전의 식구)
     if (k.status === 'home' && rollLooks(k)) out.lines.push(`${k.name}${josa(k.name, '을', '를')} 다시 찬찬히 들여다보았다. ${introOf(k)}`);
+    if (k.type === 'drake' && k.status === 'home') {
+      const wasHungry = k.data.sat != null && k.data.sat < DF.hungry;
+      satUpdate(k, now, false, DF, drakeFloor(k, now));
+      if (!wasHungry && k.data.sat < DF.hungry) out.lines.push(`${ga(k)} 배가 고픈지 둥지 바닥을 발톱으로 긁으며 칭얼거린다.`);
+    }
     if (k.type === 'human' && k.status === 'home') {
       const a = ageOf(k, now);
       if (!k.data.favFood) k.data.favFood = pick(HG.meals);
@@ -349,6 +358,17 @@ function view(k, now, d) {
     v.mood = s < HG.hungry ? 'hungry' : s >= HG.full && k.data.bond >= 60 ? 'happy' : 'calm';
     if (k.data.favKnown && k.data.favFood) v.favFood = k.data.favFood;
   }
+  if (k.type === 'drake' && k.status === 'home') {
+    const fl = drakeFloor(k, now);
+    const hrs = Math.max(0, (now - (k.data.satAt || now)) / 3600000);
+    const s = Math.max(fl ? Math.min(k.data.sat ?? DF.start, fl) : 0, (k.data.sat ?? DF.start) - hrs * DF.perHour);
+    v.sat = Math.round(s);
+    v.satWord = satWord(s);
+    v.mood = s < DF.hungry ? 'hungry' : s >= DF.full && k.data.bond >= 60 ? 'happy' : 'calm';
+    v.feedIn = Math.max(0, (k.data.lastFeed || 0) + DF.cooldown - now);
+    v.selfFeed = !!fl;
+    if (k.data.favKnown) v.favFood = DF.kindFav[k.data.kind];
+  }
   // 짝과 자녀 (식구 이벤트로 생김)
   if (k.data.mate) v.mate = { name: k.data.mate.name, kind: k.data.mate.kind || null };
   if (k.data.kids?.length) v.kids = k.data.kids.slice();
@@ -391,10 +411,35 @@ function views(kin, now, d) {
 
 // ── 식구 돌보기 ────────────────────────────────────
 // opt.away: 반려의 둥지에서 그 집 식구를 돌봄 (둥지에 있는지는 서버가 따로 확인)
+// 새끼 드래곤에게 먹이 주기 (돌보기와 같은 길로 들어옴)
+function feedDrake(d, kin, k, item, have, now) {
+  const f = DF.items[item];
+  if (!f) return { error: `${k.name}${josa(k.name, '은', '는')} 그건 먹지 않는다. 생선이나 고기를 주자.` };
+  if (have(item) < 1) return { error: '가지고 있지 않다.' };
+  const left = (k.data.lastFeed || 0) + DF.cooldown - now;
+  if (left > 0) { const m = Math.ceil(left / 60000); return { error: `${k.name}${josa(k.name, '은', '는')} 아직 배가 부르다. ${m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m}분`} 뒤에 다시 주자.` }; }
+  satUpdate(k, now, false, DF, drakeFloor(k, now));
+  const hungry = k.data.sat < DF.hungry;
+  const fav = item === DF.kindFav[k.data.kind];
+  const gain = f.bond + (fav ? DF.favBond : 0) + (hasT(k, 'clingy') ? 1 : 0);
+  k.data.bond = clamp(k.data.bond + gain);
+  k.data.sat = Math.min(100, k.data.sat + f.sat);
+  k.data.lastFeed = now;
+  const name = ITEMS[item].name;
+  const lines = [`${k.name}에게 ${name}${josa(name, '을', '를')} 주었다. ${hungry ? '배가 고팠는지 단숨에 삼키고 더 달라는 듯 입을 벌린다.' : '꼬리를 흔들며 오물오물 씹어 먹는다.'}`];
+  if (fav) {
+    if (!k.data.favKnown) { k.data.favKnown = true; lines.push(`${ga(k)} 눈을 반짝이며 콧김을 내뿜었다. ${k.name}${josa(k.name, '은', '는')} ${name}${josa(name, '을', '를')} 가장 좋아하는 것 같다!`); }
+    else lines.push(`가장 좋아하는 ${name}이다. ${ga(k)} 날개를 파닥이며 좋아한다.`);
+  }
+  if (drakeFull(k)) lines.push('배가 든든하니 가르칠 때 더 잘 따를 것이다.');
+  lines.push(`유대 +${gain} · ${satWord(k.data.sat)}`);
+  return { title: k.name, lines, items: [{ id: item, qty: -1 }] };
+}
 function care(d, kin, id, item, have, now = Date.now(), opt = {}) {
   const err = opt.away ? null : atNest(d);
   if (err) return { error: err };
   const k = findKin(kin, id);
+  if (k && k.type === 'drake' && k.status === 'home') return feedDrake(d, kin, k, item, have, now);
   if (!k || k.type !== 'human' || k.status !== 'home') return { error: '돌볼 수 있는 식구가 아니다.' };
   const c = KIN.care[item];
   if (!c) return { error: '그 물건으로는 돌볼 수 없다.' };
@@ -503,7 +548,7 @@ function incubate(d, kin, id, have, now = Date.now()) {
   };
 }
 
-const trainCd = (k) => R.trainCooldown - (hasT(k, 'diligent') ? TR.diligentMs : 0); // 부지런한: 간격이 짧음
+const trainCd = (k) => (R.trainCooldown - (hasT(k, 'diligent') ? TR.diligentMs : 0)) * (drakeFull(k) ? DF.fullTrainCd : 1); // 부지런한·배부름: 간격이 짧음
 function train(d, kin, id, stat, now = Date.now(), opt = {}) {
   const err = opt.away ? null : atNest(d);
   if (err) return { error: err };
@@ -519,7 +564,7 @@ function train(d, kin, id, stat, now = Date.now(), opt = {}) {
   d.ap -= R.trainAp;
   d.en -= R.trainEn;
   const up = hasT(k, 'clever') && Math.random() < TR.cleverChance ? 2 : 1; // 영리한: 가끔 한 번 더
-  const bondUp = 3 + (hasT(k, 'clingy') ? 2 : 0);                          // 응석받이
+  const bondUp = 3 + (hasT(k, 'clingy') ? 2 : 0) + (drakeFull(k) ? DF.fullTrainBond : 0); // 응석받이·배부름
   k.data.stats[stat] += up;
   k.data.trains += 1;
   k.data.lastTrain = now;

@@ -3966,7 +3966,8 @@
       g = `<circle cx="12" cy="13" r="8.5"/><path d="M3.65 11.4Q8.6 10.6 12 6.4Q15.4 10.6 20.35 11.4"/>${eyes(14.6)}${mouth}`;
     } else {
       // 뿔: 양 끝이 얼굴 테두리에 붙어서 안쪽으로 삐져나오는 선이 없음
-      g = `<circle cx="12" cy="13.5" r="8.5"/><path d="M5.49 8.04Q5 4.6 5.9 2.6Q7.6 3.8 8.82 5.62M18.51 8.04Q19 4.6 18.1 2.6Q16.4 3.8 15.18 5.62"/>${eyes(15)}`;
+      const dm = v.mood === 'hungry' ? '<path d="M10 19.1Q12 17.7 14 19.1"/>' : v.mood === 'happy' ? '<path d="M9.8 17.9Q12 20.1 14.2 17.9"/>' : '';
+      g = `<circle cx="12" cy="13.5" r="8.5"/><path d="M5.49 8.04Q5 4.6 5.9 2.6Q7.6 3.8 8.82 5.62M18.51 8.04Q19 4.6 18.1 2.6Q16.4 3.8 15.18 5.62"/>${eyes(15)}${dm}`;
     }
     w.innerHTML = `<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">${g}</svg>`;
     return w;
@@ -4138,6 +4139,17 @@
       const pers = { friendly: '인간과 어울리는', hermit: '조용히 홀로 지내는', hostile: '거칠고 대담한' }[v.personality];
       meta(`가르친 횟수 ${v.trains}/${v.trainLimit} · 보호자를 닮아 ${pers} 성격으로 자라는 중`);
       if (canAct && !v.onExp) {
+        // 먹이 주기: 생선과 고기, 새끼 드래곤 먹이 요리
+        const DFd = R.drakeFood;
+        if (DFd) {
+          const foods = Object.keys(DFd.items).filter((id) => (invCache[id] || 0) > 0);
+          label(v.selfFeed ? '먹이 주기: 이제 스스로 사냥해 배를 채우지만, 주면 기뻐한다'
+            : v.feedIn > 0 ? `먹이 주기: ${dur(v.feedIn)} 뒤에 다시 줄 수 있다` : '먹이 주기: 배부르면 가르칠 때 더 잘 따른다');
+          if (!foods.length) label('줄 먹이가 없다. 낚은 생선이나 고깃덩이 미끼, 새끼 드래곤 먹이 요리를 주자.');
+          for (const id of foods) {
+            btn(`${S.items[id].name} ×${invCache[id]}`, () => nestAct(partner ? 'kin:pcare' : 'kin:care', { id: v.id, item: id }), v.feedIn > 0, `유대 +${DFd.items[id].bond}, 배 +${DFd.items[id].sat}`);
+          }
+        }
         const R2 = R.drake;
         const full = v.trains >= v.trainLimit;
         label(full ? '이번 단계에서는 더 가르칠 수 없다. 조금 더 자라야 한다.'
