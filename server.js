@@ -223,6 +223,8 @@ const meOf = (d) => ({
   ruin: ruin.view(d),
   fallen: logic.isFallen(d) ? death.view(d) : null,
   titles: logic.titlesView(d),
+  dexNew: logic.dexHasNew(d), // 도감에 아직 열어 보지 않은 새 칸
+  achNew: logic.achHasNew(d), // 아직 열어 보지 않은 새 업적
   craftMult: logic.titleMods(d).craftEn || 1,
   mob: mobs.summary(d),                     // 맡은 모브 드래곤 의뢰와 진행도
   craft: logic.craftView(d),                // 찾아낸 제작법, 대성공 확률, 공방, 장신구 강화·각인
@@ -320,6 +322,16 @@ function sendMe(socket, d) {
     db.saveState(d);
     socket.emit('notice', { title: '칭호', lines: got.map((t) => `칭호 '${t.name}'${josa(t.name, '을', '를')} 얻었다. (${t.eff})`).concat(before ? [] : [`'${got[got.length - 1].name}' 칭호를 달았다. '상태'에서 바꿀 수 있다.`]) });
     if (logic.titleName(d) !== before) setImmediate(() => broadcastPresence(d.region));
+  }
+  // 새로 이룬 업적. 처음 판정할 때는 도감부터 옮겨 오고, 그동안의 기록으로 이룬 것은 한 줄로만 알림
+  const c = logic.combatJson(d);
+  if (!c.ach) logic.dexBackfill(d, [...db.inventory(d.id), ...db.hoard(d.id)].map((x) => x.item));
+  const ach = logic.checkAch(d);
+  if (ach.got.length || ach.backfill) {
+    db.saveState(d);
+    const lines = ach.got.map((A) => `${A.hidden ? '숨겨진 업적' : '업적'} '${A.name}'${josa(A.name, '을', '를')} 이루었다. (${A.desc})`);
+    if (ach.backfill) lines.push(`그동안의 기록으로 업적 ${ach.backfill}개를 이미 이루었다. '상태 → 기록 → 업적'에서 볼 수 있다.`);
+    socket.emit('notice', { title: '업적', lines });
   }
   socket.emit('me', meOf(d));
   rivalNews(d);
@@ -1021,6 +1033,31 @@ io.on('connection', (socket) => {
     ack({ ok: true, went });
   });
 
+  // 도감 (상태 화면에서 열 때 받아 감). 도감이 생기기 전의 기록도 이때 옮겨 옴
+  socket.on('dex:get', (payload, ack) => {
+    if (typeof ack !== 'function') return;
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+    const d = entry.dragon;
+    logic.dexBackfill(d, [...db.inventory(d.id), ...db.hoard(d.id)].map((x) => x.item));
+    const view = logic.dexView(d); // '새로' 표시는 지난번에 연 뒤로 생긴 것
+    logic.dexSeen(d);
+    db.saveState(d);
+    ack({ ok: true, dex: view });
+  });
+
+  // 업적 (상태 화면에서 열 때 받아 감)
+  socket.on('ach:get', (payload, ack) => {
+    if (typeof ack !== 'function') return;
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+    const d = entry.dragon;
+    const view = logic.achView(d); // '새로' 표시는 지난번에 연 뒤로 이룬 것
+    logic.achSeen(d);
+    db.saveState(d);
+    ack({ ok: true, ach: view });
+  });
+
   // 지나온 이야기 (상태 화면에서 열 때 받아 감)
   socket.on('chron:get', (payload, ack) => {
     if (typeof ack !== 'function') return;
@@ -1060,6 +1097,9 @@ io.on('connection', (socket) => {
     if (res.minutes >= 10) res.lines.push(...logic.traitCount(d, 'expedition'));
     if (res.minutes >= 10) res.event = life.rollEvent(d, kin, (id) => db.itemCount(d.id, id), 'expedition');
     refreshKin(d, kin);
+    // 지난 일지에도 얻은 것·잃은 것이 보이게 (결과 창과 같은 내용)
+    const last = logic.expInfo(d).last;
+    if (last) Object.assign(last, { items: res.items, gold: res.gold, xp: res.xp, lines: res.lines });
     db.saveState(d, res.items);
     sendMe(socket, d);
     broadcastPresence(d.region);

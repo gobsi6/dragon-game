@@ -458,6 +458,7 @@ const q = {
 
 // 드래곤의 바뀌는 상태(체력, 행동력, 원정 등)와 얻은 물건을 저장 (트랜잭션은 부르는 쪽에서)
 function saveStateRaw(d, items = [], hoardItems = []) {
+  if (items.length || hoardItems.length) require('./game-logic').dexItems(d, [...items, ...hoardItems]); // 도감: 처음 얻은 물건
   q.saveState.run({
     id: d.id, level: d.level, xp: d.xp, hp: d.hp, hp_max: d.hp_max, en: d.en, en_max: d.en_max,
     ap: d.ap, gold: d.gold, ap_at: d.ap_at, hp_at: d.hp_at, en_at: d.en_at || 0,

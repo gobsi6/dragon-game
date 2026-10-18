@@ -5,7 +5,7 @@
 
 const {
   REGIONS, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, RECIPES, SLOTS, STANCES, SHOPS, REP_TIERS, repTier, TRADE, NEST, hoardTier, RAID, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, ELEMENTS,
-  CRAFT, SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, SKILLS, FISHING, RUIN, FACILITY, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG,
+  CRAFT, SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, SKILLS, FISHING, RUIN, FACILITY, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG, BOSSES, ACHIEVEMENTS,
 } = require('./game-data');
 
 const SR = STANCE_RULES;
@@ -1470,6 +1470,7 @@ const QUALITY_LINE = {
 // 낚아 올림: 결과 { title, lines, items, xp }
 function fishLand(d, bait, quality) {
   const f = fishRoll(d, bait, quality);
+  dexFish(d, f.id); // 도감: 낚은 수
   const it = ITEMS[f.id];
   const lines = [QUALITY_LINE[quality], `${it.name}${josa(it.name, '이', '가')} 걸려 올라왔다!`];
   if (f.tier === 'rare') { lines.push('해안의 어부들이 몰려와 웅성거린다.'); chron(d, 'mark', `해안에서 ${it.name}${josa(it.name, '을', '를')} 낚았다.`); }
@@ -1591,6 +1592,7 @@ function flyHome(d) {
   if (d.rest_at) return { error: RESTING };
   if (!d.nest) return { error: '아직 둥지가 없다.' };
   if (d.region === d.nest) return { error: '이미 둥지에 있다.' };
+  if (isRuin(d.region) !== isRuin(d.nest)) return { error: '다른 대륙에 있을 땐 둥지로 돌아가려면 대륙을 넘어야 한다.' }; // 바다 건너에서는 뱃길(RUIN.crossAp)로만
   if (d.ap < NEST.homeFlightAp) return { error: `행동력이 모자란다. (${NEST.homeFlightAp} 필요)` };
   if (NEST.homeFlightAp > 0) spendAp(d, NEST.homeFlightAp);
   const from = d.region;
@@ -1802,6 +1804,224 @@ function chaseCheck(d) {
   return null;
 }
 
+// ── 도감 ───────────────────────────────────────────
+// 전투 설정(combat JSON)에 { dex: { m: { 사냥감 키: [처음 본 시각, 쓰러뜨린 수] }, i: { 물건 id: 처음 얻은 시각 }, f: { 물고기 id: 낚은 수 }, seenAt } }
+// 사냥감 키: 장소 id(사냥감) · 장소 id + '!'(그 장소의 강적) · 'boss:지역'(대륙의 재앙). 시각 0은 '도감이 생기기 전부터'
+// 물건은 db.saveState를 지나는 모든 획득에서 저절로 기록됨 (정성 들인 요리는 원래 요리로 셈)
+function dexOf(d) {
+  const c = combatJson(d);
+  if (!c.dex || typeof c.dex !== 'object') c.dex = {};
+  const x = c.dex;
+  if (!x.m || typeof x.m !== 'object') x.m = {};
+  if (!x.i || typeof x.i !== 'object') x.i = {};
+  if (!x.f || typeof x.f !== 'object') x.f = {};
+  return x;
+}
+const dexKey = (id) => ITEMS[id]?.cooked || id;
+// 처음 만난 사냥감이면 true
+function dexMeet(d, key, now = Date.now()) {
+  const m = dexOf(d).m;
+  if (m[key]) return false;
+  m[key] = [now, 0];
+  return true;
+}
+function dexWin(d, key, n = 1, now = Date.now()) { dexMeet(d, key, now); dexOf(d).m[key][1] += n; }
+// 얻은 물건들 (qty가 양수인 것만). db.saveState가 부름
+function dexItems(d, items, now = Date.now()) {
+  let x = null;
+  for (const it of items || []) {
+    if (!(it && it.qty > 0) || !ITEMS[it.id]) continue;
+    x ||= dexOf(d);
+    const k = dexKey(it.id);
+    if (x.i[k] == null) x.i[k] = now;
+  }
+}
+const dexFish = (d, id) => { const f = dexOf(d).f; f[id] = (f[id] || 0) + 1; };
+// 도감이 생기기 전의 기록을 한 번에 옮겨 옴: 가진 물건, 장소별 사냥 승리, 지나온 이야기의 강적·재앙
+// owned: 소지품·보물더미의 물건 id 목록
+function dexBackfill(d, owned = []) {
+  const x = dexOf(d);
+  for (const id of [...owned, ...Object.values(equipOf(d))]) { const k = dexKey(id); if (ITEMS[k] && x.i[k] == null) x.i[k] = 0; }
+  const counts = traitsOf(d).counts;
+  for (const [k, n] of Object.entries(counts)) {
+    const p = k.startsWith('huntwin:') && k.slice(8);
+    if (p && PLACES[p] && n > 0 && !x.m[p]) x.m[p] = [0, n];
+  }
+  for (const { t } of chronOf(d)) {
+    if (typeof t !== 'string') continue;
+    for (const p of Object.values(PLACES)) if (t.includes('강적') && t.includes(p.elite) && !x.m[`${p.id}!`]) x.m[`${p.id}!`] = [0, 1];
+    for (const [r, B] of Object.entries(BOSSES)) if (t.includes(B.name) && !x.m[`boss:${r}`]) x.m[`boss:${r}`] = [0, t.includes('쓰러뜨렸다') ? 1 : 0];
+  }
+  for (const f of FISHING.fish) if (x.i[f.id] != null && !x.f[f.id]) x.f[f.id] = 0;
+}
+// 물건이 어디서 나오는지 (보이는 글). known: 숨겨진 제작법을 아는지
+const dexRegionName = (r) => REGIONS[r]?.name || r;
+const DEX_DROPS = {};
+for (const p of Object.values(PLACES)) if (p.drop && p.drop !== 'purify_shard') (DEX_DROPS[p.drop] ||= []).push(p.name);
+function dexSources(d, id) {
+  const out = [];
+  const gather = Object.entries(REGION_LOOT).filter(([, L]) => [...L.common, ...L.uncommon, ...L.rare].includes(id)).map(([r]) => dexRegionName(r));
+  if (gather.length) out.push(`채집·탐사: ${gather.join(', ')}`);
+  if (DEX_DROPS[id]) out.push(`사냥: ${DEX_DROPS[id].join(', ')}`);
+  if (FISHING.fish.some((f) => f.id === id)) out.push(`낚시: ${dexRegionName(FISHING.region)}`);
+  const shop = Object.entries(SHOPS).filter(([, l]) => l.includes(id)).map(([r]) => dexRegionName(r));
+  const special = Object.entries(SHOPS_SPECIAL).filter(([, l]) => l.includes(id)).map(([r]) => dexRegionName(r));
+  if (shop.length) out.push(`시장: ${shop.join(', ')}`);
+  if (special.length) out.push(`우호 전용 시장: ${special.join(', ')}`);
+  if (RUIN.exchange.some((e) => e.id === id)) out.push('생존자 오르샤와 교환');
+  const r = RECIPES.find((x) => x.out === id);
+  if (r && recipeKnown(d, r)) out.push(`제작 (지혜 ${r.wis})`);
+  else if (r) out.push('숨겨진 제작법');
+  return out;
+}
+// 물건 분류 (도감 칸)
+const DEX_CATS = [['material', '재료'], ['trophy', '전리품'], ['meal', '요리'], ['use', '쓰는 것'], ['equip', '장신구'], ['treasure', '보물'], ['etc', '그 밖의 것']];
+function dexCat(it) {
+  if (it.cat === 'treasure') return 'treasure';
+  if (it.type === 'equip') return 'equip';
+  if (it.cat === 'meal') return 'meal';
+  if (it.type === 'use') return 'use';
+  if (it.cat === 'trophy') return 'trophy';
+  if (it.cat === 'bait') return 'etc';
+  return 'material';
+}
+const elemList = (l) => (l || []).map((e) => ELEMENTS[e] || e).join('·');
+const fightInfo = (o) => [o.weak?.length ? `약점 ${elemList(o.weak)}` : '', o.resist?.length ? `저항 ${elemList(o.resist)}` : '', o.special ? `특기 '${o.special.name}'` : ''].filter(Boolean).join(' · ');
+// 화면에 보낼 도감. 보지 못한 칸은 이름 대신 힌트만
+function dexView(d) {
+  const x = dexOf(d);
+  const NEW = x.seenAt || 0;
+  const isNew = (t) => !!t && t > NEW;
+  // 사냥감: 지역마다 (본 대륙 → 멸망한 대륙)
+  const beasts = [];
+  for (const [r, ids] of Object.entries(REGION_PLACES)) {
+    const list = [];
+    for (const pid of ids) {
+      const p = PLACES[pid];
+      for (const elite of [false, true]) {
+        const e = x.m[elite ? `${pid}!` : pid];
+        const where = `${p.name} · 사냥터 Lv.${p.level}`; // 강적은 화면이 따로 표시
+        if (!e) { list.push({ seen: false, elite, where }); continue; }
+        const drop = p.drop ? ITEMS[p.drop]?.name : null;
+        list.push({ seen: true, elite, name: elite ? p.elite : p.creature, where, info: fightInfo(p), sub: [drop ? `전리품 ${drop}` : '', `쓰러뜨린 수 ${e[1]}`].filter(Boolean).join(' · '), at: e[0], fresh: isNew(e[0]) });
+      }
+    }
+    beasts.push({ region: r, name: dexRegionName(r), ruin: isRuin(r), list });
+  }
+  // 대륙의 재앙
+  const bosses = Object.entries(BOSSES).map(([r, B]) => {
+    const e = x.m[`boss:${r}`];
+    const where = `${dexRegionName(r)}에 나타남`;
+    return e ? { seen: true, name: B.name, where, desc: B.desc, info: fightInfo(B), sub: `쓰러뜨린 수 ${e[1]}`, at: e[0], fresh: isNew(e[0]) } : { seen: false, where };
+  });
+  // 물고기
+  const fish = FISHING.fish.map((f) => {
+    const it = ITEMS[f.id];
+    const at = x.i[f.id];
+    return at != null ? { seen: true, id: f.id, name: it.name, rarity: it.rarity, desc: it.desc, sub: `낚은 수 ${x.f[f.id] || 0}`, at, fresh: isNew(at) } : { seen: false, id: f.id, rarity: it.rarity, where: dexRegionName(FISHING.region) };
+  });
+  // 물건 (물고기와 정성 들인 요리는 뺌)
+  const fishIds = new Set(FISHING.fish.map((f) => f.id));
+  const items = DEX_CATS.map(([k, name]) => ({ cat: k, name, list: [] }));
+  for (const [id, it] of Object.entries(ITEMS)) {
+    if (it.cooked || fishIds.has(id)) continue;
+    const at = x.i[id];
+    const src = dexSources(d, id);
+    const row = at != null
+      ? { seen: true, id, name: it.name, rarity: it.rarity, desc: it.desc, sub: src.join(' · '), at, fresh: isNew(at) }
+      : { seen: false, id, rarity: it.rarity, sub: src.join(' · ') || '어디서 나오는지 아무도 모른다' };
+    items.find((c) => c.cat === dexCat(it)).list.push(row);
+  }
+  const tally = (l) => [l.filter((e) => e.seen).length, l.length];
+  const allBeasts = beasts.flatMap((g) => g.list);
+  const allItems = items.flatMap((c) => c.list);
+  const parts = { beasts: tally(allBeasts), bosses: tally(bosses), fish: tally(fish), items: tally(allItems) };
+  const sum = Object.values(parts).reduce((a, [s, n]) => [a[0] + s, a[1] + n], [0, 0]);
+  return { beasts, bosses, fish, items, parts, total: sum };
+}
+// 도감을 열면: 이번에 처음 본 것까지 '새로' 표시를 거둠
+const dexSeen = (d, now = Date.now()) => { dexOf(d).seenAt = now; };
+// 지난번에 도감을 연 뒤로 새로 채운 칸이 있는지 (상태 창의 점)
+function dexHasNew(d) {
+  const x = dexOf(d), t = x.seenAt || 0;
+  for (const e of Object.values(x.m)) if (e[0] > t) return true;
+  for (const at of Object.values(x.i)) if (at > t) return true;
+  return false;
+}
+
+// ── 업적 ───────────────────────────────────────────
+// 전투 설정(combat JSON)에 { ach: { 업적 id: 이룬 시각 }, achSeenAt }. 시각 0은 '업적이 생기기 전에 이미 이룸'
+// 판정은 이미 남아 있는 기록(도감·셈·지나온 이야기·레벨·둥지)으로만 하므로 새로 세는 것이 없다
+const DEX_ALL = (() => { // 도감의 모든 칸 (분류별 물건 id 포함)
+  const fishIds = new Set(FISHING.fish.map((f) => f.id));
+  const cats = {};
+  for (const [id, it] of Object.entries(ITEMS)) if (!it.cooked && !fishIds.has(id)) (cats[dexCat(it)] ||= []).push(id);
+  const beasts = Object.values(REGION_PLACES).flat().flatMap((p) => [p, `${p}!`]);
+  return { cats, beasts, bosses: Object.keys(BOSSES).map((r) => `boss:${r}`), fish: [...fishIds], items: Object.values(cats).flat() };
+})();
+const RUIN_PLACES = Object.values(PLACES).filter((p) => isRuin(p.region)).map((p) => p.id);
+function achOf(d) {
+  const c = combatJson(d);
+  if (!c.ach || typeof c.ach !== 'object') c.ach = {};
+  return c.ach;
+}
+// 지금까지 어디까지 왔는지 [cur, at]
+function achProgress(d, A) {
+  const c = A.cond, x = dexOf(d);
+  const seenM = (k) => (x.m[k] ? 1 : 0), seenI = (k) => (x.i[k] != null ? 1 : 0);
+  const sum = (l, f) => l.reduce((a, k) => a + f(k), 0);
+  if (c.dexRegion) { const l = (REGION_PLACES[c.dexRegion] || []).flatMap((p) => [p, `${p}!`]); return [sum(l, seenM), l.length]; }
+  if (c.dexFish) return [sum(DEX_ALL.fish, seenI), DEX_ALL.fish.length];
+  if (c.dexBoss) return [sum(DEX_ALL.bosses, seenM), DEX_ALL.bosses.length];
+  if (c.dexCat) { const l = DEX_ALL.cats[c.dexCat[0]] || []; return [sum(l, seenI), Math.min(l.length, c.dexCat[1] || l.length)]; }
+  if (c.dexPct) {
+    const all = DEX_ALL.beasts.length + DEX_ALL.bosses.length + DEX_ALL.fish.length + DEX_ALL.items.length;
+    const seen = sum(DEX_ALL.beasts, seenM) + sum(DEX_ALL.bosses, seenM) + sum(DEX_ALL.fish, seenI) + sum(DEX_ALL.items, seenI);
+    return [seen, Math.ceil(all * c.dexPct)];
+  }
+  if (c.item) return [seenI(c.item), 1];
+  if (c.metRuin) return [RUIN_PLACES.some((p) => x.m[p] || x.m[`${p}!`]) ? 1 : 0, 1];
+  if (c.beat) return [(x.m[c.beat]?.[1] || 0) > 0 ? 1 : 0, 1];
+  if (c.recipes) return [knownRecipes(d).length, c.recipes];
+  if (c.level) return [d.level, c.level];
+  if (c.nest) return [d.nest ? nestInfo(d).tier : 0, c.nest];
+  if (c.count) return [traitsOf(d).counts[c.count[0]] || 0, c.count[1]];
+  if (c.chron) return [chronOf(d).some((e) => typeof e.t === 'string' && e.t.includes(c.chron)) ? 1 : 0, 1];
+  return [0, 1];
+}
+// 새로 이룬 업적을 기록하고 돌려줌. 처음 판정할 때(업적이 생기기 전 기록)는 시각 0으로 조용히 채우고 개수만 돌려줌
+function checkAch(d, now = Date.now()) {
+  if (d.dead_at) return { got: [], backfill: 0 };
+  const c = combatJson(d);
+  const first = !c.ach || typeof c.ach !== 'object';
+  const have = achOf(d);
+  const got = [];
+  for (const A of ACHIEVEMENTS) {
+    if (have[A.id] != null) continue;
+    const [cur, at] = achProgress(d, A);
+    if (cur < at) continue;
+    have[A.id] = first ? 0 : now;
+    if (!first) { got.push(A); chron(d, 'mark', `${A.hidden ? '숨겨진 ' : ''}업적 '${A.name}'${josa(A.name, '을', '를')} 이루었다.`, now); }
+  }
+  if (first) c.achSeenAt = now;
+  return { got, backfill: first ? Object.keys(have).length : 0 };
+}
+// 화면에 보낼 업적 목록. 숨겨진 업적은 이루기 전에는 가려짐
+function achView(d) {
+  const have = achOf(d), seenAt = combatJson(d).achSeenAt || 0;
+  const list = ACHIEVEMENTS.map((A) => {
+    const at = have[A.id];
+    if (at != null) return { id: A.id, have: true, hidden: !!A.hidden, name: A.name, desc: A.desc, at, fresh: at > seenAt };
+    if (A.hidden) return { id: A.id, have: false, hidden: true };
+    const [cur, need] = achProgress(d, A);
+    return { id: A.id, have: false, name: A.name, desc: A.desc, cur: Math.min(cur, need), need };
+  });
+  const open = list.filter((a) => !a.hidden || a.have);
+  return { list, have: list.filter((a) => a.have).length, total: list.length, hidden: [list.filter((a) => a.hidden && a.have).length, list.filter((a) => a.hidden).length], shown: open.length };
+}
+const achSeen = (d, now = Date.now()) => { combatJson(d).achSeenAt = now; };
+const achHasNew = (d) => { const t = combatJson(d).achSeenAt || 0; return Object.values(achOf(d)).some((at) => at > t); };
+
 // 다른 모듈(서버)이 채워 주는 것: hoard(드래곤 id) → 보물더미 물건, bossTrace(지역) → 최근 재앙의 흔적
 const hooks = {};
 
@@ -1822,4 +2042,6 @@ module.exports = {
   titlesOf, titleOn, titleName, titleMods, checkTitles, setTitle, titlesView,
   combatJson, dayIdx, gearMods, clampVitals, planExpedition, planView, facOf, facSlots, facPower, buildFacility, removeFacility, // 모브 드래곤(game-mobs.js)이 씀
   xpNeed, atMaxLevel,
+  dexOf, dexMeet, dexWin, dexItems, dexBackfill, dexView, dexSeen, dexHasNew, // 도감
+  checkAch, achView, achSeen, achHasNew, // 업적
 };

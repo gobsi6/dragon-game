@@ -660,9 +660,10 @@ function hunt(d) {
       cj.ruinPity = (cj.ruinPity || 0) + 1;
     }
     b.a.turnCount = 0; b.b.turnCount = 0;
+    const first = logic.dexMeet(d, `${place}!`); // 도감
     return {
       title: '강적', elite: true, battle: b,
-      lines: [`${c.name}${josa(c.name, '을', '를')} 쫓던 중, ${ga(foe)} 길을 막아섰다!`, corrupted ? '검붉은 기운이 머릿속을 파고든다. 맞을 때마다 정신도 깎인다.' : '물러설 수 없다. 직접 싸워야 한다.'],
+      lines: [`${c.name}${josa(c.name, '을', '를')} 쫓던 중, ${ga(foe)} 길을 막아섰다!`, corrupted ? '검붉은 기운이 머릿속을 파고든다. 맞을 때마다 정신도 깎인다.' : '물러설 수 없다. 직접 싸워야 한다.', ...(first ? ['처음 보는 강적이다. 도감에 적어 두었다.'] : [])],
       items: [], gold: 0, xp: 0,
     };
   }
@@ -684,6 +685,7 @@ function hunt(d) {
     ? [`${c.name}${josa(c.name, '이', '가')} 무리 지어 나타났다! (${n}마리)`, '노릴 적을 골라 싸운다. 숨결은 다른 적에게도 번지고, 포효는 모두에게 울린다.']
     : [`${c.name}${josa(c.name, '을', '를')} 찾아냈다.`];
   if (corrupted) lines.push('검붉은 기운이 머릿속을 파고든다. 맞을 때마다 정신도 깎인다.');
+  if (logic.dexMeet(d, place)) lines.push('처음 보는 사냥감이다. 도감에 적어 두었다.'); // 도감
   return { title: '사냥', hunt: true, battle: b, lines, items: [], gold: 0, xp: 0 };
 }
 
@@ -698,6 +700,7 @@ function huntReward(d, b, c) {
   const win = b.winner === me;
   const lost = Math.max(0, (me.hp0 ?? me.hpMax) - me.hp); // 싸우기 전 체력에서 줄어든 만큼
   const killed = foes.filter((f) => f.hp <= 0);
+  if (b.place && killed.length) logic.dexWin(d, b.place, killed.length); // 도감: 쓰러뜨린 수
   const lines = [];
   const hostile = d.stance === 'hostile';
   const G = COMBAT.group;
@@ -810,6 +813,7 @@ function eliteReward(d, b) {
       items = logic.bundle([...items.flatMap((x) => Array(x.qty).fill(x.id)), ...Array(MIND.scale.elite).fill('blackened_scale'), ...(Math.random() < MIND.legend.chance ? [MIND.legend.item] : [])]);
     }
     logic.traitCount(d, 'elite');
+    if (b.place) logic.dexWin(d, `${b.place}!`); // 도감
     logic.traitCount(d, `elite:${PLACES[b.place]?.region || d.region}`); // 모브 드래곤 의뢰: 지역별 강적
     logic.traitCount(d, 'huntwin');
     logic.traitCount(d, `huntwin:${PLACES[b.place]?.region || d.region}`);

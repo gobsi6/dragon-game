@@ -94,6 +94,7 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
       if (f1) lines.push(f1);
       lines.push(...logic.traitCount(d, 'bosswin'));
       if (id === lastId) { lines.push('마지막 일격은 나의 것이었다!'); lines.push(...logic.traitCount(d, 'bosslast')); }
+      logic.dexWin(d, `boss:${st.key}`); // 도감
       logic.chron(d, 'mark', `대륙의 재앙 ${eul(T.name)} 함께 쓰러뜨렸다. (${rank}위${id === lastId ? ', 마지막 일격' : ''})`);
       return { title: '대륙의 재앙', lines, items };
     });
@@ -134,11 +135,13 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
     if (logic.lowHp(d)) return { error: '기운이 없어 맞설 수 없다. 조금 쉬어야 한다.' };
     logic.spendAp(d, BOSS.ap);
     const b = combat.bossBattle(d, st);
+    const first = logic.dexMeet(d, `boss:${st.key}`); // 도감
     const bossId = st.id;
     const T = BOSSES[st.key];
     const c = { name: T.name, level: st.lv };
     const lines = [`${ga(T.name)} 앞을 가로막았다. 모두의 상처가 쌓인 몸이다. (남은 체력 ${Math.round((st.hp / st.hpMax) * 100)}%)`, `${BOSS.turns}턴 동안 싸우고 물러난다. 입힌 피해는 모두의 몫으로 남는다.`];
     if (b.b.enraged) lines.push(`${ga(T.name)} 분노해 있다! 공격이 거세다.`);
+    if (first) lines.push('도감에 대륙의 재앙을 적어 두었다.');
     const view = arena.startHunt(d, b, c, null, (dd, bb) => result(dd, bb, bossId));
     db.saveState(d);
     return { ok: true, battle: view, lines, title: `재앙 · ${T.name}` };

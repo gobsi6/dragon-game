@@ -672,12 +672,21 @@
   .trip-scene[data-wx="storm"] .wx-fall.rain.near { animation-duration: .6s; }
   @keyframes trip-rain-far { from { transform: translate(0, 0); } to { transform: translate(0, 420px); } }
   @keyframes trip-rain-near { from { transform: translate(0, 0); } to { transform: translate(0, 560px); } }
-  .trip-scene .wx-fall.snow { animation: trip-snow 6s linear infinite; }
-  .trip-scene .wx-fall.snow2 { animation: trip-snow2 9s linear infinite; }
-  @keyframes trip-snow { from { transform: translate(0, 0); } to { transform: translate(-40px, 90px); } }
-  @keyframes trip-snow2 { from { transform: translate(0, 0); } to { transform: translate(-60px, 144px); } }
+  /* 눈: 층마다 무늬 한 칸(420·560·760)만큼 아래로 → 처음 자리와 똑같아 이음매 없음. 흔들림은 바깥 묶음이 천천히 오감 */
+  .trip-scene .wx-fall.snow { will-change: transform; }
+  .trip-scene .wx-fall.snow.s1 { animation: trip-snow1 26s linear infinite; }
+  .trip-scene .wx-fall.snow.s2 { animation: trip-snow2 22s linear infinite; }
+  .trip-scene .wx-fall.snow.s3 { animation: trip-snow3 17s linear infinite; }
+  @keyframes trip-snow1 { from { transform: translateY(0); } to { transform: translateY(420px); } }
+  @keyframes trip-snow2 { from { transform: translateY(0); } to { transform: translateY(560px); } }
+  @keyframes trip-snow3 { from { transform: translateY(0); } to { transform: translateY(760px); } }
+  .trip-scene .wx-sway { will-change: transform; animation: trip-sway ease-in-out infinite alternate; }
+  .trip-scene .wx-sway.s1 { --sw: 14px; animation-duration: 7s; }
+  .trip-scene .wx-sway.s2 { --sw: 24px; animation-duration: 5.5s; animation-delay: -2s; }
+  .trip-scene .wx-sway.s3 { --sw: 36px; animation-duration: 4.2s; animation-delay: -1s; }
+  @keyframes trip-sway { from { transform: translateX(calc(var(--sw) * -1)); } to { transform: translateX(var(--sw)); } }
   .trip-scene .wx-fall.ash { animation: trip-ash 10s linear infinite; }
-  @keyframes trip-ash { from { transform: translate(0, 0); } to { transform: translate(-70px, 110px); } }
+  @keyframes trip-ash { from { transform: translate(0, 0); } to { transform: translate(-110px, 110px); } } /* 무늬 한 칸(110)만큼 → 이음매 없음 */
   .trip-scene .wx-flash { opacity: 0; animation: trip-flash 7s steps(1, end) infinite; }
   @keyframes trip-flash { 0%, 61%, 63.5%, 100% { opacity: 0; } 61.5% { opacity: .55; } 62.5% { opacity: .3; } }
   .trip-scene .wx-fog-a { animation: trip-fog 26s ease-in-out infinite alternate; }
@@ -691,7 +700,7 @@
   .trip-scene .wx-aur-band { animation: trip-aur 9s ease-in-out infinite alternate; }
   .trip-scene .wx-aur-band.two { animation-duration: 13s; }
   @keyframes trip-aur { from { transform: translateX(-60px); opacity: .7; } to { transform: translateX(60px); opacity: 1; } }
-  @media (prefers-reduced-motion: reduce) { .trip-scene .wx-fall, .trip-scene .wx-flash, .trip-scene .wx-fog-a, .trip-scene .wx-fog-b, .trip-scene .wx-heat-band, .trip-scene .wx-wind-a, .trip-scene .wx-aur-band { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .trip-scene .wx-fall, .trip-scene .wx-flash, .trip-scene .wx-fog-a, .trip-scene .wx-fog-b, .trip-scene .wx-heat-band, .trip-scene .wx-wind-a, .trip-scene .wx-aur-band, .trip-scene .wx-sway { animation: none; } }
   .trip-scene { position: relative; }
   .trip-where { position: absolute; left: 10px; top: 10px; z-index: 1; margin: 0; padding: 4px 11px; border-radius: 12px; background: rgba(255, 255, 255, .85); font: 600 12.5px/1.5 var(--sans); color: #2A4256; }
   .trip-left { position: absolute; right: 10px; top: 10px; z-index: 1; padding: 4px 11px; border-radius: 12px; background: rgba(42, 66, 86, .82); font-size: 12px; line-height: 1.5; color: #fff; }
@@ -811,6 +820,63 @@
   .tt.locked .e { color: #8A9096; }
   .tt.on { border-color: var(--steel); box-shadow: inset 0 0 0 1px var(--steel); background: #EEF2F6; }
   .tt-filter { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
+  #char-tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .tab-dot { display: inline-block; width: 7px; height: 7px; margin-left: 5px; border-radius: 50%; background: #A63E4B; vertical-align: 2px; box-shadow: 0 0 0 2px #fff; }
+  .tab-dot[hidden] { display: none; }
+  .seg.ctabs button.on .tab-dot { box-shadow: none; background: #E8A3AC; }
+  /* 기록: 제본된 책 한 쪽. 왼쪽은 묶은 등, 아래로 겹친 종이 장 */
+  #rec { position: relative; margin: 6px -6px 6px; padding: 18px 16px 34px 26px; border: 1px solid #D3CEC2; border-left: 0;
+    background: linear-gradient(90deg, #3B4752 0 5px, rgba(40, 30, 10, .16) 5px, rgba(40, 30, 10, 0) 26px),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .42 0 0 0 0 .32 0 0 0 0 .18 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"), #FCFAF4;
+    box-shadow: 3px 3px 0 -1px #F1EDE3, 3px 3px 0 0 #D8D2C4, 6px 6px 0 -1px #EBE6DA, 6px 6px 0 0 #D2CBBB; }
+  #rec[hidden] { display: none; }
+  #rec::after { content: '— 기 록 —'; position: absolute; left: 0; right: 0; bottom: 10px; text-align: center; font: 500 11px/1 var(--serif); letter-spacing: .1em; color: #A49D8E; }
+  #rec .rec-title { margin: 4px 0 26px 2px; font: 700 17px/1 var(--serif); letter-spacing: .3em; color: #3B4752; }
+  /* 비단 리본: 책 머리에서 늘어뜨린 끈, 끝은 제비꼬리. 고른 끈이 길게 내려옴 */
+  .rec-ribbons { position: absolute; top: -3px; right: 18px; display: flex; gap: 8px; align-items: flex-start; }
+  .rec-ribbons button { width: 60px; padding: 10px 2px 22px; border: 0; border-radius: 0; color: #fff; font: 600 12px/1.25 var(--serif); word-break: keep-all; opacity: .8; cursor: pointer;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 10px), 0 100%);
+    background-image: linear-gradient(90deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, 0) 45%, rgba(0, 0, 0, .14)); transition: padding .15s, opacity .15s; }
+  .rec-ribbons button[data-rt="chron"] { background-color: #5B7A5A; }
+  .rec-ribbons button[data-rt="ach"] { background-color: #8E3F3F; }
+  .rec-ribbons button[data-rt="dex"] { background-color: #2F4A63; }
+  .rec-ribbons button.on { opacity: 1; padding-bottom: 34px; }
+  .rec-ribbons button:not(.on):hover { opacity: .9; padding-bottom: 27px; }
+  .rec-ribbons button:focus-visible { outline: 2px solid var(--steel); outline-offset: 2px; }
+  .rec-ribbons .tab-dot { box-shadow: none; background: #F2B8BF; }
+  @media (prefers-reduced-motion: reduce) { .rec-ribbons button { transition: none; } }
+  @media (max-width: 520px) { .rec-ribbons { right: 10px; gap: 5px; } .rec-ribbons button { width: 52px; font-size: 11.5px; } }
+  /* 기록 안의 칸: 희귀도 색이 왼쪽에 칠해진 색인 카드 */
+  #rec .tt { background: #fff; border: 1px solid #E2DDD0; border-left: 3px solid #C9C2B0; border-radius: 2px; box-shadow: 0 1px 0 #ECE8DE; }
+  #rec .tt.r-rare { border-left-color: #C29A3E; }
+  #rec .tt.r-uncommon { border-left-color: #5E84A3; }
+  #rec .tt.r-elite { border-left-color: #8E3F3F; }
+  #rec .tt.ach:not(.locked) { border-left-color: #8E3F3F; }
+  #rec .tt.ach.r-hidden:not(.locked) { border-left-color: #C29A3E; }
+  #rec .tt.locked { background: #F7F5EF; border-left-color: #DDD8CB; }
+  #rec .dex-h { border-bottom: 1px dotted #C9C2B0; padding-bottom: 4px; }
+  #rec .chron li { border-bottom: 1px dotted #D6D0C2; }
+  #rec .chron li::before { box-shadow: 0 0 0 3px #FCFAF4; }
+  /* 물건 분류: 색 띠를 두른 칸막이 카드. 고른 카드가 솟아 아래 종이와 이어짐 */
+  .dex-cats { display: flex; flex-wrap: wrap; gap: 5px; align-items: flex-end; margin: 6px 0 10px; border-bottom: 2px solid #CFC8B8; }
+  .dex-cats[hidden] { display: none; }
+  .dex-cats button { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 5px 9px; border: 1px solid #D6D0C2; border-bottom: 0; border-top: 4px solid var(--cc, #8A8A86); border-radius: 4px 4px 0 0;
+    background: #fff; color: #555A60; font: 600 12.5px/1.2 var(--serif); transform: translateY(1px); cursor: pointer; }
+  .dex-cats button .n { font: 400 10.5px/1.2 var(--sans); color: #8E887A; font-variant-numeric: tabular-nums; }
+  .dex-cats button.on { padding: 8px 11px; background: #FCFAF4; color: #1F2A33; transform: translateY(2px); box-shadow: 0 -2px 4px rgba(40, 30, 10, .08); }
+  .dex-cats button:not(.on):hover { background: #FBF9F4; }
+  .dex-cats button:focus-visible { outline: 2px solid var(--steel); outline-offset: 2px; }
+  .tt.dex, .tt.ach { align-items: start; align-content: start; }
+  .tt.dex .dex-tag { grid-column: 2; grid-row: 1; font-size: 11px; line-height: 1.6; color: var(--muted); white-space: nowrap; }
+  .tt.dex .dex-tag.rare { color: #9A7426; }
+  .tt.dex .dex-tag.uncommon { color: var(--steel-d); }
+  .tt.dex .dex-tag.elite { color: #8A4B3A; font-weight: 600; }
+  .tt.dex .d { grid-column: 1 / -1; font-size: 12.5px; line-height: 1.5; color: var(--ink-2); }
+  .tt.dex.locked .d { color: #8A9096; }
+  .dex-new { display: inline-block; margin-left: 4px; padding: 0 6px; font: 600 10.5px/17px var(--sans, inherit); color: #fff; background: var(--steel); border-radius: 9px; vertical-align: 2px; }
+  .dex-h { grid-column: 1 / -1; margin: 10px 0 0; font: 700 13px/1.4 var(--serif); color: var(--ink-2); display: flex; justify-content: space-between; }
+  .dex-h:first-child { margin-top: 2px; }
+  .dex-h span { font: 400 11.5px/1.4 inherit; color: var(--muted); font-variant-numeric: tabular-nums; }
   .chron { list-style: none; margin: 0; padding: 0 0 0 14px; border-left: 2px solid var(--line-in); display: flex; flex-direction: column; gap: 2px; }
   .chron li { position: relative; display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 10px; padding: 6px 0; font-size: 13.5px; line-height: 1.55; color: var(--ink-2); }
   .chron li::before { content: ""; position: absolute; left: -19px; top: 12px; width: 8px; height: 8px; border-radius: 50%; background: #B6B9B5; box-shadow: 0 0 0 3px var(--surface); }
@@ -1544,7 +1610,7 @@
   @media (prefers-reduced-motion: reduce) { .ctab:not([hidden]) { animation: none; } }
   .dtabs button { display: flex; align-items: center; justify-content: center; gap: 6px; }
   .seg .tabn { padding: 0 4px; color: #fff; }
-  /* 메뉴 안의 탭(상태: 기본·칭호·스킬·지나온 이야기 / 소지품: 소지품·제작): 칸마다 따로 나뉜 작은 액자 */
+  /* 메뉴 안의 탭(상태: 기본·칭호·스킬·기록 / 소지품: 소지품·제작): 칸마다 따로 나뉜 작은 액자 */
   .seg.ctabs, .seg.dtabs { border: 0; gap: 6px; background: none; }
   .seg.ctabs button, .seg.dtabs button {
     position: relative; min-height: 38px; padding: 7px 6px; border: 1px solid #C9CCC8; border-radius: 3px;
@@ -2425,7 +2491,10 @@
     <linearGradient id="trip-aur2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#B49BFF" stop-opacity="0"/><stop offset=".5" stop-color="#8FE3D8"/><stop offset="1" stop-color="#8FE3D8" stop-opacity="0"/></linearGradient>
     <pattern id="trip-rainp" width="520" height="420" patternUnits="userSpaceOnUse"><line x1="168" y1="63" x2="163" y2="92" stroke="#E6EEF4" stroke-width="1.2" stroke-linecap="round" opacity="0.38"/><line x1="190" y1="24" x2="185" y2="50" stroke="#E6EEF4" stroke-width="1.2" stroke-linecap="round" opacity="0.36"/><line x1="36" y1="38" x2="32" y2="63" stroke="#E6EEF4" stroke-width="1.7" stroke-linecap="round" opacity="0.28"/><line x1="116" y1="264" x2="110" y2="297" stroke="#E6EEF4" stroke-width="1.5" stroke-linecap="round" opacity="0.35"/><line x1="508" y1="20" x2="502" y2="51" stroke="#E6EEF4" stroke-width="1.4" stroke-linecap="round" opacity="0.29"/><line x1="61" y1="130" x2="56" y2="161" stroke="#E6EEF4" stroke-width="1.3" stroke-linecap="round" opacity="0.40"/><line x1="332" y1="156" x2="327" y2="183" stroke="#E6EEF4" stroke-width="1.2" stroke-linecap="round" opacity="0.26"/><line x1="107" y1="286" x2="103" y2="311" stroke="#E6EEF4" stroke-width="1.4" stroke-linecap="round" opacity="0.40"/><line x1="236" y1="126" x2="230" y2="157" stroke="#E6EEF4" stroke-width="1.6" stroke-linecap="round" opacity="0.31"/><line x1="299" y1="221" x2="293" y2="253" stroke="#E6EEF4" stroke-width="1.6" stroke-linecap="round" opacity="0.32"/><line x1="510" y1="50" x2="505" y2="74" stroke="#E6EEF4" stroke-width="1.7" stroke-linecap="round" opacity="0.29"/><line x1="254" y1="16" x2="249" y2="45" stroke="#E6EEF4" stroke-width="1.7" stroke-linecap="round" opacity="0.39"/><line x1="455" y1="132" x2="450" y2="161" stroke="#E6EEF4" stroke-width="1.6" stroke-linecap="round" opacity="0.39"/><line x1="237" y1="353" x2="231" y2="386" stroke="#E6EEF4" stroke-width="1.5" stroke-linecap="round" opacity="0.42"/><line x1="32" y1="295" x2="26" y2="323" stroke="#E6EEF4" stroke-width="1.8" stroke-linecap="round" opacity="0.46"/><line x1="148" y1="162" x2="143" y2="191" stroke="#E6EEF4" stroke-width="1.2" stroke-linecap="round" opacity="0.37"/></pattern>
     <pattern id="trip-rainp2" width="640" height="560" patternUnits="userSpaceOnUse"><line x1="108" y1="66" x2="101" y2="103" stroke="#E6EEF4" stroke-width="2.8" stroke-linecap="round" opacity="0.49"/><line x1="158" y1="219" x2="148" y2="279" stroke="#E6EEF4" stroke-width="2.1" stroke-linecap="round" opacity="0.58"/><line x1="352" y1="495" x2="341" y2="554" stroke="#E6EEF4" stroke-width="2.9" stroke-linecap="round" opacity="0.53"/><line x1="266" y1="201" x2="255" y2="262" stroke="#E6EEF4" stroke-width="3.0" stroke-linecap="round" opacity="0.50"/><line x1="113" y1="130" x2="105" y2="172" stroke="#E6EEF4" stroke-width="2.5" stroke-linecap="round" opacity="0.63"/><line x1="168" y1="2" x2="160" y2="50" stroke="#E6EEF4" stroke-width="2.4" stroke-linecap="round" opacity="0.62"/><line x1="610" y1="387" x2="601" y2="437" stroke="#E6EEF4" stroke-width="2.6" stroke-linecap="round" opacity="0.65"/><line x1="35" y1="504" x2="24" y2="562" stroke="#E6EEF4" stroke-width="2.9" stroke-linecap="round" opacity="0.69"/><line x1="251" y1="223" x2="244" y2="262" stroke="#E6EEF4" stroke-width="2.6" stroke-linecap="round" opacity="0.47"/></pattern>
-    <pattern id="trip-snowp" width="90" height="90" patternUnits="userSpaceOnUse"><circle cx="20" cy="18" r="4" fill="#FFFFFF"/><circle cx="64" cy="52" r="3" fill="#FFFFFF" opacity=".85"/><circle cx="40" cy="80" r="2.4" fill="#FFFFFF" opacity=".7"/></pattern>
+    <radialGradient id="trip-flake"><stop offset=".55" stop-color="#FFFFFF"/><stop offset="1" stop-color="#FFFFFF" stop-opacity=".15"/></radialGradient>
+    <pattern id="trip-snowp1" width="420" height="420" patternUnits="userSpaceOnUse"><circle cx="234" cy="381" r="6.5" fill="#6F8DA6" opacity="0.14"/><circle cx="234" cy="381" r="4.5" fill="#FFFFFF" opacity="0.72"/><circle cx="245" cy="83" r="6.5" fill="#6F8DA6" opacity="0.15"/><circle cx="245" cy="83" r="4.5" fill="#FFFFFF" opacity="0.73"/><circle cx="328" cy="47" r="6.6" fill="#6F8DA6" opacity="0.14"/><circle cx="328" cy="47" r="4.6" fill="#FFFFFF" opacity="0.68"/><circle cx="335" cy="288" r="6.1" fill="#6F8DA6" opacity="0.12"/><circle cx="335" cy="288" r="4.1" fill="#FFFFFF" opacity="0.61"/><circle cx="397" cy="272" r="7.0" fill="#6F8DA6" opacity="0.15"/><circle cx="397" cy="272" r="5.0" fill="#FFFFFF" opacity="0.75"/><circle cx="14" cy="221" r="6.2" fill="#6F8DA6" opacity="0.12"/><circle cx="14" cy="221" r="4.2" fill="#FFFFFF" opacity="0.61"/><circle cx="106" cy="20" r="6.2" fill="#6F8DA6" opacity="0.14"/><circle cx="106" cy="20" r="4.2" fill="#FFFFFF" opacity="0.72"/><circle cx="348" cy="218" r="6.4" fill="#6F8DA6" opacity="0.15"/><circle cx="348" cy="218" r="4.4" fill="#FFFFFF" opacity="0.76"/><circle cx="275" cy="193" r="6.5" fill="#6F8DA6" opacity="0.13"/><circle cx="275" cy="193" r="4.5" fill="#FFFFFF" opacity="0.67"/><circle cx="409" cy="347" r="7.0" fill="#6F8DA6" opacity="0.16"/><circle cx="409" cy="347" r="5.0" fill="#FFFFFF" opacity="0.78"/><circle cx="101" cy="125" r="6.3" fill="#6F8DA6" opacity="0.12"/><circle cx="101" cy="125" r="4.3" fill="#FFFFFF" opacity="0.62"/><circle cx="170" cy="349" r="6.8" fill="#6F8DA6" opacity="0.14"/><circle cx="170" cy="349" r="4.8" fill="#FFFFFF" opacity="0.70"/><circle cx="169" cy="38" r="7.0" fill="#6F8DA6" opacity="0.15"/><circle cx="169" cy="38" r="5.0" fill="#FFFFFF" opacity="0.76"/><circle cx="61" cy="268" r="6.7" fill="#6F8DA6" opacity="0.13"/><circle cx="61" cy="268" r="4.7" fill="#FFFFFF" opacity="0.63"/><circle cx="332" cy="131" r="7.0" fill="#6F8DA6" opacity="0.16"/><circle cx="332" cy="131" r="5.0" fill="#FFFFFF" opacity="0.82"/><circle cx="49" cy="407" r="6.6" fill="#6F8DA6" opacity="0.13"/><circle cx="49" cy="407" r="4.6" fill="#FFFFFF" opacity="0.65"/><circle cx="38" cy="45" r="6.3" fill="#6F8DA6" opacity="0.15"/><circle cx="38" cy="45" r="4.3" fill="#FFFFFF" opacity="0.75"/><circle cx="121" cy="378" r="6.6" fill="#6F8DA6" opacity="0.13"/><circle cx="121" cy="378" r="4.6" fill="#FFFFFF" opacity="0.65"/><circle cx="117" cy="188" r="6.0" fill="#6F8DA6" opacity="0.12"/><circle cx="117" cy="188" r="4.0" fill="#FFFFFF" opacity="0.62"/><circle cx="157" cy="239" r="6.2" fill="#6F8DA6" opacity="0.13"/><circle cx="157" cy="239" r="4.2" fill="#FFFFFF" opacity="0.63"/></pattern>
+    <pattern id="trip-snowp2" width="560" height="560" patternUnits="userSpaceOnUse"><circle cx="490" cy="538" r="9.2" fill="#6F8DA6" opacity="0.18"/><circle cx="490" cy="538" r="6.6" fill="url(#trip-flake)" opacity="0.88"/><circle cx="325" cy="87" r="9.7" fill="#6F8DA6" opacity="0.15"/><circle cx="325" cy="87" r="7.1" fill="url(#trip-flake)" opacity="0.76"/><circle cx="501" cy="388" r="8.6" fill="#6F8DA6" opacity="0.19"/><circle cx="501" cy="388" r="6.0" fill="url(#trip-flake)" opacity="0.94"/><circle cx="353" cy="270" r="8.6" fill="#6F8DA6" opacity="0.18"/><circle cx="353" cy="270" r="6.0" fill="url(#trip-flake)" opacity="0.90"/><circle cx="549" cy="52" r="9.1" fill="#6F8DA6" opacity="0.17"/><circle cx="549" cy="52" r="6.5" fill="url(#trip-flake)" opacity="0.86"/><circle cx="380" cy="496" r="9.2" fill="#6F8DA6" opacity="0.18"/><circle cx="380" cy="496" r="6.6" fill="url(#trip-flake)" opacity="0.92"/><circle cx="220" cy="406" r="9.8" fill="#6F8DA6" opacity="0.17"/><circle cx="220" cy="406" r="7.2" fill="url(#trip-flake)" opacity="0.87"/><circle cx="462" cy="56" r="9.3" fill="#6F8DA6" opacity="0.18"/><circle cx="462" cy="56" r="6.7" fill="url(#trip-flake)" opacity="0.90"/><circle cx="506" cy="149" r="9.6" fill="#6F8DA6" opacity="0.15"/><circle cx="506" cy="149" r="7.0" fill="url(#trip-flake)" opacity="0.75"/><circle cx="118" cy="243" r="9.7" fill="#6F8DA6" opacity="0.18"/><circle cx="118" cy="243" r="7.1" fill="url(#trip-flake)" opacity="0.91"/><circle cx="181" cy="85" r="9.5" fill="#6F8DA6" opacity="0.17"/><circle cx="181" cy="85" r="6.9" fill="url(#trip-flake)" opacity="0.85"/><circle cx="51" cy="28" r="9.3" fill="#6F8DA6" opacity="0.18"/><circle cx="51" cy="28" r="6.7" fill="url(#trip-flake)" opacity="0.92"/><circle cx="256" cy="24" r="8.8" fill="#6F8DA6" opacity="0.18"/><circle cx="256" cy="24" r="6.2" fill="url(#trip-flake)" opacity="0.92"/><circle cx="17" cy="265" r="8.9" fill="#6F8DA6" opacity="0.18"/><circle cx="17" cy="265" r="6.3" fill="url(#trip-flake)" opacity="0.89"/></pattern>
+    <pattern id="trip-snowp3" width="760" height="760" patternUnits="userSpaceOnUse"><circle cx="214" cy="267" r="13.2" fill="#6F8DA6" opacity="0.19"/><circle cx="214" cy="267" r="10.0" fill="url(#trip-flake)" opacity="0.95"/><circle cx="463" cy="566" r="14.3" fill="#6F8DA6" opacity="0.18"/><circle cx="463" cy="566" r="11.1" fill="url(#trip-flake)" opacity="0.91"/><circle cx="675" cy="80" r="15.1" fill="#6F8DA6" opacity="0.20"/><circle cx="675" cy="80" r="11.9" fill="url(#trip-flake)" opacity="0.99"/><circle cx="678" cy="290" r="14.6" fill="#6F8DA6" opacity="0.19"/><circle cx="678" cy="290" r="11.4" fill="url(#trip-flake)" opacity="0.94"/><circle cx="595" cy="702" r="15.3" fill="#6F8DA6" opacity="0.18"/><circle cx="595" cy="702" r="12.1" fill="url(#trip-flake)" opacity="0.92"/><circle cx="166" cy="541" r="14.7" fill="#6F8DA6" opacity="0.19"/><circle cx="166" cy="541" r="11.5" fill="url(#trip-flake)" opacity="0.97"/><circle cx="538" cy="172" r="14.6" fill="#6F8DA6" opacity="0.20"/><circle cx="538" cy="172" r="11.4" fill="url(#trip-flake)" opacity="0.98"/><circle cx="250" cy="678" r="15.1" fill="#6F8DA6" opacity="0.20"/><circle cx="250" cy="678" r="11.9" fill="url(#trip-flake)" opacity="0.98"/></pattern>
     <pattern id="trip-ashp" width="110" height="110" patternUnits="userSpaceOnUse"><circle cx="24" cy="20" r="3" fill="#4A4250" opacity=".55"/><circle cx="78" cy="62" r="2.2" fill="#6A6070" opacity=".5"/><circle cx="50" cy="96" r="1.8" fill="#3F3845" opacity=".45"/></pattern>
   </defs>
   <rect width="1600" height="900" fill="url(#trip-sky)"/>
@@ -2474,8 +2543,8 @@
   </g>
 
   <g class="wx wx-rain wx-storm" aria-hidden="true"><g class="wx-fall rain far"><rect x="-200" y="-460" width="2100" height="1500" fill="url(#trip-rainp)"/></g><g class="wx-fall rain near"><rect x="-200" y="-600" width="2100" height="1600" fill="url(#trip-rainp2)"/></g></g>
-  <g class="wx wx-snow" aria-hidden="true"><g class="wx-fall snow"><rect x="0" y="-180" width="1600" height="1080" fill="url(#trip-snowp)"/></g><g class="wx-fall snow2"><rect x="30" y="-180" width="1600" height="1080" fill="url(#trip-snowp)" transform="scale(1.6)" opacity=".7"/></g></g>
-  <g class="wx wx-ash" aria-hidden="true"><g class="wx-fall ash"><rect x="0" y="-220" width="1600" height="1120" fill="url(#trip-ashp)"/></g></g>
+  <g class="wx wx-snow" aria-hidden="true"><g class="wx-sway s1"><g class="wx-fall snow s1"><rect x="-60" y="-420" width="1720" height="1320" fill="url(#trip-snowp1)"/></g></g><g class="wx-sway s2"><g class="wx-fall snow s2"><rect x="-80" y="-560" width="1760" height="1460" fill="url(#trip-snowp2)"/></g></g><g class="wx-sway s3"><g class="wx-fall snow s3"><rect x="-100" y="-760" width="1800" height="1660" fill="url(#trip-snowp3)"/></g></g></g>
+  <g class="wx wx-ash" aria-hidden="true"><g class="wx-fall ash"><rect x="0" y="-220" width="1720" height="1120" fill="url(#trip-ashp)"/></g></g>
   <rect class="wx wx-storm wx-flash" width="1600" height="900" fill="#FFFFFF" aria-hidden="true"/>
 </svg></div>
     <div class="frame trip-logbox"><ol class="trip-log" id="trip-log" aria-live="polite"></ol></div>
@@ -2614,12 +2683,12 @@
   <div class="orn-h"><h2 id="char-dlg-title">상태</h2></div>
   <div class="body">
     <div class="char-head" id="char-head"></div>
-    <!-- 상태 안의 메뉴: 기본(특성·장신구·성향) / 칭호 / 스킬 / 지나온 이야기 -->
+    <!-- 상태 안의 메뉴: 기본(특성·장신구·성향) / 칭호 / 스킬 / 기록(발자취·업적·도감) -->
     <div class="seg ctabs" id="char-tabs" role="tablist" aria-label="상태 메뉴">
       <button type="button" role="tab" data-ct="base" class="on">기본</button>
       <button type="button" role="tab" data-ct="titles">칭호</button>
       <button type="button" role="tab" data-ct="skills">스킬</button>
-      <button type="button" role="tab" data-ct="chron" aria-label="지나온 이야기"><span class="lg">지나온 </span>이야기</button>
+      <button type="button" role="tab" data-ct="rec">기록<i class="tab-dot" id="rec-dot" hidden></i></button>
     </div>
     <section class="ctab" data-ct="base" role="tabpanel">
     <h3>특성</h3>
@@ -2664,11 +2733,29 @@
     <p class="note" id="char-skill-note"></p>
     <div class="traits" id="char-skills"></div>
     </section>
-    <section class="ctab" data-ct="chron" role="tabpanel" hidden>
-    <h3>지나온 이야기</h3>
-    <div class="tt-filter" id="chron-filter"></div>
-    <ol class="chron" id="chron-list"></ol>
-    <button type="button" class="linkbtn" id="chron-more" hidden>더 보기</button>
+    <section class="ctab" data-ct="rec" id="rec" role="tabpanel" hidden>
+    <h3 class="rec-title">기 록</h3>
+    <div class="rec-ribbons" id="rec-sub" role="tablist" aria-label="기록 메뉴">
+      <button type="button" role="tab" data-rt="chron" class="on">발자취</button>
+      <button type="button" role="tab" data-rt="ach">업적<i class="tab-dot" id="ach-dot" hidden></i></button>
+      <button type="button" role="tab" data-rt="dex">도감<i class="tab-dot" id="dex-dot" hidden></i></button>
+    </div>
+    <div class="rtab" data-rt="chron">
+      <div class="tt-filter" id="chron-filter"></div>
+      <ol class="chron" id="chron-list"></ol>
+      <button type="button" class="linkbtn" id="chron-more" hidden>더 보기</button>
+    </div>
+    <div class="rtab" data-rt="ach" hidden>
+      <p class="note" id="ach-note">업적을 펼치는 중…</p>
+      <div class="tt-filter" id="ach-filter"></div>
+      <div class="tt-list" id="ach-list"></div>
+    </div>
+    <div class="rtab" data-rt="dex" hidden>
+      <p class="note" id="dex-note">도감을 펼치는 중…</p>
+      <div class="tt-filter" id="dex-secs"></div>
+      <div class="dex-cats" id="dex-cats" role="group" aria-label="물건 분류" hidden></div>
+      <div class="tt-list" id="dex-list"></div>
+    </div>
     </section>
     <div class="row"><button class="btn" type="button" id="char-close">닫기</button></div>
   </div>
@@ -3647,7 +3734,7 @@
     const l = S.me?.expLast;
     if (!l) return;
     $('exp-dlg').close();
-    showResult({ title: `지난 원정 · ${l.title}`, journal: l.journal, lines: [] });
+    showResult({ title: `지난 원정 · ${l.title}`, journal: l.journal, items: l.items || [], gold: l.gold || 0, xp: l.xp || 0, lines: l.lines || [] }); // 예전 일지는 얻은 것 기록이 없어 일지만
   });
   $('exp-cancel').addEventListener('click', () => $('exp-dlg').close());
   $('exp-go').addEventListener('click', async () => {
@@ -4985,7 +5072,7 @@
             note.textContent = me.restAt ? '지금 둥지에서 쉬고 있다.' : '둥지에서 쉬면 회복이 빨라진다. 쉬는 동안에는 채팅과 제작, 보물더미 정리만 할 수 있다.';
             row.appendChild(me.restAt ? btn('깨어나기', () => nestAct('rest:stop'), true) : btn('둥지에서 쉬기', () => nestAct('rest:start'), true, !!me.exp));
           } else {
-            note.textContent = S.nestRules.homeFlightAp > 0 ? `어디서든 둥지로 곧장 날아갈 수 있다. 행동력 ${S.nestRules.homeFlightAp}이 든다.` : '어디서든 둥지로 곧장 날아갈 수 있다. 행동력은 들지 않는다.';
+            note.textContent = S.regions[S.region]?.realm === 'ruin' ? '다른 대륙에 있을 땐 둥지로 돌아가려면 대륙을 넘어야 한다.' : S.nestRules.homeFlightAp > 0 ? `어디서든 둥지로 곧장 날아갈 수 있다. 행동력 ${S.nestRules.homeFlightAp}이 든다.` : '어디서든 둥지로 곧장 날아갈 수 있다. 행동력은 들지 않는다.';
             // 반려의 둥지에 와 있으면 그곳에서도 쉴 수 있음
             const pn = me.partnerNest;
             if (pn && pn.region === S.region) row.appendChild(me.restAt ? btn('깨어나기', () => nestAct('rest:stop'), true) : btn(`반려 ${pn.name}의 둥지에서 쉬기`, () => nestAct('rest:start'), true, !!me.exp));
@@ -7377,10 +7464,155 @@
     charTab = t;
     for (const b of document.querySelectorAll('#char-tabs [data-ct]')) { const on = b.dataset.ct === t; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); }
     for (const sec of document.querySelectorAll('#char-dlg .ctab')) sec.hidden = sec.dataset.ct !== t;
-    if (t === 'chron') loadChron();
+    if (t === 'rec') showRec(recTab);
   }
   $('char-tabs').addEventListener('click', (e) => { const b = e.target.closest('[data-ct]'); if (b && !b.classList.contains('on')) showCharTab(b.dataset.ct); });
-  function openChar() { renderChar(); showCharTab(charTab); openPanel('char-dlg'); if (charTab !== 'chron') loadChron(); }
+  // 기록 안의 리본: 발자취 · 도감 (마지막으로 본 것을 기억)
+  let recTab = 'chron';
+  function showRec(t) {
+    recTab = t;
+    for (const b of document.querySelectorAll('#rec-sub [data-rt]')) { const on = b.dataset.rt === t; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); }
+    for (const s of document.querySelectorAll('#rec .rtab')) s.hidden = s.dataset.rt !== t;
+    if (t === 'chron') loadChron();
+    if (t === 'ach') loadAch();
+    if (t === 'dex') loadDex();
+  }
+  $('rec-sub').addEventListener('click', (e) => { const b = e.target.closest('[data-rt]'); if (b && !b.classList.contains('on')) showRec(b.dataset.rt); });
+  // 도감에 아직 열어 보지 않은 새 칸이 있으면 기록 탭과 도감 리본에 점
+  function renderRecDots() {
+    const dex = !!S.me?.dexNew, ach = !!S.me?.achNew;
+    $('rec-dot').hidden = !(dex || ach); $('dex-dot').hidden = !dex; $('ach-dot').hidden = !ach;
+  }
+  // ── 업적: 효과 없이 모으는 기록. 숨겨진 업적은 이루기 전까지 가려짐 ──
+  let achData = null, achView = 'all';
+  function loadAch() {
+    socket.emit('ach:get', {}, (res) => {
+      if (res.error) return toast(res.error);
+      achData = res.ach;
+      if (S.me) S.me.achNew = false;
+      renderRecDots();
+      renderAch();
+    });
+  }
+  function achDate(t) { if (!t) return '예전에'; const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()}`; }
+  function renderAch() {
+    const A = achData;
+    if (!A) return;
+    $('ach-note').textContent = `대륙에서 겪은 일의 기록이다. 효과는 없다. 이룬 업적 ${A.have} / ${A.total} · 숨겨진 업적 ${A.hidden[0]} / ${A.hidden[1]}`;
+    dexChips($('ach-filter'), [['all', '전체'], ['have', '이룬 업적'], ['todo', '아직']], achView, (k) => { achView = k; renderAch(); });
+    const box = $('ach-list');
+    box.replaceChildren();
+    // 새로 이룬 것 → 이룬 것 → 거의 다 된 것 → 숨겨진 것
+    const rank = (a) => (a.fresh ? 3 : a.have ? 2 : a.hidden ? 0 : 1);
+    const list = A.list.filter((a) => achView === 'all' || (achView === 'have' ? a.have : !a.have))
+      .sort((a, b) => rank(b) - rank(a) || (b.have ? (b.at || 0) - (a.at || 0) : (b.cur / b.need || 0) - (a.cur / a.need || 0)));
+    if (!list.length) { const p = document.createElement('p'); p.className = 'note'; p.textContent = achView === 'have' ? '아직 이룬 업적이 없다.' : '모든 업적을 이루었다.'; box.appendChild(p); }
+    for (const a of list) {
+      const row = document.createElement('div');
+      row.className = `tt ach${a.have ? '' : ' locked'}${a.hidden ? ' r-hidden' : ''}`;
+      const b = document.createElement('b');
+      b.textContent = a.have || !a.hidden ? a.name : '???';
+      if (a.fresh) { const n = document.createElement('span'); n.className = 'dex-new'; n.textContent = '새로'; b.appendChild(n); }
+      row.appendChild(b);
+      const e = document.createElement('span'); e.className = 'e';
+      e.textContent = a.have || !a.hidden ? a.desc : '숨겨진 업적 · 어떤 일을 겪으면 드러난다';
+      row.appendChild(e);
+      const c = document.createElement('span'); c.className = 'c';
+      if (a.have) c.textContent = `${a.hidden ? '숨겨진 업적 · ' : ''}${achDate(a.at)} 이룸`;
+      else if (!a.hidden) {
+        c.textContent = `${a.cur} / ${a.need}`;
+        const bar = document.createElement('span'); bar.className = 'bar'; bar.innerHTML = '<i></i>';
+        bar.firstChild.style.width = `${Math.round((a.cur / a.need) * 100)}%`;
+        c.appendChild(bar);
+      }
+      if (c.textContent) row.appendChild(c);
+      box.appendChild(row);
+    }
+  }
+  function openChar() { renderChar(); renderRecDots(); showCharTab(charTab); openPanel('char-dlg'); if (!(charTab === 'rec' && recTab === 'chron')) loadChron(); }
+
+  // ── 도감: 만난 사냥감·재앙, 낚은 물고기, 얻은 물건 ──
+  let dexData = null, dexSec = 'beasts', dexCatOn = 'material';
+  const DEX_RARE = { common: '흔함', uncommon: '드묾', rare: '귀함' };
+  const DEX_CAT_COL = { material: '#7A8B5E', trophy: '#8E5A3B', meal: '#B07A2E', use: '#4F7A8A', equip: '#5E5A8E', treasure: '#A88A2E', etc: '#8A8A86' }; // 물건 분류 카드의 색 띠
+  function loadDex() {
+    socket.emit('dex:get', {}, (res) => {
+      if (res.error) return toast(res.error);
+      dexData = res.dex;
+      if (S.me) S.me.dexNew = false;
+      renderRecDots();
+      renderDex();
+    });
+  }
+  function dexChips(box, list, cur, pick) {
+    box.replaceChildren();
+    for (const [k, label] of list) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `chipbtn${cur === k ? ' on' : ''}`;
+      b.setAttribute('aria-pressed', String(cur === k));
+      b.textContent = label;
+      b.addEventListener('click', () => pick(k));
+      box.appendChild(b);
+    }
+  }
+  function dexRow(e) {
+    const row = document.createElement('div');
+    row.className = `tt dex${e.seen ? '' : ' locked'}${e.rarity ? ` r-${e.rarity}` : e.elite ? ' r-elite' : ''}`;
+    const b = document.createElement('b');
+    b.textContent = e.seen ? e.name : '???';
+    if (e.fresh) { const n = document.createElement('span'); n.className = 'dex-new'; n.textContent = '새로'; b.appendChild(n); }
+    row.appendChild(b);
+    const tagText = e.rarity ? DEX_RARE[e.rarity] : e.elite ? '강적' : '';
+    if (tagText) { const t = document.createElement('span'); t.className = `dex-tag ${e.rarity || (e.elite ? 'elite' : '')}`; t.textContent = tagText; row.appendChild(t); }
+    const line = (cls, text) => { if (!text) return; const s = document.createElement('span'); s.className = cls; s.textContent = text; row.appendChild(s); };
+    line('e', e.where);
+    line('d', e.seen ? e.desc : '');
+    line('c', e.seen ? e.info : '');
+    line('c', e.sub);
+    return row;
+  }
+  function renderDex() {
+    const X = dexData;
+    if (!X) return;
+    const [s, n] = X.total;
+    $('dex-note').textContent = `대륙에서 보고 얻은 것들의 기록이다. ${s} / ${n} (${Math.round((s / n) * 100)}%). 처음 보면 약점·특기와 나오는 곳이 적힌다.`;
+    const P = X.parts;
+    const tl = (k, label) => [k, `${label} ${P[k][0]}/${P[k][1]}`];
+    dexChips($('dex-secs'), [tl('beasts', '사냥감'), tl('bosses', '재앙'), tl('fish', '물고기'), tl('items', '물건')], dexSec, (k) => { dexSec = k; renderDex(); });
+    const cats = $('dex-cats');
+    cats.hidden = dexSec !== 'items';
+    if (dexSec === 'items') {
+      cats.replaceChildren();
+      for (const c of X.items) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = dexCatOn === c.cat ? 'on' : '';
+        b.setAttribute('aria-pressed', String(dexCatOn === c.cat));
+        b.style.setProperty('--cc', DEX_CAT_COL[c.cat] || '#8A8A86');
+        const nm = document.createElement('span'); nm.textContent = c.name;
+        const n = document.createElement('span'); n.className = 'n'; n.textContent = `${c.list.filter((e) => e.seen).length}/${c.list.length}`;
+        b.append(nm, n);
+        b.addEventListener('click', () => { dexCatOn = c.cat; renderDex(); });
+        cats.appendChild(b);
+      }
+    }
+    const box = $('dex-list');
+    box.replaceChildren();
+    const head = (text, list) => {
+      const h4 = document.createElement('h4');
+      h4.className = 'dex-h';
+      h4.textContent = text;
+      const c = document.createElement('span');
+      c.textContent = `${list.filter((e) => e.seen).length} / ${list.length}`;
+      h4.appendChild(c);
+      box.appendChild(h4);
+    };
+    if (dexSec === 'beasts') for (const g of X.beasts) { head(g.ruin ? `${g.name} (멸망한 대륙)` : g.name, g.list); for (const e of g.list) box.appendChild(dexRow(e)); }
+    else if (dexSec === 'bosses') for (const e of X.bosses) box.appendChild(dexRow(e));
+    else if (dexSec === 'fish') for (const e of X.fish) box.appendChild(dexRow(e));
+    else for (const e of (X.items.find((c) => c.cat === dexCatOn) || X.items[0]).list) box.appendChild(dexRow(e));
+  }
 
   // ── 지나온 이야기 (선택과 큰 사건) ──
   let chronList = [], chronView = 'all', chronShow = 15;
@@ -9522,7 +9754,7 @@
     const box = gEl('div', 'gm-remake');
     box.appendChild(gEl('b', null, '새로 만들기'));
     box.appendChild(gEl('p', null, '지금 드래곤을 완전히 지우고, 같은 계정으로 드래곤 만들기 화면부터 다시 시작한다. GM 권한은 그대로 남는다.'));
-    box.appendChild(gEl('p', 'warn', '함께 사라지는 것: 레벨·능력치·소지품·보물더미·둥지의 식구·동료 관계·텔레파시·칭호·지나온 이야기. 되돌릴 수 없다.'));
+    box.appendChild(gEl('p', 'warn', '함께 사라지는 것: 레벨·능력치·소지품·보물더미·둥지의 식구·동료 관계·텔레파시·칭호·발자취·도감. 되돌릴 수 없다.'));
     const lab = gEl('label', 'gm-confirm', `확인을 위해 드래곤 이름 '${me.name}'을 적자`);
     const inp = gEl('input', 'input');
     inp.maxLength = 12; inp.autocomplete = 'off'; inp.placeholder = me.name;

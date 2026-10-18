@@ -1566,8 +1566,41 @@ for (const r of RECIPES) {
   FACILITY.cookable.push(r.out);
 }
 
+// ── 업적: 효과 없이 모으는 기록 (칭호는 '다는 것', 업적은 '모으는 것') ──
+// 칭호가 이미 세는 횟수(사냥·채집·제작…)와 겹치지 않게: 도감 모으기 · 이정표 · 숨겨진 사건
+// cond 종류 — dexRegion: 지역의 사냥감·강적을 모두 만나기 / dexFish·dexBoss: 모두 / dexCat: [물건 분류, 개수(없으면 전부)]
+//   dexPct: 도감 전체 비율 / item: 그 물건을 얻은 적 / metRuin: 멸망한 대륙의 사냥감을 만난 적 / beat: 그 사냥감(키)을 쓰러뜨린 적
+//   recipes: 찾아낸 숨겨진 제작법 수 / level / nest: 둥지 단계(0부터) / count: [셈 이름, 횟수] / chron: 지나온 이야기에 이 글이 남은 적
+// hidden: 이루기 전에는 이름과 조건이 '???'로 가려짐
+const ACHIEVEMENTS = [
+  ...Object.keys(REGION_PLACES).map((r) => ({ id: `dex_${r}`, name: `${REGIONS[r].name} 박물지`, desc: `${REGIONS[r].name}의 사냥감과 강적을 모두 도감에 올리기`, cond: { dexRegion: r } })),
+  { id: 'dex_fish',     name: '낚시꾼의 꿈',     desc: '물고기를 모두 낚아 보기',                 cond: { dexFish: 1 } },
+  { id: 'dex_boss',     name: '재앙을 마주하다', desc: '대륙의 재앙을 모두 만나 보기',             cond: { dexBoss: 1 } },
+  { id: 'dex_treasure', name: '보물 수집가',     desc: '보물을 모두 모아 보기',                    cond: { dexCat: ['treasure'] } },
+  { id: 'dex_meal',     name: '대륙의 식탁',     desc: '요리를 모두 맛보기',                       cond: { dexCat: ['meal'] } },
+  { id: 'dex_equip',    name: '장신구 상자',     desc: '장신구 20가지를 얻어 보기',                cond: { dexCat: ['equip', 20] } },
+  { id: 'dex_half',     name: '반쪽짜리 박물지', desc: '도감의 절반을 채우기',                     cond: { dexPct: 0.5 } },
+  { id: 'dex_most',     name: '대륙의 박물학자', desc: '도감의 여덟 할을 채우기',                  cond: { dexPct: 0.8 } },
+  { id: 'recipe3',      name: '비밀의 제작자',   desc: '숨겨진 제작법 셋을 찾아내기',              cond: { recipes: 3 } },
+  { id: 'recipe_all',   name: '모든 비밀',       desc: '숨겨진 제작법을 모두 찾아내기',            cond: { recipes: RECIPES.filter((r) => r.hidden).length } },
+  { id: 'lv25',         name: '하늘에 닿다',     desc: '레벨 25에 이르기',                         cond: { level: 25 } },
+  { id: 'nest_top',     name: '가장 큰 둥지',       desc: `둥지를 ${NEST.tiers[NEST.tiers.length - 1].name}${'까지'} 넓히기`, cond: { nest: NEST.tiers.length - 1 } },
+  { id: 'ruin_step',    name: '검은 바다 너머',  desc: '멸망한 대륙의 사냥감을 만나 보기',         cond: { metRuin: 1 } },
+  { id: 'ruin_throne',  name: '왕좌 앞에서',     desc: '왕좌의 회랑의 강적을 쓰러뜨리기',          cond: { beat: 'ruin_throne!' } },
+  // 숨겨진 업적
+  { id: 'h_star',    hidden: true, name: '별을 주운 용',   desc: '먼 원정 끝에서 별똥별 조각을 줍기',       cond: { item: 'star_fragment' } },
+  { id: 'h_relic',   hidden: true, name: '어둠 속 제단',   desc: '고대의 유물을 손에 넣기',                 cond: { item: 'ancient_relic' } },
+  { id: 'h_core',    hidden: true, name: '식지 않는 재',   desc: '잿빛 심장을 손에 넣기',                   cond: { item: 'ashen_core' } },
+  { id: 'h_crown',   hidden: true, name: '심연이 내린 것',    desc: `${MIND.legend && ITEMS[MIND.legend.item] ? ITEMS[MIND.legend.item].name : '전설의 물건'}을 손에 넣기`, cond: { item: MIND.legend ? MIND.legend.item : 'abyss_crown' } },
+  { id: 'h_berserk', hidden: true, name: '돌아온 이성',    desc: '광폭화했다가 정신을 되찾기',              cond: { count: ['berserk', 1] } },
+  { id: 'h_fall',    hidden: true, name: '흙을 씹다',      desc: '싸움에서 쓰러져 보기',                    cond: { chron: '쓰러졌다.' } },
+  { id: 'h_robbed',  hidden: true, name: '텅 빈 보물더미', desc: '보물 도둑에게 보물을 도둑맞기',           cond: { chron: '보물을 도둑맞았다' } },
+  { id: 'h_sendoff', hidden: true, name: '떠나보내는 날',  desc: '다 자란 식구를 처음 떠나보내기',          cond: { count: ['sendoff', 1] } },
+  { id: 'h_story',   hidden: true, name: '한 마리의 이야기', desc: '모브 드래곤의 이야기를 끝까지 듣기',     cond: { count: ['mobstory', 1] } },
+];
+
 module.exports = {
-  KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, TITLES, TITLE_COUNT_NAMES,
+  KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, TITLES, TITLE_COUNT_NAMES, ACHIEVEMENTS,
   PURIFY, CRAFT, SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, FISHING, RUIN, FACILITY, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
   DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
   COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, DEPART, BONDS, MARKS, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG,
