@@ -541,7 +541,7 @@ function ambush(d, chance) {
   const lost = Math.min(40, Math.floor(d.gold * h.ambushGold));
   d.gold -= lost;
   return {
-    lost,
+    lost, dmg,
     lines: [
       '현상금을 노린 인간 기사단이 덮쳐 왔다.',
       lost ? `체력을 ${dmg} 잃고 금화 ${lost}닢을 빼앗겼다.` : `체력을 ${dmg} 잃고 겨우 몸을 뺐다.`,
@@ -712,13 +712,14 @@ function explore(d) {
   d.gold += gold;
   // 적대: 현상금이 걸려 있으면 야생에서 습격당할 수 있음
   if (!isTown(d.region)) {
-    const a = ambush(d, SR.hostile.ambush.explore);
-    if (a) { lines.push(...a.lines); gold -= a.lost; }
+    var a = ambush(d, SR.hostile.ambush.explore);
+    if (a) lines.push(...a.lines);
   }
   let xp = 6;
   xp = xpOf(d, xp);
   const levelUp = gainXp(d, xp);
-  return { title: '탐사', lines, items, gold, xp, levelUp };
+  // gold: 번 금화, goldLost·hpLost: 습격으로 잃은 것 (결과 창이 얻은 것·잃은 것을 따로 보여 줌)
+  return { title: '탐사', lines, items, gold, goldLost: a?.lost || 0, hpLost: a?.dmg || 0, xp, levelUp };
 }
 
 // ── 원정 ───────────────────────────────────────────
@@ -939,10 +940,10 @@ function finishExpedition(d, now = Date.now(), companions = 0) {
   if (G.fame && !early && planned >= 120) { const f = addFame(d, G.fame); lines.push(f || `용족 명성 +${G.fame}`); }
 
   d.gold += gold;
-  let net = gold;
+  let robbed = null;
   if (rolls > 0 && !isTown(region)) {
-    const a = ambush(d, SR.hostile.ambush.expedition);
-    if (a) { journal.splice(journal.length - 1, 0, ...a.lines); net -= a.lost; }
+    robbed = ambush(d, SR.hostile.ambush.expedition);
+    if (robbed) journal.splice(journal.length - 1, 0, ...robbed.lines);
   }
   xp = xpOf(d, xp);
   const levelUp = gainXp(d, xp);
@@ -952,7 +953,7 @@ function finishExpedition(d, now = Date.now(), companions = 0) {
   const title = `${G.name} 원정${early ? ' (일찍 돌아옴)' : ''}`;
   d.exp_info = { last: { title, region, goal: info.goal || 'gather', journal, at: now } };
   if (F && fr) chron(d, 'choice', `${where} ${title}의 갈림길에서 '${F[info.fork.pick].label}'${info.fork.auto ? ' (저절로)' : ''} — ${fr.good ? '잘 풀렸다' : '일이 꼬였다'}.`, now);
-  return { title, journal, lines, items, gold: net, xp, levelUp, minutes: Math.round(done) };
+  return { title, journal, lines, items, gold, goldLost: robbed?.lost || 0, hpLost: robbed?.dmg || 0, xp, levelUp, minutes: Math.round(done) };
 }
 
 // ── 제작 ───────────────────────────────────────────

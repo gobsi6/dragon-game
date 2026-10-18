@@ -1099,7 +1099,7 @@ io.on('connection', (socket) => {
     refreshKin(d, kin);
     // 지난 일지에도 얻은 것·잃은 것이 보이게 (결과 창과 같은 내용)
     const last = logic.expInfo(d).last;
-    if (last) Object.assign(last, { items: res.items, gold: res.gold, xp: res.xp, lines: res.lines });
+    if (last) Object.assign(last, { items: res.items, gold: res.gold, goldLost: res.goldLost, hpLost: res.hpLost, xp: res.xp, lines: res.lines });
     db.saveState(d, res.items);
     sendMe(socket, d);
     broadcastPresence(d.region);

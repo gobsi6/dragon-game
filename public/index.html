@@ -857,6 +857,18 @@
   #rec .dex-h { border-bottom: 1px dotted #C9C2B0; padding-bottom: 4px; }
   #rec .chron li { border-bottom: 1px dotted #D6D0C2; }
   #rec .chron li::before { box-shadow: 0 0 0 3px #FCFAF4; }
+  /* 기록 안의 칩: 책의 차례처럼 · 로 잇고, 고른 것에 지금 열린 리본 색 밑줄 */
+  #rec .rtab[data-rt="chron"] { --rc: #5B7A5A; } #rec .rtab[data-rt="ach"] { --rc: #8E3F3F; } #rec .rtab[data-rt="dex"] { --rc: #2F4A63; }
+  #rec .tt-filter { gap: 0; margin: 2px 0 10px; border-bottom: 1px solid #DCD6C8; }
+  #rec .tt-filter .chipbtn { position: relative; min-height: 32px; padding: 0 12px; border: 0; border-radius: 0; background: none; color: #7A7468; font: 500 13.5px/32px var(--serif); }
+  #rec .tt-filter .chipbtn + .chipbtn::before { content: '·'; position: absolute; left: -3px; color: #BDB5A5; }
+  #rec .tt-filter .chipbtn.on { color: #1F2A33; font-weight: 700; box-shadow: inset 0 -2px 0 var(--rc); }
+  #rec .tt-filter .chipbtn:not(.on):hover { color: var(--rc); }
+  #rec .tt-filter .chipbtn:focus-visible { outline: 2px solid var(--rc); outline-offset: -2px; }
+  /* 발자취 '더 보기': 본문과 띄우고, 쪽 아래 이어지는 표시처럼 가운데에 */
+  #rec #chron-more { display: block; margin: 18px auto 4px; min-height: 34px; padding: 0 18px; border: 1px solid #D3CEC2; border-radius: 2px; background: #FFFDF8; color: #4F5A55; font: 500 13px/32px var(--serif); box-shadow: 1px 1px 0 #E6E0D2; }
+  #rec #chron-more[hidden] { display: none; }
+  #rec #chron-more:hover { border-color: var(--rc); color: var(--rc); }
   /* 물건 분류: 색 띠를 두른 칸막이 카드. 고른 카드가 솟아 아래 종이와 이어짐 */
   .dex-cats { display: flex; flex-wrap: wrap; gap: 5px; align-items: flex-end; margin: 6px 0 10px; border-bottom: 2px solid #CFC8B8; }
   .dex-cats[hidden] { display: none; }
@@ -3550,6 +3562,8 @@
     }
     if (r.gold > 0) { chip(got, 'common', `금화 ${r.gold}`); gotLabels.push(`금화 ${r.gold}닢`); }
     if (r.gold < 0) chip(lost, 'common', `금화 ${-r.gold}`);
+    if (r.goldLost > 0) chip(lost, 'common', `금화 ${r.goldLost}`); // 습격으로 빼앗긴 금화 (번 금화와 따로)
+    if (r.hpLost > 0) chip(lost, 'hp-loss', `체력 −${r.hpLost}`);
     if (r.xp) chip(got, 'common', `경험 +${r.xp}`);
     if (r.levelUp) {
       chip(got, 'lvl', `레벨이 올랐다! Lv. ${S.me.level}`);
@@ -3734,7 +3748,7 @@
     const l = S.me?.expLast;
     if (!l) return;
     $('exp-dlg').close();
-    showResult({ title: `지난 원정 · ${l.title}`, journal: l.journal, items: l.items || [], gold: l.gold || 0, xp: l.xp || 0, lines: l.lines || [] }); // 예전 일지는 얻은 것 기록이 없어 일지만
+    showResult({ title: `지난 원정 · ${l.title}`, journal: l.journal, items: l.items || [], gold: l.gold || 0, goldLost: l.goldLost || 0, hpLost: l.hpLost || 0, xp: l.xp || 0, lines: l.lines || [] }); // 예전 일지는 얻은 것 기록이 없어 일지만
   });
   $('exp-cancel').addEventListener('click', () => $('exp-dlg').close());
   $('exp-go').addEventListener('click', async () => {
