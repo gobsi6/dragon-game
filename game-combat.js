@@ -3,7 +3,7 @@
 // - 강적·결투장: 매 턴 직접 고름 (실시간 결투에서 시간을 넘기면 자동으로 고름)
 // 전투 하나 = battle { kind, turn, a, b, log, over, winner }. a·b는 싸우는 쪽(fighter)
 const {
-  COMBAT, CRAFT, BREATHS, BREATH_COST, SKILLS, STATUS, ITEMS, RULES, STANCE_RULES, MIND, PLACES, PLACE_RULES, COMBOS, ENRAGE, RAID, BOSSES, BOSS, RUIN,
+  KIN, COMBAT, CRAFT, BREATHS, BREATH_COST, SKILLS, STATUS, ITEMS, RULES, STANCE_RULES, MIND, PLACES, PLACE_RULES, COMBOS, ENRAGE, RAID, BOSSES, BOSS, RUIN,
 } = require('./game-data');
 const logic = require('./game-logic');
 
@@ -67,6 +67,7 @@ function fromDragon(d, context) {
     if (d.stance === 'hostile') atk += STANCE_RULES.hostile.huntClaw; // 적대: 사냥에 거침없음
     if (d.perks?.knight) atk += 3;                               // 등에 탄 용기사
   }
+  const ally = hunt && d.perks?.ally ? { ...d.perks.ally } : null; // 곁에 둔 새끼 드래곤 (결투에는 없음)
   const hpMax = logic.hpCap(d);
   const enMax = logic.enCap(d);
   // 강화 음식: 사냥·강적 전투에서만 (결투장에는 적용되지 않음)
@@ -75,7 +76,7 @@ function fromDragon(d, context) {
   const love = hunt && logic.hooks.together?.(d) ? logic.BOND_TOGETHER.taken : 1; // 연인·반려와 함께 있으면 받는 피해가 줌
   const gm = hunt ? logic.gearMods(d) : null; // 희귀 장비의 특별한 효과 (결투장에는 없음)
   return {
-    id: d.id, name: d.name, kind: d.kind, creature: false,
+    id: d.id, name: d.name, kind: d.kind, creature: false, av: d.has_avatar ? d.avatar_ver : 0, // 프로필 그림 (결투·진정에서 상대에게 보임)
     hp: hunt ? d.hp : hpMax, hp0: hunt ? d.hp : hpMax, hpMax, en: hunt ? d.en : enMax, enMax, // hp0: 싸움을 시작할 때의 체력 (잃은 체력 계산)
     atk: atk * (bf?.atk || 1) * (ti.atk || 1), def: st.scale, spd: st.wing + (bf?.spd || 0), mag: st.wisdom * (bf?.mag || 1), maj: st.majesty,
     taken: (hunt ? tm.huntDmg * (d.perks?.knight ? 0.7 : 1) : 1) * (bf?.taken || 1) * (ti.taken || 1) * love * (gm?.taken || 1), // 받는 피해 배율
@@ -88,6 +89,7 @@ function fromDragon(d, context) {
     skills: loadout(d),
     weak: [], resist: [],
     st: {}, cd: {},
+    ally,
   };
 }
 // 레벨별 사냥감 기본 세기. Lv12를 넘으면 레벨당 hpHigh·atkHigh가 더 붙음 (고레벨 구역)
@@ -455,6 +457,18 @@ function checkDown(b, lines) {
 }
 // 한 턴을 치름. 빠른 쪽이 먼저 움직임 (적이 여럿이면 저마다 한 번씩)
 // actA.t: 노릴 적의 순번 (무리와 싸울 때). actB: 결투 상대의 행동 (사냥감은 미리 정해 둔 행동을 씀)
+// 곁에 둔 새끼 드래곤의 공격 (사냥·강적·재앙. 결투에는 나오지 않음)
+function allyStrike(b, ally, lines) {
+  const foe = targetOf(b);
+  if (!foe || foe.hp <= 0) return;
+  const A = KIN.drakeHelp.ally;
+  const att = { name: ally.name, atk: ally.atk, mag: 0, spd: 0, maj: 0, st: {}, level: 1, taken: 1 };
+  const dealt = hit(att, foe, ally.hunter ? A.hunterPower : A.power, {}, lines, `${ga(att)} 함께 덤벼들었다!`);
+  if (dealt && ally.clever && foe.hp > 0 && Math.random() < A.cleverDaze) {
+    foe.st.dazed = Math.max(foe.st.dazed || 0, 2);
+    lines.push(`영리한 ${ally.name}${josa(ally.name, '이', '가')} 빈틈을 파고들어 ${foe.name}${josa(foe.name, '이', '가')} 휘청인다.`);
+  }
+}
 function round(b, actA, actB) {
   if (b.over) return [];
   b.turn += 1;
@@ -476,6 +490,7 @@ function round(b, actA, actB) {
     perform(b, f, foe, x.act || { type: 'attack' }, lines);
     f.acted = b.turn; // 이번 턴에 이미 움직였음 (넘어뜨리기가 다음 턴까지 이어지게)
     checkDown(b, lines);
+    if (x.side === 'a' && f.ally && !b.over) { allyStrike(b, f.ally, lines); checkDown(b, lines); } // 곁에 둔 새끼가 뒤이어 덤벼듦
   }
   if (!b.over) {
     endOfTurn(b.a, lines);
@@ -575,7 +590,7 @@ function runAuto(b, optA = {}, optB = {}) {
 // 화면에 보낼 모습. me: 내 쪽('a'/'b'). 상대의 스킬 구성은 보이지 않음
 function fighterView(f, mine) {
   const v = {
-    name: f.name, kind: f.kind, creature: f.creature, elite: !!f.elite, id: f.id, type: f.type || null, region: f.region || null,
+    name: f.name, kind: f.kind, creature: f.creature, elite: !!f.elite, id: f.id, type: f.type || null, region: f.region || null, av: f.av || 0,
     hp: Math.round(f.hp), hpMax: f.hpMax, en: Math.round(f.en), enMax: f.enMax,
     st: Object.fromEntries(Object.keys(STATUS).filter((k) => f.st[k] > 0).map((k) => [k, f.st[k]])),
     weak: f.weak, resist: f.resist,

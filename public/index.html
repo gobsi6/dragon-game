@@ -550,6 +550,77 @@
   .kin-card .bond > span:first-child { min-width: 2.2em; } /* 유대·배 막대의 시작을 맞춤 */
   .kin-card .bond > span:last-child { min-width: 3em; text-align: right; }
   .kin-meta.fav b { color: #8C6A1E; font-weight: 600; }
+  .kin-sel { width: auto; min-height: 36px; padding: 0 8px; font-size: 13px; }
+  .fac-row .fac-work { font-size: 12.5px; color: var(--steel-d); }
+  /* 둥지 시설: 식구 배치판 */
+  .fac-board { display: flex; flex-direction: column; gap: 10px; }
+  .fac-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; margin-top: 2px; }
+  .fac-h { font: 700 15px var(--serif); color: #2A4256; }
+  .fac-sub { font-size: 13.5px; font-weight: 600; color: #2A4256; }
+  .fac-hint { font-size: 12px; color: var(--muted); }
+  .fac-card { background: #fff; border: 1px solid #DCDDD8; border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .fac-head { display: flex; align-items: center; gap: 8px; }
+  .fac-ic { width: 30px; height: 30px; flex: none; border-radius: 7px; background: var(--bg); color: var(--fg); display: grid; place-items: center; }
+  .fac-name { font: 700 14.5px/1.3 var(--serif); }
+  .fac-pow { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--fg); }
+  .fac-desc { margin: 0; font-size: 12px; line-height: 1.55; color: var(--muted); }
+  .fac-who { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 4px; background: var(--bg); }
+  .fac-face { flex: none; display: grid; place-items: center; }
+  .fac-face .kin-face, .fac-face > * { width: 30px; height: 30px; }
+  .fac-whotxt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .fac-whotxt b { font-size: 13px; font-weight: 600; }
+  .fac-whotxt small { font-size: 11.5px; color: var(--muted); }
+  .fac-stage { font-weight: 400; color: var(--muted); }
+  .fac-fit { flex: none; font-size: 11px; font-weight: 600; color: var(--fg); border: 1px solid currentColor; border-radius: 9px; padding: 0 7px; line-height: 18px; background: #fff; }
+  .fac-drop { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 52px; padding: 6px 10px; border: 2px dashed var(--fg); border-radius: 4px; background: #fff; color: var(--fg); cursor: pointer; animation: fac-pulse 1.6s ease-in-out infinite; }
+  .fac-drop b { font-size: 13.5px; font-weight: 700; }
+  .fac-drop small { font-size: 11.5px; color: var(--muted); }
+  .fac-drop.fit { background: var(--bg); }
+  .fac-drop.swap { border-style: solid; }
+  .fac-drop:hover { background: var(--bg); }
+  @keyframes fac-pulse { 50% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--fg) 18%, transparent); } }
+  @media (prefers-reduced-motion: reduce) { .fac-drop { animation: none; } }
+  .fac-empty { display: flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 10px; text-align: center; border: 1.5px dashed #B9BDB8; border-radius: 4px; color: var(--muted); font-size: 12.5px; }
+  .fac-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .fac-acts .btn { min-height: 38px; font-size: 13px; }
+  .fac-acts .btn.primary { background: var(--fg); border-color: var(--fg); }
+  .fac-acts .link.danger, .fac-head .link.danger { color: #A63E4B; margin-left: auto; }
+  /* 허물기: 흰 바탕의 작은 네모 버튼, 회색 글씨 */
+  .fac-board .fac-head .btn.fac-rm { margin-left: auto; min-height: 28px; padding: 0 9px; font-size: 12px; font-weight: 500; color: #6B7075; background: #fff; border: 1px solid #C9CCC8; border-radius: 3px; box-shadow: none; }
+  .fac-board .fac-head .btn.fac-rm:hover { color: #3B3F44; border-color: #9EA3A7; }
+  .fac-board .btn.link.danger { color: #A63E4B; }
+  .fac-slot { min-height: 52px; border: 1.5px dashed #B9BDB8; border-radius: 6px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 600; cursor: pointer; }
+  .fac-slot:hover:not(:disabled) { border-color: #7E97AC; color: #2A4256; }
+  .fac-build { display: flex; flex-direction: column; gap: 8px; padding: 10px; background: #F2F5F8; border-radius: 6px; }
+  .fac-kid { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 6px 10px; border-radius: 6px; border: 1px solid #DCDDD8; background: #fff; text-align: left; cursor: pointer; }
+  .fac-kid.on { border: 2px solid #2A4256; background: #EEF2F6; padding: 5px 9px; }
+  .fac-job { flex: none; font-size: 11.5px; font-weight: 600; color: #2E4A60; }
+  .fac-job.none { color: #A63E4B; }
+  .fac-board .btn.small { min-height: 34px; padding: 0 10px; font-size: 12.5px; }
+  .fac-board .btn.link { min-height: 32px; padding: 0 6px; border-color: transparent; background: transparent; box-shadow: none; color: var(--steel-d); font-size: 12.5px; text-decoration: underline; text-underline-offset: 2px; }
+  .fac-today { display: flex; flex-direction: column; gap: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--line-in); }
+  .fac-todo { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: #fff; border: 1px solid #DCDDD8; border-radius: 6px; }
+  .fac-todo .btn { min-height: 38px; font-size: 13px; white-space: nowrap; }
+  .fac-todo .btn.primary { background: var(--fg); border-color: var(--fg); }
+  .fac-todo.cook { flex-wrap: wrap; }
+  .fac-cook { display: flex; gap: 6px; align-items: center; margin-left: auto; }
+  .fac-cook .kin-sel { min-height: 38px; }
+  .fac-todo.idle { background: #F2F5F8; border: 1px dashed #9DB2C3; }
+  .fac-idle { flex: 1; font-size: 13px; color: #2E4A60; }
+  .fac-done { margin: 0; padding: 8px 10px; font-size: 13px; color: var(--muted); background: #F6F6F3; border-radius: 6px; }
+  /* 넓은 화면: 시설 카드를 두 줄로 */
+  @media (min-width: 861px) {
+    .fac-board { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
+    .fac-board > .fac-today, .fac-board > .fac-top, .fac-board > .fac-build, .fac-board > .fac-tip, .fac-board > .note { grid-column: 1 / -1; }
+    .fac-board > .fac-kid { grid-column: auto; }
+  }
+  .rampage.rescue.done { background: #EEF5EF; border-color: #B9D3C1; }
+  .rampage.rescue.done b { color: #2F5A43; }
+  .fac-tip { margin: 0; padding: 8px 10px; background: #E2EFF3; border-radius: 4px; font-size: 12.5px; line-height: 1.55; color: #2F5F73; }
+  .inv .it.fac-row .acts { grid-column: 1 / -1; grid-row: auto; max-width: none; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-start; margin-top: 4px; }
+  .inv .it.fac-row .cost-list, .inv .it.fac-row .fac-work { grid-column: 1 / -1; grid-row: auto; }
+  .inv-box > h3 { margin: 14px 2px 6px; }
+  .fac-row .q { margin-left: auto; font: 500 12px var(--sans); color: var(--muted); }
   .bond span:last-child { min-width: 3ch; text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); }
   .kin-stats { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--ink-2); }
   .kin-stats b { font-weight: 600; color: var(--ink); }
@@ -709,6 +780,8 @@
   .who.off .nm b { color: var(--ink-2); }
   #log .mh .ava { flex: none; width: 22px; height: 22px; cursor: pointer; box-shadow: 0 0 0 1.5px var(--surface), 0 0 0 2.5px var(--c); }
   #log .mh .ava .emblem { width: 22px; height: 22px; }
+  .ava > .emblem { width: 100%; height: 100%; transform: scale(1.06); } /* 문양의 둥근 바탕이 칸을 꽉 채우게 (그림과 같은 크기로 보이게) */
+  #log .mh .ava .emblem > circle:nth-of-type(2), .duel-row .ava .emblem > circle:nth-of-type(2), .fr-row .ava .emblem > circle:nth-of-type(2), .tp-th .ava .emblem > circle:nth-of-type(2), .kin-adopt-list .ava .emblem > circle:nth-of-type(2) { display: none; }
   #log .msg .ml { margin-left: 26px; }   /* 말은 이름 아래에 맞춰 들여 씀 (사진 22px + 간격) */
   .gift-box { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--surface-2); border: 1px solid var(--line-in); }
   .gift-box .r { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
@@ -1424,7 +1497,7 @@
   /* ── 둥지 ── */
   .restcard .clock { font-size: 34px; }
   /* 둥지 탭: 이름 아래에 요약(단계·식구 수·보물 가치)을 작게 */
-  .seg.ctabs.nest-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 16px 0 6px; }
+  .seg.ctabs.nest-tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 16px 0 6px; }
   .seg.ctabs.nest-tabs button { display: flex; flex-direction: column; align-items: center; gap: 1px; min-height: 48px; padding: 6px 4px; }
   .nest-tabs button small { font: 500 11.5px/1.3 var(--sans); letter-spacing: 0; opacity: .78; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
   .nest-pane > h3:first-child, .nest-pane > div:first-child > h3:first-child { margin-top: 4px; }
@@ -1535,7 +1608,7 @@
   .pf-body { padding: 18px 18px 20px; display: flex; flex-direction: column; gap: 16px; min-height: 0; }
   /* 넓은 화면: 왼쪽 드래곤 기록은 스크롤해도 제자리에 붙어 있고, 화면이 낮아 다 안 들어가면 그 안에서만 스크롤 */
   @media (min-width: 861px) {
-    .profile { position: sticky; top: calc(var(--head-h, 0px) + 22px); align-self: flex-start; max-height: calc(100vh - var(--head-h, 0px) - var(--dock-h, 56px) - 44px); }
+    .profile { position: sticky; top: calc(var(--head-h, 0px) + 22px); align-self: flex-start; max-height: calc(100vh - var(--head-h, 0px) - var(--dock-h, 56px) - 44px); will-change: transform; } /* 따로 그려서 스크롤 중 아이콘이 흔들리지 않게 */
     .pf-body { overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: #C9CCC8 transparent; }
     .pf-body::-webkit-scrollbar { width: 6px; }
     .pf-body::-webkit-scrollbar-thumb { background: #C9CCC8; border-radius: 3px; }
@@ -1566,7 +1639,7 @@
   }
   /* 오른쪽 이야기 칸은 화면 높이에 맞춰 고정하고, 길어진 가운데 칸을 따라 늘어나지 않게 한다 (스크롤해도 따라옴) */
   /* 양옆 칸이 붙는 위치 = 처음 놓인 위치 (상단바 + 본문 위 여백 22px). 그래서 스크롤해도 조금도 움직이지 않는다 */
-  .side { flex: 1 1 250px; max-width: 290px; align-self: flex-start; position: sticky; top: calc(var(--head-h, 0px) + 22px); height: min(780px, calc(100vh - var(--head-h, 0px) - var(--dock-h, 56px) - 44px)); display: flex; flex-direction: column; padding: 18px 8px 8px; }
+  .side { will-change: transform; flex: 1 1 250px; max-width: 290px; align-self: flex-start; position: sticky; top: calc(var(--head-h, 0px) + 22px); height: min(780px, calc(100vh - var(--head-h, 0px) - var(--dock-h, 56px) - 44px)); display: flex; flex-direction: column; padding: 18px 8px 8px; }
 
   .portrait {
     position: relative; height: 300px; width: 100%; padding: 0; overflow: hidden;
@@ -1775,6 +1848,8 @@
   .say-mode { flex: none; width: 22px; min-height: 40px; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font: 700 10.5px/1 var(--serif); color: var(--ink-2); background: #E3E5E2; border: 1px solid #D0D3CF; border-radius: 3px; cursor: pointer; }
   .say-mode span { display: block; line-height: 1; }
   .say-mode:hover { background: #D9DCD8; }
+  .say.muted .input { background: #F6E6E4; border-color: #E2BFBB; color: #8A2E27; }
+  .say.muted .input::placeholder { color: #A63E4B; }
   .say-mode[aria-pressed="true"] { color: #fff; background: #5B4A8A; border-color: #5B4A8A; }
   .say-mode:disabled { color: var(--muted); border-color: var(--line-in); background: var(--surface-2); cursor: not-allowed; }
   .say.shout .input { border-color: #9C8CC4; box-shadow: 0 0 0 2px rgba(91, 74, 138, .12); }
@@ -2893,6 +2968,13 @@
     $('mind-bar').style.width = pct(me.mind, me.mindMax);
     $('mind-vital').classList.toggle('low', me.mind <= 10);
     $('mind-vital').classList.toggle('zero', !!me.berserkInfo);
+    // 광폭화 중에는 채팅·용언을 막음 (텔레파시는 됨)
+    const mute = !!me.berserk;
+    $('say-input').disabled = mute;
+    $('say-mode').disabled = mute;
+    $('say').classList.toggle('muted', mute);
+    if (mute) { $('say-input').value = ''; $('say-input').placeholder = '광폭화 중 · 텔레파시만 가능'; $('say-send').classList.remove('ready'); }
+    else if ($('say-input').placeholder.startsWith('광폭화')) $('say-input').placeholder = '말하기';
     $('mind-vital').title = me.berserkInfo ? '광폭화 중' : `3분마다 1씩 찬다 (둥지에서 쉬면 더 빨리)`;
     renderRampages();
     renderGraves();
@@ -3513,7 +3595,7 @@
   function itemCatName(it) {
     if (!it) return '';
     if (it.type === 'equip') return '장신구';
-    if (it.type === 'use') return it.use?.buff ? '강화 음식' : '회복약';
+    if (it.type === 'use') return it.use?.nestWard ? '둥지 보호' : it.use?.buff ? '강화 음식' : '회복약';
     return { meal: '식구 요리', bait: '미끼', fish: '물고기', treasure: '보물', trophy: '전리품' }[it.cat] || '재료';
   }
   const itemTagText = (it) => (it ? `${itemCatName(it)} · ${RARITY_NAME[it.rarity] || '흔함'}` : '');
@@ -4138,7 +4220,32 @@
       card.appendChild(st);
       const pers = { friendly: '인간과 어울리는', hermit: '조용히 홀로 지내는', hostile: '거칠고 대담한' }[v.personality];
       meta(`가르친 횟수 ${v.trains}/${v.trainLimit} · 보호자를 닮아 ${pers} 성격으로 자라는 중`);
-      if (canAct && !v.onExp) {
+      // 보호자를 돕는 법: 곁에 두기(함께 싸움), 심부름
+      if (v.companion) meta('<b>곁에 둔 새끼</b> · 사냥과 강적·재앙과의 싸움에 함께 나서 매 턴 덤벼든다.', 'talent');
+      if (v.errand) meta(`<b>심부름 중</b> · ${esc(S.regions[v.errand.region]?.name || '')} · ${dur(Math.max(0, v.errand.end - Date.now()))} 뒤 돌아온다`, 'talent');
+      if (canAct && !partner && !v.errand && !v.onExp) {
+        if (v.canCompanion) btn(v.companion ? '곁에서 풀기' : '곁에 두기 (함께 싸움)', () => nestAct('kin:companion', { id: v.id }, true)).classList.toggle('primary', !v.companion);
+        else label('어린 용이 되면 곁에 두고 함께 싸우거나 심부름을 보낼 수 있다.');
+        // 심부름 보내기: 곁에 두지 않은 새끼만
+        const EH = R.drakeHelp?.errand;
+        if (EH && v.canErrand && !v.companion) {
+          const pct = S.me?.ruin?.pct || 0;
+          const regs = Object.values(S.regions).filter((r) => r.realm !== 'ruin' || (v.errandRuin && pct >= (r.unlock || 0)));
+          const rs = document.createElement('select');
+          rs.className = 'input kin-sel';
+          rs.setAttribute('aria-label', '심부름 보낼 곳');
+          for (const r of regs) { const o = document.createElement('option'); o.value = r.id; o.textContent = r.name; rs.appendChild(o); }
+          rs.value = S.me?.nest && S.regions[S.me.nest] ? S.me.nest : regs[0].id;
+          const ms = document.createElement('select');
+          ms.className = 'input kin-sel';
+          ms.setAttribute('aria-label', '심부름 시간');
+          for (const m of EH.minutes) { const o = document.createElement('option'); o.value = m; o.textContent = `${m / 60}시간`; ms.appendChild(o); }
+          label(`심부름: 혼자 다녀오며 그 지역의 재료를 구해 온다. 날개가 높을수록 많이, 지혜가 높을수록 귀한 것을 찾는다.${v.errandRuin ? '' : ' (멸망한 대륙은 다 자란 용만)'}`);
+          acts.append(rs, ms);
+          btn('심부름 보내기', () => nestAct('kin:errand', { id: v.id, region: rs.value, minutes: Number(ms.value) }, true));
+        }
+      }
+      if (canAct && !v.onExp && !v.errand) {
         // 먹이 주기: 생선과 고기, 새끼 드래곤 먹이 요리
         const DFd = R.drakeFood;
         if (DFd) {
@@ -4181,13 +4288,219 @@
   // 둥지 정보와 소지품을 한꺼번에 받아 옴 (예전엔 하나 받고 나서 다음을 받아서 열릴 때 느렸음)
   let NEST_TAB = 'nest'; // 둥지 창에서 마지막으로 본 탭 (다시 그려도 유지)
   let HOARD_SUB = 'in';  // 보물더미 탭 안: 쌓인 보물(in) / 소지품(out)
+  let NEST_LAST = null;  // 마지막으로 받은 둥지 정보 (시설 탭에서 식구를 고를 때 서버를 다시 부르지 않고 그림)
+  const renderNestAgain = () => { if (NEST_LAST) keepScroll($('nest-dlg'), () => drawNest(NEST_LAST)); };
   function openNest() {
     let got = null, invOk = false;
-    const ready = () => { if (got && invOk) drawNest(got); };
+    const ready = () => { if (got && invOk) keepScroll($('nest-dlg'), () => drawNest(got)); }; // 다시 그려도 보던 자리 유지
     socket.emit('nest:get', {}, (res) => { got = res; ready(); });
     fetchInv(() => { invOk = true; ready(); });
   }
+  // ── 둥지 시설 탭 (식구 배치판): 위에는 시설 자리, 아래에는 식구. 식구를 고르고 시설에 맡긴다 ──
+  const FAC_UI = {
+    forge:   { fg: '#8A4B2A', bg: '#F6E9E1', d: '<path d="M4 14h12l-2 4H6z"/><path d="M6 14v-3h8v3"/><path d="M14 11l4-4"/><path d="M17 5l2 2"/>' },
+    herb:    { fg: '#3B6B3F', bg: '#E7F0E4', d: '<path d="M12 20v-8"/><path d="M12 12c0-4 3-6 7-6 0 4-3 6-7 6z"/><path d="M12 14c0-3-2-5-6-5 0 3 2 5 6 5z"/>' },
+    kitchen: { fg: '#8A5F17', bg: '#F7EEDB', d: '<path d="M5 11h14v3a5 5 0 0 1-5 5h-4a5 5 0 0 1-5-5z"/><path d="M3 11h18"/><path d="M9 7c0-1.5 1-1.5 1-3M14 7c0-1.5 1-1.5 1-3"/>' },
+    tower:   { fg: '#3C5A73', bg: '#E6EDF3', d: '<path d="M8 20l1-11h6l1 11"/><path d="M7 9h10l-1-4H8z"/><path d="M11 20v-4h2v4"/>' },
+    library: { fg: '#5B4A8A', bg: '#ECE8F4', d: '<path d="M5 5h5a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H5z"/><path d="M19 5h-5a2 2 0 0 0-2 2v12a2 2 0 0 1 2-2h5z"/>' },
+    spa:     { fg: '#2F6F86', bg: '#E2EFF3', d: '<path d="M4 15c2 1.5 4 1.5 6 0s4-1.5 6 0 3 1 4 .5"/><path d="M4 19c2 1.5 4 1.5 6 0s4-1.5 6 0 3 1 4 .5"/><path d="M9 11c0-2 1.5-2 1.5-4M13 11c0-2 1.5-2 1.5-4"/>' },
+  };
+  const facIcon = (id, size = 17) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${FAC_UI[id]?.d || ''}</svg>`;
+  let FAC_SEL = null;      // 고른 식구 id
+  let FAC_BUILD = false;   // 짓기 목록을 펼쳤는지
+  function facFits(F, v) { return (F.talent && v.talent === F.talent) || (v.traits || []).some((t) => F.traits.includes(t.id)); }
+  function drawFacilities(pane, n, me) {
+    if (!pane || !S.facility) return;
+    const FL = S.facility.list;
+    const F0 = n.facilities || { slots: 2, built: [] };
+    const humans = n.kin.home.filter((v) => v.type === 'human' && v.canWork);
+    if (FAC_SEL && !humans.some((v) => v.id === FAC_SEL)) FAC_SEL = null;
+    const sel = humans.find((v) => v.id === FAC_SEL) || null;
+    const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+    const B = (text, fn, cls = '', disabled = false) => { const b = el('button', `btn ${cls}`.trim()); b.type = 'button'; b.textContent = text; b.disabled = !!disabled; b.addEventListener('click', fn); return b; };
+    const roleOf = (v) => [v.stage === '어른' || v.stage === '노년' ? '어른' : '견습', v.talent ? S.talents[v.talent]?.name : null, ...(v.traits || []).map((t) => t.name)].filter(Boolean).slice(0, 3).join(' · ');
+    const wrap = el('div', 'fac-board');
+    // 오늘 할 일 (C 시안): 지금 눌러야 할 것만 위에 모음
+    const todo = el('section', 'fac-today');
+    todo.appendChild(el('div', 'fac-top', '<b class="fac-h">오늘 할 일</b><small class="fac-hint">자정에 다시 채워진다</small>'));
+    const tItem = (id, title, sub, label, fn, cls = 'primary') => {
+      const U = FAC_UI[id] || FAC_UI.tower;
+      const r = el('div', 'fac-todo');
+      r.style.setProperty('--fg', U.fg);
+      r.style.setProperty('--bg', U.bg);
+      const tx = el('div', 'fac-whotxt');
+      const tb = el('b'); tb.textContent = title;
+      const ts = el('small'); ts.textContent = sub;
+      tx.append(tb, ts);
+      r.append(el('span', 'fac-ic', facIcon(id)), tx);
+      if (label && n.here) r.append(B(label, fn, cls));
+      todo.appendChild(r);
+    };
+    let todoN = 0;
+    const herbB = F0.built.find((b) => b.id === 'herb');
+    if (herbB && !herbB.herbDone) { todoN++; tItem('herb', '약초밭 거두기', herbB.worker ? `${herbB.worker.name}${josa(herbB.worker.name, '이', '가')} 기다리고 있다` : '하루 한 번 거둘 수 있다', '거두기', () => nestAct('nest:harvest', {})); }
+    const kitB = F0.built.find((b) => b.id === 'kitchen');
+    if (kitB?.worker?.working && kitB.cookLeft > 0) {
+      todoN++;
+      const ready = S.facility.cookable.filter((id) => { const r = S.recipes.find((x) => x.out === id); return r && Object.entries(r.needs).every(([x, q]) => (invCache[x] || 0) >= q); });
+      tItem('kitchen', '부엌에 요리 맡기기', `${kitB.worker.name} · 오늘 ${kitB.cookLeft}번 남음${ready.length ? '' : ' · 재료가 다 있는 요리가 없다'}`);
+      if (ready.length && n.here) {
+        const row = todo.lastChild;
+        row.classList.add('cook');
+        const rs = el('select', 'input kin-sel');
+        rs.setAttribute('aria-label', '맡길 요리');
+        for (const id of ready) { const o = el('option'); o.value = id; o.textContent = S.items[id].name; rs.appendChild(o); }
+        const go = el('div', 'fac-cook');
+        go.append(rs, B('요리 맡기기', () => nestAct('nest:cook', { recipe: rs.value }), 'primary'));
+        row.appendChild(go);
+      }
+    }
+    const idle = humans.filter((v) => !v.job?.working);
+    if (idle.length && F0.built.length) {
+      todoN++;
+      const r = el('div', 'fac-todo idle');
+      const tx = el('span', 'fac-idle');
+      tx.textContent = `일이 없는 식구 ${idle.length}명 · ${idle.map((v) => v.name).join(', ')}`;
+      r.appendChild(tx);
+      if (n.here) r.appendChild(B('고르기', () => { FAC_SEL = idle[0].id; renderNestAgain(); }));
+      todo.appendChild(r);
+    }
+    if (!todoN) todo.appendChild(el('p', 'fac-done', F0.built.length ? '오늘 할 일을 모두 마쳤다.' : '아직 지은 시설이 없다. 빈 칸을 눌러 시설을 지어 보자.'));
+    wrap.appendChild(todo);
+    // 머리줄
+    const top = el('div', 'fac-top');
+    top.append(el('b', 'fac-h', `시설 ${F0.built.length}/${F0.slots}칸`));
+    if (n.here) top.append(B(FAC_BUILD ? '짓기 닫기' : '＋ 짓기', () => { FAC_BUILD = !FAC_BUILD; renderNestAgain(); }, 'small'));
+    wrap.appendChild(top);
+    // 시설 자리
+    for (const f of F0.built) {
+      const F = FL[f.id], U = FAC_UI[f.id] || FAC_UI.tower;
+      const card = el('div', 'fac-card');
+      card.dataset.id = f.id;
+      card.style.setProperty('--fg', U.fg);
+      card.style.setProperty('--bg', U.bg);
+      const head = el('div', 'fac-head');
+      head.append(el('span', 'fac-ic', facIcon(f.id)), el('b', 'fac-name', ''));
+      head.querySelector('.fac-name').textContent = F.name;
+      if (n.here) { // 오른쪽 위: 허물기
+        const rm = B('허물기', () => { if (confirm(`${F.name}${josa(F.name, '을', '를')} 허물까? 지을 때 쓴 재료는 돌아오지 않는다.`)) nestAct('nest:fac:remove', { id: f.id }); }, 'fac-rm');
+        head.appendChild(rm);
+      }
+      card.appendChild(head);
+      const desc = el('p', 'fac-desc');
+      desc.textContent = F.desc;
+      card.appendChild(desc);
+      // 일하는 식구 / 빈 자리
+      const wv = f.worker && n.kin.home.find((v) => v.id === f.worker.id);
+      const place = () => { const id = sel.id; FAC_SEL = null; nestAct('nest:job', { kin: id, fac: f.id }); };
+      const target = n.here && sel && wv?.id !== sel.id; // 고른 식구를 여기에 둘 수 있음
+      if (target) {
+        // 배치할 자리: 빈 자리면 그대로, 이미 누가 있으면 바꾸기
+        const drop = el('button', `fac-drop${wv ? ' swap' : ''}`);
+        drop.type = 'button';
+        const fit = facFits(F, sel);
+        drop.innerHTML = `<b></b><small></small>`;
+        drop.querySelector('b').textContent = wv ? `${sel.name}${josa(sel.name, '으로', '로')} 바꾸기` : `${sel.name}에게 맡기기`;
+        drop.querySelector('small').textContent = [wv ? `지금 ${wv.name}${josa(wv.name, '이', '가')} 일하는 중` : null, fit ? '잘 맞는 일이다' : null].filter(Boolean).join(' · ') || '여기를 눌러 배치';
+        if (fit) drop.classList.add('fit');
+        drop.addEventListener('click', place);
+        card.appendChild(drop);
+      } else if (wv) {
+        const who = el('div', 'fac-who');
+        const face = el('span', 'fac-face', '');
+        face.appendChild(kinFace(wv));
+        const txt = el('div', 'fac-whotxt');
+        const nb = el('b'); nb.textContent = wv.name;
+        const rs = el('small'); rs.textContent = f.worker.working ? roleOf(wv) : `${roleOf(wv)} · 지금은 일할 수 없음`;
+        txt.append(nb, rs);
+        who.append(face, txt);
+        if (f.worker.fit) who.append(el('span', 'fac-fit', '잘 맞음'));
+        if (n.here) who.append(B('쉬게 하기', () => nestAct('nest:job', { kin: f.worker.id, fac: '' }), 'small link'));
+        card.appendChild(who);
+      } else {
+        const empty = el('div', 'fac-empty');
+        empty.textContent = f.id === 'kitchen' ? '아래에서 식구를 골라 이 칸을 누르면 맡긴다 (부엌은 아이가 있어야 쓸 수 있다)' : '아래에서 식구를 골라 이 칸을 누르면 맡긴다';
+        card.appendChild(empty);
+      }
+      wrap.appendChild(card);
+    }
+    // 빈 칸
+    for (let i = F0.built.length; i < F0.slots; i++) {
+      const e = el('button', 'fac-slot');
+      e.type = 'button';
+      e.textContent = n.here ? '빈 칸 · 눌러서 시설 짓기' : '빈 칸';
+      e.disabled = !n.here;
+      e.addEventListener('click', () => { FAC_BUILD = true; renderNestAgain(); });
+      wrap.appendChild(e);
+    }
+    // 짓기 목록
+    if (FAC_BUILD && n.here) {
+      const free = F0.slots - F0.built.length;
+      const list = el('div', 'fac-build');
+      list.appendChild(el('b', 'fac-sub', free > 0 ? `지을 수 있는 시설 (빈 칸 ${free})` : '칸이 모자란다. 둥지를 넓히거나 다른 시설을 허물자'));
+      for (const id of Object.keys(FL).filter((x) => !F0.built.some((b) => b.id === x))) {
+        const F = FL[id], U = FAC_UI[id];
+        const row = el('div', 'fac-card build');
+        row.style.setProperty('--fg', U.fg);
+        row.style.setProperty('--bg', U.bg);
+        const head = el('div', 'fac-head');
+        head.append(el('span', 'fac-ic', facIcon(id)), el('b', 'fac-name', ''));
+        head.querySelector('.fac-name').textContent = F.name;
+        row.appendChild(head);
+        const p = el('p', 'fac-desc'); p.textContent = `${F.desc}${F.fit ? ` 잘 맞는 식구: ${F.fit}.` : ''}`;
+        row.appendChild(p);
+        const cl = el('div', 'cost-list');
+        const chip = (text, ok) => { const sp = el('span'); sp.textContent = text; if (!ok) sp.className = 'lack'; cl.appendChild(sp); return sp; };
+        let lack = me.gold < F.cost.gold;
+        chip(`금화 ${me.gold}/${F.cost.gold}`, !lack);
+        for (const [x, k] of Object.entries(F.cost.items)) { const ok = (invCache[x] || 0) >= k; if (!ok) lack = true; srcChip(chip(`${S.items[x]?.name || x} ${invCache[x] || 0}/${k}`, ok), x, row, cl); }
+        row.appendChild(cl);
+        const a = el('div', 'fac-acts');
+        a.append(B('짓기', () => { FAC_BUILD = false; nestAct('nest:fac:build', { id }); }, 'primary', lack || free <= 0 || !!me.exp));
+        row.appendChild(a);
+        list.appendChild(row);
+      }
+      wrap.appendChild(list);
+    }
+    // 둥지의 식구
+    const kh = el('div', 'fac-top');
+    kh.append(el('b', 'fac-sub', '둥지의 식구'), el('small', 'fac-hint', humans.length ? (sel ? `${sel.name}${josa(sel.name, '을', '를')} 둘 자리를 위에서 누른다 · 다시 누르면 취소` : '식구를 누른 뒤, 위의 자리를 눌러 배치한다') : ''));
+    wrap.appendChild(kh);
+    if (!humans.length) wrap.appendChild(el('p', 'note', '일할 수 있는 식구가 없다. 인간 아이는 소년이 되면 견습으로 일할 수 있다.'));
+    for (const v of humans) {
+      const b = el('button', `fac-kid${v.id === FAC_SEL ? ' on' : ''}`);
+      b.type = 'button';
+      b.setAttribute('aria-pressed', String(v.id === FAC_SEL));
+      const face = el('span', 'fac-face');
+      face.appendChild(kinFace(v));
+      const txt = el('div', 'fac-whotxt');
+      const nb = el('b'); nb.textContent = v.name;
+      const st = el('small', 'fac-stage'); st.textContent = ` ${v.stage}`;
+      nb.appendChild(st);
+      const tr = el('small'); tr.textContent = [v.talent ? S.talents[v.talent]?.name : null, ...(v.traits || []).map((t) => t.name)].filter(Boolean).join(' · ') || '아직 재주가 없다';
+      txt.append(nb, tr);
+      const job = el('small', `fac-job${v.job?.working ? '' : ' none'}`);
+      job.textContent = v.job?.working ? v.job.name : '일 없음';
+      b.append(face, txt, job);
+      b.addEventListener('click', () => { FAC_SEL = FAC_SEL === v.id ? null : v.id; renderNestAgain(); });
+      wrap.appendChild(b);
+    }
+    // 고른 식구에게 잘 맞는 시설 추천
+    if (sel) {
+      const fits = Object.entries(FL).filter(([, F]) => facFits(F, sel));
+      const tip = el('p', 'fac-tip');
+      const built = fits.filter(([id]) => F0.built.some((b) => b.id === id)).map(([, F]) => F.name);
+      const unbuilt = fits.filter(([id]) => !F0.built.some((b) => b.id === id)).map(([, F]) => F.name);
+      tip.textContent = fits.length
+        ? `${sel.name}에게는 ${fits.map(([, F]) => F.name).join('·')}${josa(fits[fits.length - 1][1].name, '이', '가')} 잘 맞는다.${built.length ? ` 지금 둥지의 ${built.join('·')}에 맡기면 힘이 더 난다.` : ''}${unbuilt.length && !built.length ? ` (${unbuilt.join('·')}${josa(unbuilt[unbuilt.length - 1], '은', '는')} 아직 짓지 않았다)` : ''}`
+        : `${sel.name}에게 특별히 잘 맞는 시설은 없지만, 어디서든 일할 수 있다.`;
+      wrap.appendChild(tip);
+    }
+    if (!n.here) wrap.appendChild(el('p', 'note', '시설은 둥지에 있을 때 짓고 맡길 수 있다.'));
+    pane.appendChild(wrap);
+  }
   function drawNest(res) {
+    NEST_LAST = res;
     {
       if (res.error) return toast(res.error);
       const n = res.nest;
@@ -4275,6 +4588,7 @@
             ['nest', '둥지', `${T0[n.tier || 0].name} · ${(n.tier || 0) + 1}/${T0.length}단계`],
             ['kin', '식구', `${n.kin.home.length}/${n.maxKin || S.kinRules.maxKin}`],
             ['hoard', '보물더미', `가치 ${n.value.toLocaleString()}`],
+            ['fac', '시설', `${n.facilities?.built.length || 0}/${n.facilities?.slots || 2}칸`],
           ];
           if (!defs.some((x) => x[0] === NEST_TAB)) NEST_TAB = 'nest';
           const tabs = document.createElement('div');
@@ -4447,34 +4761,8 @@
             wl.appendChild(r4);
           }
           host.appendChild(wl);
-          // 둥지 공방(화로): 둥지에서 만들 때 기력 −20%, 대성공·강화 성공 확률이 오름
-          const hf = document.createElement('h3');
-          hf.textContent = '공방';
-          host.appendChild(hf);
-          const fr = document.createElement('div');
-          fr.className = 'inv inv-box';
-          const fi = document.createElement('div');
-          fi.className = 'it common';
-          fi.innerHTML = '<b><span class="nm"></span></b><small></small><div class="acts"></div>';
-          fi.querySelector('.nm').textContent = n.forge ? '화로 (지어 둠)' : '화로';
-          const FR = S.craftRules?.forge;
-          fi.querySelector('small').textContent = n.forge
-            ? `둥지에서 만들면 기력 −${Math.round((1 - (FR?.en || 0.8)) * 100)}%, 대성공·강화 성공 확률이 오른다. 둥지를 옮기면 두고 간다.`
-            : `둥지에 화로를 지으면 여기서 만들 때 기력이 덜 들고, 대성공·강화 성공 확률이 오른다.`;
-          if (!n.forge && n.forgeCost) {
-            const cost = n.forgeCost;
-            const lackG = me.gold < cost.gold;
-            const lackI = Object.entries(cost.items).some(([x, k]) => (invCache[x] || 0) < k);
-            const cl2 = document.createElement('div');
-            cl2.className = 'cost-list';
-            const chip2 = (text, okk) => { const sp = document.createElement('span'); sp.textContent = text; if (!okk) sp.className = 'lack'; cl2.appendChild(sp); };
-            chip2(`금화 ${me.gold}/${cost.gold}`, !lackG);
-            for (const [x, k] of Object.entries(cost.items)) { chip2(`${S.items[x]?.name || x} ${invCache[x] || 0}/${k}`, (invCache[x] || 0) >= k); srcChip(cl2.lastChild, x, fi, cl2); }
-            fi.appendChild(cl2);
-            if (n.here) fi.querySelector('.acts').append(btn('화로 짓기', () => nestAct('nest:forge'), true, lackG || lackI || !!me.exp));
-          }
-          fr.appendChild(fi);
-          host.appendChild(fr);
+          // 시설 (공방·약초밭·부엌·망루·서고·온천): 시설 탭에서
+          drawFacilities(P.fac, n, me);
           host = P.hoard;
           const h5 = document.createElement('h3');
           h5.textContent = '보물 넣고 꺼내기';
@@ -7031,6 +7319,24 @@
       row.append(b1, b2);
       box.appendChild(row);
     }
+    // 도움을 청했다가 다시 일어선 드래곤 (3시간 동안, 닫으면 이 기기에서는 숨김)
+    const hidden = (() => { try { return JSON.parse(localStorage.getItem('dragon-risen-hide') || '[]'); } catch { return []; } })();
+    for (const x of S.risen || []) {
+      if (x.id === S.me?.id || hidden.includes(`${x.id}:${x.at}`) || S.rescues.some((r) => r.id === x.id)) continue;
+      const row = document.createElement('div');
+      row.className = 'rampage rescue done';
+      const t = document.createElement('div');
+      t.className = 't';
+      t.innerHTML = '<b></b><small></small>';
+      t.querySelector('b').textContent = `${x.name}${josa(x.name, '이', '가')} 다시 일어섰다`;
+      const ago = Math.max(1, Math.round((Date.now() - x.at) / 60000));
+      t.querySelector('small').textContent = `${x.where} · ${x.how === 'rescued' ? `${x.by}의 도움으로` : '상흔을 입고 스스로'} · ${ago >= 60 ? `${Math.floor(ago / 60)}시간` : `${ago}분`} 전`;
+      const cb = document.createElement('button');
+      cb.type = 'button'; cb.className = 'btn'; cb.textContent = '확인';
+      cb.addEventListener('click', () => { try { localStorage.setItem('dragon-risen-hide', JSON.stringify([...hidden, `${x.id}:${x.at}`].slice(-30))); } catch {} renderRescues(); });
+      row.append(t, cb);
+      box.appendChild(row);
+    }
     for (const r of S.rescues) {
       if (r.id === S.me?.id || r.until <= Date.now()) continue;
       const here = r.region === S.region;
@@ -7544,7 +7850,7 @@
     who.className = 'bt-who';
     if (f.creature) {
       who.appendChild(creEl(f.type, f.region, f.elite, f.name));
-    } else who.appendChild(avaEl({ id: f.id, kind: f.kind, av: f.id === S.me?.id ? S.me.av : 0 }, 36));
+    } else who.appendChild(avaEl({ id: f.id, kind: f.kind, av: f.id === S.me?.id ? S.me.av : f.av || 0 }, 36)); // 상대 드래곤도 프로필 그림
     const t = document.createElement('div');
     t.style.minWidth = '0';
     t.innerHTML = '<b></b><small></small>';
@@ -8407,6 +8713,10 @@
     r = gmRow(s, '경험치');
     const xp = gNum(r, '경험치', 100);
     gBtn(r, '주기', () => gmDo('xp', { n: Math.abs(+xp.value) }));
+    r = gmRow(s, '레벨 맞추기');
+    const lvIn = gNum(r, '레벨', 25);
+    lvIn.min = 1; lvIn.max = 25;
+    gBtn(r, '맞추기', () => { if (confirm(`이 드래곤의 레벨을 ${lvIn.value}로 맞출까? (시험용. 올리면 능력치 포인트·스킬도 함께 생긴다)`)) gmDo('level', { value: Math.round(+lvIn.value) }); });
     r = gmRow(s, '능력치 포인트');
     const ptsIn = gNum(r, '포인트', 1);
     gBtn(r, '주기', () => gmDo('statPts', { n: Math.abs(+ptsIn.value) }));
@@ -8699,12 +9009,12 @@
     const cpur = cr?.purify;
     const csec = gmSection(body, '오염', cr?.region
       ? `지금: ${S.regions[cr.region]?.name} · ${fmtLeft(cr.until)} 뒤 다른 곳으로 옮겨 감${cpur ? ` · 정화 ${cpur.total ?? 0} / ${cpur.goal ?? ''}` : ''}`
-      : '지금은 오염된 곳이 없다 (정화되었거나 옮겨 가는 중). 12시간마다 새 곳에 생긴다.');
+      : '지금은 오염된 곳이 없다 (정화되었거나 옮겨 가는 중). 24시간마다 새 곳에 생긴다.');
     const cr1 = gmRow(csec, '지금 일으키기');
     const cwild = Object.keys(S.regions).filter((id) => !S.shops.includes(id) && S.regions[id].realm !== 'ruin');
     const cwhere = gSelect(cr1, '지역', [['', '다음 차례'], ...cwild.map((id) => [id, S.regions[id].name])], '');
     gBtn(cr1, '오염 일으키기', () => {
-      if (!confirm('지금 바로 새 오염을 일으킬까? 지금의 오염과 정화 진행은 끝나고, 12시간 주기가 지금부터 다시 시작된다.')) return;
+      if (!confirm('지금 바로 새 오염을 일으킬까? 지금의 오염과 정화 진행은 끝나고, 24시간 주기가 지금부터 다시 시작된다.')) return;
       gmCall('gm:corrupt', { region: cwhere.value }, (res) => { toast(`${S.regions[res.region].name}에 오염을 일으켰다.`); renderGm(); });
     }, 'primary');
 
@@ -9115,6 +9425,12 @@
   let shoutOn = false;
   function renderSayMode() {
     const b = $('say-mode');
+    if (S.me?.berserk) { // 광폭화 중: 말하기 막힘 (setMe가 정한 안내를 그대로 둠)
+      shoutOn = false;
+      b.setAttribute('aria-pressed', 'false');
+      $('say').classList.remove('shout');
+      return;
+    }
     b.setAttribute('aria-pressed', String(shoutOn));
     $('say').classList.toggle('shout', shoutOn);
     $('say-input').placeholder = shoutOn ? '모두에게 외치기' : '말하기';
@@ -9192,6 +9508,7 @@
       S.shops = data.shops;
       S.trade = data.trade;
       S.sources = data.sources || {};
+      S.facility = data.facility || null;
       S.ruinRules = data.ruinRules || null;
       S.fishing = data.fishing || null;
       S.nestRules = data.nestRules;
@@ -9311,6 +9628,7 @@
     socket.on('healed', (h) => toast(h.text, { label: '고맙다고 전하기', run: () => openTp(h.by.id) }));
     socket.on('gift:inbox', (l) => { giftQ = l || []; showGift(); });
     socket.on('rescue:list', (l) => { S.rescues = l || []; renderRescues(); });
+    socket.on('rescue:risen', (l) => { S.risen = l || []; renderRescues(); });
     socket.on('rescued', (r) => { if ($('fall-dlg').open) $('fall-dlg').close(); showResult({ title: '구조', lines: r.lines }); });
     socket.on('rampage:end', onRampageEnd);
     socket.on('battle:start', (s2) => { if ($('arena-dlg').open) $('arena-dlg').close(); openBattle(s2.view, { lines: s2.lines }); });
@@ -9333,7 +9651,8 @@
   const setDockH = () => document.documentElement.style.setProperty('--dock-h', `${dock.offsetHeight}px`);
   // 상단바 높이 (넓은 화면에서 양옆 칸이 상단바 아래에 붙도록)
   const head = document.querySelector('header.top');
-  const setHeadH = () => document.documentElement.style.setProperty('--head-h', window.innerWidth > 860 ? `${head.offsetHeight}px` : '0px');
+  // offsetHeight는 정수로 반올림돼서, 양옆 칸이 붙는 순간 0.x px씩 밀리며 아이콘이 흔들렸음 → 실제 높이를 소수점까지
+  const setHeadH = () => document.documentElement.style.setProperty('--head-h', window.innerWidth > 860 ? `${head.getBoundingClientRect().height}px` : '0px');
   if ('ResizeObserver' in window) new ResizeObserver(setHeadH).observe(head);
   window.addEventListener('resize', setHeadH);
   setHeadH();

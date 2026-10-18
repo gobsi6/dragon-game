@@ -6,7 +6,7 @@
 // 모든 함수는 식구 목록 kin을 직접 바꿉니다. 새 식구는 id가 null이고, 저장은 server.js가 합니다.
 
 const {
-  ITEMS, KINDS, REGIONS, SHOPS, STATS, REGION_LOOT, DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, EVENT_RULES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES,
+  ITEMS, KINDS, REGIONS, SHOPS, STATS, REGION_LOOT, PLACES, FACILITY, RECIPES, DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, EVENT_RULES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES,
 } = require('./game-data');
 const logic = require('./game-logic');
 const EVENTS = require('./game-events');
@@ -188,6 +188,11 @@ function tick(d, kin, now = Date.now()) {
   for (const k of kin) {
     // 모습이 정해지기 전에 들어온 식구 (이 기능이 생기기 전의 식구)
     if (k.status === 'home' && rollLooks(k)) out.lines.push(`${k.name}${josa(k.name, '을', '를')} 다시 찬찬히 들여다보았다. ${introOf(k)}`);
+    if (k.type === 'drake' && k.status === 'home' && k.data.errand && now >= k.data.errand.end) {
+      const fe = finishErrand(k, now);
+      out.items.push(...fe.items);
+      out.lines.push(fe.line);
+    }
     if (k.type === 'drake' && k.status === 'home') {
       const wasHungry = k.data.sat != null && k.data.sat < DF.hungry;
       satUpdate(k, now, false, DF, drakeFloor(k, now));
@@ -196,6 +201,14 @@ function tick(d, kin, now = Date.now()) {
     if (k.type === 'human' && k.status === 'home') {
       const a = ageOf(k, now);
       if (!k.data.favFood) k.data.favFood = pick(HG.meals);
+      const wk = workerOf(k, now);
+      const day = logic.dayIdx(now);
+      if (wk && k.data.jobDay !== day) { // 일하는 날마다: 유대 조금, 견습이면 그 시설의 재주 쪽으로
+        k.data.jobDay = day;
+        k.data.bond = clamp(k.data.bond + 1);
+        const tl = FACILITY.list[k.data.job].talent;
+        if (!wk.adult && tl && !k.data.talent && k.data.lean) k.data.lean[tl] = (k.data.lean[tl] || 0) + 2;
+      }
       const wasHungry = k.data.sat != null && k.data.sat < HG.hungry;
       satUpdate(k, now, hasKeeper(kin, k));
       if (!wasHungry && k.data.sat < HG.hungry) out.lines.push(`${ga(k)} 배가 고픈지 자꾸 둥지 입구를 기웃거린다.`);
@@ -274,7 +287,7 @@ function tick(d, kin, now = Date.now()) {
         out.lines.push(`${ga(k)} 자라서 '${st.name}'${josa(st.name, '이', '가')} 되었다.`);
       }
       // 젊은 용부터 혼자 사냥해 옴
-      if (a >= R.huntFrom && !k.data.onExp) {
+      if (a >= R.huntFrom && !k.data.onExp && !k.data.errand) {
         let n = 0;
         while (now - k.data.lastHunt >= R.huntEvery && n < 3) { k.data.lastHunt += R.huntEvery; n++; }
         if (now - k.data.lastHunt >= R.huntEvery) k.data.lastHunt = now;
@@ -312,8 +325,28 @@ function tick(d, kin, now = Date.now()) {
 
 // ── 식구가 주는 도움 ──────────────────────────────
 // 어른이 되어 길을 정한 인간만. game-logic.js가 d.perks로 읽음
-function perksOf(kin) {
+function perksOf(kin, now = Date.now()) {
   const p = {};
+  const DH = KIN.drakeHelp;
+  // 새끼 드래곤: 곁에 둔 새끼 (심부름 중이면 함께 못 감)
+  for (const k of kin) {
+    if (k.type !== 'drake' || k.status !== 'home' || !k.data.stats || k.data.errand) continue;
+    if (k.data.companion && DH.ally.from.includes(stageOf(k, now).name)) {
+      const A = DH.ally, st = k.data.stats;
+      p.ally = {
+        id: k.id, name: k.name, kind: k.data.kind,
+        atk: Math.round(A.base + st.claw * A.claw + st.wing * A.wing + (A.stage[stageOf(k, now).name] || 0)),
+        hunter: hasT(k, 'hunter'), clever: hasT(k, 'clever'),
+      };
+    }
+  }
+  // 둥지 시설에서 일하는 식구 (어른 1, 견습 0.5, 잘 맞으면 ×1.5)
+  for (const k of kin) {
+    const w = workerOf(k, now);
+    if (!w) continue;
+    (p.fac ||= {})[k.data.job] = w.part;
+    if (k.data.job === 'kitchen') p.cook = { id: k.id, name: k.name, adult: w.adult, glutton: hasT(k, 'glutton'), handy: hasT(k, 'handy'), gentle: hasT(k, 'gentle') };
+  }
   for (const k of kin) {
     if (k.type !== 'human' || k.status !== 'home' || !k.data.path) continue;
     if (k.data.path === 'stay') {
@@ -366,9 +399,21 @@ function view(k, now, d) {
     v.satWord = satWord(s);
     v.mood = s < DF.hungry ? 'hungry' : s >= DF.full && k.data.bond >= 60 ? 'happy' : 'calm';
     v.feedIn = Math.max(0, (k.data.lastFeed || 0) + DF.cooldown - now);
+    // 곁에 두기와 심부름
+    const EH = KIN.drakeHelp.errand;
+    v.companion = !!k.data.companion;
+    v.canCompanion = KIN.drakeHelp.ally.from.includes(stageOf(k, now).name);
+    v.canErrand = EH.from.includes(stageOf(k, now).name);
+    v.errandRuin = EH.ruinFrom.includes(stageOf(k, now).name);
+    if (k.data.errand) v.errand = { region: k.data.errand.region, end: k.data.errand.end };
     v.selfFeed = !!fl;
     if (k.data.favKnown) v.favFood = DF.kindFav[k.data.kind];
   }
+  if (k.type === 'human' && k.data.job && FACILITY.list[k.data.job]) {
+    const w = workerOf(k, now);
+    v.job = { id: k.data.job, name: FACILITY.list[k.data.job].name, working: !!w, apprentice: w ? !w.adult : false, fit: !!w?.fit };
+  }
+  if (k.type === 'human' && k.status === 'home') v.canWork = FW.adultStages.includes(stageOf(k, now).name) || FW.apprenticeStages.includes(stageOf(k, now).name);
   // 짝과 자녀 (식구 이벤트로 생김)
   if (k.data.mate) v.mate = { name: k.data.mate.name, kind: k.data.mate.kind || null };
   if (k.data.kids?.length) v.kids = k.data.kids.slice();
@@ -413,6 +458,7 @@ function views(kin, now, d) {
 // opt.away: 반려의 둥지에서 그 집 식구를 돌봄 (둥지에 있는지는 서버가 따로 확인)
 // 새끼 드래곤에게 먹이 주기 (돌보기와 같은 길로 들어옴)
 function feedDrake(d, kin, k, item, have, now) {
+  if (k.data.errand) return { error: `${ga(k)} 심부름을 떠나 있다.` };
   const f = DF.items[item];
   if (!f) return { error: `${k.name}${josa(k.name, '은', '는')} 그건 먹지 않는다. 생선이나 고기를 주자.` };
   if (have(item) < 1) return { error: '가지고 있지 않다.' };
@@ -420,7 +466,7 @@ function feedDrake(d, kin, k, item, have, now) {
   if (left > 0) { const m = Math.ceil(left / 60000); return { error: `${k.name}${josa(k.name, '은', '는')} 아직 배가 부르다. ${m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m}분`} 뒤에 다시 주자.` }; }
   satUpdate(k, now, false, DF, drakeFloor(k, now));
   const hungry = k.data.sat < DF.hungry;
-  const fav = item === DF.kindFav[k.data.kind];
+  const fav = (ITEMS[item]?.cooked || item) === DF.kindFav[k.data.kind];
   const gain = f.bond + (fav ? DF.favBond : 0) + (hasT(k, 'clingy') ? 1 : 0);
   k.data.bond = clamp(k.data.bond + gain);
   k.data.sat = Math.min(100, k.data.sat + f.sat);
@@ -453,7 +499,7 @@ function care(d, kin, id, item, have, now = Date.now(), opt = {}) {
   satUpdate(k, now, hasKeeper(kin, k));
   const food = isFood(item);
   const hungry = k.data.sat < HG.hungry;
-  const fav = item === k.data.favFood;
+  const fav = (ITEMS[item]?.cooked || item) === k.data.favFood; // 정성 들인 것도 같은 음식
   // 특성: 다정한 발톱·냉담 / 아이의 성격: 다정한·먹보·수줍은 / 가장 좋아하는 요리
   let mood = 0;
   if (hasT(k, 'gentle')) mood += 1;
@@ -548,12 +594,169 @@ function incubate(d, kin, id, have, now = Date.now()) {
   };
 }
 
+// ── 둥지 시설의 일 ─────────────────────────────────
+const FW = FACILITY.worker;
+// 이 식구가 맡은 일에서 내는 힘. 일할 수 없으면 null
+function workerOf(k, now = Date.now()) {
+  if (k.type !== 'human' || k.status !== 'home' || !k.data.job || !FACILITY.list[k.data.job]) return null;
+  if (k.data.onExp || k.data.path === 'knight') return null;
+  const stg = stageOf(k, now).name;
+  const adult = FW.adultStages.includes(stg);
+  if (!adult && !FW.apprenticeStages.includes(stg)) return null;
+  const F = FACILITY.list[k.data.job];
+  const fit = (F.talent && k.data.talent === F.talent) || F.traits.some((t) => hasT(k, t));
+  return { adult, fit, part: (adult ? FW.adult : FW.apprentice) * (fit ? FW.fit : 1) };
+}
+function setJob(d, kin, id, fac, now = Date.now()) {
+  const k = findKin(kin, id);
+  if (!k || k.type !== 'human' || k.status !== 'home') return { error: '일을 맡길 수 있는 식구가 아니다.' };
+  if (!fac) { if (!k.data.job) return { error: '맡은 일이 없다.' }; const was = FACILITY.list[k.data.job]?.name; k.data.job = null; return { title: k.name, lines: [`${ga(k)} ${was || '일'}에서 손을 놓고 쉬기로 했다.`] }; }
+  const F = FACILITY.list[fac];
+  if (!F || !logic.facOf(d)[fac]) return { error: '그 시설이 둥지에 없다.' };
+  const stg = stageOf(k, now).name;
+  if (!FW.adultStages.includes(stg) && !FW.apprenticeStages.includes(stg)) return { error: `${k.name}${josa(k.name, '은', '는')} 아직 너무 어리다. 소년이 되면 견습으로 일할 수 있다.` };
+  if (k.data.path === 'knight') return { error: '용기사는 둥지 일을 맡을 수 없다.' };
+  const other = kin.find((x) => x !== k && x.type === 'human' && x.status === 'home' && x.data.job === fac);
+  if (other) other.data.job = null; // 한 시설에는 한 명
+  k.data.job = fac;
+  const w = workerOf(k, now);
+  return { title: k.name, lines: [`${k.name}에게 ${F.name} 일을 맡겼다.${w?.adult ? '' : ' (견습)'}`, w?.fit ? `${ga(k)} 눈을 반짝인다. 잘 맞는 일이다.` : `${ga(k)} 소매를 걷어붙였다.`] };
+}
+// 약초밭: 하루 한 번 거둠 (한국 날짜)
+function harvest(d, kin, now = Date.now()) {
+  if (!d.nest || d.region !== d.nest) return { error: '둥지에 있을 때만 거둘 수 있다.' };
+  const fac = logic.facOf(d);
+  if (!fac.herb) return { error: '약초밭이 없다.' };
+  const day = logic.dayIdx(now);
+  if (fac.herb.day === day) return { error: '오늘은 이미 거두었다. 내일 다시 거두자.' };
+  fac.herb.day = day;
+  const F = FACILITY.list.herb;
+  const p = logic.facPower(d, 'herb');
+  const n = Math.round(F.rolls * p);
+  const ids = Array.from({ length: n }, () => pick(F.pool));
+  if (Math.random() < F.rareChance * p) ids.push(F.rare);
+  const cnt = {};
+  for (const x of ids) cnt[x] = (cnt[x] || 0) + 1;
+  const items = Object.entries(cnt).map(([id, qty]) => ({ id, qty }));
+  const worker = kin.find((x) => x.data.job === 'herb' && workerOf(x, now));
+  const lines = [worker ? `${ga(worker)} 흙 묻은 손으로 약초밭을 거두었다.` : '약초밭을 거두었다.', `${items.map((x) => `${ITEMS[x.id].name}${x.qty > 1 ? ` ${x.qty}개` : ''}`).join(', ')}${josa('개', '을', '를')} 얻었다.`];
+  if (cnt[F.rare]) lines.push(`${ITEMS[F.rare].name}${josa(ITEMS[F.rare].name, '이', '가')} 섞여 있었다!`);
+  return { title: '약초밭', lines, items };
+}
+// 부엌: 재료를 건네면 일하는 아이가 바로 요리 (하루 횟수 제한, 보호자 기력은 들지 않음)
+const cookUses = (cook) => (cook ? (cook.adult ? FACILITY.list.kitchen.uses.adult : FACILITY.list.kitchen.uses.apprentice) + (cook.glutton ? FACILITY.list.kitchen.uses.glutton : 0) : 0);
+function cookLeft(d, now = Date.now()) {
+  const k = logic.facOf(d).kitchen;
+  if (!k || !d.perks?.cook) return 0;
+  const used = k.day === logic.dayIdx(now) ? k.used || 0 : 0;
+  return Math.max(0, cookUses(d.perks.cook) - used);
+}
+function cook(d, kin, recipe, have, now = Date.now()) {
+  if (!d.nest || d.region !== d.nest) return { error: '둥지에 있을 때만 맡길 수 있다.' };
+  const fac = logic.facOf(d);
+  if (!fac.kitchen) return { error: '부엌이 없다.' };
+  const c = d.perks?.cook;
+  const k = c && findKin(kin, c.id);
+  if (!k || !workerOf(k, now)) return { error: '부엌에서 일하는 아이가 없다. 먼저 아이에게 부엌 일을 맡기자.' };
+  if (!FACILITY.cookable.includes(recipe)) return { error: '부엌에서 만들 수 있는 요리가 아니다.' };
+  const r = RECIPES.find((x) => x.out === recipe);
+  if (!r) return { error: '알 수 없는 요리다.' };
+  if (cookLeft(d, now) < 1) return { error: `오늘은 ${k.name}${josa(k.name, '이', '가')} 더 요리할 수 없다. 내일 다시 맡기자.` };
+  for (const [x, q] of Object.entries(r.needs)) if (have(x) < q) return { error: `${ITEMS[x].name}${josa(ITEMS[x].name, '이', '가')} 모자란다. (${q}개 필요)` };
+  const day = logic.dayIdx(now);
+  if (fac.kitchen.day !== day) { fac.kitchen.day = day; fac.kitchen.used = 0; }
+  fac.kitchen.used = (fac.kitchen.used || 0) + 1;
+  const F = FACILITY.list.kitchen;
+  const out = `${recipe}__k`;
+  let qty = 1;
+  const name = ITEMS[out].name;
+  const lines = [`${ga(k)} 재료를 받아 들고 ${ITEMS[recipe].name}${josa(ITEMS[recipe].name, '을', '를')} 정성껏 만들었다.`];
+  if (c.glutton && Math.random() < F.extra.glutton) {
+    if (Math.random() < F.eat) lines.push(`먹보 ${k.name}${josa(k.name, '은', '는')} 한 그릇 더 만들었지만… 맛만 본다더니 다 먹어 버렸다.`);
+    else { qty++; lines.push(`먹보 ${k.name}${josa(k.name, '은', '는')} 신이 나서 한 그릇을 더 만들었다!`); }
+  }
+  if (c.handy && Math.random() < F.extra.handy) { qty++; lines.push(`손재주 좋은 ${k.name} 덕에 모양까지 예쁘게 하나 더 나왔다.`); }
+  // 다정한 아이: 둥지의 다른 아이들과 나눠 먹음
+  if (c.gentle) {
+    const others = kin.filter((x) => x !== k && x.type === 'human' && x.status === 'home');
+    for (const o of others) { satUpdate(o, now, false); o.data.sat = Math.min(100, o.data.sat + F.share.sat); o.data.bond = clamp(o.data.bond + F.share.bond); }
+    if (others.length) lines.push(`다정한 ${k.name}${josa(k.name, '은', '는')} 만든 것을 조금씩 덜어 다른 아이들과 나눠 먹었다.`);
+  }
+  k.data.bond = clamp(k.data.bond + 1);
+  lines.push(`${name}${qty > 1 ? ` ${qty}개` : ''}${josa(qty > 1 ? '개' : name, '을', '를')} 받았다. (오늘 ${cookLeft(d, now)}번 더)`);
+  return { title: '부엌', lines, items: [...Object.entries(r.needs).map(([x, q]) => ({ id: x, qty: -q })), { id: out, qty }] };
+}
+
+// ── 심부름 ─────────────────────────────────────────
+// 곁에 두지 않은 새끼를 혼자 보냄. allowRuin: 멸망한 대륙으로 보낼 수 있는지 (서버가 정화도로 정함)
+function sendErrand(kin, id, region, minutes, allowRuin, now = Date.now()) {
+  const EH = KIN.drakeHelp.errand;
+  const k = findKin(kin, id);
+  if (!k || k.type !== 'drake' || k.status !== 'home') return { error: '심부름을 보낼 수 있는 새끼가 아니다.' };
+  const stg = stageOf(k, now).name;
+  if (!EH.from.includes(stg)) return { error: `${k.name}${josa(k.name, '은', '는')} 아직 혼자 다니기에 어리다. 어린 용이 되면 심부름을 보낼 수 있다.` };
+  if (k.data.errand) return { error: `${ga(k)} 이미 심부름을 떠나 있다.` };
+  if (k.data.onExp) return { error: `${ga(k)} 원정에 함께 가 있다.` };
+  if (k.data.companion) return { error: `곁에 둔 새끼는 심부름을 보낼 수 없다. 먼저 곁에서 풀어 주자.` };
+  const r = REGIONS[region];
+  if (!r) return { error: '그런 곳은 없다.' };
+  if (r.realm === 'ruin') {
+    if (!EH.ruinFrom.includes(stg)) return { error: '멸망한 대륙은 너무 위험하다. 다 자란 용만 보낼 수 있다.' };
+    if (!allowRuin) return { error: `${r.name}${josa(r.name, '은', '는')} 아직 오염이 짙어 갈 수 없다.` };
+  }
+  const m = Number(minutes);
+  if (!EH.minutes.includes(m)) return { error: '심부름 시간을 골라야 한다.' };
+  k.data.errand = { region, start: now, end: now + m * 60000, minutes: m };
+  return { title: k.name, lines: [`${k.name}에게 ${r.name}${josa(r.name, '으로', '로')} 심부름을 보냈다. (${m >= 60 ? `${m / 60}시간` : `${m}분`})`, `${ga(k)} 고개를 끄덕이고 힘차게 날아올랐다.`] };
+}
+// 돌아온 심부름: 그 지역의 재료를 줍고, 배가 줄어듦
+function finishErrand(k, now) {
+  const EH = KIN.drakeHelp.errand;
+  const e = k.data.errand;
+  k.data.errand = null;
+  const st = k.data.stats || {};
+  const loot = REGION_LOOT[e.region] || {};
+  const n = (EH.rolls[e.minutes] || 3) + (EH.stageRolls[stageOf(k, now).name] || 0) + Math.floor((st.wing || 0) / EH.wingPer);
+  const rareUp = (st.wisdom || 0) * EH.wisdomRare * (hasT(k, 'curious') ? 1.5 : 1);
+  const ids = [];
+  for (let i = 0; i < n; i++) {
+    const r = Math.random();
+    const tier = r < EH.tier.rare + rareUp ? 'rare' : r < EH.tier.rare + rareUp + EH.tier.uncommon ? 'uncommon' : 'common';
+    const pool = (loot[tier]?.length ? loot[tier] : loot.common) || [];
+    if (pool.length) ids.push(pick(pool));
+  }
+  if (hasT(k, 'hunter')) ids.push('beast_hide', 'beast_hide'); // 사냥 본능: 오는 길에 사냥까지
+  if (stageOf(k, now).name === '다 자란 용' && Math.random() < EH.trophy) {
+    const pl = Object.values(PLACES).filter((p) => p.region === e.region && p.drop);
+    if (pl.length) ids.push(pick(pl).drop);
+  }
+  const cnt = {};
+  for (const id of ids) cnt[id] = (cnt[id] || 0) + 1;
+  const items = Object.entries(cnt).map(([id, qty]) => ({ id, qty }));
+  if (k.data.sat != null) k.data.sat = Math.max(0, k.data.sat - EH.satPerHour * (e.minutes / 60));
+  const rname = REGIONS[e.region]?.name || '먼 곳';
+  const what = items.map((x) => `${ITEMS[x.id].name}${x.qty > 1 ? ` ${x.qty}개` : ''}`).join(', ');
+  return { items, line: `${ga(k)} ${rname}에서 심부름을 마치고 돌아왔다. ${what ? `입에 물고 온 것: ${what}.` : '아무것도 찾지 못했는지 시무룩하다.'}` };
+}
+
+// 곁에 둘 새끼 고르기 (하나만). 같은 새끼를 다시 고르면 풀어 줌
+function setCompanion(kin, id, now = Date.now()) {
+  const k = findKin(kin, id);
+  if (!k || k.type !== 'drake' || k.status !== 'home') return { error: '곁에 둘 수 있는 새끼가 아니다.' };
+  if (!KIN.drakeHelp.ally.from.includes(stageOf(k, now).name)) return { error: `${k.name}${josa(k.name, '은', '는')} 아직 너무 어리다. 어린 용이 되면 함께 싸울 수 있다.` };
+  if (k.data.companion) { k.data.companion = false; return { title: k.name, lines: [`${ga(k)} 둥지에 남아 쉬기로 했다.`] }; }
+  if (k.data.errand) return { error: `${ga(k)} 심부름을 떠나 있다. 돌아오면 곁에 둘 수 있다.` };
+  for (const x of kin) if (x.type === 'drake') x.data.companion = false;
+  k.data.companion = true;
+  return { title: k.name, lines: [`${ga(k)} 날개를 펼치고 곁에 섰다. 이제 사냥과 강적과의 싸움에 함께 나선다.`] };
+}
 const trainCd = (k) => (R.trainCooldown - (hasT(k, 'diligent') ? TR.diligentMs : 0)) * (drakeFull(k) ? DF.fullTrainCd : 1); // 부지런한·배부름: 간격이 짧음
 function train(d, kin, id, stat, now = Date.now(), opt = {}) {
   const err = opt.away ? null : atNest(d);
   if (err) return { error: err };
   const k = findKin(kin, id);
   if (!k || k.type !== 'drake' || k.status !== 'home') return { error: '가르칠 새끼가 없다.' };
+  if (k.data.errand) return { error: `${ga(k)} 심부름을 떠나 있다. 돌아오면 가르치자.` };
   if (!STAT_KEYS.includes(stat)) return { error: '알 수 없는 능력치다.' };
   const limit = R.trainLimit[stageOf(k, now).i];
   if (k.data.trains >= limit) return { error: '지금은 더 가르쳐도 소용이 없다. 조금 더 자라야 한다.' };
@@ -734,7 +937,7 @@ function rememberEvent(d, id, now) {
 
 function rollEvent(d, kin, have, trigger, now = Date.now(), force = false) {
   if (pending(d)) return null;
-  if (!force && Math.random() >= (EVENT_RULES.chance[trigger] || 0)) return null;
+  if (!force && Math.random() >= (EVENT_RULES.chance[trigger] || 0) * (1 + FACILITY.list.library.event * logic.facPower(d, 'library'))) return null; // 서고: 이야기가 조금 더 자주
   const c = ctxOf(d, kin, have, trigger, now);
   const list = EVENTS.filter((e) => e.when.includes(trigger) && safe(() => e.cond(c)) && weightOf(e, c) > 0);
   if (!list.length) return null;
@@ -850,5 +1053,5 @@ module.exports = {
   care, rename, choosePath, incubate, train, release,
   expStart, expFinish, companions, restTogether,
   rollEvent, getEvent, chooseEvent, forceEvent,
-  newHuman, newEgg, // 시험용
+  newHuman, newEgg, setCompanion, sendErrand, setJob, harvest, cook, cookLeft, // 시험용
 };

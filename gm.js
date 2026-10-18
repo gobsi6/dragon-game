@@ -3,7 +3,7 @@
 //
 // 접속 중인 드래곤은 서버가 들고 있는 그 객체를 고쳐야 함
 // (DB만 고치면 그 드래곤이 다음에 저장할 때 옛 값으로 덮어씀)
-const { REGIONS, ITEMS, STANCES, KINDS, KIN, DAY, TRAITS, STATS, NEST } = require('./game-data');
+const { REGIONS, ITEMS, STANCES, KINDS, KIN, DAY, TRAITS, STATS, NEST, RULES, STAT_POINTS } = require('./game-data');
 const EVENTS = require('./game-events');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
@@ -134,6 +134,30 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
       if (!(n > 0) || n > 1e6) return { error: '경험치 숫자를 확인하자.' };
       const up = logic.gainXp(d, n);
       return { log: `경험치 +${n}${up ? ` (레벨 +${up})` : ''}`, tell: `경험치 ${n}을 얻었다.${up ? ` 레벨이 올랐다! Lv. ${d.level}` : ''}` };
+    },
+    // 레벨을 바로 맞춤 (시험용). 올릴 때는 경험치를 주는 것과 같고(능력치 포인트·스킬·행동력이 함께 늘어남),
+    // 내릴 때는 레벨만큼 최대 체력·기력과 아직 나누지 않은 능력치 포인트를 거둬들임 (이미 나눈 능력치는 그대로)
+    level(d, kin, now, p) {
+      const to = int(p.value);
+      const max = RULES.levelMax || 25;
+      if (!(to >= 1 && to <= max)) return { error: `레벨은 1부터 ${max}까지다.` };
+      const from = d.level;
+      if (to === from) return { error: `이미 레벨 ${to}이다.` };
+      if (to > from) {
+        let need = -d.xp;
+        for (let l = from; l < to; l++) need += logic.xpNeed(l);
+        logic.gainXp(d, Math.max(1, need));
+        d.xp = 0;
+      } else {
+        const k = from - to;
+        d.level = to;
+        d.xp = 0;
+        d.hp_max = Math.max(10, d.hp_max - 5 * k);
+        d.en_max = Math.max(5, d.en_max - 2 * k);
+        d.stat_pts = Math.max(0, (d.stat_pts || 0) - STAT_POINTS.perLevel * k);
+        logic.clampVitals(d);
+      }
+      return { log: `레벨 ${from} → ${d.level}`, tell: `레벨이 ${d.level}${[2, 4, 5, 9].includes(d.level % 10) ? '가' : '이'} 되었다.` };
     },
     mind(d, kin, now, p) {
       const v = int(p.value);

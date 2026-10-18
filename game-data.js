@@ -586,6 +586,30 @@ const RAID = {
   ],
 };
 
+// ── 둥지 시설: 둥지 단계마다 지을 수 있는 칸. 시설마다 식구 한 명에게 일을 맡길 수 있음 ──
+// 힘(power) = 1(시설만) + 일하는 식구 (어른 1, 소년·청년 견습 0.5) × (잘 맞으면 1.5). 부엌은 일하는 식구가 있어야 쓸 수 있음
+const FACILITY = {
+  slots: [2, 3, 4],                       // 보금자리 · 넓은 동굴 · 용의 성채
+  worker: { adult: 1, apprentice: 0.5, fit: 1.5, apprenticeStages: ['소년', '청년'], adultStages: ['어른', '노년'] },
+  list: {
+    forge:   { name: '공방',   cost: { gold: 250, items: { bog_iron: 4, red_clay: 4, obsidian: 2 } }, talent: 'smith', traits: ['handy'],
+      desc: '둥지에서 만들면 기력이 덜 들고 대성공·강화가 잘 된다.', en: 0.05, great: 0.015, rate: 0.5 },
+    herb:    { name: '약초밭', cost: { gold: 120, items: { grass_seed: 6, glow_moss: 3, red_clay: 3 } }, talent: 'herbalist', traits: ['flowers'],
+      desc: '하루 한 번 약초와 꿀을 거둔다. 가끔 귀한 약초도.', rolls: 3, pool: ['wild_honey', 'glow_moss', 'grass_seed', 'poison_herb'], rare: 'silver_clover', rareChance: 0.08 },
+    kitchen: { name: '부엌',   cost: { gold: 150, items: { red_clay: 6, bog_iron: 2, salt_crystal: 2 } }, talent: null, traits: ['glutton', 'handy', 'gentle'],
+      desc: '재료를 건네면 일하는 아이가 바로 요리한다. 아이가 만든 요리는 더 좋다. (보호자의 기력은 들지 않음)',
+      uses: { adult: 3, apprentice: 2, glutton: 1 }, extra: { glutton: 0.3, handy: 0.2 }, eat: 0.3, share: { sat: 15, bond: 1 } },
+    tower:   { name: '망루',   cost: { gold: 180, items: { beast_hide: 4, bog_iron: 3, obsidian: 1 } }, talent: 'guard', traits: ['brave'],
+      desc: '보물 도둑이 덜 든다.', raid: 0.25, raidMax: 0.75 },
+    library: { name: '서고',   cost: { gold: 200, items: { silk_scrap: 3, brass_button: 2, glow_moss: 2 } }, talent: null, traits: ['curious', 'steady'],
+      desc: '보호자가 얻는 경험치가 늘고, 식구 이야기(이벤트)가 조금 더 자주 생긴다.', xp: 0.04, event: 0.1 },
+    spa:     { name: '온천',   cost: { gold: 220, items: { volcanic_ash: 4, obsidian: 2, sea_shell: 4 } }, talent: null, traits: ['sleepy', 'lonely'],
+      desc: '둥지에서 쉴 때 체력·기력과 정신이 더 빨리 찬다.', rest: 0.12, mind: 0.25 },
+  },
+  // 부엌 요리: '정성 들인 ○○'. 식구 요리는 유대·배 ×, 강화 음식은 지속 시간 ×, 새끼 먹이는 유대·배 ×
+  cooked: { bond: 1.5, sat: 1.3, buffMin: 1.5 },
+};
+
 // ── 낚시: 해안 절벽에서만. 미끼 하나로 한 번 던짐 (행동력은 들지 않음) ──
 const FISHING = {
   region: 'coast',
@@ -704,6 +728,22 @@ const KIN = {
     salted_fish: { bond: 6, talent: 'guard', sat: 30 }, beast_hide: { bond: 4, talent: 'guard' }, sharp_fang: { bond: 5, talent: 'guard' },
   },
   tripTalent: 2,                      // 원정에 한 번 따라갈 때마다 파수꾼 쪽으로
+  // 새끼 드래곤이 보호자를 돕는 법
+  //  ally: '곁에 둔 새끼'(어린 용부터) 하나가 사냥·강적·재앙과의 싸움에 따라 나와 매 턴 공격 (결투에는 나오지 않음)
+  //  errand: 곁에 두지 않은 새끼를 혼자 심부름 보내 그 지역의 재료를 구해 옴 (보호자의 행동력은 들지 않음)
+  drakeHelp: {
+    errand: {
+      from: ['어린 용', '젊은 용', '다 자란 용'], ruinFrom: ['다 자란 용'], // 멸망한 대륙은 다 자란 용만
+      minutes: [60, 120, 240],
+      rolls: { 60: 3, 120: 5, 240: 9 },          // 시간마다 줍는 횟수
+      stageRolls: { '어린 용': 0, '젊은 용': 1, '다 자란 용': 2 },
+      wingPer: 10,                               // 날개 이만큼마다 한 번 더 줍기
+      tier: { common: 0.7, uncommon: 0.26, rare: 0.04 }, wisdomRare: 0.003, // 지혜 1당 귀한 것 확률 +0.3%
+      satPerHour: 8,                             // 다녀오면 배가 이만큼씩 줆
+      trophy: 0.25,                              // 다 자란 용은 가끔 그 지역 사냥감의 전리품도
+    },
+    ally: { from: ['어린 용', '젊은 용', '다 자란 용'], base: 4, claw: 1.2, wing: 0.5, stage: { '어린 용': 2, '젊은 용': 4, '다 자란 용': 6 }, power: 0.25, hunterPower: 0.31, cleverDaze: 0.2 },
+  },
   // 새끼 드래곤의 먹이와 포만감. 배부르면 가르칠 때 유대가 더 오르고 가르치기 간격이 짧아짐
   drakeFood: {
     items: {
@@ -1185,7 +1225,7 @@ const MIND = {
   max: 100,
   regenEvery: 3 * 60 * 1000,   // 정신 1이 차는 간격 (둥지에서 쉬면 3배, 은둔이면 1.3배 빠름)
   restMult: 3, hermitMult: 1.3,
-  rotateMs: 12 * 60 * 60 * 1000, // 오염된 땅이 옮겨 가는 간격 (12시간마다 새 곳에 오염이 생김)
+  rotateMs: 24 * 60 * 60 * 1000, // 오염된 땅이 옮겨 가는 간격 (24시간마다 새 곳에 오염이 생김)
   drain: { explore: 5, gather: 4, hunt: 0, expedition: 2 }, // 오염된 땅에서 행동할 때 깎이는 정신 (원정은 10분마다). 사냥은 몬스터가 깎음
   monster: 0.5,                // 오염된 몬스터가 입힌 피해의 이만큼 정신도 깎임
   monsterAtk: 1.15,            // 오염된 몬스터는 조금 더 셈
@@ -1492,9 +1532,26 @@ const ELITES = {
   ruins: '깨어난 수호 골렘', canyon: '황금 꼬리 전갈', volcano: '용암 도롱뇽 군주',
 };
 
+// 부엌에서 아이가 만든 요리: 제작법이 있는 식구 요리·강화 음식·새끼 먹이마다 '정성 들인 ○○'(id__k)을 만들어 둠
+FACILITY.cookable = [];
+for (const r of RECIPES) {
+  const it = ITEMS[r.out];
+  if (!it || r.hidden) continue;
+  const meal = it.cat === 'meal';
+  const buff = it.type === 'use' && it.use?.buff;
+  if (!meal && !buff) continue;
+  const id = `${r.out}__k`;
+  const C = FACILITY.cooked;
+  ITEMS[id] = { ...it, name: `정성 들인 ${it.name}`, value: Math.round((it.value || 1) * 1.5), cooked: r.out,
+    desc: `${it.desc} 둥지의 아이가 정성껏 만들어 더 맛있다.`, ...(buff ? { use: { ...it.use, minutes: Math.round(BUFFS.minutes * C.buffMin) } } : {}) };
+  if (KIN.care[r.out]) { const c = KIN.care[r.out]; KIN.care[id] = { ...c, bond: Math.round(c.bond * C.bond), sat: Math.round((c.sat || 0) * C.sat) }; }
+  if (KIN.drakeFood.items[r.out]) { const f = KIN.drakeFood.items[r.out]; KIN.drakeFood.items[id] = { bond: Math.round(f.bond * C.bond), sat: Math.round(f.sat * C.sat) }; }
+  FACILITY.cookable.push(r.out);
+}
+
 module.exports = {
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, TITLES, TITLE_COUNT_NAMES,
-  PURIFY, CRAFT, SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, FISHING, RUIN, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
+  PURIFY, CRAFT, SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, FISHING, RUIN, FACILITY, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
   DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
   COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, DEPART, BONDS, MARKS, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG,
 };

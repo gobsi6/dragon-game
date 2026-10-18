@@ -65,6 +65,24 @@ module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broa
     return w ? { id: d.id, name: d.name, kind: d.kind, level: d.level, region: d.fallen.region || d.region, until: w.until } : null;
   }
   const rescues = () => db.waitIds().map((id) => rescueInfo(load(id))).filter(Boolean);
+  // ── 다시 일어선 드래곤: 도움을 청했던 드래곤이 일어서면 3시간 동안 모두의 대륙 탭에 남겨 둠 ──
+  const RISEN_MS = 3 * 3600 * 1000;
+  const risenList = () => (db.worldGet('risen', []) || []).filter((x) => Date.now() - x.at < RISEN_MS);
+  const pushRisen = () => io.emit('rescue:risen', risenList());
+  function markRisen(d, how, by = null, byId = null) {
+    const where = REGIONS[(d.fallen && d.fallen.region) || d.region]?.name || '';
+    const list = [{ id: d.id, name: d.name, kind: d.kind, at: Date.now(), how, by, where }, ...risenList().filter((x) => x.id !== d.id)].slice(0, 12);
+    db.worldSet('risen', list);
+    pushRisen();
+    // 동료에게는 둥지 소식 카드로 (채팅이 밀려도 남음)
+    const text = how === 'rescued' ? `동료 ${ga(d.name)} ${where}에서 ${by}의 도움으로 다시 일어섰다.` : `동료 ${ga(d.name)} ${where}에서 상흔을 입고 스스로 다시 일어섰다.`;
+    for (const r of db.relList(d.id)) {
+      if (r.kind !== 'friend' || r.id === byId) continue; // 일으켜 준 드래곤은 이미 앎
+      const e = live(r.id);
+      if (e) e.socket.emit('notice', { title: '동료 소식', lines: [text] });
+      else db.noteAdd(r.id, text);
+    }
+  }
   const pushRescues = () => io.emit('rescue:list', rescues());
   function wait(d) {
     const f = fallenOf(d);
@@ -122,6 +140,7 @@ module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broa
     const levelUp = logic.gainXp(helper, xp);
     db.saveState(helper);
     shout(`[구조] ${ga(helper.name)} 쓰러진 ${eul(t.name)} 일으켜 세웠다.`);
+    markRisen({ ...t, fallen: { region: where } }, 'rescued', helper.name, helper.id);
     const tl = `${ga(helper.name)} 찾아와 ${healer ? '치유 마법으로 상처를 아물게 하며 ' : ''}일으켜 주었다. 상흔 없이 다시 일어섰다. (체력 ${Math.round(hpPct * 100)}%)`;
     const e = live(t.id);
     if (e) { sendMe(e.socket, t); e.socket.emit('rescued', { by: helper.name, lines: [tl] }); broadcastPresence(t.region); }
@@ -145,6 +164,11 @@ module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broa
     scars.push(st.key);
     logic.chron(d, 'choice', `쓰러졌다가 상흔을 입고 일어섰다. (${st.name} 영구 −1)`);
     const wasWaiting = !!waitingOf(d);
+    const askedHelp = wasWaiting || !!fallenOf(d)?.waited; // 도움을 청한 적이 있으면 모두에게 알림
+    if (askedHelp) {
+      markRisen(d, 'scar');
+      shout(`[일어섬] ${ga(d.name)} 상흔을 입고 스스로 다시 일어섰다.`);
+    }
     d.fallen = null;
     if (wasWaiting) setImmediate(pushRescues);
     d.hp = Math.max(1, Math.round(logic.hpCap(d) * DEATH.reviveHp));
@@ -364,5 +388,5 @@ module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broa
   // 쓰러진 동안·죽은 뒤에는 아무것도 할 수 없음
   const blocked = (d) => (fallenOf(d) ? (waitingOf(d) ? '쓰러져 도움을 기다리는 중이다.' : '쓰러져 있다. 일어설지, 긴 잠에 들지 먼저 정해야 한다.') : null);
 
-  return { attach, fall, blocked, fallenOf, scarsOf, canRevive, graves, view, closeGrave, rescues, wait, help, waitingOf };
+  return { attach, fall, blocked, fallenOf, scarsOf, canRevive, graves, view, closeGrave, rescues, risenList, wait, help, waitingOf };
 };

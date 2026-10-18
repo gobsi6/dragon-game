@@ -18,7 +18,7 @@ const {
 const logic = require('./game-logic');
 const mobs = require('./game-mobs'); // 모브 드래곤: 의뢰·이야기·교환
 const life = require('./game-life');
-const { REGION_LOOT, SHOPS_SPECIAL, RUIN } = require('./game-data');
+const { REGION_LOOT, SHOPS_SPECIAL, RUIN, FACILITY, KIN_TRAITS } = require('./game-data');
 
 // ── 물건을 얻는 곳: 제작 화면에서 재료를 누르면 보여 줌. 서버를 켤 때 한 번 정리해 둠 ──
 const ITEM_SOURCES = (() => {
@@ -44,6 +44,7 @@ const ITEM_SOURCES = (() => {
   add('star_fragment', '어디서든 2시간 이상 원정을 끝까지 다녀오면 (3시간이면 더 잘)');
   for (const t of RUIN.treasure.pool) add(t, `${RUIN.name}의 강적·사냥 (드물게)`);
   for (const g of RUIN.gear.pool) add(g, `${RUIN.name}의 강적 (아주 드물게, 강적 ${RUIN.gear.pity}마리째에는 반드시)`);
+  for (const id of FACILITY.cookable) add(`${id}__k`, '둥지 부엌에서 아이에게 요리를 맡기면');
   for (const r of RECIPES) if (!r.hidden) add(r.out, '제작');
   return out;
 })();
@@ -723,6 +724,11 @@ io.on('connection', (socket) => {
     shops: Object.keys(SHOPS),
     trade: TRADE,
     sources: ITEM_SOURCES,
+    facility: {
+      slots: FACILITY.slots, cookable: FACILITY.cookable,
+      list: Object.fromEntries(Object.entries(FACILITY.list).map(([id, F]) => [id, { ...F,
+        fit: [F.talent ? `${TALENTS[F.talent].name} 재주` : null, ...F.traits.map((t) => KIN_TRAITS[t]?.name)].filter(Boolean).join(', ') }])),
+    },
     ruinRules: { name: RUIN.name, crossAp: RUIN.crossAp, minLevel: RUIN.minLevel, gateTo: RUIN.gateTo, drain: RUIN.drain },
     fishing: { region: FISHING.region, window: FISHING.window },
     bonds: require('./game-data').BONDS, marks: require('./game-data').MARKS, bondRules: require('./game-data').BOND_RULES,
@@ -748,6 +754,7 @@ io.on('connection', (socket) => {
   socket.emit('weather', weatherAll());
   socket.emit('grave:list', death.graves());
   socket.emit('rescue:list', death.rescues());
+  socket.emit('rescue:risen', death.risenList()); // 최근 다시 일어선 드래곤
 
   socket.on('dragon:create', (payload, ack) => {
     if (typeof ack !== 'function') return;
@@ -1089,7 +1096,13 @@ io.on('connection', (socket) => {
   itemAction('craft:experiment', (d, p, have) => logic.experiment(d, p.items, have));
   itemAction('gear:enhance', (d, p, have) => logic.enhanceGear(d, str(p.item), have));
   itemAction('gear:engrave', (d, p, have) => logic.engraveGear(d, str(p.item), str(p.elem), have));
-  itemAction('nest:forge', (d, p, have) => logic.buildForge(d, have));
+  itemAction('nest:forge', (d, p, have) => logic.buildFacility(d, 'forge', have)); // 예전 화로 짓기 버튼
+  // 둥지 시설
+  itemAction('nest:fac:build', (d, p, have) => logic.buildFacility(d, str(p.id), have));
+  itemAction('nest:fac:remove', (d, p) => logic.removeFacility(d, str(p.id)));
+  itemAction('nest:job', (d, p, have, kin) => life.setJob(d, kin, p.kin, str(p.fac)));
+  itemAction('nest:harvest', (d, p, have, kin) => life.harvest(d, kin));
+  itemAction('nest:cook', (d, p, have, kin) => life.cook(d, kin, str(p.recipe), have));
   itemAction('order:fill', (d, p, have) => logic.fillOrder(d, str(p.key), have));
   // ── 모브 드래곤 ──
   socket.on('mob:get', (payload, ack) => {
@@ -1229,6 +1242,8 @@ io.on('connection', (socket) => {
   itemAction('kin:path', (d, p, have, kin) => life.choosePath(d, kin, p.id, str(p.path), str(p.town)));
   itemAction('kin:incubate', (d, p, have, kin) => life.incubate(d, kin, p.id, have));
   itemAction('kin:train', (d, p, have, kin) => life.train(d, kin, p.id, str(p.stat)));
+  itemAction('kin:companion', (d, p, have, kin) => life.setCompanion(kin, p.id)); // 곁에 둘 새끼 (사냥·강적에 함께 나섬)
+  itemAction('kin:errand', (d, p, have, kin) => life.sendErrand(kin, p.id, str(p.region), Number(p.minutes), ruin.unlocked(str(p.region)))); // 새끼 혼자 심부름
   itemAction('kin:release', (d, p, have, kin) => life.release(d, kin, p.id));
 
   // ── 이벤트 ──
@@ -1263,6 +1278,22 @@ io.on('connection', (socket) => {
         raid: logic.raidView(d),
         guard: d.perks?.guard || null,
         forge: !!logic.nestInfo(d).forge, forgeCost: CRAFT.forge.cost, // 둥지 공방(화로)
+        // 둥지 시설: 칸 수, 지은 시설과 그 힘, 일하는 식구, 오늘 할 수 있는 것
+        facilities: (() => {
+          const fac = logic.facOf(d);
+          const today = logic.dayIdx();
+          const workers = {};
+          for (const k of kin) if (k.type === 'human' && k.status === 'home' && k.data.job) workers[k.data.job] = k;
+          return {
+            slots: logic.facSlots(d),
+            built: Object.keys(fac).filter((id) => FACILITY.list[id]).map((id) => {
+              const w = workers[id];
+              const v = w && life.views([w], Date.now(), d).home[0];
+              return { id, power: logic.facPower(d, id), worker: w ? { id: w.id, name: w.name, working: !!v?.job?.working, apprentice: !!v?.job?.apprentice, fit: !!v?.job?.fit } : null,
+                herbDone: id === 'herb' ? fac.herb.day === today : undefined, cookLeft: id === 'kitchen' ? life.cookLeft(d) : undefined };
+            }),
+          };
+        })(),
         offers: social.kinOffers(d),            // 식구 입양 제안 (받은 것·보낸 것)
         partnerKin: (() => {                     // 반려의 둥지에 와 있으면 그 집 식구 (같이 돌보기)
           const ph = logic.hooks.partnerNest(d);
@@ -1439,6 +1470,8 @@ io.on('connection', (socket) => {
     if (!entry) return;
     const text = str(payload?.text).slice(0, CHAT_MAX);
     if (!text) return;
+    // 광폭화 중에는 말을 잃음 (텔레파시만 가능)
+    if (logic.berserkOf(entry.dragon)) return socket.emit('system', { text: '광폭화 중에는 말을 할 수 없다. 텔레파시로만 마음을 전할 수 있다.', at: Date.now() });
 
     const now = Date.now();
     if (now - (socket.data.lastChat || 0) < CHAT_COOLDOWN) return;
@@ -1457,6 +1490,7 @@ io.on('connection', (socket) => {
     if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
     const text = str(payload?.text).slice(0, CHAT_MAX);
     if (!text) return ack({ error: '외칠 말을 적자.' });
+    if (logic.berserkOf(entry.dragon)) return ack({ error: '광폭화 중에는 외칠 수 없다. 텔레파시로만 마음을 전할 수 있다.' });
     const now = Date.now();
     if (now - (socket.data.lastChat || 0) < CHAT_COOLDOWN) return ack({ error: '숨을 고르고 다시 외치자.' });
     const d = entry.dragon;

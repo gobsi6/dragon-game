@@ -5,7 +5,7 @@
 
 const {
   REGIONS, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, RECIPES, SLOTS, STANCES, SHOPS, REP_TIERS, repTier, TRADE, NEST, hoardTier, RAID, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, ELEMENTS,
-  CRAFT, SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, SKILLS, FISHING, RUIN, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG,
+  CRAFT, SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, SKILLS, FISHING, RUIN, FACILITY, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG,
 } = require('./game-data');
 
 const SR = STANCE_RULES;
@@ -70,7 +70,7 @@ function traitCount(d, key, n = 1) {
   return lines;
 }
 // 특성과 칭호가 반영된 경험치
-const xpOf = (d, xp) => (xp > 0 ? Math.max(1, Math.round(xp * traitMods(d).xp * (titleMods(d).xp || 1))) : 0);
+const xpOf = (d, xp) => (xp > 0 ? Math.max(1, Math.round(xp * traitMods(d).xp * (titleMods(d).xp || 1) * (1 + FACILITY.list.library.xp * facPower(d, 'library')))) : 0); // 서고: 경험치 조금 더
 
 // ── 지나온 이야기 ──────────────────────────────────
 // 선택(choice)과 큰 사건(mark)을 한 줄씩 남김. 최근 CHRON_MAX개만
@@ -377,7 +377,7 @@ function regen(d, now = Date.now()) {
   // 계절과 날씨. 둥지에서 쉬는 동안에는 궂은 날씨를 피함 (느려지는 효과는 없고, 겨울에는 둥지 온기로 더 빨라짐)
   const wx = weatherFx(d.region, now);
   const shelter = (v) => (d.rest_at ? Math.max(1, v) : v);
-  const rr = d.rest_at ? wx.restRegen : 1;
+  const rr = d.rest_at ? wx.restRegen * (1 + FACILITY.list.spa.rest * facPower(d, 'spa')) : 1; // 온천: 쉴 때 더 빨리
   m = { ap: m.ap * shelter(wx.apRegen) * rr, hp: m.hp * shelter(wx.hpRegen) * rr, en: m.en * shelter(wx.enRegen) * rr };
   tick('ap', apCap(d), 'ap_at', RULES.apEvery / (m.ap * tm.apRegen));
   if (isFallen(d)) d.hp_at = now; // 쓰러져 있는 동안은 체력이 차지 않음
@@ -386,7 +386,7 @@ function regen(d, now = Date.now()) {
   // 정신: 광폭화 중에는 차지 않음. 둥지에서 쉬면 빨리, 은둔이면 조금 더 빨리
   if (d.mind == null) d.mind = MIND.max;
   if (berserkOf(d)) d.mind_at = now;
-  else tick('mind', MIND.max, 'mind_at', MIND.regenEvery / ((d.rest_at ? MIND.restMult * (hoardTier(nestInfo(d).value || 0)?.mind || 1) : 1) * (d.stance === 'hermit' ? MIND.hermitMult : 1) * shelter(wx.mindRegen) * (hooks.together?.(d) ? BOND_RULES.together.mind : 1)));
+  else tick('mind', MIND.max, 'mind_at', MIND.regenEvery / ((d.rest_at ? MIND.restMult * (hoardTier(nestInfo(d).value || 0)?.mind || 1) * (1 + FACILITY.list.spa.mind * facPower(d, 'spa')) : 1) * (d.stance === 'hermit' ? MIND.hermitMult : 1) * shelter(wx.mindRegen) * (hooks.together?.(d) ? BOND_RULES.together.mind : 1)));
 }
 
 // ── 장소 ───────────────────────────────────────────
@@ -940,7 +940,7 @@ function finishExpedition(d, now = Date.now(), companions = 0) {
 
 // ── 제작 ───────────────────────────────────────────
 // 둥지의 대장장이가 있으면 기력이 30% 덜 듦
-const craftEn = (d, r) => Math.ceil(r.en * (d.perks?.smith ? 0.7 : 1) * (titleMods(d).craftEn || 1) * (atForge(d) ? CRAFT.forge.en : 1) - 1e-9);
+const craftEn = (d, r) => Math.ceil(r.en * (d.perks?.smith ? 0.7 : 1) * (titleMods(d).craftEn || 1) * (atForge(d) ? CRAFT.forge.en - FACILITY.list.forge.en * (forgeP(d) - 1) : 1) - 1e-9);
 // ── 제작 확장: 걸작·강화·각인(장신구별 기록), 숨겨진 제작법, 공방 ──
 // 전투 설정(combat JSON)에 { gear: { 아이템id: { plus, mw, elem } }, recipes: [찾아낸 제작법], orders: { day, done } }
 const gearOf = (d) => {
@@ -952,7 +952,8 @@ const gearOf = (d) => {
 const mainStat = (it) => Object.entries(it.bonus || {}).sort((a, b) => b[1] - a[1])[0]?.[0] || null; // 가장 크게 올려 주는 능력치
 const knownRecipes = (d) => { const c = combatJson(d); if (!Array.isArray(c.recipes)) c.recipes = []; return c.recipes; };
 const recipeKnown = (d, r) => !r.hidden || knownRecipes(d).includes(r.out);
-const atForge = (d) => !!d.nest && d.region === d.nest && !!nestInfo(d).forge;
+const atForge = (d) => !!d.nest && d.region === d.nest && !!facOf(d).forge;
+const forgeP = (d) => (atForge(d) ? facPower(d, 'forge') : 0); // 공방의 힘 (일하는 식구가 있으면 더)
 // 각인: 속성별 피해 배율 (착용한 장신구에 새긴 것만)
 function engraveOf(d) {
   const m = {};
@@ -965,7 +966,7 @@ function greatChance(d, focus = null) {
   const G = CRAFT.great;
   const count = traitsOf(d).counts?.craft || 0;
   let p = G.base + statsOf(d).wisdom * G.perWis + Math.min(G.countMax, count / G.perCount);
-  if (atForge(d)) p += G.forge;
+  if (atForge(d)) p += G.forge + FACILITY.list.forge.great * (forgeP(d) - 1);
   if (d.perks?.smith) p += G.smith;
   p += titleMods(d).craftGreat || 0;
   if (focus != null) for (const [at, add] of G.focus) if (focus >= at) { p += add; break; }
@@ -1068,7 +1069,7 @@ function enhanceGear(d, id, have) {
   for (const [x, n] of Object.entries(step.items)) if (have(x) < n) return { error: `${ITEMS[x].name}${josa(ITEMS[x].name, '이', '가')} 모자란다. (${n}개 필요)` };
   d.gold -= step.gold;
   const items = Object.entries(step.items).map(([x, n]) => ({ id: x, qty: -n }));
-  const rate = Math.min(1, step.rate + (atForge(d) ? CRAFT.forgeRate : 0));
+  const rate = Math.min(1, step.rate + (atForge(d) ? CRAFT.forgeRate * (1 + FACILITY.list.forge.rate * (forgeP(d) - 1)) : 0));
   const lines = [];
   if (Math.random() < rate) {
     g[id] = { ...(g[id] || {}), plus: lv + 1 };
@@ -1210,8 +1211,9 @@ function useItem(d, id, have) {
   if (u.buff) {
     const B = BUFFS[u.buff];
     const old = buffOf(d);
-    combatJson(d).buff = { id: u.buff, until: Date.now() + BUFFS.minutes * 60000 };
-    lines.push(`${BUFFS.minutes}분 동안 ${B.name} 상태가 된다. (사냥·강적 전투에서 ${B.desc})`);
+    const mins = u.minutes || BUFFS.minutes; // 부엌에서 아이가 만든 것은 더 오래감
+    combatJson(d).buff = { id: u.buff, until: Date.now() + mins * 60000 };
+    lines.push(`${mins}분 동안 ${B.name} 상태가 된다. (사냥·강적 전투에서 ${B.desc})`);
     if (old && old.id !== u.buff) lines.push(`먼저 있던 ${old.name}의 효과는 사라졌다.`);
     if (u.mindCost) lines.push(...loseMind(d, u.mindCost)); // 광기의 묘약: 정신이 깎임
     return { title: it.name, lines, items: [{ id, qty: -1 }] };
@@ -1643,6 +1645,44 @@ function nestInfo(d) {
   return n;
 }
 const nestTier = (d) => NEST.tiers[d.nest ? nestInfo(d).tier : 0];
+// ── 둥지 시설 ─────────────────────────────────────
+// 지은 시설 { 시설 id: { at } }. 예전의 화로(forge: true)는 공방으로 옮김
+function facOf(d) {
+  const n = nestInfo(d);
+  if (!n.fac || typeof n.fac !== 'object') n.fac = {};
+  if (n.forge && !n.fac.forge) n.fac.forge = { at: Date.now() };
+  return n.fac;
+}
+const facSlots = (d) => FACILITY.slots[d.nest ? nestInfo(d).tier : 0] || FACILITY.slots[0];
+// 시설의 힘: 없으면 0, 지었으면 1 + 일하는 식구 몫 (d.perks.fac는 game-life의 perksOf가 채움)
+const facPower = (d, id) => (d.nest && facOf(d)[id] ? 1 + (d.perks?.fac?.[id] || 0) : 0);
+function buildFacility(d, id, have) {
+  const F = FACILITY.list[id];
+  if (!F) return { error: '알 수 없는 시설이다.' };
+  if (!d.nest || d.region !== d.nest) return { error: '시설은 둥지에 있을 때만 지을 수 있다.' };
+  if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
+  const fac = facOf(d);
+  if (fac[id]) return { error: `이미 ${F.name}${josa(F.name, '이', '가')} 있다.` };
+  if (Object.keys(fac).length >= facSlots(d)) return { error: `시설 칸이 모자란다. (지금 ${facSlots(d)}칸. 둥지를 넓히면 늘어난다)` };
+  const c = F.cost;
+  if (d.gold < c.gold) return { error: `금화가 모자란다. (${c.gold}닢 필요)` };
+  for (const [x, k] of Object.entries(c.items)) if (have(x) < k) return { error: `${ITEMS[x].name}${josa(ITEMS[x].name, '이', '가')} 모자란다. (${k}개 필요)` };
+  d.gold -= c.gold;
+  fac[id] = { at: Date.now() };
+  if (id === 'forge') nestInfo(d).forge = true;
+  chron(d, 'mark', `둥지에 ${F.name}${josa(F.name, '을', '를')} 지었다.`);
+  return { title: F.name, lines: [`둥지에 ${F.name}${josa(F.name, '을', '를')} 지었다.`, F.desc, '식구에게 일을 맡기면 더 좋아진다.'], items: Object.entries(c.items).map(([x, k]) => ({ id: x, qty: -k })), gold: -c.gold };
+}
+function removeFacility(d, id) {
+  const F = FACILITY.list[id];
+  if (!F) return { error: '알 수 없는 시설이다.' };
+  if (!d.nest || d.region !== d.nest) return { error: '둥지에 있을 때만 할 수 있다.' };
+  const fac = facOf(d);
+  if (!fac[id]) return { error: '그 시설이 없다.' };
+  delete fac[id];
+  if (id === 'forge') nestInfo(d).forge = false;
+  return { title: F.name, lines: [`${F.name}${josa(F.name, '을', '를')} 허물었다. 그 자리가 비었다.`] };
+}
 const maxKinOf = (d) => nestTier(d).kin;
 
 // 둥지 넓히기: 금화는 가진 것에서 먼저, 모자라면 보물더미에서
@@ -1695,7 +1735,8 @@ function checkRaid(d, hoard, now = Date.now(), force = false) {
     ni.raidAt += hours * 3600000;
     if (ni.raidAt < now - 3600000) ni.raidAt = now;
     const C = RAID.chance;
-    const p = Math.min(C.max, C.base + C.per1000 * (value / 1000)) * (d.perks?.guard ? RAID.guard : 1);
+    const tw = FACILITY.list.tower;
+    const p = Math.min(C.max, C.base + C.per1000 * (value / 1000)) * (d.perks?.guard ? RAID.guard : 1) * (1 - Math.min(tw.raidMax, tw.raid * facPower(d, 'tower'))); // 망루
     chance = 1 - (1 - p) ** hours;
   }
   if (Math.random() >= chance) return null;
@@ -1762,6 +1803,6 @@ module.exports = {
   corruptedRegion, corruptUntil, corruptPeriod, isCorrupted, isRuin, berserkOf, loseMind, nearestTown,
   placeOf, goPlace, isFallen, chron, chronOf,
   titlesOf, titleOn, titleName, titleMods, checkTitles, setTitle, titlesView,
-  combatJson, dayIdx, gearMods, // 모브 드래곤(game-mobs.js)이 씀
+  combatJson, dayIdx, gearMods, clampVitals, facOf, facSlots, facPower, buildFacility, removeFacility, // 모브 드래곤(game-mobs.js)이 씀
   xpNeed, atMaxLevel,
 };
