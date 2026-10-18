@@ -1068,7 +1068,7 @@ const PLACES = {
     desc: '검은 갈대가 사람 키보다 높이 자랐다. 물속에서 커다란 눈이 떠올랐다 가라앉는다.' },
   swamp_village: { region: 'swamp',   name: '가라앉은 마을', level: 5, creature: '늪 망령', type: 'ghost',       elite: '물에 잠긴 촌장의 망령', weak: ['fire', 'lightning', 'spirit'], resist: ['poison', 'ice'], special: { name: '울부짖음', power: 0.5, debuff: { weaken: 3 } },
     desc: '지붕만 남은 집들이 늪 위로 솟아 있다. 밤마다 종소리가 들린다고 한다.' },
-  swamp_mire:    { region: 'swamp',   name: '검은 수렁',    level: 7,  creature: '어린 히드라', type: 'reptile',   elite: '머리 셋 달린 히드라', weak: ['fire'], resist: ['poison', 'acid', 'water'], special: { name: '세 머리 물기', power: 0.55, hits: 3 },
+  swamp_mire:    { region: 'swamp',   name: '검은 수렁',    level: 7,  creature: '작은 히드라', type: 'reptile',   elite: '머리 셋 달린 히드라', weak: ['fire'], resist: ['poison', 'acid', 'water'], special: { name: '세 머리 물기', power: 0.55, hits: 3 },
     desc: '빠지면 다시는 올라오지 못한다는 수렁. 거품 사이로 비늘 덮인 목들이 솟는다.' },
   snow_field:    { region: 'snow',    name: '눈벌판',       level: 2,  creature: '설원 늑대', type: 'beast',     elite: '서리 늑대 우두머리', weak: ['fire'], resist: ['ice'], special: { name: '무리 사냥', power: 0.65, hits: 2 },
     desc: '눈보라가 지나간 뒤 세상이 고요하다. 눈 위에 발자국이 어지럽게 찍혀 있다.' },

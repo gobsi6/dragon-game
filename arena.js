@@ -545,9 +545,30 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
     });
   }
 
-  // 접속이 끊기면: 강적은 물러난 것으로, 결투는 진 것으로
-  function onLeave(id) {
+  // 접속이 끊기면: 새로고침일 수 있으니 RECONNECT_MS 동안 싸움을 그대로 두고 기다림
+  // 그 안에 돌아오면 resume()으로 이어서 싸우고, 안 돌아오면 그때 끝냄 (immediate면 바로 끝냄: 탈퇴·먼 여행 등)
+  const RECONNECT_MS = 90 * 1000;
+  const leaving = new Map(); // 드래곤 id → 기다리는 타이머
+  function onLeave(id, immediate = false) {
     for (const [k, inv] of invites) if (inv.from === id || inv.to === id) { clearTimeout(inv.timer); invites.delete(k); }
+    if (!sessions.has(id)) return;
+    clearTimeout(leaving.get(id));
+    leaving.delete(id);
+    if (immediate) return endOnLeave(id);
+    leaving.set(id, setTimeout(() => { leaving.delete(id); endOnLeave(id); }, RECONNECT_MS));
+  }
+  // 다시 접속했을 때: 기다리던 싸움이 있으면 그 화면을 다시 보내 줌
+  function resume(id, socket) {
+    clearTimeout(leaving.get(id));
+    leaving.delete(id);
+    const s = sessions.get(id);
+    if (!s || s.b.over) return false;
+    const k = s.side[id];
+    socket.emit('battle:start', { view: { ...combat.view(s.b, k), deadline: s.deadline }, lines: ['다시 돌아와 싸움을 이어 간다.'] });
+    return true;
+  }
+  // 실제로 끝냄: 강적은 물러난 것으로, 결투는 진 것으로, 사냥은 나머지를 자동으로
+  function endOnLeave(id) {
     const s = sessions.get(id);
     if (!s) return;
     if (s.kind === 'hunt') { autoHunt(s); return finishHunt(s); } // 사냥은 나머지를 자동으로 끝냄
@@ -561,5 +582,5 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
     finishDuel(s);
   }
 
-  return { attach, startElite, startHunt, inBattle, onLeave, checkMind, rampages, endBerserk, startBerserk, setFall };
+  return { attach, startElite, startHunt, inBattle, onLeave, resume, checkMind, rampages, endBerserk, startBerserk, setFall };
 };

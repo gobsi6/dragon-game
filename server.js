@@ -422,6 +422,7 @@ function enterWorld(socket, dragon) {
   logic.regen(dragon);
   syncKin(socket, dragon);
   sendMe(socket, dragon); // 접속할 때 새로 이룬 칭호도 확인
+  if (arena) arena.resume(dragon.id, socket); // 새로고침 전의 싸움이 남아 있으면 이어서
   social.onEnter(socket, dragon);
   online.set(dragon.id, { socket, dragon });
   socket.join(dragon.region);
@@ -1519,7 +1520,7 @@ io.on('connection', (socket) => {
     if (entry) {
       const d = entry.dragon;
       social.onLeave(d.id);
-      arena.onLeave(d.id);
+      arena.onLeave(d.id, true);
       online.delete(d.id);
       socket.leave(d.region);
       system(d.region, `${d.name}${josa(d.name, '이', '가')} 구름 너머로 영영 떠났다.`);
@@ -1559,7 +1560,7 @@ io.on('connection', (socket) => {
     if (legacy) db.legacySet(user.id, legacy);
     for (const o of db.offersTo(d.id)) db.offerDel(o.id); // 받은 입양 제안은 지움 (보낸 제안은 동료가 받아 줄 수 있게 둠)
     social.onLeave(d.id);
-    arena.onLeave(d.id);
+    arena.onLeave(d.id, true);
     online.delete(d.id);
     socket.leave(d.region);
     socket.data.dragonId = null;
@@ -1590,7 +1591,7 @@ io.on('connection', (socket) => {
     if (arena.inBattle(d.id)) return ack({ error: '싸우는 중에는 할 수 없다. 싸움을 끝낸 뒤 다시 하자.' });
     if (logic.berserkOf(d)) return ack({ error: '광폭화 중에는 할 수 없다.' });
     social.onLeave(d.id);
-    arena.onLeave(d.id);
+    arena.onLeave(d.id, true);
     online.delete(d.id);
     socket.leave(d.region);
     socket.data.dragonId = null;

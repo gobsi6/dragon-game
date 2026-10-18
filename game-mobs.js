@@ -181,7 +181,7 @@ const MOBS = {
       { t: 1, g: { explore: 'swamp', n: 2 }, say: '늪 바닥에 뭐가 가라앉아 있는지 보고 와.' },
       { t: 2, g: { win: 'swamp_village', n: 3 }, say: '가라앉은 마을의 망령들이 시끄럽다.' },
       { t: 2, g: { bring: { croc_scale: 3, bog_iron: 1 } }, say: '비늘 갑옷을 손볼 거다.' },
-      { t: 3, g: { win: 'swamp_mire', n: 1 }, say: '어린 히드라의 피… 한 방울이면 충분해.' },
+      { t: 3, g: { win: 'swamp_mire', n: 1 }, say: '작은 히드라의 피… 한 방울이면 충분해.' },
       { t: 3, g: { elite: 'swamp' }, say: '늪의 늙은 악어. 놈이 내 꼬리를 물었었지.' },
     ],
     trades: [

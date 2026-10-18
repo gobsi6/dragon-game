@@ -133,7 +133,9 @@ function fromCreature(place, elite, corrupted = false, minion = null) {
   const DF = COMBAT.difficulty || { hp: 1, atk: 1 }; // 난이도 배율
   const CB = creatureBase(lv);
   const hpMax = Math.round(CB.hp * (elite ? K.eliteHp : 1) * (minion ? G.hp : 1) * DF.hp * (pl.hpMul || 1)); // 멸망한 대륙: 체력이 훨씬 높음
-  const name = `${minion ? `${minion} ` : ''}${elite ? pl.elite : pl.creature}`;
+  const base = elite ? pl.elite : pl.creature;
+  // 무리의 말이 이름에 이미 들어 있으면 두 번 붙이지 않음 (예: '어린' + '어린 ○○')
+  const name = minion && !base.startsWith(`${minion} `) ? `${minion} ${base}` : base;
   return {
     id: null, name: corrupted ? `오염된 ${name}` : name, kind: null, creature: true, region: pl.region, place, elite: !!elite, minion: !!minion, level: lv,
     type: (elite && pl.eliteType) || pl.type || null, // 화면 아이콘 계통
