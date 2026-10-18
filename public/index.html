@@ -624,6 +624,8 @@
   /* 둥지 탭 칸은 사이가 12px 띄워져 있어서, 제목·설명·칸 사이는 음수 여백으로 좁힘 */
   .nest-pane h3.nest-cut { margin: 10px 0 -8px; padding-top: 16px; border-top: 1px solid #C9CCC8; }
   .nest-pane .nest-cut-note { margin: 0 0 -6px; }
+  .kin-head-btns { margin-left: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+  .kin-head-btns .linkbtn { margin-left: 0; }
   .fac-tip { margin: 0; padding: 8px 10px; background: #E2EFF3; border-radius: 4px; font-size: 12.5px; line-height: 1.55; color: #2F5F73; }
   .inv .it.fac-row .acts { grid-column: 1 / -1; grid-row: auto; max-width: none; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-start; margin-top: 4px; }
   .inv .it.fac-row .cost-list, .inv .it.fac-row .fac-work { grid-column: 1 / -1; grid-row: auto; }
@@ -4087,6 +4089,11 @@
     chip.className = `kin-chip${v.status === 'egg' ? ' egg' : ''}`;
     chip.textContent = v.status === 'egg' ? `알 · ${kindName(v.kind)}` : v.type === 'human' ? `인간 · ${v.stage}` : `${kindName(v.kind)} · ${v.stage}`;
     head.append(kinFace(v), nm, chip);
+    // 머리줄 오른쪽: 이름 바꾸기 · 동료에게 입양 보내기 (같은 모양의 버튼)
+    const canAdopt = v.status === 'egg' || (v.type === 'human' && v.status === 'home' && !v.path && !v.talent && !v.onExp);
+    const pend = nestOffersOut.find((o) => o.kin === v.id);
+    const hb = document.createElement('div');
+    hb.className = 'kin-head-btns';
     if (v.status !== 'egg' && !partner) {
       const rn = document.createElement('button');
       rn.type = 'button';
@@ -4096,8 +4103,18 @@
         const name = prompt('새 이름 (한글이나 영문 1~8자)', v.name);
         if (name && name.trim() !== v.name) nestAct('kin:rename', { id: v.id, name: name.trim() });
       });
-      head.appendChild(rn);
+      hb.appendChild(rn);
     }
+    if (!pend && canAct && canAdopt && !partner) {
+      const ad = document.createElement('button');
+      ad.type = 'button';
+      ad.className = 'linkbtn';
+      ad.textContent = '입양 보내기';
+      ad.title = '동료에게 입양 보내기';
+      ad.addEventListener('click', () => adoptPicker(card, v));
+      hb.appendChild(ad);
+    }
+    if (hb.childElementCount) head.appendChild(hb);
     card.appendChild(head);
     // 타고난 모습 (알은 깨어나야 알 수 있음)
     if (v.sex) {
@@ -4281,13 +4298,9 @@
       }
     }
     // 입양: 알(식지 않은 것)이나 아직 갈 길을 정하지 않은 인간 아이
-    const canAdopt = v.status === 'egg' || (v.type === 'human' && v.status === 'home' && !v.path && !v.talent && !v.onExp);
-    const pend = nestOffersOut.find((o) => o.kin === v.id);
     if (pend) {
       label(`${pend.to.name}에게 입양을 제안했다. 답을 기다리는 중 (${dur(pend.until - Date.now())} 남음)`);
       btn('제안 거두기', () => socket.emit('kin:offer:cancel', { id: pend.id }, (r) => { if (r.error) return toast(r.error); toast(r.lines.join(' ')); openNest(); }));
-    } else if (canAct && canAdopt && !partner) {
-      btn('동료에게 입양 보내기', () => adoptPicker(card, v));
     }
     if (acts.children.length) card.appendChild(acts);
     return card;
