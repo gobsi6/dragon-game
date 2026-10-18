@@ -140,7 +140,7 @@ function titleCondText(t) {
   if (c.count) {
     const [k, r] = c.count.split(':');
     const text = (TITLE_COUNT_NAMES[k] || `${k} {n}번`).replace('{n}', c.at);
-    return r ? `${REGIONS[r].name}에서 ${text.replace('사냥에서 ', '사냥 ').replace('번 이기기', '번 이기기')}` : text;
+    return r ? `${REGIONS[r].name}에서 ${text.replace('사냥에서 ', '사냥 ')}` : text;
   }
   if (c.level) return `레벨 ${c.level}`;
   if (c.duel) return `결투에서 ${c.duel}번 이기기`;
@@ -222,6 +222,8 @@ function clampVitals(d) {
   d.hp = Math.min(d.hp, hpCap(d));
   d.en = Math.min(d.en, enCap(d));
 }
+// 사냥·강적·재앙·추격에 나설 수 있는 최소 체력: 고정값과 최대 체력 비율 중 큰 쪽
+const lowHp = (d) => d.hp < Math.max(RULES.huntMinHp, Math.round(hpCap(d) * (RULES.huntMinHpPct || 0)));
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const randInt = (a, b) => Math.floor(rand(a, b + 1));
@@ -422,7 +424,7 @@ function isFallen(d) {
 }
 
 // ── 정신과 오염 ────────────────────────────────────
-// 오염된 땅: 야생 지역 중 하나. 이틀마다 다음 곳으로 옮겨 감 (모두에게 같은 곳)
+// 오염된 땅: 야생 지역 중 하나. 하루마다 다음 곳으로 옮겨 감 (모두에게 같은 곳)
 const isRuin = (region) => REGIONS[region]?.realm === 'ruin'; // 멸망한 대륙 (늘 오염되어 있음)
 const WILD = () => Object.keys(REGIONS).filter((r) => !isTown(r) && !isRuin(r));
 // 오염 시계: 서버가 { off, bump, force }를 알려 줌 (GM이 '지금 오염 일으키기'를 하면 바뀜)
@@ -473,12 +475,13 @@ function mindWard(d) {
   return w * (titleMods(d).mindWard || 1);
 }
 // 정신을 깎음. 알려 줄 문장을 돌려줌 (경고 문턱을 넘으면 경고도)
-function loseMind(d, n) {
+function loseMind(d, n, max = Infinity) {
   if (!n || berserkOf(d)) return [];
   if (d.mind == null) d.mind = MIND.max;
   // 멸망한 대륙: 훨씬 빨리 닳음 (지역마다 다름). 같은 곳에 다른 드래곤이 있으면 덜 닳음
   const ruin = isRuin(d.region) ? RUIN.drain * (REGIONS[d.region].drain ?? 1) * (hooks.companionsHere && hooks.companionsHere(d) ? RUIN.together : 1) : 1;
-  const lost = Math.max(1, Math.round(n * ruin * traitMods(d).mindDrain * mindWard(d)));
+  // max: 깎이는 정신의 상한 (몬스터의 피해 기반 소모 등). 특성·장신구 보호는 상한을 자른 뒤에 곱해 여전히 효과가 있음
+  const lost = Math.max(1, Math.round(Math.min(max, n * ruin) * traitMods(d).mindDrain * mindWard(d)));
   const before = d.mind;
   d.mind = Math.max(0, d.mind - lost);
   if (before >= MIND.max) d.mind_at = Date.now();
@@ -716,54 +719,6 @@ function explore(d) {
   xp = xpOf(d, xp);
   const levelUp = gainXp(d, xp);
   return { title: '탐사', lines, items, gold, xp, levelUp };
-}
-
-function hunt(d) {
-  const err = check(d, 'hunt');
-  if (err) return err;
-  const c = CREATURES[d.region];
-  if (!c) return { error: '인간의 땅에서는 사냥할 수 없다.' };
-  if (d.hp < RULES.huntMinHp) return { error: '기운이 없어 사냥에 나설 수 없다. 조금 쉬어야 한다.' };
-  spendAp(d, RULES.cost.hunt);
-
-  const st = statsOf(d);
-  const hostile = d.stance === 'hostile';
-  if (hostile) st.claw += SR.hostile.huntClaw; // 적대: 사냥에 거침없음
-  if (d.perks?.knight) st.claw += 3;           // 등에 탄 용기사
-  const tm = traitMods(d);
-  st.claw += tm.huntClaw;                      // 특성: 타고난 사냥꾼
-  const power = st.claw + st.wing * 0.5 + d.level * 2;
-  const fameHunt = fameTier(d.fame || 0).hunt;  // 명성이 낮으면 짐승도 얕봄
-  const chance = Math.max(0.1, Math.min(0.9, 0.55 + (power - (12 + c.level * 3)) * 0.04 + fameHunt));
-  const win = Math.random() < chance;
-  const rawDmg = randInt(3, 6) * c.level * (win ? 1 : 1.4);
-  const dmg = Math.max(1, Math.round((rawDmg - st.scale * 0.4) * (d.perks?.knight ? 0.7 : 1) * tm.huntDmg));
-  d.hp = Math.max(1, d.hp - dmg);
-  const wound = d.hp <= hpCap(d) * 0.15; // 쓰러지기 직전까지 몰림 (특성: 얇은 비늘)
-
-  const lines = [];
-  let items = [];
-  let gold = 0;
-  let xp;
-  if (win) {
-    lines.push(`${c.name}${josa(c.name, '을', '를')} 쓰러뜨렸다. 체력을 ${dmg} 잃었다.`);
-    const ids = ['beast_hide'];
-    if (Math.random() < 0.3 + c.level * 0.05 + (hostile ? SR.hostile.huntFang : 0)) ids.push('sharp_fang');
-    items = bundle(ids);
-    gold = Math.round(randInt(0, 3) * c.level * (hostile ? SR.hostile.huntGold : 1));
-    xp = 12 + c.level * 6;
-    const got = items.map(itemLabel);
-    if (gold) got.push(`금화 ${gold}닢`);
-    const t = got.join(', ');
-    lines.push(`${t}${josa(t, '을', '를')} 얻었다.`);
-  } else {
-    lines.push(`${c.name}에게 밀려 물러났다. 체력을 ${dmg} 잃었다.`);
-    xp = 4;
-  }
-  d.gold += gold;
-  xp = xpOf(d, xp);
-  const levelUp = gainXp(d, xp);
-  return { title: '사냥', lines, items, gold, xp, levelUp, win, wound };
 }
 
 // ── 원정 ───────────────────────────────────────────
@@ -1843,7 +1798,7 @@ function chaseCheck(d) {
   if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
   if (d.rest_at) return { error: RESTING };
   if (d.ap < RAID.chaseAp) return { error: `행동력이 모자란다. (${RAID.chaseAp} 필요)` };
-  if (d.hp < RULES.huntMinHp) return { error: '기운이 없어 쫓아갈 수 없다. 조금 쉬어야 한다.' };
+  if (lowHp(d)) return { error: '기운이 없어 쫓아갈 수 없다. 조금 쉬어야 한다.' };
   return null;
 }
 
@@ -1854,14 +1809,14 @@ module.exports = {
   hooks, BOND_TOGETHER: BOND_RULES.together,
   seasonAt, weatherOf, weatherIdAt, weatherFx, fxText, fxProse, weatherDebug, SLOT_MS,
   nestInfo, nestTier, maxKinOf, expandNest, checkRaid, raidView, chaseCheck,
-  regen, gather, explore, hunt, fishCast, fishReel, startExpedition, finishExpedition, chooseFork, forkView, expInfo,
+  regen, gather, explore, fishCast, fishReel, startExpedition, finishExpedition, chooseFork, forkView, expInfo,
   craft, experiment, enhanceGear, engraveGear, tidyGear, engraveOf, gearOf, greatChance, craftView, ordersView, fillOrder, buildForge, atForge,
   useItem, equip, unequip, statsOf, bonusOf, hpCap, enCap, apCap, equipOf, buffOf, giveBuff,
   repOf, setStance, marketInfo, buy, sell, intimidate,
   buildNest, flyHome, startRest, stopRest, hoardMove, hoardValue,
   actionCost, townArrows, hasBounty, addRep, addFame, craftEn, gainXp, spendStats,
   traitsOf, traitMods, hasTrait, chooseTraits, traitCount,
-  check, spendAp, rollItem, bundle, itemLabel, xpOf, isTown, // 전투(game-combat.js)가 씀
+  check, spendAp, rollItem, bundle, itemLabel, xpOf, isTown, lowHp, // 전투(game-combat.js)가 씀
   corruptedRegion, corruptUntil, corruptPeriod, isCorrupted, isRuin, berserkOf, loseMind, nearestTown,
   placeOf, goPlace, isFallen, chron, chronOf,
   titlesOf, titleOn, titleName, titleMods, checkTitles, setTitle, titlesView,

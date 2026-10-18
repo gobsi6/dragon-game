@@ -104,7 +104,7 @@ function creatureBase(lv) {
 }
 // place: 장소 id (사냥터 난이도 = 사냥감 레벨). corrupted: 오염된 땅의 몬스터 (조금 더 세고, 입힌 피해만큼 정신도 깎음)
 // minion: 무리에 함께 나온 사냥감이면 이름 앞에 붙일 말 ('어린' 등). 체력·공격이 조금 낮음
-// 멸망한 대륙에서 이겼을 때 드물게 나오는 것: 잿빛 심장, 보물, 희귀 장비 (희귀 장비는 강적 pity번째에 반드시)
+// 멸망한 대륙에서 이겼을 때 드물게 나오는 것: 잿빛 심장, 보물, 희귀 장비 (천장: 강적을 pity번 만났으면 그다음 승리에서 반드시)
 function ruinFinds(d, kind, lines) {
   const out = [];
   if (Math.random() < RUIN.coreDrop[kind]) { out.push('ashen_core'); lines.push('식지 않은 잿빛 심장 하나가 재 속에서 뛰고 있었다.'); }
@@ -115,7 +115,6 @@ function ruinFinds(d, kind, lines) {
     logic.chron(d, 'mark', `멸망한 대륙에서 보물 ${ITEMS[t].name}${josa(ITEMS[t].name, '을', '를')} 찾았다.`);
   }
   const c = logic.combatJson(d);
-  if (kind === 'elite') c.ruinPity = (c.ruinPity || 0) + 1;
   const G = RUIN.gear;
   if (Math.random() < G[kind] || (kind === 'elite' && c.ruinPity >= G.pity)) {
     const g = pick(G.pool);
@@ -134,7 +133,8 @@ function fromCreature(place, elite, corrupted = false, minion = null) {
   const G = COMBAT.group;
   const DF = COMBAT.difficulty || { hp: 1, atk: 1 }; // 난이도 배율
   const CB = creatureBase(lv);
-  const hpMax = Math.round(CB.hp * (elite ? K.eliteHp : 1) * (minion ? G.hp : 1) * DF.hp * (pl.hpMul || 1)); // 멸망한 대륙: 체력이 훨씬 높음
+  const ruinMul = pl.hpMul ? (elite ? 1 + (pl.hpMul - 1) * 0.5 : pl.hpMul) : 1; // 멸망한 대륙: 체력이 훨씬 높음 (강적은 절반만 적용해 잡을 길을 남김)
+  const hpMax = Math.round(CB.hp * (elite ? K.eliteHp : 1) * (minion ? G.hp : 1) * DF.hp * ruinMul);
   const base = elite ? pl.elite : pl.creature;
   // 무리의 말이 이름에 이미 들어 있으면 두 번 붙이지 않음 (예: '어린' + '어린 ○○')
   const name = minion && !base.startsWith(`${minion} `) ? `${minion} ${base}` : base;
@@ -272,6 +272,7 @@ function damage(att, def, power, opt = {}) {
   if (def.guarding) raw *= opt.special ? 0.25 : 0.5; // 예고된 특기를 방어하면 4분의 1
   if (has(def, 'harden')) raw *= 0.5;
   if (has(def, 'stone')) raw *= 0.7; // 브론즈: 돌 비늘
+  if (has(def, 'acid')) raw *= 1.15; // 비늘이 녹으면 받는 피해도 늘어남 (산 숨결)
   if (has(def, 'fury')) raw *= 1.1;    // 역린: 받는 피해도 늘어남
   if (has(def, 'exposed')) raw *= 1.25; // 하늘 낙하 뒤의 빈틈
   raw *= def.taken;
@@ -638,11 +639,11 @@ function hunt(d) {
   const place = logic.placeOf(d);
   if (!place) return { error: '인간의 땅에서는 사냥할 수 없다.' };
   const c = { name: PLACES[place].creature, level: PLACES[place].level };
-  if (d.hp < RULES.huntMinHp) return { error: '기운이 없어 사냥에 나설 수 없다. 조금 쉬어야 한다.' };
+  if (logic.lowHp(d)) return { error: '기운이 없어 사냥에 나설 수 없다. 조금 쉬어야 한다.' };
   logic.spendAp(d, logic.actionCost(d, 'hunt'));
 
   const corrupted = logic.isCorrupted(d.region);
-  const chance = corrupted ? MIND.eliteChance : COMBAT.eliteChance;
+  const chance = corrupted ? (logic.isRuin(d.region) ? RUIN.eliteChance : MIND.eliteChance) : COMBAT.eliteChance;
   const eliteRoll = debug.forceElite ?? (d.level >= COMBAT.eliteFrom && Math.random() < chance);
   const me = fromDragon(d, 'hunt');
   if (eliteRoll) {
@@ -653,6 +654,11 @@ function hunt(d) {
     weatherize(b, d.region);
     b.place = place;
     b.corrupted = corrupted;
+    if (logic.isRuin(d.region)) { // 질긴 몸은 조금 더 길게 싸움. 희귀 장비 천장은 만날 때마다 셈 (져도 쌓임)
+      b.maxTurns = COMBAT.ruinMaxTurns;
+      const cj = logic.combatJson(d);
+      cj.ruinPity = (cj.ruinPity || 0) + 1;
+    }
     b.a.turnCount = 0; b.b.turnCount = 0;
     return {
       title: '강적', elite: true, battle: b,
@@ -672,6 +678,7 @@ function hunt(d) {
   weatherize(b, d.region);
   b.place = place;
   b.corrupted = corrupted;
+  if (logic.isRuin(d.region)) b.maxTurns = COMBAT.ruinMaxTurns; // 질긴 몸은 조금 더 길게 싸움
   b.a.turnCount = 0;
   const lines = n > 1
     ? [`${c.name}${josa(c.name, '이', '가')} 무리 지어 나타났다! (${n}마리)`, '노릴 적을 골라 싸운다. 숨결은 다른 적에게도 번지고, 포효는 모두에게 울린다.']
@@ -710,6 +717,15 @@ function huntReward(d, b, c) {
     gold += randInt(0, 3) * c.level * (hostile ? STANCE_RULES.hostile.huntGold : 1) * (ti.huntGold || 1) * wx.huntGold * (extra ? G.gold : 1);
     xp += (12 + c.level * 6) * (extra ? G.xp : 1);
   }
+  // 판정승: 턴이 다하도록 쓰러뜨리지 못하고 물리친 사냥감은 입힌 피해 비율만큼만 보상 (멸망한 대륙의 질긴 몸)
+  const driven = win ? foes.filter((f) => f.hp > 0) : [];
+  for (const f of driven) {
+    const r = Math.max(0, Math.min(1, (f.hpMax - f.hp) / f.hpMax));
+    if (Math.random() < r) ids.push('beast_hide');
+    if (drop && Math.random() < (PLACE_RULES.dropChance[ITEMS[drop].rarity] + (logic.buffOf(d)?.drop || 0) + (ti.drop || 0) + wx.drop) * r) ids.push(drop);
+    gold += randInt(0, 3) * c.level * (hostile ? STANCE_RULES.hostile.huntGold : 1) * (ti.huntGold || 1) * wx.huntGold * r;
+    xp += (12 + c.level * 6) * r;
+  }
   // 오염된 땅의 사냥감: 경험치·금화가 더 많음, 검게 물든 비늘이 나옴
   const corrupt = foeCorrupt(b);
   if (corrupt) {
@@ -721,7 +737,10 @@ function huntReward(d, b, c) {
   let items = logic.bundle(ids);
   const names = (l) => { const t = l.map((f) => f.name).join(', '); return `${t}${josa(t, '을', '를')}`; };
   if (win) {
-    lines.push(foes.length > 1 ? `${b.turn}턴 만에 ${names(killed)} 모두 쓰러뜨렸다${how}.` : `${b.turn}턴 만에 ${names(killed)} 쓰러뜨렸다${how}.`);
+    if (killed.length) lines.push(`${b.turn}턴 만에 ${names(killed)} ${killed.length > 1 ? '모두 ' : ''}쓰러뜨렸다${how}.`);
+    if (driven.length) lines.push(killed.length
+      ? `${names(driven)} 만신창이로 만들어 쫓아냈다. 입힌 만큼은 거두었다.`
+      : `${b.turn}턴 내내 몰아붙이자 ${names(driven)} 만신창이가 되어 물러났다${how}. 입힌 만큼은 거두었다.`);
     // 칭호: 사냥에서 이긴 횟수 (전체와 지역별)
     logic.traitCount(d, 'huntwin');
     logic.traitCount(d, `huntwin:${PLACES[b.place]?.region || d.region}`);
@@ -737,13 +756,13 @@ function huntReward(d, b, c) {
     const t = got.join(', ');
     lines.push(`${t}${josa(t, '을', '를')} 얻었다.`);
   }
-  if (!killed.length) xp = 4;
+  if (!killed.length && !driven.length) xp = 4;
   lines.push(`체력을 ${Math.round(lost)} 잃었다.`);
   // 오염된 몬스터: 오염 결정이 나오기도 하고, 맞은 만큼 정신이 깎임
   if (corrupt) {
     if (killed.length && Math.random() < MIND.crystal.hunt) { items = logic.bundle([...items.flatMap((x) => Array(x.qty).fill(x.id)), 'corrupt_crystal']); lines.push('쓰러진 몸에서 오염 결정이 굴러 나왔다.'); }
     if (killed.length) lines.push(`오염된 사냥감이라 경험치와 금화를 더 얻었다. (×${MIND.reward.xp})`);
-    lines.push(...logic.loseMind(d, me.mindLoss || 0));
+    lines.push(...logic.loseMind(d, me.mindLoss || 0, MIND.monsterMax));
     if (win && logic.hooks.purify) lines.push(...logic.hooks.purify(d, 'hunt'));
     if (win && logic.isRuin(d.region)) { // 멸망한 대륙: 정화의 결정과 귀한 것들
       const n = randInt(...RUIN.shard.hunt) + logic.gearMods(d).shard;
@@ -823,7 +842,7 @@ function eliteReward(d, b) {
         lines.push(`검은 기운이 걷히며 정화의 결정 ${n}개가 남았다.`);
       }
     }
-    lines.push(...logic.loseMind(d, me.mindLoss || 0));
+    lines.push(...logic.loseMind(d, me.mindLoss || 0, MIND.monsterMax));
   }
   xp = logic.xpOf(d, xp);
   const levelUp = logic.gainXp(d, xp);

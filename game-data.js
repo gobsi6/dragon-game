@@ -638,8 +638,12 @@ const RUIN = {
   gateFrom: 'coast', gateTo: 'ruin_shore',
   crossAp: 3, minLevel: 20,                      // 바다를 건널 때 (오갈 때마다)
   drain: 2,                                      // 이 땅의 정신 소모 배율 (지역 drain을 곱함). 정신 보호 장신구가 줄여 줌
+  eliteChance: 0.15,                             // 이 땅에서 강적을 만날 확률 (본토의 오염된 땅 MIND.eliteChance보다 낮게)
   together: 0.7,                                 // 같은 지역에 다른 드래곤이 있으면 정신 소모 ×
-  goal: 60000,                                   // 모두의 정화도 100%에 필요한 기여 (11명이 꾸준히 해도 한두 달)
+  // 모두의 정화도 목표: 최근 활동한 입장 가능(레벨 minLevel 이상) 드래곤 수 × goalPer (인원이 몇이든 걸리는 기간이 비슷하게)
+  goalPer: 3300,                                 // 드래곤 하나당 몫. 하루 110점쯤(사냥 20번꼴) 쌓는 보통 강도로 한 달
+  goalMin: 8000,                                 // 활동 인원이 아주 적어도 목표가 이 아래로는 내려가지 않음
+  activeDays: 7,                                 // 최근 이 기간에 접속한 드래곤을 셈
   pts: { explore: 3, gather: 2, hunt: 6, elite: 25 }, // 행동마다 쌓이는 기여
   shard: { explore: [0.5, 1], gather: [0.4, 1], hunt: [1, 2], elite: [6, 9] }, // [나올 확률, 개수] / 사냥은 [최소, 최대]
   // 잿빛 상륙지의 생존자 '오르샤'와 바꾸기 (정화의 결정 몇 개)
@@ -657,8 +661,8 @@ const RUIN = {
   // 강적·사냥에서 나오는 것 (멸망한 대륙)
   coreDrop: { elite: 0.3, hunt: 0.03 },          // 잿빛 심장
   treasure: { elite: 0.05, hunt: 0.006, pool: ['tr_map_piece', 'tr_star_orb', 'tr_dragon_idol', 'tr_ash_mirror', 'tr_broken_crown', 'tr_last_claw'] },
-  // 희귀 장비: 강적을 이기면 아주 드물게. pity번째 강적까지 못 얻으면 그때는 반드시
-  gear: { elite: 0.015, hunt: 0.001, pity: 50, pool: ['erebus_eye', 'knight_gauntlet', 'void_ring', 'abyss_membrane'] },
+  // 희귀 장비: 강적을 이기면 아주 드물게. 강적을 pity번 만날 때까지 못 얻었으면 그다음 승리에서 반드시
+  gear: { elite: 0.015, hunt: 0.001, pity: 40, pool: ['erebus_eye', 'knight_gauntlet', 'void_ring', 'abyss_membrane'] },
 };
 
 const TRADE = {
@@ -948,6 +952,7 @@ const RULES = {
   enEvery: 2 * 60 * 1000,       // 기력 1 회복 간격 (2분)
   cost: { explore: 1, gather: 1, hunt: 2 },
   huntMinHp: 15,                // 이보다 체력이 낮으면 사냥 불가
+  huntMinHpPct: 0.2,            // 최대 체력의 이 비율보다 낮아도 사냥 불가 (레벨이 올라도 빈사로 나서지 않게)
   expeditionMinutes: [30, 60, 120, 180],
   levelMax: 25,                 // 레벨 상한
   // 다음 레벨까지 필요한 경험치 = 레벨 × 100. xpFrom 레벨부터는 (레벨 − xpFrom) × xpStep 배만큼 더 (Lv13 ×1.5, Lv18 ×4, Lv24 ×7)
@@ -1230,7 +1235,7 @@ const DEATH = {
 };
 
 // ── 정신과 오염 ────────────────────────────────────
-// 오염된 땅(야생 지역 하나, 이틀마다 옮겨 감)과 오염된 몬스터가 정신을 깎는다. 정신이 0이 되면 광폭화
+// 오염된 땅(야생 지역 하나, 하루마다 옮겨 감)과 오염된 몬스터가 정신을 깎는다. 정신이 0이 되면 광폭화
 const MIND = {
   max: 100,
   regenEvery: 3 * 60 * 1000,   // 정신 1이 차는 간격 (둥지에서 쉬면 3배, 은둔이면 1.3배 빠름)
@@ -1238,6 +1243,7 @@ const MIND = {
   rotateMs: 24 * 60 * 60 * 1000, // 오염된 땅이 옮겨 가는 간격 (24시간마다 새 곳에 오염이 생김)
   drain: { explore: 5, gather: 4, hunt: 0, expedition: 2 }, // 오염된 땅에서 행동할 때 깎이는 정신 (원정은 10분마다). 사냥은 몬스터가 깎음
   monster: 0.5,                // 오염된 몬스터가 입힌 피해의 이만큼 정신도 깎임
+  monsterMax: 30,              // 몬스터가 한 번의 싸움에서 깎는 정신의 최대 (멸망한 대륙의 질긴 몸과 땅의 배율이 겹쳐도 이 위로는 깎이지 않음. 정신 보호는 여기에 다시 곱해 줄여 줌)
   monsterAtk: 1.15,            // 오염된 몬스터는 조금 더 셈
   eliteChance: 0.25,           // 오염된 땅에서 강적이 나올 확률
   crystal: { explore: 0.25, gather: 0.2, hunt: 0.3, elite: 2 }, // 오염 결정이 나올 확률 (강적은 개수)
@@ -1290,9 +1296,10 @@ const PURIFY = {
 const COMBAT = {
   // 결투 보정: 결투에서는 두 드래곤의 공격·비늘·날개·지혜·위엄·체력·기력을 둘의 가운데 쪽으로 당김
   // 0이면 두 드래곤이 똑같아지고, 1이면 보정 없음. 레벨과 장신구 차이가 커도 낮은 쪽에 기회가 남게
-  duelGap: 0.15,           // 예: 공격 36과 54가 결투에서는 43.7과 46.4가 됨
+  duelGap: 0.25,           // 예: 공격 36과 54가 결투에서는 42.8과 47.3이 됨
   duelSwing: 0.35,         // 결투의 피해 흔들림 (±35%. 사냥은 ±15%)
   maxTurns: 12,            // 이만큼 지나면 남은 체력 비율로 판정
+  ruinMaxTurns: 16,        // 멸망한 대륙의 사냥·강적은 몸이 질겨 조금 더 길게 싸움
   enPerTurn: 2,            // 턴마다 차는 기력
   huntReserve: 0.25,       // 자동 사냥은 기력을 이만큼(최대치 비율) 남겨 둠 (제작할 몫)
   fleeBelow: 0.2,          // 자동 사냥은 체력이 이 아래면 물러남
@@ -1326,14 +1333,14 @@ const COMBAT = {
 // 종류마다 하나뿐인 숨결. 기력 12, 3턴마다
 const BREATHS = {
   red:    { name: '화염 숨결',   element: 'fire',      power: 1.35, debuff: { burn: 3 }, desc: '불길을 쏟아 큰 피해를 주고, 세 턴 동안 불태운다.' },
-  black:  { name: '산 숨결',     element: 'acid',      power: 1.1,  debuff: { acid: 3 }, desc: '비늘을 녹여 세 턴 동안 상대의 방어를 절반으로 만든다.' },
-  white:  { name: '눈보라 숨결', element: 'ice',       power: 1.0,  debuff: { freeze: 1 }, chance: 0.7, desc: '얼음 폭풍으로 피해를 주고, 높은 확률로 한 턴 얼려 움직이지 못하게 한다.' },
+  black:  { name: '산 숨결',     element: 'acid',      power: 1.1,  debuff: { acid: 3 }, desc: '비늘을 녹여 세 턴 동안 상대의 방어를 절반으로 만들고, 받는 피해를 15% 늘린다.' },
+  white:  { name: '눈보라 숨결', element: 'ice',       power: 1.0,  debuff: { freeze: 1 }, chance: 0.6, desc: '얼음 폭풍으로 피해를 주고, 높은 확률로 한 턴 얼려 움직이지 못하게 한다.' },
   gold:   { name: '번개 숨결',   element: 'lightning', power: 1.7,  debuff: { stun: 1 }, chance: 0.3, desc: '가장 강한 한 방. 가끔 상대를 마비시켜 한 턴 쉬게 한다.' },
-  green:  { name: '독 숨결',     element: 'poison',    power: 0.75, debuff: { poison: 4 }, desc: '짙은 독안개로 네 턴 동안 중독시킨다.' },
-  silver: { name: '안개 숨결',   element: 'mist',      power: 0.6,  self: { evade: 3 }, desc: '은빛 안개에 몸을 숨겨, 세 턴 동안 공격을 잘 피한다.' },
+  green:  { name: '독 숨결',     element: 'poison',    power: 0.75, debuff: { poison: 3 }, desc: '짙은 독안개로 세 턴 동안 중독시킨다.' },
+  silver: { name: '안개 숨결',   element: 'mist',      power: 0.8,  self: { evade: 3 }, desc: '은빛 안개에 몸을 숨겨, 세 턴 동안 공격을 잘 피한다.' },
   blue:   { name: '해일 숨결',   element: 'water',     power: 1.05, debuff: { soak: 2 }, desc: '거센 물살로 피해를 주고, 두 턴 동안 흠뻑 젖게 해 굼뜨게 만든다 (속도 −30%, 잘 피하지 못함). 젖은 적에게 꼬리치기를 하면 넘어뜨린다.' },
-  purple: { name: '자수정 숨결', element: 'spirit',    power: 0.95, drain: 0.4, cleanse: 1, desc: '보랏빛 결정을 쏟아 피해를 주고, 입힌 피해의 40%만큼 체력을 되찾으며 나쁜 상태 하나를 씻어 낸다.' },
-  bronze: { name: '모래 폭풍 숨결', element: 'earth',  power: 1.0,  self: { stone: 2 }, desc: '모래와 돌 조각을 쏟아 피해를 주고, 두 턴 동안 비늘이 돌처럼 굳어 받는 피해가 30% 준다.' },
+  purple: { name: '자수정 숨결', element: 'spirit',    power: 0.95, drain: 0.55, cleanse: 1, desc: '보랏빛 결정을 쏟아 피해를 주고, 입힌 피해의 55%만큼 체력을 되찾으며 나쁜 상태 하나를 씻어 낸다.' },
+  bronze: { name: '모래 폭풍 숨결', element: 'earth',  power: 1.0,  self: { stone: 3 }, desc: '모래와 돌 조각을 쏟아 피해를 주고, 세 턴 동안 비늘이 돌처럼 굳어 받는 피해가 30% 준다.' },
 };
 const BREATH_COST = { en: 12, cd: 3 };
 const ELEMENTS = { fire: '화염', acid: '산', ice: '얼음', lightning: '번개', poison: '독', mist: '안개', water: '물', spirit: '정화', earth: '대지' };

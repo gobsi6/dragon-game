@@ -131,7 +131,7 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
     if (d.rest_at) return { error: '둥지에서 쉬는 중이다. 먼저 깨어나야 한다.' };
     logic.regen(d);
     if (d.ap < BOSS.ap) return { error: `행동력이 모자란다. (${BOSS.ap} 필요)` };
-    if (d.hp < RULES.huntMinHp) return { error: '기운이 없어 맞설 수 없다. 조금 쉬어야 한다.' };
+    if (logic.lowHp(d)) return { error: '기운이 없어 맞설 수 없다. 조금 쉬어야 한다.' };
     logic.spendAp(d, BOSS.ap);
     const b = combat.bossBattle(d, st);
     const bossId = st.id;

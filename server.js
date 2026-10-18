@@ -540,34 +540,55 @@ const purify = (() => {
 })();
 logic.hooks.purified = purify.purified;
 // ── 멸망한 대륙의 정화도: 서버 전체가 함께 채움. 단계를 넘을 때마다 새 지역이 열림 ──
+// 목표는 최근 활동한 입장 가능(레벨 RUIN.minLevel 이상) 드래곤 수 × RUIN.goalPer — 인원이 몇이든 걸리는 기간이 비슷하다
+// 한 번 열린 지역은 st.open에 남아, 인원이 늘어 목표가 커져도 다시 잠기지 않는다
 const ruin = (() => {
   let st = db.worldGet('ruin') || { total: 0, pts: {}, names: {}, stage: 0 };
   const save = () => db.worldSet('ruin', st);
-  const pct = () => Math.min(1, st.total / RUIN.goal);
-  const unlocked = (region) => !logic.isRuin(region) || pct() >= (REGIONS[region].unlock || 0);
-  const nextLock = () => Object.values(REGIONS).filter((r) => r.realm === 'ruin' && r.unlock > pct()).sort((a, b) => a.unlock - b.unlock)[0] || null;
+  let goalAt = 0, goalV = RUIN.goalMin; // 목표는 1분씩 캐시 (저장 공간을 자주 두드리지 않게)
+  const goal = (now = Date.now()) => {
+    if (now - goalAt > 60000) {
+      const n = db.activeSince(now - RUIN.activeDays * 24 * 3600000).filter((x) => x.level >= RUIN.minLevel).length;
+      goalV = Math.max(RUIN.goalMin, n * RUIN.goalPer);
+      goalAt = now;
+    }
+    return goalV;
+  };
+  const pct = () => Math.min(1, st.total / goal());
+  const gated = () => Object.values(REGIONS).filter((r) => r.realm === 'ruin' && r.unlock > 0);
+  const openText = (r) => `[${RUIN.name}] 정화도 ${Math.round(r.unlock * 100)}%! 오염이 물러나며 ${r.name}${josa(r.name, '으로', '로')} 가는 길이 열렸다.`;
+  // 예전 저장분: 열림 기록이 없으면 지금 정화도로 조용히 채움 (다시 알리지 않게)
+  if (!Array.isArray(st.open)) { st.open = gated().filter((r) => pct() >= r.unlock).map((r) => r.id); save(); }
+  // 문턱을 새로 넘은 지역을 열고 모두에게 알림. 돌려주는 것: 이번에 새로 열린 지역들
+  function settle() {
+    const opened = gated().filter((r) => !st.open.includes(r.id) && pct() >= r.unlock);
+    for (const r of opened) {
+      st.open.push(r.id);
+      io.emit('system', { text: openText(r), at: Date.now() });
+    }
+    if (opened.length) save();
+    return opened;
+  }
+  const unlocked = (region) => {
+    if (!logic.isRuin(region) || !(REGIONS[region]?.unlock > 0)) return true;
+    if (!st.open.includes(region)) settle();
+    return st.open.includes(region);
+  };
+  const nextLock = () => gated().filter((r) => !st.open.includes(r.id)).sort((a, b) => a.unlock - b.unlock)[0] || null;
   function add(d, kind, n = null) {
     if (!logic.isRuin(d.region)) return [];
     const v = n ?? RUIN.pts[kind] ?? 0;
     if (!v) return [];
-    const before = pct();
     st.pts[d.id] = (st.pts[d.id] || 0) + v;
     st.names[d.id] = d.name;
     st.total += v;
-    const lines = [];
-    // 새로 열린 지역이 있으면 모두에게 알림
-    for (const r of Object.values(REGIONS)) {
-      if (r.realm !== 'ruin' || !r.unlock || before >= r.unlock || pct() < r.unlock) continue;
-      const text = `[${RUIN.name}] 정화도 ${Math.round(r.unlock * 100)}%! 오염이 물러나며 ${r.name}${josa(r.name, '으로', '로')} 가는 길이 열렸다.`;
-      io.emit('system', { text, at: Date.now() });
-      lines.push(text);
-    }
+    const lines = settle().map(openText); // 새로 열린 지역이 있으면 내 결과 창에도
     save();
     return lines;
   }
   const top = (n = 5) => Object.entries(st.pts).sort((a, b) => b[1] - a[1]).slice(0, n).map(([id, p]) => ({ id: Number(id), name: st.names[id], pts: p }));
-  const view = (d) => { const nx = nextLock(); return { total: st.total, goal: RUIN.goal, pct: pct(), mine: st.pts[d.id] || 0, next: nx ? { name: nx.name, at: nx.unlock } : null }; };
-  return { add, view, top, unlocked, debugSet: (n) => { st.total = n; save(); } };
+  const view = (d) => { settle(); const nx = nextLock(); return { total: st.total, goal: goal(), pct: pct(), open: st.open.slice(), mine: st.pts[d.id] || 0, next: nx ? { name: nx.name, at: nx.unlock } : null }; };
+  return { add, view, top, unlocked, debugSet: (n) => { st.total = n; save(); goalAt = 0; settle(); } };
 })();
 logic.hooks.purify = (d, kind) => (logic.isRuin(d.region) ? ruin.add(d, kind) : purify.add(d, kind));
 logic.hooks.companionsHere = (d) => { for (const e of online.values()) if (e.dragon.id !== d.id && e.dragon.region === d.region && !e.dragon.dead_at) return true; return false; };

@@ -171,7 +171,7 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
     const mine = myBlock(d);
     if (mine) return { error: mine };
     if (d.region !== bz.region) return { error: `${REGIONS[bz.region].name}에 가야 진정시킬 수 있다.` };
-    if (d.hp < 15) return { error: '기운이 없어 맞설 수 없다. 조금 쉬어야 한다.' };
+    if (logic.lowHp(d)) return { error: '기운이 없어 맞설 수 없다. 조금 쉬어야 한다.' };
     if (calming.has(id)) return { error: '다른 드래곤이 이미 붙잡고 싸우는 중이다. 잠시 기다리자.' };
     logic.regen(d);
     const foe = combat.fromDragon(t, 'duel');

@@ -4679,7 +4679,8 @@
         const EH = R.drakeHelp?.errand;
         if (EH && v.canErrand && !v.companion) {
           const pct = S.me?.ruin?.pct || 0;
-          const regs = Object.values(S.regions).filter((r) => r.realm !== 'ruin' || (v.errandRuin && pct >= (r.unlock || 0)));
+          const open = S.me?.ruin?.open || [];
+          const regs = Object.values(S.regions).filter((r) => r.realm !== 'ruin' || (v.errandRuin && (open.includes(r.id) || pct >= (r.unlock || 0))));
           const rs = document.createElement('select');
           rs.className = 'input kin-sel';
           rs.setAttribute('aria-label', '심부름 보낼 곳');
@@ -6354,7 +6355,7 @@
     const pos = (r) => (realmOf(r.id) === rm ? r : { ...r, x: r.gate?.x ?? r.x, y: r.gate?.y ?? r.y, gateway: true });
     const shown = Object.values(S.regions).filter((r) => realmOf(r.id) === rm || r.links.some((id) => realmOf(id) === rm && r.gate)).map(pos);
     const byId = Object.fromEntries(shown.map((r) => [r.id, r]));
-    const lockedOf = (r) => r.realm === 'ruin' && (r.unlock || 0) > (S.me?.ruin?.pct || 0);
+    const lockedOf = (r) => r.realm === 'ruin' && (r.unlock || 0) > 0 && !(S.me?.ruin?.open || []).includes(r.id) && (r.unlock || 0) > (S.me?.ruin?.pct || 0); // 한 번 열린 지역은 다시 잠기지 않음
     const drawn = new Set();
     for (const r of shown) {
       for (const id of r.links) {
