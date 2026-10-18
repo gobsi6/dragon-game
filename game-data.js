@@ -113,12 +113,25 @@ const REGION_LIST = [
     desc: '붉은 바위벽이 햇빛을 받아 금빛으로 달아오른다. 바위틈에 광맥이 드러나 있다.' },
   { id: 'volcano', name: '잿빛 화산',    tag: '야생',     x: 760, y: 125,
     desc: '잿가루가 눈처럼 내리는 화산 기슭. 땅 밑에서 낮은 울림이 올라온다.' },
+  // ── 멸망한 대륙 에레보스 (남쪽 해안에서 바다를 건너감. realm: 'ruin', 지도도 따로) ──
+  // unlock: 모두의 정화도가 이 비율에 닿으면 열림. drain: 정신이 깎이는 배율 (RUIN.drain에 곱함)
+  { id: 'ruin_shore',   name: '잿빛 상륙지',      tag: '멸망', realm: 'ruin', x: 230, y: 470, unlock: 0,    drain: 0.6,
+    gate: { x: 862, y: 575, label: '멸망한 대륙' }, // 본 대륙 지도에서 이 땅으로 가는 표시를 그릴 자리
+    desc: '검은 파도가 닿는 잿빛 모래톱. 무너진 부두 옆에 살아남은 자들이 피운 작은 모닥불 하나가 흔들린다.' },
+  { id: 'ruin_plain',   name: '시든 평원',        tag: '멸망', realm: 'ruin', x: 430, y: 335, unlock: 0.25, drain: 1,
+    desc: '한때 금빛 밀밭이었던 들판. 이삭은 검게 말라 있고, 허수아비들이 이쪽을 돌아본다.' },
+  { id: 'ruin_capital', name: '무너진 왕도 카르넴', tag: '멸망', realm: 'ruin', x: 655, y: 205, unlock: 0.5,  drain: 1.2,
+    desc: '용과 인간이 함께 세웠다는 왕도. 무너진 성벽 위로 아직도 깃발 하나가 찢긴 채 펄럭인다.' },
+  { id: 'ruin_rift',    name: '심연의 균열',      tag: '멸망', realm: 'ruin', x: 825, y: 430, unlock: 0.75, drain: 1.5,
+    desc: '대륙을 둘로 가른 검은 틈. 바닥이 보이지 않고, 그 아래에서 무언가가 숨을 쉰다.' },
 ];
 
 // 서로 바로 날아갈 수 있는 지역 쌍 (양방향)
 const ROUTES = [
   ['plains', 'capital'], ['plains', 'forest'], ['plains', 'swamp'],
   ['plains', 'canyon'], ['plains', 'coast'],
+  ['coast', 'ruin_shore'], // 바다 건너기 (RUIN.crossAp, RUIN.minLevel)
+  ['ruin_shore', 'ruin_plain'], ['ruin_plain', 'ruin_capital'], ['ruin_plain', 'ruin_rift'], ['ruin_capital', 'ruin_rift'],
   ['capital', 'snow'], ['capital', 'volcano'],
   ['snow', 'ruins'], ['snow', 'volcano'],
   ['forest', 'ruins'], ['forest', 'swamp'],
@@ -135,6 +148,7 @@ for (const [a, b] of ROUTES) {
   REGIONS[a].links.push(b);
   REGIONS[b].links.push(a);
 }
+REGIONS.coast.gate = { x: 130, y: 585, label: '남쪽 해안' }; // 멸망한 대륙 지도에서 '바다 건너 남쪽 해안'을 그릴 자리
 
 
 // ── 재료와 물건 ──────────────────────────────────────
@@ -169,6 +183,34 @@ const ITEMS = {
   fire_crystal: { name: '불의 결정',        rarity: 'rare',     desc: '안에서 작은 불꽃이 흔들린다.' },
   beast_hide:   { name: '짐승 가죽',        rarity: 'common',   desc: '질기고 두꺼운 가죽이다.' },
   sharp_fang:   { name: '날카로운 송곳니',  rarity: 'uncommon', desc: '사냥한 짐승에게서 얻었다.' },
+  // ── 멸망한 대륙: 희귀 재료 (반드시 만들 수 있는 장비의 재료) ──
+  ashen_core:    { name: '잿빛 심장',     rarity: 'rare',     value: 60, desc: '오염된 강적의 가슴에서 식지 않고 뛰던 잿빛 덩어리. 정화하면 단단한 힘이 된다.' },
+  carnem_steel:  { name: '카르넴 강철',   rarity: 'uncommon', value: 30, desc: '용의 불로 벼린 왕국의 강철. 녹이 슬어도 날은 무뎌지지 않았다.' },
+  void_silk:     { name: '공허의 실',     rarity: 'uncommon', value: 30, desc: '균열 가장자리에서 뽑아낸 검은 실. 빛을 먹어 거의 보이지 않는다.' },
+  // 2시간 이상 원정에서만 (어느 지역이든)
+  star_fragment: { name: '별똥별 조각',     rarity: 'rare',     value: 50, desc: '먼 길 끝에서만 주울 수 있는, 밤하늘에서 떨어진 빛나는 돌. 두 시간 넘게 원정을 다녀와야 손에 넣을 수 있다.' },
+  // ── 멸망한 대륙: 보물 (cat: treasure. 둥지의 보물더미에만 쌓을 수 있고, 팔 수 없고, 보물 도둑도 가져가지 못함) ──
+  // value가 보물더미 가치
+  tr_map_piece:   { name: '왕국의 지도 조각', rarity: 'uncommon', cat: 'treasure', value: 250, desc: '카르넴 왕국의 옛 지도 한 귀퉁이. 지금은 없는 강과 마을이 그려져 있다.' },
+  tr_star_orb:    { name: '별을 담은 유리구슬', rarity: 'uncommon', cat: 'treasure', value: 320, desc: '안에서 작은 별빛이 천천히 돈다. 멸망 전 아이들이 가지고 놀던 장난감이었다고 한다.' },
+  tr_dragon_idol: { name: '오염된 용 석상', rarity: 'rare', cat: 'treasure', value: 450, desc: '검게 물든 용 석상. 둥지에 두면 이상하게도 마음이 가라앉는다.' },
+  tr_ash_mirror:  { name: '잿빛 거울',     rarity: 'rare',     cat: 'treasure', value: 500, desc: '비추면 잿빛 하늘만 보이는 거울. 가끔 멸망 전의 맑은 하늘이 스친다.' },
+  tr_broken_crown:{ name: '카르넴의 깨진 왕관', rarity: 'rare', cat: 'treasure', value: 700, desc: '마지막 왕이 쓰던 왕관. 반쪽이 떨어져 나갔지만 보석은 아직 빛난다.' },
+  tr_last_claw:   { name: '거대 고룡의 발톱', rarity: 'rare',   cat: 'treasure', value: 900, desc: '대륙이 무너지던 날까지 싸운 거대한 고룡의 발톱. 사람 키보다 길고, 아직 따뜻하다.' },
+  // ── 멸망한 대륙: 희귀 장비 (강적이 아주 드물게 떨어뜨림. gear: 사냥·강적에서만 듣는 특별한 효과) ──
+  erebus_eye:     { name: '에레보스의 눈', rarity: 'rare', type: 'equip', slot: 'head', bonus: { wisdom: 4, majesty: 2 }, gear: { vsCorrupt: 1.15 }, value: 120, desc: '멸망한 대륙을 끝까지 지켜본 눈. 오염된 적에게 주는 피해 +15%.' },
+  knight_gauntlet:{ name: '카르넴 기사단의 발톱갑', rarity: 'rare', type: 'equip', slot: 'claw', bonus: { claw: 6 }, gear: { eliteAtk: 1.12 }, value: 120, desc: '마지막 기사단장이 끼던 발톱 덮개. 강적에게 주는 피해 +12%.' },
+  void_ring:      { name: '공허의 꼬리고리', rarity: 'rare', type: 'equip', slot: 'tail', bonus: { scale: 4, wing: 2 }, gear: { taken: 0.92 }, value: 120, desc: '균열에서 건진 검은 고리. 받는 피해 −8%.' },
+  abyss_membrane: { name: '심연의 날개막', rarity: 'rare', type: 'equip', slot: 'wing', bonus: { wing: 6 }, gear: { shard: 1 }, value: 120, desc: '심연의 고룡에게서 떨어진 날개막. 멸망한 대륙에서 사냥·강적을 이기면 정화의 결정 +1.' },
+  // ── 멸망한 대륙: 만드는 장비 (재료를 모으면 반드시 만들 수 있음) ──
+  purified_crown: { name: '정화된 왕관', rarity: 'rare', type: 'equip', slot: 'head', bonus: { majesty: 5, wisdom: 3 }, mindWard: 0.75, value: 100, desc: '잿빛 심장을 정화해 박아 넣은 왕관. 깎이는 정신 −25%.' },
+  carnem_claw:    { name: '카르넴 강철 발톱', rarity: 'rare', type: 'equip', slot: 'claw', bonus: { claw: 7, scale: 2 }, value: 100, desc: '왕국의 강철로 다시 벼린 발톱.' },
+  void_cloak:     { name: '공허의 날개덮개', rarity: 'rare', type: 'equip', slot: 'wing', bonus: { wing: 6, wisdom: 2 }, mindWard: 0.85, value: 100, desc: '공허의 실로 짠 얇은 덮개. 깎이는 정신 −15%.' },
+  star_charm:     { name: '별빛 부적', rarity: 'rare', type: 'equip', slot: 'charm', bonus: { wisdom: 4 }, expRare: 0.03, value: 100, desc: '별똥별 조각을 엮은 부적. 원정에서 귀한 것이 더 잘 나온다.' },
+  // ── 멸망한 대륙 ──
+  purify_shard: { name: '정화의 결정',  rarity: 'uncommon', value: 1, desc: '멸망한 대륙의 오염을 걷어 낼 때 맺히는 맑은 결정. 잿빛 상륙지의 생존자에게 귀한 것과 바꿀 수 있다.' },
+  ashen_dust:   { name: '잿빛 먼지',    rarity: 'common',   value: 3, desc: '멸망한 대륙을 덮은 고운 먼지. 손에 묻으면 잘 지워지지 않는다.' },
+  faded_crest:  { name: '바랜 왕국 문장', rarity: 'uncommon', value: 18, desc: '카르넴 왕국의 문장이 새겨진 금속 조각. 용과 인간이 함께 그려져 있다.' },
   corrupt_crystal:{ name: '오염 결정',      rarity: 'rare', value: 55, desc: '오염된 땅에서만 맺히는 검붉은 결정. 오래 쥐고 있으면 머릿속이 웅웅거린다.' },
   recipe_scroll:  { name: '바랜 제작서',   rarity: 'rare',     type: 'use', use: { recipe: true }, value: 40, desc: '누군가 남긴 제작법이 적힌 낡은 양피지. 읽으면 아직 모르는 제작법 하나를 알게 된다.' },
   ember_tonic:    { name: '불씨 강장제',   rarity: 'uncommon', type: 'use', use: { hp: 25, en: 40 }, desc: '불도마뱀 꼬리를 꿀에 재운 강장제. 목구멍이 화끈거린다.' },
@@ -363,6 +405,11 @@ const BUFFS = {
 
 // 제작법. needs: 재료와 개수, en: 쓰는 기력, wis: 필요한 지혜
 const RECIPES = [
+  // 멸망한 대륙의 장비 (지혜 18 이상)
+  { out: 'purified_crown', needs: { ashen_core: 2, faded_crest: 4, purify_shard: 20 },  en: 20, wis: 18 },
+  { out: 'carnem_claw',    needs: { carnem_steel: 4, ashen_core: 1, sharp_fang: 5 },     en: 20, wis: 18 },
+  { out: 'void_cloak',     needs: { void_silk: 4, star_fragment: 2, ashen_core: 1 },     en: 20, wis: 18 },
+  { out: 'star_charm',     needs: { star_fragment: 3, purify_shard: 15, faded_crest: 2 }, en: 16, wis: 18 },
   // 낚시
   { out: 'salted_fish',   needs: { fish_mackerel: 3, salt_crystal: 1 },                 en: 4,  wis: 0 },
   { out: 'bait_meat',     needs: { beast_hide: 1 },                                     en: 2,  wis: 0 },
@@ -549,6 +596,35 @@ const FISHING = {
   xp: { common: 2, uncommon: 5, rare: 12 },
   gatherBait: 0.45, gatherSalt: 0.35,    // 해안에서 채집할 때 미끼·소금이 함께 나올 확률
   coastTribute: { bait: [3, 5], fish: [1, 3], failBait: [1, 2] }, // 적대가 해안을 위협할 때: 성공하면 미끼·생선, 실패해도 미끼 조금
+};
+
+// ── 멸망한 대륙 에레보스: 모두가 함께 채우는 정화도, 정화의 결정, 생존자와의 교환 ──
+const RUIN = {
+  name: '멸망한 대륙 에레보스',
+  gateFrom: 'coast', gateTo: 'ruin_shore',
+  crossAp: 3, minLevel: 20,                      // 바다를 건널 때 (오갈 때마다)
+  drain: 2,                                      // 이 땅의 정신 소모 배율 (지역 drain을 곱함). 정신 보호 장신구가 줄여 줌
+  together: 0.7,                                 // 같은 지역에 다른 드래곤이 있으면 정신 소모 ×
+  goal: 60000,                                   // 모두의 정화도 100%에 필요한 기여 (11명이 꾸준히 해도 한두 달)
+  pts: { explore: 3, gather: 2, hunt: 6, elite: 25 }, // 행동마다 쌓이는 기여
+  shard: { explore: [0.5, 1], gather: [0.4, 1], hunt: [1, 2], elite: [6, 9] }, // [나올 확률, 개수] / 사냥은 [최소, 최대]
+  // 잿빛 상륙지의 생존자 '오르샤'와 바꾸기 (정화의 결정 몇 개)
+  exchange: [
+    { id: 'purify_incense', cost: 6 },
+    { id: 'holy_water',     cost: 2 },
+    { id: 'recipe_scroll',  cost: 12 },
+    { id: 'ghost_lantern',  cost: 30 },
+    { id: 'pure_amulet',    cost: 70 },
+    { id: 'fire_crystal',   cost: 15 }, { id: 'eternal_ice', cost: 15 }, { id: 'sun_stone', cost: 15 },
+    { id: 'heartwood',      cost: 15 }, { id: 'bog_pearl', cost: 15 }, { id: 'deep_pearl', cost: 15 }, { id: 'ancient_relic', cost: 15 },
+    { id: 'ashen_core',     cost: 40 },
+    { id: 'tr_map_piece',   cost: 60 }, { id: 'tr_star_orb', cost: 80 }, { id: 'tr_dragon_idol', cost: 120 },
+  ],
+  // 강적·사냥에서 나오는 것 (멸망한 대륙)
+  coreDrop: { elite: 0.3, hunt: 0.03 },          // 잿빛 심장
+  treasure: { elite: 0.05, hunt: 0.006, pool: ['tr_map_piece', 'tr_star_orb', 'tr_dragon_idol', 'tr_ash_mirror', 'tr_broken_crown', 'tr_last_claw'] },
+  // 희귀 장비: 강적을 이기면 아주 드물게. pity번째 강적까지 못 얻으면 그때는 반드시
+  gear: { elite: 0.015, hunt: 0.001, pity: 50, pool: ['erebus_eye', 'knight_gauntlet', 'void_ring', 'abyss_membrane'] },
 };
 
 const TRADE = {
@@ -744,6 +820,10 @@ const fameTier = (v) => FAME_TIERS.find((t) => v >= t.min);
 
 // 지역별 채집 재료
 const REGION_LOOT = {
+  ruin_shore:   { common: ['ashen_dust', 'sea_shell'], uncommon: ['faded_crest'], rare: ['corrupt_crystal'] },
+  ruin_plain:   { common: ['ashen_dust'], uncommon: ['faded_crest', 'carnem_steel'], rare: ['corrupt_crystal'] },
+  ruin_capital: { common: ['ashen_dust'], uncommon: ['faded_crest', 'carnem_steel'], rare: ['corrupt_crystal'] },
+  ruin_rift:    { common: ['ashen_dust'], uncommon: ['void_silk', 'blackened_scale'], rare: ['corrupt_crystal'] },
   plains:  { common: ['grass_seed'],   uncommon: ['wild_honey'],   rare: ['silver_clover'] },
   capital: { common: ['brass_button'], uncommon: ['silk_scrap'],   rare: ['lost_seal'] },
   snow:    { common: ['ice_shard'],    uncommon: ['frost_lichen'], rare: ['eternal_ice'] },
@@ -768,6 +848,10 @@ const CREATURES = {
 
 // 지역별 장면. 탐사 결과와 원정 기록에 쓰임
 const SCENES = {
+  ruin_shore: ['검은 파도가 무너진 부두를 핥고 지나갔다.', '모닥불 곁에서 생존자들이 낮은 목소리로 노래를 불렀다.', '모래에 반쯤 묻힌 배의 뼈대를 발견했다.', '잿가루가 바닷바람에 실려 눈처럼 흩날렸다.', '누군가 모래 위에 그려 둔 용과 사람의 그림이 반쯤 지워져 있었다.'],
+  ruin_plain: ['검게 마른 이삭이 바람에 서걱거렸다.', '허수아비 하나가 고개를 돌려 이쪽을 보는 것 같았다.', '무너진 농가의 화덕에 아직 온기가 남아 있었다.', '먼 하늘에서 뼈가 부딪히는 소리가 들렸다.', '말라붙은 우물 바닥에서 무언가가 반짝였다.'],
+  ruin_capital: ['찢긴 깃발이 무너진 성벽 위에서 펄럭였다.', '광장의 분수대에는 용과 인간이 손을 맞잡은 조각상이 서 있었다.', '갑옷 부딪히는 소리가 골목 끝에서 울렸다.', '왕궁 쪽 창문 하나에 희미한 불빛이 보였다가 사라졌다.', '부서진 서고에서 탄 종이가 바람에 날렸다.'],
+  ruin_rift: ['균열 아래에서 뜨겁고 축축한 바람이 올라왔다.', '발밑의 바위가 숨을 쉬듯 미세하게 떨렸다.', '어둠 속에서 누군가 이름을 부르는 것 같았다.', '균열 가장자리의 돌들이 하나둘 아래로 떨어져 사라졌다.', '머리 위로 보랏빛 번개가 소리 없이 지나갔다.'],
   plains: ['바람에 눕는 풀밭 위를 낮게 날았다.', '멀리 왕도의 종소리가 들려왔다.', '들소 떼가 그림자를 보고 흩어졌다.', '해 질 녘 언덕에서 잠시 날개를 쉬었다.'],
   capital: ['성벽 위 파수병들의 눈을 피해 구름 속을 맴돌았다.', '시장의 소란이 하늘까지 올라왔다.', '성당 첨탑 위에 앉은 비둘기들이 일제히 날아올랐다.', '골목 어귀에서 아이 하나가 하늘을 가리켰다.'],
   snow: ['눈보라가 지나간 뒤 세상이 고요해졌다.', '얼어붙은 호수 위에 자신의 모습이 비쳤다.', '눈 속에 반쯤 묻힌 인간의 썰매를 발견했다.', '밤하늘에 초록빛 커튼이 일렁였다.'],
@@ -893,6 +977,8 @@ const EXP_FORKS = [
     a: { label: '위협해 쫓아낸다', tone: 'cruel', chance: 0.6, ok: { rolls: 1.3, text: '이빨을 드러내자 낯선 드래곤이 물러났다. 이 땅은 이제 나의 것이다.' }, bad: { hurt: 0.15, rolls: 0.9, text: '상대도 만만치 않았다. 서로 상처만 남기고 갈라섰다.' } },
     b: { label: '함께 뒤지자고 청한다', tone: 'kind', ok: { loot: 1, xp: 1.1, text: '둘이 함께 뒤지니 더 많은 것이 보였다. 헤어질 때 서로 고개를 끄덕였다.' } } },
 ];
+// 2시간 이상 원정을 끝까지 다녀오면: 별똥별 조각 (멸망한 대륙이면 잿빛 심장도 가끔)
+const EXP_LONG = { from: 120, star: { 120: 0.35, 180: 0.6 }, second: 0.2, ruinCore: 0.3 };
 const EXP_RULES = { forkFrom: 0.35, forkTo: 0.6, stanceTone: { hostile: ['bold', 'cruel', 'careful', 'kind'], hermit: ['careful', 'kind', 'bold', 'cruel'], friendly: ['kind', 'careful', 'bold', 'cruel'] } };
 
 // ── 칭호 ───────────────────────────────────────────
@@ -1022,10 +1108,27 @@ const PLACES = {
     desc: '봉인된 제단 아래 숨겨진 금고. 죽어서도 보물을 지키는 근위대가 문 앞에 늘어서 있다.' },
   volcano_core:  { region: 'volcano', name: '불의 심장부',  level: 24, creature: '용암 와이번', type: 'flyer', eliteType: 'ghost', elite: '불을 삼킨 고룡의 그림자', weak: ['ice', 'water'], resist: ['fire', 'poison', 'earth'], special: { name: '불바다', power: 1.5, debuff: { burn: 4 }, element: 'fire' },
     desc: '분화구 아래, 대륙의 불이 시작되는 곳. 오래전 이곳에서 쓰러진 고룡의 기운이 아직 맴돈다.' },
+  // ── 멸망한 대륙: 모든 사냥감이 오염되어 있음 (이름 앞에 '오염된'이 붙음). hpMul: 체력 배율 ──
+  ruin_pier:     { region: 'ruin_shore', name: '부서진 부두', level: 21, hpMul: 1.7, creature: '어부 무리', type: 'human', elite: '바다에 삼켜진 선장', weak: ['fire', 'lightning'], resist: ['water'], special: { name: '녹슨 작살', power: 1.2, debuff: { bleed: 3 } },
+    desc: '썩은 판자가 반쯤 물에 잠긴 부두. 그물을 든 사람들이 아직도 고기를 잡는 시늉을 한다.' },
+  ruin_flats:    { region: 'ruin_shore', name: '잿빛 모래톱', level: 22, hpMul: 1.8, creature: '껍질 게', type: 'bug', elite: '모래톱의 거대 집게', weak: ['lightning', 'earth'], resist: ['water', 'ice'], special: { name: '부수는 집게', power: 1.5 },
+    desc: '잿가루가 섞인 검은 모래. 밟을 때마다 껍질이 부서지는 소리가 난다.' },
+  ruin_field:    { region: 'ruin_plain', name: '시든 밀밭', level: 23, hpMul: 1.9, creature: '농부 무리', type: 'human', eliteType: 'construct', elite: '허수아비 군주', weak: ['fire'], resist: ['poison', 'earth'], special: { name: '낫질', power: 1.0, hits: 2 },
+    desc: '검게 마른 이삭 사이로 낫을 든 그림자들이 천천히 걸어 다닌다.' },
+  ruin_river:    { region: 'ruin_plain', name: '말라붙은 강바닥', level: 24, hpMul: 2.0, creature: '뼈 와이번', type: 'flyer', elite: '뼈만 남은 와이번 왕', weak: ['spirit', 'fire'], resist: ['poison', 'ice'], special: { name: '썩은 숨결', power: 1.3, debuff: { poison: 3 } },
+    desc: '강이 흐르던 자리에 갈라진 진흙만 남았다. 하늘에서 뼈가 부딪히는 소리가 들린다.' },
+  ruin_gate:     { region: 'ruin_capital', name: '무너진 성문', level: 25, hpMul: 2.1, creature: '기사단', type: 'human', elite: '마지막 기사단장', weak: ['lightning', 'spirit'], resist: ['earth', 'poison'], special: { name: '돌격 대열', power: 1.4, debuff: { weaken: 2 } },
+    desc: '부서진 성문 앞에 갑옷을 입은 기사들이 아직 대열을 지키고 서 있다.' },
+  ruin_throne:   { region: 'ruin_capital', name: '왕좌의 회랑', level: 26, hpMul: 2.2, creature: '왕궁의 드래곤', type: 'drake', elite: '카르넴의 왕룡', weak: ['spirit', 'ice'], resist: ['fire', 'poison'], special: { name: '검게 탄 숨결', power: 1.6, debuff: { burn: 3 }, element: 'fire' },
+    desc: '왕좌로 이어지는 긴 회랑. 왕을 지키던 용들이 검게 물든 비늘로 기둥을 감고 있다.' },
+  ruin_edge:     { region: 'ruin_rift', name: '균열 가장자리', level: 27, hpMul: 2.3, creature: '공허의 망령', type: 'ghost', elite: '이름을 잃은 것', weak: ['spirit', 'lightning'], resist: ['poison', 'earth', 'ice'], special: { name: '공허의 속삭임', power: 1.2, debuff: { weaken: 3 } },
+    desc: '발밑이 끝없는 어둠으로 이어진다. 가장자리에 선 망령들이 아래를 내려다보고 있다.' },
+  ruin_abyss:    { region: 'ruin_rift', name: '심연의 문턱', level: 28, hpMul: 2.5, creature: '고룡', type: 'drake', elite: '심연에 삼켜진 고룡', weak: ['spirit'], resist: ['fire', 'poison', 'earth', 'ice'], special: { name: '심연의 포효', power: 1.8, debuff: { stun: 1 }, chance: 0.4 },
+    desc: '균열 아래로 내려가는 마지막 바위턱. 이 대륙을 멸망시킨 것의 숨결이 여기까지 올라온다.' },
 };
 // 장소별 사냥 전리품
 const PLACE_DROPS = {'plains_keep': 'knight_crest', 'forest_root': 'shadow_spore', 'swamp_abyss': 'basilisk_eye', 'snow_glacier': 'frost_heart', 'canyon_temple': 'sphinx_mane', 'ruins_vault': 'crown_shard', 'volcano_core': 'elder_ember', 'plains_field': 'bison_horn', 'plains_hill': 'wolf_pelt', 'plains_war': 'ghost_ash', 'forest_edge': 'spider_silk', 'forest_valley': 'toad_gland', 'forest_heart': 'living_bark', 'swamp_reeds': 'croc_scale', 'swamp_village': 'ghost_ash', 'swamp_mire': 'hydra_blood', 'snow_field': 'wolf_pelt', 'snow_cave': 'troll_tusk', 'snow_peak': 'wyvern_membrane', 'ruins_hall': 'stone_heart', 'ruins_crypt': 'cursed_steel', 'ruins_altar': 'seal_core', 'canyon_path': 'scorpion_stinger', 'canyon_storm': 'sandworm_tooth', 'canyon_cliff': 'griffin_feather', 'volcano_slope': 'salamander_tail', 'volcano_cave': 'magma_core', 'volcano_crater': 'giant_ember'};
-for (const [id, p] of Object.entries(PLACES)) { p.id = id; p.drop = PLACE_DROPS[id]; }
+for (const [id, p] of Object.entries(PLACES)) { p.id = id; p.drop = PLACE_DROPS[id] || (p.region.startsWith('ruin_') ? 'purify_shard' : undefined); }
 // 지역별 장소 (입구 → 안쪽)
 const REGION_PLACES = {};
 for (const p of Object.values(PLACES)) (REGION_PLACES[p.region] ||= []).push(p.id);
@@ -1296,6 +1399,10 @@ const W_REGION = {
   plains:  { add: { wind: 1, storm: 1 } },
   capital: { add: { rain: 1 } },
   coast:   { add: { fog: 2, wind: 2, storm: 1 } },
+  ruin_shore:   { mul: { clear: 0.3, heat: 0.3, snow: 0.3 }, add: { fog: 4, ash: 3, storm: 1 } },
+  ruin_plain:   { mul: { clear: 0.3, heat: 0.3, snow: 0.3 }, add: { ash: 5, wind: 2 } },
+  ruin_capital: { mul: { clear: 0.2, heat: 0.3 }, add: { ash: 4, fog: 3, storm: 2 } },
+  ruin_rift:    { mul: { clear: 0.1, heat: 0.3, snow: 0.3 }, add: { fog: 4, storm: 3, aurora: 1 } },
 };
 
 // ── 대륙의 재앙: 모든 드래곤이 함께 맞서는 거대한 적 ──
@@ -1361,7 +1468,7 @@ const ELITES = {
 
 module.exports = {
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, TITLES, TITLE_COUNT_NAMES,
-  PURIFY, CRAFT, SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, FISHING, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
+  PURIFY, CRAFT, SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, FISHING, RUIN, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
   DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
-  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, DEPART, BONDS, MARKS, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES,
+  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, DEPART, BONDS, MARKS, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG,
 };

@@ -5,7 +5,7 @@
 
 const {
   REGIONS, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, RECIPES, SLOTS, STANCES, SHOPS, REP_TIERS, repTier, TRADE, NEST, hoardTier, RAID, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, ELEMENTS,
-  CRAFT, SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, SKILLS, FISHING, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES,
+  CRAFT, SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, SKILLS, FISHING, RUIN, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG,
 } = require('./game-data');
 
 const SR = STANCE_RULES;
@@ -423,14 +423,15 @@ function isFallen(d) {
 
 // ── 정신과 오염 ────────────────────────────────────
 // 오염된 땅: 야생 지역 중 하나. 이틀마다 다음 곳으로 옮겨 감 (모두에게 같은 곳)
-const WILD = () => Object.keys(REGIONS).filter((r) => !isTown(r));
+const isRuin = (region) => REGIONS[region]?.realm === 'ruin'; // 멸망한 대륙 (늘 오염되어 있음)
+const WILD = () => Object.keys(REGIONS).filter((r) => !isTown(r) && !isRuin(r));
 function corruptedRegion(now = Date.now()) {
   const w = WILD();
   return w[Math.floor(now / MIND.rotateMs) % w.length];
 }
 const corruptUntil = (now = Date.now()) => (Math.floor(now / MIND.rotateMs) + 1) * MIND.rotateMs;
 // 정화되었으면 다음 곳으로 옮겨 갈 때까지 오염이 걷혀 있음 (hooks.purified: 서버가 정화 상태를 알려 줌)
-const isCorrupted = (region, now = Date.now()) => region === corruptedRegion(now) && !(hooks.purified && hooks.purified(now));
+const isCorrupted = (region, now = Date.now()) => isRuin(region) || (region === corruptedRegion(now) && !(hooks.purified && hooks.purified(now)));
 // 광폭화 상태 { at, until, region, hp, hpMax } (없으면 null)
 function berserkOf(d) {
   if (!d.berserk) return null;
@@ -439,11 +440,23 @@ function berserkOf(d) {
 }
 // 가장 가까운 인간 마을
 function nearestTown(region) {
+  if (isRuin(region)) return RUIN.gateFrom; // 멸망한 대륙에는 마을이 없음: 바다 건너 해안
   const r = REGIONS[region];
   return Object.keys(SHOPS).sort((a, b) =>
     Math.hypot(REGIONS[a].x - r.x, REGIONS[a].y - r.y) - Math.hypot(REGIONS[b].x - r.x, REGIONS[b].y - r.y))[0];
 }
 // 장신구가 막아 주는 정도 (정화의 부적)
+// 희귀 장비의 특별한 효과 (사냥·강적에서만): vsCorrupt·eliteAtk·taken은 곱하고, shard는 더함
+function gearMods(d) {
+  const m = { vsCorrupt: 1, eliteAtk: 1, taken: 1, shard: 0 };
+  for (const id of Object.values(equipOf(d))) {
+    const g = ITEMS[id]?.gear;
+    if (!g) continue;
+    for (const k of ['vsCorrupt', 'eliteAtk', 'taken']) if (g[k]) m[k] *= g[k];
+    if (g.shard) m.shard += g.shard;
+  }
+  return m;
+}
 function mindWard(d) {
   let w = 1;
   for (const id of Object.values(equipOf(d))) if (ITEMS[id]?.mindWard) w *= ITEMS[id].mindWard;
@@ -453,7 +466,9 @@ function mindWard(d) {
 function loseMind(d, n) {
   if (!n || berserkOf(d)) return [];
   if (d.mind == null) d.mind = MIND.max;
-  const lost = Math.max(1, Math.round(n * traitMods(d).mindDrain * mindWard(d)));
+  // 멸망한 대륙: 훨씬 빨리 닳음 (지역마다 다름). 같은 곳에 다른 드래곤이 있으면 덜 닳음
+  const ruin = isRuin(d.region) ? RUIN.drain * (REGIONS[d.region].drain ?? 1) * (hooks.companionsHere && hooks.companionsHere(d) ? RUIN.together : 1) : 1;
+  const lost = Math.max(1, Math.round(n * ruin * traitMods(d).mindDrain * mindWard(d)));
   const before = d.mind;
   d.mind = Math.max(0, d.mind - lost);
   if (before >= MIND.max) d.mind_at = Date.now();
@@ -847,6 +862,14 @@ function finishExpedition(d, now = Date.now(), companions = 0) {
   const trophyN = Math.floor(done / 20) * (G.trophy || 0) + (fr?.trophy || 0);
   const huntable = (REGION_PLACES[region] || []).filter((id) => PLACES[id].level <= d.level + PLACE_RULES.tooHard);
   for (let i = 0; i < trophyN && huntable.length; i++) ids.push(PLACES[pick(huntable)].drop);
+  // 2시간 이상 원정을 끝까지 다녀오면: 별똥별 조각 (멸망한 대륙이면 잿빛 심장도)
+  let longFind = null;
+  const plannedMin = Math.round(planned);
+  if (!early && plannedMin >= EXP_LONG.from) {
+    const p = plannedMin >= 180 ? EXP_LONG.star[180] : EXP_LONG.star[120];
+    if (Math.random() < p) { ids.push('star_fragment'); if (plannedMin >= 180 && Math.random() < EXP_LONG.second) ids.push('star_fragment'); longFind = 'star'; }
+    if (isRuin(region) && Math.random() < EXP_LONG.ruinCore) { ids.push('ashen_core'); longFind = longFind || 'core'; }
+  }
   const items = bundle(ids);
   let gold = Math.round((Math.round(done * rand(0.4, 0.8)) + (rolls ? Math.floor(st.majesty / 2) : 0)) * G.gold) + (fr?.gold || 0);
   let xp = Math.round(done * 0.8 * G.xp * (fr?.xp || 1));
@@ -867,6 +890,7 @@ function finishExpedition(d, now = Date.now(), companions = 0) {
     if (trophyN && huntable.length) journal.push('사냥감을 몰아 몇 마리를 쓰러뜨리고 전리품을 챙겼다.');
     const rare = items.find((it) => ITEMS[it.id].rarity === 'rare');
     if (rare) journal.push(`그리고 ${ITEMS[rare.id].name}${josa(ITEMS[rare.id].name, '을', '를')} 손에 넣었다.`);
+    if (longFind === 'star') journal.push('먼 길 끝, 밤하늘에서 떨어진 별똥별 조각이 발밑에서 빛나고 있었다.');
     journal.push(early ? '부름을 받고 서둘러 돌아왔다.' : '긴 여정을 마치고 돌아왔다.');
   }
 
@@ -1333,7 +1357,7 @@ function marketInfo(d, invList) {
       ? (SHOPS_SPECIAL[d.region] || []).map((id) => ({ id, price: buyPrice(d, id), locked: !specialOpen(d), limit: TRADE.dailyBuy[id] || null, left: buyLeft(d, id) }))
       : [],
     specialFrom: repTier(SR.friendly.specialFrom),
-    sell: invList.filter((x) => ITEMS[x.item]).map((x) => ({ id: x.item, qty: x.qty, price: sellPrice(d, x.item) })),
+    sell: invList.filter((x) => ITEMS[x.item] && ITEMS[x.item].cat !== 'treasure').map((x) => ({ id: x.item, qty: x.qty, price: sellPrice(d, x.item) })),
   };
 }
 
@@ -1379,6 +1403,7 @@ function sell(d, id, qty, have) {
   const err = marketCheck(d);
   if (err) return err;
   if (!ITEMS[id]) return { error: '알 수 없는 물건이다.' };
+  if (ITEMS[id].cat === 'treasure') return { error: '보물은 팔 수 없다. 둥지의 보물더미에 쌓아 두자.' };
   const n = have(id);
   qty = Math.max(1, Math.min(n, Math.floor(qty) || 1));
   if (n < 1) return { error: '가지고 있지 않다.' };
@@ -1509,6 +1534,7 @@ const isTown = (region) => !!SHOPS[region];
 function buildNest(d) {
   if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
   if (isTown(d.region)) return { error: '인간의 땅에는 둥지를 틀 수 없다.' };
+  if (isRuin(d.region)) return { error: '오염된 이 땅에는 둥지를 틀 수 없다.' };
   if (d.nest === d.region) return { error: '이미 이곳에 둥지가 있다.' };
   const moving = !!d.nest;
   if (moving && d.gold < NEST.moveCost) return { error: `둥지를 옮기려면 금화 ${NEST.moveCost}닢이 든다.` };
@@ -1677,7 +1703,7 @@ function checkRaid(d, hoard, now = Date.now(), force = false) {
   if (trapped) ni.wards.trap -= 1;
   const mult = nestTier(d).raidLoss * (trapped ? RAID.trap : 1);
   const gold = Math.min(RAID.goldMax[ti], Math.floor((d.hoard_gold || 0) * rand(...RAID.gold) * mult));
-  const stacks = shuffle(hoard.filter((x) => x.qty > 0 && ITEMS[x.item])).slice(0, randInt(...RAID.stacks));
+  const stacks = shuffle(hoard.filter((x) => x.qty > 0 && ITEMS[x.item] && ITEMS[x.item].cat !== 'treasure')).slice(0, randInt(...RAID.stacks)); // 보물은 도둑도 손대지 못함
   const items = stacks.map((x) => ({ id: x.item, qty: Math.min(x.qty, Math.max(1, Math.round(x.qty * rand(...RAID.itemPart) * mult))) }));
   if (!gold && !items.length) { ni.calm = now + RAID.calm; return null; }
   d.hoard_gold -= gold;
@@ -1723,9 +1749,9 @@ module.exports = {
   actionCost, townArrows, hasBounty, addRep, addFame, craftEn, gainXp, spendStats,
   traitsOf, traitMods, hasTrait, chooseTraits, traitCount,
   check, spendAp, rollItem, bundle, itemLabel, xpOf, isTown, // 전투(game-combat.js)가 씀
-  corruptedRegion, corruptUntil, isCorrupted, berserkOf, loseMind, nearestTown,
+  corruptedRegion, corruptUntil, isCorrupted, isRuin, berserkOf, loseMind, nearestTown,
   placeOf, goPlace, isFallen, chron, chronOf,
   titlesOf, titleOn, titleName, titleMods, checkTitles, setTitle, titlesView,
-  combatJson, dayIdx, // 모브 드래곤(game-mobs.js)이 씀
+  combatJson, dayIdx, gearMods, // 모브 드래곤(game-mobs.js)이 씀
   xpNeed, atMaxLevel,
 };

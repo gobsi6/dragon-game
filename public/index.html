@@ -440,6 +440,12 @@
   .mk-go .coin::after { width: 6px; height: 6px; }
   .ord-rw { display: inline-flex; align-items: center; gap: 5px; font: 600 12.5px/1 var(--sans); color: #6A4E12; white-space: nowrap; }
   .mk-row .lock { font-size: 12px; color: var(--muted); text-align: right; }
+  /* 멸망한 대륙 */
+  .corrupt-note.ruin, #corrupt-note.ruin { background: #EFEBF3; border-color: #B7AEC6; }
+  #corrupt-note .ruin-top { margin-top: 6px; font-size: 12px; color: #4A3F5E; }
+  #corrupt-note .ruin-ex { margin-top: 10px; }
+  .ruin-shards { margin: 0 0 8px; font-weight: 600; color: #4A3F5E; }
+  #map-svg.ruin-map { background: #2A2932; }
   /* 낚시 */
   .fish-wx { margin: 0 0 10px; font-size: 13px; color: #2F5F73; }
   .fish-baits { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
@@ -1641,6 +1647,7 @@
   .tag { padding: 1px 9px; font-size: 12px; font-weight: 500; border: 1px solid; }
   .tag.wild { border-color: #A9C4B2; background: #EEF4EF; color: #2F5D45; }
   .tag.human { border-color: #B9C7D3; background: #EEF2F6; color: #2E4A60; }
+  .tag.ruin { border-color: #B7AEC6; background: #EFEBF3; color: #4A3F5E; }
   .quote { margin: 10px 0 0; padding: 10px 0 10px 16px; border-left: 2px solid #B6B9B5; font: 500 16px/1.75 var(--serif); color: #30353A; max-width: 40em; }
   .actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   .actions .note { font-size: 11.5px; color: var(--muted); margin-left: 4px; }
@@ -2169,6 +2176,16 @@
   <div class="row" style="margin-top: 12px"><button class="btn" type="button" id="nest-close">닫기</button></div>
 </dialog>
 
+<dialog class="frame dlg wide" id="ruin-dlg" aria-labelledby="ruin-dlg-title">
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="ruin-dlg-title">생존자 오르샤</h2></div>
+  <div class="body">
+    <p class="note">무너진 부두 옆 모닥불을 지키는 늙은 드래곤. "정화의 결정을 가져오면, 살아남은 자들이 지켜 온 것을 내어 주겠소."</p>
+    <p class="ruin-shards" id="ruin-shards"></p>
+    <div class="mk-list" id="ruin-list"></div>
+    <div class="row"><button class="btn" type="button" id="ruin-close">닫기</button></div>
+  </div>
+</dialog>
 <dialog class="frame dlg" id="fish-dlg" aria-labelledby="fish-dlg-title">
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="fish-dlg-title">낚시</h2></div>
@@ -3491,8 +3508,14 @@
       const out = Object.entries(it.bonus || {}).map(([k, v]) => `${statName(k)} +${v}`);
       if (it.expRare) out.push(`원정 귀한 물건 +${Math.round(it.expRare * 100)}%`);
       if (it.mindWard) out.push(`깎이는 정신 −${Math.round((1 - it.mindWard) * 100)}%`);
+      const g = it.gear || {}; // 희귀 장비의 특별한 효과 (사냥·강적에서만)
+      if (g.vsCorrupt) out.push(`오염된 적에게 주는 피해 +${Math.round((g.vsCorrupt - 1) * 100)}%`);
+      if (g.eliteAtk) out.push(`강적에게 주는 피해 +${Math.round((g.eliteAtk - 1) * 100)}%`);
+      if (g.taken) out.push(`받는 피해 −${Math.round((1 - g.taken) * 100)}%`);
+      if (g.shard) out.push(`멸망한 대륙에서 정화의 결정 +${g.shard}`);
       return `${slotName(it.slot)} 장신구. ${out.join(', ')}`;
     }
+    if (it.cat === 'treasure') return `보물 · 보물더미 가치 ${it.value.toLocaleString()} (팔 수 없고, 도둑도 가져가지 못한다)`;
     if (it.cat === 'trophy') {
       const where = dropPlaces(it.id);
       return where ? `사냥 전리품 · ${where}` : '사냥 전리품';
@@ -3505,7 +3528,7 @@
     if (!S.places) return '';
     return Object.values(S.places).filter((p) => p.drop === id).map((p) => `${p.name}(${S.regions[p.region]?.name || ''})`).join(', ');
   }
-  const itemCat = (it) => (it.type === 'equip' ? 'equip' : it.type === 'use' ? (it.use?.buff ? 'buff' : 'use') : it.cat === 'meal' ? 'meal' : it.cat === 'bait' || it.cat === 'fish' ? 'fish' : it.cat === 'trophy' ? 'trophy' : 'mat');
+  const itemCat = (it) => (it.type === 'equip' ? 'equip' : it.type === 'use' ? (it.use?.buff ? 'buff' : 'use') : it.cat === 'meal' ? 'meal' : it.cat === 'bait' || it.cat === 'fish' ? 'fish' : it.cat === 'treasure' ? 'treasure' : it.cat === 'trophy' ? 'trophy' : 'mat');
 
   // 프로필 카드의 장신구 자리
   function renderGear() {
@@ -3579,8 +3602,8 @@
     }
 
     const order = { rare: 0, uncommon: 1, common: 2 };
-    const CATS = ['equip', 'use', 'buff', 'meal', 'fish', 'trophy', 'mat'];
-    const CAT_NAME = { equip: '장신구', use: '회복약', buff: '강화 음식', meal: '식구 요리', fish: '낚시', trophy: '사냥 전리품', mat: '재료' };
+    const CATS = ['treasure', 'equip', 'use', 'buff', 'meal', 'fish', 'trophy', 'mat'];
+    const CAT_NAME = { treasure: '보물 (둥지 전용)', equip: '장신구', use: '회복약', buff: '강화 음식', meal: '식구 요리', fish: '낚시', trophy: '사냥 전리품', mat: '재료' };
     const list = Object.entries(invCache)
       .filter(([id, q]) => S.items[id] && q > 0)
       .sort(([a], [b]) => CATS.indexOf(itemCat(S.items[a])) - CATS.indexOf(itemCat(S.items[b]))
@@ -5459,7 +5482,7 @@
     $('region-name').textContent = r.name;
     const tag = $('region-tag');
     tag.textContent = r.tag;
-    tag.className = `tag ${r.tag === '야생' ? 'wild' : 'human'}`;
+    tag.className = `tag ${r.tag === '야생' ? 'wild' : r.realm === 'ruin' ? 'ruin' : 'human'}`;
     $('region-desc').textContent = r.desc;
     renderCorrupt();
     renderWeather();
@@ -5472,9 +5495,24 @@
   }
 
   // 지형 그림은 한 번만 불러오고, 길과 지역 표시는 위에 따로 그림
-  fetch('/map-terrain.svg').then((r) => r.text()).then((t) => {
-    $('terrain').innerHTML = t.replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '');
-  }).catch(() => {});
+  // 지형 그림: 본 대륙과 멸망한 대륙 두 장. 지금 있는 대륙의 그림을 깜
+  const TERRAIN = {};
+  const realmOf = (id) => S.regions?.[id]?.realm || 'main';
+  let terrainShown = null;
+  function showTerrain() {
+    const rm = realmOf(S.region);
+    if (terrainShown === rm || !TERRAIN[rm]) return;
+    terrainShown = rm;
+    $('terrain').innerHTML = TERRAIN[rm];
+    $('map-svg').classList.toggle('ruin-map', rm === 'ruin');
+    $('map-svg').setAttribute('aria-label', rm === 'ruin' ? '멸망한 대륙 지도' : '대륙 지도');
+  }
+  for (const [rm, file] of [['main', '/map-terrain.svg'], ['ruin', '/map-ruin.svg']]) {
+    fetch(file).then((r) => r.text()).then((t) => {
+      TERRAIN[rm] = t.replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '');
+      showTerrain();
+    }).catch(() => {});
+  }
 
   function el(tag, attrs, text) {
     const e = document.createElementNS(NS, tag);
@@ -5486,25 +5524,34 @@
     const g = $('overlay');
     g.replaceChildren();
     if (!S.region) return;
+    showTerrain();
     const here = S.regions[S.region];
+    const rm = realmOf(S.region);
+    const ruinMap = rm === 'ruin';
+    // 이 대륙의 지역과, 바다 건너 이어진 지역(gate 자리에 그림)만
+    const pos = (r) => (realmOf(r.id) === rm ? r : { ...r, x: r.gate?.x ?? r.x, y: r.gate?.y ?? r.y, gateway: true });
+    const shown = Object.values(S.regions).filter((r) => realmOf(r.id) === rm || r.links.some((id) => realmOf(id) === rm && r.gate)).map(pos);
+    const byId = Object.fromEntries(shown.map((r) => [r.id, r]));
+    const lockedOf = (r) => r.realm === 'ruin' && (r.unlock || 0) > (S.me?.ruin?.pct || 0);
     const drawn = new Set();
-    for (const r of Object.values(S.regions)) {
+    for (const r of shown) {
       for (const id of r.links) {
         const key = [r.id, id].sort().join('|');
-        if (drawn.has(key)) continue;
+        if (drawn.has(key) || !byId[id]) continue;
         drawn.add(key);
-        const t = S.regions[id];
+        const t = byId[id];
         const act = r.id === S.region || id === S.region;
         g.appendChild(el('line', {
           x1: r.x, y1: r.y, x2: t.x, y2: t.y, 'stroke-linecap': 'round',
-          stroke: act ? '#B84653' : '#6E6A58', 'stroke-width': act ? 3.4 : 2,
+          stroke: act ? (ruinMap ? '#D07A8A' : '#B84653') : (ruinMap ? '#8E86A0' : '#6E6A58'), 'stroke-width': act ? 3.4 : 2,
           'stroke-dasharray': act ? '10 6' : '2 7', opacity: act ? 1 : 0.75,
         }));
       }
     }
-    for (const r of Object.values(S.regions)) {
+    for (const r of shown) {
       const isHere = r.id === S.region;
-      const isOpen = here.links.includes(r.id);
+      const locked = lockedOf(r);
+      const isOpen = here.links.includes(r.id) && !locked;
       const node = el('g', { class: `node${isOpen ? ' open' : ''}`, 'data-region': r.id });
       // 오염된 땅: 보랏빛 얼룩
       if (S.me?.corrupt?.region === r.id) {
@@ -5544,19 +5591,27 @@
           el('circle', { class: 'ring', cx: r.x, cy: r.y, r: 12, fill: '#F7F5EE', stroke: '#B84653', 'stroke-width': 3.2 }),
           el('circle', { cx: r.x, cy: r.y, r: 4, fill: '#B84653' }),
         );
+      } else if (locked) {
+        // 정화도가 모자라 아직 닫힌 땅: 자물쇠
+        node.append(
+          el('title', {}, `${r.name} · 모두의 정화도 ${Math.round(r.unlock * 100)}%에 열림`),
+          el('circle', { cx: r.x, cy: r.y, r: 11, fill: '#3A3642', stroke: '#8E86A0', 'stroke-width': 2, 'stroke-dasharray': '3 3' }),
+          el('path', { d: `M${r.x - 4},${r.y - 1} h8 v6 h-8z M${r.x - 2.5},${r.y - 1} v-2.5 a2.5 2.5 0 0 1 5 0 v2.5`, fill: 'none', stroke: '#CFC8DA', 'stroke-width': 1.4 }),
+        );
       } else {
         node.append(
           el('circle', { cx: r.x, cy: r.y, r: 10, fill: '#F7F5EE', stroke: '#4F4B3E', 'stroke-width': 2 }),
           el('circle', { cx: r.x, cy: r.y, r: 3, fill: '#4F4B3E' }),
         );
       }
+      const name = r.gateway ? `${r.gate?.label || r.name} (바다 건너)` : locked ? `${r.name} · ${Math.round(r.unlock * 100)}%` : r.name;
       const label = el('text', {
         x: r.x, y: r.y + (isHere ? 46 : isOpen ? 40 : 38), 'text-anchor': 'middle',
-        'font-family': 'Noto Serif KR, serif', 'font-size': isHere ? 25 : isOpen ? 22 : 21,
+        'font-family': 'Noto Serif KR, serif', 'font-size': isHere ? 25 : isOpen ? 22 : r.gateway || locked ? 18 : 21,
         'font-weight': isHere || isOpen ? 700 : 400,
-        fill: isHere ? '#2A4256' : isOpen ? '#1F2326' : '#4E5358',
-        'paint-order': 'stroke', stroke: '#ECE7D3', 'stroke-width': 6, 'stroke-linejoin': 'round',
-      }, r.name);
+        fill: ruinMap ? (isHere ? '#F1EDF6' : isOpen ? '#F1EDF6' : '#B9B1C6') : (isHere ? '#2A4256' : isOpen ? '#1F2326' : '#4E5358'),
+        'paint-order': 'stroke', stroke: ruinMap ? '#2A2732' : '#ECE7D3', 'stroke-width': 6, 'stroke-linejoin': 'round',
+      }, name);
       node.appendChild(label);
       if (S.me?.nest === r.id) {
         const hx = r.x - 30, hy = r.y - 12;
@@ -5592,7 +5647,14 @@
     if (n && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); move(n.dataset.region); }
   });
   function move(to) {
-    socket.emit('move', { to }, (res) => { if (res.error || res.notice) toast(res.error || res.notice); });
+    const cross = realmOf(to) !== realmOf(S.region);
+    if (cross && !confirm(realmOf(to) === 'ruin'
+      ? `검은 바다를 건너 멸망한 대륙으로 갈까? (행동력 ${S.ruinRules?.crossAp ?? 3})\n그곳에서는 정신이 훨씬 빨리 깎인다.`
+      : `바다를 건너 ${S.regions[to].name}${ro(S.regions[to].name)} 돌아갈까? (행동력 ${S.ruinRules?.crossAp ?? 3})`)) return;
+    socket.emit('move', { to }, (res) => {
+      if (res.error || res.notice) toast(res.error || res.notice);
+      if (res.crossed) showResult(res.crossed);
+    });
   }
 
   // ── 동료: 관계 목록 ──
@@ -7081,7 +7143,84 @@
     if (S.region) renderOverlay();
   }
   setInterval(() => { if (S.wx) renderWeather(); }, 60000);
+  // 멸망한 대륙: 늘 오염된 땅. 모두의 정화도와 기여 순위, 상륙지에서는 생존자와의 교환
+  let ruinTop = null, ruinTopAt = 0;
+  function renderRuin(box) {
+    const R = S.me?.ruin;
+    const rr = S.regions[S.region];
+    box.hidden = false;
+    box.classList.remove('clean');
+    box.classList.add('ruin');
+    const mult = (S.ruinRules?.drain || 2) * (rr.drain ?? 1);
+    box.innerHTML = `<b>${S.ruinRules?.name || '멸망한 대륙'}.</b> 이 땅은 모두 오염되어 있다. 탐사·채집·사냥할 때마다 정신이 본 대륙의 오염된 땅보다 ${mult.toFixed(1).replace(/\.0$/, '')}배 빨리 깎인다. `
+      + '<span class="cn-gain">정신 보호 장신구를 차거나, 같은 곳에 다른 드래곤이 있으면 덜 깎인다. 무엇을 하든 정화의 결정이 나온다.</span>';
+    if (R) {
+      const pr = document.createElement('div');
+      pr.className = 'cn-purify';
+      const pct = R.pct * 100;
+      pr.innerHTML = '<div class="cn-l"><span></span><span></span></div><div class="cn-bar"><i></i></div><small></small>';
+      pr.querySelector('.cn-l span').textContent = `모두의 정화도 ${pct.toFixed(pct < 10 ? 2 : 1)}% (${R.total.toLocaleString()} / ${R.goal.toLocaleString()})`;
+      pr.querySelector('.cn-l span + span').textContent = `내 기여 ${R.mine.toLocaleString()}`;
+      pr.querySelector('.cn-bar i').style.width = `${Math.min(100, pct)}%`;
+      pr.querySelector('small').textContent = R.next ? `정화도 ${Math.round(R.next.at * 100)}%에 ${R.next.name}${ro(R.next.name)} 가는 길이 열린다.` : '모든 땅으로 가는 길이 열렸다.';
+      if (ruinTop?.length) {
+        const t = document.createElement('div');
+        t.className = 'ruin-top';
+        t.textContent = `가장 많이 정화한 드래곤 · ${ruinTop.map((x, i) => `${i + 1}. ${x.name} ${x.pts.toLocaleString()}`).join('  ')}`;
+        pr.appendChild(t);
+      }
+      box.appendChild(pr);
+    }
+    if (S.region === S.ruinRules?.gateTo) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn ruin-ex';
+      b.textContent = '생존자 오르샤와 교환';
+      b.addEventListener('click', openRuinTrade);
+      box.appendChild(b);
+    }
+    // 순위는 가끔만 새로 받음
+    if (Date.now() - ruinTopAt > 60000) {
+      ruinTopAt = Date.now();
+      socket.emit('ruin:get', {}, (res) => { if (res.ok) { ruinTop = res.top; if (realmOf(S.region) === 'ruin') renderCorrupt(); } });
+    }
+  }
+  function openRuinTrade() {
+    socket.emit('ruin:get', {}, (res) => {
+      if (res.error) return toast(res.error);
+      if (!res.exchange) return toast('생존자는 잿빛 상륙지에만 있다.');
+      const box = $('ruin-list');
+      box.replaceChildren();
+      $('ruin-shards').textContent = `가진 정화의 결정 ${res.shards}개`;
+      for (const x of res.exchange) {
+        const it = S.items[x.id];
+        const row = document.createElement('div');
+        row.className = `mk-row ${it.rarity}`;
+        row.innerHTML = '<div class="nm"><b></b><span class="eff"></span><small></small></div><div class="ctl"></div>';
+        row.querySelector('b').textContent = it.name;
+        row.querySelector('.eff').textContent = effectText(it);
+        row.querySelector('small').textContent = `정화의 결정 ${x.cost}개 · ${it.desc || ''}`;
+        const bt = document.createElement('button');
+        bt.type = 'button';
+        bt.className = 'btn primary';
+        bt.textContent = '바꾸기';
+        bt.disabled = res.shards < x.cost;
+        bt.addEventListener('click', () => socket.emit('ruin:trade', { id: x.id, qty: 1 }, (r) => {
+          if (r.error) return toast(r.error);
+          showResult(r.result);
+          openRuinTrade();
+        }));
+        row.querySelector('.ctl').appendChild(bt);
+        box.appendChild(row);
+      }
+      if (!$('ruin-dlg').open) openPanel('ruin-dlg');
+    });
+  }
+  $('ruin-close').addEventListener('click', () => $('ruin-dlg').close());
+
   function renderCorrupt() {
+    if (realmOf(S.region) === 'ruin') return renderRuin($('corrupt-note'));
+    $('corrupt-note').classList.remove('ruin');
     const c = S.me?.corrupt;
     const on = !!c && c.region === S.region;
     const pu = c?.purify;
@@ -7301,8 +7440,10 @@
     bird:      ['새',     '<path d="M4.5 21C4.5 12.5 6.3 6.2 11.7 4.6c2.7-.8 5.6-.1 7.4 1.7 1.9 1.9 2.6 4.4 1.9 7.4-.5-1.4-1.5-2.4-2.9-2.8-1.5-.4-3 .1-3.9 1.2-.9 3.1-1.9 6-2.6 8.9"/><path d="M14.4 8.3c1.4-.5 3-.2 4.1.8"/><circle cx="12.3" cy="8.2" r="1.05" fill="currentColor" stroke="none"/>'],
     spirit:    ['정령',   '<path d="M5 19.5c0-8.5 5-13.5 14-14.5-1 9-6 14.5-14 14.5z"/><path d="M5 19.5l8.5-8.5M10 14.5h3.5M12 12.5V9"/>'],
     thief:     ['도둑',   '<path d="M12 3.2c-3.5 0-6 3-6 7.3V20.5h12V10.5c0-4.3-2.5-7.3-6-7.3z"/><path d="M9.3 11.2c.8-1.7 4.6-1.7 5.4 0 0 1.9-1.1 3.2-2.7 3.2s-2.7-1.3-2.7-3.2z"/>'],
+    human:     ['인간',   '<circle cx="12" cy="7" r="3.2"/><path d="M5.5 20.5c0-4 2.9-7.2 6.5-7.2s6.5 3.2 6.5 7.2"/><path d="M9.5 16.5h5"/>'],
+    drake:     ['드래곤', '<path d="M6 19c0-6 2.6-10.6 6.5-12.2l-.6-3.3 3 2.4c2.5.4 4.4 2.2 5.1 4.6l-3.2-.4c-.4 2.3-2 4-4.3 4.8 1.5 1.2 2.4 2.7 2.4 4.1"/><path d="M14.6 8.6h.01"/><path d="M6 19h11"/>'],
   };
-  const CRE_COLORS = { plains: '#7A6A2E', forest: '#3B5E33', swamp: '#3E5C57', snow: '#3F6A88', ruins: '#5E5868', canyon: '#9A5228', volcano: '#8A3A22' };
+  const CRE_COLORS = { plains: '#7A6A2E', forest: '#3B5E33', swamp: '#3E5C57', snow: '#3F6A88', ruins: '#5E5868', canyon: '#9A5228', volcano: '#8A3A22', ruin_shore: '#5E5868', ruin_plain: '#5A5266', ruin_capital: '#544B60', ruin_rift: '#463E52' };
   function creEl(type, region, elite, name) {
     const c = document.createElement('span');
     c.className = `cre${elite ? ' elite' : ''}`;
@@ -8959,6 +9100,7 @@
       S.shops = data.shops;
       S.trade = data.trade;
       S.sources = data.sources || {};
+      S.ruinRules = data.ruinRules || null;
       S.fishing = data.fishing || null;
       S.nestRules = data.nestRules;
       S.bonds = data.bonds || {}; S.marks = data.marks || {}; S.bondRules = data.bondRules || {};

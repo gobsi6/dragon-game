@@ -18,7 +18,7 @@ const {
 const logic = require('./game-logic');
 const mobs = require('./game-mobs'); // 모브 드래곤: 의뢰·이야기·교환
 const life = require('./game-life');
-const { REGION_LOOT, SHOPS_SPECIAL } = require('./game-data');
+const { REGION_LOOT, SHOPS_SPECIAL, RUIN } = require('./game-data');
 
 // ── 물건을 얻는 곳: 제작 화면에서 재료를 누르면 보여 줌. 서버를 켤 때 한 번 정리해 둠 ──
 const ITEM_SOURCES = (() => {
@@ -38,6 +38,12 @@ const ITEM_SOURCES = (() => {
   add('bait_shrimp', `${rn(FISHING.region)} 채집`); add('salt_crystal', `${rn(FISHING.region)} 채집`);
   add('bait_worm', `${rn(FISHING.region)} 위협 (적대)`); add('fish_mackerel', `${rn(FISHING.region)} 위협 (적대)`);
   for (const m of Object.values(mobs.MOBS)) for (const t of m.trades || []) for (const id of Object.keys(t.get || {})) add(id, `${m.name}(${rn(m.region)})와 교환`);
+  for (const x of RUIN.exchange) add(x.id, `${rn(RUIN.gateTo)}의 생존자와 교환 (정화의 결정 ${x.cost})`);
+  add('purify_shard', `${RUIN.name}에서 사냥·강적·탐사·채집`);
+  add('ashen_core', `${RUIN.name}의 강적 (가끔)`); add('ashen_core', `${RUIN.name}에서 2시간 이상 원정 (가끔)`);
+  add('star_fragment', '어디서든 2시간 이상 원정을 끝까지 다녀오면 (3시간이면 더 잘)');
+  for (const t of RUIN.treasure.pool) add(t, `${RUIN.name}의 강적·사냥 (드물게)`);
+  for (const g of RUIN.gear.pool) add(g, `${RUIN.name}의 강적 (아주 드물게, 강적 ${RUIN.gear.pity}마리째에는 반드시)`);
   for (const r of RECIPES) if (!r.hidden) add(r.out, '제작');
   return out;
 })();
@@ -213,6 +219,7 @@ const meOf = (d) => ({
   mind: d.mind ?? MIND.max, mindMax: MIND.max, mindAt: d.mind_at || 0, mindEvery: MIND.regenEvery,
   berserkInfo: (() => { const b = logic.berserkOf(d); return b ? { until: b.until, region: b.region, hp: b.hp, hpMax: b.hpMax } : null; })(),
   corrupt: { region: logic.isCorrupted(logic.corruptedRegion()) ? logic.corruptedRegion() : null, until: logic.corruptUntil(), purify: purify.view(d) },
+  ruin: ruin.view(d),
   fallen: logic.isFallen(d) ? death.view(d) : null,
   titles: logic.titlesView(d),
   craftMult: logic.titleMods(d).craftEn || 1,
@@ -526,7 +533,38 @@ const purify = (() => {
   return { add, view, purified: (now = Date.now()) => { const s = cur(now); return s.period === period(now) && s.done; }, debugSet: (n) => { const s = cur(); s.total = n; db.worldSet('purify', s); } };
 })();
 logic.hooks.purified = purify.purified;
-logic.hooks.purify = (d, kind) => purify.add(d, kind);
+// ── 멸망한 대륙의 정화도: 서버 전체가 함께 채움. 단계를 넘을 때마다 새 지역이 열림 ──
+const ruin = (() => {
+  let st = db.worldGet('ruin') || { total: 0, pts: {}, names: {}, stage: 0 };
+  const save = () => db.worldSet('ruin', st);
+  const pct = () => Math.min(1, st.total / RUIN.goal);
+  const unlocked = (region) => !logic.isRuin(region) || pct() >= (REGIONS[region].unlock || 0);
+  const nextLock = () => Object.values(REGIONS).filter((r) => r.realm === 'ruin' && r.unlock > pct()).sort((a, b) => a.unlock - b.unlock)[0] || null;
+  function add(d, kind, n = null) {
+    if (!logic.isRuin(d.region)) return [];
+    const v = n ?? RUIN.pts[kind] ?? 0;
+    if (!v) return [];
+    const before = pct();
+    st.pts[d.id] = (st.pts[d.id] || 0) + v;
+    st.names[d.id] = d.name;
+    st.total += v;
+    const lines = [];
+    // 새로 열린 지역이 있으면 모두에게 알림
+    for (const r of Object.values(REGIONS)) {
+      if (r.realm !== 'ruin' || !r.unlock || before >= r.unlock || pct() < r.unlock) continue;
+      const text = `[${RUIN.name}] 정화도 ${Math.round(r.unlock * 100)}%! 오염이 물러나며 ${r.name}${josa(r.name, '으로', '로')} 가는 길이 열렸다.`;
+      io.emit('system', { text, at: Date.now() });
+      lines.push(text);
+    }
+    save();
+    return lines;
+  }
+  const top = (n = 5) => Object.entries(st.pts).sort((a, b) => b[1] - a[1]).slice(0, n).map(([id, p]) => ({ id: Number(id), name: st.names[id], pts: p }));
+  const view = (d) => { const nx = nextLock(); return { total: st.total, goal: RUIN.goal, pct: pct(), mine: st.pts[d.id] || 0, next: nx ? { name: nx.name, at: nx.unlock } : null }; };
+  return { add, view, top, unlocked, debugSet: (n) => { st.total = n; save(); } };
+})();
+logic.hooks.purify = (d, kind) => (logic.isRuin(d.region) ? ruin.add(d, kind) : purify.add(d, kind));
+logic.hooks.companionsHere = (d) => { for (const e of online.values()) if (e.dragon.id !== d.id && e.dragon.region === d.region && !e.dragon.dead_at) return true; return false; };
 logic.hooks.purifyDebug = purify.debugSet; // 시험용: 정화 진행을 바로 정함
 // 숨겨진 제작법을 대륙에서 처음 찾아낸 드래곤: 전체 공지와 칭호
 logic.hooks.firstRecipe = (d, out) => {
@@ -681,6 +719,7 @@ io.on('connection', (socket) => {
     shops: Object.keys(SHOPS),
     trade: TRADE,
     sources: ITEM_SOURCES,
+    ruinRules: { name: RUIN.name, crossAp: RUIN.crossAp, minLevel: RUIN.minLevel, gateTo: RUIN.gateTo, drain: RUIN.drain },
     fishing: { region: FISHING.region, window: FISHING.window },
     bonds: require('./game-data').BONDS, marks: require('./game-data').MARKS, bondRules: require('./game-data').BOND_RULES,
     nestRules: NEST, hoardTiers: HOARD_TIERS,
@@ -773,6 +812,15 @@ io.on('connection', (socket) => {
     const to = str(payload?.to);
     if (!REGIONS[to]) return ack({ error: '없는 지역이다.' });
     if (!REGIONS[from].links.includes(to)) return ack({ error: '그곳은 여기서 바로 날아갈 수 없다.' });
+    // 멸망한 대륙: 아직 정화도가 모자라 닫혀 있는 땅
+    if (!ruin.unlocked(to)) return ack({ error: `${REGIONS[to].name}${josa(REGIONS[to].name, '은', '는')} 아직 오염이 짙어 들어갈 수 없다. (모두의 정화도 ${Math.round(REGIONS[to].unlock * 100)}%에 열림)` });
+    // 바다 건너기: 본 대륙 ↔ 멸망한 대륙 (조건은 먼저 보고, 행동력은 실제로 떠날 때 씀)
+    const cross = logic.isRuin(from) !== logic.isRuin(to);
+    if (cross) {
+      if (logic.isRuin(to) && d.level < RUIN.minLevel) return ack({ error: `바다 건너의 땅은 너무 위험하다. 레벨 ${RUIN.minLevel}부터 건널 수 있다.` });
+      logic.regen(d, Date.now());
+      if (d.ap < RUIN.crossAp) return ack({ error: `바다를 건너려면 행동력 ${RUIN.crossAp}이 필요하다.` });
+    }
 
     const now = Date.now();
     if (now - (socket.data.lastMove || 0) < MOVE_COOLDOWN) {
@@ -782,6 +830,7 @@ io.on('connection', (socket) => {
 
     const ga = josa(d.name, '이', '가');
     logic.regen(d, now);
+    if (cross) logic.spendAp(d, RUIN.crossAp);
     socket.leave(from);
     d.region = to;
     d.place = REGION_PLACES[to]?.[0] || null; // 새 지역에서는 입구에 내려앉음
@@ -801,8 +850,15 @@ io.on('connection', (socket) => {
       db.saveState(d);
       system(to, `${d.name}${ga} 나타나자 성벽 위에서 화살이 쏟아졌다.`, socket);
     }
+    let crossed = null;
+    if (cross) {
+      db.saveState(d); // 바다를 건너며 쓴 행동력
+      crossed = logic.isRuin(to)
+        ? { title: '바다 건너기', lines: [`검은 바다를 건너 ${RUIN.name}에 내려앉았다. (행동력 −${RUIN.crossAp})`, '공기가 무겁다. 이 땅에서는 정신이 훨씬 빨리 깎인다. 정신 보호 장신구가 있다면 꼭 차 두자.'] }
+        : { title: '바다 건너기', lines: [`검은 바다를 건너 ${REGIONS[to].name}${josa(REGIONS[to].name, '으로', '로')} 돌아왔다. (행동력 −${RUIN.crossAp})`, '맑은 바람이 비늘 사이로 스민다.'] };
+    }
     sendMe(socket, d);
-    ack({ ok: true, notice: arrows });
+    ack({ ok: true, notice: arrows, crossed });
   });
 
   socket.on('dragon:avatar', (payload, ack) => {
@@ -890,7 +946,9 @@ io.on('connection', (socket) => {
         if (Math.random() < MIND.crystal[type]) { res.items = [...(res.items || []), { id: 'corrupt_crystal', qty: 1 }]; res.lines.push('검붉게 빛나는 오염 결정을 주웠다.'); }
         if (Math.random() < (MIND.scale[type] || 0)) { res.items = [...(res.items || []), { id: 'blackened_scale', qty: 1 }]; res.lines.push('검게 물든 비늘 한 장이 바위틈에 박혀 있었다.'); }
         res.lines.push(...logic.loseMind(d, MIND.drain[type]));
-        res.lines.push(...purify.add(d, type));
+        res.lines.push(...(logic.isRuin(d.region) ? ruin.add(d, type) : purify.add(d, type)));
+        const sh = logic.isRuin(d.region) && RUIN.shard[type];
+        if (sh && Math.random() < sh[0]) { res.items = [...(res.items || []), { id: 'purify_shard', qty: sh[1] }]; res.lines.push('잿빛 먼지 사이에서 맑게 빛나는 정화의 결정을 찾았다.'); }
       }
       res.lines.push(...logic.traitCount(d, 'corrupt'));
     }
@@ -1296,6 +1354,25 @@ io.on('connection', (socket) => {
     db.worldSet('notes', list.filter((x) => x !== n));
     db.gmLog(socket.data.user.username, null, `업데이트 노트를 지움: ${n.title}`);
     ack({ ok: true, list: notesOf() });
+  });
+
+  // ── 멸망한 대륙: 정화도와 기여 순위, 생존자와의 교환 ──
+  socket.on('ruin:get', (p, ack) => {
+    if (typeof ack !== 'function') return;
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+    const d = entry.dragon;
+    ack({ ok: true, view: ruin.view(d), top: ruin.top(5), exchange: d.region === RUIN.gateTo ? RUIN.exchange : null, shards: db.itemCount(d.id, 'purify_shard') });
+  });
+  itemAction('ruin:trade', (d, p, have) => {
+    if (d.region !== RUIN.gateTo) return { error: `${REGIONS[RUIN.gateTo].name}의 생존자에게서만 바꿀 수 있다.` };
+    const x = RUIN.exchange.find((e) => e.id === str(p.id));
+    if (!x) return { error: '바꿀 수 없는 물건이다.' };
+    const qty = Math.max(1, Math.min(20, Math.floor(Number(p.qty)) || 1));
+    const cost = x.cost * qty;
+    if (have('purify_shard') < cost) return { error: `정화의 결정이 모자란다. (${cost}개 필요)` };
+    const name = ITEMS[x.id].name;
+    return { title: '생존자 오르샤', lines: [`정화의 결정 ${cost}개를 건네자, 오르샤가 낡은 상자에서 ${name}${qty > 1 ? ` ${qty}개` : ''}${josa(qty > 1 ? '개' : name, '을', '를')} 꺼내 주었다.`, '"이 땅을 맑게 해 주는 대가요. 부디 무사히 돌아가시오."'], items: [{ id: 'purify_shard', qty: -cost }, { id: x.id, qty }] };
   });
 
   socket.on('weather:get', (p, ack) => { if (typeof ack === 'function') ack({ ok: true, weather: weatherAll() }); });

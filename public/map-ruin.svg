@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 640">
+  <!-- 멸망한 대륙 에레보스: 채도 낮은 보라와 짙은 회색. 선 없이 면으로 -->
+  <defs>
+    <linearGradient id="rm-sea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3B3A45"/>
+      <stop offset="1" stop-color="#2A2932"/>
+    </linearGradient>
+    <linearGradient id="rm-land" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6E6878"/>
+      <stop offset="1" stop-color="#565162"/>
+    </linearGradient>
+    <radialGradient id="rm-rift" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#1B1820"/>
+      <stop offset=".7" stop-color="#2E2836" stop-opacity=".9"/>
+      <stop offset="1" stop-color="#4A4255" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="rm-fog" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#8E86A0" stop-opacity=".35"/>
+      <stop offset="1" stop-color="#8E86A0" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- 바다 -->
+  <rect width="1000" height="640" fill="url(#rm-sea)"/>
+  <path d="M0 120 Q160 100 300 128 T620 112 T1000 130" fill="none" stroke="#45434F" stroke-width="2" opacity=".6"/>
+  <path d="M0 610 Q140 596 280 612 T560 604 T1000 616" fill="none" stroke="#45434F" stroke-width="2" opacity=".6"/>
+
+  <!-- 땅 덩어리 -->
+  <path d="M120 520 Q100 450 150 400 Q170 330 250 300 Q300 250 330 190 Q400 120 520 112 Q610 90 700 110 Q800 120 860 180 Q930 230 925 320 Q955 400 900 470 Q850 560 740 575 Q640 600 540 570 Q430 590 330 565 Q210 580 120 520 Z" fill="url(#rm-land)"/>
+  <!-- 땅의 층 (더 짙은 안쪽) -->
+  <path d="M220 470 Q210 410 270 370 Q320 320 380 300 Q460 250 560 230 Q660 210 760 250 Q840 290 850 370 Q840 450 760 500 Q660 540 560 520 Q450 540 350 520 Q250 520 220 470 Z" fill="#5E586A"/>
+  <path d="M330 420 Q360 370 430 350 Q520 320 600 320 Q700 330 760 380 Q770 440 700 470 Q610 495 520 480 Q420 480 360 460 Q320 450 330 420 Z" fill="#544F5F"/>
+
+  <!-- 잿빛 상륙지의 모래톱 -->
+  <path d="M120 520 Q140 470 200 455 Q250 446 290 470 Q270 520 220 540 Q160 548 120 520 Z" fill="#7C7684"/>
+  <path d="M140 515 Q170 490 210 486 Q240 488 256 500 Q236 524 200 530 Q160 532 140 515 Z" fill="#8A8492"/>
+
+  <!-- 시든 평원: 마른 밭이랑 -->
+  <g fill="#635D6E">
+    <path d="M360 300 Q420 290 480 296 L478 304 Q420 298 362 308 Z"/>
+    <path d="M350 322 Q420 312 490 318 L488 326 Q420 320 352 330 Z"/>
+    <path d="M362 344 Q430 336 500 342 L498 350 Q430 344 364 352 Z"/>
+    <path d="M380 366 Q440 360 500 364 L498 372 Q440 368 382 374 Z"/>
+  </g>
+  <!-- 말라 죽은 나무 -->
+  <g fill="#4A4554">
+    <path d="M300 340 l4 -26 l-8 -10 l9 6 l3 -12 l3 14 l9 -6 l-8 12 l2 22 z"/>
+    <path d="M520 290 l3 -20 l-7 -8 l8 5 l2 -10 l3 11 l7 -5 l-6 10 l1 17 z"/>
+    <path d="M470 400 l3 -22 l-7 -9 l8 6 l2 -11 l3 12 l8 -6 l-7 10 l1 20 z"/>
+  </g>
+
+  <!-- 무너진 왕도 카르넴: 부서진 성벽과 탑 -->
+  <g fill="#47424F">
+    <path d="M590 175 h18 v-38 l6 -10 l6 10 v38 h14 v-24 h12 v24 h16 v-52 l8 -14 l8 14 v52 h14 v-20 l10 -8 v28 h12 v10 h-150 z"/>
+    <path d="M610 186 h12 v-8 h10 v8 h14 v-6 h10 v6 h20 v-10 h10 v10 h18 v8 h-94 z" fill="#3E3946"/>
+  </g>
+  <path d="M700 118 l4 -22 h3 l1 22 z" fill="#47424F"/>
+  <path d="M705 96 l14 5 l-14 5 z" fill="#7A6F86"/>
+
+  <!-- 심연의 균열 -->
+  <ellipse cx="830" cy="430" rx="95" ry="70" fill="url(#rm-rift)"/>
+  <path d="M760 360 L790 392 L780 410 L818 430 L806 452 L846 470 L838 490 L880 505 L870 480 L892 470 L860 448 L872 430 L840 412 L850 392 L812 380 L820 362 Z" fill="#17141C"/>
+  <path d="M800 400 L830 420 L824 436 L852 452" fill="none" stroke="#6E5A8A" stroke-width="2" opacity=".55"/>
+
+  <!-- 떠도는 안개 -->
+  <ellipse cx="420" cy="230" rx="160" ry="60" fill="url(#rm-fog)"/>
+  <ellipse cx="700" cy="520" rx="180" ry="55" fill="url(#rm-fog)"/>
+  <ellipse cx="260" cy="420" rx="120" ry="45" fill="url(#rm-fog)"/>
+
+  <!-- 잿가루 -->
+  <g fill="#9A93A6" opacity=".5">
+    <circle cx="380" cy="160" r="1.6"/><circle cx="460" cy="190" r="1.2"/><circle cx="560" cy="150" r="1.5"/><circle cx="640" cy="260" r="1.2"/>
+    <circle cx="300" cy="260" r="1.4"/><circle cx="720" cy="320" r="1.6"/><circle cx="560" cy="420" r="1.2"/><circle cx="420" cy="480" r="1.5"/>
+    <circle cx="860" cy="250" r="1.3"/><circle cx="240" cy="360" r="1.2"/><circle cx="660" cy="470" r="1.4"/><circle cx="500" cy="540" r="1.2"/>
+  </g>
+
+  <!-- 이름 띠 -->
+  <g transform="translate(500 40)">
+    <rect x="-150" y="-20" width="300" height="38" rx="3" fill="#2C2A33" opacity=".85"/>
+    <text x="0" y="6" text-anchor="middle" font-family="Noto Serif KR, serif" font-size="20" font-weight="700" letter-spacing="6" fill="#CFC8DA">멸망한 대륙 에레보스</text>
+  </g>
+</svg>
