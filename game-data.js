@@ -728,6 +728,16 @@ const KIN = {
     salted_fish: { bond: 6, talent: 'guard', sat: 30 }, beast_hide: { bond: 4, talent: 'guard' }, sharp_fang: { bond: 5, talent: 'guard' },
   },
   tripTalent: 2,                      // 원정에 한 번 따라갈 때마다 파수꾼 쪽으로
+  // 가출: 소년(인간)과 해츨링·어린 용(새끼 드래곤)이 가끔 둥지를 나감. 영영 떠나지는 않음
+  runaway: {
+    human: ['소년'], drake: ['해츨링', '어린 용'],
+    base: 0.04,                 // 하루에 한 번 굴리는 기본 확률
+    lowBond: 40, lowBondAdd: 0.12, hungryAdd: 0.08, neglectDays: 2, neglectAdd: 0.1,
+    traitAdd: { curious: 0.06, prankster: 0.06 }, traitCut: { steady: 0.5, clingy: 0.5 }, // 모험 좋아함 / 잘 안 나감
+    gapDays: 7,                 // 한 번 나간 뒤 이만큼은 다시 나가지 않음
+    hours: 24,                  // 아무도 찾지 않으면 이만큼 지나 스스로 돌아옴
+    searchAp: 2, foundBond: 10, waitBond: -8, seekBond: 6, seekMinutes: 60, giftChance: 0.4,
+  },
   // 새끼 드래곤이 보호자를 돕는 법
   //  ally: '곁에 둔 새끼'(어린 용부터) 하나가 사냥·강적·재앙과의 싸움에 따라 나와 매 턴 공격 (결투에는 나오지 않음)
   //  errand: 곁에 두지 않은 새끼를 혼자 심부름 보내 그 지역의 재료를 구해 옴 (보호자의 행동력은 들지 않음)

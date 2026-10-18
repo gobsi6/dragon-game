@@ -550,6 +550,7 @@
   .kin-card .bond > span:first-child { min-width: 2.2em; } /* 유대·배 막대의 시작을 맞춤 */
   .kin-card .bond > span:last-child { min-width: 3em; text-align: right; }
   .kin-meta.fav b { color: #8C6A1E; font-weight: 600; }
+  .kin-card.runaway { border-style: dashed; opacity: .95; }
   .kin-sel { width: auto; min-height: 36px; padding: 0 8px; font-size: 13px; }
   .fac-row .fac-work { font-size: 12.5px; color: var(--steel-d); }
   /* 둥지 시설: 식구 배치판 */
@@ -702,8 +703,6 @@
       linear-gradient(180deg, #ECEEEE 0%, #E1E4E5 50%, #D2D8DC 100%);
   }
   .trip-logbox { margin-top: 2px; padding: 6px; }
-  .trip-logbox > .tl { top: -5px; left: -5px; } .trip-logbox > .tr { top: -5px; right: -5px; }
-  .trip-logbox > .bl { bottom: -5px; left: -5px; } .trip-logbox > .br { bottom: -5px; right: -5px; }
   .trip-log { list-style: none; margin: 0; padding: 2px 10px; display: flex; flex-direction: column; height: min(46vh, 380px); overflow-y: auto; background: transparent; }
   .trip-row { display: flex; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line-in); font-size: 13.5px; line-height: 1.6; color: var(--ink); word-break: keep-all; }
   .trip-row:first-child { border-top: 0; }
@@ -2478,7 +2477,7 @@
   <g class="wx wx-ash" aria-hidden="true"><g class="wx-fall ash"><rect x="0" y="-220" width="1600" height="1120" fill="url(#trip-ashp)"/></g></g>
   <rect class="wx wx-storm wx-flash" width="1600" height="900" fill="#FFFFFF" aria-hidden="true"/>
 </svg></div>
-    <div class="frame trip-logbox"><i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i><ol class="trip-log" id="trip-log" aria-live="polite"></ol></div>
+    <div class="frame trip-logbox"><ol class="trip-log" id="trip-log" aria-live="polite"></ol></div>
     <div class="trip-foot"><div class="trip-got" id="trip-got" aria-live="polite"></div><button class="btn" type="button" id="trip-recall">불러들이기</button><button class="btn primary" type="button" id="trip-close">닫기</button></div>
   </div>
 </dialog>
@@ -3705,13 +3704,15 @@
   };
   // 함께 간 식구의 말: 나잇대마다 다르게 (child 아기~소년, young 청년, adult 어른·노년, drake 새끼 드래곤)
   const TRIP_KIN = {
-    child: ['저기 봐! 저기!', '구름 만져 보고 싶어!', '우와, 엄청 높다!', '배고파… 조금만 쉬었다 가자.', '졸려… 등 위에서 자도 돼?', '바람이 간지러워!', '방금 그거 봤어? 엄청 빨랐어!', '언제 도착해?'],
-    young: ['이 정도 바람쯤은 아무것도 아니야.', '저 아래 길, 나중에 혼자 걸어 보고 싶어.', '다음엔 내가 길을 찾아볼게.', '조금만 더 높이 날아 줄래? 멀리까지 보고 싶어.', '여기 풍경, 꼭 기억해 둬야지.', '무서운 거 아니야. 그냥… 좀 높을 뿐이야.'],
-    adult: ['바람이 바뀌는군. 서두르지 말고 가자.', '저 구름 모양을 보니 내일은 비가 오겠어.', '이 길은 예전에도 와 본 적이 있지.', '조금 쉬어 가는 게 좋겠어. 날개가 지쳐 보여.', '저쪽은 위험하니 돌아가자.', '이렇게 함께 다니는 것도 오랜만이네.'],
+    child: ['{call}, 저기 봐! 저기!', '{call}, 꽉 잡고 있을게!', '구름 만져 보고 싶어!', '우와, 엄청 높다!', '배고파… 조금만 쉬었다 가자.', '졸려… 등 위에서 자도 돼?', '바람이 간지러워!', '방금 그거 봤어? 엄청 빨랐어!', '언제 도착해?'],
+    young: ['{call}, 다음엔 내가 앞에서 날아 볼게.', '이 정도 바람쯤은 아무것도 아니야.', '저 아래 길, 나중에 혼자 걸어 보고 싶어.', '다음엔 내가 길을 찾아볼게.', '조금만 더 높이 날아 줄래? 멀리까지 보고 싶어.', '여기 풍경, 꼭 기억해 둬야지.', '무서운 거 아니야. 그냥… 좀 높을 뿐이야.'],
+    adult: ['{call}, 조금 쉬어 가요. 날개가 지쳐 보여요.', '바람이 바뀌는군. 서두르지 말고 가자.', '저 구름 모양을 보니 내일은 비가 오겠어.', '이 길은 예전에도 와 본 적이 있지.', '조금 쉬어 가는 게 좋겠어. 날개가 지쳐 보여.', '저쪽은 위험하니 돌아가자.', '이렇게 함께 다니는 것도 오랜만이네.'],
     drake: ['(꼬리를 흔들며 끼룩 하고 울었다)', '(작은 날개를 열심히 퍼덕였다)', '(저 아래를 향해 작게 불꽃을 뿜어 보았다)', '(바람을 타 보려다 비틀거렸다)', '(등에 바짝 붙어 고개를 묻었다)'],
   };
   const TRIP_KIN_START = { child: ['같이 가서 신나!', '꽉 잡을게!', '출발이다!'], young: ['이번엔 나도 도움이 될 거야.', '준비됐어. 가자.'], adult: ['길은 내가 봐 둘게.', '조심해서 다녀오자.'], drake: ['(신이 나서 날개를 파닥였다)'] };
   // 원정마다 같은 이야기가 나오도록, 출발 시각으로 정해지는 난수
+  // 아이가 보호자를 부르는 말: 성별 칸이 여성이면 엄마, 남성이면 아빠, 그 밖에는 이름
+  const tripCall = () => { const g = S.me?.bio?.gender || ''; return g === '여성' ? '엄마' : g === '남성' ? '아빠' : (S.me?.name || ''); };
   function tripRand(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
   // 실제로 일어난 일 (서버가 떠날 때 정해 둔 시간표)을 이야기로
   const TRIP_PICK = (r, arr) => arr[Math.floor(r() * arr.length)];
@@ -3730,17 +3731,19 @@
     return null;
   }
   function tripEntries(e, now) {
-    const r = tripRand(e.start + (S.me?.id || 0) * 7919);
+    // 난수는 쓰임마다 따로 (실제 일이 하나 늘어도 이미 보인 이야기가 바뀌지 않게)
+    const seed = e.start + (S.me?.id || 0) * 7919;
+    const r = tripRand(seed);
     const rg = S.regions[e.region];
     const local = TRIP_REGION[rg?.realm === 'ruin' ? 'ruin' : e.region] || [];
     // 함께 간 식구 {name, age} (예전 원정은 이름만 있음 → 아이로)
     const kin = (e.went?.length ? e.went : TRIP_WENT).map((k) => (typeof k === 'string' ? { name: k, age: 'child' } : k));
     const out = [{ at: e.start, parts: [`${rg?.name || '먼 곳'}${ro(rg?.name || '먼 곳')} 날개를 펼쳤다.${kin.length ? ` ${kin.map((k) => k.name).join(', ')}${josa(kin.at(-1).name, '이', '가')} 함께 따라나섰다.` : ''}`] }];
-    if (kin.length) out.push({ at: e.start + 4000, parts: [TRIP_PICK(r, TRIP_KIN_START[kin[0].age] || TRIP_KIN_START.child)], who: kin[0].name, age: kin[0].age });
+    if (kin.length) out.push({ at: e.start + 4000, parts: [TRIP_PICK(tripRand(seed + 11), TRIP_KIN_START[kin[0].age] || TRIP_KIN_START.child)], who: kin[0].name, age: kin[0].age });
     const until = Math.min(now, e.end);
     // 실제로 일어난 일
     const real = (e.plan || []).map((x) => ({ at: e.start + x.t, x })).filter((y) => y.at <= until);
-    for (const y of real) { const t = tripReal(y.x, r); if (t) out.push({ at: y.at, ...t, real: true }); }
+    for (const y of real) { const t = tripReal(y.x, tripRand(seed + y.x.t)); if (t) out.push({ at: y.at, ...t, real: true }); } // 일마다 제 난수
     // 갈림길
     const f = e.fork;
     if (f?.text && f.at <= until) {
@@ -3750,7 +3753,7 @@
     // 사이사이 꾸밈 이야기 (실제 일과 너무 붙지 않게)
     let t = e.start;
     const recent = []; // 최근에 쓴 꾸밈 이야기 (같은 말이 자꾸 나오지 않게)
-    const realTimes = out.map((o) => o.at);
+    const realTimes = [e.start, ...(e.plan || []).map((x) => e.start + x.t), ...(e.fork?.at ? [e.fork.at] : [])]; // 앞으로 일어날 일 자리도 미리 비워 둠
     while (true) {
       t += Math.round((90 + r() * 90) * 1000); // 1분 반~3분마다
       if (t > until) break;
@@ -3763,7 +3766,7 @@
         let q = pool[Math.floor(r() * pool.length)], tries = 0;
         while (recent.includes(q) && tries++ < 10) q = pool[Math.floor(r() * pool.length)];
         recent.push(q); if (recent.length > 10) recent.shift();
-        out.push({ at: t, parts: [q], who: k.name, age: k.age });
+        out.push({ at: t, parts: [q.replace('{call}', tripCall())], who: k.name, age: k.age });
         continue;
       }
       else {
@@ -4494,7 +4497,7 @@
       });
       hb.appendChild(rn);
     }
-    if (!pend && canAct && canAdopt && !partner) {
+    if (!pend && canAct && canAdopt && !partner && !v.runaway) {
       const ad = document.createElement('button');
       ad.type = 'button';
       ad.className = 'linkbtn';
@@ -4566,6 +4569,26 @@
       return b;
     };
     const label = (t) => { const s = document.createElement('span'); s.className = 'lbl'; s.textContent = t; acts.appendChild(s); };
+
+    // 가출 중: 단서와 찾는 길 (직접 찾기 · 새끼 드래곤 보내기 · 기다리기)
+    if (v.runaway) {
+      card.classList.add('runaway');
+      const rn = S.regions[v.runaway.region]?.name || '어딘가';
+      meta(`<b>가출 중</b> · ${esc(rn)} 쪽으로 간 것 같다 · ${dur(Math.max(0, v.runaway.until - Date.now()))} 뒤에는 스스로 돌아온다`, 'talent');
+      const home = (NEST_LAST?.nest?.kin?.home || []);
+      if (v.runaway.seeker) {
+        const sk = home.find((x) => x.id === v.runaway.seeker);
+        label(`${sk?.name || '새끼'}${josa(sk?.name || '새끼', '이', '가')} 찾으러 갔다. 곧 데려올 것이다.`);
+      } else if (!partner) {
+        if (S.region === v.runaway.region) btn(`찾아보기 · 행동력 ${R.runaway?.searchAp || 2}`, () => nestAct('kin:search', { id: v.id }, true), !!S.me.exp || S.me.ap < (R.runaway?.searchAp || 2)).classList.add('primary');
+        else label(`${rn}${ro(rn)} 날아가서 찾아볼 수 있다. 찾으러 가지 않으면 서운해할지도 모른다.`);
+        for (const x of home.filter((x) => x.type === 'drake' && x.id !== v.id && x.canErrand && !x.companion && !x.errand && !x.runaway && !x.onExp)) {
+          btn(`${x.name}에게 찾아오게 하기`, () => nestAct('kin:seek', { id: x.id, target: v.id }, true));
+        }
+      }
+      if (acts.children.length) card.appendChild(acts);
+      return card;
+    }
 
     if (v.status === 'egg') {
       const item = S.items[v.need];

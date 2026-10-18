@@ -1246,6 +1246,8 @@ io.on('connection', (socket) => {
   itemAction('kin:incubate', (d, p, have, kin) => life.incubate(d, kin, p.id, have));
   itemAction('kin:train', (d, p, have, kin) => life.train(d, kin, p.id, str(p.stat)));
   itemAction('kin:companion', (d, p, have, kin) => life.setCompanion(kin, p.id)); // 곁에 둘 새끼 (사냥·강적에 함께 나섬)
+  itemAction('kin:search', (d, p, have, kin) => life.searchRunaway(d, kin, p.id, have)); // 가출한 식구 직접 찾기
+  itemAction('kin:seek', (d, p, have, kin) => life.sendSeek(kin, p.id, p.target)); // 새끼 드래곤을 보내 찾아오게
   itemAction('kin:errand', (d, p, have, kin) => life.sendErrand(kin, p.id, str(p.region), Number(p.minutes), ruin.unlocked(str(p.region)))); // 새끼 혼자 심부름
   itemAction('kin:release', (d, p, have, kin) => life.release(d, kin, p.id));
 

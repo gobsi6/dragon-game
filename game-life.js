@@ -189,9 +189,44 @@ function tick(d, kin, now = Date.now()) {
     // 모습이 정해지기 전에 들어온 식구 (이 기능이 생기기 전의 식구)
     if (k.status === 'home' && rollLooks(k)) out.lines.push(`${k.name}${josa(k.name, '을', '를')} 다시 찬찬히 들여다보았다. ${introOf(k)}`);
     if (k.type === 'drake' && k.status === 'home' && k.data.errand && now >= k.data.errand.end) {
-      const fe = finishErrand(k, now);
-      out.items.push(...fe.items);
-      out.lines.push(fe.line);
+      const seek = k.data.errand.seek;
+      if (seek) {
+        const er = k.data.errand.region;
+        k.data.errand = null;
+        const t = findKin(kin, seek);
+        if (t && isRunaway(t)) {
+          t.data.runaway = null;
+          t.data.bond = clamp(t.data.bond + RW.seekBond);
+          k.data.bond = clamp(k.data.bond + 2);
+          out.lines.push(`${ga(k)} ${t.name}${josa(t.name, '을', '를')} 데리고 돌아왔다. 둘은 서로 꼭 붙어 있다. (${t.name} 유대 +${RW.seekBond})`);
+          const g = runawayGift(d, t, er, out);
+          if (g) out.items.push(g);
+        } else out.lines.push(`${ga(k)} 돌아왔다. 찾던 식구는 이미 둥지에 와 있었다.`);
+      } else {
+        const fe = finishErrand(k, now);
+        out.items.push(...fe.items);
+        out.lines.push(fe.line);
+      }
+    }
+    // 가출: 하루에 한 번 굴림 / 가출 중이면 시간이 다 되었을 때 스스로 돌아옴
+    if (k.status === 'home' && isRunaway(k) && now >= k.data.runaway.until && !k.data.runaway.seeker) {
+      const r = k.data.runaway.region;
+      k.data.runaway = null;
+      k.data.bond = clamp(k.data.bond + RW.waitBond);
+      out.lines.push(`${ga(k)} 스스로 둥지로 돌아왔다. ${canTalk(k, now) ? `"…아무도 찾으러 오지 않았어." ` : '고개를 푹 숙이고 구석으로 갔다. '}(유대 ${RW.waitBond})`);
+      const g = runawayGift(d, k, r, out);
+      if (g) out.items.push(g);
+    } else if (k.status === 'home' && !isRunaway(k)) {
+      const day = logic.dayIdx(now);
+      if (k.data.runRoll !== day) {
+        k.data.runRoll = day;
+        if (Math.random() < runawayChance(k, now)) {
+          const r = runawayRegion(d);
+          k.data.runaway = { region: r, at: now, until: now + RW.hours * 3600000 };
+          k.data.lastRunaway = now;
+          out.lines.push(`${k.name}${josa(k.name, '이', '가')} 보이지 않는다. ${pick(RW_CLUE).replace('{r}', REGIONS[r].name)}`);
+        }
+      }
     }
     if (k.type === 'drake' && k.status === 'home') {
       const wasHungry = k.data.sat != null && k.data.sat < DF.hungry;
@@ -330,7 +365,7 @@ function perksOf(kin, now = Date.now()) {
   const DH = KIN.drakeHelp;
   // 새끼 드래곤: 곁에 둔 새끼 (심부름 중이면 함께 못 감)
   for (const k of kin) {
-    if (k.type !== 'drake' || k.status !== 'home' || !k.data.stats || k.data.errand) continue;
+    if (k.type !== 'drake' || k.status !== 'home' || !k.data.stats || k.data.errand || k.data.runaway) continue;
     if (k.data.companion && DH.ally.from.includes(stageOf(k, now).name)) {
       const A = DH.ally, st = k.data.stats;
       p.ally = {
@@ -413,6 +448,7 @@ function view(k, now, d) {
     const w = workerOf(k, now);
     v.job = { id: k.data.job, name: FACILITY.list[k.data.job].name, working: !!w, apprentice: w ? !w.adult : false, fit: !!w?.fit };
   }
+  if (k.data.runaway) v.runaway = { region: k.data.runaway.region, until: k.data.runaway.until, seeker: k.data.runaway.seeker || null };
   if (k.type === 'human' && k.status === 'home') v.canWork = FW.adultStages.includes(stageOf(k, now).name) || FW.apprenticeStages.includes(stageOf(k, now).name);
   // 짝과 자녀 (식구 이벤트로 생김)
   if (k.data.mate) v.mate = { name: k.data.mate.name, kind: k.data.mate.kind || null };
@@ -485,6 +521,7 @@ function care(d, kin, id, item, have, now = Date.now(), opt = {}) {
   const err = opt.away ? null : atNest(d);
   if (err) return { error: err };
   const k = findKin(kin, id);
+  if (k && isRunaway(k)) return { error: `${k.name}${josa(k.name, '은', '는')} 지금 둥지에 없다. 먼저 찾아오자.` };
   if (k && k.type === 'drake' && k.status === 'home') return feedDrake(d, kin, k, item, have, now);
   if (!k || k.type !== 'human' || k.status !== 'home') return { error: '돌볼 수 있는 식구가 아니다.' };
   const c = KIN.care[item];
@@ -594,12 +631,94 @@ function incubate(d, kin, id, have, now = Date.now()) {
   };
 }
 
+// ── 가출 ──────────────────────────────────────────
+const RW = KIN.runaway;
+// 아이가 보호자를 부르는 말: 성별 칸이 여성이면 엄마, 남성이면 아빠, 그 밖에는 이름
+function callName(d) {
+  let b = d.bio;
+  if (typeof b === 'string') { try { b = JSON.parse(b || '{}'); } catch { b = {}; } }
+  const g = (b && b.gender) || '';
+  return g === '여성' || g === '암컷' ? '엄마' : g === '남성' || g === '수컷' ? '아빠' : d.name;
+}
+// 말을 하는 식구인지: 인간, 그리고 폴리모프를 하는 어린 용부터
+const canTalk = (k, now) => k.type === 'human' || stageOf(k, now).name !== '해츨링';
+const isRunaway = (k) => !!k.data.runaway;
+function runawayChance(k, now) {
+  const st = stageOf(k, now).name;
+  if (!(k.type === 'human' ? RW.human : RW.drake).includes(st)) return 0;
+  if (k.status !== 'home' || k.data.onExp || k.data.errand || k.data.companion || k.data.job) return 0;
+  if (k.data.lastRunaway && now - k.data.lastRunaway < RW.gapDays * DAY) return 0;
+  let p = RW.base;
+  if ((k.data.bond ?? 50) < RW.lowBond) p += RW.lowBondAdd;
+  if (k.data.sat != null && k.data.sat < (k.type === 'human' ? HG.hungry : DF.hungry)) p += RW.hungryAdd;
+  const last = k.type === 'human' ? k.data.lastCare : Math.max(k.data.lastFeed || 0, k.data.lastTrain || 0, k.data.born || 0);
+  if (last && now - last > RW.neglectDays * DAY) p += RW.neglectAdd;
+  for (const [t, a] of Object.entries(RW.traitAdd)) if (hasT(k, t)) p += a;
+  for (const [t, m] of Object.entries(RW.traitCut)) if (hasT(k, t)) p *= m;
+  return p;
+}
+// 어디로 나갔는지: 둥지 근처(둥지 지역 반, 나머지는 본 대륙의 다른 야생 지역)
+function runawayRegion(d) {
+  const wild = Object.keys(REGIONS).filter((r) => !SHOPS[r] && REGIONS[r].realm !== 'ruin');
+  return d.nest && Math.random() < 0.5 ? d.nest : pick(wild);
+}
+const RW_CLUE = ['둥지 바닥에 작은 발자국이 {r} 쪽으로 나 있다.', '{r} 쪽으로 가는 길에 떨어뜨린 듯한 장난감 하나가 놓여 있다.', '{r} 쪽에서 왔다는 바람에 익숙한 냄새가 섞여 있다.'];
+// 돌아올 때: 가끔 그 지역에서 주운 작은 선물
+function runawayGift(d, k, region, out) {
+  if (Math.random() >= RW.giftChance) return null;
+  const pool = REGION_LOOT[region]?.common || [];
+  if (!pool.length) return null;
+  const id = pick(pool);
+  const call = callName(d);
+  const parent = call === '엄마' || call === '아빠';
+  const nm = ITEMS[id].name;
+  const say = canTalk(k, Date.now())
+    ? `"${parent ? call : `${call}에게`} 주려고 주웠어." ${ga(k)} ${nm}${josa(nm, '을', '를')} 내밀었다.`
+    : `${ga(k)} ${parent ? '' : `${call}의 `}발치에 ${nm}${josa(nm, '을', '를')} 살며시 내려놓았다.`;
+  out.lines.push(say);
+  return { id, qty: 1 };
+}
+// 직접 찾아가기 (그 지역에 있어야 함)
+function searchRunaway(d, kin, id, have, now = Date.now()) {
+  const k = findKin(kin, id);
+  if (!k || !isRunaway(k)) return { error: '찾을 식구가 없다.' };
+  const r = k.data.runaway.region;
+  if (d.region !== r) return { error: `${REGIONS[r].name}에 가야 찾을 수 있다.` };
+  if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
+  if (d.ap < RW.searchAp) return { error: `행동력이 모자란다. (${RW.searchAp} 필요)` };
+  logic.spendAp(d, RW.searchAp, now);
+  k.data.runaway = null;
+  k.data.bond = clamp(k.data.bond + RW.foundBond);
+  const call = callName(d);
+  const found = pick(k.type === 'human'
+    ? [`나무 위에서 울다 잠든 ${k.name}${josa(k.name, '을', '를')} 찾았다.`, `개울가에 쪼그려 앉아 돌을 던지던 ${k.name}${josa(k.name, '을', '를')} 찾았다.`, `덤불 속에 숨어 있던 ${k.name}${josa(k.name, '이', '가')} 먼저 뛰어나왔다.`]
+    : [`바위틈에 몸을 말고 있던 ${k.name}${josa(k.name, '을', '를')} 찾았다.`, `높은 가지에 매달려 내려오지 못하던 ${k.name}${josa(k.name, '을', '를')} 찾았다.`, `작은 불씨를 피워 놓고 웅크린 ${k.name}${josa(k.name, '을', '를')} 찾았다.`]);
+  const out = { lines: [found] };
+  out.lines.push(canTalk(k, now) ? `"${call}! 찾으러 올 줄 알았어…" ${ga(k)} 품에 안겼다.` : `${ga(k)} 끼룩 울며 품으로 파고들었다.`);
+  out.lines.push(`유대 +${RW.foundBond}`);
+  const g = runawayGift(d, k, r, out);
+  return { title: k.name, lines: out.lines, items: g ? [g] : [] };
+}
+// 새끼 드래곤을 보내 찾아오게 함 (곁에 두지 않은 어린 용 이상, 심부름처럼 다녀옴)
+function sendSeek(kin, drakeId, targetId, now = Date.now()) {
+  const t = findKin(kin, targetId);
+  if (!t || !isRunaway(t)) return { error: '찾을 식구가 없다.' };
+  if (t.data.runaway.seeker) return { error: '이미 누군가 찾으러 갔다.' };
+  const k = findKin(kin, drakeId);
+  if (!k || k.id === t.id) return { error: '보낼 새끼가 아니다.' };
+  const res = sendErrand(kin, drakeId, t.data.runaway.region, RW.seekMinutes, false, now);
+  if (res.error) return res;
+  k.data.errand.seek = t.id;
+  t.data.runaway.seeker = k.id;
+  return { title: k.name, lines: [`${k.name}에게 ${t.name}${josa(t.name, '을', '를')} 찾아오게 했다.`, `${ga(k)} 고개를 끄덕이고 ${REGIONS[t.data.runaway.region].name} 쪽으로 날아갔다.`] };
+}
+
 // ── 둥지 시설의 일 ─────────────────────────────────
 const FW = FACILITY.worker;
 // 이 식구가 맡은 일에서 내는 힘. 일할 수 없으면 null
 function workerOf(k, now = Date.now()) {
   if (k.type !== 'human' || k.status !== 'home' || !k.data.job || !FACILITY.list[k.data.job]) return null;
-  if (k.data.onExp || k.data.path === 'knight') return null;
+  if (k.data.onExp || k.data.path === 'knight' || k.data.runaway) return null;
   const stg = stageOf(k, now).name;
   const adult = FW.adultStages.includes(stg);
   if (!adult && !FW.apprenticeStages.includes(stg)) return null;
@@ -616,6 +735,7 @@ function setJob(d, kin, id, fac, now = Date.now()) {
   const stg = stageOf(k, now).name;
   if (!FW.adultStages.includes(stg) && !FW.apprenticeStages.includes(stg)) return { error: `${k.name}${josa(k.name, '은', '는')} 아직 너무 어리다. 소년이 되면 견습으로 일할 수 있다.` };
   if (k.data.path === 'knight') return { error: '용기사는 둥지 일을 맡을 수 없다.' };
+  if (isRunaway(k)) return { error: `${k.name}${josa(k.name, '은', '는')} 지금 둥지에 없다.` };
   const other = kin.find((x) => x !== k && x.type === 'human' && x.status === 'home' && x.data.job === fac);
   if (other) other.data.job = null; // 한 시설에는 한 명
   k.data.job = fac;
@@ -696,6 +816,7 @@ function sendErrand(kin, id, region, minutes, allowRuin, now = Date.now()) {
   const stg = stageOf(k, now).name;
   if (!EH.from.includes(stg)) return { error: `${k.name}${josa(k.name, '은', '는')} 아직 혼자 다니기에 어리다. 어린 용이 되면 심부름을 보낼 수 있다.` };
   if (k.data.errand) return { error: `${ga(k)} 이미 심부름을 떠나 있다.` };
+  if (isRunaway(k)) return { error: `${k.name}${josa(k.name, '은', '는')} 지금 둥지에 없다.` };
   if (k.data.onExp) return { error: `${ga(k)} 원정에 함께 가 있다.` };
   if (k.data.companion) return { error: `곁에 둔 새끼는 심부름을 보낼 수 없다. 먼저 곁에서 풀어 주자.` };
   const r = REGIONS[region];
@@ -746,6 +867,7 @@ function setCompanion(kin, id, now = Date.now()) {
   if (!KIN.drakeHelp.ally.from.includes(stageOf(k, now).name)) return { error: `${k.name}${josa(k.name, '은', '는')} 아직 너무 어리다. 어린 용이 되면 함께 싸울 수 있다.` };
   if (k.data.companion) { k.data.companion = false; return { title: k.name, lines: [`${ga(k)} 둥지에 남아 쉬기로 했다.`] }; }
   if (k.data.errand) return { error: `${ga(k)} 심부름을 떠나 있다. 돌아오면 곁에 둘 수 있다.` };
+  if (isRunaway(k)) return { error: `${k.name}${josa(k.name, '은', '는')} 지금 둥지에 없다.` };
   for (const x of kin) if (x.type === 'drake') x.data.companion = false;
   k.data.companion = true;
   return { title: k.name, lines: [`${ga(k)} 날개를 펼치고 곁에 섰다. 이제 사냥과 강적과의 싸움에 함께 나선다.`] };
@@ -757,6 +879,7 @@ function train(d, kin, id, stat, now = Date.now(), opt = {}) {
   const k = findKin(kin, id);
   if (!k || k.type !== 'drake' || k.status !== 'home') return { error: '가르칠 새끼가 없다.' };
   if (k.data.errand) return { error: `${ga(k)} 심부름을 떠나 있다. 돌아오면 가르치자.` };
+  if (isRunaway(k)) return { error: `${k.name}${josa(k.name, '은', '는')} 지금 둥지에 없다.` };
   if (!STAT_KEYS.includes(stat)) return { error: '알 수 없는 능력치다.' };
   const limit = R.trainLimit[stageOf(k, now).i];
   if (k.data.trains >= limit) return { error: '지금은 더 가르쳐도 소용이 없다. 조금 더 자라야 한다.' };
@@ -816,6 +939,7 @@ function expStart(kin, now = Date.now()) {
     if (k.status !== 'home') continue;
     const from = k.type === 'human' ? H.expeditionFrom : R.expeditionFrom;
     if (k.type === 'human' && k.data.path === 'stay') continue; // 둥지를 지키는 어른은 남음
+    if (k.data.runaway || k.data.errand) continue; // 가출·심부름 중인 식구는 못 따라감
     if (ageOf(k, now) >= from) { k.data.onExp = true; went.push(k.name); }
   }
   return went;
@@ -823,7 +947,7 @@ function expStart(kin, now = Date.now()) {
 // 함께 간 식구의 이름·종류·나잇대 (원정 길 팝업의 말: 아이·청년·어른, 새끼 드래곤)
 const ageGroup = (k, now) => {
   const s = stageOf(k, now).name;
-  if (k.type === 'drake') return 'drake';
+  if (k.type === 'drake') return s === '해츨링' ? 'drake' : ['젊은 용', '다 자란 용'].includes(s) ? 'adult' : 'young'; // 어린 용부터는 폴리모프를 해서 말을 함
   return ['어른', '노년'].includes(s) ? 'adult' : s === '청년' ? 'young' : 'child';
 };
 const expWent = (kin, now = Date.now()) => kin.filter((k) => k.status === 'home' && k.data.onExp).map((k) => ({ name: k.name, age: ageGroup(k, now) }));
@@ -1060,5 +1184,5 @@ module.exports = {
   care, rename, choosePath, incubate, train, release,
   expStart, expFinish, companions, restTogether,
   rollEvent, getEvent, chooseEvent, forceEvent,
-  newHuman, newEgg, setCompanion, sendErrand, setJob, harvest, cook, cookLeft, expWent, // 시험용
+  newHuman, newEgg, setCompanion, sendErrand, setJob, harvest, cook, cookLeft, expWent, searchRunaway, sendSeek, callName, // 시험용
 };
