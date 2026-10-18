@@ -1453,6 +1453,11 @@
   .cost-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 10px; }
   .cost-list span { font-size: 12.5px; padding: 3px 8px; border: 1px solid var(--line-in); background: #fff; color: var(--ink-2); font-variant-numeric: tabular-nums; }
   .cost-list span.lack { color: #8A2E27; border-color: #E6C3C7; background: #FBF1F2; }
+  .cost-list span.src { cursor: pointer; }
+  .cost-list span.src:hover { border-color: #9DB2C3; }
+  .cost-list span.src[aria-expanded="true"] { color: #fff; background: var(--steel-d); border-color: var(--steel-d); }
+  .cost-list span.src.lack[aria-expanded="true"] { background: #A63E4B; border-color: #A63E4B; }
+  .cost-list + .src-box { margin: -2px 0 10px; }
   .hoard-tier { flex-basis: 100%; display: flex; flex-direction: column; gap: 6px; margin-top: 4px; font-size: 13px; color: #6B5A3A; }
   .hoard-tier b { color: #4E3A10; font-weight: 600; }
   .hoard-tier .hb { height: 6px; background: #EFE6CC; overflow: hidden; }
@@ -4341,6 +4346,7 @@
               const have = invCache[id] || 0;
               if (have < q) ready = false;
               chip(`${S.items[id]?.name || id} ${have}/${q}`, have >= q);
+              srcChip(cl.lastChild, id, host, cl);
             }
             host.appendChild(cl);
             if (n.here) {
@@ -4451,7 +4457,7 @@
             cl2.className = 'cost-list';
             const chip2 = (text, okk) => { const sp = document.createElement('span'); sp.textContent = text; if (!okk) sp.className = 'lack'; cl2.appendChild(sp); };
             chip2(`금화 ${me.gold}/${cost.gold}`, !lackG);
-            for (const [x, k] of Object.entries(cost.items)) chip2(`${S.items[x]?.name || x} ${invCache[x] || 0}/${k}`, (invCache[x] || 0) >= k);
+            for (const [x, k] of Object.entries(cost.items)) { chip2(`${S.items[x]?.name || x} ${invCache[x] || 0}/${k}`, (invCache[x] || 0) >= k); srcChip(cl2.lastChild, x, fi, cl2); }
             fi.appendChild(cl2);
             if (n.here) fi.querySelector('.acts').append(btn('화로 짓기', () => nestAct('nest:forge'), true, lackG || lackI || !!me.exp));
           }
@@ -5180,9 +5186,10 @@
   let craftMode = 'make', mixPick = [];
   const ELEM_NAME = { fire: '화염', ice: '얼음', lightning: '번개', earth: '대지', poison: '독', mist: '안개', acid: '산', water: '물', spirit: '정화' };
   // 제작 재료를 누르면, 그 재료를 얻는 곳을 재료 줄 아래에 펼침 (한 번 더 누르면 접힘)
-  function toggleSource(row, chip, id) {
+  // anchor를 주면 그 바로 뒤에 펼침 (둥지의 넓히기·화로 재료 칸처럼 줄 중간에 있을 때)
+  function toggleSource(row, chip, id, anchor = null) {
     const open = chip.getAttribute('aria-expanded') !== 'true';
-    for (const c of row.querySelectorAll('.need.src')) c.setAttribute('aria-expanded', 'false');
+    for (const c of row.querySelectorAll('.src')) c.setAttribute('aria-expanded', 'false');
     row.querySelector('.src-box')?.remove();
     if (!open) return;
     chip.setAttribute('aria-expanded', 'true');
@@ -5201,9 +5208,30 @@
       for (const t of list) { const li = document.createElement('li'); li.textContent = t; ul.appendChild(li); }
       box.appendChild(ul);
     }
-    row.appendChild(box);
+    if (anchor) anchor.after(box); else row.appendChild(box);
   }
-  function renderCraft() {
+  // 재료 칩을 눌러서 얻는 곳을 볼 수 있게 함 (제작 탭과 같은 방식)
+  function srcChip(chip, id, row, anchor) {
+    if (!S.items[id]) return;
+    chip.classList.add('src');
+    chip.tabIndex = 0;
+    chip.setAttribute('role', 'button');
+    chip.setAttribute('aria-expanded', 'false');
+    if (!chip.title) chip.title = '눌러서 얻는 곳 보기';
+    const toggle = () => toggleSource(row, chip, id, anchor);
+    chip.addEventListener('click', toggle);
+    chip.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+  }
+  // 제작 목록을 다시 그려도 보던 자리를 지킴 (휴대폰에서 만들 때마다 맨 위로 올라가던 문제)
+  function keepScroll(dlg, draw) {
+    const els = [dlg, dlg.querySelector('.body'), document.scrollingElement].filter(Boolean);
+    const tops = els.map((e) => e.scrollTop);
+    draw();
+    els.forEach((e, i) => { e.scrollTop = tops[i]; });
+    requestAnimationFrame(() => els.forEach((e, i) => { if (Math.abs(e.scrollTop - tops[i]) > 1) e.scrollTop = tops[i]; }));
+  }
+  function renderCraft() { keepScroll($('craft-dlg'), drawCraft); }
+  function drawCraft() {
     const me = S.me;
     const ci = me.craft || { known: [], needs: {}, hiddenLeft: 0, great: 0, gear: {} };
     $('craft-status').textContent = `기력 ${me.en} / ${me.enMax}, 지혜 ${me.stats.wisdom}. 대성공 ${ci.great}%${ci.forge ? ' · 공방의 화로를 쓰는 중' : ''}`;
@@ -5288,16 +5316,7 @@
         for (const [id, n] of Object.entries(r.needs)) {
           add(`${S.items[id].name} ${invCache[id] || 0}/${n}`, (invCache[id] || 0) < n);
           if (S.items[id].cat === 'trophy') needs.lastChild.title = effectText(S.items[id]);
-          // 누르면 그 재료를 얻는 곳이 펼쳐짐
-          const chip = needs.lastChild;
-          chip.classList.add('src');
-          chip.tabIndex = 0;
-          chip.setAttribute('role', 'button');
-          chip.setAttribute('aria-expanded', 'false');
-          if (!chip.title) chip.title = '눌러서 얻는 곳 보기';
-          const toggle = () => toggleSource(row, chip, id);
-          chip.addEventListener('click', toggle);
-          chip.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+          srcChip(needs.lastChild, id, row); // 누르면 그 재료를 얻는 곳이 펼쳐짐
         }
         const forgeM = ci.forge ? (S.craftRules?.forge.en || 1) : 1;
         const en = Math.ceil(r.en * (me.perks?.smith ? 0.7 : 1) * (me.craftMult || 1) * forgeM - 1e-9); // 둥지의 대장장이, 칭호, 공방
@@ -6259,6 +6278,8 @@
 
   // ── 텔레파시 ──
   let tpWith = null;    // 지금 열어 둔 대화 상대 id
+  let tpToast = false;  // 하단에 텔레파시 알림이 떠 있는지 (텔레파시 창을 열면 치움)
+  const clearTpToast = () => { if (tpToast) { tpToast = false; hideToast(); } };
   const ago = (t) => {
     const m = Math.floor((Date.now() - t) / 60000);
     if (m < 1) return '방금';
@@ -6269,6 +6290,7 @@
   function renderTpBadge(n) { badgeN.tp = n; renderSocialBadges(); }
   function openTpList() {
     tpWith = null;
+    clearTpToast();
     socket.emit('tp:threads', {}, (res) => {
       if (res.error) return toast(res.error);
       $('tp-convo').hidden = true;
@@ -6317,6 +6339,7 @@
   function openTp(id) {
     socket.emit('tp:open', { id }, (res) => {
       if (res.error) return toast(res.error);
+      clearTpToast();
       tpWith = id;
       const w = res.with;
       $('tp-list').hidden = true;
@@ -6379,7 +6402,11 @@
       return;
     }
     renderTpBadge(badgeN.tp + 1);
-    if ($('tp-dlg').open && tpWith === null) openTpList();
+    if ($('tp-dlg').open) { // 텔레파시 창을 보고 있으면 하단 알림 없이 목록만 새로
+      if (tpWith === null) openTpList();
+      return;
+    }
+    tpToast = true;
     toast(`${m.from.name}의 목소리가 머릿속에 울린다.`, { label: '듣기', run: () => { hideToast(); openTp(m.from.id); } });
   }
 
