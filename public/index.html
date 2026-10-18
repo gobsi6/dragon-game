@@ -608,14 +608,22 @@
   .fac-todo.idle { background: #F2F5F8; border: 1px dashed #9DB2C3; }
   .fac-idle { flex: 1; font-size: 13px; color: #2E4A60; }
   .fac-done { margin: 0; padding: 8px 10px; font-size: 13px; color: var(--muted); background: #F6F6F3; border-radius: 6px; }
-  /* 넓은 화면: 시설 카드를 두 줄로 */
+  /* 시설 칸: 모든 칸(빈 칸 포함)의 높이를 가장 높은 칸에 맞춤 */
+  .fac-grid { display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-rows: 1fr; gap: 10px; }
+  .fac-grid > .fac-card { min-height: 0; }
+  .fac-grid > .fac-card > .fac-who, .fac-grid > .fac-card > .fac-empty, .fac-grid > .fac-card > .fac-drop { margin-top: auto; } /* 배치 자리는 칸 아래쪽에 맞춤 */
+  .fac-grid > .fac-slot { height: 100%; min-height: 52px; }
+  .fac-kids { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  /* 넓은 화면: 시설과 식구를 두 줄로 */
   @media (min-width: 861px) {
-    .fac-board { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
-    .fac-board > .fac-today, .fac-board > .fac-top, .fac-board > .fac-build, .fac-board > .fac-tip, .fac-board > .note { grid-column: 1 / -1; }
-    .fac-board > .fac-kid { grid-column: auto; }
+    .fac-grid, .fac-kids { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   .rampage.rescue.done { background: #EEF5EF; border-color: #B9D3C1; }
   .rampage.rescue.done b { color: #2F5A43; }
+  /* 둥지 탭: 둥지 단계와 둥지 지키기 사이 절취선, 제목·설명·칸 사이를 좁게 */
+  /* 둥지 탭 칸은 사이가 12px 띄워져 있어서, 제목·설명·칸 사이는 음수 여백으로 좁힘 */
+  .nest-pane h3.nest-cut { margin: 10px 0 -8px; padding-top: 16px; border-top: 1px solid #C9CCC8; }
+  .nest-pane .nest-cut-note { margin: 0 0 -6px; }
   .fac-tip { margin: 0; padding: 8px 10px; background: #E2EFF3; border-radius: 4px; font-size: 12.5px; line-height: 1.55; color: #2F5F73; }
   .inv .it.fac-row .acts { grid-column: 1 / -1; grid-row: auto; max-width: none; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-start; margin-top: 4px; }
   .inv .it.fac-row .cost-list, .inv .it.fac-row .fac-work { grid-column: 1 / -1; grid-row: auto; }
@@ -4372,7 +4380,9 @@
     top.append(el('b', 'fac-h', `시설 ${F0.built.length}/${F0.slots}칸`));
     if (n.here) top.append(B(FAC_BUILD ? '짓기 닫기' : '＋ 짓기', () => { FAC_BUILD = !FAC_BUILD; renderNestAgain(); }, 'small'));
     wrap.appendChild(top);
-    // 시설 자리
+    // 시설 자리: 지은 시설과 빈 칸을 한 격자에 (모든 칸의 높이가 같음)
+    const grid = el('div', 'fac-grid');
+    wrap.appendChild(grid);
     for (const f of F0.built) {
       const F = FL[f.id], U = FAC_UI[f.id] || FAC_UI.tower;
       const card = el('div', 'fac-card');
@@ -4422,7 +4432,7 @@
         empty.textContent = f.id === 'kitchen' ? '아래에서 식구를 골라 이 칸을 누르면 맡긴다 (부엌은 아이가 있어야 쓸 수 있다)' : '아래에서 식구를 골라 이 칸을 누르면 맡긴다';
         card.appendChild(empty);
       }
-      wrap.appendChild(card);
+      grid.appendChild(card);
     }
     // 빈 칸
     for (let i = F0.built.length; i < F0.slots; i++) {
@@ -4431,7 +4441,7 @@
       e.textContent = n.here ? '빈 칸 · 눌러서 시설 짓기' : '빈 칸';
       e.disabled = !n.here;
       e.addEventListener('click', () => { FAC_BUILD = true; renderNestAgain(); });
-      wrap.appendChild(e);
+      grid.appendChild(e);
     }
     // 짓기 목록
     if (FAC_BUILD && n.here) {
@@ -4467,6 +4477,8 @@
     kh.append(el('b', 'fac-sub', '둥지의 식구'), el('small', 'fac-hint', humans.length ? (sel ? `${sel.name}${josa(sel.name, '을', '를')} 둘 자리를 위에서 누른다 · 다시 누르면 취소` : '식구를 누른 뒤, 위의 자리를 눌러 배치한다') : ''));
     wrap.appendChild(kh);
     if (!humans.length) wrap.appendChild(el('p', 'note', '일할 수 있는 식구가 없다. 인간 아이는 소년이 되면 견습으로 일할 수 있다.'));
+    const kids = el('div', 'fac-kids');
+    wrap.appendChild(kids);
     for (const v of humans) {
       const b = el('button', `fac-kid${v.id === FAC_SEL ? ' on' : ''}`);
       b.type = 'button';
@@ -4483,7 +4495,7 @@
       job.textContent = v.job?.working ? v.job.name : '일 없음';
       b.append(face, txt, job);
       b.addEventListener('click', () => { FAC_SEL = FAC_SEL === v.id ? null : v.id; renderNestAgain(); });
-      wrap.appendChild(b);
+      kids.appendChild(b);
     }
     // 고른 식구에게 잘 맞는 시설 추천
     if (sel) {
@@ -4735,11 +4747,11 @@
           // 둥지 지키기: 덫·결계석, 도둑이 들 수 있는지 (둥지 탭에)
           host = P.nest;
           const h4 = document.createElement('h3');
+          h4.className = 'nest-cut'; // 둥지 단계와 나누는 절취선
           h4.textContent = '둥지 지키기';
           host.appendChild(h4);
           const risk = document.createElement('p');
-          risk.className = 'note';
-          risk.style.margin = '0 0 8px';
+          risk.className = 'note nest-cut-note';
           const rr = S.raidRules;
           risk.textContent = n.value < rr.minValue
             ? `보물더미가 아직 작아서 도둑이 노리지 않는다. (가치 ${rr.minValue} 이상부터)`
