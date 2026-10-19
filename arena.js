@@ -71,7 +71,12 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
   // 정신이 0이 되면 광폭화. 정해진 시간 안에 다른 드래곤이 싸워 진정시키지 않으면 큰 피해
   const berserkSet = new Set(db.berserkIds()); // 광폭화한 드래곤 (서버를 다시 켜도 이어짐)
   const calming = new Map();                   // 광폭화한 드래곤 id → 진정시키는 중인 드래곤 id
-  const shout = (text) => io.emit('system', { text, at: Date.now() }); // 모든 지역 이야기 창에
+  const shout = (text) => { // 모든 지역 이야기 창에 알리고, 대륙 소식으로 기록에도 남김 (늦게 들어와도 볼 수 있게)
+    const at = Date.now();
+    let id = 0;
+    try { id = db.addChat('!', { dragonId: 0, name: '', kind: '', text, at }); } catch (e) { console.error('[대륙 소식]', e); }
+    io.emit('system', { text, at, news: true, id });
+  };
   const ga = (n) => `${n}${josa(n, '이', '가')}`;
   const eul = (n) => `${n}${josa(n, '을', '를')}`;
   function rampageInfo(id) {

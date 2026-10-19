@@ -1205,7 +1205,7 @@ function buffOf(d, now = Date.now()) {
 }
 
 // ── 회복약 사용 ────────────────────────────────────
-// opts.from: 받은 선물이면 보낸 이 이름 (보물 상자에 함께 남김), opts.msg: 그때의 쪽지
+// opts.keep: 보물 상자에 넣기를 고름 (꽃다발처럼 쓸 수도, 간직할 수도 있는 물건), opts.from: 받은 선물이면 보낸 이 이름 (상자에 함께 남김), opts.msg: 그때의 쪽지
 function useItem(d, id, have, opts = {}) {
   if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
   const it = ITEMS[id];
@@ -1213,7 +1213,7 @@ function useItem(d, id, have, opts = {}) {
   if (have(id) < 1) return { error: '가지고 있지 않다.' };
   const u = it.use;
   const lines = [];
-  if (u.keep) { // 보물 상자에 넣고 잠금 (꺼낼 수 없음)
+  if (u.keep && (opts.keep || !u.mind)) { // 보물 상자에 넣고 잠금 (꺼낼 수 없음). 꽃다발은 '상자에 넣기'를 고를 때만, 아니면 아래에서 정신 회복
     if (!d.nest) return { error: '둥지를 틀어야 보물 상자에 간직할 수 있다.' };
     if (d.region !== d.nest) return { error: '보물 상자는 둥지에 있을 때만 열 수 있다.' };
     chestAdd(d, u.keep, opts.from || '', opts.msg || '');
@@ -1227,6 +1227,11 @@ function useItem(d, id, have, opts = {}) {
     const wasOn = crownOn(d);
     c.crownUntil = Date.now() + u.crown * 60000;
     lines.push(wasOn ? `시든 화관을 내려놓고 새 ${it.name}${josa(it.name, '을', '를')} 머리에 얹었다.` : `${it.name}${josa(it.name, '을', '를')} 머리에 얹었다. 하루 동안 이름 옆에 작은 꽃이 핀다.`);
+    if (u.mind && !berserkOf(d) && (d.mind ?? MIND.max) < MIND.max) {
+      const before = d.mind ?? MIND.max;
+      d.mind = Math.min(MIND.max, before + u.mind);
+      lines.push(`꽃향기에 정신이 ${d.mind - before} 맑아졌다.`);
+    }
     return { title: it.name, lines, items: [{ id, qty: -1 }] };
   }
   if (u.nestWard) {

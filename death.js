@@ -19,7 +19,12 @@ const eul = (n) => `${n}${josa(n, '을', '를')}`;
 const parse = (v, def) => { if (v && typeof v === 'object') return v; try { return v ? JSON.parse(v) : def; } catch { return def; } };
 
 module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broadcastPresence }) {
-  const shout = (text) => io.emit('system', { text, at: Date.now() });
+  const shout = (text) => { // 모든 지역 이야기 창에 알리고, 대륙 소식으로 기록에도 남김 (늦게 들어와도 볼 수 있게)
+    const at = Date.now();
+    let id = 0;
+    try { id = db.addChat('!', { dragonId: 0, name: '', kind: '', text, at }); } catch (e) { console.error('[대륙 소식]', e); }
+    io.emit('system', { text, at, news: true, id });
+  };
   const live = (id) => online.get(id) || null;
   const load = (id) => { const e = live(id); return e ? e.dragon : db.getDragon(id); };
 

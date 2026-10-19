@@ -1401,6 +1401,22 @@
   @media (prefers-reduced-motion: reduce) { .rampage::before { animation: none; } }
   .who .rage { font-size: 11px; color: #fff; background: #A63E4B; padding: 0 6px; border-radius: 2px; margin-left: auto; margin-right: 2px; white-space: nowrap; }
   .log .sys.alarm { color: #A63E4B; font-weight: 600; font-size: 12.5px; }
+  /* 이야기 보기 칩: 기록 탭과 같은 차례 글씨. 고른 것에 밑줄 (용언과 소식은 보랏빛) */
+  .chat-view { display: flex; align-items: center; gap: 0; margin: 2px 0 0; padding: 0 2px; border-bottom: 1px solid var(--line-in); }
+  .chat-view button { position: relative; min-height: 30px; padding: 0 9px; border: 0; background: none; color: #7A7468; font: 500 12.5px/30px var(--serif); cursor: pointer; }
+  .chat-view button + button::before { content: '·'; position: absolute; left: -3px; color: #BDB5A5; }
+  .chat-view button.on { color: var(--ink); font-weight: 700; box-shadow: inset 0 -2px 0 var(--steel-d); }
+  .chat-view button[data-v="shout"].on { box-shadow: inset 0 -2px 0 #5B4A8A; }
+  .chat-view button:not(.on):hover { color: var(--ink-2); }
+  .chat-view button:focus-visible { outline: 2px solid var(--steel); outline-offset: -2px; }
+  /* 보기에 따라 숨김: 이곳 = 용언·소식 빼고, 용언과 소식 = 그것만 */
+  #log[data-view="here"] .msg.shout, #log[data-view="here"] .sys.news { display: none; }
+  #log[data-view="shout"] .msg:not(.shout), #log[data-view="shout"] .sys:not(.news) { display: none; }
+  /* 기록으로 남는 대륙 소식 (쓰러짐·구조·광폭화·부고): 알림 줄 모양에 시각 */
+  .log .sys time { margin-left: 6px; font-size: 10.5px; color: #A3A6A9; font-variant-numeric: tabular-nums; font-weight: 400; }
+  .log .sys.news { color: #6A5A3A; background: #F6F1E6; }
+  .log .sys.news.alarm { color: #A63E4B; background: #F8ECEE; }
+  .log .sys.news.bye { color: #4A4F55; background: #ECEDEC; }
 
   /* ── 설정: 내 드래곤 · 계정 ── */
   .bio-form { display: flex; flex-direction: column; gap: 10px; padding: 12px; background: #fff; border: 1px solid var(--line-in); }
@@ -2464,7 +2480,8 @@
           <b>이곳의 이야기</b>
           <button type="button" class="chat-x" id="chat-close" aria-label="이야기 창 접기"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16l-8 11z"/></svg></button>
         </div>
-        <div class="log" id="log" aria-live="polite"></div>
+        <div class="chat-view" id="chat-view" role="tablist" aria-label="이야기 보기"><button type="button" role="tab" data-v="all" class="on" aria-selected="true">전체</button><button type="button" role="tab" data-v="here" aria-selected="false">이곳</button><button type="button" role="tab" data-v="shout" aria-selected="false">용언과 소식</button></div>
+        <div class="log" id="log" aria-live="polite" data-view="all"></div>
         <form class="say" id="say">
           <button class="say-mode" type="button" id="say-mode" aria-pressed="false" title="용언: 대륙의 모든 드래곤에게 닿는 말" aria-label="용언"><span aria-hidden="true">용</span><span aria-hidden="true">언</span></button>
           <label class="sr" for="say-input">채팅 입력</label>
@@ -4250,7 +4267,7 @@
   function itemCatName(it) {
     if (!it) return '';
     if (it.type === 'equip') return '장신구';
-    if (it.type === 'use') return it.use?.nestWard ? '둥지 보호' : it.use?.buff ? '강화 음식' : '회복약';
+    if (it.type === 'use') return it.use?.nestWard ? '둥지 보호' : it.use?.buff ? '강화 음식' : it.use?.crown || (it.use?.keep && it.use?.mind) ? '꽃 선물' : it.use?.keep ? '추억' : '회복약';
     return { meal: '식구 요리', bait: '미끼', fish: '물고기', treasure: '보물', trophy: '전리품' }[it.cat] || '재료';
   }
   const itemTagText = (it) => (it ? `${itemCatName(it)} · ${RARITY_NAME[it.rarity] || '흔함'}` : '');
@@ -4448,9 +4465,17 @@
           const b = document.createElement('button');
           b.type = 'button';
           b.className = 'btn';
-          b.textContent = it.type === 'use' ? (it.use?.keep ? '상자에 넣기' : it.use?.crown ? '머리에 얹기' : '사용') : '착용';
+          b.textContent = it.type === 'use' ? (it.use?.keep && !it.use?.mind ? '상자에 넣기' : it.use?.crown ? '머리에 얹기' : '사용') : '착용';
           b.addEventListener('click', () => itemAct(it.type === 'use' ? 'item:use' : 'equip', { item: id }));
           acts.appendChild(b);
+          // 꽃다발: 써서 정신을 맑히거나, 보물 상자에 넣어 간직하거나
+          if (it.use?.keep && it.use?.mind) {
+            const k2 = document.createElement('button');
+            k2.type = 'button'; k2.className = 'btn'; k2.textContent = '상자에 넣기';
+            k2.title = '둥지의 보물 상자에 넣어 간직한다 (꺼낼 수 없다)';
+            k2.addEventListener('click', () => itemAct('item:use', { item: id, keep: true }));
+            acts.appendChild(k2);
+          }
         }
         const x = document.createElement('button');
         x.type = 'button';
@@ -10376,8 +10401,8 @@
       if (res.error) { if (btn) btn.textContent = '지난 이야기 더 보기'; return toast(res.error); }
       const tmp = document.createElement('div');
       LOG_TARGET = tmp;
-      try { for (const m of res.history) addChat(m); } finally { LOG_TARGET = null; }
-      if (res.history.length) CHAT_OLDEST = res.history[0].id;
+      try { for (const m of res.history) addHistory(m); } finally { LOG_TARGET = null; }
+      if (res.history.length) CHAT_OLDEST = Math.min(...res.history.map((m) => m.id));
       // 보던 자리를 그대로 두고 위에 끼워 넣음
       const oldH = log.scrollHeight, oldTop = log.scrollTop;
       const first = btn ? btn.nextSibling : log.firstChild;
@@ -10462,12 +10487,24 @@
     line.remove();
     if (group && !group.querySelector('.ml')) group.remove();
   }
-  function addSystem(text) {
+  // news: 기록으로 남는 대륙 소식 (쓰러짐·구조·광폭화·부고) — 시각을 붙이고, 보기 칩에서 '용언과 소식'에 함께 나옴
+  function addSystem(text, at, news) {
     const p = document.createElement('div');
-    p.className = text.startsWith('[광폭화]') ? 'sys alarm' : 'sys';
+    p.className = `sys${text.startsWith('[광폭화]') ? ' alarm' : ''}${news ? ` news${text.startsWith('[부고]') ? ' bye' : ''}` : ''}`;
     p.textContent = text;
+    if (news && at) { const t = document.createElement('time'); t.textContent = chatTime(at); p.appendChild(t); }
     addLine(p);
   }
+  // 기록 한 줄: 대륙 소식이면 알림 줄로, 아니면 말
+  const addHistory = (m) => (m.news ? addSystem(m.text, m.at, true) : addChat(m));
+  // 보기 칩: 전체 · 이곳 · 용언과 소식 (걸러 보기만 하고, 들어온 기록은 그대로)
+  $('chat-view').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-v]'); if (!b) return;
+    for (const x of $('chat-view').children) { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-selected', String(on)); }
+    const log = $('log');
+    log.dataset.view = b.dataset.v;
+    log.scrollTop = log.scrollHeight;
+  });
   // 폰에서 이야기 창 접기·펴기. 접혀 있는 동안 들어온 남의 말은 버튼에 숫자로
   const chatMq = matchMedia('(max-width: 860px)');
   let chatUnread = 0;
@@ -10635,9 +10672,9 @@
       renderRegion();
       renderHere();
       $('log').replaceChildren();
-      CHAT_OLDEST = data.history.length ? data.history[0].id : 0;
+      CHAT_OLDEST = data.history.length ? Math.min(...data.history.map((m) => m.id)) : 0;
       if (data.more && data.history.length >= 30) $('log').appendChild(olderBtn()); // 30개(서버의 HISTORY)를 다 채웠으면 더 있을 수 있음
-      for (const m of data.history) addChat(m);
+      for (const m of data.history) addHistory(m); // 지역 대화 · 용언 · 대륙 소식
       addSystem(`${S.regions[data.region].name}에 내려앉았다`);
       $('log').scrollTop = $('log').scrollHeight;
     });
@@ -10719,7 +10756,7 @@
     socket.on('trade:error', (e) => toast(e.error));
     socket.on('trade:closed', (e) => { endTrade(); toast(e.reason); });
     socket.on('trade:done', (r) => { endTrade(); showResult(r); fetchInv(); if ($('ledger-dlg').open) openLedger(); });
-    socket.on('system', (m) => addSystem(m.text));
+    socket.on('system', (m) => addSystem(m.text, m.at, m.news));
       socket.on('yabawi:now', (v) => { if (S.me) { S.me.yabawiNow = v; renderYabaBar(); } }); // 야바위꾼이 나타나거나 떠남
   }
 

@@ -56,7 +56,9 @@ const CHAT_COOLDOWN = 700;  // ms, 도배 방지
 const CHAT_MAX = 200;       // 글자 수
 // 용언: 지역과 관계없이 대륙의 모든 드래곤에게 닿는 말 (횟수 제한 없음, 도배 방지 간격만)
 const SHOUT_REGION = '*';   // 채팅 기록에서 용언을 담는 자리
-const SHOUT_HISTORY = 10;   // 지역에 들어갈 때 함께 보여 줄 지난 용언 수
+const SHOUT_HISTORY = 20;   // 지역에 들어갈 때 함께 보여 줄 지난 용언 수
+const NEWS_REGION = '!';    // 채팅 기록에서 대륙 소식(쓰러짐·구조·광폭화·부고)을 담는 자리
+const NEWS_HISTORY = 20;    // 지역에 들어갈 때 함께 보여 줄 지난 대륙 소식 수
 const HISTORY = 30;         // 지역에 들어갈 때 보여줄 지난 대화 수
 const AVATAR_MAX = 400000;  // 프로필 그림 최대 크기 (base64 글자 수, 약 300KB)
 const AVATAR_COOLDOWN = 5000;
@@ -212,11 +214,13 @@ const publicDragon = (d) => ({
 function giftSender(d, id) {
   const c = logic.combatJson(d);
   if (!c.keepUsed || typeof c.keepUsed !== 'object') c.keepUsed = {};
+  c._lastKeep = null;
   for (const e of db.ledgerList(d.id, 200)) {
     if (e.kind !== 'gift_in' || !e.other?.name) continue;
     const n = e.itemsIn.filter((x) => x.id === id).reduce((a, x) => a + (x.qty || 0), 0);
     if (n - (c.keepUsed[e.id] || 0) <= 0) continue;
     c.keepUsed[e.id] = (c.keepUsed[e.id] || 0) + 1;
+    c._lastKeep = String(e.id);
     return { from: e.other.name, msg: (e.msg || '').slice(0, 200) };
   }
   return {};
@@ -438,10 +442,12 @@ function sendRegionState(socket, dragon) {
     occupants: occupants(dragon.region),
     // 이 지역의 대화에 지난 용언을 시각 순서대로 섞어 보여 줌
     more: true, // 위로 올리면 더 불러올 수 있음 (불러와 보고 없으면 버튼을 숨김)
+    // 지역 대화·용언·대륙 소식을 따로 가져와 섞음 (용언·소식이 활발한 지역 대화에 밀려 잘리지 않게)
     history: withTitles([
       ...db.recentChat(dragon.region, HISTORY),
       ...db.recentChat(SHOUT_REGION, SHOUT_HISTORY).map((m) => ({ ...m, shout: true })),
-    ].sort((a, b) => a.at - b.at || a.id - b.id).slice(-HISTORY)),
+      ...db.recentChat(NEWS_REGION, NEWS_HISTORY).map((m) => ({ ...m, news: true })),
+    ].sort((a, b) => a.at - b.at || a.id - b.id)),
   });
 }
 
@@ -1259,7 +1265,12 @@ io.on('connection', (socket) => {
   });
   itemAction('item:use', (d, p, have) => {
     const id = str(p.item);
-    return logic.useItem(d, id, have, ITEMS[id]?.use?.keep ? giftSender(d, id) : {});
+    const U = ITEMS[id]?.use || {};
+    const keep = !!U.keep && (!!p.keep || !U.mind); // 상자에 넣는 경우에만 보낸 이를 찾아 붙임
+    const sender = U.keep ? giftSender(d, id) : {};  // 받은 꽃다발을 써 버려도 그 선물은 쓴 것으로 셈 (나중에 넣는 다른 꽃다발에 엉뚱한 이름이 붙지 않게)
+    const res = logic.useItem(d, id, have, keep ? { keep: true, ...sender } : {});
+    if (res.error && U.keep) { const c = logic.combatJson(d); /* 쓰지 못했으면 셈을 되돌림 */ for (const k of Object.keys(c.keepUsed || {})) if (c._lastKeep === k) c.keepUsed[k] -= 1; }
+    return res;
   }, (d, res) => { arena.checkMind(d); if (res?.title === ITEMS.flower_crown.name) broadcastPresence(d.region); }); // 광기의 묘약으로 정신이 다 깎일 수 있음 · 화관을 쓰면 같은 지역 목록에 꽃이 바로 보이게
   // 소지품 버리기: 버린 물건은 사라짐
   itemAction('item:drop', (d, p, have) => {
@@ -1573,7 +1584,8 @@ io.on('connection', (socket) => {
     const list = [
       ...db.olderChat(entry.dragon.region, before, N),
       ...db.olderChat(SHOUT_REGION, before, N).map((m) => ({ ...m, shout: true })),
-    ].sort((a, b) => a.id - b.id).slice(-N);
+      ...db.olderChat(NEWS_REGION, before, N).map((m) => ({ ...m, news: true })),
+    ].sort((a, b) => a.id - b.id).slice(-N * 2);
     ack({ ok: true, history: withTitles(list), more: list.length >= N });
   });
 

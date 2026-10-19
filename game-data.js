@@ -350,10 +350,10 @@ const ITEMS = {
   moss_flower:  { name: '이끼꽃',         rarity: 'uncommon', value: 4,  desc: '안개 낀 숲 그늘의 이끼 사이에서만 피는 푸르스름한 꽃.' },
   sea_bindweed: { name: '갯메꽃',         rarity: 'common',   value: 2,  desc: '해안 절벽 모래땅을 기어가며 피는 분홍 꽃. 짠 바람에도 시들지 않는다.' },
   snow_flower:  { name: '눈꽃',           rarity: 'uncommon', value: 4,  desc: '설원의 눈 속에서 피어나는 하얀 꽃. 손에 쥐어도 녹지 않는다.' },
-  // 선물용: 꽃다발은 보물 상자에 넣어 간직할 수 있음 (받은 것이면 보낸 이와 쪽지도 함께), 화관은 쓰면 하루 동안 이름 옆에 꽃이 핌
-  flower_crown: { name: '들꽃 화관',      rarity: 'common',   value: 8,  type: 'use', use: { crown: 1440 }, desc: '들꽃을 엮어 만든 화관. 머리에 얹으면 하루 동안 이름 옆에 작은 꽃이 핀다. 누군가에게 선물해도 좋다.' },
-  bouquet_wild: { name: '들꽃 꽃다발',    rarity: 'common',   value: 8,  type: 'use', use: { keep: 'bouquet_wild' }, desc: '평원의 들꽃과 해안의 갯메꽃을 묶은 꽃다발. 선물로 보내거나, 둥지의 보물 상자에 넣어 간직할 수 있다.' },
-  bouquet_four: { name: '네 고장 꽃다발', rarity: 'uncommon', value: 20, type: 'use', use: { keep: 'bouquet_four' }, desc: '평원·숲·해안·설원의 꽃을 하나씩 모아 묶은 꽃다발. 대륙을 한 바퀴 돈 정성이 담겼다. 선물로 보내거나 보물 상자에 넣어 간직할 수 있다.' },
+  // 선물용: 꽃다발은 쓰면 정신 회복, 또는 보물 상자에 넣어 간직 (받은 것이면 보낸 이와 쪽지도 함께). 화관은 쓰면 정신 조금 + 하루 동안 이름 옆에 꽃
+  flower_crown: { name: '들꽃 화관',      rarity: 'common',   value: 8,  type: 'use', use: { crown: 1440, mind: 5 }, desc: '들꽃을 엮어 만든 화관. 머리에 얹으면 꽃향기에 정신이 조금 맑아지고(+5), 하루 동안 이름 옆에 작은 꽃이 핀다. 누군가에게 선물해도 좋다.' },
+  bouquet_wild: { name: '들꽃 꽃다발',    rarity: 'common',   value: 8,  type: 'use', use: { keep: 'bouquet_wild', mind: 10 }, desc: '평원의 들꽃과 해안의 갯메꽃을 묶은 꽃다발. 향을 맡으면 정신이 맑아진다(+10). 선물로 보내거나, 둥지의 보물 상자에 넣어 간직할 수도 있다.' },
+  bouquet_four: { name: '네 고장 꽃다발', rarity: 'uncommon', value: 20, type: 'use', use: { keep: 'bouquet_four', mind: 25 }, desc: '평원·숲·해안·설원의 꽃을 하나씩 모아 묶은 꽃다발. 대륙을 한 바퀴 돈 정성이 담겼다. 향을 맡으면 정신이 맑아진다(+25). 선물로 보내거나 보물 상자에 넣어 간직할 수도 있다.' },
   whisper_ring: { name: '속삭이는 반지',   rarity: 'rare',     type: 'equip', slot: 'charm', bonus: { majesty: 3 }, mindWard: 1.3, value: 60, desc: '보물더미 깊은 곳에서 나온 반지. 끼면 위엄이 차오르지만, 밤마다 속삭임이 정신을 갉아먹는다. (깎이는 정신 +30%)' },
   calamity_core:{ name: '재앙의 핵',        rarity: 'rare',     cat: 'trophy', value: 120, desc: '쓰러진 재앙의 가슴에서 꺼낸, 아직 고동치는 검붉은 핵. 대륙에 몇 개 없는 물건이다.' },
   calamity_charm:{ name: '재앙을 이긴 증표', rarity: 'rare',    type: 'equip', slot: 'charm', bonus: { claw: 2, scale: 2, wing: 1, wisdom: 1, majesty: 2 }, desc: '재앙의 핵을 고대의 유물에 박아 넣었다. 지닌 드래곤의 이름이 대륙에 울린다.' },
