@@ -1303,7 +1303,7 @@
     .profile.pinned, .side.pinned { position: fixed !important; top: calc(var(--head-h, 0px) + 22px); margin: 0; z-index: 2; }
   }
   .pin-spacer { display: none; }
-  .crown-fl, .who .nm .crown-fl { margin-left: 3px; color: #C0607A; font-size: 13px; vertical-align: 0; } /* 목록 줄의 회색 글자 규칙보다 앞서게 */
+  .crown-fl, .who .nm .crown-fl { margin-left: 2px; color: #C0607A; font-size: 13px; vertical-align: 0; } /* 목록 줄의 회색 글자 규칙보다 앞서게 */
   .yaba-hint { background: #FBF8F1; border-style: dashed; }
   /* 창: 밝은 머리(남색 띠 · 장소 · 말 · 금화) 아래 시장 물건 줄처럼 판돈 · 조약돌 · 홀짝 · 소문을 한 장에 */
   #yaba-dlg .body > * + * { margin-top: 10px; }
@@ -2076,6 +2076,7 @@
   .here-list .who .nm { flex: 1 1 auto; }
   .here-list .who .nm b { display: flex; align-items: center; gap: 6px; min-width: 0; line-height: 18px; white-space: nowrap; overflow-wrap: normal; }
   .here-list .who .nm b .n { min-width: 0; overflow: hidden; text-overflow: ellipsis; font: inherit; color: inherit; }
+  .here-list .who .nm b .crown-fl { margin-left: -4px; } /* 줄의 간격(6px)을 덜어 꽃이 이름에 붙게 (실제 2px) */
   .here-list .who .nm b .relb { flex: none; margin-left: 0; }
   .here-list .who .nm > span.sub { display: block; line-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .here-list .who .nm .sub .ttl { display: inline; margin: 0; font-size: 11px; vertical-align: 0; }
