@@ -7075,7 +7075,7 @@
     if (p.bio?.gender) row('성별', p.bio.gender);
     row('인간을 대하는 방식', p.stanceName);
     row('용족 명성', p.fame);
-    if (p.nest) row('둥지', S.regions[p.nest].name);
+    if (p.nest) row('둥지', S.regions[p.nest]?.name || p.nest);
     row('둥지 식구', p.kin.length ? p.kin.map((k) => `${k.name}(${k.stage})`).join(', ') : '없음');
     if (p.lineage) row('계보', `${p.lineage}마리 독립`);
     if (p.heir) row('이어받은 의지', `${p.heir.name} (레벨 ${p.heir.level} ${p.heir.kindName})`);
@@ -7107,7 +7107,7 @@
       const c = document.createElement('span');
       c.className = `gain ${S.items[e.item]?.rarity || ''}`;
       c.textContent = `${slotName(e.slot)} · ${S.items[e.item]?.name || e.item}`;
-      c.title = effectText(S.items[e.item]);
+      c.title = S.items[e.item] ? effectText(S.items[e.item]) : ''; // 이제는 없는 물건을 끼고 있어도 프로필이 열리게
       box.appendChild(c);
     }
     body.appendChild(eq);
