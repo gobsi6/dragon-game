@@ -2308,12 +2308,13 @@
      같은 칸(.profile)을 그대로 띄우므로 체력·기력 같은 값은 늘 최신. 넓은 화면은 지금처럼 왼쪽에 고정 */
   .pf-open, .pf-x, .pf-backdrop { display: none; }
   @media (max-width: 860px) {
-    .pf-open { display: inline-flex; gap: 5px; width: auto !important; padding: 0 7px; }
+    .pf-open { display: inline-flex; align-items: center; gap: 7px; width: auto !important; padding: 0 8px; border-color: var(--line-in) !important; background: rgba(255, 255, 255, .6); }
     .pf-open[aria-expanded="true"] { background: rgba(60, 90, 115, .12); border-color: var(--line-soft); color: var(--steel-d); }
-    .pf-mini { display: flex; flex-direction: column; gap: 2px; width: 22px; }
-    .pf-mini i { display: block; height: 3px; border-radius: 2px; background: #D6D8D4; overflow: hidden; }
+    .pf-mini { display: flex; flex-direction: column; gap: 3px; width: 64px; } /* 체력·기력·정신을 한눈에 볼 수 있을 만큼 */
+    .pf-mini i { display: block; height: 6px; border-radius: 3px; background: #D6D8D4; overflow: hidden; }
     .pf-mini b { display: block; height: 100%; width: 0; border-radius: 2px; }
-    .pf-mini .hp b { background: #B04A57; } .pf-mini .en b { background: #3F7A5C; } .pf-mini .mind b { background: #6A5BA0; }
+    /* 드래곤 기록의 큰 막대와 같은 그라데이션 */
+    .pf-mini .hp b { background: linear-gradient(90deg, #8E3340, #CB5A66); } .pf-mini .en b { background: linear-gradient(90deg, #2F6248, #5E9C7B); } .pf-mini .mind b { background: linear-gradient(90deg, #4A3F78, #8E7FC4); }
     .pf-mini .mind[hidden] { display: none; }
     main.main > .profile { display: none; }
     body.pf-sheet main.main > .profile {
@@ -2335,15 +2336,19 @@
     .top .pf-open { grid-column: 3; grid-row: 1; }
     .top .tp-btn { grid-column: 4; }
     .top .menu-wrap { grid-column: 5; }
-    .top .chip:nth-of-type(2) { grid-column: 3 / 6; }
+    .top .chip:nth-of-type(1) { grid-column: 1 / 4; }
+    .top .chip:nth-of-type(2) { grid-column: 4 / 6; }
+    .top .brand .s { white-space: nowrap; }
+    .top .chip { white-space: nowrap; }
   }
+  @media (max-width: 380px) { .pf-mini { width: 46px; } .pf-open { gap: 5px; padding: 0 6px; } } /* 아주 좁은 폰 */
 
   /* ── 즐겨찾기 별 (칭호·제작법) ── */
-  .fav { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; margin: -6px 0 -6px -6px; padding: 0; border: 0; border-radius: 3px; background: none; color: #A3A7AB; font: 400 17px/1 var(--sans); cursor: pointer; vertical-align: middle; }
-  .fav.on { color: #B08A2E; }
-  .fav:hover { color: #7A5A16; background: rgba(184, 145, 58, .12); }
-  .fav:focus-visible { outline: 2px solid var(--steel); outline-offset: -2px; }
-  .recipe .nm b .fav { order: -1; margin-right: -2px; } /* 마름모 앞에 */
+  .fav-star { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; margin: -6px 0 -6px -6px; padding: 0; border: 0; border-radius: 3px; background: none; color: #A3A7AB; font: 400 17px/1 var(--sans); cursor: pointer; vertical-align: middle; }
+  .fav-star.on { color: #B08A2E; }
+  .fav-star:hover { color: #7A5A16; background: rgba(184, 145, 58, .12); }
+  .fav-star:focus-visible { outline: 2px solid var(--steel); outline-offset: -2px; }
+  .recipe .nm b .fav-star { order: -1; margin-right: -2px; } /* 마름모 앞에 */
 
   /* ── 착용한 장신구: 이름을 누르면 효과가 펼쳐짐 ── */
   .gear-grid, .inv-gear { align-items: start; }
@@ -2357,6 +2362,25 @@
   .inv-gear .slot.open { flex-wrap: wrap; }
   .inv-gear .slot .slot-h { flex: 1 1 0; }
   .inv-gear .slot .slot-d { flex-basis: 100%; margin-top: 4px; }
+
+  /* ── 장신구 부위 그림: 왼쪽 네모 칸 (둥지 식구 얼굴과 같은 모양), 칸 높이도 조금 넉넉하게 ── */
+  .gear-grid .slot { min-height: 60px; padding: 8px 10px; }
+  .inv-gear .slot { min-height: 56px; padding: 7px 8px; }
+  .slot .slot-h, .slot.slot-row { flex-direction: row; align-items: center; justify-content: flex-start; gap: 10px; }
+  .slot-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-style: normal; }
+  .si-box { flex: none; width: 40px; height: 40px; display: grid; place-items: center; font-style: normal; color: #5B6066; background: rgba(255, 255, 255, .55); border: 1px solid #D5D8D4; border-radius: 3px; } /* 칸 바탕보다 살짝 밝은 같은 빛깔 */
+  .si-box svg { display: block; width: 24px; height: 24px; }
+  .slot.on .si-box { color: var(--steel-d); border-color: #C9D6E1; }
+  .slot.on.rare .si-box { color: #9A7426; border-color: #E2CF9E; }
+  .slot.empty .si-box { color: #A3A7AB; border-style: dashed; }
+  .inv-gear .si-box { width: 38px; height: 38px; }
+  .inv-gear .si-box svg { width: 22px; height: 22px; }
+  @media (max-width: 520px) { /* 폰: 칸이 좁으니 부위 그림은 숨기고 글자만 */
+    .si-box { display: none; }
+    .gear-grid .slot { min-height: 54px; }
+    .inv-gear .slot { min-height: 50px; gap: 6px; padding: 6px 6px 6px 9px; }
+    .inv-gear .slot .btn { padding: 0 7px; }
+  }
 </style>
 </head>
 <body>
@@ -4460,7 +4484,7 @@
     const on = FAV.has(kind, id);
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = `fav${on ? ' on' : ''}`;
+    b.className = `fav-star${on ? ' on' : ''}`; // (둥지 식구의 .kin-meta.fav와 겹치지 않는 이름)
     b.setAttribute('aria-pressed', String(on));
     b.setAttribute('aria-label', on ? '즐겨찾기에서 빼기' : '즐겨찾기에 넣기');
     b.title = on ? '즐겨찾기에서 빼기' : '즐겨찾기에 넣기';
@@ -4481,6 +4505,22 @@
     if (g.elem) out.push(`${ELEM_NAME[g.elem] || g.elem} 각인: 그 속성 공격 피해 +${Math.round(((S.craftRules?.engrave?.power || 1) - 1) * 100)}%`);
     return out.filter(Boolean);
   }
+  // 장신구 부위 그림 (아래 메뉴 아이콘과 같은 선 그림)
+  const SLOT_ICON = {
+    head: '<path d="M4 16l1.6-8 4.4 4 2-6 2 6 4.4-4L20 16z"/><path d="M5 19h14"/>',
+    neck: '<path d="M6 4c0 6 2.6 9 6 9s6-3 6-9"/><path d="M12 13l2.2 3-2.2 3.2L9.8 16z"/>',
+    claw: '<path d="M5 19c1.6-5.5 3.6-9.5 7-13"/><path d="M10 20c1.4-4.6 3.4-8 7-11"/><path d="M15 20.5c1.2-3 2.6-5.2 5-7"/>',
+    charm: '<path d="M8 3h8v14l-4 4-4-4z"/><circle cx="12" cy="8" r="1.6"/><path d="M10 13h4"/>',
+    wing: '<path d="M3 18c2.5-8 8-12.5 18-13-1.6 2.6-3.6 4.4-6.4 5.6 2 .1 3.9-.2 5.6-1-1.8 3-4.8 5-8.8 5.4 1 .2 1.9.5 2.8 1-3.4 1.6-7.2 2.2-11.2 2z"/>',
+    tail: '<path d="M3 17c4.5 0 6.5-2 7.5-5s3-5 6.5-5"/><path d="M16.5 4.5L21 6.6 17.6 10z"/>',
+  };
+  function slotIcon(key) {
+    const i = document.createElement('i');
+    i.className = 'si-box'; // 둥지 식구 얼굴처럼 네모 칸 안의 그림
+    i.setAttribute('aria-hidden', 'true');
+    i.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${SLOT_ICON[key] || '<circle cx="12" cy="12" r="5"/>'}</svg>`;
+    return i;
+  }
   // 장신구 칸: 이름을 누르면 효과가 펼쳐짐 (다시 누르면 접힘)
   const gearOpen = { gear: new Set(), inv: new Set() };
   function gearSlotHead(slot, sl, id, where, redraw) {
@@ -4490,8 +4530,9 @@
     h.type = 'button';
     h.className = 'slot-h';
     h.setAttribute('aria-expanded', String(open));
-    h.innerHTML = '<small></small><span></span>';
+    h.innerHTML = '<i class="slot-t"><small></small><span></span></i>';
     h.querySelector('small').textContent = sl.name;
+    h.prepend(slotIcon(sl.key));
     const gm = S.me.craft?.gear?.[id];
     h.querySelector('span').textContent = `${S.items[id].name}${gm?.plus ? ` +${gm.plus}` : ''}${gm?.mw ? ' ★' : ''}`;
     h.addEventListener('click', () => { if (open) gearOpen[where].delete(sl.key); else gearOpen[where].add(sl.key); redraw(); });
@@ -4527,8 +4568,10 @@
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'slot empty';
-      b.innerHTML = '<small></small><span>비어 있음</span>';
+      b.classList.add('slot-row');
+      b.innerHTML = '<i class="slot-t"><small></small><span>비어 있음</span></i>';
       b.querySelector('small').textContent = sl.name;
+      b.prepend(slotIcon(sl.key));
       b.addEventListener('click', openInv); // 빈 칸은 소지품을 열어 바로 끼게
       box.appendChild(b);
     }
@@ -4573,8 +4616,10 @@
       d.className = `slot ${id ? `on ${S.items[id]?.rarity || 'common'}` : 'empty'}`;
       if (id && S.items[id]) gearSlotHead(d, sl, id, 'inv', renderInv); // 이름을 누르면 효과가 펼쳐짐 (강화·걸작 표시 포함)
       else {
-        d.innerHTML = '<div style="min-width: 0"><small></small><br><span>비어 있음</span></div>';
+        d.classList.add('slot-row');
+        d.innerHTML = '<i class="slot-t"><small></small><span>비어 있음</span></i>';
         d.querySelector('small').textContent = sl.name;
+        d.prepend(slotIcon(sl.key));
       }
       if (id) {
         const b = document.createElement('button');
@@ -8074,6 +8119,7 @@
   // 기록 안의 리본: 발자취 · 도감 (마지막으로 본 것을 기억)
   let recTab = 'chron';
   function showRec(t) {
+    if (recTab === 'dex' && t !== 'dex') dexForget(); // 도감을 떠나면 본 것의 'new'만 지움
     recTab = t;
     for (const b of document.querySelectorAll('#rec-sub [data-rt]')) { const on = b.dataset.rt === t; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); }
     for (const s of document.querySelectorAll('#rec .rtab')) s.hidden = s.dataset.rt !== t;
@@ -8082,6 +8128,7 @@
     if (t === 'dex') loadDex();
   }
   $('rec-sub').addEventListener('click', (e) => { const b = e.target.closest('[data-rt]'); if (b && !b.classList.contains('on')) showRec(b.dataset.rt); });
+  $('char-dlg').addEventListener('close', dexForget);
   // 도감에 아직 열어 보지 않은 새 칸이 있으면 기록 탭과 도감 리본에 점
   function renderRecDots() {
     const dex = !!S.me?.dexNew, ach = !!S.me?.achNew;
@@ -8139,10 +8186,23 @@
   let dexData = null, dexSec = 'beasts', dexCatOn = 'material';
   const DEX_RARE = { common: '흔함', uncommon: '드묾', rare: '귀함' };
   const DEX_CAT_COL = { material: '#7A8B5E', trophy: '#8E5A3B', meal: '#B07A2E', use: '#4F7A8A', equip: '#5E5A8E', treasure: '#A88A2E', etc: '#8A8A86' }; // 물건 분류 카드의 색 띠
+  // 'new' 표시는 서버에서는 도감을 여는 순간 지워지므로, 화면에서 직접 그 목록을 펼쳐 볼 때까지 따로 기억해 둠
+  // (도감을 열었다가 다른 분류로 옮기거나 다시 열어도 아직 못 본 새 칸은 계속 'new')
+  const dexKeep = new Map(); // 열쇠 → 이번에 화면에 보였는지
+  const dexKey = (e) => `${e.id || e.name}|${e.at}`;
+  const dexAll = (X) => [...X.beasts.flatMap((g) => g.list), ...X.bosses, ...X.fish, ...X.items.flatMap((c) => c.list)];
+  function dexForget() { for (const [k, shown] of dexKeep) if (shown) dexKeep.delete(k); } // 보고 나서 떠나면 그때 지움
   function loadDex() {
     socket.emit('dex:get', {}, (res) => {
       if (res.error) return toast(res.error);
+      dexForget();
       dexData = res.dex;
+      for (const e of dexAll(dexData)) {
+        if (!e.seen) continue;
+        const k = dexKey(e);
+        if (e.fresh && !dexKeep.has(k)) dexKeep.set(k, false);
+        if (dexKeep.has(k)) e.fresh = true;
+      }
       if (S.me) S.me.dexNew = false;
       renderRecDots();
       renderDex();
@@ -8150,17 +8210,19 @@
   }
   function dexChips(box, list, cur, pick) {
     box.replaceChildren();
-    for (const [k, label] of list) {
+    for (const [k, label, fresh] of list) {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = `chipbtn${cur === k ? ' on' : ''}`;
       b.setAttribute('aria-pressed', String(cur === k));
       b.textContent = label;
+      if (fresh) { const n = document.createElement('span'); n.className = 'dex-new'; n.textContent = 'new'; b.appendChild(n); } // 이 분류에 새로 얻은 것이 있음
       b.addEventListener('click', () => pick(k));
       box.appendChild(b);
     }
   }
   function dexRow(e) {
+    if (e.fresh) { const k = dexKey(e); if (dexKeep.has(k)) dexKeep.set(k, true); } // 화면에 보였음
     const row = document.createElement('div');
     row.className = `tt dex${e.seen ? '' : ' locked'}${e.rarity ? ` r-${e.rarity}` : e.elite ? ' r-elite' : ''}`;
     const b = document.createElement('b');
@@ -8182,7 +8244,9 @@
     const [s, n] = X.total;
     $('dex-note').textContent = `대륙에서 보고 얻은 것들의 기록이다. ${s} / ${n} (${Math.round((s / n) * 100)}%). 처음 보면 약점·특기와 나오는 곳이 적힌다.`;
     const P = X.parts;
-    const tl = (k, label) => [k, `${label} ${P[k][0]}/${P[k][1]}`];
+    const anyFresh = (list) => list.some((e) => e.fresh);
+    const secFresh = { beasts: anyFresh(X.beasts.flatMap((g) => g.list)), bosses: anyFresh(X.bosses), fish: anyFresh(X.fish), items: anyFresh(X.items.flatMap((c) => c.list)) };
+    const tl = (k, label) => [k, `${label} ${P[k][0]}/${P[k][1]}`, secFresh[k]];
     dexChips($('dex-secs'), [tl('beasts', '사냥감'), tl('bosses', '재앙'), tl('fish', '물고기'), tl('items', '물건')], dexSec, (k) => { dexSec = k; renderDex(); });
     const cats = $('dex-cats');
     cats.hidden = dexSec !== 'items';
@@ -8197,6 +8261,7 @@
         const nm = document.createElement('span'); nm.textContent = c.name;
         const n = document.createElement('span'); n.className = 'n'; n.textContent = `${c.list.filter((e) => e.seen).length}/${c.list.length}`;
         b.append(nm, n);
+        if (anyFresh(c.list)) { const f = document.createElement('span'); f.className = 'dex-new'; f.textContent = 'new'; b.appendChild(f); }
         b.addEventListener('click', () => { dexCatOn = c.cat; renderDex(); });
         cats.appendChild(b);
       }
