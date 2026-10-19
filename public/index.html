@@ -1410,13 +1410,14 @@
   .chat-view button:not(.on):hover { color: var(--ink-2); }
   .chat-view button:focus-visible { outline: 2px solid var(--steel); outline-offset: -2px; }
   /* 보기에 따라 숨김: 이곳 = 용언·소식 빼고, 용언과 소식 = 그것만 */
-  #log[data-view="here"] .msg.shout, #log[data-view="here"] .sys.news { display: none; }
-  #log[data-view="shout"] .msg:not(.shout), #log[data-view="shout"] .sys:not(.news) { display: none; }
+  #log[data-view="here"] .msg.shout, #log[data-view="here"] .sys.wnews { display: none; }
+  #log[data-view="shout"] .msg:not(.shout), #log[data-view="shout"] .sys:not(.wnews) { display: none; }
   /* 기록으로 남는 대륙 소식 (쓰러짐·구조·광폭화·부고): 알림 줄 모양에 시각 */
-  .log .sys time { margin-left: 6px; font-size: 10.5px; color: #A3A6A9; font-variant-numeric: tabular-nums; font-weight: 400; }
-  .log .sys.news { color: #6A5A3A; background: #F6F1E6; }
-  .log .sys.news.alarm { color: #A63E4B; background: #F8ECEE; }
-  .log .sys.news.bye { color: #4A4F55; background: #ECEDEC; }
+  .log .sys time { display: inline; margin-left: 6px; font-size: 10.5px; color: #A3A6A9; font-variant-numeric: tabular-nums; font-weight: 400; white-space: nowrap; }
+  /* 'news'는 업데이트 노트 칸과 이름이 겹쳐서(세로로 쌓는 규칙) 'wnews'로 */
+  .log .sys.wnews { color: #6A5A3A; background: #F6F1E6; }
+  .log .sys.wnews.alarm { color: #A63E4B; background: #F8ECEE; }
+  .log .sys.wnews.bye { color: #4A4F55; background: #ECEDEC; }
 
   /* ── 설정: 내 드래곤 · 계정 ── */
   .bio-form { display: flex; flex-direction: column; gap: 10px; padding: 12px; background: #fff; border: 1px solid var(--line-in); }
@@ -10490,7 +10491,7 @@
   // news: 기록으로 남는 대륙 소식 (쓰러짐·구조·광폭화·부고) — 시각을 붙이고, 보기 칩에서 '용언과 소식'에 함께 나옴
   function addSystem(text, at, news) {
     const p = document.createElement('div');
-    p.className = `sys${text.startsWith('[광폭화]') ? ' alarm' : ''}${news ? ` news${text.startsWith('[부고]') ? ' bye' : ''}` : ''}`;
+    p.className = `sys${text.startsWith('[광폭화]') ? ' alarm' : ''}${news ? ` wnews${text.startsWith('[부고]') ? ' bye' : ''}` : ''}`;
     p.textContent = text;
     if (news && at) { const t = document.createElement('time'); t.textContent = chatTime(at); p.appendChild(t); }
     addLine(p);
