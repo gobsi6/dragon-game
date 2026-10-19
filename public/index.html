@@ -1413,7 +1413,7 @@
   #log[data-view="here"] .msg.shout, #log[data-view="here"] .sys.wnews { display: none; }
   #log[data-view="shout"] .msg:not(.shout), #log[data-view="shout"] .sys:not(.wnews) { display: none; }
   /* 기록으로 남는 대륙 소식 (쓰러짐·구조·광폭화·부고): 알림 줄 모양에 시각 */
-  .log .sys time { display: inline; margin-left: 6px; font-size: 10.5px; color: #A3A6A9; font-variant-numeric: tabular-nums; font-weight: 400; white-space: nowrap; }
+  .log .sys .ntm { display: inline; margin: 0; font: inherit; color: inherit; opacity: .6; font-weight: 400; font-variant-numeric: tabular-nums; white-space: nowrap; }
   /* 'news'는 업데이트 노트 칸과 이름이 겹쳐서(세로로 쌓는 규칙) 'wnews'로 */
   .log .sys.wnews { color: #6A5A3A; background: #F6F1E6; }
   .log .sys.wnews.alarm { color: #A63E4B; background: #F8ECEE; }
@@ -10492,8 +10492,12 @@
   function addSystem(text, at, news) {
     const p = document.createElement('div');
     p.className = `sys${text.startsWith('[광폭화]') ? ' alarm' : ''}${news ? ` wnews${text.startsWith('[부고]') ? ' bye' : ''}` : ''}`;
-    p.textContent = text;
-    if (news && at) { const t = document.createElement('time'); t.textContent = chatTime(at); p.appendChild(t); }
+    // 대륙 소식은 말머리 안에 시각: [구조 요청 10:10] … (시각만 살짝 흐리게)
+    const head = news && at ? /^\[([^\]]+)\]\s*/.exec(text) : null;
+    if (head) {
+      const t = document.createElement('time'); t.className = 'ntm'; t.textContent = chatTime(at);
+      p.append(`[${head[1]} `, t, `] ${text.slice(head[0].length)}`);
+    } else p.textContent = text;
     addLine(p);
   }
   // 기록 한 줄: 대륙 소식이면 알림 줄로, 아니면 말
