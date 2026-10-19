@@ -2414,10 +2414,11 @@
   .wx.fest .fr .done { font-size: 12px; color: #8A3D55; }
 
   /* ── 둥지 이야기: 식구들의 하루를 일기처럼 ── */
-  .nest-story { margin-bottom: 18px; padding: 12px 14px 10px; background: var(--surface-2); border: 1px solid var(--line-in); border-radius: 3px; } /* 둥지 이야기를 감싸는 칸 */
-  .nest-story > h3 { margin-top: 0; }
-  .nest-story > .note { margin: 6px 0 2px; }
-  .nest-story ul { list-style: none; margin: 8px 0 6px; padding: 4px 0 4px 14px; border-left: 2px solid #D9CBA8; display: flex; flex-direction: column; gap: 10px; }
+  .nest-story { margin-bottom: 18px; }
+  /* 장면 목록(로그)만 상자로 감쌈. 제목 '둥지 이야기'는 상자 밖 */
+  .nest-story > .note { margin: 8px 0 0; padding: 10px 14px; background: var(--surface-2); border: 1px solid var(--line-in); border-radius: 3px; }
+  .nest-story ul { position: relative; list-style: none; margin: 8px 0 0; padding: 12px 14px 12px 30px; background: var(--surface-2); border: 1px solid var(--line-in); border-radius: 3px; display: flex; flex-direction: column; gap: 10px; }
+  .nest-story ul::before { content: ""; position: absolute; left: 16px; top: 16px; bottom: 16px; width: 2px; background: #D9CBA8; } /* 타임라인 줄 */
   .nest-story li { position: relative; display: flex; flex-direction: column; gap: 2px; }
   .nest-story li::before { content: ""; position: absolute; left: -19px; top: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--surface-2); border: 2px solid #C2AD7E; }
   .nest-story li:first-child::before { background: #C2AD7E; }
