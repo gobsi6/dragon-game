@@ -1282,6 +1282,46 @@
   .mob-bar small { font-size: 12.5px; line-height: 1.45; color: var(--muted); }
   .mob-bar small .rd { color: #2F5D45; font-weight: 600; }
   .mob-bar .btn { min-height: 34px; padding: 0 14px; font-size: 13px; flex: none; }
+  /* 떠돌이 야바위꾼 */
+  .yaba-bar { background: #F8F3E8; border-color: #D9C9A6; }
+  .yaba-bar small .rd { color: #8A5E2A; font-weight: 600; }
+  /* 창: 밝은 머리(남색 띠 · 장소 · 말 · 금화) 아래 시장 물건 줄처럼 판돈 · 조약돌 · 홀짝 · 소문을 한 장에 */
+  #yaba-dlg .body > * + * { margin-top: 10px; }
+  .yb-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--line-in); border-left: 3px solid #2A4256; border-radius: 4px; background: var(--surface-2); }
+  .yb-where { font-size: 11.5px; letter-spacing: .06em; color: var(--muted); }
+  .yb-say { margin: 4px 0 0; font: 700 15.5px/1.45 var(--serif); color: var(--ink); }
+  .yb-gold { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 16px; background: #F6F1E4; border: 1px solid #E3D6B5; font-size: 13px; }
+  .yb-gold b { font: 700 14px/1 var(--sans); color: #6A4E12; font-variant-numeric: tabular-nums; }
+  .yb-list { gap: 8px; }
+  .yb-list .mk-row { --r: #3C5A73; } /* 시장 줄 앞의 마름모 */
+  .yb-bet { flex-direction: column; align-items: stretch; gap: 10px; }
+  .yb-in { position: relative; display: block; }
+  .yb-in .input { width: 100%; padding-right: 34px; font-variant-numeric: tabular-nums; }
+  .yb-in em { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-style: normal; font-size: 13px; color: var(--muted); pointer-events: none; }
+  .yaba-quick { display: flex; flex-wrap: wrap; gap: 6px; }
+  .yaba-quick .chipbtn { min-height: 30px; padding: 0 11px; font-size: 12.5px; }
+  .yb-board-h { border-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+  .yaba-stones { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; min-height: 66px; padding: 14px 16px; background: #fff; border: 1px solid var(--line-in); border-radius: 0 0 4px 4px; }
+  .yaba-stones .fist { font: 500 13px/1.4 var(--serif); color: var(--muted); }
+  .yaba-stones i { width: 17px; height: 13px; border-radius: 52% 48% 55% 45% / 58% 52% 48% 42%; background: #948C80; animation: yaba-drop .32s ease-out both; }
+  .yaba-stones i:nth-child(3n) { background: #B0A89B; border-radius: 48% 55% 45% 52% / 50% 58% 42% 50%; }
+  .yaba-stones i:nth-child(3n + 2) { background: #7F786E; width: 15px; height: 12px; }
+  @keyframes yaba-drop { from { transform: translateY(-9px) scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
+  .yaba-stones.shake .fist { display: inline-block; animation: yaba-shake .5s ease-in-out; }
+  @keyframes yaba-shake { 20%, 60% { transform: translateX(-4px) rotate(-3deg); } 40%, 80% { transform: translateX(4px) rotate(3deg); } }
+  .yaba-result { min-height: 1.5em; margin: 0; text-align: center; font: 600 13.5px/1.5 var(--serif); color: var(--ink-2); }
+  .yaba-result.win { color: #2F5D45; } .yaba-result.lose { color: #8E3F3F; }
+  .yaba-picks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .yaba-pick { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 58px; }
+  .yaba-pick b { font: 700 19px/1 var(--serif); color: var(--steel-d); }
+  .yaba-pick small { font: 400 11.5px/1.2 var(--sans); color: var(--muted); }
+  .yaba-pick:hover:not(:disabled) { background: #F4F7FA; border-color: #9DB3C6; }
+  .yb-rumor-row .nm small { font-variant-numeric: tabular-nums; }
+  .yaba-rumor-txt { margin: -2px 0 0; padding: 0 4px; font: 400 13.5px/1.7 var(--serif); color: var(--ink-2); }
+  .yaba-rumor-txt:empty { display: none; }
+  .yaba-rumor-txt.muted { color: var(--muted); font-size: 12.5px; }
+  .yaba-rumor-txt .k { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 2px; font: 600 11px/18px var(--sans); background: #EEF4EF; color: #2F5D45; border: 1px solid #A9C4B2; vertical-align: 1px; }
+  @media (prefers-reduced-motion: reduce) { .yaba-stones i, .yaba-stones.shake .fist { animation: none; } }
   .mob-em { flex: none; display: inline-flex; }
   .mob-em .emblem { display: block; }
   .mob-track { display: flex; flex-direction: column; gap: 4px; padding: 8px 12px; border: 1px dashed var(--line-soft); font-size: 12.5px; color: var(--ink-2); }
@@ -2128,7 +2168,7 @@
     .center { order: -1; }  /* 휴대폰에서는 지역과 지도를 먼저 */
     .where h1 { font-size: 26px; }
     .region-card { padding: 16px 14px 14px; gap: 14px; }
-    .side { position: relative; top: auto; height: auto; align-self: stretch; }
+    .side { position: relative; top: auto; height: auto; align-self: stretch; will-change: auto; } /* will-change가 있으면 안의 채팅창(fixed)이 화면이 아니라 이 칸을 기준으로 떠서 페이지 맨 아래로 내려감 */
     /* 폰: 이야기 창은 오른쪽 아래 △ 버튼으로 접어 두고, 누르면 메뉴 바로 위에 떠오름 */
     .chat {
       display: none; position: fixed; z-index: 15; right: 12px; bottom: calc(var(--dock-h, 56px) + 12px);
@@ -2319,6 +2359,11 @@
           <button class="btn" type="button" id="mob-open">말 걸기</button>
         </div>
         <div class="mob-track" id="mob-track" hidden></div>
+        <div class="mob-bar yaba-bar" id="yaba-bar" hidden>
+          <span class="mob-em yaba-em" aria-hidden="true"><svg width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="17" r="16" fill="#F1E7D2" stroke="#B08A3E" stroke-width="1.2"/><ellipse cx="12" cy="20" rx="4.2" ry="3.4" fill="#9A9184"/><ellipse cx="21" cy="21.5" rx="3.6" ry="3" fill="#B3AA9C"/><ellipse cx="17" cy="14" rx="3.9" ry="3.2" fill="#857C70"/><ellipse cx="15.8" cy="12.9" rx="1.2" ry=".8" fill="#E8E2D6" opacity=".7"/></svg></span>
+          <div class="mob-t"><b>떠돌이 야바위꾼</b><small id="yaba-sub"></small></div>
+          <button class="btn primary" type="button" id="yaba-open">말 걸기</button>
+        </div>
         <div class="event-bar raid-bar" id="raid-bar" hidden><span>둥지에 도둑이 들었다. <b id="raid-bar-t"></b></span><button class="btn primary" type="button" id="raid-bar-open">둥지 보기</button></div>
         <div class="event-bar" id="event-bar" hidden><span>일이 생겼다. <b id="event-bar-title"></b></span><button class="btn primary" type="button" id="event-bar-open">살펴보기</button></div>
         <div class="actions" id="actions">
@@ -2475,6 +2520,37 @@
   <div class="row" style="margin-top: 12px"><button class="btn" type="button" id="nest-close">닫기</button></div>
 </dialog>
 
+<dialog class="frame dlg" id="yaba-dlg" aria-labelledby="yaba-dlg-title">
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="yaba-dlg-title">떠돌이 야바위꾼</h2></div>
+  <div class="body">
+    <div class="yb-head">
+      <div><span class="yb-where" id="yaba-left"></span><p class="yb-say" id="yaba-say"></p></div>
+      <span class="yb-gold"><i class="coin" aria-hidden="true"></i><b id="yaba-gold"></b></span>
+    </div>
+    <div class="mk-list yb-list">
+      <div class="mk-row yb-bet">
+        <div class="nm"><b>판돈</b><small>맞히면 건 만큼 따고, 틀리면 건 만큼 잃는다.</small></div>
+        <label class="yb-in"><span class="sr">걸 금화</span><input class="input" type="number" id="yaba-bet" min="1" step="1" inputmode="numeric" placeholder="걸 금화"><em aria-hidden="true">닢</em></label>
+        <div class="yaba-quick" id="yaba-quick">
+          <button type="button" class="chipbtn" data-q="10">+10</button><button type="button" class="chipbtn" data-q="50">+50</button><button type="button" class="chipbtn" data-q="100">+100</button><button type="button" class="chipbtn" data-q="half">절반</button><button type="button" class="chipbtn" data-q="all">전부</button><button type="button" class="chipbtn" data-q="clear">지우기</button>
+        </div>
+      </div>
+      <div class="yb-board">
+        <div class="mk-row yb-board-h"><div class="nm"><b>조약돌</b><small>홀수면 홀, 짝수면 짝</small></div></div>
+        <div class="yaba-stones" id="yaba-stones" aria-live="polite"><span class="fist">주먹을 꽉 쥐고 있다</span></div>
+      </div>
+      <p class="yaba-result" id="yaba-result" aria-live="polite"></p>
+      <div class="yaba-picks"><button class="btn yaba-pick" type="button" data-p="odd"><b>홀</b><small>홀수에 걸기</small></button><button class="btn yaba-pick" type="button" data-p="even"><b>짝</b><small>짝수에 걸기</small></button></div>
+      <div class="mk-row yb-rumor-row" id="yaba-rumor">
+        <div class="nm"><b>소문</b><small id="yaba-rumor-n"></small></div>
+        <div class="ctl"><button class="btn mk-go" type="button" id="yaba-rumor-btn">듣기</button></div>
+      </div>
+      <p class="yaba-rumor-txt" id="yaba-rumor-txt"></p>
+    </div>
+    <div class="row"><button class="btn" type="button" id="yaba-close">그만두기</button></div>
+  </div>
+</dialog>
 <dialog class="frame dlg wide" id="ruin-dlg" aria-labelledby="ruin-dlg-title">
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="ruin-dlg-title">생존자 오르샤</h2></div>
@@ -3806,12 +3882,47 @@
   };
   // 함께 간 식구의 말: 나잇대마다 다르게 (child 아기~소년, young 청년, adult 어른·노년, drake 새끼 드래곤)
   const TRIP_KIN = {
-    child: ['{call}, 저기 봐! 저기!', '{call}, 꽉 잡고 있을게!', '구름 만져 보고 싶어!', '우와, 엄청 높다!', '배고파… 조금만 쉬었다 가자.', '졸려… 등 위에서 자도 돼?', '바람이 간지러워!', '방금 그거 봤어? 엄청 빨랐어!', '언제 도착해?'],
-    young: ['{call}, 다음엔 내가 앞에서 날아 볼게.', '이 정도 바람쯤은 아무것도 아니야.', '저 아래 길, 나중에 혼자 걸어 보고 싶어.', '다음엔 내가 길을 찾아볼게.', '조금만 더 높이 날아 줄래? 멀리까지 보고 싶어.', '여기 풍경, 꼭 기억해 둬야지.', '무서운 거 아니야. 그냥… 좀 높을 뿐이야.'],
+    child: ['{call}, 저기 봐! 저기!', '{call}, 꽉 잡고 있을게!', '구름 만져 보고 싶어!', '우와, 엄청 높다!', '배고파… 조금만 쉬었다 가자.', '졸려… 등 위에서 자도 돼?', '바람이 간지러워!', '방금 그거 봤어? 엄청 빨랐어!', '언제 도착해?',
+      '{call}, 저 구름 토끼처럼 생겼다!', '내 그림자 봐! 엄청 작아!', '새들이 우리 따라와!', '{call} 비늘 따뜻하다…', '높이 나니까 귀가 멍멍해.', '이거 나중에 친구들한테 다 자랑할 거야!',
+      '{call}, 저기 집들이 장난감 같아!', '나도 날개 있었으면 좋겠다.', '노래 불러도 돼? 아아아—', '{call}, 우리 지금 얼마나 높이 있어?', '저 산 꼭대기엔 누가 살아?', '흔들려도 안 무서워! …조금 무서워.',
+      '손 흔들면 저 사람들도 흔들어 줄까?', '{call}, 배에서 꼬르륵 소리 났어.', '바람 냄새가 달라졌어!', '{call} 등이 세상에서 제일 좋아.', '하나, 둘, 셋… 구름 다섯 개 지나갔어!', '저기 강이 반짝반짝해!',
+      '집에 가면 오늘 거 다 얘기해 줄 거야.', '{call}, 나 안 졸려. 진짜 안 졸려…', '방금 하품한 거 아니야!', '안 무서워? 난 하나도 안 무서워!', '{call}, 우리 길 잃은 거 아니지?', '저 새는 이름이 뭐야?',
+      '오늘 저녁엔 뭐 먹어?', '{call}, 꼭 잡고 있으니까 천천히 가도 돼.'],
+    young: ['{call}, 다음엔 내가 앞에서 날아 볼게.', '이 정도 바람쯤은 아무것도 아니야.', '저 아래 길, 나중에 혼자 걸어 보고 싶어.', '다음엔 내가 길을 찾아볼게.', '조금만 더 높이 날아 줄래? 멀리까지 보고 싶어.', '여기 풍경, 꼭 기억해 둬야지.', '무서운 거 아니야. 그냥… 좀 높을 뿐이야.',
+      '{call}, 날개 아프면 말해. 잠깐 내려가서 걸어도 돼.', '여기 지형, 돌아가서 지도에 그려 둬야겠다.', '예전엔 이 높이가 무서웠는데, 이젠 괜찮아.', '{call}, 나 요즘 좀 컸지?',
+      '바람 방향이 바뀌었어. 왼쪽으로 기울이는 게 좋겠어.', '짐은 내가 꽉 잡고 있을게.', '조용하네. 이런 시간, 좋아.', '다음 원정은 내가 계획을 세워 볼게.', '저기 연기 보여? 누가 불을 피웠나 봐.',
+      '무슨 일 생기면 내가 먼저 내려갈게.', '{call}, 이렇게 같이 멀리 오는 거, 예전엔 상상도 못 했어.', '배고프진 않아. 아직은.', '여기서 보면 우리 둥지는 어느 쪽일까?', '저 짐승 발자국, 꽤 커. 조심하자.',
+      '가끔은 나도 {call}처럼 날 수 있으면 좋겠어.', '오늘 밤 불침번은 내가 설게.', '혼자서도 할 수 있다는 거, 보여 줄게.', '{call}, 고마워. 데려와 줘서.', '하늘 위에선 걱정이 작아지는 것 같아.',
+      '어릴 땐 등 위에서 맨날 잠들었었지.', '저 별 이름, 전에 알려 줬던 거 기억나.', '언젠가 나도 누군가를 이렇게 데리고 다닐 수 있을까.'],
     adult: ['{call}, 조금 쉬어 가요. 날개가 지쳐 보여요.', '바람이 바뀌는군. 서두르지 말고 가자.', '저 구름 모양을 보니 내일은 비가 오겠어.', '이 길은 예전에도 와 본 적이 있지.', '조금 쉬어 가는 게 좋겠어. 날개가 지쳐 보여.', '저쪽은 위험하니 돌아가자.', '이렇게 함께 다니는 것도 오랜만이네.'],
     drake: ['(꼬리를 흔들며 끼룩 하고 울었다)', '(작은 날개를 열심히 퍼덕였다)', '(저 아래를 향해 작게 불꽃을 뿜어 보았다)', '(바람을 타 보려다 비틀거렸다)', '(등에 바짝 붙어 고개를 묻었다)'],
   };
-  const TRIP_KIN_START = { child: ['같이 가서 신나!', '꽉 잡을게!', '출발이다!'], young: ['이번엔 나도 도움이 될 거야.', '준비됐어. 가자.'], adult: ['길은 내가 봐 둘게.', '조심해서 다녀오자.'], drake: ['(신이 나서 날개를 파닥였다)'] };
+  const TRIP_KIN_START = {
+    child: ['같이 가서 신나!', '꽉 잡을게!', '출발이다!', '오늘은 어디 가?', '간식 챙겼어!', '{call} 등 꽉 잡았어!', '나 하나도 안 무서워!', '모험이다, 모험!'],
+    young: ['이번엔 나도 도움이 될 거야.', '준비됐어. 가자.', '짐은 내가 들게.', '오늘은 내가 길을 볼게.', '이번엔 뭘 찾게 될까.', '출발하자. 해 지기 전에 닿게.', '{call}, 무리하지 말고 가자.'],
+    adult: ['길은 내가 봐 둘게.', '조심해서 다녀오자.'], drake: ['(신이 나서 날개를 파닥였다)'],
+  };
+  // 지역마다 아이·청년이 하는 말 (꾸밈 이야기 중 식구의 말 차례에 가끔 섞임)
+  const TRIP_KIN_REGION = {
+    plains: { child: ['풀밭이 바다처럼 출렁거려!', '저기 들소다! 엄청 많아!', '{call}, 풀밭에 내려가서 굴러 보고 싶어!'], young: ['평원은 어디서 봐도 끝이 없네.', '들소 떼가 움직이는 방향을 보면 바람을 알 수 있대.'] },
+    snow: { child: ['눈 먹어 봐도 돼?', '{call}, 손이 꽁꽁 얼었어. 비늘에 대고 있을게.', '하얀 거밖에 안 보여!', '눈사람 만들고 싶다!'], young: ['숨 쉴 때마다 하얀 김이 나와.', '설원은 조용해서 좋아. 대신 너무 춥지만.', '얼음 동굴 쪽은 가까이 가지 말자.'] },
+    ruins: { child: ['저 돌 기둥 엄청 커!', '옛날 사람들은 여기서 뭐 했어?', '저기 그림 새겨져 있어!'], young: ['이 돌에 새긴 글자, 언젠가 읽을 수 있으면 좋겠어.', '무너진 데도 이렇게 아름다울 수 있구나.'] },
+    forest: { child: ['나무가 하늘까지 닿을 것 같아!', '안개 냄새 이상해…', '{call}, 숲속에 요정 있어?'], young: ['안개가 짙어. 낮게 날지 말자.', '고목 쪽에서 뭔가 움직이는 소리가 났어.'] },
+    swamp: { child: ['으, 냄새!', '물속에서 뭐가 쳐다봤어!', '반딧불이다! 하나만 잡아 줘!'], young: ['늪 위로는 빨리 지나가는 게 좋겠어.', '저 거품, 그냥 거품은 아닌 것 같은데.'] },
+    coast: { child: ['바다다! 엄청 넓어!', '{call}, 물고기 잡아 줘!', '파도 소리가 쿵쿵해!'], young: ['바다 냄새, 좋다.', '저 멀리 배가 보여. 어디까지 가는 걸까.'] },
+    canyon: { child: ['야호— 하면 대답해!', '바위가 빨개! 불난 거 아니지?'], young: ['협곡 바람은 갑자기 바뀌어. 조심해.', '절벽에 둥지 튼 새들, 대단하다.'] },
+    volcano: { child: ['뜨거워! 발 데일 것 같아!', '{call}, 산이 숨 쉬는 소리가 나!'], young: ['재가 눈에 들어가. 조금만 높이 날자.', '여긴 오래 있을 곳이 못 돼.'] },
+    capital: { child: ['사람이 엄청 많아!', '{call}, 저기 성에 깃발 있어!'], young: ['인간들 도시는 언제 봐도 시끄럽네.'] },
+    ruin: { child: ['{call}, 여기 무서워…', '왜 다 회색이야?', '집에 가고 싶어…'], young: ['여기선 나도 정신 단단히 차릴게.', '이 땅에도 예전엔 누가 살았겠지.', '{call}, 너무 오래 있지 말자.'] },
+  };
+  // 실제로 일어난 일에 식구가 하는 말 (싸움 · 귀한 발견 · 다침 · 쉬어 감 · 갈림길)
+  const TRIP_KIN_REACT = {
+    fight: { child: ['{call} 최고야!', '우와, 한 방에!', '나도 크면 저렇게 할 거야!', '무, 무서웠던 거 아니야!', '{call}, 안 다쳤어?'], young: ['깔끔했어. 다친 데는 없지?', '다음엔 나도 거들게.', '등 뒤는 내가 봐 둘게.', '역시 대단해.'], adult: ['잘했어. 그래도 무리는 하지 마.'], drake: ['(덩달아 작게 으르렁거렸다)'] },
+    rare: { child: ['반짝반짝해! 나 만져 봐도 돼?', '보물이다, 보물!', '{call}, 그거 나 주면 안 돼?'], young: ['그거, 꽤 귀한 것 같은데.', '눈이 밝네, {call}.', '오늘 운이 좋다.'], adult: ['좋은 걸 찾았구나.'], drake: ['(눈을 동그랗게 뜨고 들여다보았다)'] },
+    scrape: { child: ['{call}, 아파? 호 해 줄게.', '괜찮아? 피 나?'], young: ['괜찮아? 잠깐 쉬어 가자.', '상처는 돌아가서 꼭 보자.'], adult: ['서두르지 말자. 천천히 가.'], drake: ['(걱정스럽게 끼룩 울었다)'] },
+    heal: { child: ['따뜻해… 여기서 자고 싶다.', '조금만 더 있다 가자!'], young: ['이런 쉼도 필요하지.', '볕이 좋다.'], adult: ['잘 쉬었다.'], drake: ['(볕 아래 동그랗게 몸을 말았다)'] },
+    fork: { child: ['{call} 말대로 할래!', '어느 쪽이든 따라갈게!'], young: ['좋은 선택이었어.', '나라도 그 길을 골랐을 거야.'], adult: ['그래, 그 길이 낫겠지.'], drake: ['(고개를 갸웃했다)'] },
+  };
   // 원정마다 같은 이야기가 나오도록, 출발 시각으로 정해지는 난수
   // 아이가 보호자를 부르는 말: 성별 칸이 여성이면 엄마, 남성이면 아빠, 그 밖에는 이름
   const tripCall = () => { const g = S.me?.bio?.gender || ''; return g === '여성' ? '엄마' : g === '남성' ? '아빠' : (S.me?.name || ''); };
@@ -3841,16 +3952,31 @@
     // 함께 간 식구 {name, age} (예전 원정은 이름만 있음 → 아이로)
     const kin = (e.went?.length ? e.went : TRIP_WENT).map((k) => (typeof k === 'string' ? { name: k, age: 'child' } : k));
     const out = [{ at: e.start, parts: [`${rg?.name || '먼 곳'}${ro(rg?.name || '먼 곳')} 날개를 펼쳤다.${kin.length ? ` ${kin.map((k) => k.name).join(', ')}${josa(kin.at(-1).name, '이', '가')} 함께 따라나섰다.` : ''}`] }];
-    if (kin.length) out.push({ at: e.start + 4000, parts: [TRIP_PICK(tripRand(seed + 11), TRIP_KIN_START[kin[0].age] || TRIP_KIN_START.child)], who: kin[0].name, age: kin[0].age });
+    if (kin.length) out.push({ at: e.start + 4000, parts: [TRIP_PICK(tripRand(seed + 11), TRIP_KIN_START[kin[0].age] || TRIP_KIN_START.child).replace('{call}', tripCall())], who: kin[0].name, age: kin[0].age });
     const until = Math.min(now, e.end);
     // 실제로 일어난 일
     const real = (e.plan || []).map((x) => ({ at: e.start + x.t, x })).filter((y) => y.at <= until);
-    for (const y of real) { const t = tripReal(y.x, tripRand(seed + y.x.t)); if (t) out.push({ at: y.at, ...t, real: true }); } // 일마다 제 난수
+    for (const y of real) {
+      const t = tripReal(y.x, tripRand(seed + y.x.t)); // 일마다 제 난수
+      if (!t) continue;
+      out.push({ at: y.at, ...t, real: true });
+      // 함께 간 식구가 있으면 절반쯤 한마디 (귀한 발견이면 늘)
+      const key = y.x.k === 'item' ? (t.kind === 'rare' ? 'rare' : null) : y.x.k;
+      const R = key && TRIP_KIN_REACT[key];
+      const rr = tripRand(seed + y.x.t + 7);
+      if (R && kin.length && (key === 'rare' || rr() < 0.5)) {
+        const k = kin[Math.floor(rr() * kin.length)];
+        out.push({ at: y.at + 5000, parts: [TRIP_PICK(rr, R[k.age] || R.child).replace('{call}', tripCall())], who: k.name, age: k.age });
+      }
+    }
     // 갈림길
     const f = e.fork;
     if (f?.text && f.at <= until) {
       out.push({ at: f.at, parts: [`갈림길에 닿았다. ${f.text}`], real: true });
-      if (f.picked) out.push({ at: f.at + 1000, parts: [`— ${f.picked}. ${f.outcome || ''}`], real: true });
+      if (f.picked) {
+        out.push({ at: f.at + 1000, parts: [`— ${f.picked}. ${f.outcome || ''}`], real: true });
+        if (kin.length) { const rr = tripRand(seed + f.at), k = kin[Math.floor(rr() * kin.length)]; out.push({ at: f.at + 6000, parts: [TRIP_PICK(rr, TRIP_KIN_REACT.fork[k.age] || TRIP_KIN_REACT.fork.child).replace('{call}', tripCall())], who: k.name, age: k.age }); }
+      }
     }
     // 사이사이 꾸밈 이야기 (실제 일과 너무 붙지 않게)
     let t = e.start;
@@ -3864,7 +3990,8 @@
       let text;
       if (pickKin) { // 아이의 말: 최근에 한 말은 다시 하지 않음
         const k = kin[Math.floor(r() * kin.length)];
-        const pool = TRIP_KIN[k.age] || TRIP_KIN.child;
+        const kinLocal = TRIP_KIN_REGION[rg?.realm === 'ruin' ? 'ruin' : e.region]?.[k.age];
+        const pool = kinLocal && r() < 0.35 ? kinLocal : TRIP_KIN[k.age] || TRIP_KIN.child;
         let q = pool[Math.floor(r() * pool.length)], tries = 0;
         while (recent.includes(q) && tries++ < 10) q = pool[Math.floor(r() * pool.length)];
         recent.push(q); if (recent.length > 10) recent.shift();
@@ -5726,7 +5853,108 @@
   // ── 모브 드래곤: 의뢰 · 이야기 · 교환 ──
   let mobTab = 'quest';
   const MOB_TIER = { 1: '쉬움', 2: '보통', 3: '어려움' };
+  // ── 떠돌이 야바위꾼: 같은 장소에 있을 때만 줄이 보이고, 말을 걸면 홀짝 한 판 ──
+  const yabaLeft = (until) => Math.max(1, Math.ceil((until - Date.now()) / 60000));
+  function renderYabaBar() {
+    const y = S.me?.yabawi;
+    const bar = $('yaba-bar');
+    bar.hidden = !y || !!S.me?.exp;
+    if (bar.hidden) { if ($('yaba-dlg').open && !yabaBusy) { $('yaba-dlg').close(); toast('야바위꾼이 판을 접고 떠났다.'); } return; }
+    $('yaba-sub').replaceChildren(`홀짝 한 판 어때? · `);
+    const rd = document.createElement('span'); rd.className = 'rd'; rd.textContent = `${yabaLeft(y.until)}분 뒤 떠난다`;
+    $('yaba-sub').appendChild(rd);
+    if ($('yaba-dlg').open) renderYabaInfo();
+  }
+  let yabaBusy = false;
+  function renderYabaInfo() {
+    const y = S.me?.yabawi;
+    $('yaba-gold').textContent = S.me?.gold ?? 0;
+    // 머리: 지역 · 장소 · 남은 시간 (장소 값이 비어 있으면 그 지역 입구)
+    const rg = S.regions?.[S.region];
+    const pid = S.me?.place && S.places?.[S.me.place]?.region === S.region ? S.me.place : Object.keys(S.places || {}).find((k) => S.places[k].region === S.region);
+    $('yaba-left').textContent = y ? [rg?.name, S.places?.[pid]?.name, `${yabaLeft(y.until)}분 뒤 떠남`].filter(Boolean).join(' · ') : '';
+    renderYabaRumor();
+  }
+  function openYaba() {
+    const y = S.me?.yabawi;
+    if (!y) return toast('야바위꾼이 여기에 없다.');
+    const g = y.greet || [];
+    $('yaba-say').textContent = `"${g[Math.floor(Math.random() * g.length)] || '한 판 어때?'}"`;
+    $('yaba-stones').replaceChildren(Object.assign(document.createElement('span'), { className: 'fist', textContent: '주먹을 꽉 쥐고 있다' }));
+    $('yaba-result').textContent = ''; $('yaba-result').className = 'yaba-result';
+    const inp = $('yaba-bet');
+    if (!inp.value) inp.value = Math.min(10, S.me.gold || 0) || '';
+    yabaRumorShown = null;
+    renderYabaInfo();
+    $('yaba-dlg').showModal();
+    socket.emit('yabawi:talk', {}, (res) => { if (res?.lines?.length) toast(res.lines.join(' ')); }); // 이번 판에 처음이면 만난 횟수를 셈
+  }
+  // 소문: '야바위꾼의 단골' 칭호를 달고 있으면 나타날 때마다 하나
+  let yabaRumorShown = null; // 이번에 창을 연 동안 들은 소문 (다시 그려도 남게)
+  const YABA_KIND = { '에레보스 이야기': 'ruin', '대륙의 옛이야기': 'tale', '귀띔': 'tip' };
+  function renderYabaRumor() {
+    const y = S.me?.yabawi;
+    if (!y) return;
+    const txt = $('yaba-rumor-txt'), btn = $('yaba-rumor-btn');
+    $('yaba-rumor-n').textContent = y.rumor === 'locked' ? '야바위꾼이 아는 이야기' : `들은 소문 ${yabaRumorShown?.heard ?? y.heard} / ${y.rumors}`;
+    txt.replaceChildren(); txt.className = 'yaba-rumor-txt';
+    if (yabaRumorShown) {
+      const k = document.createElement('span'); k.className = 'k'; k.textContent = yabaRumorShown.kind;
+      txt.append(k, `"${yabaRumorShown.text}"`);
+    } else if (y.rumor === 'locked') { txt.classList.add('muted'); txt.textContent = y.rumorLocked; }
+    else if (y.rumor === 'used') { txt.classList.add('muted'); txt.textContent = y.rumorUsed; }
+    else txt.textContent = '';
+    btn.disabled = y.rumor !== 'ok' || !!yabaRumorShown;
+    btn.hidden = y.rumor === 'locked';
+  }
+  $('yaba-rumor-btn').addEventListener('click', () => {
+    socket.emit('yabawi:rumor', {}, (res) => {
+      if (res.error) { toast(res.error); return; }
+      yabaRumorShown = res;
+      if (res.lines?.length) toast(res.lines.join(' '));
+      renderYabaRumor();
+    });
+  });
+  $('yaba-open').addEventListener('click', openYaba);
+  $('yaba-close').addEventListener('click', () => $('yaba-dlg').close());
+  $('yaba-quick').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-q]'); if (!b) return;
+    const inp = $('yaba-bet'), gold = S.me?.gold || 0, cur = Math.max(0, Math.floor(Number(inp.value) || 0));
+    const q = b.dataset.q;
+    inp.value = q === 'all' ? gold : q === 'half' ? Math.floor(gold / 2) : q === 'clear' ? '' : Math.min(gold, cur + Number(q));
+  });
+  $('yaba-dlg').querySelector('.yaba-picks').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-p]'); if (!b || yabaBusy) return;
+    const bet = Math.floor(Number($('yaba-bet').value) || 0);
+    if (bet < 1) return toast('걸 금화를 적자.');
+    if (bet > (S.me?.gold || 0)) return toast('가진 금화보다 많이 걸 수는 없다.');
+    yabaBusy = true;
+    const picks = $('yaba-dlg').querySelectorAll('.yaba-pick');
+    picks.forEach((x) => { x.disabled = true; });
+    const box = $('yaba-stones');
+    box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake');
+    $('yaba-result').textContent = '야바위꾼이 주먹을 흔든다…'; $('yaba-result').className = 'yaba-result';
+    socket.emit('yabawi:play', { bet, pick: b.dataset.p }, (res) => {
+      setTimeout(() => {
+        yabaBusy = false;
+        picks.forEach((x) => { x.disabled = false; });
+        box.classList.remove('shake');
+        if (res.error) { $('yaba-result').textContent = ''; toast(res.error); renderYabaBar(); return; }
+        box.replaceChildren(...Array.from({ length: res.stones }, (_, i) => { const s = document.createElement('i'); s.style.animationDelay = `${i * 60}ms`; return s; }));
+        $('yaba-result').textContent = `조약돌 ${res.stones}개, ${res.stones % 2 ? '홀' : '짝'}! ${res.win ? `금화 ${res.bet}닢을 땄다.` : `금화 ${res.bet}닢을 잃었다.`}`;
+        $('yaba-result').className = `yaba-result ${res.win ? 'win' : 'lose'}`;
+        $('yaba-say').textContent = `"${res.say}"`;
+        SFX.play(res.win ? 'coin' : 'error');
+        const extra = res.lines.slice(3); if (extra.length) toast(extra.join(' '));
+        if ($('yaba-bet').value > res.gold) $('yaba-bet').value = res.gold || '';
+        renderYabaInfo();
+      }, 550); // 주먹을 흔드는 동안 기다렸다가 펼침
+    });
+  });
+  setInterval(() => { if (!$('yaba-bar').hidden) renderYabaBar(); }, 30000);
+
   function renderMobBar() {
+    renderYabaBar();
     const me = S.me;
     if (!me || !S.mobs) return;
     const mb = S.mobs[S.region];
@@ -8160,6 +8388,22 @@
   // ── 하단 메뉴 화면: 가운데 칸에 펼치기 ──
   // 팝업(모달) 대신 지역 카드와 지도 자리에 보여 준다. 다른 메뉴를 열면 바뀌고, '대륙'이나 닫기로 돌아간다
   const PANELS = ['char-dlg', 'nest-dlg', 'inv-dlg', 'craft-dlg', 'ledger-dlg', 'friends-dlg', 'arena-dlg']; // 텔레파시는 지금 화면 위에 팝업으로
+  // 팝업창 바깥(어두운 배경)을 누르면 Esc와 똑같이 닫힘. 'cancel'을 막아 둔 창(확인을 눌러야 하는 창, 싸우는 중의 전투 창 등)은 그대로 남음
+  // 거래·초대·그림 자르기는 잘못 눌러 취소되지 않게 바깥 누르기로는 닫지 않음
+  const NO_OUTSIDE = new Set(['trade-dlg', 'invite-dlg', 'crop']);
+  const outsideOf = (d, e) => { const r = d.getBoundingClientRect(); return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom; };
+  const isModal = (d) => { try { return d.matches(':modal'); } catch { return !d.classList.contains('as-panel'); } };
+  let pressedOutside = null; // 누르기 시작한 곳도 바깥이어야 (창 안에서 끌다가 바깥에서 놓으면 닫지 않음)
+  document.addEventListener('pointerdown', (e) => {
+    const d = e.target;
+    pressedOutside = d instanceof HTMLDialogElement && d.open && isModal(d) && !NO_OUTSIDE.has(d.id) && outsideOf(d, e) ? d : null;
+  }, true);
+  document.addEventListener('click', (e) => {
+    const d = pressedOutside; pressedOutside = null;
+    if (!d || e.target !== d || !d.open || !outsideOf(d, e)) return;
+    if (d.dispatchEvent(new Event('cancel', { cancelable: true }))) d.close();
+  });
+
   function openPanel(id) {
     const dlg = $(id);
     if (dlg.open) return;
@@ -9660,6 +9904,19 @@
       gmCall('gm:announce', { text: ta.value }, () => { GM.draft = ''; toast('공지를 보냈다.'); });
     }, 'primary');
     body.appendChild(r);
+
+    // 떠돌이 야바위꾼 (시험용으로 바로 부르기, 오늘 시간표)
+    const ysec = gmSection(body, '떠돌이 야바위꾼', '하루 네 번 한 시간씩 저절로 나타난다. 시험해 보려면 지금 바로 불러 한 시간 동안 판을 벌이게 할 수 있다 (전체 알림이 나간다).');
+    const yr = gEl('div', 'gm-r');
+    const yinfo = gEl('p', 'note');
+    const hm = (t) => { const x = new Date(t); return `${String(x.getHours()).padStart(2, '0')}:${String(x.getMinutes()).padStart(2, '0')}`; };
+    const yshow = (res) => {
+      const w = res.where;
+      yinfo.textContent = (w ? `지금: ${w.regionName} · ${w.placeName} (${hm(w.until)}까지)` : '지금은 나와 있지 않다.') + ' · 오늘: ' + res.today.map((s) => `${hm(s.start)} ${s.region}·${s.place}`).join(' / ');
+    };
+    gBtn(yr, '지금 바로 부르기', () => { if (!confirm('야바위꾼을 지금 불러 한 시간 동안 판을 벌이게 할까?')) return; gmCall('gm:yabawi', { summon: true }, (res) => { toast('야바위꾼을 불렀다.'); yshow(res); }); });
+    gBtn(yr, '어디 있는지·오늘 시간표', () => socket.emit('gm:yabawi', {}, (res) => (res.error ? toast(res.error) : yshow(res))));
+    ysec.appendChild(yr); ysec.appendChild(yinfo);
 
     // 환영 공지
     const wsec = gmSection(body, '환영 공지', '계정마다 처음 대륙에 들어올 때 한 번 뜬다. 줄마다 문단이 되고, 빈 줄 아래는 작은 글씨 안내로 보인다. 2,000자까지.');
