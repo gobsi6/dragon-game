@@ -5,7 +5,7 @@
 
 const {
   REGIONS, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, RECIPES, SLOTS, STANCES, SHOPS, REP_TIERS, repTier, TRADE, NEST, hoardTier, RAID, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, ELEMENTS,
-  CRAFT, SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, SKILLS, FISHING, RUIN, FACILITY, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG, BOSSES, ACHIEVEMENTS,
+  CRAFT, SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, SKILLS, FISHING, RUIN, FACILITY, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG, BOSSES, ACHIEVEMENTS, KEEPSAKES,
 } = require('./game-data');
 
 const SR = STANCE_RULES;
@@ -1205,13 +1205,30 @@ function buffOf(d, now = Date.now()) {
 }
 
 // ── 회복약 사용 ────────────────────────────────────
-function useItem(d, id, have) {
+// opts.from: 받은 선물이면 보낸 이 이름 (보물 상자에 함께 남김), opts.msg: 그때의 쪽지
+function useItem(d, id, have, opts = {}) {
   if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
   const it = ITEMS[id];
   if (!it || it.type !== 'use') return { error: '쓸 수 없는 물건이다.' };
   if (have(id) < 1) return { error: '가지고 있지 않다.' };
   const u = it.use;
   const lines = [];
+  if (u.keep) { // 보물 상자에 넣고 잠금 (꺼낼 수 없음)
+    if (!d.nest) return { error: '둥지를 틀어야 보물 상자에 간직할 수 있다.' };
+    if (d.region !== d.nest) return { error: '보물 상자는 둥지에 있을 때만 열 수 있다.' };
+    chestAdd(d, u.keep, opts.from || '', opts.msg || '');
+    const label = chestLabel({ k: u.keep, n: opts.from || '' });
+    lines.push(`${label}${josa(label, '을', '를')} 보물 상자에 넣고 잠갔다.`);
+    if (opts.msg) lines.push(`함께 받은 쪽지도 접어 넣었다. "${opts.msg}"`);
+    return { title: '보물 상자', lines, items: [{ id, qty: -1 }] };
+  }
+  if (u.crown) { // 화관: 하루 동안 이름 옆에 꽃
+    const c = combatJson(d);
+    const wasOn = crownOn(d);
+    c.crownUntil = Date.now() + u.crown * 60000;
+    lines.push(wasOn ? `시든 화관을 내려놓고 새 ${it.name}${josa(it.name, '을', '를')} 머리에 얹었다.` : `${it.name}${josa(it.name, '을', '를')} 머리에 얹었다. 하루 동안 이름 옆에 작은 꽃이 핀다.`);
+    return { title: it.name, lines, items: [{ id, qty: -1 }] };
+  }
   if (u.nestWard) {
     if (!d.nest || d.region !== d.nest) return { error: '둥지에 있을 때만 설치할 수 있다.' };
     const w = nestInfo(d).wards;
@@ -1805,6 +1822,43 @@ function chaseCheck(d) {
   return null;
 }
 
+// ── 보물 상자 ──────────────────────────────────────
+// 둥지 정보(nest_info)에 { chest: [{ k: 종류(KEEPSAKES), n: 준 이, t: 글(편지·쪽지), at }] }
+// 물건 칸이 아니라서 보물 도둑이 손대지 못하고, 꺼내거나 팔 수도 없음. 하나마다 작은 값어치가 보물더미 가치에 더해짐
+function chestOf(d) {
+  const ni = nestInfo(d);
+  if (!Array.isArray(ni.chest)) ni.chest = [];
+  return ni.chest;
+}
+function chestAdd(d, kind, from = '', text = '', now = Date.now()) {
+  if (!KEEPSAKES[kind] || !d.nest) return false;
+  chestOf(d).push({ k: kind, n: String(from || '').slice(0, 24), t: String(text || '').slice(0, 400), at: now });
+  return true;
+}
+const chestValue = (d) => (d.nest ? chestOf(d).reduce((a, e) => a + (KEEPSAKES[e.k]?.value || 0), 0) : 0);
+// 보이는 이름: '루비의 그림' · '하늘에게 받은 들꽃 꽃다발' · 준 이가 없으면 이름만
+function chestLabel(e) {
+  const K = KEEPSAKES[e.k];
+  if (!K) return '';
+  if (!e.n) return K.name;
+  return K.fmt === 'from' ? `${e.n}에게 받은 ${K.name}` : `${e.n}의 ${K.name}`;
+}
+const chestView = (d) => (d.nest ? chestOf(d).map((e) => ({ k: e.k, label: chestLabel(e), desc: KEEPSAKES[e.k]?.desc || '', text: e.t || '', say: KEEPSAKES[e.k]?.say !== false, at: e.at, value: KEEPSAKES[e.k]?.value || 0 })).reverse() : []);
+// 예전에 보물더미에 물건으로 쌓아 둔 추억 물건(먼 둥지의 편지, 고향의 조약돌)을 상자로 옮김. 돌려주는 것: 보물더미에서 뺄 것
+function chestMigrate(d, hoard) {
+  if (!d.nest) return [];
+  const out = [];
+  for (const x of hoard) {
+    const keep = ITEMS[x.item]?.use?.keep;
+    if (!keep || !['kin_letter', 'elder_keepsake'].includes(x.item) || !(x.qty > 0)) continue;
+    for (let i = 0; i < x.qty; i++) chestAdd(d, keep, '', '', 0);
+    out.push({ id: x.item, qty: -x.qty });
+  }
+  return out;
+}
+// 화관을 쓰고 있는지 (이름 옆 꽃 표시)
+const crownOn = (d, now = Date.now()) => (combatJson(d).crownUntil || 0) > now;
+
 // ── 도감 ───────────────────────────────────────────
 // 전투 설정(combat JSON)에 { dex: { m: { 사냥감 키: [처음 본 시각, 쓰러뜨린 수] }, i: { 물건 id: 처음 얻은 시각 }, f: { 물고기 id: 낚은 수 }, seenAt } }
 // 사냥감 키: 장소 id(사냥감) · 장소 id + '!'(그 장소의 강적) · 'boss:지역'(대륙의 재앙). 시각 0은 '도감이 생기기 전부터'
@@ -2053,4 +2107,5 @@ module.exports = {
   xpNeed, atMaxLevel,
   dexOf, dexMeet, dexWin, dexItems, dexBackfill, dexView, dexSeen, dexHasNew, // 도감
   checkAch, achView, achSeen, achHasNew, // 업적
+  chestOf, chestAdd, chestValue, chestView, chestMigrate, crownOn, // 보물 상자 · 화관
 };

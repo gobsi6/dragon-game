@@ -16,10 +16,10 @@
 //           k(id)(이벤트가 고른 식구, 떠났으면 null) age(식구)(나이, 일) stage(식구)(성장 단계 이름)
 //           canTravel(식구)(원정에 따라갈 나이인지) pick(목록)
 //           weather(지금 날씨 id) season(계절 id) level place(장소 id) hoard(보물더미 [{item, qty}]) hoardValue
-//           bossTrace(하루 안에 재앙이 쓰러지거나 떠난 지역이면 { name, won }) me(내 이름)
+//           bossTrace(하루 안에 재앙이 쓰러지거나 떠난 지역이면 { name, won }) me(내 이름) call(아이가 나를 부르는 말)
 //   식구를 다루는 이벤트는 setup에서 대상 id를 골라 두고, text·run에서 c.k(v.id)로 꺼냅니다.
 //   그 사이 식구가 떠나 버리면 이벤트는 조용히 지나갑니다.
-// h (결과 만들기): say(문장) gold(n) give(id, n) take(id, n) rep(지역, n) fame(n) hp(n) en(n)
+// h (결과 만들기): say(문장) gold(n) give(id, n) take(id, n) rep(지역, n) fame(n) hp(n) en(n) keep(보물 상자 종류, 준 이, 글)
 //           adopt(유래) egg(종류) bond(식구, n) lean(식구, 재주, n) train(새끼, 능력치) leave(식구, 상태)
 //           nudge(새끼, 성향, 일)(성격을 그 성향 쪽으로)
 //           nearestTown() name(식구 → '미르가') josa(말, 받침, 없음)
@@ -50,9 +50,77 @@ const randInt = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 const statName = (k) => STATS.find((x) => x.key === k)?.name || k;
 const bestStat = (kind) => Object.entries(KINDS[kind].stats).sort((a, b) => b[1] - a[1])[0][0]; // 그 종류가 가장 강한 능력치
 const D3 = 3 * 864e5;
+const hasTrait = (k, id) => !!k.data.traits && k.data.traits.includes(id);
+const GIFT_STAGES = ['아이', '소년', '청년', '해츨링', '어린 용', '젊은 용'];
+const giftKids = (c) => [...c.humans, ...c.drakes].filter((x) => GIFT_STAGES.includes(c.stage(x)) && (x.data.bond || 0) >= 40 && c.now - (x.data.giftAt || 0) >= 2 * 864e5);
 const ready = (t, ms) => !t || Date.now() - t > ms; // 다시 일어나기까지의 간격
 
 module.exports = [
+  // ── 아이의 선물: 정이 든 식구가 선물을 들고 옴 → 보물 상자에 (성격·나이에 따라 선물이 다름) ──
+  {
+    id: 'kid_gift',
+    title: '작은 선물',
+    when: ['wake'],
+    weight: 6,
+    cond: (c) => !!c.nest && giftKids(c).length > 0,
+    setup: (c) => {
+      const k = c.pick(giftKids(c));
+      const st = c.stage(k);
+      const call = c.call;
+      const ga = (w) => `${w}${c.josa(w, '이', '가')}`;
+      let kind;
+      if (k.type === 'drake') kind = st === '해츨링' ? 'shiny_pebble' : c.pick(['first_scale', 'shiny_pebble', 'first_scale']);
+      else if (hasTrait(k, 'flowers')) kind = c.pick(['pressed_flower', 'flower_ring']);
+      else if (hasTrait(k, 'handy')) kind = c.pick(['wood_dragon', 'pebble_neck']);
+      else if (hasTrait(k, 'dreamy')) kind = 'kid_drawing';
+      else if (['gentle', 'clingy', 'lonely'].some((t) => hasTrait(k, t))) kind = 'kid_letter';
+      else kind = c.pick(st === '아이' ? ['kid_drawing', 'flower_ring', 'kid_drawing'] : st === '소년' ? ['kid_letter', 'pebble_neck', 'kid_drawing'] : ['kid_letter', 'wood_dragon']);
+      // 상자에 함께 남길 글 (편지는 나이에 따라)
+      const LETTER = {
+        '아이': `${call}에게. 사랑해요. ${ga(call)} 세상에서 제일 커요. 나도 크면 ${call}처럼 하늘을 날 거예요.`,
+        '소년': `${call}, 오늘도 고마워요. 사냥 나갈 때마다 조금 걱정했는데, 무사히 돌아와 줘서 좋아요. 다음엔 나도 데려가 줘요.`,
+        '청년': `${call}. 어릴 땐 몰랐는데, 둥지가 얼마나 따뜻한 곳인지 이제 알 것 같아요. 키워 줘서 고마워요. 이건 쑥스러우니까 나중에 읽어요.`,
+      };
+      const NOTE = {
+        kid_letter: LETTER[st] || LETTER['소년'],
+        kid_drawing: `${call}${c.josa(call, '이랑', '랑')} 나랑 같이 하늘을 나는 그림. 구름 위에 '${call}'${c.josa(call, '이라고', '라고')} 커다랗게 적혀 있다.`,
+        pressed_flower: '책장 사이에 며칠이나 눌러 둔 거예요. 제일 예쁜 걸로 골랐어요.',
+        flower_ring: '발톱엔 안 들어가니까… 그냥 갖고만 있어요!',
+        wood_dragon: `${call}${c.josa(call, '을', '를')} 깎았어요. 꼬리가 좀 짧은 건 나무가 모자라서예요.`,
+        pebble_neck: '강가에서 구멍 난 돌만 골라 꿰었어요. 하나도 똑같은 게 없어요.',
+        first_scale: '처음으로 빠진 비늘이에요. 제일 먼저 보여 주고 싶었어요.',
+        shiny_pebble: '',
+      };
+      return { id: k.id, kind, note: NOTE[kind] || '' };
+    },
+    text: (c, v) => {
+      const k = c.k(v.id);
+      const nm = `${k.name}${c.josa(k.name, '이', '가')}`;
+      const T = {
+        kid_letter: [`눈을 뜨니 ${nm} 접은 종이 한 장을 등 뒤에 숨긴 채 서 있다.`, `"이거… 읽어 봐요." 꾹꾹 눌러 쓴 편지다.`],
+        kid_drawing: [`눈을 뜨니 ${nm} 그림 한 장을 들고 기다리고 있었다.`, `"내가 그렸어요! 이게 ${c.call}고, 이게 나예요!"`],
+        pressed_flower: [`${nm} 두 손을 오므린 채 다가왔다.`, `손바닥 위에는 곱게 눌러 말린 꽃 한 송이가 놓여 있다.`],
+        flower_ring: [`${nm} 풀줄기로 엮은 작은 반지를 내밀었다.`, `"선물이에요!" 반지는 발톱 끝에도 들어가지 않을 만큼 작다.`],
+        wood_dragon: [`${nm} 나뭇조각으로 깎은 작은 인형을 내밀었다.`, `날개를 편 용이다. 며칠 동안 몰래 깎았다고 한다.`],
+        pebble_neck: [`${nm} 조약돌 목걸이를 들고 쭈뼛거린다.`, `구멍 난 조약돌을 실에 하나하나 꿴 것이다.`],
+        first_scale: [`${nm} 무언가를 입에 물고 쪼르르 달려왔다.`, `내려놓은 것은 손톱만 한 비늘 한 조각. 처음으로 빠진 비늘이다.`],
+        shiny_pebble: [`${nm} 반짝이는 조약돌 하나를 물어 와 발치에 내려놓았다.`, `꼬리를 흔들며 올려다본다. 아무래도 보물이라는 모양이다.`],
+      };
+      return T[v.kind] || [`${nm} 작은 선물을 들고 왔다.`];
+    },
+    choices: [
+      { label: '보물 상자에 소중히 넣는다', run: (h, c, v) => {
+        const k = c.k(v.id); k.data.giftAt = c.now;
+        h.keep(v.kind, k.name, v.note); h.bond(k, 3); h.mind(6);
+        h.say(`보물 상자를 열어 가장 안쪽에 넣고 잠갔다. ${h.name(k)} 그 모습을 보고 배시시 웃었다. (유대 +3, 정신 +6)`);
+      } },
+      { label: '꼭 안아 주고 상자에 넣는다', run: (h, c, v) => {
+        const k = c.k(v.id); k.data.giftAt = c.now;
+        h.keep(v.kind, k.name, v.note); h.bond(k, 6); h.mind(3);
+        h.say(`날개로 ${k.name}${h.josa(k.name, '을', '를')} 감싸 안았다. 선물은 보물 상자 가장 안쪽에 넣고 잠갔다. (유대 +6, 정신 +3)`);
+      } },
+    ],
+  },
   // ── 아이를 만나는 길: 성향마다 다름 ──
   {
     id: 'abandoned_baby',
@@ -971,8 +1039,8 @@ module.exports = [
       } },
       { label: '소중히 간직한다', run: (h, c, v) => {
         h.mind(5);
-        if (c.nest) h.hoardGive('kin_letter'); else h.give('kin_letter');
-        h.say(`${v.type === 'human' ? '편지를' : '비늘을'} ${c.nest ? '보물더미 한쪽에' : '품속 깊이'} 넣어 두었다. (정신 +5, 먼 둥지의 편지)`);
+        if (c.nest) h.keep('far_letter', v.name, v.type === 'human' ? '잘 먹고 잘 자요. 가끔 보고 싶어요.' : ''); else h.give('kin_letter');
+        h.say(`${v.type === 'human' ? '편지를' : '비늘을'} ${c.nest ? '보물 상자에 넣고 잠갔다' : '품속 깊이 넣어 두었다'}. (정신 +5, 먼 둥지의 편지)`);
       } },
     ],
   },
@@ -1437,7 +1505,7 @@ module.exports = [
     choices: [
       { label: '등에 태워 다녀온다 (기력 15)', need: (c) => (c.d.en < 15 ? '기력이 모자란다.' : null), run: (h, c, v) => {
         const k = c.k(v.id); k.data.lastWish = 'went'; h.en(-15); h.bond(k, 15); h.mind(20);
-        if (c.nest) h.hoardGive('elder_keepsake'); else h.give('elder_keepsake');
+        if (c.nest) h.keep('home_pebble', k.name, '고마워요. 정말로.'); else h.give('elder_keepsake');
         h.say(`바람을 가르며 날아가는 동안 ${h.name(k)} 어린아이처럼 웃었다. 옛 골목을 내려다보며 오래오래 눈을 감았다.`, `돌아오는 길, 고향 강가에서 주운 조약돌을 손에 쥐여 주었다. "고마워요. 정말로." (유대 +15, 정신 +20, 고향의 조약돌)`);
       } },
       { label: '대신 옛이야기를 들어 준다', run: (h, c, v) => {

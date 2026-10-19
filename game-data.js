@@ -343,8 +343,17 @@ const ITEMS = {
   // 대륙의 재앙을 쓰러뜨리면 나오는 것
   // 이벤트에서 얻는 물건
   star_shard:   { name: '별조각',           rarity: 'rare',     value: 45, desc: '유성우가 내린 밤, 땅에 박힌 채 아직도 희미하게 빛난다.' },
-  elder_keepsake:{ name: '고향의 조약돌',  rarity: 'common',   value: 2,  desc: '늙은 식구가 마지막으로 고향에 다녀오며 주워 온 조약돌. 손때가 묻어 반들반들하다.' },
-  kin_letter:   { name: '먼 둥지의 편지',   rarity: 'common',   value: 2,  desc: '입양 보낸 식구가 보내온 안부. 값어치는 없지만 버릴 수가 없다.' },
+  elder_keepsake:{ name: '고향의 조약돌',  rarity: 'common',   value: 2,  type: 'use', use: { keep: 'home_pebble' }, desc: '늙은 식구가 마지막으로 고향에 다녀오며 주워 온 조약돌. 손때가 묻어 반들반들하다. 둥지의 보물 상자에 넣어 간직할 수 있다.' },
+  kin_letter:   { name: '먼 둥지의 편지',   rarity: 'common',   value: 2,  type: 'use', use: { keep: 'far_letter' }, desc: '입양 보낸 식구가 보내온 안부. 값어치는 없지만 버릴 수가 없다. 둥지의 보물 상자에 넣어 간직할 수 있다.' },
+  // 들꽃: 지역마다 피는 꽃이 다름. 화관·꽃다발의 재료
+  wild_flower:  { name: '들꽃',           rarity: 'common',   value: 2,  desc: '바람 부는 평원에 흐드러지게 핀 작은 꽃. 엮으면 화관이 된다.' },
+  moss_flower:  { name: '이끼꽃',         rarity: 'uncommon', value: 4,  desc: '안개 낀 숲 그늘의 이끼 사이에서만 피는 푸르스름한 꽃.' },
+  sea_bindweed: { name: '갯메꽃',         rarity: 'common',   value: 2,  desc: '해안 절벽 모래땅을 기어가며 피는 분홍 꽃. 짠 바람에도 시들지 않는다.' },
+  snow_flower:  { name: '눈꽃',           rarity: 'uncommon', value: 4,  desc: '설원의 눈 속에서 피어나는 하얀 꽃. 손에 쥐어도 녹지 않는다.' },
+  // 선물용: 꽃다발은 보물 상자에 넣어 간직할 수 있음 (받은 것이면 보낸 이와 쪽지도 함께), 화관은 쓰면 하루 동안 이름 옆에 꽃이 핌
+  flower_crown: { name: '들꽃 화관',      rarity: 'common',   value: 8,  type: 'use', use: { crown: 1440 }, desc: '들꽃을 엮어 만든 화관. 머리에 얹으면 하루 동안 이름 옆에 작은 꽃이 핀다. 누군가에게 선물해도 좋다.' },
+  bouquet_wild: { name: '들꽃 꽃다발',    rarity: 'common',   value: 8,  type: 'use', use: { keep: 'bouquet_wild' }, desc: '평원의 들꽃과 해안의 갯메꽃을 묶은 꽃다발. 선물로 보내거나, 둥지의 보물 상자에 넣어 간직할 수 있다.' },
+  bouquet_four: { name: '네 고장 꽃다발', rarity: 'uncommon', value: 20, type: 'use', use: { keep: 'bouquet_four' }, desc: '평원·숲·해안·설원의 꽃을 하나씩 모아 묶은 꽃다발. 대륙을 한 바퀴 돈 정성이 담겼다. 선물로 보내거나 보물 상자에 넣어 간직할 수 있다.' },
   whisper_ring: { name: '속삭이는 반지',   rarity: 'rare',     type: 'equip', slot: 'charm', bonus: { majesty: 3 }, mindWard: 1.3, value: 60, desc: '보물더미 깊은 곳에서 나온 반지. 끼면 위엄이 차오르지만, 밤마다 속삭임이 정신을 갉아먹는다. (깎이는 정신 +30%)' },
   calamity_core:{ name: '재앙의 핵',        rarity: 'rare',     cat: 'trophy', value: 120, desc: '쓰러진 재앙의 가슴에서 꺼낸, 아직 고동치는 검붉은 핵. 대륙에 몇 개 없는 물건이다.' },
   calamity_charm:{ name: '재앙을 이긴 증표', rarity: 'rare',    type: 'equip', slot: 'charm', bonus: { claw: 2, scale: 2, wing: 1, wisdom: 1, majesty: 2 }, desc: '재앙의 핵을 고대의 유물에 박아 넣었다. 지닌 드래곤의 이름이 대륙에 울린다.' },
@@ -412,6 +421,10 @@ const BUFFS = {
 const RECIPES = [
   // 새끼 드래곤 먹이
   { out: 'roast_meat',    needs: { bait_meat: 2, red_clay: 1 },                          en: 3,  wis: 0 },
+  // 선물용 꽃 (들꽃은 평원, 이끼꽃은 숲, 갯메꽃은 해안, 눈꽃은 설원에서)
+  { out: 'flower_crown', needs: { wild_flower: 3, grass_seed: 1 }, en: 2, wis: 0 },
+  { out: 'bouquet_wild', needs: { wild_flower: 2, sea_bindweed: 1 }, en: 2, wis: 0 },
+  { out: 'bouquet_four', needs: { wild_flower: 1, moss_flower: 1, sea_bindweed: 1, snow_flower: 1 }, en: 3, wis: 1 },
   { out: 'ember_snack',   needs: { bait_meat: 1, volcanic_ash: 1 },                      en: 3,  wis: 0 },
   { out: 'fish_skewer',   needs: { fish_mackerel: 2, salt_crystal: 1 },                  en: 3,  wis: 0 },
   { out: 'dragon_feast',  needs: { bait_meat: 2, fish_salmon: 1, wild_honey: 1 },        en: 6,  wis: 0 },
@@ -904,13 +917,13 @@ const REGION_LOOT = {
   ruin_plain:   { common: ['ashen_dust'], uncommon: ['faded_crest', 'carnem_steel'], rare: ['corrupt_crystal'] },
   ruin_capital: { common: ['ashen_dust'], uncommon: ['faded_crest', 'carnem_steel'], rare: ['corrupt_crystal'] },
   ruin_rift:    { common: ['ashen_dust'], uncommon: ['void_silk', 'blackened_scale'], rare: ['corrupt_crystal'] },
-  plains:  { common: ['grass_seed'],   uncommon: ['wild_honey'],   rare: ['silver_clover'] },
+  plains:  { common: ['grass_seed', 'wild_flower'], uncommon: ['wild_honey'],   rare: ['silver_clover'] },
   capital: { common: ['brass_button'], uncommon: ['silk_scrap'],   rare: ['lost_seal'] },
-  snow:    { common: ['ice_shard'],    uncommon: ['frost_lichen'], rare: ['eternal_ice'] },
+  snow:    { common: ['ice_shard'],    uncommon: ['frost_lichen', 'snow_flower'], rare: ['eternal_ice'] },
   ruins:   { common: ['rune_stone'],   uncommon: ['old_scroll'],   rare: ['ancient_relic'] },
-  forest:  { common: ['poison_herb'],  uncommon: ['glow_moss'],    rare: ['heartwood'] },
+  forest:  { common: ['poison_herb'],  uncommon: ['glow_moss', 'moss_flower'],    rare: ['heartwood'] },
   swamp:   { common: ['black_reed'],   uncommon: ['bog_iron'],     rare: ['bog_pearl'] },
-  coast:   { common: ['sea_shell'],    uncommon: ['amber'],        rare: ['deep_pearl'] },
+  coast:   { common: ['sea_shell', 'sea_bindweed'], uncommon: ['amber'],        rare: ['deep_pearl'] },
   canyon:  { common: ['red_clay'],     uncommon: ['gold_ore'],     rare: ['sun_stone'] },
   volcano: { common: ['volcanic_ash'], uncommon: ['obsidian'],     rare: ['fire_crystal'] },
 };
@@ -1568,6 +1581,24 @@ for (const r of RECIPES) {
   FACILITY.cookable.push(r.out);
 }
 
+// ── 보물 상자: 보물더미 안의 잠긴 상자. 아이의 선물·받은 꽃다발 같은 특별한 물건을 넣음 ──
+// 한번 넣으면 꺼내거나 팔 수 없고, 보물 도둑도 손대지 못함. 하나마다 value만큼 보물더미 가치에 더해짐
+// fmt — of: '루비의 그림' / from: '하늘에게 받은 들꽃 꽃다발' / plain: 이름만 · say: false면 함께 남은 글이 말이 아니라 설명 (따옴표 없이)
+const KEEPSAKES = {
+  kid_drawing:   { name: '그림',              value: 8,  fmt: 'of',   say: false, desc: '삐뚤빼뚤한 선으로 그린 그림. 크레용 자국이 손끝에 묻어난다.' },
+  kid_letter:    { name: '편지',              value: 8,  fmt: 'of',   desc: '또박또박 눌러 쓴 편지. 군데군데 지우고 다시 쓴 자국이 있다.' },
+  pressed_flower:{ name: '눌러 말린 꽃',      value: 6,  fmt: 'of',   desc: '책갈피 사이에 며칠을 눌러 둔 꽃. 색은 바랬지만 모양은 그대로다.' },
+  flower_ring:   { name: '들꽃 반지',         value: 5,  fmt: 'of',   desc: '풀줄기를 엮어 만든 작은 반지. 발톱 끝에도 들어가지 않을 만큼 작다.' },
+  wood_dragon:   { name: '나무로 깎은 용',    value: 10, fmt: 'of',   desc: '나뭇조각을 깎아 만든 작은 용 인형. 꼬리가 조금 짧다.' },
+  pebble_neck:   { name: '조약돌 목걸이',     value: 7,  fmt: 'of',   desc: '구멍 난 조약돌을 실에 꿰어 만든 목걸이. 하나하나 직접 골랐다고 한다.' },
+  first_scale:   { name: '첫 비늘',           value: 10, fmt: 'of',   desc: '처음으로 빠진 작은 비늘. 아직 온기가 남아 있는 것 같다.' },
+  shiny_pebble:  { name: '반짝이는 조약돌',   value: 5,  fmt: 'of',   desc: '어디선가 물어 온 반짝이는 조약돌. 보물이라며 내밀었다.' },
+  far_letter:    { name: '먼 둥지의 편지',    value: 5,  fmt: 'from', desc: '입양 보낸 식구가 보내온 안부.' },
+  home_pebble:   { name: '고향의 조약돌',     value: 5,  fmt: 'from',   desc: '늙은 식구가 마지막으로 고향에 다녀오며 주워 온 조약돌.' },
+  bouquet_wild:  { name: '들꽃 꽃다발',       value: 6,  fmt: 'from', desc: '평원의 들꽃과 해안의 갯메꽃을 묶은 꽃다발. 상자 안에서 곱게 말라 간다.' },
+  bouquet_four:  { name: '네 고장 꽃다발',    value: 10, fmt: 'from', desc: '네 고장의 꽃을 하나씩 모은 꽃다발. 상자 안에서 곱게 말라 간다.' },
+};
+
 // ── 떠돌이 야바위꾼: 하루 네 번, 한 시간씩 대륙 어딘가에 판을 벌임 (yabawi.js) ──
 // 하루(한국 날짜)를 여섯 시간씩 넷으로 나눠 구간마다 한 번, 그 안의 아무 때나 나타남. 지역은 본 대륙 야생 지역 중 하나, 장소는 그 지역 장소 중 하나
 // 전체 알림에는 지역 이름 대신 hint만 나옴. 장소를 찾아가면 '말 걸기'가 생김
@@ -1703,7 +1734,7 @@ const ACHIEVEMENTS = [
 ];
 
 module.exports = {
-  KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, TITLES, TITLE_COUNT_NAMES, ACHIEVEMENTS, YABAWI,
+  KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, TITLES, TITLE_COUNT_NAMES, ACHIEVEMENTS, YABAWI, KEEPSAKES,
   PURIFY, CRAFT, SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, FISHING, RUIN, FACILITY, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
   DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
   COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, DEPART, BONDS, MARKS, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG,

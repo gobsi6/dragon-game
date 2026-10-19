@@ -1016,6 +1016,7 @@ function ctxOf(d, kin, have, trigger, now, region = d.region) {
     pick,
     have, perks: d.perks || {}, stats: logic.statsOf(d), josa,
     rivals: d.rivalsCache || [], me: d.name, regionName: REGIONS[region]?.name || '', // 라이벌 이벤트
+    call: callName(d), // 아이가 나를 부르는 말 (엄마·아빠·이름)
     // 날씨·계절·장소·보물더미·재앙의 흔적 (날씨·둥지 이벤트)
     weather: logic.weatherIdAt(region, now), season: logic.seasonAt(now).id, level: d.level,
     place: region === d.region ? logic.placeOf(d) : null,
@@ -1163,6 +1164,7 @@ function chooseEvent(d, kin, have, idx, now = Date.now()) {
       return n;
     },
     hoardGive: (id, qty = 1) => out.hoardItems.push({ id, qty }),
+    keep: (kind, from = '', text = '') => logic.chestAdd(d, kind, from, text, now), // 보물 상자에 넣음 (도둑이 못 가져가고 꺼낼 수 없음)
     send: (id, items, msg = '') => out.sends.push({ id, items, msg }),
     purify: (n) => { out.purify += n; }, // 오염된 땅의 정화 기여 // 다른 드래곤에게 물건을 보냄 (받은 선물 상자로)
     xp: (n) => { const lv = d.level; logic.gainXp(d, n); if (d.level > lv) out.lines.push(`레벨 ${d.level}${[2, 4, 5, 9].includes(d.level % 10) ? '가' : '이'} 되었다!`); },

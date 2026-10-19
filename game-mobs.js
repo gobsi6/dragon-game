@@ -312,6 +312,8 @@ function stateOf(d) {
   if (!c.mob || typeof c.mob !== 'object') c.mob = {};
   const m = c.mob;
   if (!Array.isArray(m.act)) m.act = [];
+  // 의뢰 목록이 바뀌어 없어진 의뢰는 맡은 목록에서 뺌 (칸만 차지하고 끝낼 수 없게 되지 않도록)
+  if (m.act.some((a) => !MOBS[a.mob]?.pool[a.i])) m.act = m.act.filter((a) => MOBS[a.mob]?.pool[a.i]);
   if (!m.story || typeof m.story !== 'object') m.story = {};
   if (!m.done || typeof m.done !== 'object') m.done = { day: 0, keys: [] };
   if (!m.tr || typeof m.tr !== 'object') m.tr = { day: 0, n: {} };
@@ -572,7 +574,10 @@ function view(d, mobId, have, now = Date.now()) {
   if (!mb) return null;
   const m = stateOf(d);
   const done = todayDone(m, now);
-  const offers = offersOf(mobId, now).map((i) => {
+  // 오늘 내미는 의뢰 + 예전에 이 드래곤에게서 맡아 아직 끝내지 않은 의뢰 (날이 바뀌어 오늘 목록에 없어도 끝낼 수 있게)
+  const today = offersOf(mobId, now);
+  const carried = m.act.filter((a) => a.mob === mobId && !today.includes(a.i)).map((a) => a.i);
+  const offers = [...today, ...carried].map((i) => {
     const q = mb.pool[i];
     const bring = isBring(q.g);
     const act = m.act.find((a) => a.mob === mobId && a.i === i);
@@ -582,6 +587,7 @@ function view(d, mobId, have, now = Date.now()) {
       needs: bring ? Object.entries(q.g.bring).map(([id, n]) => ({ id, n, have: have(id) })) : null,
       state: act ? (p.have >= p.n ? 'ready' : 'doing') : done.includes(`${mobId}:${i}`) ? 'done' : 'open',
       have: p?.have, n: p?.n,
+      carried: carried.includes(i), // 지난날 맡은 의뢰
     };
   });
   const s = storyOf(m, mobId);

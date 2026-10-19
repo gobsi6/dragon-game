@@ -204,7 +204,23 @@ const publicDragon = (d) => ({
   berserk: !!logic.berserkOf(d),
   place: logic.placeOf(d),
   title: logic.titleName(d),
+  crown: logic.crownOn(d), // 들꽃 화관을 쓰고 있음 (이름 옆에 꽃)
 });
+
+// 꽃다발 같은 물건을 보물 상자에 넣을 때: 받은 선물 장부에서 아직 상자에 넣지 않은 가장 최근 것을 찾아 보낸 이·쪽지를 돌려줌
+// 직접 만들었거나 장부에서 밀려났으면 빈 값 (상자에 '이름만' 남음). 쓴 장부 칸은 combat.keepUsed에 셈
+function giftSender(d, id) {
+  const c = logic.combatJson(d);
+  if (!c.keepUsed || typeof c.keepUsed !== 'object') c.keepUsed = {};
+  for (const e of db.ledgerList(d.id, 200)) {
+    if (e.kind !== 'gift_in' || !e.other?.name) continue;
+    const n = e.itemsIn.filter((x) => x.id === id).reduce((a, x) => a + (x.qty || 0), 0);
+    if (n - (c.keepUsed[e.id] || 0) <= 0) continue;
+    c.keepUsed[e.id] = (c.keepUsed[e.id] || 0) + 1;
+    return { from: e.other.name, msg: (e.msg || '').slice(0, 200) };
+  }
+  return {};
+}
 
 // 내 드래곤의 전체 정보 (나에게만 보냄)
 
@@ -302,13 +318,16 @@ function nestSync(socket, d, now = Date.now()) {
   if (!d.nest || d.dead_at) return;
   const ni = logic.nestInfo(d);
   let hoard = db.hoard(d.id);
-  ni.value = logic.hoardValue(d.hoard_gold || 0, hoard);
+  // 예전에 보물더미에 물건으로 쌓아 둔 추억 물건은 보물 상자로 옮김 (도둑이 못 가져가게)
+  const moved = logic.chestMigrate(d, hoard);
+  if (moved.length) { db.saveState(d, [], moved); hoard = db.hoard(d.id); }
+  ni.value = logic.hoardValue(d.hoard_gold || 0, hoard) + logic.chestValue(d); // 보물 상자의 작은 값어치도 더함
   const r = logic.checkRaid(d, hoard, now, !!d._forceRaid);
   delete d._forceRaid;
   if (!r) return;
   db.saveState(d, [], r.hoardItems || []);
   hoard = db.hoard(d.id);
-  ni.value = logic.hoardValue(d.hoard_gold || 0, hoard);
+  ni.value = logic.hoardValue(d.hoard_gold || 0, hoard) + logic.chestValue(d);
   if (socket) socket.emit('notice', { title: r.kind === 'blocked' ? '둥지를 지켜 냈다' : '보물 도둑', lines: r.lines, raid: r.kind === 'raid' });
   else for (const l of r.lines) db.noteAdd(d.id, l);
 }
@@ -1238,7 +1257,10 @@ io.on('connection', (socket) => {
     if (!v) return ack({ error: '의뢰 게시판은 인간 마을에만 있다.' });
     ack({ ok: true, orders: v });
   });
-  itemAction('item:use', (d, p, have) => logic.useItem(d, str(p.item), have), (d) => arena.checkMind(d)); // 광기의 묘약으로 정신이 다 깎일 수 있음
+  itemAction('item:use', (d, p, have) => {
+    const id = str(p.item);
+    return logic.useItem(d, id, have, ITEMS[id]?.use?.keep ? giftSender(d, id) : {});
+  }, (d, res) => { arena.checkMind(d); if (res?.title === ITEMS.flower_crown.name) broadcastPresence(d.region); }); // 광기의 묘약으로 정신이 다 깎일 수 있음 · 화관을 쓰면 같은 지역 목록에 꽃이 바로 보이게
   // 소지품 버리기: 버린 물건은 사라짐
   itemAction('item:drop', (d, p, have) => {
     const id = str(p.item);
@@ -1383,7 +1405,8 @@ io.on('connection', (socket) => {
       ok: true,
       nest: {
         region: d.nest, here: !!d.nest && d.region === d.nest,
-        gold: d.hoard_gold || 0, items, value: logic.hoardValue(d.hoard_gold || 0, items),
+        gold: d.hoard_gold || 0, items, value: logic.hoardValue(d.hoard_gold || 0, items) + logic.chestValue(d),
+        chest: logic.chestView(d), // 보물 상자 (아이의 선물·받은 꽃다발)
         kin: life.views(kin, Date.now(), d),
         tier: logic.nestInfo(d).tier, maxKin: logic.maxKinOf(d),
         wards: { trap: logic.nestInfo(d).wards.trap || 0, stone: logic.nestInfo(d).wards.stone || 0 },
