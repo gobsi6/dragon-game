@@ -991,6 +991,24 @@
   .gift-box select, .gift-box .input { min-height: 36px; }
   .gift-box select { flex: 1; min-width: 160px; padding: 0 8px; background: #fff; border: 1px solid var(--line-soft); border-radius: 3px; font: inherit; }
   .gift-box .num { width: 90px; }
+  .gift-box .gp { display: flex; flex-direction: column; gap: 8px; }
+  .gift-box .gp-q { width: 100%; box-sizing: border-box; }
+  .gift-box .gp-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .gift-box .gp-tags[hidden] { display: none; }
+  .gift-box .gp-tag { min-height: 30px; padding: 0 12px; border-radius: 15px; border: 1px solid var(--line-soft); background: #fff; color: var(--muted); font: 400 12px/1 var(--sans); cursor: pointer; }
+  .gift-box .gp-tag.on { border-color: var(--steel); background: #E3EAF0; color: var(--steel-d); font-weight: 500; }
+  .gift-box .gp-list { display: flex; flex-direction: column; gap: 4px; max-height: 220px; overflow-y: auto; padding: 2px; border: 1px solid var(--line-in); background: #fff; }
+  .gift-box .gp-it { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px; min-height: 40px; padding: 6px 10px; border: 1px solid transparent; background: none; text-align: left; cursor: pointer; font: inherit; color: var(--ink); }
+  .gift-box .gp-it b { font: 600 13.5px/1.3 var(--serif); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .gift-box .gp-it small { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+  .gift-box .gp-it span { min-width: 34px; text-align: right; font: 600 12.5px/1 var(--sans); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .gift-box .gp-it:hover { background: #F2F4F1; }
+  .gift-box .gp-it.on { border-color: var(--steel); background: #EEF2F6; }
+  .gift-box .gp-it.on span { color: var(--steel-d); }
+  .gift-box .gp-empty { margin: 10px; text-align: center; }
+  .gift-box .gp-sel { flex: 1; min-width: 0; font-size: 13px; color: var(--muted); }
+  .gift-box .gp-sel.on { color: var(--ink); font-weight: 600; }
+  .gift-box .num:disabled { opacity: .5; }
   .fr-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 4px; border-top: 1px solid var(--line-in); cursor: pointer; }
   .fr-row:hover { background: #F2F3F1; }
   .fr-row .ava { width: 34px; height: 34px; }
@@ -2238,6 +2256,85 @@
     .main { padding: 14px 12px; gap: 14px; }
     .profile, .side, .center { flex-basis: 100%; min-width: 0; }
   }
+
+  /* ── 메뉴 단계 구분 ─────────────────────────────
+     창 안의 큰 탭(상태·둥지·소지품·시장·모브 드래곤): 서류철 탭. 고른 탭이 아래 내용과 이어지고 나머지는 뒤로 물러남
+     그 안의 작은 탭(보물더미의 넣은 보물/소지품): 글자 + 밑줄
+     행동 버튼(.btn)은 그대로라, 탭과 버튼이 서로 닮지 않음. 기록 리본·거래 기록 거르기·머리띠는 손대지 않음 */
+  .seg.ctabs, .seg.dtabs.three, #mk-tabs, #mob-tabs {
+    display: flex; flex-wrap: nowrap; align-items: flex-end; gap: 4px;
+    padding: 0 2px; border: 0; border-bottom: 1px solid var(--line); background: none;
+  }
+  .seg.ctabs button, .seg.dtabs.three button, #mk-tabs button, #mob-tabs button {
+    flex: 1 1 0; min-width: 0; position: relative; z-index: 0;
+    min-height: 38px; margin-bottom: -1px; padding: 8px 6px;
+    border: 1px solid var(--line-soft); border-bottom-color: var(--line); border-radius: 3px 3px 0 0;
+    background: #E4E5E1; color: var(--muted); font: 500 14px/1.25 var(--serif); letter-spacing: .02em;
+    box-shadow: none; transform: none;
+  }
+  .seg.ctabs button + button, .seg.dtabs.three button + button, #mk-tabs button + button, #mob-tabs button + button { border-left: 1px solid var(--line-soft); }
+  .seg.ctabs button:not(.on):hover, .seg.dtabs.three button:not(.on):hover, #mk-tabs button:not(.on):hover, #mob-tabs button:not(.on):hover {
+    background: #EDEEEA; color: var(--ink); border-color: var(--line-soft); border-bottom-color: var(--line); box-shadow: none; transform: none;
+  }
+  .seg.ctabs button.on, .seg.dtabs.three button.on, #mk-tabs button.on, #mob-tabs button.on {
+    z-index: 1; min-height: 44px;
+    background: var(--surface); color: var(--ink); font-weight: 700;
+    border-color: var(--line); border-top: 3px solid var(--steel-d); border-bottom-color: var(--surface);
+    box-shadow: none;
+  }
+  .seg.ctabs.nest-tabs button { min-height: 46px; }
+  .seg.ctabs.nest-tabs button.on { min-height: 52px; }
+  .seg.ctabs button.on .tab-dot { background: #A63E4B; box-shadow: 0 0 0 2px var(--surface); }
+  #mk-tabs .mk-n, #mob-tabs .mk-n { color: var(--muted); }
+
+  .seg.dtabs.hoard-sub {
+    display: flex; gap: 18px; margin: 10px 0 6px; padding: 0;
+    border: 0; border-bottom: 1px solid var(--line-in); background: none;
+  }
+  .seg.dtabs.hoard-sub button {
+    flex: none; min-height: 34px; margin-bottom: -1px; padding: 0 1px;
+    border: 0; border-bottom: 2px solid transparent; border-radius: 0;
+    background: none; box-shadow: none; transform: none;
+    color: var(--muted); font: 500 13px/1 var(--sans); letter-spacing: 0;
+  }
+  .seg.dtabs.hoard-sub button + button { border-left: 0; }
+  .seg.dtabs.hoard-sub button:not(.on):hover { background: none; color: var(--ink); border-color: transparent; box-shadow: none; transform: none; }
+  .seg.dtabs.hoard-sub button.on { background: none; color: var(--ink); font-weight: 600; border-bottom-color: var(--steel-d); box-shadow: none; }
+  .hoard-sub button.on .mk-n { background: rgba(42, 66, 86, .1); color: var(--steel-d); }
+
+  /* ── 휴대폰: 드래곤 기록은 상단 버튼으로 띄워 보는 창 ──
+     같은 칸(.profile)을 그대로 띄우므로 체력·기력 같은 값은 늘 최신. 넓은 화면은 지금처럼 왼쪽에 고정 */
+  .pf-open, .pf-x, .pf-backdrop { display: none; }
+  @media (max-width: 860px) {
+    .pf-open { display: inline-flex; gap: 5px; width: auto !important; padding: 0 7px; }
+    .pf-open[aria-expanded="true"] { background: rgba(60, 90, 115, .12); border-color: var(--line-soft); color: var(--steel-d); }
+    .pf-mini { display: flex; flex-direction: column; gap: 2px; width: 22px; }
+    .pf-mini i { display: block; height: 3px; border-radius: 2px; background: #D6D8D4; overflow: hidden; }
+    .pf-mini b { display: block; height: 100%; width: 0; border-radius: 2px; }
+    .pf-mini .hp b { background: #B04A57; } .pf-mini .en b { background: #3F7A5C; } .pf-mini .mind b { background: #6A5BA0; }
+    .pf-mini .mind[hidden] { display: none; }
+    main.main > .profile { display: none; }
+    body.pf-sheet main.main > .profile {
+      display: flex; position: fixed; z-index: 45; left: 10px; right: 10px;
+      top: calc(env(safe-area-inset-top, 0px) + 10px); bottom: auto; max-height: calc(100svh - var(--dock-h, 56px) - env(safe-area-inset-top, 0px) - 20px); /* 내용만큼만, 길면 안에서 스크롤 */
+      max-width: 520px; margin: 0 auto; overflow: hidden;
+      box-shadow: inset 0 0 0 4px var(--surface), inset 0 0 0 5px var(--line-in), 0 12px 32px rgba(20, 30, 40, .28);
+      animation: chat-in .24s cubic-bezier(.16, 1, .3, 1) both; transform-origin: top right;
+    }
+    body.pf-sheet main.main > .profile > .pf-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; align-content: start; }
+    body.pf-sheet main.main > .profile > .pf-body > .orn-h { padding-right: 40px; } /* 닫기 단추와 겹치지 않게 */
+    body.pf-sheet .pf-x { display: flex; align-items: center; justify-content: center; position: absolute; z-index: 2; top: 10px; right: 10px; width: 36px; height: 36px; padding: 0; background: var(--surface); border: 1px solid var(--line-in); border-radius: 3px; color: var(--steel-d); cursor: pointer; }
+    body.pf-sheet .pf-backdrop { display: block; position: fixed; inset: 0; z-index: 44; background: rgba(20, 30, 40, .3); }
+    body.pf-sheet { overflow: hidden; } /* 뒤의 화면이 같이 스크롤되지 않게 */
+  }
+  @media (max-width: 860px) and (prefers-reduced-motion: reduce) { body.pf-sheet main.main > .profile { animation: none; } }
+  @media (max-width: 520px) { /* 상단 1줄에 기록 버튼 자리 하나 더 */
+    header.top .in { grid-template-columns: auto 1fr auto auto auto; }
+    .top .pf-open { grid-column: 3; grid-row: 1; }
+    .top .tp-btn { grid-column: 4; }
+    .top .menu-wrap { grid-column: 5; }
+    .top .chip:nth-of-type(2) { grid-column: 3 / 6; }
+  }
 </style>
 </head>
 <body>
@@ -2302,6 +2399,7 @@
       <div class="chips">
         <div class="chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3C5A73" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12M6 21h12M7 3c0 5 10 5 10 9s-10 4-10 9M17 3c0 5-10 5-10 9s10 4 10 9"/></svg><span class="l">행동력</span><span class="v" id="ap"></span><span class="next" id="ap-next"></span></div>
         <div class="chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7E8389" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/></svg><span class="l">금화</span><span class="v" id="gold"></span></div>
+        <button class="iconbtn pf-open" id="pf-open" type="button" aria-label="드래곤 기록 보기" aria-expanded="false" title="드래곤 기록"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12c3-5 6.5-7 9.5-7s6.5 2 9.5 7c-3 5-6.5 7-9.5 7s-6.5-2-9.5-7z"/><path d="M12 8c-1.2 1.4-1.2 6.6 0 8 1.2-1.4 1.2-6.6 0-8z"/></svg><span class="pf-mini" aria-hidden="true"><i class="hp"><b id="pfm-hp"></b></i><i class="en"><b id="pfm-en"></b></i><i class="mind"><b id="pfm-mind"></b></i></span></button>
         <button class="iconbtn tp-btn" id="tp-open" type="button" aria-label="텔레파시" title="텔레파시"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="2.2"/><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7"/><path d="M5.5 5.5a9.2 9.2 0 0 0 0 13M18.5 5.5a9.2 9.2 0 0 1 0 13"/></svg><span class="tp-n" id="tp-badge" hidden></span></button>
         <div class="menu-wrap">
           <button class="iconbtn" id="menu-btn" type="button" aria-label="설정" aria-expanded="false" aria-controls="menu"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="menu-dot" id="menu-dot" hidden></span></button>
@@ -2317,8 +2415,10 @@
   </header>
 
   <main class="main" style="flex: 1">
-    <section class="frame profile" aria-label="드래곤 기록">
+    <div class="pf-backdrop" id="pf-backdrop" hidden></div>
+    <section class="frame profile" id="pf-panel" aria-label="드래곤 기록">
       <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+      <button class="pf-x" id="pf-close" type="button" aria-label="드래곤 기록 닫기"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       <div class="pf-body">
       <div class="orn-h"><h2>드래곤 기록</h2></div>
       <div class="pf-top" style="position: relative">
@@ -7316,19 +7416,71 @@
     gift.className = 'gift-box';
     gift.hidden = !keep?.gift;
     const own = Object.entries(invCache).filter(([id, q]) => S.items[id] && q > 0);
-    gift.innerHTML = `<div class="r"><select aria-label="보낼 물건"><option value="">물건 없이</option></select><input class="input num" type="number" min="1" value="1" aria-label="개수"></div>
+    // 보낼 물건 고르기: 이름으로 찾기 + 종류로 거르기 + 눌러서 고르는 목록 (긴 드롭다운 대신)
+    gift.innerHTML = `<div class="gp">
+        <input class="input gp-q" type="search" placeholder="물건 이름으로 찾기" aria-label="보낼 물건 찾기" autocomplete="off">
+        <div class="gp-tags" role="group" aria-label="물건 종류"></div>
+        <div class="gp-list" role="listbox" aria-label="보낼 물건"></div>
+        <div class="r gp-pick"><span class="gp-sel">물건 없이 보낸다</span><input class="input num" type="number" min="1" value="1" aria-label="개수"></div>
+      </div>
       <div class="r"><span style="font-size: 13px">금화</span><input class="input num gold" type="number" min="0" value="0" aria-label="금화"><span class="note">가진 금화 ${S.me.gold}</span></div>
       <div class="r"><textarea class="input msg" rows="2" maxlength="100" placeholder="함께 보낼 말 (적지 않아도 된다, 100자까지)" aria-label="함께 보낼 말"></textarea></div>
       <div class="r"><button class="btn primary" type="button">보내기</button></div>`;
-    const sel = gift.querySelector('select');
-    for (const [id, q] of own.sort(([a], [b]) => S.items[a].name.localeCompare(S.items[b].name, 'ko'))) {
-      const o = document.createElement('option');
-      o.value = id;
-      o.textContent = `${S.items[id].name} [${itemTagText(S.items[id])}] (가진 것 ${q})`;
-      sel.appendChild(o);
-    }
+    own.sort(([a], [b]) => S.items[a].name.localeCompare(S.items[b].name, 'ko'));
+    const gp = { id: '', tag: '', q: '' };
+    const gpList = gift.querySelector('.gp-list'), gpTags = gift.querySelector('.gp-tags');
+    const gpNum = gift.querySelector('.gp-pick .num'), gpSel = gift.querySelector('.gp-sel');
+    const tagOf = (id) => itemTagText(S.items[id]);
+    const tags = [...new Set(own.map(([id]) => tagOf(id)))];
+    const drawPick = () => {
+      const q = own.find(([id]) => id === gp.id)?.[1] || 0;
+      gpSel.textContent = gp.id ? `${S.items[gp.id].name} · 가진 것 ${q}` : '물건 없이 보낸다';
+      gpSel.classList.toggle('on', !!gp.id);
+      gpNum.disabled = !gp.id;
+      gpNum.max = q || '';
+      if (gp.id && Number(gpNum.value) > q) gpNum.value = q;
+    };
+    const drawList = () => {
+      gpList.replaceChildren();
+      const q = gp.q.trim().toLowerCase();
+      const hits = own.filter(([id]) => (!gp.tag || tagOf(id) === gp.tag) && (!q || S.items[id].name.toLowerCase().includes(q)));
+      for (const [id, n] of hits) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = `gp-it${gp.id === id ? ' on' : ''}`;
+        b.setAttribute('role', 'option');
+        b.setAttribute('aria-selected', String(gp.id === id));
+        b.innerHTML = '<b></b><small></small><span></span>';
+        b.querySelector('b').textContent = S.items[id].name;
+        b.querySelector('small').textContent = tagOf(id);
+        b.querySelector('span').textContent = `×${n}`;
+        b.addEventListener('click', () => { gp.id = gp.id === id ? '' : id; drawList(); drawPick(); }); // 다시 누르면 고르기 취소
+        gpList.appendChild(b);
+      }
+      if (!hits.length) {
+        const e = document.createElement('p');
+        e.className = 'note gp-empty';
+        e.textContent = own.length ? '찾는 물건이 없다.' : '보낼 수 있는 물건이 없다.';
+        gpList.appendChild(e);
+      }
+    };
+    const drawTags = () => {
+      gpTags.replaceChildren();
+      if (tags.length < 2) { gpTags.hidden = true; return; }
+      for (const t of ['', ...tags]) {
+        const c = document.createElement('button');
+        c.type = 'button';
+        c.className = `gp-tag${gp.tag === t ? ' on' : ''}`;
+        c.setAttribute('aria-pressed', String(gp.tag === t));
+        c.textContent = t || '전체';
+        c.addEventListener('click', () => { gp.tag = t; drawTags(); drawList(); });
+        gpTags.appendChild(c);
+      }
+    };
+    gift.querySelector('.gp-q').addEventListener('input', (e) => { gp.q = e.target.value; drawList(); });
+    drawTags(); drawList(); drawPick();
     gift.querySelector('.btn').addEventListener('click', () => {
-      const id = sel.value;
+      const id = gp.id;
       const qty = Number(gift.querySelector('.num').value) || 0;
       const gold = Number(gift.querySelector('.gold').value) || 0;
       const items = id && qty > 0 ? [{ id, qty }] : [];
@@ -7355,7 +7507,7 @@
     body.replaceChildren();
     const head = document.createElement('div');
     head.className = 'gift-from';
-    head.appendChild(avaEl({ id: g.from.id, kind: g.from.kind || 'silver', av: 0 }, 44));
+    head.appendChild(avaEl({ id: g.from.id, kind: g.from.kind || 'silver', av: g.from.av || 0 }, 44)); // 보낸 드래곤의 프로필 그림
     const t = document.createElement('div');
     t.innerHTML = '<b></b><small></small>';
     t.querySelector('b').textContent = `${g.from.name}${josa(g.from.name, '이', '가')} 보내온 선물`;
@@ -10810,6 +10962,31 @@
     window.addEventListener('resize', pinSides);
     pinSides();
   }
+  // 휴대폰: 상단 버튼으로 드래곤 기록 띄우기 (같은 칸을 띄우므로 값은 늘 최신)
+  const pfOpenBtn = $('pf-open'), pfBack = $('pf-backdrop');
+  const pfSheet = (on) => {
+    document.body.classList.toggle('pf-sheet', on);
+    pfBack.hidden = !on;
+    pfOpenBtn.setAttribute('aria-expanded', String(on));
+    if (on) $('pf-close').focus(); else if (document.activeElement && $('pf-panel').contains(document.activeElement)) pfOpenBtn.focus();
+  };
+  pfOpenBtn.addEventListener('click', () => pfSheet(!document.body.classList.contains('pf-sheet')));
+  $('pf-close').addEventListener('click', () => pfSheet(false));
+  pfBack.addEventListener('click', () => pfSheet(false));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('pf-sheet') && !document.querySelector('dialog[open]')) pfSheet(false); });
+  window.addEventListener('resize', () => { if (window.innerWidth > 860 && document.body.classList.contains('pf-sheet')) pfSheet(false); });
+  // 버튼 옆 작은 막대: 기록 칸의 체력·기력·정신 막대 길이를 그대로 따라감
+  const pfMirror = [['hp-bar', 'pfm-hp'], ['en-bar', 'pfm-en'], ['mind-bar', 'pfm-mind']];
+  const pfSync = () => {
+    for (const [from, to] of pfMirror) { const f = $(from), t = $(to); if (f && t) t.style.width = f.style.width || '0'; }
+    const mv = $('mind-vital'); $('pfm-mind').parentElement.hidden = !!(mv && (mv.hidden || getComputedStyle(mv).display === 'none'));
+  };
+  if ('MutationObserver' in window) {
+    const mo = new MutationObserver(pfSync);
+    for (const [from] of pfMirror) { const f = $(from); if (f) mo.observe(f, { attributes: true, attributeFilter: ['style'] }); }
+    const mv = $('mind-vital'); if (mv) mo.observe(mv, { attributes: true, attributeFilter: ['hidden', 'class', 'style'] });
+  }
+  pfSync();
   // 휴대폰: 아래로 내리면 상단바를 숨기고, 위로 올리면 보여 줌
   let lastY = window.scrollY;
   window.addEventListener('scroll', () => {
