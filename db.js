@@ -292,7 +292,7 @@ db.exec(`
 // 그림(avatar)을 뺀 드래곤 정보 열
 const DRAGON_FIELDS = `id, name, kind, region, avatar_ver, level, xp, hp, hp_max, en, en_max,
   ap, ap_max, gold, claw, scale, wing, wisdom, majesty, stance,
-  ap_at, hp_at, en_at, exp_start, exp_end, exp_region, equip, rep, stance_at, nest, rest_at, hoard_gold, fame, pending_event, traits, combat, last_seen, stat_pts, mind, mind_at, berserk, place, fallen, scars, dead_at, bio, titles, exp_info, chron, nest_info, heir, ev_recent,
+  ap_at, hp_at, en_at, exp_start, exp_end, exp_region, equip, rep, stance_at, nest, rest_at, hoard_gold, fame, pending_event, traits, combat, last_seen, stat_pts, mind, mind_at, berserk, place, fallen, scars, dead_at, bio, titles, exp_info, chron, nest_info, heir, ev_recent, created_at,
   (avatar IS NOT NULL) AS has_avatar`;
 
 const q = {

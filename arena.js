@@ -3,7 +3,7 @@
 // - 실시간 결투: 둘 다 접속해 있을 때. 신청 → 수락 → 둘 다 고르면 한 턴. 시간을 넘기면 자동으로 고름
 // - 자동 결투: 상대가 '자동 결투 허용'을 켜 두었으면, 접속하지 않았어도 서로의 스킬 구성대로 자동으로 싸움
 // 결투에서는 다치지 않음 (가득 찬 상태로 싸우고, 끝나면 원래대로). 전적과 명성, 경험치만 남음
-const { COMBAT, MIND, REGIONS, BOND_RULES } = require('./game-data');
+const { COMBAT, MIND, REGIONS, BOND_RULES, ITEMS } = require('./game-data');
 
 const str = (v) => (typeof v === 'string' ? v.trim() : '');
 function josa(word, a, b) {
@@ -12,6 +12,9 @@ function josa(word, a, b) {
   return c % 28 ? a : b;
 }
 const ACTS = ['attack', 'skill', 'guard', 'flee'];
+const itemText = (items) => items.map(({ id, qty }) => `${ITEMS[id]?.name || id}${qty > 1 ? ` ${qty}개` : ''}`).join(', ');
+const stakeText = (s) => [s.gold ? `금화 ${s.gold}닢` : '', itemText(s.items)].filter(Boolean).join(', ');
+const stakeEmpty = (s) => !s || (!s.gold && !s.items.length);
 
 module.exports = function setupArena({ io, db, online, logic, combat, life, sendMe, broadcastPresence }) {
   const sessions = new Map(); // 드래곤 id → 전투 { id, kind, b, side: {드래곤 id: 'a'|'b'}, ids: {a, b}, pending, timer, deadline }
@@ -23,6 +26,48 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
   const inBattle = (id) => sessions.has(id);
   // 접속 중이면 그 객체를, 아니면 저장된 것을 불러옴
   const load = (id) => { const e = live(id); return e ? e.dragon : db.getDragon(id); };
+
+  // ── 내기 결투 ─────────────────────────────────────
+  const BET = COMBAT.bet;
+  // 건 것이 규칙에 맞고 실제로 가졌는지 (착용한 장신구는 소지품에 없으므로 저절로 빠짐, 보물은 걸 수 없음)
+  function readStake(d, raw) {
+    const gold = Math.floor(Number(raw?.gold) || 0);
+    const seen = new Set(), items = [];
+    for (const x of Array.isArray(raw?.items) ? raw.items : []) {
+      const id = str(x?.id), qty = Math.floor(Number(x?.qty));
+      if (!id || !(qty > 0)) continue;
+      if (!ITEMS[id] || seen.has(id)) return { error: '알 수 없는 물건이다.' };
+      if (ITEMS[id].cat === 'treasure') return { error: '보물은 내기에 걸 수 없다.' };
+      seen.add(id); items.push({ id, qty });
+    }
+    if (gold < 0 || gold > BET.goldMax) return { error: `금화는 ${BET.goldMax}닢까지 걸 수 있다.` };
+    if (gold > d.gold) return { error: '그만한 금화가 없다.' };
+    if (items.length > BET.itemKinds) return { error: `물건은 ${BET.itemKinds}가지까지 걸 수 있다.` };
+    for (const it of items) {
+      if (it.qty > BET.itemQty) return { error: `한 물건은 ${BET.itemQty}개까지 걸 수 있다.` };
+      if (db.itemCount(d.id, it.id) < it.qty) return { error: `${ITEMS[it.id].name}${josa(ITEMS[it.id].name, '이', '가')} 그만큼 없다.` };
+    }
+    return { gold, items };
+  }
+  const betGapWhy = (a, b) => (Math.abs(a.level - b.level) > BET.levelGap ? `레벨 차이가 ${BET.levelGap}보다 크면 내기를 걸 수 없다.` : null);
+  // 결투가 끝나면: 진 쪽이 건 것을 이긴 쪽에게. 싸우는 동안엔 시장·선물·교환이 막혀 있지만, 혹시 모자라면 있는 만큼만
+  function settleBet(s, winnerId, loserId, lines) {
+    const bet = s.bet;
+    if (!bet) return;
+    const w = load(winnerId), l = load(loserId);
+    if (!w || !l) return;
+    const stake = bet[loserId];
+    const gold = Math.min(stake.gold, l.gold);
+    const items = stake.items.map((x) => ({ id: x.id, qty: Math.min(x.qty, db.itemCount(l.id, x.id)) })).filter((x) => x.qty > 0);
+    l.gold -= gold; w.gold += gold;
+    db.saveMany([[l, items.map((x) => ({ id: x.id, qty: -x.qty }))], [w, items]]);
+    const got = stakeText({ gold, items }) || '없음';
+    lines[w.id].push(`내기에서 이겨 ${got}${josa(got, '을', '를')} 받았다. (내가 건 것은 그대로)`);
+    lines[l.id].push(`내기에서 져서 ${got}${josa(got, '을', '를')} 내주었다.`);
+    db.ledgerAdd(w.id, { kind: 'bet', other: { id: l.id, name: l.name, kind: l.kind }, goldIn: gold, itemsIn: items, note: '내기 결투 승리' });
+    db.ledgerAdd(l.id, { kind: 'bet', other: { id: w.id, name: w.name, kind: w.kind }, goldOut: gold, itemsOut: items, note: '내기 결투 패배' });
+    for (const d of [w, l]) { const e = live(d.id); if (e) sendMe(e.socket, d); }
+  }
 
   function cleanup(s) {
     clearTimeout(s.timer);
@@ -309,6 +354,7 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
   function finishDuel(s) {
     cleanup(s);
     const st = settleDuel(s.b, s.ids.a, s.ids.b);
+    if (s.bet) { const wid = st.winner.id; settleBet(s, wid, wid === s.ids.a ? s.ids.b : s.ids.a, st.lines); }
     for (const k of ['a', 'b']) {
       const id = s.ids[k];
       const won = st.winner.id === id;
@@ -474,20 +520,29 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
         };
       }
       if (why.live) return { error: why.live };
+      let stake = null;
+      if (p.bet) {
+        const gap = betGapWhy(d, o);
+        if (gap) return { error: gap };
+        stake = readStake(d, p.bet);
+        if (stake.error) return { error: stake.error };
+        if (stakeEmpty(stake)) return { error: '걸 것을 골라야 한다.' };
+      }
       for (const inv of invites.values()) {
         if (inv.from === d.id) return { error: '이미 결투를 신청해 두었다. 답을 기다리자.' };
         if (inv.to === o.id) return { error: `${o.name}${josa(o.name, '은', '는')} 다른 결투 신청을 받고 있다.` };
       }
-      const inv = { id: nextId++, from: d.id, to: o.id };
+      const inv = { id: nextId++, from: d.id, to: o.id, bet: stake ? { [d.id]: stake } : null };
+      const secs = stake ? BET.answerSeconds : COMBAT.inviteSeconds; // 내기면 걸 것을 고를 시간을 더 줌
       inv.timer = setTimeout(() => {
         if (!invites.delete(inv.id)) return;
         emitTo(d.id, 'arena:declined', { name: o.name, reason: '답이 없었다.' });
         emitTo(o.id, 'arena:invite-gone', { id: inv.id });
-      }, COMBAT.inviteSeconds * 1000);
+      }, secs * 1000);
       inv.timer.unref?.();
       invites.set(inv.id, inv);
-      emitTo(o.id, 'arena:invite', { id: inv.id, from: { id: d.id, name: d.name, kind: d.kind, level: d.level }, seconds: COMBAT.inviteSeconds });
-      return { ok: true, sent: true };
+      emitTo(o.id, 'arena:invite', { id: inv.id, from: { id: d.id, name: d.name, kind: d.kind, level: d.level }, seconds: secs, bet: stake });
+      return { ok: true, sent: true, bet: !!stake };
     });
 
     // 결투 기록: 내가 건 것과 받은 것. 열어 보면 받은 자동 결투는 확인한 것으로
@@ -525,7 +580,14 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
 
     on('arena:answer', (d, p) => {
       const inv = invites.get(Number(p.id));
-      if (!inv || inv.to !== d.id) return { error: '그 결투 신청은 이미 지나갔다.' };
+      if (!inv || inv.to !== d.id || inv.confirm) return { error: '그 결투 신청은 이미 지나갔다.' };
+      // 내기: 받는 쪽이 건 것이 맞는지 먼저 확인 (틀렸으면 신청은 그대로 두고 다시 고르게)
+      let mine = null;
+      if (p.accept && inv.bet) {
+        mine = readStake(d, p.bet);
+        if (mine.error) return { error: mine.error };
+        if (stakeEmpty(mine)) return { error: '내기 결투는 받는 쪽도 무언가를 걸어야 한다.' };
+      }
       invites.delete(inv.id);
       clearTimeout(inv.timer);
       const from = live(inv.from);
@@ -536,18 +598,58 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
       if (!from) return { error: '상대가 떠나 버렸다.' };
       const why = myBlock(d) || myBlock(from.dragon);
       if (why) return { error: why };
-      const s = duelSession(from.dragon, d, 'duel');
+      if (inv.bet) {
+        // 받는 쪽도 걸었음 → 건 쪽에게 둘 다 보여 주고 마지막 확인
+        inv.bet[d.id] = mine;
+        inv.confirm = true;
+        invites.set(inv.id, inv);
+        inv.timer = setTimeout(() => {
+          if (!invites.delete(inv.id)) return;
+          emitTo(d.id, 'arena:declined', { name: from.dragon.name, reason: '내기를 확인하지 않았다.' });
+          emitTo(inv.from, 'arena:bet-gone', { id: inv.id });
+        }, BET.confirmSeconds * 1000);
+        inv.timer.unref?.();
+        emitTo(inv.from, 'arena:bet-confirm', { id: inv.id, name: d.name, seconds: BET.confirmSeconds, mine: inv.bet[inv.from], theirs: mine });
+        return { ok: true, waiting: true };
+      }
+      return startLiveDuel(from.dragon, d, null);
+    });
+
+    // 내기 결투: 건 쪽의 마지막 확인 (둘 다 건 것을 보고)
+    on('arena:bet-ok', (d, p) => {
+      const inv = invites.get(Number(p.id));
+      if (!inv || !inv.confirm || inv.from !== d.id) return { error: '그 결투 신청은 이미 지나갔다.' };
+      invites.delete(inv.id);
+      clearTimeout(inv.timer);
+      const to = live(inv.to);
+      if (!p.accept) { emitTo(inv.to, 'arena:declined', { name: d.name, reason: '내기를 거두었다.' }); return { ok: true }; }
+      if (!to) return { error: '상대가 떠나 버렸다.' };
+      const why = myBlock(d) || myBlock(to.dragon) || betGapWhy(d, to.dragon);
+      if (why) return { error: why };
+      // 고른 뒤에 써 버렸을 수도 있으니 다시 확인
+      for (const x of [d, to.dragon]) {
+        const st = readStake(x, inv.bet[x.id]);
+        if (st.error) { emitTo(inv.to, 'arena:declined', { name: d.name, reason: `${x.name}: ${st.error}` }); return { error: `${x.name}: ${st.error}` }; }
+      }
+      return startLiveDuel(d, to.dragon, inv.bet);
+    });
+
+    function startLiveDuel(fromD, d, bet) {
+      const s = duelSession(fromD, d, 'duel');
+      s.bet = bet;
+      const from = { dragon: fromD };
       sessions.set(s.ids.a, s);
       sessions.set(s.ids.b, s);
       armTimer(s);
       for (const k of ['a', 'b']) {
         emitTo(s.ids[k], 'battle:start', {
           view: { ...combat.view(s.b, k), deadline: s.deadline },
-          lines: [`${from.dragon.name}${josa(from.dragon.name, '과', '와')} ${d.name}의 결투가 시작되었다!`],
+          lines: [`${from.dragon.name}${josa(from.dragon.name, '과', '와')} ${d.name}의 ${bet ? '내기 ' : ''}결투가 시작되었다!`,
+            ...(bet ? [`${from.dragon.name}${josa(from.dragon.name, '이', '가')} 건 것: ${stakeText(bet[from.dragon.id])}`, `${d.name}${josa(d.name, '이', '가')} 건 것: ${stakeText(bet[d.id])}`] : [])],
         });
       }
       return { ok: true };
-    });
+    }
   }
 
   // 접속이 끊기면: 새로고침일 수 있으니 RECONNECT_MS 동안 싸움을 그대로 두고 기다림

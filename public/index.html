@@ -1442,6 +1442,7 @@
   .log .sys.wnews { color: #6A5A3A; background: #F6F1E6; }
   .log .sys.wnews.alarm { color: #A63E4B; background: #F8ECEE; }
   .log .sys.wnews.bye { color: #4A4F55; background: #ECEDEC; }
+  .log .sys.wnews.notice { color: var(--steel-d); background: #EAF0F5; font-weight: 600; } /* GM 공지 */
 
   /* ── 설정: 내 드래곤 · 계정 ── */
   .bio-form { display: flex; flex-direction: column; gap: 10px; padding: 12px; background: #fff; border: 1px solid var(--line-in); }
@@ -2385,6 +2386,42 @@
     .inv-gear .slot { min-height: 50px; gap: 6px; padding: 6px 6px 6px 9px; }
     .inv-gear .slot .btn { padding: 0 7px; }
   }
+
+  /* ── 내기 결투 ── */
+  .bet-box { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+  .bet-box[hidden] { display: none; }
+  .bet-side { display: flex; flex-direction: column; gap: 6px; }
+  .bet-side[hidden] { display: none; }
+  .bet-side .bl { font: 600 13px/1.4 var(--serif); color: var(--ink-2); }
+  .bet-side .bl small { font: 400 11.5px var(--sans); color: var(--muted); }
+  .bet-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .bet-chips[hidden] { display: none; }
+  .stake-box .gp-list { max-height: 170px; }
+  .stk-picked { display: flex; flex-direction: column; gap: 5px; }
+  .stk-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: #EEF2F6; border: 1px solid #C9D6E1; border-radius: 3px; }
+  .stk-row b { flex: 1; min-width: 0; font: 600 13px/1.3 var(--serif); }
+  .stk-row .num { width: 70px; min-height: 32px; }
+  .stk-row .linkbtn { min-height: 30px; font-size: 12px; }
+  @media (max-width: 520px) { #arena-body .fr-row .acts { grid-column: 1 / -1; display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 6px; } } /* 폰: 결투 버튼 셋은 아래 줄로 */
+
+  /* ── 왕도 축제 (날씨 칸과 같은 모양, 장밋빛) ── */
+  .wx.fest .fl { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 5px; border-top: 1px dashed var(--line-in); padding-top: 7px; }
+  .wx.fest .fc { margin: 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
+  .wx.fest .fr { display: flex; align-items: center; gap: 8px; min-height: 36px; }
+  .wx.fest .fr .ava { width: 26px; height: 26px; flex: none; }
+  .wx.fest .fr .nm { flex: 1; min-width: 0; font: 600 13.5px/1.3 var(--serif); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .wx.fest .fr .btn { min-height: 32px; padding: 0 12px; font-size: 12.5px; }
+  .wx.fest .fr .done { font-size: 12px; color: #8A3D55; }
+
+  /* ── 둥지 이야기: 식구들의 하루를 일기처럼 ── */
+  .nest-story { margin-bottom: 18px; }
+  .nest-story ul { list-style: none; margin: 8px 0 6px; padding: 4px 0 4px 14px; border-left: 2px solid #D9CBA8; display: flex; flex-direction: column; gap: 10px; }
+  .nest-story li { position: relative; display: flex; flex-direction: column; gap: 2px; }
+  .nest-story li::before { content: ""; position: absolute; left: -19px; top: 6px; width: 8px; height: 8px; border-radius: 50%; background: #F7F7F5; border: 2px solid #C2AD7E; }
+  .nest-story li:first-child::before { background: #C2AD7E; }
+  .nest-story time { font: 600 11.5px/1.3 var(--sans); color: #8C7A52; font-variant-numeric: tabular-nums; }
+  .nest-story p { margin: 0; font: 400 14px/1.6 var(--serif); color: var(--ink-2); }
+  .nest-story li:first-child p { color: var(--ink); }
 </style>
 </head>
 <body>
@@ -2525,6 +2562,7 @@
           <div class="at" id="region-at"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg><span id="region-at-t"></span></div>
           <p class="quote" id="region-desc"></p>
           <div class="wx" id="wx" hidden></div>
+          <div class="wx fest" id="fest" hidden></div>
         </div>
         <div class="places" id="places" hidden>
           <div class="pl-head">이곳의 장소<small>지도의 핀을 눌러 옮겨 간다</small></div>
@@ -3127,8 +3165,27 @@
   <div class="orn-h"><h2 id="invite-title">결투 신청</h2></div>
   <div class="body">
     <p id="invite-text" style="margin: 0; font-size: 15px; line-height: 1.6"></p>
+    <div class="bet-box" id="invite-bet" hidden>
+      <div class="bet-side"><span class="bl">상대가 건 것</span><div class="bet-chips" id="invite-bet-theirs"></div></div>
+      <div class="bet-side"><span class="bl">내가 걸 것 <small>(무언가 하나는 걸어야 한다)</small></span><div id="invite-bet-pick"></div></div>
+    </div>
     <p class="note" id="invite-left"></p>
     <div class="row"><button class="btn" type="button" id="invite-no">거절</button><button class="btn primary" type="button" id="invite-yes">받아들이기</button></div>
+  </div>
+</dialog>
+
+<!-- 내기 결투: 걸고 신청하기 / 둘 다 건 것을 보고 마지막 확인 -->
+<dialog class="frame dlg" id="bet-dlg" aria-labelledby="bet-title">
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="bet-title">내기 결투</h2></div>
+  <div class="body">
+    <p id="bet-text" style="margin: 0; font-size: 14.5px; line-height: 1.6"></p>
+    <div class="bet-box">
+      <div class="bet-side" id="bet-theirs-wrap" hidden><span class="bl" id="bet-theirs-l">상대가 건 것</span><div class="bet-chips" id="bet-theirs"></div></div>
+      <div class="bet-side"><span class="bl" id="bet-mine-l">내가 걸 것</span><div id="bet-pick"></div><div class="bet-chips" id="bet-mine" hidden></div></div>
+    </div>
+    <p class="note" id="bet-left"></p>
+    <div class="row"><button class="btn" type="button" id="bet-no">그만두기</button><button class="btn primary" type="button" id="bet-yes">걸고 신청하기</button></div>
   </div>
 </dialog>
 
@@ -4744,7 +4801,7 @@
   function openInv() { fetchInv(() => { renderInv(); openPanel('inv-dlg'); }); }
   // ── 주고받은 기록 ──
   let ledgerF = 'all';
-  const LEDGER_KIND = { gift_in: '받은 선물', gift_out: '보낸 선물', trade: '교환', gm: 'GM 지급' };
+  const LEDGER_KIND = { gift_in: '받은 선물', gift_out: '보낸 선물', trade: '교환', gm: 'GM 지급', bet: '내기' };
   function ledgerChips(host, gold, items) {
     if (gold) { const c = document.createElement('span'); c.className = 'lg-chip gold'; c.innerHTML = '<i class="coin" aria-hidden="true"></i>'; c.append(`금화 ${gold.toLocaleString()}닢`); host.appendChild(c); }
     for (const x of items || []) {
@@ -5595,6 +5652,9 @@
           tabs.addEventListener('click', (e) => { const b = e.target.closest('[data-nt]'); if (b && !b.classList.contains('on')) show(b.dataset.nt); });
           show(NEST_TAB);
         }
+
+        // 둥지 이야기: 식구들이 지금 뭘 하며 지내는지 (30분마다 새 장면)
+        if (n.region) renderNestStory(P.nest, n);
 
         // 둥지 단계
         if (n.region) {
@@ -6987,6 +7047,7 @@
     $('region-desc').textContent = r.desc;
     renderCorrupt();
     renderWeather();
+    loadFest();
     renderPlaces();
     renderGraves();
     renderRescues();
@@ -7226,6 +7287,331 @@
       loadRel(after);
     });
   };
+
+
+  // ── 둥지 이야기 ──
+  // 식구의 종류·나이·특성·하는 일, 둥지 시설, 날씨, 시각에 맞춰 짧은 장면을 고름.
+  // 30분마다 한 장면씩, 같은 때에는 늘 같은 장면이 나오게 (때와 식구로 정한 난수) — 서버에 따로 저장하지 않음
+  const STORY_SLOT = 30 * 60000;
+  function storyRng(seed) { let a = (Math.imul(seed ^ (seed >>> 16), 0x45d9f3b) ^ 0x9e3779b9) >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  const pickOf = (rnd, arr) => arr[Math.floor(rnd() * arr.length)];
+  // {a} {b}: 이름. 뒤의 [이/가] [은/는] [을/를] [과/와] [에게]는 이름 받침에 맞춰 바꿈
+  let storyCtx = { o: '', r: '', n: '' }; // o: 내 드래곤 이름, r: 원정 지역, n: 함께 떠난·돌아온 식구들
+  function storyText(tpl, a, b) {
+    const names = { a, b, ...storyCtx };
+    return tpl.replace(/\{([abonr])\}(\[([^/\]]+)\/([^\]]+)\])?/g, (m, who, _x, j1, j2) => {
+      const nm = names[who] || '';
+      if (!j1) return nm;
+      if (j1 === '으로') return `${nm}${josa(nm, '으로', '로')}`; // 받침에 따라 (ㄹ 받침도 '으로'로 두는 단순한 방식)
+      return `${nm}${josa(nm, j1, j2)}`;
+    });
+  }
+  const STORY = {
+    night: [
+      '{a}[이/가] 둥지 구석에서 몸을 동그랗게 말고 곤히 잠들었다.',
+      '{a}[이/가] 잠꼬대를 하다가 스스로 놀라 눈을 떴다가 다시 잠들었다.',
+      '{a}[은/는] 잠이 오지 않는지 동굴 입구에 앉아 별을 세고 있다.',
+      '{a}[이/가] 이불을 걷어차고 대자로 뻗어 잔다. 누가 덮어 주길 기다리는 모양이다.',
+      '{a}[이/가] 꿈속에서 무언가를 먹는지 입을 오물거린다.',
+      '{a}[이/가] 반쯤 깬 채로 {o}의 자리를 더듬어 찾다가 다시 잠들었다.',
+    ],
+    morning: [
+      '{a}[이/가] 제일 먼저 일어나 둥지 입구에 비치는 햇살 속에서 기지개를 켰다.',
+      '{a}[이/가] 아직 덜 깬 눈으로 아침 이슬을 핥아 먹고 있다.',
+      '{a}[이/가] 해가 뜨자마자 오늘은 뭘 할지 혼자 계획을 세우고 있다.',
+      '{a}[이/가] 졸린 얼굴로 둥지 바닥에 앉아 하품을 세 번 연달아 했다.',
+    ],
+    evening: [
+      '{a}[이/가] 둥지 입구에 앉아 노을이 질 때까지 하늘을 바라본다.',
+      '{a}[이/가] 저녁 바람이 차다며 불가로 바짝 다가앉았다.',
+      '{a}[이/가] 해 질 녘 그림자가 길어지는 것을 밟으며 논다.',
+      '{a}[이/가] 오늘 하루 있었던 일을 누구에게 먼저 말할지 고민하고 있다.',
+    ],
+    hungry: [
+      '{a}[이/가] 배가 고픈지 먹을 것을 찾아 둥지 안을 기웃거린다.',
+      '{a}의 배에서 꼬르륵 소리가 났다. 모른 척하지만 다 들렸다.',
+      '{a}[이/가] 빈 그릇을 들고 와서 아무 말 없이 내밀었다.',
+      '{a}[이/가] 보물더미 속 금화를 깨물어 보더니 실망한 얼굴을 했다.',
+    ],
+    happy: [
+      '{a}[이/가] 기분이 좋은지 콧노래를 흥얼거리며 둥지를 한 바퀴 돌았다.',
+      '{a}[이/가] {o}의 이름을 부르며 혼자 실실 웃는다.',
+      '{a}[이/가] 배부르고 따뜻해서 그런지 볕 드는 자리에 누워 꾸벅꾸벅 존다.',
+      '{a}[이/가] 오늘은 무슨 일이든 다 잘될 것 같은 얼굴이다.',
+    ],
+    withOwner: [
+      '{a}[이/가] {o}의 꼬리에 기대앉아 오늘 있었던 일을 재잘재잘 늘어놓는다.',
+      '{a}[이/가] {o}의 비늘 사이에 낀 흙을 하나하나 털어 주었다.',
+      '{a}[이/가] {o} 곁을 졸졸 따라다니며 하는 걸 모두 따라 한다.',
+      '{a}[이/가] {o}에게 오늘 주운 것을 자랑하려고 등 뒤에 숨기고 기다린다.',
+    ],
+    ownerRest: [
+      '{a}[이/가] 잠든 {o}의 날개 밑으로 쏙 들어가 같이 눈을 감았다.',
+      '{a}[이/가] {o}[이/가] 깰까 봐 발끝으로 살금살금 걸어 다닌다.',
+      '{a}[이/가] 쉬고 있는 {o}의 머리맡에 들꽃 한 송이를 놓아두었다.',
+    ],
+    miss: [
+      '{a}[은/는] {o}[이/가] 언제 돌아오나 둥지 입구를 자꾸 내다본다.',
+      '{a}[이/가] {o}의 냄새가 남은 자리에 웅크리고 앉아 있다.',
+      '{a}[이/가] {o}에게 돌아오면 보여 줄 것을 하나씩 모아 두고 있다.',
+    ],
+    babyH: [
+      '{a}[이/가] 바닥에 깔린 비늘 하나를 쥐고 신기한 듯 흔들어 본다.',
+      '{a}[이/가] 엉금엉금 기어 다니다 보물더미 앞에서 멈춰 섰다.',
+      '{a}[이/가] 알 수 없는 옹알이로 한참 동안 무언가를 설명했다.',
+      '{a}[이/가] 제 발가락을 처음 발견한 듯 한참을 들여다본다.',
+      '{a}[이/가] 혼자 일어서 보려다 엉덩방아를 찧고는 울까 말까 고민한다.',
+      '{a}[이/가] 반짝이는 금화를 입에 넣으려다 얼른 빼앗겼다.',
+    ],
+    kidH: [
+      '{a}[이/가] 나뭇가지를 칼처럼 들고 용사 흉내를 내며 뛰어다닌다.',
+      '{a}[이/가] 동굴 벽에 숯으로 커다란 용을 그려 놓았다. 꼬리가 조금 짧다.',
+      '{a}[이/가] 조약돌을 줄 세워 놓고 혼자 장사 놀이를 한다.',
+      '{a}[은/는] 둥지 밖 바위에 올라가 멀리 왕도 쪽을 바라보고 있다.',
+      '{a}[이/가] 오늘 배운 노래를 처음부터 끝까지 세 번 불렀다.',
+      '{a}[이/가] 나뭇잎으로 배를 접어 물웅덩이에 띄웠다.',
+      '{a}[이/가] {o}처럼 날겠다며 두 팔을 벌리고 언덕을 뛰어 내려갔다.',
+      '{a}[이/가] 숨바꼭질을 하자더니 혼자 숨어서 아직도 안 나온다.',
+      '{a}[이/가] 개미 행렬을 따라가다 둥지 뒤편까지 갔다 왔다.',
+      '{a}[이/가] 커서 무엇이 될지 손가락을 꼽아 가며 말해 본다. 매번 바뀐다.',
+    ],
+    youthH: [
+      '{a}[이/가] 둥지 앞 공터에서 혼자 검 휘두르는 연습을 하고 있다.',
+      '{a}[이/가] 왕도에서 들은 소문을 어린 식구들에게 부풀려 들려준다.',
+      '{a}[이/가] 바위에 걸터앉아 먼 산을 보며 무언가 깊이 생각한다.',
+      '{a}[이/가] 어린 식구들 몰래 맛있는 걸 숨겨 두었다가 들켰다.',
+    ],
+    adultH: [
+      '{a}[이/가] 둥지 입구를 쓸고, 떨어진 비늘을 모아 한쪽에 가지런히 놓았다.',
+      '{a}[이/가] 불가에 앉아 해진 망토를 꿰매고 있다.',
+      '{a}[은/는] 바람 냄새를 맡더니 내일 날씨 이야기를 혼자 중얼거린다.',
+      '{a}[이/가] 장작을 패서 동굴 벽에 차곡차곡 쌓아 두었다.',
+      '{a}[이/가] 어린 식구들이 어질러 놓은 것을 한숨을 쉬며 치운다.',
+    ],
+    elderH: [
+      '{a}[이/가] 볕 드는 바위에 앉아 옛날이야기를 들려줄 사람을 기다린다.',
+      '{a}[이/가] 느린 손으로 바구니를 엮으며 오래된 노래를 흥얼거린다.',
+      '{a}[은/는] {o}[이/가] 처음 둥지를 틀던 날을 떠올리며 웃음 짓는다.',
+    ],
+    hatch: [
+      '{a}[이/가] 제 꼬리를 잡으려고 빙글빙글 돌다가 어지러워 주저앉았다.',
+      '{a}[이/가] 작은 불꽃을 뿜어 보려다 재채기만 했다.',
+      '{a}[이/가] 보물더미 위로 기어 올라가 금화 사이에 몸을 파묻었다.',
+      '{a}[이/가] 껍데기 조각을 아직도 소중하게 품에 안고 다닌다.',
+      '{a}[이/가] 제 그림자를 보고 놀라 으르렁거렸다.',
+      '{a}[이/가] 꼬물꼬물 기어 와 {o}의 발톱 위에 턱을 괴었다.',
+    ],
+    littleD: [
+      '{a}[이/가] 날개를 퍼덕이며 바위에서 뛰어내렸다. 아직은 조금 무리였다.',
+      '{a}[이/가] 처음으로 연기 한 줄기를 뿜어 내고 몹시 뿌듯해한다.',
+      '{a}[이/가] 사람 모습으로 바뀌어 보려다 꼬리만 남기고 실패했다.',
+      '{a}[이/가] 둥지 근처 나무 꼭대기까지 날아올랐다가 내려오는 법을 몰라 울상이다.',
+      '{a}[이/가] 보물더미에서 제일 반짝이는 것을 골라 제 자리에 옮겨 놓았다.',
+    ],
+    olderD: [
+      '{a}[이/가] 둥지 위를 한 바퀴 크게 돌고 내려와 날개를 접었다.',
+      '{a}[은/는] 보물더미 곁에 엎드려 반쯤 감은 눈으로 입구를 지키고 있다.',
+      '{a}[이/가] 바위에 발톱을 갈고 있다. 소리가 제법 어른스럽다.',
+      '{a}[이/가] 어린 식구들을 등에 태우고 둥지 앞을 천천히 돈다.',
+      '{a}[이/가] 먼 하늘을 바라보며 언젠가 자기 둥지를 틀 곳을 그려 본다.',
+    ],
+    trait: {
+      glutton: ['{a}[이/가] 몰래 먹을 것을 하나 더 집어 들었다가 들키자 씩 웃었다.', '{a}[이/가] 저녁 메뉴를 벌써 세 번째 물어본다.'],
+      gentle: ['{a}[이/가] 둥지에 날아든 작은 새에게 빵 부스러기를 나눠 주었다.', '{a}[이/가] 넘어진 식구를 일으켜 무릎을 호호 불어 주었다.'],
+      lonely: ['{a}[은/는] 둥지 입구에 앉아 누가 돌아오나 자꾸 바깥을 내다본다.', '{a}[이/가] 혼자 있기 싫다며 식구 곁에 바짝 붙어 앉았다.'],
+      sleepy: ['{a}[이/가] 해가 중천인데도 이불 속에서 나오지 않는다.', '{a}[이/가] 밥을 먹다 말고 그대로 꾸벅 잠들었다.'],
+      steady: ['{a}[이/가] 어린 식구들의 신발을 가지런히 놓아 주었다.', '{a}[이/가] 둥지 살림을 손가락으로 하나하나 세며 점검하고 있다.'],
+      shy: ['{a}[이/가] 바위 뒤에 숨어서 이쪽을 살짝 내다본다.', '{a}[이/가] 칭찬을 듣자 귀까지 빨개져서 고개를 숙였다.'],
+      prankster: ['{a}[이/가] 누군가의 신발에 조약돌을 하나씩 넣어 두고 시치미를 뗐다.', '{a}[이/가] 잠든 식구 얼굴에 숯으로 수염을 그려 놓았다.'],
+      brave: ['{a}[이/가] 둥지 근처를 어슬렁거리던 여우를 막대기 하나로 쫓아냈다.', '{a}[이/가] 천둥이 쳐도 끄떡없다며 입구에 버티고 섰다.'],
+      handy: ['{a}[이/가] 부러진 나무 의자를 뚝딱뚝딱 고쳐 놓았다.', '{a}[이/가] 나뭇가지로 작은 용 모양 풍경을 깎아 입구에 매달았다.'],
+      flowers: ['{a}[이/가] 들꽃을 한 아름 꺾어 와 둥지 곳곳에 꽂아 두었다.', '{a}[이/가] 꽃잎을 모아 {o}에게 줄 화관을 엮고 있다.'],
+      curious: ['{a}[이/가] 처음 보는 벌레를 따라 동굴 깊은 곳까지 들어갔다 나왔다.', '{a}[이/가] 왜 하늘은 파란지 대답할 때까지 묻는다.'],
+      clever: ['{a}[이/가] 금화를 크기대로 줄 세워 놓고 뿌듯해한다.', '{a}[이/가] 보물더미 금화를 몰래 세어 보고 하나 모자란다고 알려 주었다.'],
+      diligent: ['{a}[이/가] 둥지 바닥의 돌을 하나하나 치워 잠자리를 고르게 다졌다.', '{a}[이/가] 해가 뜨기 전부터 날갯짓 연습을 시작했다.'],
+      clingy: ['{a}[이/가] {o}의 냄새가 밴 자리에 몸을 비비며 떠나지 않는다.', '{a}[이/가] 어디를 가든 다른 식구 꼬리를 물고 따라다닌다.'],
+      hunter: ['{a}[이/가] 풀숲에 납작 엎드려 들쥐 한 마리를 노리고 있다.', '{a}[이/가] 잡은 들쥐를 자랑스럽게 둥지 입구에 놓아두었다.'],
+      swift: ['{a}[이/가] 둥지 위를 쏜살같이 맴돌다가 바람을 가르며 내려앉았다.', '{a}[이/가] 떨어지는 나뭇잎을 땅에 닿기 전에 모두 낚아챘다.'],
+      stubborn: ['{a}[은/는] 자기 자리라며 아무리 불러도 보물더미에서 내려오지 않는다.', '{a}[이/가] 싫다는 대답을 오늘만 열 번은 했다.'],
+      dreamy: ['{a}[이/가] 구름 모양을 하나하나 짚어 가며 이름을 붙이고 있다.', '{a}[이/가] 어젯밤 꾼 꿈이 진짜였다고 우기고 있다.'],
+    },
+    job: {
+      forge: ['{a}[이/가] 공방에서 풀무질을 거들며 얼굴에 검댕을 묻혔다.', '{a}[이/가] 공방에서 갓 두드린 쇠붙이를 물에 담가 치익 소리를 냈다.'],
+      herb: ['{a}[이/가] 약초밭에서 잡초를 뽑으며 콧노래를 흥얼거린다.', '{a}[이/가] 약초를 말리려고 줄에 하나하나 매달고 있다.'],
+      kitchen: ['{a}[이/가] 부엌에서 국을 휘저으며 간을 보고 있다.', '{a}[이/가] 부엌에서 오늘 저녁 거리를 손질하고 있다.'],
+      tower: ['{a}[이/가] 망루에 올라 먼 하늘을 지켜보고 있다.', '{a}[이/가] 망루에서 수상한 그림자가 없는지 꼼꼼히 살핀다.'],
+      library: ['{a}[이/가] 서고에서 오래된 책의 먼지를 털어 내고 있다.', '{a}[이/가] 서고에서 책을 읽다가 중요한 대목에 나뭇잎을 끼워 두었다.'],
+      spa: ['{a}[이/가] 온천 물을 데우려고 장작을 나르고 있다.', '{a}[이/가] 온천 둘레의 이끼 낀 돌을 닦고 있다.'],
+    },
+    fac: {
+      spa: ['{a}[이/가] 온천에 발을 담그고 눈을 지그시 감았다.', '{a}[이/가] 온천에서 물장구를 치다가 김이 서려 앞이 안 보인다며 웃는다.'],
+      library: ['{a}[이/가] 서고에서 그림책을 펼쳐 놓고 그림만 한참 들여다본다.', '{a}[이/가] 서고 구석에서 글자를 하나씩 따라 쓰고 있다.'],
+      herb: ['{a}[이/가] 약초밭에 쪼그려 앉아 새싹이 몇 개 났는지 세고 있다.', '{a}[이/가] 약초밭에 물을 주다가 신발까지 흠뻑 적셨다.'],
+      kitchen: ['{a}[이/가] 부엌 근처를 맴돌며 냄새를 킁킁 맡는다.', '{a}[이/가] 부엌에서 몰래 집어 온 빵 조각을 반으로 나눴다.'],
+      tower: ['{a}[이/가] 망루 계단을 몇 칸까지 올라갈 수 있나 시험해 보고 있다.', '{a}[이/가] 망루 꼭대기에서 손을 흔들며 소리를 질렀다. 메아리가 돌아왔다.'],
+      forge: ['{a}[이/가] 공방에서 반짝이는 쇳조각을 하나 주워 와 자랑했다.', '{a}[이/가] 공방 화로 앞에서 손을 녹이며 불꽃 튀는 걸 구경한다.'],
+    },
+    wx: {
+      clear: ['맑은 날이라 {a}[이/가] 둥지 밖 풀밭에 나가 한참을 뒹굴었다.', '{a}[이/가] 햇볕에 데워진 바위 위에 배를 깔고 누웠다.'],
+      rain: ['비가 와서 {a}[이/가] 동굴 입구에 앉아 빗소리를 듣고 있다.', '{a}[이/가] 빗물 받는 그릇을 늘어놓고 떨어지는 소리를 비교해 본다.'],
+      storm: ['천둥이 치자 {a}[이/가] 보물더미 뒤로 쏙 숨었다.', '{a}[이/가] 번개가 칠 때마다 숫자를 세며 천둥을 기다린다.'],
+      snow: ['{a}[이/가] 둥지 앞에 쌓인 눈으로 작은 용을 빚어 놓았다.', '{a}[이/가] 혀를 내밀어 떨어지는 눈송이를 받아먹는다.'],
+      fog: ['안개가 짙어 {a}[이/가] 둥지 밖에 나가지 못하고 입구만 서성인다.', '{a}[이/가] 안개 속에서 들리는 소리가 무엇인지 맞혀 보려 귀를 기울인다.'],
+      heat: ['더위에 지친 {a}[이/가] 동굴 안쪽 서늘한 바위에 배를 깔고 누웠다.', '{a}[이/가] 더위를 식히려고 물웅덩이에 발을 담갔다.'],
+      wind: ['{a}[이/가] 바람에 날아가는 나뭇잎을 쫓아 이리저리 뛰어다닌다.', '{a}[이/가] 바람에 날려 갈까 봐 둥지 입구 바위를 꼭 붙잡고 있다.'],
+      aurora: ['{a}[이/가] 하늘에 일렁이는 빛을 보며 입을 다물지 못한다.', '{a}[이/가] 오로라 빛깔을 하나하나 이름 붙여 부르고 있다.'],
+      ash: ['잿가루가 날려 {a}[이/가] 코를 찡그리며 재채기를 했다.'],
+    },
+    season: {
+      spring: ['{a}[이/가] 둥지 앞에 처음 핀 꽃을 찾아내고 모두를 불러 모았다.', '{a}[이/가] 봄볕에 졸려서 하품을 하다가 나비를 놓쳤다.'],
+      summer: ['{a}[이/가] 개울에서 잡은 송사리를 그릇에 담아 와 자랑한다.', '{a}[이/가] 매미 소리를 흉내 내다 목이 쉬었다.'],
+      autumn: ['{a}[이/가] 낙엽을 한가득 모아 그 위로 풀썩 뛰어들었다.', '{a}[이/가] 도토리를 주워 둥지 구석에 몰래 쌓아 두고 있다.'],
+      winter: ['{a}[이/가] 입김을 후후 불며 누가 더 멀리 가나 혼자 겨룬다.', '{a}[이/가] 불가에 바짝 붙어 앉아 꼬리 끝을 녹이고 있다.'],
+    },
+    mate: ['{a}[이/가] 짝과 함께 둥지 입구에서 해 지는 걸 바라보았다.', '{a}[이/가] 짝에게 줄 선물을 고르느라 보물더미를 뒤적인다.'],
+    pairHH: [
+      '{a}[과/와] {b}[이/가] 둥지 앞에서 술래잡기를 하며 한참을 뛰어다녔다.',
+      '{a}[이/가] {b}에게 몰래 숨겨 둔 사탕 반쪽을 나눠 주었다.',
+      '{a}[과/와] {b}[이/가] 누가 더 멀리 조약돌을 던지나 겨루고 있다.',
+      '{a}[과/와] {b}[이/가] 나란히 누워 구름이 무엇을 닮았는지 이야기한다.',
+      '{a}[이/가] {b}의 머리를 땋아 주겠다며 나섰다. 결과는 아무도 모른다.',
+      '{a}[과/와] {b}[이/가] 마지막 남은 빵 한 조각을 두고 가위바위보를 했다.',
+    ],
+    pairDD: [
+      '{a}[과/와] {b}[이/가] 서로 꼬리를 물고 둥지 안을 데굴데굴 굴렀다.',
+      '{a}[이/가] {b}에게 나는 법을 보여 주겠다며 날개를 활짝 폈다.',
+      '{a}[과/와] {b}[이/가] 누가 더 큰 불꽃을 뿜나 겨루다가 둘 다 콜록거렸다.',
+      '{a}[과/와] {b}[이/가] 보물더미의 가장 높은 자리를 두고 밀치기를 한다.',
+    ],
+    pairHD: [
+      '{a}[이/가] {b}의 등에 올라타려다 미끄러져 둘 다 웃음을 터뜨렸다.',
+      '{a}[이/가] {b}에게 이름을 붙인 돌멩이를 하나 선물했다.',
+      '{a}[이/가] {b}의 비늘을 하나하나 닦아 주고 있다. {b}[은/는] 기분이 좋은지 꼬리를 흔든다.',
+      '{a}[이/가] {b}에게 그림책을 읽어 주고, {b}[은/는] 그림마다 콧김을 뿜는다.',
+      '{a}[과/와] {b}[이/가] 둥지 앞 웅덩이에서 함께 물장구를 쳤다.',
+    ],
+    // 어른·다 큰 용이 어린 식구를 돌봄
+    care: [
+      '{a}[이/가] 칭얼대는 {b}[을/를] 품에 안고 둥지 안을 천천히 거닐었다.',
+      '{a}[이/가] {b}에게 걷는 법을 가르쳐 주느라 허리를 굽히고 있다.',
+      '{a}[이/가] 잠든 {b} 위에 담요를 살며시 덮어 주었다.',
+    ],
+    // 원정
+    depart: [
+      '{n}[이/가] {o}[을/를] 따라 원정길에 올랐다. {r}[으로/로] 간다며 들떠 있다.',
+      '{n}[이/가] {o}의 뒤를 바짝 따라 원정을 떠났다. 남은 식구들이 입구까지 배웅했다.',
+    ],
+    back: [
+      '{n}[이/가] 원정에서 돌아와 남은 식구들에게 본 것을 늘어놓는다.',
+      '원정에서 돌아온 {n}[이/가] 짐도 풀기 전에 둥지 바닥에 쓰러져 잠들었다.',
+    ],
+    tripH: [
+      '{a}[이/가] {r}의 낯선 길에서 처음 보는 꽃을 꺾어 들었다.',
+      '{a}[이/가] {o}의 등 위에서 바람에 머리칼을 날리며 아래를 내려다본다.',
+      '{a}[이/가] 원정길 모닥불 앞에서 오늘 본 것을 손짓으로 설명한다.',
+      '{a}[이/가] {r}에서 주운 예쁜 돌을 둥지 식구들에게 줄 선물로 챙겼다.',
+      '{a}[이/가] 걷다 지쳐 {o}의 발톱에 기대 잠깐 쉬어 간다.',
+    ],
+    tripD: [
+      '{a}[이/가] {o} 옆에서 나란히 날며 바람 타는 법을 익히고 있다.',
+      '{a}[이/가] {r}의 하늘이 둥지보다 넓다며 신나게 맴돈다.',
+      '{a}[이/가] 원정길에서 처음 맡은 냄새를 따라가 보겠다고 고집을 부린다.',
+      '{a}[이/가] {o}[이/가] 사냥하는 모습을 숨죽여 지켜보고 있다.',
+    ],
+  };
+  const STAGE_GROUP = { '아기': 'babyH', '아이': 'kidH', '소년': 'kidH', '청년': 'youthH', '어른': 'adultH', '노년': 'elderH', '해츨링': 'hatch', '어린 용': 'littleD', '젊은 용': 'olderD', '다 자란 용': 'olderD' };
+  const SMALL = new Set(['아기', '아이', '해츨링']);   // 돌봄을 받는 어린 식구
+  const GROWN = new Set(['청년', '어른', '노년', '젊은 용', '다 자란 용']);
+  const joinNames = (list) => list.map((k, i) => (i < list.length - 1 ? `${k.name}${josa(k.name, '과', '와')}` : k.name)).join(' ');
+  function storyMoment(slot, all, n, salt = 0) {
+    const rnd = storyRng((slot % 1000003) * 7919 + all.reduce((a, k) => a + k.id * 97, 0) + salt * 104729);
+    rnd(); rnd();
+    const t0 = slot * STORY_SLOT, t1 = t0 + STORY_SLOT;
+    // 원정에 따라나선 때, 돌아온 때는 그 시간의 이야기로 꼭 남김
+    const dep = all.filter((k) => k.expAt >= t0 && k.expAt < t1);
+    if (dep.length && !salt) { storyCtx.n = joinNames(dep); return storyText(pickOf(rnd, STORY.depart)); }
+    const back = all.filter((k) => k.expBack >= t0 && k.expBack < t1);
+    if (back.length && !salt) { storyCtx.n = joinNames(back); return storyText(pickOf(rnd, STORY.back)); }
+    const away = all.filter((k) => k.onExp && (!k.expAt || k.expAt < t0));          // 이 시간에 원정길에 있던 식구
+    const home = all.filter((k) => !(k.onExp && (!k.expAt || k.expAt < t1)));        // 둥지에 있던 식구
+    if (!home.length && !away.length) return '';
+    if (away.length && (!home.length || rnd() < 0.4)) {
+      const a = pickOf(rnd, away);
+      return storyText(pickOf(rnd, a.type === 'drake' ? STORY.tripD : STORY.tripH), a.name);
+    }
+    const hour = new Date(t0 + 9 * 3600000).getUTCHours();
+    const a = pickOf(rnd, home);
+    if (hour >= 23 || hour < 6) return storyText(pickOf(rnd, STORY.night), a.name);
+    // 둘이 함께 (어린 식구가 있으면 다 큰 식구가 돌보는 장면도)
+    if (home.length > 1 && rnd() < 0.34) {
+      const b = pickOf(rnd, home.filter((k) => k !== a));
+      const [big, small] = GROWN.has(a.stage) && SMALL.has(b.stage) ? [a, b] : GROWN.has(b.stage) && SMALL.has(a.stage) ? [b, a] : [null, null];
+      if (big) return storyText(pickOf(rnd, STORY.care), big.name, small.name); // 다 큰 식구와 어린 식구면 돌보는 장면
+      const both = a.type === 'human' && b.type === 'human' ? STORY.pairHH : a.type === 'drake' && b.type === 'drake' ? STORY.pairDD : STORY.pairHD;
+      const [x, y] = both === STORY.pairHD && a.type === 'drake' ? [b, a] : [a, b]; // 사람과 용이면 사람을 앞에
+      return storyText(pickOf(rnd, both), x.name, y.name);
+    }
+    const pool = [];
+    const add = (arr, w = 1) => { if (arr) for (let i = 0; i < w; i++) pool.push(...arr); };
+    add(STORY[STAGE_GROUP[a.stage]] || []);
+    if (a.mood === 'hungry') add(STORY.hungry, 2);
+    if (a.mood === 'happy') add(STORY.happy);
+    for (const t of a.traits || []) add(STORY.trait[t.id], 2);
+    if (a.job?.working) add(STORY.job[a.job.id], 2);
+    if (a.mate) add(STORY.mate);
+    for (const f of n.facilities?.built || []) add(STORY.fac[f.id || f]);
+    const w = S.wx?.regions?.[n.region]?.id;
+    if (w) add(STORY.wx[w]);
+    if (S.wx?.season?.id) add(STORY.season[S.wx.season.id]);
+    if (hour >= 6 && hour < 9) add(STORY.morning);
+    if (hour >= 18) add(STORY.evening);
+    // 내 드래곤이 둥지에 있는지, 쉬는 중인지, 멀리 있는지
+    const me = S.me;
+    if (me && !me.exp && me.region === n.region) add(me.restAt ? STORY.ownerRest : STORY.withOwner, 2);
+    else if (a.bond >= 50) add(STORY.miss);
+    return storyText(pickOf(rnd, pool.length ? pool : STORY.kidH), a.name);
+  }
+  function renderNestStory(host, n) {
+    const kids = (n.kin?.home || []).filter((v) => v.status === 'home' && !v.errand && !v.runaway && !v.companion);
+    storyCtx = { o: S.me?.name || '주인', r: S.regions?.[S.me?.exp?.region]?.name || '먼 곳', n: '' };
+    const sec = document.createElement('div');
+    sec.className = 'nest-story';
+    const h = document.createElement('h3');
+    h.textContent = '둥지 이야기';
+    sec.appendChild(h);
+    if (!kids.length) {
+      const p = document.createElement('p');
+      p.className = 'note';
+      const all = n.kin?.home || [];
+      p.textContent = all.some((v) => v.status === 'home') ? '식구들이 모두 바깥에 나가 있어 둥지가 조용하다.'
+        : all.length ? '아직 알에서 깨어난 식구가 없다. 알이 깨어나면 둥지에서 어떻게 지내는지 여기에 적힌다.'
+        : '아직 둥지에 함께 사는 식구가 없다. 식구가 생기면 둥지에서 어떻게 지내는지 여기에 적힌다.';
+      sec.appendChild(p);
+      host.appendChild(sec);
+      return;
+    }
+    const ul = document.createElement('ul');
+    const now = Date.now();
+    const cur = Math.floor(now / STORY_SLOT);
+    let prevText = '';
+    for (let i = 0; i < 4; i++) {
+      const slot = cur - i;
+      const li = document.createElement('li');
+      const t = document.createElement('time');
+      const d = new Date(slot * STORY_SLOT);
+      t.textContent = i === 0 ? '지금' : `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      const p = document.createElement('p');
+      // 바로 앞 장면과 같으면 다시 고름 (같은 때에는 늘 같은 결과)
+      let text = storyMoment(slot, kids, n);
+      for (let k = 1; k < 4 && text === prevText; k++) text = storyMoment(slot, kids, n, k);
+      prevText = text;
+      p.textContent = text;
+      li.append(t, p);
+      ul.appendChild(li);
+    }
+    sec.appendChild(ul);
+    host.appendChild(sec);
+  }
 
   // ── 다른 드래곤의 기록 (프로필) ──
   let profileId = null;
@@ -8913,6 +9299,57 @@
     if (S.region) renderOverlay();
   }
   setInterval(() => { if (S.wx) renderWeather(); }, 60000);
+
+  // ── 왕도 축제: 주말마다. 왕도에 있으면 함께 있는 드래곤에게 춤을 청할 수 있음 ──
+  const FEST_SVG = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.00 9.40L12.00 6.80M13.30 9.75L14.60 7.50M14.25 10.70L16.50 9.40M14.60 12.00L17.20 12.00M14.25 13.30L16.50 14.60M13.30 14.25L14.60 16.50M12.00 14.60L12.00 17.20M10.70 14.25L9.40 16.50M9.75 13.30L7.50 14.60M9.40 12.00L6.80 12.00M9.75 10.70L7.50 9.40M10.70 9.75L9.40 7.50M13.71 5.62L14.43 2.92M16.67 7.33L18.65 5.35M18.38 10.29L21.08 9.57M18.38 13.71L21.08 14.43M16.67 16.67L18.65 18.65M13.71 18.38L14.43 21.08M10.29 18.38L9.57 21.08M7.33 16.67L5.35 18.65M5.62 13.71L2.92 14.43M5.62 10.29L2.92 9.57M7.33 7.33L5.35 5.35M10.29 5.62L9.57 2.92"/><circle cx="12.00" cy="1.00" r=".6" fill="currentColor" stroke="none"/><circle cx="17.50" cy="2.47" r=".6" fill="currentColor" stroke="none"/><circle cx="21.53" cy="6.50" r=".6" fill="currentColor" stroke="none"/><circle cx="23.00" cy="12.00" r=".6" fill="currentColor" stroke="none"/><circle cx="21.53" cy="17.50" r=".6" fill="currentColor" stroke="none"/><circle cx="17.50" cy="21.53" r=".6" fill="currentColor" stroke="none"/><circle cx="12.00" cy="23.00" r=".6" fill="currentColor" stroke="none"/><circle cx="6.50" cy="21.53" r=".6" fill="currentColor" stroke="none"/><circle cx="2.47" cy="17.50" r=".6" fill="currentColor" stroke="none"/><circle cx="1.00" cy="12.00" r=".6" fill="currentColor" stroke="none"/><circle cx="2.47" cy="6.50" r=".6" fill="currentColor" stroke="none"/><circle cx="6.50" cy="2.47" r=".6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/></svg>';
+  let festLast = null;
+  function loadFest() {
+    if (!S.me) return;
+    socket.emit('fest:get', {}, (res) => { if (res && !res.error) renderFest(res); });
+  }
+  function renderFest(f) {
+    festLast = f;
+    const box = $('fest');
+    box.hidden = !f.on;
+    if (!f.on) return;
+    box.style.setProperty('--wc', '#A84F6A');
+    box.innerHTML = `<span class="ic">${FEST_SVG}</span><div class="hd"><b>왕도 축제</b><small></small></div><div class="fl"></div>`;
+    const capital = S.regions.capital?.name || '왕도';
+    box.querySelector('.hd small').textContent = f.here
+      ? `광장에 음악이 울린다. 함께 춤추면 '축제의 흥'이 붙는다. ${untilText(f.until)} 뒤에 끝난다.`
+      : `${capital}에서 주말 축제가 열리고 있다. 광장에 가면 다른 드래곤과 춤출 수 있다. ${untilText(f.until)} 뒤에 끝난다.`;
+    const fl = box.querySelector('.fl');
+    if (!f.here) { fl.remove(); return; }
+    if (f.count) { const c = document.createElement('p'); c.className = 'fc'; c.textContent = `이번 축제에서 ${f.count}번 춤추었다. 같은 드래곤과는 축제마다 한 번씩 출 수 있다.`; fl.appendChild(c); }
+    if (!f.list.length) { const e = document.createElement('p'); e.className = 'fc'; e.textContent = '광장에 다른 드래곤이 없다. 누군가 오기를 기다리자.'; fl.appendChild(e); return; }
+    for (const x of f.list) {
+      const r = document.createElement('div');
+      r.className = 'fr';
+      r.appendChild(avaEl(x, 26));
+      const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = `${x.name} · Lv. ${x.level}`;
+      r.appendChild(nm);
+      if (x.done) { const t = document.createElement('span'); t.className = 'done'; t.textContent = '함께 춤추었다'; r.appendChild(t); }
+      else {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'btn'; b.textContent = '춤 청하기';
+        b.disabled = !!x.why; if (x.why) b.title = x.why;
+        b.addEventListener('click', () => socket.emit('fest:invite', { id: x.id }, (res) => { if (res.error) return toast(res.error); toast(res.lines.join(' ')); }));
+        r.appendChild(b);
+      }
+      fl.appendChild(r);
+    }
+  }
+  setInterval(() => { if (S.me && S.region) loadFest(); }, 30000); // 광장에 드나드는 드래곤, 축제 시작·끝
+  let festInv = null;
+  function onFestInvited(x) {
+    festInv = x.id;
+    toast(`${x.from.name}${josa(x.from.name, '이', '가')} 함께 춤추자고 발톱을 내민다.`, {
+      label: '함께 춤추기',
+      run: () => { hideToast(); festInv = null; socket.emit('fest:answer', { id: x.id, accept: true }, (res) => { if (res.error) toast(res.error); }); },
+      alt: { label: '사양하기', run: () => { festInv = null; socket.emit('fest:answer', { id: x.id, accept: false }, () => {}); } },
+      ttl: x.seconds * 1000,
+    });
+  }
   // 멸망한 대륙: 늘 오염된 땅. 모두의 정화도와 기여 순위, 상륙지에서는 생존자와의 교환
   let ruinTop = null, ruinTopAt = 0;
   function renderRuin(box) {
@@ -9665,7 +10102,7 @@
     body.appendChild(me);
     const n = document.createElement('p');
     n.className = 'note';
-    n.textContent = '결투에서는 다치지 않는다. 둘 다 접속해 있으면 직접 턴을 골라 싸우고, 상대가 자동 결투를 허용했다면 접속하지 않았어도 스킬 구성대로 싸운다. 이기면 용족 명성과 경험치가 오른다.';
+    n.textContent = '결투에서는 다치지 않는다. 둘 다 접속해 있으면 직접 턴을 골라 싸우고, 상대가 자동 결투를 허용했다면 접속하지 않았어도 스킬 구성대로 싸운다. 이기면 용족 명성과 경험치가 오른다. 내기 결투는 둘 다 접속해 있고 레벨 차이가 5 이하일 때, 서로 금화나 물건을 걸고 겨뤄 진 쪽이 건 것을 이긴 쪽이 가져간다.';
     body.appendChild(n);
     const box = document.createElement('div');
     for (const x of res.list) {
@@ -9691,6 +10128,9 @@
         a.appendChild(b);
       };
       btn('결투 신청', x.live, () => challenge(x, 'live'), true);
+      // 내기 결투: 실시간 결투로만, 레벨 차이 BET_UI.gap 이하
+      const gapWhy = Math.abs((S.me?.level || 0) - x.level) > BET_UI.gap ? `레벨 차이가 ${BET_UI.gap}보다 크면 내기를 걸 수 없다.` : null;
+      btn('내기 결투', x.live || gapWhy, () => openBetChallenge(x));
       btn('자동 결투', x.auto, () => challenge(x, 'auto'));
       r.appendChild(a);
       r.addEventListener('click', (e) => { if (!e.target.closest('button')) openProfile(x.id); });
@@ -9719,10 +10159,19 @@
   // 결투 신청을 받았을 때
   let invite = null;
   let inviteTimer = null;
+  let invitePick = null;
   function onInvite(inv) {
     invite = inv;
     const until = Date.now() + inv.seconds * 1000;
-    $('invite-text').textContent = `${inv.from.name}(Lv. ${inv.from.level}, ${S.kinds[inv.from.kind]?.name || ''})${josa(inv.from.name, '이', '가')} 결투를 신청했다.`;
+    $('invite-text').textContent = `${inv.from.name}(Lv. ${inv.from.level}, ${S.kinds[inv.from.kind]?.name || ''})${josa(inv.from.name, '이', '가')} ${inv.bet ? '내기 ' : ''}결투를 신청했다.${inv.bet ? ' 지는 쪽이 건 것을 이긴 쪽이 가져간다.' : ''}`;
+    $('invite-bet').hidden = !inv.bet;
+    $('invite-yes').textContent = inv.bet ? '걸고 받아들이기' : '받아들이기';
+    invitePick = null;
+    if (inv.bet) {
+      $('invite-bet-theirs').replaceChildren(); ledgerChips($('invite-bet-theirs'), inv.bet.gold, inv.bet.items);
+      $('invite-bet-pick').replaceChildren();
+      fetchInv(() => { if (invite === inv) invitePick = stakePicker($('invite-bet-pick')); });
+    }
     const tick = () => {
       const left = Math.ceil((until - Date.now()) / 1000);
       $('invite-left').textContent = `${Math.max(0, left)}초 안에 답하지 않으면 지나간다. 결투로 다치지는 않는다.`;
@@ -9736,9 +10185,147 @@
   function closeInvite() { clearInterval(inviteTimer); invite = null; if ($('invite-dlg').open) $('invite-dlg').close(); }
   function answerInvite(accept) {
     if (!invite) return closeInvite();
-    socket.emit('arena:answer', { id: invite.id, accept }, (res) => { if (res.error) toast(res.error); });
+    const inv = invite;
+    if (accept && inv.bet) {
+      const bet = invitePick ? invitePick.get() : { gold: 0, items: [] };
+      if (!bet.gold && !bet.items.length) return toast('내기 결투는 받는 쪽도 무언가를 걸어야 한다.');
+      // 걸 것이 틀렸으면 창을 닫지 않고 다시 고르게
+      socket.emit('arena:answer', { id: inv.id, accept, bet }, (res) => {
+        if (res.error) return toast(res.error);
+        if (invite === inv) closeInvite();
+        if (res.waiting) toast(`${inv.from.name}${josa(inv.from.name, '이', '가')} 건 것을 확인하면 결투가 시작된다.`);
+      });
+      return;
+    }
+    socket.emit('arena:answer', { id: inv.id, accept }, (res) => { if (res.error) toast(res.error); });
     closeInvite();
   }
+
+  // ── 내기 결투 ──
+  const BET_UI = { gap: 5, goldMax: 200, kinds: 3, qty: 20 }; // 서버(game-data.js의 COMBAT.bet)와 같은 값
+  // 걸 것 고르기: 금화 + 물건 (찾기·눌러 고르기, 최대 BET_UI.kinds가지). 보물은 걸 수 없음
+  function stakePicker(host) {
+    host.replaceChildren();
+    const box = document.createElement('div');
+    box.className = 'gift-box stake-box';
+    const maxGold = Math.min(BET_UI.goldMax, S.me?.gold || 0);
+    box.innerHTML = `<div class="r"><span style="font-size: 13px">금화</span><input class="input num gold" type="number" min="0" max="${maxGold}" value="0" aria-label="걸 금화"><span class="note">최대 ${maxGold}닢</span></div>
+      <div class="gp">
+        <input class="input gp-q" type="search" placeholder="걸 물건 이름으로 찾기" aria-label="걸 물건 찾기" autocomplete="off">
+        <div class="gp-list" role="listbox" aria-label="걸 물건" aria-multiselectable="true"></div>
+        <div class="stk-picked"></div>
+      </div>`;
+    host.appendChild(box);
+    const picked = new Map(); // 물건 id → 개수
+    const own = Object.entries(invCache).filter(([id, q]) => S.items[id] && q > 0 && S.items[id].cat !== 'treasure')
+      .sort(([a], [b]) => S.items[a].name.localeCompare(S.items[b].name, 'ko'));
+    const goldIn = box.querySelector('.gold');
+    goldIn.addEventListener('change', () => { goldIn.value = Math.max(0, Math.min(maxGold, Math.floor(Number(goldIn.value) || 0))); });
+    let q = '';
+    const list = box.querySelector('.gp-list'), pk = box.querySelector('.stk-picked');
+    const drawPicked = () => {
+      pk.replaceChildren();
+      for (const [id, n] of picked) {
+        const have = invCache[id] || 0;
+        const row = document.createElement('div');
+        row.className = 'stk-row';
+        row.innerHTML = '<b></b><input class="input num" type="number" min="1"><button type="button" class="linkbtn">빼기</button>';
+        row.querySelector('b').textContent = S.items[id].name;
+        const inp = row.querySelector('input');
+        inp.max = Math.min(have, BET_UI.qty); inp.value = n;
+        inp.setAttribute('aria-label', `${S.items[id].name} 개수`);
+        inp.addEventListener('change', () => { const v = Math.max(1, Math.min(Number(inp.max), Math.floor(Number(inp.value) || 1))); inp.value = v; picked.set(id, v); });
+        row.querySelector('button').addEventListener('click', () => { picked.delete(id); drawPicked(); drawList(); });
+        pk.appendChild(row);
+      }
+    };
+    const drawList = () => {
+      list.replaceChildren();
+      const hits = own.filter(([id]) => !q || S.items[id].name.toLowerCase().includes(q));
+      for (const [id, n] of hits) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        const on = picked.has(id);
+        b.className = `gp-it${on ? ' on' : ''}`;
+        b.setAttribute('role', 'option');
+        b.setAttribute('aria-selected', String(on));
+        b.innerHTML = '<b></b><small></small><span></span>';
+        b.querySelector('b').textContent = S.items[id].name;
+        b.querySelector('small').textContent = itemTagText(S.items[id]);
+        b.querySelector('span').textContent = `×${n}`;
+        b.addEventListener('click', () => {
+          if (on) picked.delete(id);
+          else if (picked.size >= BET_UI.kinds) return toast(`물건은 ${BET_UI.kinds}가지까지 걸 수 있다.`);
+          else picked.set(id, 1);
+          drawList(); drawPicked();
+        });
+        list.appendChild(b);
+      }
+      if (!hits.length) { const e = document.createElement('p'); e.className = 'note gp-empty'; e.textContent = own.length ? '찾는 물건이 없다.' : '걸 수 있는 물건이 없다.'; list.appendChild(e); }
+    };
+    box.querySelector('.gp-q').addEventListener('input', (e) => { q = e.target.value.trim().toLowerCase(); drawList(); });
+    drawList();
+    return { get: () => ({ gold: Math.max(0, Math.min(maxGold, Math.floor(Number(goldIn.value) || 0))), items: [...picked].map(([id, qty]) => ({ id, qty })) }) };
+  }
+  let betMode = null; // { kind: 'challenge', x, pick } | { kind: 'confirm', id }
+  let betTimer = null;
+  function closeBet() { clearInterval(betTimer); betMode = null; if ($('bet-dlg').open) $('bet-dlg').close(); }
+  function openBetChallenge(x) {
+    fetchInv(() => {
+      betMode = { kind: 'challenge', x };
+      $('bet-title').textContent = `내기 결투 · ${x.name}`;
+      $('bet-text').textContent = `${x.name}에게 걸 것을 고르자. 상대도 무언가를 걸어야 받아들일 수 있고, 둘 다 건 것을 보고 내가 마지막으로 확인하면 결투가 시작된다. 지는 쪽이 건 것을 이긴 쪽이 가져간다.`;
+      $('bet-theirs-wrap').hidden = true;
+      $('bet-mine-l').textContent = '내가 걸 것';
+      $('bet-mine').hidden = true;
+      $('bet-pick').hidden = false;
+      betMode.pick = stakePicker($('bet-pick'));
+      $('bet-left').textContent = `금화는 ${BET_UI.goldMax}닢까지, 물건은 ${BET_UI.kinds}가지(한 가지에 ${BET_UI.qty}개)까지. 착용한 장신구와 보물은 걸 수 없다.`;
+      $('bet-yes').textContent = '걸고 신청하기';
+      $('bet-no').textContent = '그만두기';
+      if (!$('bet-dlg').open) $('bet-dlg').showModal();
+    });
+  }
+  function onBetConfirm(m) {
+    clearInterval(betTimer);
+    betMode = { kind: 'confirm', id: m.id };
+    $('bet-title').textContent = `내기 확인 · ${m.name}`;
+    $('bet-text').textContent = `${m.name}${josa(m.name, '이', '가')} 걸고 받아들였다. 둘 다 건 것을 확인하자. 지는 쪽이 건 것을 이긴 쪽이 가져간다.`;
+    $('bet-theirs-wrap').hidden = false;
+    $('bet-theirs-l').textContent = `${m.name}${josa(m.name, '이', '가')} 건 것`;
+    $('bet-theirs').replaceChildren(); ledgerChips($('bet-theirs'), m.theirs.gold, m.theirs.items);
+    $('bet-mine-l').textContent = '내가 건 것';
+    $('bet-pick').hidden = true; $('bet-pick').replaceChildren();
+    $('bet-mine').hidden = false; $('bet-mine').replaceChildren(); ledgerChips($('bet-mine'), m.mine.gold, m.mine.items);
+    $('bet-yes').textContent = '이대로 결투';
+    $('bet-no').textContent = '내기 거두기';
+    const until = Date.now() + m.seconds * 1000;
+    const tick = () => { const left = Math.ceil((until - Date.now()) / 1000); $('bet-left').textContent = `${Math.max(0, left)}초 안에 정하지 않으면 지나간다.`; if (left <= 0) closeBet(); };
+    tick(); betTimer = setInterval(tick, 1000);
+    if (!$('bet-dlg').open) $('bet-dlg').showModal();
+  }
+  $('bet-yes').addEventListener('click', () => {
+    const m = betMode;
+    if (!m) return closeBet();
+    if (m.kind === 'challenge') {
+      const bet = m.pick.get();
+      if (!bet.gold && !bet.items.length) return toast('걸 것을 골라야 한다. 내기 없이 겨루려면 \'결투 신청\'을 누르자.');
+      socket.emit('arena:challenge', { id: m.x.id, mode: 'live', bet }, (res) => {
+        if (res.error) return toast(res.error);
+        closeBet();
+        toast(`${m.x.name}에게 내기 결투를 신청했다. 답을 기다린다.`);
+      });
+    } else {
+      socket.emit('arena:bet-ok', { id: m.id, accept: true }, (res) => { if (res.error) toast(res.error); });
+      closeBet();
+    }
+  });
+  $('bet-no').addEventListener('click', () => {
+    const m = betMode;
+    if (m?.kind === 'confirm') socket.emit('arena:bet-ok', { id: m.id, accept: false }, () => {});
+    closeBet();
+  });
+  $('bet-dlg').addEventListener('cancel', (e) => { e.preventDefault(); $('bet-no').click(); });
   $('invite-yes').addEventListener('click', () => answerInvite(true));
   $('invite-no').addEventListener('click', () => answerInvite(false));
   $('invite-dlg').addEventListener('cancel', (e) => { e.preventDefault(); answerInvite(false); });
@@ -10548,7 +11135,7 @@
   });
   function onGmAnnounce(m) {
     const text = `[공지] ${m.text}`;
-    addSystem(text);
+    addSystem(text, m.at, true); // 대륙 소식처럼 시각을 붙이고 '용언과 소식'에도 보임
     toast(text, { label: '확인', run: hideToast });
   }
 
@@ -10830,7 +11417,7 @@
   // news: 기록으로 남는 대륙 소식 (쓰러짐·구조·광폭화·부고) — 시각을 붙이고, 보기 칩에서 '용언과 소식'에 함께 나옴
   function addSystem(text, at, news) {
     const p = document.createElement('div');
-    p.className = `sys${text.startsWith('[광폭화]') ? ' alarm' : ''}${news ? ` wnews${text.startsWith('[부고]') ? ' bye' : ''}` : ''}`;
+    p.className = `sys${text.startsWith('[광폭화]') ? ' alarm' : ''}${news ? ` wnews${text.startsWith('[부고]') ? ' bye' : ''}${text.startsWith('[공지]') ? ' notice' : ''}` : ''}`;
     // 대륙 소식은 말머리 안에 시각: [구조 요청 10:10] … (시각만 살짝 흐리게)
     const head = news && at ? /^\[([^\]]+)\]\s*/.exec(text) : null;
     if (head) {
@@ -11094,6 +11681,12 @@
     socket.on('battle:end', onBattleEnd);
     socket.on('arena:invite', onInvite);
     socket.on('arena:invite-gone', closeInvite);
+    socket.on('arena:bet-confirm', onBetConfirm);
+    socket.on('fest:invited', onFestInvited);
+    socket.on('fest:gone', (x) => { if (festInv === x.id) { festInv = null; hideToast(); } });
+    socket.on('fest:declined', (x) => { toast(`${x.name}: ${x.reason}`); loadFest(); });
+    socket.on('fest:changed', loadFest);
+    socket.on('arena:bet-gone', closeBet);
     socket.on('arena:declined', (x) => toast(`${x.name}에게 신청한 결투: ${x.reason}`));
     socket.on('gm:role', (r) => { setGmVisible(r.isGm); toast(r.isGm ? 'GM 권한을 받았다. 오른쪽 위 메뉴에서 GM 도구를 열 수 있다.' : 'GM 권한이 거두어졌다.'); });
     socket.on('gm:kicked', () => toast('GM이 접속을 끊었다. 새로고침하면 다시 들어올 수 있다.', { label: '다시 접속', run: () => { hideToast(); socket.connect(); } }));

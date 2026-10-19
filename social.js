@@ -11,7 +11,7 @@
 // 입양   둥지의 알이나 아직 어른이 되지 않은 인간 아이를 동료에게 보내자고 제안. 받는 쪽이 데려오기로 하면
 //        그 둥지로 옮겨 감 (받는 쪽 둥지에 빈자리가 있어야 함). 정할 때까지는 보내는 쪽 둥지에 있음
 
-const { ITEMS, KINDS, STANCES, MIND, SKILLS, HEAL_OTHER, fameTier, KIN, DAY, BONDS, MARKS, BOND_RULES } = require('./game-data');
+const { ITEMS, KINDS, STANCES, MIND, SKILLS, HEAL_OTHER, fameTier, KIN, DAY, BONDS, MARKS, BOND_RULES, FESTIVAL, BUFFS, REGIONS } = require('./game-data');
 
 const ADOPT = { days: 3 };         // 입양 제안을 기다리는 날 (지나면 저절로 거둬짐)
 
@@ -125,6 +125,60 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     if (!t) return '동료가 아니면 같은 지역에 함께 있을 때만 할 수 있다.';
     if (!sameRegion(me.id, them)) return '동료가 아니면 같은 지역에 함께 있을 때만 할 수 있다.';
     return null;
+  }
+
+  // ── 왕도 축제 ─────────────────────────────────────
+  // 한국 시각으로 토·일이면 축제. key는 그 주말 토요일 날짜 (같은 축제인지 가리는 데 씀)
+  const KST = 9 * 3600 * 1000;
+  function festivalNow(now = Date.now()) {
+    if (process.env.FESTIVAL_FORCE === '1') return { key: 'test', until: now + DAY }; // 시험용: 평일에도 축제
+    const k = new Date(now + KST);
+    const day = k.getUTCDay();
+    if (!FESTIVAL.days.includes(day)) return null;
+    const sat = new Date(Date.UTC(k.getUTCFullYear(), k.getUTCMonth(), k.getUTCDate() - (day === 0 ? 1 : 0)));
+    const until = sat.getTime() + 2 * DAY - KST; // 일요일이 끝나는 때 (실제 시각)
+    return { key: sat.toISOString().slice(0, 10), until };
+  }
+  // 이번 축제에서 함께 춘 드래곤 (드래곤마다 저장, 축제가 바뀌면 새로)
+  function dancedWith(d, key) {
+    const c = logic.combatJson(d);
+    if (!c.fest || c.fest.key !== key) c.fest = { key, with: [] };
+    return c.fest.with;
+  }
+  const festInvites = new Map(); // 신청 id → { id, from, to, timer }
+  function danceWhy(me, t, fest) {
+    if (!fest) return '지금은 축제가 열리지 않았다. 주말마다 왕도에서 열린다.';
+    if (me.region !== FESTIVAL.region) return `축제는 ${REGIONS[FESTIVAL.region]?.name || '왕도'}에서 열린다.`;
+    if (!t) return '상대가 접속해 있지 않다.';
+    if (t.id === me.id) return '혼자서는 춤출 수 없다.';
+    if (t.region !== me.region) return '같은 지역에 있어야 함께 춤출 수 있다.';
+    for (const [x, who] of [[me, ''], [t, '상대가 ']]) {
+      if (x.exp_end) return `${who}원정을 떠나 있다.`;
+      if (x.rest_at) return `${who}둥지에서 쉬는 중이다.`;
+      if (inBattle(x.id)) return `${who}싸우는 중이다.`;
+      if (logic.berserkOf(x)) return `${who}광폭화 중이다.`;
+      if (logic.isFallen(x)) return `${who}쓰러져 있다.`;
+    }
+    if (dancedWith(me, fest.key).includes(t.id)) return '이번 축제에서 이미 함께 춤추었다.';
+    return null;
+  }
+  // 춤을 춘 뒤: 둘 다 강화 효과, 춤 횟수(칭호), 처음이면 꽃장식
+  function danceDone(d, partner, fest) {
+    dancedWith(d, fest.key).push(partner.id);
+    const first = !(logic.traitsOf(d).counts.dance > 0);
+    const lines = [`${partner.name}${josa(partner.name, '과', '와')} 광장 한가운데서 춤을 추었다. 사람들이 손뼉을 치며 둘레를 돈다.`];
+    logic.giveBuff(d, 'festive', FESTIVAL.buffMinutes);
+    lines.push(`강화 효과 '${BUFFS.festive.name}' (${FESTIVAL.buffMinutes / 60}시간): ${BUFFS.festive.desc}`);
+    const before = logic.repOf(d)[FESTIVAL.region] || 0;
+    const rep = logic.addRep(d, FESTIVAL.region, FESTIVAL.rep); // 축제에 함께한 드래곤을 마을이 반김 (특성에 따라 오르는 폭이 다를 수 있음)
+    if (rep > before) lines.push(`${REGIONS[FESTIVAL.region]?.name || '왕도'} 평판 +${rep - before}`);
+    lines.push(...logic.traitCount(d, 'dance'));
+    const items = [];
+    if (first) {
+      items.push({ id: FESTIVAL.gift, qty: 1 });
+      lines.push(`춤이 끝나자 마을 사람들이 목에 ${ITEMS[FESTIVAL.gift].name}${josa(ITEMS[FESTIVAL.gift].name, '을', '를')} 걸어 주었다. 둥지의 보물 상자에 넣어 간직할 수 있다.`);
+    }
+    return { lines, items };
   }
 
   // ── 다른 드래곤 치유하기 ──
@@ -389,7 +443,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     const me = () => entryOf(socket)?.dragon || null;
     // 보기만 하는 요청(목록·프로필 읽기)은 간격 제한을 두지 않음.
     // 관계를 바꾼 직후 화면이 목록과 프로필을 다시 불러오는데, 여기에 걸리면 화면이 바뀌지 않고 멈춰 있었음
-    const READ_ONLY = new Set(['dragon:profile', 'rel:list', 'gift:inbox', 'gift:seen', 'ledger:list', 'tp:threads', 'tp:open', 'tp:heard']);
+    const READ_ONLY = new Set(['dragon:profile', 'fest:get', 'rel:list', 'gift:inbox', 'gift:seen', 'ledger:list', 'tp:threads', 'tp:open', 'tp:heard']);
     const on = (event, fn) => socket.on(event, (payload, ack) => {
       if (typeof ack !== 'function') ack = () => {};
       const d = me();
@@ -670,6 +724,60 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     });
 
     // ── 선물 ──
+    // ── 왕도 축제: 지금 축제 여부와 이 지역에서 함께 출 수 있는 드래곤 ──
+    on('fest:get', (d) => {
+      const fest = festivalNow();
+      if (!fest) return { ok: true, on: false };
+      const done = dancedWith(d, fest.key);
+      const list = [];
+      if (d.region === FESTIVAL.region) {
+        for (const [id, e] of online) {
+          if (id === d.id || e.dragon.region !== d.region) continue;
+          list.push({ id, name: e.dragon.name, kind: e.dragon.kind, level: e.dragon.level, av: e.dragon.has_avatar ? e.dragon.avatar_ver : 0, done: done.includes(id), why: danceWhy(d, e.dragon, fest) });
+        }
+      }
+      return { ok: true, on: true, here: d.region === FESTIVAL.region, until: fest.until, count: done.length, list };
+    });
+    on('fest:invite', (d, p) => {
+      const fest = festivalNow();
+      const t = live(Number(p.id))?.dragon || null;
+      const why = danceWhy(d, t, fest);
+      if (why) return { error: why };
+      for (const inv of festInvites.values()) {
+        if (inv.from === d.id) return { error: '이미 춤을 청해 두었다. 답을 기다리자.' };
+        if (inv.to === t.id) return { error: `${t.name}${josa(t.name, '은', '는')} 다른 드래곤의 청을 받고 있다.` };
+      }
+      const inv = { id: nextId++, from: d.id, to: t.id };
+      inv.timer = setTimeout(() => {
+        if (!festInvites.delete(inv.id)) return;
+        tell(d.id, 'fest:declined', { name: t.name, reason: '답이 없었다.' });
+        tell(t.id, 'fest:gone', { id: inv.id });
+      }, FESTIVAL.inviteSeconds * 1000);
+      inv.timer.unref?.();
+      festInvites.set(inv.id, inv);
+      tell(t.id, 'fest:invited', { id: inv.id, from: { id: d.id, name: d.name }, seconds: FESTIVAL.inviteSeconds });
+      return { ok: true, lines: [`${t.name}에게 춤을 청했다. 답을 기다린다.`] };
+    });
+    on('fest:answer', (d, p) => {
+      const inv = festInvites.get(Number(p.id));
+      if (!inv || inv.to !== d.id) return { error: '그 청은 이미 지나갔다.' };
+      festInvites.delete(inv.id);
+      clearTimeout(inv.timer);
+      const f = live(inv.from);
+      if (!p.accept) { tell(inv.from, 'fest:declined', { name: d.name, reason: '정중히 사양했다.' }); return { ok: true }; }
+      const fest = festivalNow();
+      const why = danceWhy(d, f?.dragon || null, fest);
+      if (why) { tell(inv.from, 'fest:declined', { name: d.name, reason: why }); return { error: why }; }
+      const a = danceDone(f.dragon, d, fest), b = danceDone(d, f.dragon, fest);
+      db.saveMany([[f.dragon, a.items], [d, b.items]]);
+      for (const [x, r, sock] of [[f.dragon, a, f.socket], [d, b, socket]]) {
+        sock.emit('notice', { title: '왕도 축제', lines: r.lines });
+        sendMe(sock, x);
+        sock.emit('fest:changed', {});
+      }
+      return { ok: true };
+    });
+
     on('gift:send', (d, p) => {
       const id = target(p);
       if (!id) return { error: '그런 드래곤은 없다.' };

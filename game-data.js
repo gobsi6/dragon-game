@@ -353,6 +353,7 @@ const ITEMS = {
   // 선물용: 꽃다발은 쓰면 정신 회복, 또는 보물 상자에 넣어 간직 (받은 것이면 보낸 이와 쪽지도 함께). 화관은 쓰면 정신 조금 + 하루 동안 이름 옆에 꽃
   flower_crown: { name: '들꽃 화관',      rarity: 'common',   value: 8,  type: 'use', use: { crown: 1440, mind: 5 }, desc: '들꽃을 엮어 만든 화관. 머리에 얹으면 꽃향기에 정신이 조금 맑아지고(+5), 하루 동안 이름 옆에 작은 꽃이 핀다. 누군가에게 선물해도 좋다.' },
   bouquet_wild: { name: '들꽃 꽃다발',    rarity: 'common',   value: 8,  type: 'use', use: { keep: 'bouquet_wild', mind: 10 }, desc: '평원의 들꽃과 해안의 갯메꽃을 묶은 꽃다발. 향을 맡으면 정신이 맑아진다(+10). 선물로 보내거나, 둥지의 보물 상자에 넣어 간직할 수도 있다.' },
+  festival_garland: { name: '축제 꽃장식', rarity: 'uncommon', value: 10, type: 'use', use: { keep: 'festival_garland' }, desc: '왕도 축제에서 처음 춤을 춘 드래곤에게 마을 사람들이 걸어 준 꽃장식. 리본 끝에 작은 방울이 달려 있다. 둥지의 보물 상자에 넣어 간직할 수 있다.' },
   bouquet_four: { name: '네 고장 꽃다발', rarity: 'uncommon', value: 20, type: 'use', use: { keep: 'bouquet_four', mind: 25 }, desc: '평원·숲·해안·설원의 꽃을 하나씩 모아 묶은 꽃다발. 대륙을 한 바퀴 돈 정성이 담겼다. 향을 맡으면 정신이 맑아진다(+25). 선물로 보내거나 보물 상자에 넣어 간직할 수도 있다.' },
   whisper_ring: { name: '속삭이는 반지',   rarity: 'rare',     type: 'equip', slot: 'charm', bonus: { majesty: 3 }, mindWard: 1.3, value: 60, desc: '보물더미 깊은 곳에서 나온 반지. 끼면 위엄이 차오르지만, 밤마다 속삭임이 정신을 갉아먹는다. (깎이는 정신 +30%)' },
   calamity_core:{ name: '재앙의 핵',        rarity: 'rare',     cat: 'trophy', value: 120, desc: '쓰러진 재앙의 가슴에서 꺼낸, 아직 고동치는 검붉은 핵. 대륙에 몇 개 없는 물건이다.' },
@@ -415,6 +416,18 @@ const BUFFS = {
   swift: { name: '날렵함', desc: '날개(속도) +4',      spd: 4 },
   focus: { name: '집중',   desc: '숨결·치유 +20%',     mag: 1.2 },
   lucky: { name: '행운',   desc: '사냥 전리품 확률 +25%', drop: 0.25 },
+  festive: { name: '축제의 흥', desc: '공격 +10%, 받는 피해 −10%, 전리품 확률 +10%', atk: 1.1, taken: 0.9, drop: 0.1 }, // 왕도 축제에서 춤추면
+};
+
+// ── 왕도 축제: 주말(한국 시각 토·일)마다 왕도에서. 같은 지역에 있는 드래곤과 춤을 출 수 있음 (social.js) ──
+// 한 축제에서 같은 드래곤과는 한 번만. 춤추면 둘 다 '축제의 흥', 처음 춤추면 마을 사람들이 꽃장식을 줌 (보물 상자에 간직 가능)
+const FESTIVAL = {
+  region: 'capital',
+  days: [6, 0],            // 토요일, 일요일 (한국 시각)
+  buffMinutes: 120,        // '축제의 흥'이 이어지는 시간
+  rep: 3,                  // 춤출 때마다 오르는 왕도 평판
+  inviteSeconds: 30,       // 춤 신청을 기다리는 시간
+  gift: 'festival_garland',// 처음 춤춘 뒤 받는 꽃장식
 };
 
 // 제작법. needs: 재료와 개수, en: 쓰는 기력, wis: 필요한 지혜
@@ -1114,6 +1127,8 @@ const TITLES = [
   { id: 'rescuer',   name: '손을 내미는 자',   cond: { count: 'rescue', at: 3 },    mod: { helpHp: 0.15 },   eff: '일으켜 줄 때 체력 +15%' },
   { id: 'mender',    name: '치유의 손길',      cond: { count: 'healother', at: 15 }, mod: { heal: 1.1, helpHp: 0.05 }, eff: '치유 +10%, 일으켜 줄 때 체력 +5%' },
   { id: 'calmer',    name: '광기를 잠재우는 자', cond: { count: 'calm', at: 3 },     mod: { mindWard: 0.8 },  eff: '깎이는 정신 −20%' },
+  // 왕도 축제
+  { id: 'dancer',    name: '축제의 춤꾼',       cond: { count: 'dance', at: 3 },     mod: { mindWard: 0.9 },  eff: '깎이는 정신 −10%' },
   // 관계
   { id: 'teacher',   name: '이름난 스승',      cond: { count: 'teach', at: 20 },    mod: { xp: 1.03 },       eff: '경험치 +3%' },
   { id: 'surpass',   name: '청출어람',         cond: { count: 'surpass', at: 1 },   mod: { atk: 1.03 },      eff: '사냥 공격 +3%' },
@@ -1141,7 +1156,7 @@ const TITLES = [
   { id: 'yb_gambler', name: '홀짝의 귀재', cond: { count: 'yabawi', at: 30 }, mod: { huntGold: 1.05 }, eff: '사냥 금화 +5%' },
 ];
 // 칭호 조건을 사람이 읽는 글로
-const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: '둥지에서 {n}번 쉬기', craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격', heir: '먼 여행을 떠난 드래곤의 의지를 잇기', teach: '제자를 {n}번 가르치기', surpass: '스승의 레벨을 따라잡기', sendoff: '다 자란 식구를 {n}번 떠나보내기', corrupt: '오염된 땅에서 {n}번 행동하기', purify: '오염된 땅을 {n}번 정화하기', firstcraft: '숨겨진 제작법을 대륙에서 처음 찾아내기', masterwork: '대성공 {n}번', mobquest: '모브 드래곤의 의뢰 {n}번 마치기', mobstory: '모브 드래곤의 이야기 {n}개를 끝까지 듣기', yabawimeet: '떠돌이 야바위꾼을 {n}번 만나기 (나타날 때마다 한 번)', yabawi: '야바위꾼과 홀짝 {n}판' };
+const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: '둥지에서 {n}번 쉬기', craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격', heir: '먼 여행을 떠난 드래곤의 의지를 잇기', teach: '제자를 {n}번 가르치기', surpass: '스승의 레벨을 따라잡기', sendoff: '다 자란 식구를 {n}번 떠나보내기', corrupt: '오염된 땅에서 {n}번 행동하기', purify: '오염된 땅을 {n}번 정화하기', firstcraft: '숨겨진 제작법을 대륙에서 처음 찾아내기', masterwork: '대성공 {n}번', mobquest: '모브 드래곤의 의뢰 {n}번 마치기', mobstory: '모브 드래곤의 이야기 {n}개를 끝까지 듣기', yabawimeet: '떠돌이 야바위꾼을 {n}번 만나기 (나타날 때마다 한 번)', yabawi: '야바위꾼과 홀짝 {n}판', dance: '왕도 축제에서 {n}번 춤추기' };
 
 // ── 장소와 사냥터 난이도 ───────────────────────────
 // 야생 지역마다 장소가 넷. 입구는 쉽고 안쪽일수록 사냥터 난이도가 높다 (셋째까지 Lv.1~12, 넷째는 고레벨 구역 Lv.13~24).
@@ -1324,6 +1339,8 @@ const COMBAT = {
   gustDodge: 0.6,          // 날개 돌풍을 탄 뒤 다음 공격을 흘려보낼 확률 (예전에는 반드시)
   turnSeconds: 30,         // 실시간 결투에서 한 턴을 고르는 시간. 넘기면 자동으로 고름
   inviteSeconds: 30,       // 결투 신청을 기다리는 시간
+  // 내기 결투: 실시간 결투에서만. 둘 다 걸고, 진 쪽이 건 것을 이긴 쪽이 가져감
+  bet: { levelGap: 5, goldMax: 200, itemKinds: 3, itemQty: 20, answerSeconds: 60, confirmSeconds: 30 },
   autoCooldown: 10 * 60 * 1000, // 같은 상대에게 자동 결투를 다시 걸 수 있는 간격
   fameWin: 3, fameRival: 2, fameLose: -1,
   // 결투 경험치 = 기본 + 상대 레벨 × 레벨당 (예: 상대가 Lv.5면 이기면 20+5×4=40, 지면 8+5×2=18)
@@ -1597,6 +1614,7 @@ const KEEPSAKES = {
   home_pebble:   { name: '고향의 조약돌',     value: 5,  fmt: 'from',   desc: '늙은 식구가 마지막으로 고향에 다녀오며 주워 온 조약돌.' },
   bouquet_wild:  { name: '들꽃 꽃다발',       value: 6,  fmt: 'from', desc: '평원의 들꽃과 해안의 갯메꽃을 묶은 꽃다발. 상자 안에서 곱게 말라 간다.' },
   bouquet_four:  { name: '네 고장 꽃다발',    value: 10, fmt: 'from', desc: '네 고장의 꽃을 하나씩 모은 꽃다발. 상자 안에서 곱게 말라 간다.' },
+  festival_garland: { name: '축제 꽃장식',     value: 8,  fmt: 'plain', desc: '왕도 축제에서 처음 춤춘 날 받은 꽃장식. 꽃은 말랐지만 방울 소리는 그대로다.' },
 };
 
 // ── 떠돌이 야바위꾼: 하루 네 번, 한 시간씩 대륙 어딘가에 판을 벌임 (yabawi.js) ──
@@ -1704,6 +1722,12 @@ const ACHIEVEMENTS = [
   { id: 'recipe3',      name: '비밀의 제작자',   desc: '숨겨진 제작법 셋을 찾아내기',              cond: { recipes: 3 } },
   { id: 'recipe_all',   name: '모든 비밀',       desc: '숨겨진 제작법을 모두 찾아내기',            cond: { recipes: RECIPES.filter((r) => r.hidden).length } },
   { id: 'lv25',         name: '하늘에 닿다',     desc: '레벨 25에 이르기',                         cond: { level: 25 } },
+  // 대륙에서 보낸 날 (현실 시간, 드래곤을 만든 날부터)
+  { id: 'days30',       name: '대륙에 깃들다',   desc: '용의 대륙에서 30일 보내기',                cond: { daysIn: 30 } },
+  { id: 'days100',      name: '오래된 비늘',     desc: '용의 대륙에서 100일 보내기',               cond: { daysIn: 100 } },
+  // 왕도 축제
+  { id: 'fest_first',   name: '광장의 첫 춤',    desc: '왕도 축제에서 처음 춤추기',                cond: { count: ['dance', 1] } },
+  { id: 'fest_joy',     name: '축제를 즐기는 용', desc: '왕도 축제에서 10번 춤추기',               cond: { count: ['dance', 10] } },
   { id: 'nest_top',     name: '가장 큰 둥지',       desc: `둥지를 ${NEST.tiers[NEST.tiers.length - 1].name}${'까지'} 넓히기`, cond: { nest: NEST.tiers.length - 1 } },
   { id: 'ruin_step',    name: '검은 바다 너머',  desc: '멸망한 대륙의 사냥감을 만나 보기',         cond: { metRuin: 1 } },
   { id: 'ruin_throne',  name: '왕좌 앞에서',     desc: '왕좌의 회랑의 강적을 쓰러뜨리기',          cond: { beat: 'ruin_throne!' } },
@@ -1734,7 +1758,7 @@ const ACHIEVEMENTS = [
 ];
 
 module.exports = {
-  KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, TITLES, TITLE_COUNT_NAMES, ACHIEVEMENTS, YABAWI, KEEPSAKES,
+  KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, FESTIVAL, TITLES, TITLE_COUNT_NAMES, ACHIEVEMENTS, YABAWI, KEEPSAKES,
   PURIFY, CRAFT, SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, FISHING, RUIN, FACILITY, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
   DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
   COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, DEPART, BONDS, MARKS, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG,

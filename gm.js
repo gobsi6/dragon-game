@@ -409,7 +409,10 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
       const text = str(p.text).replace(/\s+/g, ' ').slice(0, ANNOUNCE_MAX);
       if (!text) return { error: '알릴 말을 적자.' };
       const now = Date.now();
-      io.emit('gm:announce', { text, at: now });
+      // 대륙 소식 기록에도 남김: '용언과 소식'에서 늦게 들어온 드래곤도 볼 수 있게
+      let id = 0;
+      try { id = db.addChat('!', { dragonId: 0, name: '', kind: '', text: `[공지] ${text}`, at: now }); } catch (e) { console.error('[공지 기록]', e); }
+      io.emit('gm:announce', { text, at: now, id });
       for (const id of db.dragonIds()) if (!online.has(id)) db.noteAdd(id, `[공지] ${text}`);
       db.gmLog(gmName(), null, `공지: ${text}`);
       return { ok: true, log: db.gmLogList(40) };

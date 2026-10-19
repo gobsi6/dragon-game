@@ -479,6 +479,9 @@ function view(k, now, d) {
     v.canRelease = k.status === 'home' && a >= R.independentDay;
     v.onExp = !!k.data.onExp;
   }
+  // 둥지 이야기: 원정에 따라나선 때, 최근 세 시간 안에 돌아온 때
+  if (k.data.onExp && k.data.expAt) v.expAt = k.data.expAt;
+  if (k.data.expBack && now - k.data.expBack < 3 * 3600000) v.expBack = k.data.expBack;
   if (!isHome(k)) v.ended = k.data.ended || null;
   return v;
 }
@@ -940,7 +943,7 @@ function expStart(kin, now = Date.now()) {
     const from = k.type === 'human' ? H.expeditionFrom : R.expeditionFrom;
     if (k.type === 'human' && k.data.path === 'stay') continue; // 둥지를 지키는 어른은 남음
     if (k.data.runaway || k.data.errand) continue; // 가출·심부름 중인 식구는 못 따라감
-    if (ageOf(k, now) >= from) { k.data.onExp = true; went.push(k.name); }
+    if (ageOf(k, now) >= from) { k.data.onExp = true; k.data.expAt = now; went.push(k.name); } // expAt: 둥지 이야기에 '따라나섰다'를 적을 때
   }
   return went;
 }
@@ -960,6 +963,7 @@ function expFinish(kin, minutes) {
     if (!k.data.onExp) continue;
     k.data.onExp = false;
     if (k.status !== 'home') continue;
+    k.data.expBack = Date.now(); // 둥지 이야기에 '돌아왔다'를 적을 때
     back.push(k.name);
     k.data.bond = clamp(k.data.bond + 3 + (hasT(k, 'brave') ? 2 : 0)); // 씩씩한: 원정이 즐거움
     if (k.type === 'human') {

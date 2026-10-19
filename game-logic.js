@@ -2056,6 +2056,7 @@ function achProgress(d, A) {
   if (c.mindLow) return [!berserkOf(d) && d.mind != null && d.mind <= c.mindLow ? 1 : 0, 1];
   if (c.fameAt) return [(d.fame || 0) <= c.fameAt ? 1 : 0, 1];
   if (c.hourKST != null) return [new Date(Date.now() + 9 * 3600000).getUTCHours() === c.hourKST ? 1 : 0, 1];
+  if (c.daysIn) return [Math.min(c.daysIn, d.created_at ? Math.floor((Date.now() - d.created_at) / 86400000) : 0), c.daysIn]; // 드래곤을 만든 날부터 지난 날 (현실 시간)
   return [0, 1];
 }
 // 새로 이룬 업적을 기록하고 돌려줌. 처음 판정할 때(업적이 생기기 전 기록)는 시각 0으로 조용히 채우고 개수만 돌려줌
