@@ -184,10 +184,11 @@ function titlesView(d) {
 // ── 장신구와 실제 능력치 ───────────────────────────
 // 저장 공간에는 글자(JSON)로 들어 있으니 객체로 바꿔 둠
 function equipOf(d) {
-  if (typeof d.equip === 'string') {
+  // 예전 저장 버그로 여러 겹 감싸진 값도 다 풀어 냄 (다음 저장 때 바르게 고쳐져 들어감)
+  for (let i = 0; typeof d.equip === 'string' && i < 10; i++) {
     try { d.equip = JSON.parse(d.equip || '{}'); } catch { d.equip = {}; }
   }
-  if (!d.equip) d.equip = {};
+  if (!d.equip || typeof d.equip !== 'object' || Array.isArray(d.equip)) d.equip = {};
   return d.equip;
 }
 // 장신구가 더해 주는 능력치

@@ -22,6 +22,7 @@ if (fs.existsSync(RESTORE_PATH)) {
 
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
+db.pragma('synchronous = NORMAL'); // WAL에서는 안전함. 저장할 때마다 디스크 동기화를 기다리지 않아 느린 볼륨에서도 빠름
 db.pragma('foreign_keys = ON');
 
 db.exec(`
@@ -463,7 +464,7 @@ function saveStateRaw(d, items = [], hoardItems = []) {
     id: d.id, level: d.level, xp: d.xp, hp: d.hp, hp_max: d.hp_max, en: d.en, en_max: d.en_max,
     ap: d.ap, gold: d.gold, ap_at: d.ap_at, hp_at: d.hp_at, en_at: d.en_at || 0,
     exp_start: d.exp_start ?? null, exp_end: d.exp_end ?? null, exp_region: d.exp_region ?? null,
-    equip: JSON.stringify(d.equip || {}),
+    equip: typeof d.equip === 'string' ? d.equip : JSON.stringify(d.equip || {}), // 이미 글자면 그대로 (두 번 감싸지 않게)
     rep: typeof d.rep === 'string' ? d.rep : JSON.stringify(d.rep || {}),
     stance: d.stance, stance_at: d.stance_at || 0,
     region: d.region, nest: d.nest ?? null, rest_at: d.rest_at ?? null, hoard_gold: d.hoard_gold || 0,
