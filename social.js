@@ -46,6 +46,8 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
   // 연인·반려 상대 (한 명)
   const heartOf = (id) => { for (const b of BOND_RULES.hearts) { const x = db.relByBond(id, b)[0]; if (x) return { id: x, bond: b }; } return null; };
   // a가 b에게 bond(b가 a에게 무엇인지)를 맺을 수 있는지. 안 되면 이유
+  // 보낸 드래곤의 지금 프로필 그림 번호 (없으면 0 → 화면에서 문장으로)
+  const avOf = (id) => { const x = db.getDragon(id); return x && x.has_avatar ? x.avatar_ver : 0; };
   function bondWhy(a, b, bond) {
     const A = loadD(a), B = loadD(b);
     if (!BONDS[bond]) return '그런 관계는 없다.';
@@ -105,7 +107,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     db.ledgerAdd(id, { kind: 'gift_in', other: { id: from.id, name: from.name, kind: from.kind }, itemsIn: items, msg, note: '이벤트' });
     db.ledgerAdd(from.id, { kind: 'gift_out', other: { id, name: to?.name || '', kind: to?.kind }, itemsOut: items, msg, note: '이벤트' });
     if (t) {
-      t.socket.emit('gift:got', { id: gid, from: { id: from.id, name: from.name, kind: from.kind }, gold: 0, items, msg, at: Date.now() });
+      t.socket.emit('gift:got', { id: gid, from: { id: from.id, name: from.name, kind: from.kind, av: avOf(from.id) }, gold: 0, items, msg, at: Date.now() });
       sendMe(t.socket, t.dragon);
     }
   };
@@ -697,7 +699,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       db.ledgerAdd(d.id, { kind: 'gift_out', other: { id, name, kind: to?.kind }, goldOut: gold, itemsOut: items, msg });
       db.ledgerAdd(id, { kind: 'gift_in', other: { id: d.id, name: d.name, kind: d.kind }, goldIn: gold, itemsIn: items, msg });
       if (t) {
-        t.socket.emit('gift:got', { id: gid, from: { id: d.id, name: d.name, kind: d.kind }, gold, items, msg, at: Date.now() });
+        t.socket.emit('gift:got', { id: gid, from: { id: d.id, name: d.name, kind: d.kind, av: avOf(d.id) }, gold, items, msg, at: Date.now() });
         sendMe(t.socket, t.dragon);
       }
       sendMe(socket, d);
@@ -706,7 +708,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
 
     // 받은 선물 확인 (상자에서 지움)
     on('gift:seen', (d, p) => ({ ok: db.giftSeen(Number(p.id), d.id) }));
-    on('gift:inbox', (d) => ({ ok: true, list: db.giftList(d.id) }));
+    on('gift:inbox', (d) => ({ ok: true, list: db.giftList(d.id).map((g) => ({ ...g, from: { ...g.from, av: avOf(g.from.id) } })) }));
     // 주고받은 기록: 선물·교환·이벤트 선물·GM 지급 (최근 것부터)
     on('ledger:list', (d) => ({ ok: true, list: db.ledgerList(d.id, 150) }));
 

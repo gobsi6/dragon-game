@@ -146,7 +146,7 @@ function bioOf(d) {
 
 // ── 계정 (REST) ────────────────────────────────────
 
-app.post('/api/register', (req, res) => {
+app.post('/api/register', async (req, res) => {
   const username = str(req.body?.username);
   const password = typeof req.body?.password === 'string' ? req.body.password : '';
   if (!/^[가-힣A-Za-z0-9_]{2,16}$/.test(username)) {
@@ -160,17 +160,20 @@ app.post('/api/register', (req, res) => {
   }
   const isGm = db.countUsers() === 0; // 처음 만든 계정이 GM
   const link = str(req.body?.link).replace(/\s+/g, ' ').trim().slice(0, 40); // GM과 연결된 계정 (GM 확인용 메모)
-  const userId = db.createUser(username, bcrypt.hashSync(password, 10), isGm, link);
+  // 비밀번호 암호화(약 70ms)는 비동기로: 그동안 다른 드래곤의 행동이 멈추지 않게
+  const hash = await bcrypt.hash(password, 10);
+  let userId;
+  try { userId = db.createUser(username, hash, isGm, link); } catch { return res.status(409).json({ error: '이미 있는 아이디다. 다른 아이디를 골라야 한다.' }); }
   const token = crypto.randomBytes(24).toString('hex');
   db.createSession(token, userId);
   res.json({ token });
 });
 
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
   const username = str(req.body?.username);
   const password = typeof req.body?.password === 'string' ? req.body.password : '';
   const user = db.getUserByName(username);
-  if (!user || !bcrypt.compareSync(password, user.pw_hash)) {
+  if (!user || !(await bcrypt.compare(password, user.pw_hash))) {
     return res.status(401).json({ error: '아이디나 비밀번호가 맞지 않는다.' });
   }
   const token = crypto.randomBytes(24).toString('hex');
@@ -1691,24 +1694,24 @@ io.on('connection', (socket) => {
   });
 
   // 비밀번호 바꾸기: 지금 비밀번호를 확인하고 새 비밀번호로. 이 기기만 로그인을 유지하고 다른 기기는 끊김
-  socket.on('account:password', (payload, ack) => {
+  socket.on('account:password', async (payload, ack) => {
     if (typeof ack !== 'function') ack = () => {};
     const u = db.getUserByName(user.username);
     const cur = typeof payload?.current === 'string' ? payload.current : '';
     const next = typeof payload?.next === 'string' ? payload.next : '';
-    if (!u || !cur || !bcrypt.compareSync(cur, u.pw_hash)) return ack({ error: '지금 비밀번호가 맞지 않는다.' });
+    if (!u || !cur || !(await bcrypt.compare(cur, u.pw_hash))) return ack({ error: '지금 비밀번호가 맞지 않는다.' });
     if (next.length < 4 || next.length > 64) return ack({ error: '새 비밀번호는 4~64자로 정해야 한다.' });
     if (next === cur) return ack({ error: '지금 비밀번호와 다른 비밀번호를 정하자.' });
-    db.setPassword(u.id, bcrypt.hashSync(next, 10), socket.handshake.auth?.token || null);
+    db.setPassword(u.id, await bcrypt.hash(next, 10), socket.handshake.auth?.token || null);
     ack({ ok: true });
   });
 
   // 계정 탈퇴: 비밀번호를 다시 확인하고, 계정과 드래곤을 모두 지움 (되돌릴 수 없음)
-  socket.on('account:delete', (payload, ack) => {
+  socket.on('account:delete', async (payload, ack) => {
     if (typeof ack !== 'function') ack = () => {};
     const u = db.getUserByName(user.username);
     const pw = typeof payload?.password === 'string' ? payload.password : '';
-    if (!u || !pw || !bcrypt.compareSync(pw, u.pw_hash)) return ack({ error: '비밀번호가 맞지 않는다.' });
+    if (!u || !pw || !(await bcrypt.compare(pw, u.pw_hash))) return ack({ error: '비밀번호가 맞지 않는다.' });
     if (u.is_gm && db.gmCount() <= 1 && db.userCount() > 1) {
       return ack({ error: '마지막 GM은 탈퇴할 수 없다. GM 도구에서 다른 드래곤에게 GM 권한을 준 뒤 탈퇴하자.' });
     }
