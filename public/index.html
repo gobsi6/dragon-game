@@ -885,7 +885,7 @@
   .tt.dex .dex-tag.elite { color: #8A4B3A; font-weight: 600; }
   .tt.dex .d { grid-column: 1 / -1; font-size: 12.5px; line-height: 1.5; color: var(--ink-2); }
   .tt.dex.locked .d { color: #8A9096; }
-  .dex-new { display: inline-block; margin-left: 4px; padding: 0 6px; font: 700 9.5px/17px var(--sans, inherit); letter-spacing: 0.04em; color: #fff; background: var(--steel); border-radius: 9px; vertical-align: 2px; }
+  .dex-new { display: inline-block; margin-left: 4px; padding: 0 6px; font: 600 10.5px/17px var(--sans, inherit); letter-spacing: .03em; color: #fff; background: var(--steel); border-radius: 9px; vertical-align: 2px; }
   .dex-h { grid-column: 1 / -1; margin: 10px 0 0; font: 700 13px/1.4 var(--serif); color: var(--ink-2); display: flex; justify-content: space-between; }
   .dex-h:first-child { margin-top: 2px; }
   .dex-h span { font: 400 11.5px/1.4 inherit; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -1410,13 +1410,14 @@
   .chat-view button:not(.on):hover { color: var(--ink-2); }
   .chat-view button:focus-visible { outline: 2px solid var(--steel); outline-offset: -2px; }
   /* 보기에 따라 숨김: 이곳 = 용언·소식 빼고, 용언과 소식 = 그것만 */
-  #log[data-view="here"] .msg.shout, #log[data-view="here"] .sys.news { display: none; }
-  #log[data-view="shout"] .msg:not(.shout), #log[data-view="shout"] .sys:not(.news) { display: none; }
+  #log[data-view="here"] .msg.shout, #log[data-view="here"] .sys.wnews { display: none; }
+  #log[data-view="shout"] .msg:not(.shout), #log[data-view="shout"] .sys:not(.wnews) { display: none; }
   /* 기록으로 남는 대륙 소식 (쓰러짐·구조·광폭화·부고): 알림 줄 모양에 시각 */
-  .log .sys time { margin-left: 6px; font-size: 10.5px; color: #A3A6A9; font-variant-numeric: tabular-nums; font-weight: 400; }
-  .log .sys.news { color: #6A5A3A; background: #F6F1E6; }
-  .log .sys.news.alarm { color: #A63E4B; background: #F8ECEE; }
-  .log .sys.news.bye { color: #4A4F55; background: #ECEDEC; }
+  .log .sys .ntm { display: inline; margin: 0; font: inherit; color: inherit; opacity: .6; font-weight: 400; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  /* 'news'는 업데이트 노트 칸과 이름이 겹쳐서(세로로 쌓는 규칙) 'wnews'로 */
+  .log .sys.wnews { color: #6A5A3A; background: #F6F1E6; }
+  .log .sys.wnews.alarm { color: #A63E4B; background: #F8ECEE; }
+  .log .sys.wnews.bye { color: #4A4F55; background: #ECEDEC; }
 
   /* ── 설정: 내 드래곤 · 계정 ── */
   .bio-form { display: flex; flex-direction: column; gap: 10px; padding: 12px; background: #fff; border: 1px solid var(--line-in); }
@@ -7845,7 +7846,7 @@
       row.className = `tt ach${a.have ? '' : ' locked'}${a.hidden ? ' r-hidden' : ''}`;
       const b = document.createElement('b');
       b.textContent = a.have || !a.hidden ? a.name : '???';
-      if (a.fresh) { const n = document.createElement('span'); n.className = 'dex-new'; n.textContent = 'NEW'; b.appendChild(n); }
+      if (a.fresh) { const n = document.createElement('span'); n.className = 'dex-new'; n.textContent = 'new'; b.appendChild(n); }
       row.appendChild(b);
       const e = document.createElement('span'); e.className = 'e';
       e.textContent = a.have || !a.hidden ? a.desc : '숨겨진 업적 · 어떤 일을 겪으면 드러난다';
@@ -7894,7 +7895,7 @@
     row.className = `tt dex${e.seen ? '' : ' locked'}${e.rarity ? ` r-${e.rarity}` : e.elite ? ' r-elite' : ''}`;
     const b = document.createElement('b');
     b.textContent = e.seen ? e.name : '???';
-    if (e.fresh) { const n = document.createElement('span'); n.className = 'dex-new'; n.textContent = 'NEW'; b.appendChild(n); }
+    if (e.fresh) { const n = document.createElement('span'); n.className = 'dex-new'; n.textContent = 'new'; b.appendChild(n); }
     row.appendChild(b);
     const tagText = e.rarity ? DEX_RARE[e.rarity] : e.elite ? '강적' : '';
     if (tagText) { const t = document.createElement('span'); t.className = `dex-tag ${e.rarity || (e.elite ? 'elite' : '')}`; t.textContent = tagText; row.appendChild(t); }
@@ -10490,9 +10491,13 @@
   // news: 기록으로 남는 대륙 소식 (쓰러짐·구조·광폭화·부고) — 시각을 붙이고, 보기 칩에서 '용언과 소식'에 함께 나옴
   function addSystem(text, at, news) {
     const p = document.createElement('div');
-    p.className = `sys${text.startsWith('[광폭화]') ? ' alarm' : ''}${news ? ` news${text.startsWith('[부고]') ? ' bye' : ''}` : ''}`;
-    p.textContent = text;
-    if (news && at) { const t = document.createElement('time'); t.textContent = chatTime(at); p.appendChild(t); }
+    p.className = `sys${text.startsWith('[광폭화]') ? ' alarm' : ''}${news ? ` wnews${text.startsWith('[부고]') ? ' bye' : ''}` : ''}`;
+    // 대륙 소식은 말머리 안에 시각: [구조 요청 10:10] … (시각만 살짝 흐리게)
+    const head = news && at ? /^\[([^\]]+)\]\s*/.exec(text) : null;
+    if (head) {
+      const t = document.createElement('time'); t.className = 'ntm'; t.textContent = chatTime(at);
+      p.append(`[${head[1]} `, t, `] ${text.slice(head[0].length)}`);
+    } else p.textContent = text;
     addLine(p);
   }
   // 기록 한 줄: 대륙 소식이면 알림 줄로, 아니면 말
