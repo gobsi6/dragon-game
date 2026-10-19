@@ -476,6 +476,12 @@ function view(k, now, d) {
     v.trainLimit = R.trainLimit[Math.max(0, st.i)];
     v.trainIn = Math.max(0, (k.data.lastTrain || 0) + trainCd(k) - now);
     v.personality = personalityOf(k);
+    // 성격이 선택지로 정해졌는지: 선택지 몫을 빼고 보면 다른 성향이 가장 길었을 때
+    {
+      const ms = k.data.stanceMs || {}, nd = k.data.stanceNudge || {};
+      const lived = Object.keys(ms).sort((x, y) => ((ms[y] || 0) - (nd[y] || 0)) - ((ms[x] || 0) - (nd[x] || 0)))[0];
+      v.persByChoice = !!nd[v.personality] && lived !== v.personality;
+    }
     v.canRelease = k.status === 'home' && a >= R.independentDay;
     v.onExp = !!k.data.onExp;
   }
@@ -1144,7 +1150,11 @@ function chooseEvent(d, kin, have, idx, now = Date.now()) {
     train: (k, s) => { if (k && k.data.stats) k.data.stats[s] += 1; },
     leave: (k, status) => { k.status = status; k.data.ended = now; },
     // 새끼의 성격을 한쪽으로 기울임 (그 성향 밑에서 며칠 더 자란 것처럼)
-    nudge: (k, stance, days) => { if (k && k.data.stanceMs) k.data.stanceMs[stance] = (k.data.stanceMs[stance] || 0) + days * DAY; },
+    nudge: (k, stance, days) => {
+      if (!k || !k.data.stanceMs) return;
+      k.data.stanceMs[stance] = (k.data.stanceMs[stance] || 0) + days * DAY;
+      (k.data.stanceNudge ||= {})[stance] = (k.data.stanceNudge[stance] || 0) + days * DAY; // 선택지로 기운 몫 (성격 문구에 씀)
+    },
     adopt: (origin) => {
       if (homeKin(kin, logic.maxKinOf(d)).full) return out.lines.push('둥지에는 이미 식구가 가득해 더 데려갈 수 없었다.');
       const k = newHuman(origin, now, origin === 'lost' ? nearestTown(c.region) : town);

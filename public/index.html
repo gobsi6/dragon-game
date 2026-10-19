@@ -5250,7 +5250,14 @@
       st.innerHTML = S.stats.map((x) => `<span>${x.name} <b>${v.stats[x.key]}</b></span>`).join('');
       card.appendChild(st);
       const pers = { friendly: '인간과 어울리는', hermit: '조용히 홀로 지내는', hostile: '거칠고 대담한' }[v.personality];
-      meta(`가르친 횟수 ${v.trains}/${v.trainLimit} · 보호자를 닮아 ${pers} 성격으로 자라는 중`);
+      // 성격은 보호자가 가장 오래 지낸 성향을 따름. 지금 성향과 다르면 '닮아'가 아니라 그 까닭을 적음
+      const STN = { friendly: '우호', hermit: '은둔', hostile: '적대' };
+      const nowSt = S.me?.stance;
+      const same = !nowSt || nowSt === v.personality;
+      const why = v.persByChoice ? `그동안 겪은 일들로 ${pers} 성격으로 자라는 중` // 선택지로 기운 성격
+        : same ? `보호자를 닮아 ${pers} 성격으로 자라는 중`
+        : `보호자가 ${STN[v.personality]} 성향이던 때를 가장 오래 보고 자라 ${pers} 성격으로 크는 중`;
+      meta(`가르친 횟수 ${v.trains}/${v.trainLimit} · ${why}${same ? '' : `. 지금의 ${STN[nowSt]} 성향으로 오래 지내면 차츰 바뀐다`}`);
       // 보호자를 돕는 법: 곁에 두기(함께 싸움), 심부름
       if (v.companion) meta('<b>곁에 둔 새끼</b> · 사냥과 강적·재앙과의 싸움에 함께 나서 매 턴 덤벼든다.', 'talent');
       if (v.errand) meta(`<b>심부름 중</b> · ${esc(S.regions[v.errand.region]?.name || '')} · ${dur(Math.max(0, v.errand.end - Date.now()))} 뒤 돌아온다`, 'talent');
