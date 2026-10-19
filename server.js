@@ -226,6 +226,7 @@ const meOf = (d) => ({
   dexNew: logic.dexHasNew(d), // 도감에 아직 열어 보지 않은 새 칸
   achNew: logic.achHasNew(d), // 아직 열어 보지 않은 새 업적
   yabawi: yabawi.here(d),     // 같은 장소에 야바위꾼이 있으면 { until, greet … }
+  yabawiNow: yabawi.nowInfo(), // 대륙 어딘가에 야바위꾼이 나와 있으면 { hint, until } (지역 카드의 알림 줄)
   craftMult: logic.titleMods(d).craftEn || 1,
   mob: mobs.summary(d),                     // 맡은 모브 드래곤 의뢰와 진행도
   craft: logic.craftView(d),                // 찾아낸 제작법, 대성공 확률, 공방, 장신구 강화·각인

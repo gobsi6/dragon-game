@@ -1285,6 +1285,7 @@
   /* 떠돌이 야바위꾼 */
   .yaba-bar { background: #F8F3E8; border-color: #D9C9A6; }
   .yaba-bar small .rd { color: #8A5E2A; font-weight: 600; }
+  .yaba-hint { background: #FBF8F1; border-style: dashed; }
   /* 창: 밝은 머리(남색 띠 · 장소 · 말 · 금화) 아래 시장 물건 줄처럼 판돈 · 조약돌 · 홀짝 · 소문을 한 장에 */
   #yaba-dlg .body > * + * { margin-top: 10px; }
   .yb-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--line-in); border-left: 3px solid #2A4256; border-radius: 4px; background: var(--surface-2); }
@@ -2359,6 +2360,10 @@
           <button class="btn" type="button" id="mob-open">말 걸기</button>
         </div>
         <div class="mob-track" id="mob-track" hidden></div>
+        <div class="mob-bar yaba-bar yaba-hint" id="yaba-hint" hidden>
+          <span class="mob-em yaba-em" aria-hidden="true"><svg width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="17" r="16" fill="#F1E7D2" stroke="#B08A3E" stroke-width="1.2"/><ellipse cx="12" cy="20" rx="4.2" ry="3.4" fill="#9A9184"/><ellipse cx="21" cy="21.5" rx="3.6" ry="3" fill="#B3AA9C"/><ellipse cx="17" cy="14" rx="3.9" ry="3.2" fill="#857C70"/></svg></span>
+          <div class="mob-t"><b>떠돌이 야바위꾼이 판을 벌였다</b><small id="yaba-hint-t"></small></div>
+        </div>
         <div class="mob-bar yaba-bar" id="yaba-bar" hidden>
           <span class="mob-em yaba-em" aria-hidden="true"><svg width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="17" r="16" fill="#F1E7D2" stroke="#B08A3E" stroke-width="1.2"/><ellipse cx="12" cy="20" rx="4.2" ry="3.4" fill="#9A9184"/><ellipse cx="21" cy="21.5" rx="3.6" ry="3" fill="#B3AA9C"/><ellipse cx="17" cy="14" rx="3.9" ry="3.2" fill="#857C70"/><ellipse cx="15.8" cy="12.9" rx="1.2" ry=".8" fill="#E8E2D6" opacity=".7"/></svg></span>
           <div class="mob-t"><b>떠돌이 야바위꾼</b><small id="yaba-sub"></small></div>
@@ -5856,6 +5861,15 @@
   // ── 떠돌이 야바위꾼: 같은 장소에 있을 때만 줄이 보이고, 말을 걸면 홀짝 한 판 ──
   const yabaLeft = (until) => Math.max(1, Math.ceil((until - Date.now()) / 60000));
   function renderYabaBar() {
+    // 대륙 어딘가에 나와 있으면 (내가 그 장소에 있지 않을 때) 힌트 줄: 채팅 알림은 지역을 옮기면 지워지므로
+    const yn = S.me?.yabawiNow;
+    const live = yn && Date.now() < yn.until;
+    $('yaba-hint').hidden = !live || !!S.me?.yabawi;
+    if (!$('yaba-hint').hidden) {
+      $('yaba-hint-t').replaceChildren(`${yn.hint} 조약돌 굴리는 소리가 들린다 · `);
+      const rd = document.createElement('span'); rd.className = 'rd'; rd.textContent = `${yabaLeft(yn.until)}분 뒤 떠난다`;
+      $('yaba-hint-t').appendChild(rd);
+    }
     const y = S.me?.yabawi;
     const bar = $('yaba-bar');
     bar.hidden = !y || !!S.me?.exp;
@@ -5951,7 +5965,7 @@
       }, 550); // 주먹을 흔드는 동안 기다렸다가 펼침
     });
   });
-  setInterval(() => { if (!$('yaba-bar').hidden) renderYabaBar(); }, 30000);
+  setInterval(() => { if (!$('yaba-bar').hidden || !$('yaba-hint').hidden) renderYabaBar(); }, 30000);
 
   function renderMobBar() {
     renderYabaBar();
@@ -10653,6 +10667,7 @@
     socket.on('trade:closed', (e) => { endTrade(); toast(e.reason); });
     socket.on('trade:done', (r) => { endTrade(); showResult(r); fetchInv(); if ($('ledger-dlg').open) openLedger(); });
     socket.on('system', (m) => addSystem(m.text));
+      socket.on('yabawi:now', (v) => { if (S.me) { S.me.yabawiNow = v; renderYabaBar(); } }); // 야바위꾼이 나타나거나 떠남
   }
 
   // 하단 메뉴 높이를 재서 본문 여백과 알림 위치에 씀 (휴대폰에서 두 줄이 되어도 맞음)

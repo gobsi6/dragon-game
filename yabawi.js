@@ -59,6 +59,8 @@ module.exports = function setupYabawi({ io, db, online, logic, sendMe, isOpen = 
     const s = slotNow(now);
     return isHere(d, s) ? { name: Y.name, until: s.end, greet: Y.greet, minBet: Y.minBet, maxBet: Y.maxBet, rumor: rumorState(d, s), rumorLocked: Y.rumorLocked, rumorUsed: Y.rumorUsed, heard: ybOf(d).heard.length, rumors: Y.rumors.length } : null;
   }
+  // 지금 판이 벌어져 있으면 모두에게 보일 것: 힌트와 떠나는 시각 (어느 장소인지는 알려 주지 않음)
+  const nowInfo = (now = Date.now()) => { const s = slotNow(now); return s ? { hint: Y.hints[s.region] || '대륙 어딘가에서', until: s.end } : null; };
   // 그 장소에 있는 드래곤들 화면을 새로 고침 (말 걸기 버튼이 생기거나 사라지게)
   function refreshAt(s) {
     if (!s) return;
@@ -71,6 +73,7 @@ module.exports = function setupYabawi({ io, db, online, logic, sendMe, isOpen = 
     if (cur && (!s || s.key !== cur.key)) {
       if (st.gone !== cur.key) { st.gone = cur.key; save(); io.emit('system', { text: `[${Y.name}] 야바위꾼이 판을 접고 어디론가 사라졌다.`, at: now }); }
       refreshAt(cur);
+      if (!s) io.emit('yabawi:now', null);
     }
     if (s && (!cur || s.key !== cur.key)) {
       if (st.ann !== s.key) {
@@ -78,6 +81,7 @@ module.exports = function setupYabawi({ io, db, online, logic, sendMe, isOpen = 
         io.emit('system', { text: `[${Y.name}] ${Y.hints[s.region] || '대륙 어딘가에서'} 조약돌 굴리는 소리가 들려온다. 떠돌이 야바위꾼이 판을 벌였다! (한 시간 뒤 떠난다)`, at: now });
       }
       refreshAt(s);
+      io.emit('yabawi:now', nowInfo(now));
     }
     cur = s;
   }
@@ -144,5 +148,5 @@ module.exports = function setupYabawi({ io, db, online, logic, sendMe, isOpen = 
     return st.force;
   }
   const where = (now = Date.now()) => { const s = slotNow(now); return s ? { region: s.region, regionName: REGIONS[s.region].name, place: s.place, placeName: PLACES[s.place]?.name, until: s.end } : null; };
-  return { here, play, talk, rumor, summon, where, daySlots, slotNow, tick };
+  return { here, nowInfo, play, talk, rumor, summon, where, daySlots, slotNow, tick };
 };
