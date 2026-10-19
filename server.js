@@ -225,6 +225,7 @@ const meOf = (d) => ({
   titles: logic.titlesView(d),
   dexNew: logic.dexHasNew(d), // 도감에 아직 열어 보지 않은 새 칸
   achNew: logic.achHasNew(d), // 아직 열어 보지 않은 새 업적
+  yabawi: yabawi.here(d),     // 같은 장소에 야바위꾼이 있으면 { until, greet … }
   craftMult: logic.titleMods(d).craftEn || 1,
   mob: mobs.summary(d),                     // 맡은 모브 드래곤 의뢰와 진행도
   craft: logic.craftView(d),                // 찾아낸 제작법, 대성공 확률, 공방, 장신구 강화·각인
@@ -494,6 +495,8 @@ wxTicker.unref?.();
 
 // 대륙의 재앙: 모두가 함께 맞서는 거대한 적 (boss.js)
 const boss = require('./boss')({ io, db, online, logic, combat, arena, sendMe });
+// 떠돌이 야바위꾼: 하루 네 번 한 시간씩 대륙 어딘가에 판을 벌임 (yabawi.js)
+const yabawi = require('./yabawi')({ io, db, online, logic, sendMe, isOpen: (r) => ruin.unlocked(r) }); // ruin은 아래에서 만들어지지만, 쓰는 건 게임이 돌아갈 때라 괜찮음
 // ── 정화: 오염된 땅에서 행동할수록 모두의 기여가 쌓이고, 목표에 닿으면 그 땅의 오염이 일찍 걷힘 ──
 // 오염 시계 (GM이 즉시 일으키면 바뀜). logic이 이걸 보고 지금 오염된 곳을 셈
 let corruptClock = db.worldGet('corruptClock') || { off: 0, bump: 0, force: null };
@@ -1044,6 +1047,48 @@ io.on('connection', (socket) => {
     logic.dexSeen(d);
     db.saveState(d);
     ack({ ok: true, dex: view });
+  });
+
+  // 떠돌이 야바위꾼과 한 판 (홀짝)
+  socket.on('yabawi:play', (payload, ack) => {
+    if (typeof ack !== 'function') return;
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+    const d = entry.dragon;
+    const now = Date.now();
+    if (now - (socket.data.lastYabawi || 0) < 800) return ack({ error: '야바위꾼이 조약돌을 다시 모으는 중이다.' });
+    socket.data.lastYabawi = now;
+    if (logic.berserkOf(d)) return ack({ error: BERSERK });
+    if (logic.isFallen(d)) return ack({ error: FALLEN });
+    if (d.rest_at) return ack({ error: '둥지에서 쉬는 중이다. 먼저 깨어나야 한다.' });
+    if (arena.inBattle(d.id)) return ack({ error: '싸우는 중에는 할 수 없다.' });
+    const res = yabawi.play(d, payload?.bet, str(payload?.pick), now);
+    if (res.error) return ack(res);
+    db.saveState(d);
+    sendMe(socket, d);
+    ack(res);
+  });
+  // 야바위꾼에게 말 걸기 (만난 횟수) · 소문 듣기
+  for (const [ev, fn] of [['yabawi:talk', yabawi.talk], ['yabawi:rumor', yabawi.rumor]]) {
+    socket.on(ev, (payload, ack) => {
+      if (typeof ack !== 'function') return;
+      const entry = entryOf(socket);
+      if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+      const d = entry.dragon;
+      if (logic.berserkOf(d)) return ack({ error: BERSERK });
+      if (logic.isFallen(d)) return ack({ error: FALLEN });
+      const res = fn(d);
+      if (res.error) return ack(res);
+      if (res.first || res.id) { db.saveState(d); sendMe(socket, d); } // 칭호·업적 확인도 여기서
+      ack(res);
+    });
+  }
+  // GM: 야바위꾼을 지금 바로 부름 (시험용). 어디에 있는지도 알려 줌
+  socket.on('gm:yabawi', (p, ack) => {
+    if (typeof ack !== 'function') return;
+    if (!socket.data.user?.is_gm) return ack({ error: 'GM만 쓸 수 있다.' });
+    if (p?.summon) yabawi.summon(str(p?.region));
+    ack({ ok: true, where: yabawi.where(), today: yabawi.daySlots(logic.dayIdx()).map((s) => ({ start: s.start, end: s.end, region: REGIONS[s.region].name, place: PLACES[s.place]?.name })) });
   });
 
   // 업적 (상태 화면에서 열 때 받아 감)

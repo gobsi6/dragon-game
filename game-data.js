@@ -1123,9 +1123,12 @@ const TITLES = [
   { id: 'hoard2',    name: '황금 산의 주인',   cond: { hoard: 5000 },               mod: { huntGold: 1.1, mindWard: 0.9 }, eff: '사냥 금화 +10%, 깎이는 정신 −10%' },
   { id: 'keeper',    name: '보물 지킴이',      cond: { count: 'raidwin', at: 3 },   mod: { atk: 1.03 },      eff: '사냥 공격 +3%' },
   { id: 'scarred',   name: '상흔투성이',       cond: { scars: 3 },                  mod: { taken: 0.95 },    eff: '사냥 받는 피해 −5%' },
+  // 떠돌이 야바위꾼: 서로 다른 때 나타난 야바위꾼에게 말 걸기 / 홀짝 판 수
+  { id: 'yb_regular', name: '야바위꾼의 단골', cond: { count: 'yabawimeet', at: 5 }, mod: {}, eff: '달고 있으면 떠돌이 야바위꾼이 소문을 들려준다' },
+  { id: 'yb_gambler', name: '홀짝의 귀재', cond: { count: 'yabawi', at: 30 }, mod: { huntGold: 1.05 }, eff: '사냥 금화 +5%' },
 ];
 // 칭호 조건을 사람이 읽는 글로
-const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: '둥지에서 {n}번 쉬기', craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격', heir: '먼 여행을 떠난 드래곤의 의지를 잇기', teach: '제자를 {n}번 가르치기', surpass: '스승의 레벨을 따라잡기', sendoff: '다 자란 식구를 {n}번 떠나보내기', corrupt: '오염된 땅에서 {n}번 행동하기', purify: '오염된 땅을 {n}번 정화하기', firstcraft: '숨겨진 제작법을 대륙에서 처음 찾아내기', masterwork: '대성공 {n}번', mobquest: '모브 드래곤의 의뢰 {n}번 마치기', mobstory: '모브 드래곤의 이야기 {n}개를 끝까지 듣기' };
+const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: '둥지에서 {n}번 쉬기', craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격', heir: '먼 여행을 떠난 드래곤의 의지를 잇기', teach: '제자를 {n}번 가르치기', surpass: '스승의 레벨을 따라잡기', sendoff: '다 자란 식구를 {n}번 떠나보내기', corrupt: '오염된 땅에서 {n}번 행동하기', purify: '오염된 땅을 {n}번 정화하기', firstcraft: '숨겨진 제작법을 대륙에서 처음 찾아내기', masterwork: '대성공 {n}번', mobquest: '모브 드래곤의 의뢰 {n}번 마치기', mobstory: '모브 드래곤의 이야기 {n}개를 끝까지 듣기', yabawimeet: '떠돌이 야바위꾼을 {n}번 만나기 (나타날 때마다 한 번)', yabawi: '야바위꾼과 홀짝 {n}판' };
 
 // ── 장소와 사냥터 난이도 ───────────────────────────
 // 야생 지역마다 장소가 넷. 입구는 쉽고 안쪽일수록 사냥터 난이도가 높다 (셋째까지 Lv.1~12, 넷째는 고레벨 구역 Lv.13~24).
@@ -1565,6 +1568,93 @@ for (const r of RECIPES) {
   FACILITY.cookable.push(r.out);
 }
 
+// ── 떠돌이 야바위꾼: 하루 네 번, 한 시간씩 대륙 어딘가에 판을 벌임 (yabawi.js) ──
+// 하루(한국 날짜)를 여섯 시간씩 넷으로 나눠 구간마다 한 번, 그 안의 아무 때나 나타남. 지역은 본 대륙 야생 지역 중 하나, 장소는 그 지역 장소 중 하나
+// 전체 알림에는 지역 이름 대신 hint만 나옴. 장소를 찾아가면 '말 걸기'가 생김
+// 판: 금화를 걸고 홀·짝을 고름. 야바위꾼이 쥔 조약돌(1~10개)이 맞으면 건 만큼 따고, 틀리면 건 만큼 잃음 (정확히 반반)
+const YABAWI = {
+  name: '떠돌이 야바위꾼',
+  perDay: 4,                 // 하루에 나타나는 횟수 (하루를 이만큼 나눈 구간마다 한 번)
+  minutes: 60,               // 한 번 머무는 시간
+  edge: 10,                  // 구간 가장자리에서 이만큼(분)은 비움 (두 번이 바로 이어 붙지 않게)
+  placeDepth: 3,             // 지역의 앞쪽 몇 장소에서만 판을 벌일지 (넷째는 고레벨 구역이라 낮은 레벨은 들어가지 못함. 2로 줄이면 더 많은 드래곤이 닿음)
+  minBet: 1,                 // 가장 적게 걸 수 있는 금화
+  maxBet: null,              // 가장 많이 걸 수 있는 금화 (null이면 가진 만큼)
+  bigBet: 300,               // 이만큼 넘게 걸어 따거나 잃으면 발자취에 남음
+  hints: {
+    plains: '바람에 눕는 풀밭 어딘가에서', snow: '눈보라가 잦아든 하얀 땅 어딘가에서', ruins: '무너진 돌기둥 사이 어딘가에서',
+    forest: '안개 낀 나무들 사이 어딘가에서', swamp: '검은 갈대가 우거진 물가 어딘가에서', canyon: '붉은 바위 골짜기 어딘가에서',
+    volcano: '잿가루가 흩날리는 뜨거운 땅 어딘가에서',
+  },
+  greet: [
+    '어이, 거기 지나가는 손님! 홀이냐 짝이냐, 한 판 어때?',
+    '조약돌은 거짓말을 안 해. 거짓말은 내가 하지. …농담이야, 농담!',
+    '이런 외진 데까지 손님이 다 오셨네. 금화 냄새 맡고 왔지?',
+    '쉿, 경비대한테는 비밀이야. 자, 걸어 봐.',
+    '한 판에 인생이 바뀌진 않아. 그래도 저녁값은 바뀌지.',
+  ],
+  win: ['이런, 손님 눈이 매섭구먼!', '쳇, 오늘 운이 좋은 손님이네.', '어허, 내 주머니가 가벼워지는 소리가 들리는구먼.', '다음 판엔 안 질 거야. 아마도.'],
+  lose: ['헤헤, 조약돌은 정직하다니까.', '아깝다, 아까워! 한 판 더?', '금화는 잘 받았어. 다음엔 맞힐 거야, 분명히.', '운은 금화로 못 사는 법이지.'],
+  // 소문: '야바위꾼의 단골' 칭호를 달고 있으면 나타날 때마다 하나씩 들려줌. 안 들은 것부터
+  // kind — ruin: 멸망한 대륙 에레보스 (region이 열려 있을 때만) · tease: 아직 닫힌 region의 예고 (닫혀 있을 때만) · tale: 대륙의 옛이야기 · tip: 쓸모 있는 귀띔 (늘 사실)
+  rumorLocked: '"단골한테만 하는 얘기가 있지. 자주 보는 얼굴이 되면 말이야."',
+  rumorUsed: '"오늘 몫의 소문은 다 풀었어. 다음에 또 만나면 하나 더 해 주지."',
+  rumorKinds: { ruin: '에레보스 이야기', tease: '에레보스 이야기', tale: '대륙의 옛이야기', tip: '귀띔' },
+  rumors: [
+    { id: 'r_fire',    kind: 'ruin', region: 'ruin_shore', text: '검은 바다 건너 잿빛 상륙지에 모닥불 하나가 꺼지지 않는다더군. 늙은 드래곤 오르샤가 지킨대. 정화의 결정을 가져가면 살아남은 자들이 숨겨 둔 걸 내어 준다지.' },
+    { id: 'r_nets',    kind: 'ruin', region: 'ruin_shore', text: '부서진 부두의 어부들 말이야, 아직도 그물을 던진대. 바다가 마을을 삼킨 날부터 하루도 안 쉬었다는 거야. 잡히는 건 하나도 없는데.' },
+    { id: 'r_why',     kind: 'ruin', region: 'ruin_shore', text: '에레보스가 왜 멸망했냐고? 다들 다르게 말해. 하늘이 갈라졌다는 놈, 땅이 울었다는 놈… 확실한 건, 그날 이후 그 땅의 바람에선 재 냄새가 난다는 거지.' },
+    { id: 'r_captain', kind: 'ruin', region: 'ruin_shore', text: '바다에 삼켜진 선장 얘기 들었나? 마지막 배를 띄우려다 배랑 같이 가라앉았대. 아직도 부두에서 출항하라고 외친다더군.' },
+    { id: 'r_wheat',   kind: 'ruin', region: 'ruin_plain', text: '시든 평원은 원래 금빛 밀밭이었대. 카르넴 사람들 배를 다 채우고도 남았다지. 지금은 허수아비만 남았는데… 그놈들이 고개를 돌린다는 거, 사실이야. 내가 봤거든.' },
+    { id: 'r_river',   kind: 'ruin', region: 'ruin_plain', text: '말라붙은 강바닥에 뼈 와이번들이 산대. 강이 마를 때 물을 따라 떠나지 못한 놈들이라더군. 하늘에서 뼈 부딪히는 소리가 나면 고개 숙여.' },
+    { id: 'r_scare',   kind: 'ruin', region: 'ruin_plain', text: '허수아비 군주 말이야, 원래는 농부들이 밭 지키라고 세운 거래. 지키라고 세웠더니 정말로 지키고 있는 거지. 지금도, 아무도 없는 밭을.' },
+    { id: 'r_karnem',  kind: 'ruin', region: 'ruin_capital', text: '카르넴은 용과 인간이 함께 세운 왕도였어. 성벽은 인간이 쌓고, 탑 꼭대기는 용들이 불로 구웠다지. 그런 나라가 또 있을까 싶어.' },
+    { id: 'r_crown',   kind: 'ruin', region: 'ruin_capital', text: '카르넴의 마지막 왕은 왕관을 반으로 쪼개서 반쪽을 용에게 줬대. 함께 다스리자는 약속이었다나. 나머지 반쪽이 어디 있냐고? 그걸 알면 내가 여기서 조약돌이나 굴리고 있겠나.' },
+    { id: 'r_knights', kind: 'ruin', region: 'ruin_capital', text: '무너진 성문 앞 기사단은 아직 대열을 안 풀었대. 왕이 "문을 열지 마라" 하고 들어간 뒤로, 아무도 해산하라는 말을 안 했거든.' },
+    { id: 'r_kingdrg', kind: 'ruin', region: 'ruin_capital', text: '왕좌의 회랑에 있는 왕룡은 왕을 지키던 용이래. 검게 물든 뒤에도 왕좌 앞에서 안 비킨다더군. 지키는 게 왕인지, 빈 왕좌인지는 모르겠지만.' },
+    { id: 'r_rift',    kind: 'ruin', region: 'ruin_rift', text: '심연의 균열은 대륙을 둘로 가른 틈이야. 그 아래에서 뭔가 숨을 쉰다는데… 그 숨소리를 들은 놈들은 하나같이 잠을 못 자.' },
+    { id: 'r_noname',  kind: 'ruin', region: 'ruin_rift', text: '"이름을 잃은 것"이라고 들어 봤나? 균열 가장자리를 떠도는 그림자래. 이름을 불러 주면 대답한다는데, 아무도 그 이름을 몰라.' },
+    { id: 'r_lastclaw', kind: 'ruin', region: 'ruin_rift', text: '거대한 고룡 하나가 대륙이 무너지던 날까지 균열 앞에서 싸웠대. 그 발톱이 아직 따뜻하다는 얘기, 허풍만은 아닐걸.' },
+    { id: 'r_abyss',   kind: 'ruin', region: 'ruin_rift', text: '심연의 문턱으로 내려간 고룡은 돌아오지 않았어. 대신 그 숨결이 위로 올라오지. 거긴 오래 있지 마. 이건 진심이야.' },
+    { id: 'r_core',    kind: 'ruin', region: 'ruin_shore', text: '잿빛 심장은 오염된 강적의 가슴에서 뛰던 거래. 꺼내도 식지 않아. 정화하면 단단한 힘이 된다지만, 손에 쥐고 있으면 기분이 묘하다더군.' },
+    { id: 'r_orb',     kind: 'ruin', region: 'ruin_shore', text: '별을 담은 유리구슬은 그 땅 아이들 장난감이었대. 멸망한 날에도 어딘가 굴러다녔겠지. …이런 얘긴 판돈이 안 돼서 공짜야.' },
+    { id: 'r_idol',    kind: 'ruin', region: 'ruin_shore', text: '오염된 용 석상을 둥지에 두면 이상하게 마음이 가라앉는다던데, 정말일까? 난 무서워서 못 두겠어.' },
+    { id: 't_plain',   kind: 'tease', region: 'ruin_plain', text: '상륙지 너머로 길이 하나 나 있는데, 오염이 짙어서 아직 아무도 못 갔지. 다들 결정을 모아 길을 열면… 금빛이었다는 들판을 볼 수 있으려나.' },
+    { id: 't_capital', kind: 'tease', region: 'ruin_capital', text: '그 대륙 안쪽에 카르넴이라는 왕도가 있었대. 길이 열리면 가 봐. 무너진 성벽 위로 아직 깃발 하나가 펄럭인다더라.' },
+    { id: 't_rift',    kind: 'tease', region: 'ruin_rift', text: '에레보스 가장 깊은 곳엔 대륙을 가른 틈이 있다더군. 거기까지 가는 길은 아직 오염에 막혀 있어. 정화도가 한참 올라야 할걸.' },
+    { id: 's_beast',   kind: 'tale', text: '중앙 평원의 거수는 땅을 가르며 걷는대. 지나간 자리엔 골짜기가 생긴다나. 평원에 골짜기가 많은 게 그래서라고, 어떤 노인이 그러더군.' },
+    { id: 's_ymir',    kind: 'tale', text: '북부 설원의 이미르는 서리 거신이야. 눈보라는 그놈 한숨이래. 오늘 눈보라가 심했다면, 뭐… 기분이 안 좋은 거지.' },
+    { id: 's_tree',    kind: 'tale', text: '독안개 숲의 천 년 고목이 썩어 간다는 거 알아? 숲 전체가 그 뿌리 위에 있대. 고목이 쓰러지면 숲도 무너진다는 거야.' },
+    { id: 's_hydra',   kind: 'tale', text: '검은 늪 히드라는 머리가 아홉이래. 하나를 자르면 둘이 난다는 건 거짓말이고, 그냥 아홉 개야. 그래도 많지.' },
+    { id: 's_bird',    kind: 'tale', text: '태양 협곡의 괴조는 날갯짓 한 번에 폭풍을 부른다더군. 협곡 바람이 갑자기 바뀌면 그놈이 깬 거야.' },
+    { id: 's_vargas',  kind: 'tale', text: '잿빛 화산 아래 고룡 바르가스가 자고 있대. 깨어나면 하늘이 재로 덮인다지. …아, 이미 깨어났다고? 어쩐지 요즘 덥더라.' },
+    { id: 's_giant',   kind: 'tale', text: '고대 유적의 거신은 봉인에서 풀려났대. 누가 풀었냐고? 그걸 알면 현상금이 꽤 될걸.' },
+    { id: 's_mobs',    kind: 'tale', text: '지역마다 머무는 드래곤들 있잖아. 다들 사연이 하나씩 있어. 끝까지 들어 주면 선물을 준다더라. 나한텐 안 주던데.' },
+    { id: 's_stairs',  kind: 'tale', text: '원정 가다 보면 어둠 속으로 내려가는 계단이 나올 때가 있지. 그 아래엔 제단이 있대. 겁 없는 놈만 내려가고, 겁 많은 놈은 룬 돌이나 줍고 돌아오지.' },
+    { id: 's_arden',   kind: 'tale', text: '왕도 아르덴 경비대는 내 얼굴을 알아. 그래서 내가 마을엔 판을 안 벌이는 거야. 이유는 묻지 마.' },
+    { id: 's_thief',   kind: 'tale', text: '보물 도둑 무리는 반짝이는 걸 좋아해. 보물더미가 클수록 잘 꼬이지. 둥지 지킬 거 하나쯤은 두는 게 좋아.' },
+    { id: 's_calm',    kind: 'tale', text: '광폭화한 용을 붙잡아 주는 건 쉬운 일이 아니야. 그래도 곁에 누가 있으면 돌아오는 길이 짧대. 혼자는 위험해.' },
+    { id: 's_fish',    kind: 'tale', text: '남쪽 해안 절벽에선 비 오는 날 연어가 잘 문대. 뇌우 치는 날엔 번개 장어가 올라온다더군. 짜릿하겠지.' },
+    { id: 'p_weak',    kind: 'tip', text: '강적은 싫어하는 숨결이 있어. 도감에 약점이 적혀 있잖아? 그걸 보고 가. 옛 전장 망령은 불이랑 번개를, 갈대밭 늪 악어는 번개를 못 견뎌.' },
+    { id: 'p_star',    kind: 'tip', text: '원정을 두 시간 넘게, 끝까지 다녀오면 별똥별 조각이 떨어져 있을 때가 있어. 세 시간이면 더 잘 보이지. 중간에 불러들이면 꽝이고.' },
+    { id: 'p_pity',    kind: 'tip', text: '멸망한 대륙 강적이 안 잡힌다고? 만나기만 해도 운이 쌓인대. 마흔 번쯤 만나면, 그다음 이길 때 귀한 장비가 꼭 나온다더라.' },
+    { id: 'p_rest',    kind: 'tip', text: '체력이 15도 안 남았으면 사냥엔 못 나서. 둥지에서 쉬면 금방 차오르지. 무리하다 쓰러지면 상흔이 남는다고.' },
+    { id: 'p_together', kind: 'tip', text: '멸망한 대륙에선 정신이 빨리 깎여. 그런데 같은 곳에 누가 함께 있으면 덜 깎인대. 혼자 다니지 마.' },
+    { id: 'p_back',    kind: 'tip', text: '멸망한 대륙에서 돌아올 땐 둥지로 곧장 못 날아가. 뱃길로 건너와야 해. 행동력 세 개는 남겨 둬.' },
+    { id: 'p_ward',    kind: 'tip', text: '정신 보호 장신구를 차면 오염된 땅에서 정신이 덜 깎여. 멸망한 대륙 갈 땐 꼭 챙겨.' },
+    { id: 'p_stone',   kind: 'tip', text: '둥지 둘레에 결계석을 묻어 두면 보물 도둑이 들어와도 통째로 쫓아낸대. 보물더미가 크다면 아끼지 마.' },
+    { id: 'p_dex',     kind: 'tip', text: '도감에 처음 보는 칸이 채워지면 약점이랑 나오는 곳이 적혀. 못 본 칸도 어디서 나오는지 힌트는 있지. 심심하면 들여다봐.' },
+    { id: 'p_secret',  kind: 'tip', text: '숨겨진 제작법은 목록에 안 나와. 실험에서 재료 두세 개를 섞어 봐. 비슷하면 힌트를 주지. 바랜 두루마리를 읽어도 되고.' },
+    { id: 'p_shard',   kind: 'tip', text: '정화의 결정은 오르샤가 귀한 것과 바꿔 줘. 멸망한 대륙에선 뭘 해도 조금씩 나오니까 버리지 말고 모아 둬.' },
+    { id: 'p_deep',    kind: 'tip', text: '같은 지역이라도 깊은 장소일수록 귀한 재료가 잘 나와. 대신 너무 약하면 들어가지도 못하지. 사냥터 레벨을 잘 봐.' },
+    { id: 'p_kin',     kind: 'tip', text: '식구를 원정에 데려가 봐. 눈이 여럿이면 찾는 것도 늘어. 애들이 수다스러운 건 덤이고.' },
+    { id: 'p_arena',   kind: 'tip', text: '결투장에선 칭호 효과가 없어. 순전히 실력이지. 칭호 믿고 덤볐다간 큰코다쳐.' },
+    { id: 'p_boss',    kind: 'tip', text: '대륙의 재앙은 다 같이 때려잡는 거야. 마지막 일격을 넣은 녀석한텐 따로 칭호도 준다더군.' },
+    { id: 'p_mobq',    kind: 'tip', text: '지역의 드래곤들이 주는 의뢰는 자정이 지나면 바뀌어. 하루 두 개씩이니까 아침마다 들러 봐.' },
+    { id: 'p_open',    kind: 'tip', text: '멸망한 대륙은 다 같이 정화할수록 새 길이 열려. 한 번 열린 길은 다시 안 닫히니까, 한 발씩만 거들어도 돼.' },
+  ],
+};
+
 // ── 업적: 효과 없이 모으는 기록 (칭호는 '다는 것', 업적은 '모으는 것') ──
 // 칭호가 이미 세는 횟수(사냥·채집·제작…)와 겹치지 않게: 도감 모으기 · 이정표 · 숨겨진 사건
 // cond 종류 — dexRegion: 지역의 사냥감·강적을 모두 만나기 / dexFish·dexBoss: 모두 / dexCat: [물건 분류, 개수(없으면 전부)]
@@ -1608,11 +1698,12 @@ const ACHIEVEMENTS = [
   { id: 'h_dawn',   hidden: true, name: '새벽 네 시의 용', desc: '새벽 네 시에 대륙을 거닐기',              cond: { hourKST: 4 } },
   { id: 'h_thread', hidden: true, name: '실 한 가닥',      desc: '정신이 5 이하로 남은 채 버티기',          cond: { mindLow: 5 } },
   { id: 'h_shame',  hidden: true, name: '평판 따윈',       desc: "용족 명성이 '수치'까지 떨어지기",         cond: { fameAt: -60 } },
+  { id: 'q_rumor',  name: '귀가 밝은 용',      desc: '떠돌이 야바위꾼에게서 소문 20가지 듣기',  cond: { count: ['rumor', 20] } },
   { id: 'h_eel',    hidden: true, name: '번개를 낚다',     desc: '번개 장어를 낚기',                        cond: { item: 'fish_eel' } },
 ];
 
 module.exports = {
-  KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, TITLES, TITLE_COUNT_NAMES, ACHIEVEMENTS,
+  KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, TITLES, TITLE_COUNT_NAMES, ACHIEVEMENTS, YABAWI,
   PURIFY, CRAFT, SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, FISHING, RUIN, FACILITY, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
   DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
   COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, DEPART, BONDS, MARKS, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG,
