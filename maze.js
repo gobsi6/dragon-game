@@ -196,10 +196,16 @@ module.exports = function setupMaze({ io, db, online, logic, sendMe, system, dea
     let sn = 0;
     for (const k of W.floors[fi].ways) {
       const a = k.split(','), r = +a[0], c = +a[1];
-      if (G.g[r][c] === 'P') out.push({ key: k, name: `${pillarAt(fi, r, c) + 1}번 기둥`, pos: [r, c], kind: 'pillar' });
-      else { sn++; out.push({ key: k, name: `화톳불 ${sn}`, pos: [r, c], kind: 'fire' }); }
+      if (G.g[r][c] !== 'F') continue; // 기둥은 귀환 지점이 아니다 (예전에 저장된 기둥 기록은 건너뜀)
+      sn++; out.push({ key: k, name: `화톳불 ${sn}`, pos: [r, c], kind: 'fire' });
     }
     return out;
+  }
+  // 가장 가까운 찾은 화톳불 (구덩이 알림 등에 쓰는 위치 표시). 이름은 points()의 번호와 같다
+  function nearFire(fi, r, c) {
+    let best = null, bd = 1e9;
+    for (const p of points(fi)) { if (p.kind !== 'fire') continue; const dd = Math.abs(p.pos[0] - r) + Math.abs(p.pos[1] - c); if (dd < bd) { bd = dd; best = p; } }
+    return best ? ` ${best.name} 근처` : '';
   }
   // 아직 밝히지 않은 곳에 가장 가까운 지점
   function bestPoint(fi) {
@@ -224,7 +230,9 @@ module.exports = function setupMaze({ io, db, online, logic, sendMe, system, dea
       floors: W.floors.map((f, i) => ({ i, N: GEO[i].N, opened: !!f.opened, conquered: f.conquered, pct: pct(i), guardsDown: guardsDown(i), deep: deep(i),
         fires: f.ways.filter((k) => { const a = k.split(','); return GEO[i].g[+a[0]][+a[1]] === 'F'; }).length, pioneers: f.pioneers })),
       me: { fi: m.fi ?? null, used: m.used || 0, max: R.entries, torch: m.torch || 0 },
-      points: points(fi), best: bestPoint(fi), rev: enc(FL[fi].rev), rows: GEO[fi].rows, lockedText: '회랑 입구는 오르딘이 지키고 있다. 먼저 그에게 말을 걸어야 한다.',
+      points: points(fi), best: bestPoint(fi), rev: enc(FL[fi].rev), rows: GEO[fi].rows, flags: W.floors[fi].flags,
+      // 찾아 둔 기둥(밝혀진 곳에 있는 기둥) 모두: 수호자가 남았는지, 지금 불이 타는지 (기둥에서 시작할 수는 없음)
+      pillars: GEO[fi].pillars.map((p, pi) => (FL[fi].rev[idx(fi, p[0], p[1])] ? { pi, pos: p, guard: guard(fi, pi).hp > 0, lit: litLeft(fi, pi) > 0, } : null)).filter(Boolean), lockedText: '회랑 입구는 오르딘이 지키고 있다. 먼저 그에게 말을 걸어야 한다.',
       here: hereOn(fi).length,
     };
   }
@@ -251,7 +259,7 @@ module.exports = function setupMaze({ io, db, online, logic, sendMe, system, dea
 
   // 반나절마다: 깊은 층의 회랑이 무너진다
   function collapse(fi) {
-    const G = GEO[fi], N = G.N, f = W.floors[fi], keep = new Set([...f.ways, '1,1']);
+    const G = GEO[fi], N = G.N, f = W.floors[fi], keep = new Set([...f.ways, '1,1', ...GEO[fi].pillars.map((p) => `${p[0]},${p[1]}`)]); // 화톳불·입구·기둥 자리는 무너지지 않음
     let done = 0;
     for (let t = 0; t < 400 && done < R.collapse.spots; t++) {
       const r = 1 + Math.floor(Math.random() * (N - 2)), c = 1 + Math.floor(Math.random() * (N - 2));
@@ -358,7 +366,7 @@ module.exports = function setupMaze({ io, db, online, logic, sendMe, system, dea
     if (d.hp <= 0) { knockOut(d, fi, fromMob ? '돌 파수꾼' : '기둥 수호자'); broadcast(fi); save(); return { ok: true, lines: [...lines, '체력이 다해 쓰러졌다. 유적 밖으로 실려 나갔다.'], out: true }; }
     const mob = live[fi].mobs[key];
     if (mob) lines.push(`${mob.f.length ? mob.f.map((x) => x.name).join(', ') + ' 곁에 내려앉았다.' : `Lv ${mob.lv} 돌 파수꾼 앞에 섰다.`}`);
-    else if (ch === 'T' && !f.pits.includes(key)) { f.pits.push(key); m.stuck = true; d.hp = Math.max(0, d.hp - R.pit); lines.push(`돌판이 꺼지며 아래로 떨어졌다. 체력 −${R.pit}. 다른 드래곤이 옆 칸까지 와야 끌어올릴 수 있다.`); notice(`${ga(d.name)} 제 ${fi + 1}층의 구덩이에 빠졌다. 누가 끌어올려 줘야 한다.`); if (d.hp <= 0) { knockOut(d, fi, null); broadcast(fi); save(); return { ok: true, lines: [...lines, '체력이 다해 쓰러졌다.'], out: true }; } }
+    else if (ch === 'T' && !f.pits.includes(key)) { f.pits.push(key); m.stuck = true; d.hp = Math.max(0, d.hp - R.pit); lines.push(`돌판이 꺼지며 아래로 떨어졌다. 체력 −${R.pit}. 다른 드래곤이 옆 칸까지 와야 끌어올릴 수 있다.`); notice(`${ga(d.name)} 제 ${fi + 1}층${nearFire(fi, r, c)}의 구덩이에 빠졌다. 누가 끌어올려 줘야 한다.`); if (d.hp <= 0) { knockOut(d, fi, null); broadcast(fi); save(); return { ok: true, lines: [...lines, '체력이 다해 쓰러졌다.'], out: true }; } }
     else if (ch === 'T') lines.push('이미 무너진 자리다. 가장자리를 밟고 조심히 지나간다.');
     else if (ch === 'F') { if (!f.ways.includes(key)) { f.ways.push(key); lines.push('옛 화톳불 자리를 찾았다. 재 속에 아직 온기가 남아 있다. 이제 여기서 바로 들어올 수 있다.'); notice(`${ga(d.name)} 제 ${fi + 1}층에서 새 화톳불 자리를 찾았다.`); } else lines.push('이미 찾아 둔 화톳불 자리다. 불 곁에서 상처를 돌볼 수 있다.'); }
     else if (ch === 'P') { const pi = pillarAt(fi, r, c), g = guard(fi, pi); lines.push(g.hp > 0 ? `${pi + 1}번 기둥 앞을 Lv ${R.guardLv(fi)} 수호자가 막고 있다. 쓰러뜨려야 불을 붙일 수 있다.` : litLeft(fi, pi) > 0 ? `${pi + 1}번 기둥이 타오르고 있다. ${Math.ceil(litLeft(fi, pi) / 60000)}분 남았다.` : `수호자가 무너진 ${pi + 1}번 기둥이다. 불을 붙일 수 있다.`); }
@@ -422,9 +430,10 @@ module.exports = function setupMaze({ io, db, online, logic, sendMe, system, dea
     if (litLeft(fi, pi) > 0) return err('이미 타오르고 있다.');
     if (m.torch < R.lightCost) return err('횃불이 모자란다.');
     m.torch -= R.lightCost; begin(d, m); f.lit[pi] = Date.now() + R.pillarMs; f.contrib[d.id] = dayIdx();
-    const key = `${m.pos[0]},${m.pos[1]}`; if (!f.ways.includes(key)) f.ways.push(key);
-    const lines = [`${pi + 1}번 기둥에 불을 붙였다. ${Math.round(R.pillarMs / 60000)}분 동안 타오른다.`];
-    notice(`${ga(d.name)} 제 ${fi + 1}층 ${pi + 1}번 기둥에 불을 붙였다. ${Math.round(R.pillarMs / 60000)}분 동안 타오른다. (${f.lit.filter((t) => t > Date.now()).length}/4)`);
+    const litN = f.lit.filter((t) => t > Date.now()).length;
+    const lines = [`${pi + 1}번 기둥의 불을 밝혔다. ${Math.round(R.pillarMs / 60000)}분 동안 타오른다. (밝힌 기둥 ${litN}/4)`];
+    // 고대 유적 '이곳' 채팅에 알림: 누가 몇 번 기둥을 밝혔는지
+    notice(`${ga(d.name)} 지하 회랑 제 ${fi + 1}층 ${pi + 1}번 기둥의 불을 밝혔다. ${Math.round(R.pillarMs / 60000)}분 동안 타오른다. (밝힌 기둥 ${litN}/4)`);
     lines.push(...checkSeal(fi));
     save(); broadcast(fi);
     return { ok: true, lines };

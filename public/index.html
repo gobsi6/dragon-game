@@ -2464,7 +2464,7 @@
   .rm-grid { display: grid; gap: 2px; }
   .rm-c { aspect-ratio: 1; border-radius: 2px; position: relative; display: flex; align-items: center; justify-content: center; background: #F7F5EF; border: 1px solid #DDD9CE; min-width: 0; padding: 0; margin: 0; font: inherit; color: inherit; }
   .rm-c.out { background: transparent; border-color: transparent; }
-  .rm-c.fog { background: repeating-linear-gradient(135deg, #E1DFD8 0 3px, #E9E7E1 3px 8px); border-color: transparent; }
+  .rm-c.fog { background: repeating-linear-gradient(135deg, #ADA99F 0 3px, #B8B4AA 3px 8px); border-color: transparent; } /* 아직 밝히지 않은 곳: 밟을 수 있는 길보다 확실히 어둡게, 벽보다는 밝게 */
   .rm-c.wall { background: #77736A; border-color: #6A665E; }
   .rm-c.trod::before { content: ''; position: absolute; width: 5px; height: 5px; border-radius: 50%; background: #CFC8B8; }
   .rm-c.go { background: #E3ECF3; border-color: var(--steel-l); cursor: pointer; }
@@ -2505,7 +2505,7 @@
   .rm-dot { width: 20px; height: 20px; border-radius: 50%; background: var(--c); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; overflow: hidden; flex: none; }
   .rm-dot img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .rm-mini-wrap { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line-in); }
-  .rm-mini { display: block; flex: 1 1 200px; max-width: 260px; width: 100%; height: auto; border-radius: 3px; border: 1px solid var(--line-in); background: #E1DFD8; image-rendering: pixelated; }
+  .rm-mini { display: block; flex: 1 1 200px; max-width: 260px; width: 100%; height: auto; border-radius: 3px; border: 1px solid var(--line-in); background: #ADA99F; image-rendering: pixelated; }
   .rm-log { flex: 1 1 200px; display: flex; flex-direction: column; min-width: 0; }
   .rm-log div { display: flex; gap: 8px; font-size: 12.5px; line-height: 1.55; padding: 5px 0; border-top: 1px solid var(--line-in); }
   .rm-log div:first-child { border-top: 0; padding-top: 0; }
@@ -2535,13 +2535,23 @@
   .rm-step .pc .bar { height: 5px; background: var(--line-in); border-radius: 3px; overflow: hidden; margin-top: 3px; }
   .rm-step .pc .bar i { display: block; height: 100%; border-radius: 3px; background: var(--steel); }
   .rm-step.done .pc .bar i { background: var(--forest); }
-  .rm-pickmap { position: relative; border: 1px solid var(--line-in); border-radius: 3px; overflow: hidden; background: #E1DFD8; }
+  .rm-pickmap { position: relative; border: 1px solid var(--line-in); border-radius: 3px; overflow: hidden; background: #ADA99F; }
   .rm-pickmap svg { display: block; width: 100%; height: auto; }
   .rm-pin { position: absolute; transform: translate(-50%, -50%); width: 28px; height: 28px; border-radius: 50%; padding: 0; border: 2px solid #fff; background: #B07A2A; color: #fff; font: 600 11px/1 var(--sans); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
   .rm-pin::after { content: ''; position: absolute; inset: -9px; }
   .rm-pin.gate { background: var(--steel); }
   .rm-pin.pillar { background: #7A5A16; border-radius: 5px; }
   .rm-pin.fire { width: 18px; height: 18px; }
+  .rm-pin.pil-seen { width: 22px; height: 22px; border-radius: 5px; background: #fff; color: #5B6066; border: 2px solid #7E8389; cursor: default; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+  .rm-pin.pil-seen::after { display: none; }
+  .rm-pin.pil-seen.guarded { border-color: #A63E4B; color: #A63E4B; }
+  .rm-pin.pil-seen.burning { background: #D9A35A; border-color: #7A5A16; color: #fff; }
+  .rm-pin.pillar.guarded { box-shadow: 0 0 0 2px #A63E4B, 0 1px 2px rgba(0,0,0,.25); }
+  .rm-pin.pillar.burning { background: #D9A35A; }
+  .rm-no { position: absolute; left: -3px; top: -3px; z-index: 2; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 8px; background: #7A5A16; color: #fff; font: 600 10px/15px var(--sans); text-align: center; }
+  .rm-pin.flag { width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 1.5px solid #6A4522; cursor: default; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+  .rm-pin.flag svg { width: 11px; height: 11px; fill: #E2B66F; stroke: #6A4522; stroke-width: 2.2; }
+  .rm-pin.flag::after { display: none; }
   .rm-pin.on { width: 34px; height: 34px; background: var(--steel-d); box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--steel-d); z-index: 2; }
   .rm-pin svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .rm-pick { display: flex; align-items: center; gap: 10px; margin-top: 8px; padding: 8px 10px; border: 1px solid var(--steel-l); background: #F4F7FA; border-radius: 3px; }
@@ -12135,7 +12145,7 @@
     let r0 = N, r1 = 0, c0 = N, c1 = 0;
     for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (rev[r * N + c]) { r0 = Math.min(r0, r); r1 = Math.max(r1, r); c0 = Math.min(c0, c); c1 = Math.max(c1, c); }
     r0 = Math.max(0, r0 - 1); c0 = Math.max(0, c0 - 1); const side = Math.max(r1 - r0, c1 - c0) + 3;
-    let svg = `<svg viewBox="${c0 * 6} ${r0 * 6} ${side * 6} ${side * 6}" role="img" aria-label="제 ${fl.i + 1}층 지도"><rect x="0" y="0" width="${N * 6}" height="${N * 6}" fill="#E1DFD8"/>`;
+    let svg = `<svg viewBox="${c0 * 6} ${r0 * 6} ${side * 6} ${side * 6}" role="img" aria-label="제 ${fl.i + 1}층 지도"><rect x="0" y="0" width="${N * 6}" height="${N * 6}" fill="#ADA99F"/>`;
     for (let r = r0; r < Math.min(N, r0 + side); r++) for (let c = c0; c < Math.min(N, c0 + side); c++) {
       if (!rev[r * N + c]) continue; const ch = rows[r][c];
       svg += `<rect x="${c * 6}" y="${r * 6}" width="6" height="6" fill="${ch === '#' ? '#77736A' : ch === 'E' ? '#3C5A73' : '#F7F5EF'}"/>`;
@@ -12144,7 +12154,13 @@
     const X = (c) => `${((c + 0.5 - c0) / side) * 100}%`, Y = (r) => `${((r + 0.5 - r0) / side) * 100}%`;
     const pins = v.points.map((p, i) => {
       const on = p.key === MZ.pick, fireNo = p.kind === 'fire' ? p.name.replace('화톳불 ', '') : '';
-      return `<button type="button" class="rm-pin ${p.kind}${on ? ' on' : ''}" style="left:${X(p.pos[1])};top:${Y(p.pos[0])}" data-key="${p.key}" aria-pressed="${on}" aria-label="${p.name}에서 들어가기">${p.kind === 'gate' ? MZ_ICON.stairs : p.kind === 'pillar' ? p.name.replace('번 기둥', '') : on ? fireNo : ''}</button>`;
+      const pl = p.kind === 'pillar' ? (v.pillars || []).find((q) => `${q.pos[0]},${q.pos[1]}` === p.key) : null; // 수호자가 다시 깨어난 기둥은 빨간 테두리
+      return `<button type="button" class="rm-pin ${p.kind}${pl?.guard ? ' guarded' : ''}${pl?.lit ? ' burning' : ''}${on ? ' on' : ''}" style="left:${X(p.pos[1])};top:${Y(p.pos[0])}" data-key="${p.key}" aria-pressed="${on}" aria-label="${p.name}에서 들어가기">${p.kind === 'gate' ? MZ_ICON.stairs : p.kind === 'pillar' ? p.name.replace('번 기둥', '') : on ? fireNo : ''}</button>`;
+    }).join('') + (v.pillars || []).map((q) => // 찾아 둔 기둥: 시작할 수는 없고 상태만 (수호자 남음 · 쓰러짐 · 불 타는 중)
+      `<span class="rm-pin pil-seen${q.guard ? ' guarded' : q.lit ? ' burning' : ''}" style="left:${X(q.pos[1])};top:${Y(q.pos[0])}" title="${q.pi + 1}번 기둥 · ${q.guard ? '수호자가 지키고 있다' : q.lit ? '밝힌 기둥 · 불이 타오르고 있다' : '수호자가 쓰러졌다 · 불을 붙일 수 있다'}" aria-label="${q.pi + 1}번 기둥, ${q.guard ? '수호자가 지키고 있다' : q.lit ? '밝힌 기둥' : '수호자가 쓰러졌다'}">${q.pi + 1}</span>`
+    ).join('') + Object.entries(v.flags || {}).map(([k, who]) => { // 다른 드래곤이 남긴 표식: 시작할 수는 없고 보기만
+      const [fr, fc] = k.split(',').map(Number);
+      return rev[fr * N + fc] ? `<span class="rm-pin flag" style="left:${X(fc)};top:${Y(fr)}" title="${who}의 표식" aria-label="${who}의 표식"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21V4h11l-3 4 3 4H6"/></svg></span>` : '';
     }).join('');
     const pk = v.points.find((p) => p.key === MZ.pick) || v.points[0];
     const canGo = v.open && !v.city && fl.opened && v.me.fi == null && v.me.used < v.me.max;
@@ -12155,7 +12171,7 @@
         <section><h3 class="rm-h3">내려가는 길</h3><ol class="rm-depth"><span class="done-line" style="height:calc(${doneN} * 58px)"></span>${steps}</ol></section>
         <section><h3 class="rm-h3">제 ${fl.i + 1}층 · 어디서 들어갈까</h3>
           <div class="rm-pickmap">${svg}${pins}</div>
-          <div class="rm-pl"><span><i style="background:var(--steel)"></i>입구</span><span><i style="background:#7A5A16;border-radius:3px"></i>밝힌 기둥</span><span><i style="background:#B07A2A"></i>찾은 화톳불</span></div>
+          <div class="rm-pl"><span><i style="background:var(--steel)"></i>입구</span><span><i style="background:#fff;border-radius:3px;box-shadow:0 0 0 2px #A63E4B"></i>수호자가 지키는 기둥</span><span><i style="background:#fff;border-radius:3px;box-shadow:0 0 0 1.5px #7E8389"></i>수호자가 쓰러진 기둥</span><span><i style="background:#D9A35A;border-radius:3px;box-shadow:0 0 0 1.5px #7A5A16"></i>밝힌 기둥</span><span><i style="background:#B07A2A"></i>찾은 화톳불</span><span><i style="background:#fff;box-shadow:0 0 0 1.5px #6A4522"></i>표식 (다른 드래곤이 남김)</span></div>
           <div class="rm-pick"><span class="ic">${pk.kind === 'fire' ? pk.name.replace('화톳불 ', '') : pk.kind === 'pillar' ? pk.name.replace('번 기둥', '') : '입'}</span><div><b>${pk.name}</b><small>${pk.key === v.best ? '아직 밝히지 않은 곳에 가장 가깝다' : '여기서 시작한다'} · 다른 점을 누르면 그곳에서 시작한다</small></div></div>
         </section>
       </div>
@@ -12182,6 +12198,8 @@
     const VW = window.innerWidth < 640 ? 9 : 13, VH = 11;
     const r0 = Math.max(0, Math.min(N - VH, pos[0] - Math.floor(VH / 2))), c0 = Math.max(0, Math.min(N - VW, pos[1] - Math.floor(VW / 2)));
     const occ = {}; for (const h of f.here) (occ[`${h.pos[0]},${h.pos[1]}`] ||= []).push(h);
+    const fireNo = {}; let fno = 0; for (const k of f.ways) { const [wr, wc] = k.split(',').map(Number); if (rows[wr][wc] === 'F') fireNo[k] = ++fno; } // 화톳불 번호: 들어갈 곳 고르기와 같은 번호
+    const nearFire = (pp) => { let best = 0, bd = 1e9; for (const [k, no] of Object.entries(fireNo)) { const [wr, wc] = k.split(',').map(Number); const dd = Math.abs(wr - pp[0]) + Math.abs(wc - pp[1]); if (dd < bd) { bd = dd; best = no; } } return best; };
     const pillarIdx = {}; let pn = 0;
     for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (rows[r][c] === 'P') pillarIdx[`${r},${c}`] = pn++;
     const near = (r, c) => f.here.some((h) => Math.max(Math.abs(h.pos[0] - r), Math.abs(h.pos[1] - c)) <= (S.mazeRules?.sight ?? 3));
@@ -12214,6 +12232,7 @@
       else if (ch === 'E') inner += f.unsealed ? MZ_ICON.down : MZ_ICON.sealed;
       else if (ch === 'P') inner += gAlive ? MZ_ICON.warden : f.lit[pi] > 0 ? MZ_ICON.pillarLit : MZ_ICON.pillar;
       else if (ch === 'F') inner += f.ways.includes(key) ? MZ_ICON.fire : MZ_ICON.ember;
+      if (ch === 'F' && fireNo[key]) inner += `<span class="rm-no" aria-label="화톳불 ${fireNo[key]}">${fireNo[key]}</span>`;
       else if (ch === 'T' && f.pits.includes(key)) inner += MZ_ICON.pit;
       if (f.flags[key]) inner += MZ_ICON.flag;
       const tip = here.length ? mzEsc(whoTip(here)) : '';
@@ -12258,7 +12277,7 @@
     const pills = f.guards.map((g, i) => `<span class="rm-pill${f.lit[i] > 0 ? ' ok' : g.hp > 0 ? ' bad' : ''}">${i + 1}번 ${f.lit[i] > 0 ? `${Math.ceil(f.lit[i] / 60000)}분 남음` : g.hp > 0 ? `수호자 ${g.hp}/${g.hpMax}` : '불 꺼짐'}</span>`).join('');
     const seal = f.unsealed ? '<div class="rm-pill ok" style="align-self:flex-start">봉인이 풀렸다. 계단으로 가자.</div>'
       : `<div class="rm-row"><span>지도 ${target}% 밝히기</span><span class="rm-pill${f.reached ? ' ok' : ''}">${f.pct}%</span></div><div class="rm-row"><span>수호자 넷 쓰러뜨리기</span><span class="rm-pill${gdn === 4 ? ' ok' : ''}">${gdn} / 4</span></div><div class="rm-row"><span>네 기둥 함께 밝히기</span><span class="rm-pill${litN === 4 ? ' ok' : ''}">${litN} / 4</span></div><div class="rm-pills">${pills}</div>`;
-    const who = f.here.map((h) => `<span class="rm-who"><span class="rm-dot" style="--c:var(--k-${h.kind})">${avatarUrl(h) ? `<img src="${avatarUrl(h)}" alt="">` : h.name.charAt(0)}</span>${h.name}${h.stuck ? ' <em>구덩이</em>' : h.torch < 0.5 ? ' <em>횃불 꺼짐</em>' : ''}</span>`).join('');
+    const who = f.here.map((h) => `<span class="rm-who"><span class="rm-dot" style="--c:var(--k-${h.kind})">${avatarUrl(h) ? `<img src="${avatarUrl(h)}" alt="">` : h.name.charAt(0)}</span>${h.name}${h.stuck ? ` <em>구덩이${nearFire(h.pos) ? ` · 화톳불 ${nearFire(h.pos)} 근처` : ''}</em>` : h.torch < 0.5 ? ' <em>횃불 꺼짐</em>' : ''}</span>`).join('');
     const log = MZ.log.map((l) => `<div><b>${l.who || ''}</b><span>${l.t}</span></div>`).join('');
     card.innerHTML = `<i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
       <div class="where"><span class="k">지금 머무는 곳</span><div class="title"><h1>지하 회랑 제 ${f.fi + 1}층</h1><span class="tag wild">탐사 중</span></div>
@@ -12283,7 +12302,7 @@
       <div class="rm-mini-wrap"><canvas id="maze-mini" class="rm-mini" aria-label="제 ${f.fi + 1}층 전체 지도"></canvas><div class="rm-log">${log || '<div><span class="rm-k">아직 아무 일도 없다.</span></div>'}</div></div>`;
     // 작은 지도
     const cv = card.querySelector('#maze-mini'), px = 4; cv.width = N * px; cv.height = N * px;
-    const x = cv.getContext('2d'); x.fillStyle = '#E1DFD8'; x.fillRect(0, 0, cv.width, cv.height);
+    const x = cv.getContext('2d'); x.fillStyle = '#ADA99F'; x.fillRect(0, 0, cv.width, cv.height);
     for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
       if (!rev[r * N + c]) continue; const k = `${r},${c}`, cc = rows[r][c];
       x.fillStyle = cc === '#' ? '#77736A' : cc === 'P' ? (f.guards[pillarIdx[k]]?.hp > 0 ? '#A63E4B' : f.lit[pillarIdx[k]] > 0 ? '#D9A35A' : '#5B6066') : cc === 'F' ? (f.ways.includes(k) ? '#D9A35A' : '#B9B4A8') : cc === 'E' ? '#3C5A73' : '#F7F5EF';
