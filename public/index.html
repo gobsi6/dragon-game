@@ -377,6 +377,30 @@
   .src-box ul { margin: 0; padding-left: 16px; }
   .src-box p { margin: 0; }
   .recipe .btn { min-height: 38px; padding: 0 14px; font-size: 14px; }
+  /* 소지품: 제작에 쓰이는 재료는 이름을 누르면 쓰임새 창이 뜸 */
+  .inv .it .nm.uses { cursor: pointer; text-decoration: underline dotted; text-decoration-color: #7E97AC; text-underline-offset: 3px; }
+  .inv .it .nm.uses:hover { color: var(--steel-d); }
+  .inv .it .nm.uses:focus-visible { outline: 2px solid var(--steel); outline-offset: 2px; border-radius: 2px; }
+  /* '제작 N' 단추: 망치 그림 + 글씨, 강철빛 테두리로 눈에 띄게 (색은 늘 쓰는 강철빛 하나만) */
+  .inv .it .use-n { display: inline-flex; align-items: center; gap: 4px; font: 700 11.5px/20px var(--sans); padding: 0 8px 0 6px; border-radius: 2px; border: 1px solid #7E97AC; background: #E6EDF3; color: var(--steel-d); cursor: pointer; }
+  .inv .it .use-n svg { width: 12px; height: 12px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .inv .it .use-n::after { content: "›"; font-weight: 700; margin-left: 1px; }
+  .inv .it .use-n:hover { background: var(--steel-d); border-color: var(--steel-d); color: #fff; }
+  .inv .it .use-n:focus-visible { outline: 2px solid var(--steel); outline-offset: 2px; }
+  /* 쓰임새 창 */
+  .uses-list { display: flex; flex-direction: column; gap: 10px; margin: 6px 0 12px; }
+  /* 제작법 줄 전체를 누르면 제작 창의 그 줄로 감. 오른쪽 끝에 화살표 하나 */
+  .uses-list .recipe { position: relative; cursor: pointer; padding-right: 34px; transition: background .15s; }
+  .uses-list .recipe .go { position: absolute; right: 12px; top: 50%; width: 16px; height: 16px; margin-top: -8px; color: #A9ADAA; transition: color .15s, transform .15s; }
+  .uses-list .recipe:hover { background: #F2F5F8; }
+  .uses-list .recipe:hover .go { color: var(--steel-d); transform: translateX(2px); }
+  .uses-list .recipe:focus-visible { outline: 2px solid var(--steel); outline-offset: -2px; }
+  /* 쓰임새 창의 '만들러 가기'로 찾아간 제작법: 잠깐 강조 */
+  .recipe.flash { animation: rc-flash 1.8s ease-out; }
+  @keyframes rc-flash { 0%, 35% { background: #E6EDF3; box-shadow: inset 3px 0 0 var(--steel); } 100% { background: transparent; box-shadow: inset 3px 0 0 transparent; } }
+  @media (prefers-reduced-motion: reduce) { .recipe.flash { animation: none; background: #EEF2F6; } }
+  .need.me { border-color: var(--steel); box-shadow: inset 0 0 0 1px var(--steel); font-weight: 600; }
+  .need.me.lack { border-color: #C98A92; box-shadow: inset 0 0 0 1px #C98A92; }
   .inv { display: flex; flex-direction: column; }
   /* 물건 한 줄: 왼쪽에 이름(개수)·설명, 오른쪽에 버튼 */
   .inv .it { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 14px; row-gap: 4px; padding: 11px 14px; border-top: 1px solid #E6E8E4; align-items: center; }
@@ -1552,6 +1576,44 @@
   .dlg .craft-sub + h3.inv-h { margin-top: 4px; }
   .chipbtn { min-height: 32px; padding: 0 12px; font-size: 13px; border: 1px solid var(--line-soft); background: #fff; border-radius: 16px; color: var(--ink-2); }
   .chipbtn.on { background: var(--steel-d); border-color: var(--steel-d); color: #fff; }
+  /* 분류 탭: 밑줄 글자 탭 한 줄 (소지품 · 제작 · 칭호). 넘치면 옆으로 밀어 보고, 오른쪽 끝이 흐려져 더 있음을 알림 */
+  .utabs { position: relative; display: flex; flex-wrap: nowrap; gap: 0; margin: 2px 0 14px; overflow-x: auto; border-bottom: 1px solid var(--line-in); scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
+  .utabs::-webkit-scrollbar { display: none; }
+  .utabs .chipbtn { position: relative; flex: none; min-height: 38px; padding: 0 11px; border: 0; border-radius: 0; background: none; font: 500 13.5px/38px var(--serif); color: #6E7176; }
+  .utabs .chipbtn:hover { color: var(--ink); }
+  .utabs .chipbtn.on { background: none; color: var(--steel-d); font-weight: 700; }
+  .utabs .chipbtn.on::after { content: ""; position: absolute; left: 11px; right: 11px; bottom: 0; height: 2px; background: var(--steel-d); }
+  .utabs .chipbtn:focus-visible { outline: 2px solid var(--steel); outline-offset: -2px; }
+  .utabs .chipbtn:last-child { margin-right: 24px; }
+  .inv-bar { margin-bottom: 18px; }
+  .inv-bar > .utabs { margin-top: 0; margin-bottom: 0; } /* 왼쪽은 폰에서 제목 글자에 맞추는 값을 그대로 */
+  /* 폰에서만 보이는 '분류 ▾' 탭과 그 아래 펼침 상자 */
+  .utabs-wrap { position: relative; }
+  .utabs .chipbtn.more { display: none; align-items: center; gap: 3px; }
+  .utabs .chipbtn.more span { font: inherit; color: inherit; }
+  .utabs .chipbtn.more svg { width: 12px; height: 12px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s; }
+  .utabs .chipbtn.more[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .utabs-menu { position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + 6px); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; padding: 6px; background: #FCFCFB; border: 1px solid #C9CCC8; border-radius: 4px; box-shadow: 0 8px 22px rgba(31, 35, 38, .16); }
+  .utabs-menu[hidden] { display: none; }
+  .utabs-menu button { display: flex; justify-content: space-between; align-items: center; gap: 6px; min-height: 40px; padding: 0 12px; border: 0; border-radius: 3px; background: none; font: 500 13.5px/1.2 var(--serif); color: var(--ink-2); text-align: left; }
+  .utabs-menu button small { font: 400 11px/1 var(--sans); color: var(--muted); }
+  .utabs-menu button:hover { background: #F2F5F8; }
+  .utabs-menu button.on { background: #EEF2F6; color: var(--steel-d); font-weight: 700; }
+  .utabs-menu button:focus-visible { outline: 2px solid var(--steel); outline-offset: -2px; }
+  @media (min-width: 561px) { .utabs-menu { display: none !important; } }
+  /* 폰: 전체 · 즐겨찾기 · '분류 ▾' 세 개만 한 줄로 (나머지 분류는 펼침 상자 안) */
+  @media (max-width: 560px) {
+    .utabs { flex-wrap: wrap; overflow: visible; -webkit-mask-image: none; mask-image: none; margin-left: -8px;
+      border-bottom: 0; background: linear-gradient(var(--line-in), var(--line-in)) no-repeat 8px 100% / calc(100% - 8px) 1px; } /* 글자는 제목에 맞추고, 아래 선은 글자 칸 시작에서부터 */
+    .utabs .chipbtn { min-height: 36px; padding: 0 8px; font-size: 13px; line-height: 36px; }
+    .utabs .chipbtn.on::after { left: 8px; right: 8px; }
+    .utabs .chipbtn:last-child { margin-right: 0; }
+    .utabs .chipbtn[data-cat] { display: none; }
+    .utabs .chipbtn.more { display: inline-flex; }
+  }
+  .craft-bar > .utabs-wrap { flex: 1 1 100%; }
+  .craft-bar .utabs { margin-top: 0; margin-bottom: 0; }
   .craft-can { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); cursor: pointer; }
   @media (max-width: 520px) { .craft-can { margin-left: 0; width: 100%; } }
   .rampage.grave b { color: #34312B; } .rampage.grave small { color: #6E6A60; }
@@ -2396,6 +2458,14 @@
   .fav-star:hover { color: #7A5A16; background: rgba(184, 145, 58, .12); }
   .fav-star:focus-visible { outline: 2px solid var(--steel); outline-offset: -2px; }
   .recipe .nm b .fav-star { order: -1; margin-right: -2px; } /* 마름모 앞에 */
+  /* 소지품의 별: 줄 왼쪽 여백에 따로 세워 둠 (이름 줄에 끼우면 폰에서 별·마름모만 윗줄에 남음) */
+  .inv .it { position: relative; }
+  .inv .it:has(> .fav-star) { padding-left: 38px; }
+  .inv .it > .fav-star { position: absolute; left: 8px; top: 5px; margin: 0; } /* 이름 첫 줄 가운데에 맞춤 (11px 여백 + 첫 줄 가운데 9.4px − 별 칸 절반 15px) */
+  /* 마름모도 이름 첫 줄 앞에 붙여 둠 (폰에서 마름모만 윗줄에 남지 않게) */
+  .inv .it > b { position: relative; padding-left: 14px; }
+  .inv .it > b::before { position: absolute; left: 0; top: 6px; }
+  .dlg .inv-bar + h3.inv-h, .dlg .inv-bar + .buff-now, .dlg .inv-bar + .empty { margin-top: 4px; }
 
   /* ── 착용한 장신구: 이름을 누르면 효과가 펼쳐짐 ── */
   .gear-grid, .inv-gear { align-items: start; }
@@ -3127,6 +3197,16 @@
     <div class="row"><button class="btn" type="button" id="notes-close">닫기</button></div>
   </div>
 </dialog>
+<dialog class="frame dlg" id="uses-dlg" aria-labelledby="uses-dlg-title">
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="uses-dlg-title">쓰임새</h2></div>
+  <div class="body">
+    <p class="note" id="uses-dlg-have"></p>
+    <div class="uses-list" id="uses-list"></div>
+    <p class="note craft-hint" id="uses-dlg-hint" hidden>아직 찾지 못한 제작법에도 쓰일지 모른다.</p>
+    <div class="row"><button class="btn" type="button" id="uses-close">닫기</button></div>
+  </div>
+</dialog>
 <dialog class="frame dlg" id="welcome-dlg" aria-labelledby="welcome-dlg-title">
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="welcome-dlg-title">용의 대륙</h2></div>
@@ -3248,7 +3328,7 @@
     <section class="ctab" data-ct="titles" role="tabpanel" hidden>
     <h3>칭호</h3>
     <p class="note" id="char-title-note"></p>
-    <div class="tt-filter" id="char-title-filter"></div>
+    <div class="tt-filter utabs" id="char-title-filter" role="group" aria-label="칭호 분류"></div>
     <div class="tt-list" id="char-titles"></div>
     </section>
     <section class="ctab" data-ct="skills" role="tabpanel" hidden>
@@ -4905,13 +4985,32 @@
     const order = { rare: 0, uncommon: 1, common: 2 };
     const CATS = ['treasure', 'equip', 'use', 'buff', 'meal', 'fish', 'trophy', 'mat'];
     const CAT_NAME = { treasure: '보물 (둥지 전용)', equip: '장신구', use: '회복약', buff: '강화 음식', meal: '식구 요리', fish: '낚시', trophy: '사냥 전리품', mat: '재료' };
-    const list = Object.entries(invCache)
-      .filter(([id, q]) => S.items[id] && q > 0)
-      .sort(([a], [b]) => CATS.indexOf(itemCat(S.items[a])) - CATS.indexOf(itemCat(S.items[b]))
+    // 즐겨찾기: '전체'에서는 맨 위에 따로 모으고 아래 묶음에서는 빼며, 분류 탭에서는 그 묶음 맨 위로 (제작 창과 같음)
+    const favI = FAV.list('items');
+    const isFav = (id) => favI.includes(id);
+    const all = Object.entries(invCache).filter(([id, q]) => S.items[id] && q > 0);
+    const groupOf = (id) => (invTab === 'all' && isFav(id) ? 'fav' : itemCat(S.items[id]));
+    const GORDER = ['fav', ...CATS];
+    const list = all
+      .filter(([id]) => invTab === 'all' || (invTab === 'fav' ? isFav(id) : itemCat(S.items[id]) === invTab))
+      .sort(([a], [b]) => GORDER.indexOf(groupOf(a)) - GORDER.indexOf(groupOf(b))
+        || isFav(b) - isFav(a)
         || order[S.items[a].rarity] - order[S.items[b].rarity]
         || S.items[a].name.localeCompare(S.items[b].name, 'ko'));
     const box = $('inv-list');
+    const tabX = box.querySelector('.utabs')?.scrollLeft || 0;
     box.replaceChildren();
+    // 분류 탭: 가진 물건이 있는 분류만 (전체 · 즐겨찾기는 늘)
+    const has = new Set(all.map(([id]) => itemCat(S.items[id])));
+    if (invTab !== 'all' && invTab !== 'fav' && !has.has(invTab)) invTab = 'all';
+    const kinds = {};
+    for (const [id] of all) { const c = itemCat(S.items[id]); kinds[c] = (kinds[c] || 0) + 1; }
+    const { wrap: bar, tabs } = buildTabs(
+      [['all', '전체'], ['fav', '★ 즐겨찾기'], ...CATS.filter((c) => has.has(c)).map((c) => [c, INV_TAB_NAME[c], true, kinds[c]])],
+      invTab, (k) => { invTab = k; keepScroll($('inv-dlg'), renderInv); }, '물건 분류');
+    bar.classList.add('inv-bar');
+    box.appendChild(bar);
+    showTab(tabs, tabX);
     const buf = S.me.buff && S.me.buff.until > Date.now() ? S.buffs?.[S.me.buff.id] : null;
     if (buf) {
       const n = document.createElement('div');
@@ -4921,21 +5020,22 @@
     }
     let lastCat = null, group = box;
     const catN = {};
-    for (const [id] of list) { const c = itemCat(S.items[id]); catN[c] = (catN[c] || 0) + 1; }
+    for (const [id] of list) { const c = groupOf(id); catN[c] = (catN[c] || 0) + 1; }
     if (!list.length) {
       const p = document.createElement('div');
       p.className = 'empty';
-      p.textContent = '아직 모은 물건이 없다. 탐사나 채집으로 모아 보자.';
+      p.textContent = !all.length ? '아직 모은 물건이 없다. 탐사나 채집으로 모아 보자.'
+        : invTab === 'fav' ? '즐겨찾기한 물건이 없다. 물건 이름 앞의 ☆를 누르면 여기에 모인다.' : '이 분류의 물건이 없다.';
       box.appendChild(p);
     }
     for (const [id, qty] of list) {
       const it = S.items[id];
-      const cat = itemCat(it);
+      const cat = groupOf(id);
       if (cat !== lastCat) {
         lastCat = cat;
         const h = document.createElement('h3');
         h.className = 'inv-h';
-        h.textContent = CAT_NAME[cat];
+        h.textContent = cat === 'fav' ? '★ 즐겨찾기' : CAT_NAME[cat];
         const hn = document.createElement('span');
         hn.className = 'inv-hn';
         hn.textContent = `${catN[cat]}종`;
@@ -4952,6 +5052,25 @@
       row.querySelector('.nm').textContent = `${it.name}${gmod?.plus ? ` +${gmod.plus}` : ''}`;
       row.querySelector('.nm').append(itemTags(it));
       row.querySelector('.q').textContent = `×${qty}`;
+      row.prepend(favBtn('items', id, () => keepScroll($('inv-dlg'), renderInv))); // 별은 줄 왼쪽 여백에
+      const uses = usesOf(id).length; // 이 물건을 재료로 쓰는 제작법 수 (찾아낸 것만)
+      if (uses) {
+        const nm = row.querySelector('.nm');
+        nm.classList.add('uses');
+        nm.tabIndex = 0;
+        nm.setAttribute('role', 'button');
+        nm.title = '눌러서 이것으로 만들 수 있는 것 보기';
+        nm.addEventListener('click', () => openUses(id));
+        nm.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openUses(id); } });
+        const u = document.createElement('button');
+        u.type = 'button';
+        u.className = 'use-n';
+        u.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13.5l6-6"/><path d="M7.5 3.5l3-1.5 3.5 3.5-1.5 3-5-5z"/></svg><span></span>';
+        u.querySelector('span').textContent = `제작 ${uses}`;
+        u.title = '이것으로 만들 수 있는 것 보기';
+        u.addEventListener('click', () => openUses(id));
+        row.querySelector('.q').after(u);
+      }
       if (gmod?.mw) { const t = document.createElement('span'); t.className = 'gw-mw'; t.textContent = '걸작'; row.querySelector('b').appendChild(t); }
       if (gmod?.elem) { const t = document.createElement('span'); t.className = 'gw-el'; t.textContent = `${ELEM_NAME[gmod.elem]} 각인`; row.querySelector('b').appendChild(t); }
       row.querySelector('small').textContent = it.desc;
@@ -5007,7 +5126,134 @@
       group.appendChild(row);
     }
   }
+  // 밑줄 글자 탭: 다시 그린 뒤 전의 가로 위치로 돌리고, 고른 탭이 화면 밖이면 보이는 자리로
+  function showTab(bar, x) {
+    if (!bar) return;
+    bar.scrollLeft = x || 0;
+    const on = bar.querySelector('.on');
+    if (!on || !bar.clientWidth) return;
+    const l = on.offsetLeft, r = l + on.offsetWidth;
+    if (l < bar.scrollLeft) bar.scrollLeft = l - 8;
+    else if (r > bar.scrollLeft + bar.clientWidth - 28) bar.scrollLeft = r - bar.clientWidth + 36;
+  }
+  // 분류 탭 만들기: list = [키, 이름, 분류인가, 개수]. 분류는 넓은 화면에선 탭으로, 폰에선 '분류 ▾' 상자 안에
+  function buildTabs(list, cur, pick, label) {
+    const wrap = document.createElement('div');
+    wrap.className = 'utabs-wrap';
+    const tabs = document.createElement('div');
+    tabs.className = 'utabs';
+    tabs.setAttribute('role', 'group');
+    tabs.setAttribute('aria-label', label);
+    for (const [k, name, cat] of list) {
+      const bt = document.createElement('button');
+      bt.type = 'button';
+      bt.className = `chipbtn${cur === k ? ' on' : ''}`;
+      if (cat) bt.dataset.cat = '1';
+      bt.setAttribute('aria-pressed', String(cur === k));
+      bt.textContent = name;
+      bt.addEventListener('click', () => pick(k));
+      tabs.appendChild(bt);
+    }
+    wrap.appendChild(tabs);
+    const cats = list.filter((x) => x[2]);
+    if (cats.length) {
+      const now = cats.find((x) => x[0] === cur);
+      const more = document.createElement('button');
+      more.type = 'button';
+      more.className = `chipbtn more${now ? ' on' : ''}`;
+      more.setAttribute('aria-haspopup', 'true');
+      more.setAttribute('aria-expanded', 'false');
+      more.innerHTML = '<span></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+      more.querySelector('span').textContent = now ? now[1] : '분류';
+      tabs.appendChild(more);
+      const menu = document.createElement('div');
+      menu.className = 'utabs-menu';
+      menu.hidden = true;
+      for (const [k, name, , n] of cats) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = cur === k ? 'on' : '';
+        b.innerHTML = '<span></span>';
+        b.querySelector('span').textContent = name;
+        if (n != null) { const sm = document.createElement('small'); sm.textContent = `${n}종`; b.appendChild(sm); }
+        b.addEventListener('click', () => { close(); pick(k); });
+        menu.appendChild(b);
+      }
+      wrap.appendChild(menu);
+      const onDoc = (e) => { if (!wrap.contains(e.target)) close(); };
+      function close() { menu.hidden = true; more.setAttribute('aria-expanded', 'false'); document.removeEventListener('click', onDoc, true); }
+      more.addEventListener('click', () => {
+        if (!menu.hidden) return close();
+        menu.hidden = false;
+        more.setAttribute('aria-expanded', 'true');
+        document.addEventListener('click', onDoc, true);
+      });
+      wrap.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !menu.hidden) { e.stopPropagation(); close(); more.focus(); } });
+    }
+    return { wrap, tabs };
+  }
+  let invTab = 'all'; // 소지품 분류 탭
+  const INV_TAB_NAME = { treasure: '보물', equip: '장신구', use: '회복약', buff: '강화 음식', meal: '식구 요리', fish: '낚시', trophy: '전리품', mat: '재료' };
   function openInv() { fetchInv(() => { renderInv(); openPanel('inv-dlg'); }); }
+  // ── 쓰임새: 이 재료로 만들 수 있는 것 (숨겨진 제작법은 찾아낸 것만) ──
+  function usesOf(id) {
+    const ci = S.me?.craft || { known: [], needs: {} };
+    return (S.recipes || [])
+      .filter((r) => !r.hidden || ci.known.includes(r.out))
+      .map((r) => (r.hidden ? { ...r, needs: ci.needs[r.out] || {} } : r))
+      .filter((r) => r.needs[id] && S.items[r.out]);
+  }
+  function openUses(id) {
+    const it = S.items[id], me = S.me;
+    if (!it) return;
+    const rs = usesOf(id).sort((a, b) => (a.wis || 0) - (b.wis || 0) || S.items[a.out].name.localeCompare(S.items[b.out].name, 'ko'));
+    $('uses-dlg-title').textContent = `${it.name}의 쓰임새`;
+    $('uses-dlg-have').textContent = `지금 ${invCache[id] || 0}개 가지고 있다. 이것으로 만들 수 있는 것은 ${rs.length}가지다.`;
+    const box = $('uses-list');
+    box.replaceChildren();
+    const grp = document.createElement('div');
+    grp.className = 'inv-box';
+    for (const r of rs) {
+      const out = S.items[r.out];
+      const row = document.createElement('div');
+      row.className = `recipe ${out.rarity}`;
+      row.innerHTML = '<div class="nm"><b></b><span class="eff"></span></div><div class="needs"></div><svg class="go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+      row.querySelector('b').textContent = out.name;
+      row.querySelector('b').append(itemTags(out));
+      // 줄 전체가 '만들러 가기'
+      row.tabIndex = 0;
+      row.setAttribute('role', 'button');
+      row.setAttribute('aria-label', `${out.name} 만들러 가기`);
+      const go = () => { $('uses-dlg').close(); goRecipe(r.out); };
+      row.addEventListener('click', go);
+      row.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+      if (r.hidden) { const t = document.createElement('span'); t.className = 'rc-found'; t.textContent = '찾아낸 제작법'; row.querySelector('b').appendChild(t); }
+      row.querySelector('.eff').textContent = effectText(out);
+      const needs = row.querySelector('.needs');
+      const add = (text, lack, cls = '') => { const n = document.createElement('span'); n.className = `need${lack ? ' lack' : ''}${cls}`; n.textContent = text; needs.appendChild(n); };
+      for (const [x, n] of Object.entries(r.needs)) add(`${S.items[x]?.name || x} ${invCache[x] || 0}/${n}`, (invCache[x] || 0) < n, x === id ? ' me' : '');
+      if (r.wis) add(`지혜 ${r.wis} 이상`, me.stats.wisdom < r.wis);
+      grp.appendChild(row);
+    }
+    box.appendChild(grp);
+    $('uses-dlg-hint').hidden = !(me.craft?.hiddenLeft > 0);
+    $('uses-dlg').showModal();
+  }
+  // 제작 창을 열고 그 제작법으로 스크롤 (만들기 · 전체 탭, 필터 풀고)
+  function goRecipe(out) {
+    craftMode = 'make'; craftTab = 'all'; craftSlot = 'all'; craftCan = false;
+    fetchInv(() => {
+      renderCraft();
+      openPanel('craft-dlg');
+      setTimeout(() => { // 패널이 화면으로 미끄러져 들어온 뒤에
+        const row = document.querySelector(`#craft-list .recipe[data-out="${out}"]`);
+        if (!row) return;
+        row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        row.classList.remove('flash'); void row.offsetWidth; row.classList.add('flash');
+      }, 350);
+    });
+  }
+  $('uses-close').addEventListener('click', () => $('uses-dlg').close());
   // ── 주고받은 기록 ──
   let ledgerF = 'all';
   const LEDGER_KIND = { gift_in: '받은 선물', gift_out: '보낸 선물', trade: '교환', gm: 'GM 지급', bet: '내기' };
@@ -6933,6 +7179,7 @@
     const ci = me.craft || { known: [], needs: {}, hiddenLeft: 0, great: 0, gear: {} };
     $('craft-status').textContent = `기력 ${me.en} / ${me.enMax}, 지혜 ${me.stats.wisdom}. 대성공 ${ci.great}%${ci.forge ? ' · 공방의 화로를 쓰는 중' : ''}`;
     const box = $('craft-list');
+    const craftTabX = box.querySelector('.utabs')?.scrollLeft || 0;
     box.replaceChildren();
     // 위쪽: 만들기 / 실험 / 다듬기
     const modes = document.createElement('div');
@@ -6950,19 +7197,12 @@
     box.appendChild(modes);
     if (craftMode === 'exp') return renderExperiment(box, ci);
     if (craftMode === 'gear') return renderGearWork(box, ci);
-    // 고르기: 종류별로 나눠 보기, 재료가 다 있는 것만 보기
+    // 고르기: 종류별로 나눠 보기(밑줄 글자 탭), 재료가 다 있는 것만 보기
     const bar = document.createElement('div');
     bar.className = 'craft-bar';
-    const TABS = [['all', '전체'], ['fav', '★ 즐겨찾기'], ['use', '회복약'], ['buff', '강화 음식'], ['meal', '식구 요리'], ['fish', '낚시'], ['equip', '장신구']];
-    for (const [k, label] of TABS) {
-      const bt = document.createElement('button');
-      bt.type = 'button';
-      bt.className = `chipbtn${craftTab === k ? ' on' : ''}`;
-      bt.setAttribute('aria-pressed', String(craftTab === k));
-      bt.textContent = label;
-      bt.addEventListener('click', () => { craftTab = k; renderCraft(); });
-      bar.appendChild(bt);
-    }
+    const TABS = [['all', '전체'], ['fav', '★ 즐겨찾기'], ['use', '회복약', true], ['buff', '강화 음식', true], ['meal', '식구 요리', true], ['fish', '낚시', true], ['equip', '장신구', true]];
+    const { wrap: tabWrap, tabs } = buildTabs(TABS, craftTab, (k) => { craftTab = k; renderCraft(); }, '제작법 분류');
+    bar.appendChild(tabWrap);
     const lab = document.createElement('label');
     lab.className = 'craft-can';
     lab.innerHTML = '<input type="checkbox"> 재료가 다 있는 것만';
@@ -6971,6 +7211,7 @@
     cb.addEventListener('change', () => { craftCan = cb.checked; renderCraft(); });
     bar.appendChild(lab);
     box.appendChild(bar);
+    showTab(tabs, craftTabX);
     // 장신구 탭: 부위별 소분류 (전체 · 머리 · 목 · 발톱 · 부적 · 날개 · 꼬리)
     if (craftTab === 'equip') {
       const sub = document.createElement('div');
@@ -7030,6 +7271,7 @@
         const it = S.items[r.out];
         const row = document.createElement('div');
         row.className = `recipe ${it.rarity}`;
+        row.dataset.out = r.out; // 쓰임새 창의 '만들러 가기'가 찾아옴
         row.innerHTML = '<div class="nm"><b></b><span class="eff"></span></div><button type="button" class="btn primary">만들기</button><div class="needs"></div>';
         row.querySelector('b').textContent = it.name;
         row.querySelector('b').prepend(favBtn('recipes', r.out, renderCraft));
@@ -8640,6 +8882,7 @@
       ? `지금 '${on.name}' 칭호를 달고 있다. (${on.eff}) · 얻은 칭호 ${have} / ${T.list.length}. 효과는 사냥·강적 전투 등에만 있고 결투장에는 없다.`
       : `단 칭호가 없다. 얻은 칭호 ${have} / ${T.list.length}. 하나를 골라 달면 이름 옆에 보이고 작은 효과가 생긴다.`;
     const f = $('char-title-filter');
+    const tabX = f.scrollLeft;
     f.replaceChildren();
     for (const [k, label] of [['all', '전체'], ['fav', '★ 즐겨찾기'], ['have', '얻은 칭호'], ['todo', '아직 못 얻음']]) {
       const b = document.createElement('button');
@@ -8650,6 +8893,7 @@
       b.addEventListener('click', () => { titleView = k; renderTitles(); });
       f.appendChild(b);
     }
+    showTab(f, tabX);
     const box = $('char-titles');
     box.replaceChildren();
     // 단 칭호 → 얻은 칭호 → 거의 다 된 칭호 순

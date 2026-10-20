@@ -630,10 +630,10 @@ const RAID = {
 };
 
 // ── 둥지 시설: 둥지 단계마다 지을 수 있는 칸. 시설마다 식구 한 명에게 일을 맡길 수 있음 ──
-// 힘(power) = 1(시설만) + 일하는 식구 (어른 1, 소년·청소년 견습 0.5) × (잘 맞으면 1.5). 부엌은 일하는 식구가 있어야 쓸 수 있음
+// 힘(power) = 1(시설만) + 일하는 식구 (어른 1, 소년·청년 견습 0.5) × (잘 맞으면 1.5). 부엌은 일하는 식구가 있어야 쓸 수 있음
 const FACILITY = {
   slots: [2, 3, 4],                       // 보금자리 · 넓은 동굴 · 용의 성채
-  worker: { adult: 1, apprentice: 0.5, fit: 1.5, apprenticeStages: ['소년', '청소년'], adultStages: ['어른', '노년'] },
+  worker: { adult: 1, apprentice: 0.5, fit: 1.5, apprenticeStages: ['소년', '청년'], adultStages: ['어른', '노년'] },
   list: {
     forge:   { name: '공방',   cost: { gold: 250, items: { bog_iron: 4, red_clay: 4, obsidian: 2 } }, talent: 'smith', traits: ['handy'],
       desc: '둥지에서 만들면 기력이 덜 들고 대성공·강화가 잘 된다.', en: 0.05, great: 0.015, rate: 0.5 },
@@ -725,7 +725,7 @@ const KIN = {
   human: {
     stages: [
       { name: '아기', from: 0 }, { name: '아이', from: 1 }, { name: '소년', from: 2 },
-      { name: '청소년', from: 4 }, { name: '어른', from: 11 }, { name: '노년', from: 18 },
+      { name: '청년', from: 4 }, { name: '어른', from: 11 }, { name: '노년', from: 18 },
     ],
     adultDay: 11,                     // 이날 재주가 정해지고 갈 길을 고름
     lifespan: 25,                     // 이날이 지나면 세상을 떠남 (어른 1주 + 노년 1주)
@@ -852,31 +852,6 @@ const KIN_LOOKS = {
     horn: ['곧은 뿔', '굽은 뿔', '짧고 뭉툭한 뿔', '갈래진 뿔', '나선 뿔'],
     eyes: ['호박색 눈', '청록 눈', '은빛 눈', '붉은 눈', '금빛 눈'],
     mark: ['꼬리 끝이 두 갈래', '이마에 별 무늬', '날개막에 반점', '한쪽 뿔이 조금 짧음', '등가시가 유난히 큼', '목덜미에 흰 비늘 한 줌'],
-  },
-  // 자라면서 바뀌는 모습 (game-life.js growLooks). {n} = 이름
-  //  phase: 그 나잇대에만 있는 모습. 그 단계가 되면 chance 확률로 생기고, 단계를 지나면 사라짐 (태어날 때는 붙지 않음)
-  //  fade: 그 단계가 되면 chance 확률로 옅어져 사라지는 타고난 모습
-  //  scar: from 단계부터 한 단계 자랄 때마다 chance 확률로 흉터 (최대 max개)
-  //  hair: 그 단계가 되면 머리색이 바뀜 (인간)
-  grow: {
-    human: {
-      phase: [
-        { mark: '앞니 빠진 웃음', stages: ['아이'], chance: 0.45, gain: '{n}의 앞니가 하나 쏙 빠졌다. 웃을 때마다 빈자리가 보인다.', lose: '{n}의 빠졌던 앞니 자리에 새 이가 가지런히 났다.' },
-        { mark: '콧등의 여드름', stages: ['청소년'], chance: 0.3, gain: '{n}의 콧등에 여드름이 돋았다. 물웅덩이에 얼굴을 비춰 보는 일이 잦아졌다.', lose: '{n}의 콧등 여드름이 말끔히 가라앉았다.' },
-      ],
-      fade: [
-        { mark: '주근깨', at: '어른', chance: 0.4, lose: '{n}의 주근깨가 어른이 되며 한결 옅어졌다.' },
-      ],
-      scar: { from: '소년', chance: 0.03, max: 1, list: ['이마의 작은 흉터', '뺨을 가로지른 흉터', '손등의 흉터', '턱 아래 흉터'], line: '{n}에게 {s}{가} 생겼다. 어디서 다쳤는지 물으니 멋쩍게 웃기만 한다.' },
-      hair: { at: '노년', to: '하얗게 센 머리' },
-    },
-    drake: {
-      phase: [],
-      fade: [
-        { mark: '한쪽 뿔이 조금 짧음', at: '젊은 용', chance: 0.5, lose: '{n}의 짧던 뿔이 마저 자라 양쪽이 가지런해졌다.' },
-      ],
-      scar: { from: '어린 용', chance: 0.04, max: 1, list: ['날개막에 아문 찢김 자국', '옆구리 비늘의 긁힌 흉터', '콧등의 오래된 흉터'], line: '{n}에게 {s}{가} 생겼다. 혼자 날아다니다 다친 모양이다.' },
-    },
   },
 };
 // 성격: 식구마다 2개. for는 인간(human)·새끼 드래곤(drake) 중 누구에게 붙는지
