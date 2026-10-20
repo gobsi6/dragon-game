@@ -25,7 +25,7 @@
 //           nearestTown() name(식구 → '미르가') josa(말, 받침, 없음)
 //           mind(n) buff(강화 id, 분) notify(드래곤 id, 글, 제목) hoardTake(id, n)(보물더미에서, 있는 만큼만) hoardGive(id, n)
 
-const { ITEMS, KINDS, REGIONS, PLACES, REGION_LOOT, KIN, STATS, HUMAN_NAMES, DRAKE_NAMES } = require('./game-data');
+const { ITEMS, KINDS, REGIONS, PLACES, REGION_LOOT, KIN, STATS, HUMAN_NAMES, DRAKE_NAMES, PLAY_KINDS } = require('./game-data');
 
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 // '옛 둥지를 그리워하는 아이': 입양 온 아이가 한 번 그리워한 뒤 다시 그리워하기까지의 간격
@@ -273,8 +273,8 @@ module.exports = [
     weight: (c) => (c.trigger === 'expedition' ? 4 : c.region === 'ruins' ? 2 : 0.6),
     cond: (c) => !c.town && c.nest && !c.full,
     setup: (c) => {
-      const home = Object.entries(KINDS).find(([, k]) => k.home === c.region);
-      return { kind: home ? home[0] : pick(Object.keys(KINDS)) };
+      const home = Object.entries(KINDS).find(([, k]) => !k.hidden && k.home === c.region);
+      return { kind: home ? home[0] : pick(PLAY_KINDS) };
     },
     text: (c, v) => [
       '바위틈에 아직 온기가 남은 커다란 알 하나가 놓여 있다.',
@@ -346,7 +346,7 @@ module.exports = [
     when: ['explore', 'expedition'],
     weight: 2,
     cond: (c) => !c.town,
-    setup: (c) => ({ kind: pick(Object.keys(KINDS)), level: Math.max(1, c.d.level + randInt(-1, 2)) }),
+    setup: (c) => ({ kind: pick(PLAY_KINDS), level: Math.max(1, c.d.level + randInt(-1, 2)) }),
     text: (c, v) => [
       `하늘을 가르며 낯선 ${KINDS[v.kind].name} 한 마리가 내려앉았다.`,
       `제법 나이 든 기색이다(레벨 ${v.level} 정도). 꼬리로 땅을 치며 도전을 청한다.`,
@@ -735,7 +735,7 @@ module.exports = [
     when: ['hunt'],
     weight: 2,
     cond: (c) => !c.town,
-    setup: () => ({ kind: pick(Object.keys(KINDS)) }),
+    setup: () => ({ kind: pick(PLAY_KINDS) }),
     text: (c, v) => [
       `쓰러뜨린 사냥감 위로 그림자가 드리웠다. 낯선 ${KINDS[v.kind].name}${c.josa(KINDS[v.kind].name, '이', '가')} 내려앉아 이빨을 드러낸다.`,
       '"그건 내가 먼저 노리던 거다."',
@@ -1470,7 +1470,7 @@ module.exports = [
     cond: (c) => c.drakes.some((x) => grownDrake(c, x) && canMate(c, x)),
     setup: (c) => {
       const k = c.pick(c.drakes.filter((x) => grownDrake(c, x) && canMate(c, x)));
-      return { id: k.id, name: c.pick(DRAKE_NAMES.filter((n) => n !== k.name)), kind: c.pick(Object.keys(KINDS)) };
+      return { id: k.id, name: c.pick(DRAKE_NAMES.filter((n) => n !== k.name)), kind: c.pick(PLAY_KINDS) };
     },
     text: (c, v) => {
       const k = c.k(v.id); const kn = KINDS[v.kind].name;

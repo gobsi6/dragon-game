@@ -11,7 +11,7 @@
 // 입양   둥지의 알이나 아직 어른이 되지 않은 인간 아이를 동료에게 보내자고 제안. 받는 쪽이 데려오기로 하면
 //        그 둥지로 옮겨 감 (받는 쪽 둥지에 빈자리가 있어야 함). 정할 때까지는 보내는 쪽 둥지에 있음
 
-const { ITEMS, KINDS, STANCES, MIND, SKILLS, HEAL_OTHER, fameTier, KIN, DAY, BONDS, MARKS, BOND_RULES, FESTIVAL, BUFFS, REGIONS } = require('./game-data');
+const { ITEMS, KINDS, STANCES, MIND, SKILLS, HEAL_OTHER, fameTier, KIN, DAY, BONDS, MARKS, BOND_RULES, FESTIVAL, BUFFS, REGIONS, isTestDragon } = require('./game-data');
 
 const ADOPT = { days: 3 };         // 입양 제안을 기다리는 날 (지나면 저절로 거둬짐)
 
@@ -443,12 +443,19 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     const me = () => entryOf(socket)?.dragon || null;
     // 보기만 하는 요청(목록·프로필 읽기)은 간격 제한을 두지 않음.
     // 관계를 바꾼 직후 화면이 목록과 프로필을 다시 불러오는데, 여기에 걸리면 화면이 바뀌지 않고 멈춰 있었음
+    // p.id가 상대 드래곤인 요청들 (시험용 드래곤이면 막음)
+    const TARGETED = new Set(['rel:request', 'rel:accept', 'rel:decline', 'rel:cancel', 'rel:unfriend', 'rel:mark', 'rel:memo', 'heal:other', 'rel:teach', 'kin:offer', 'gift:send', 'tp:open', 'tp:send', 'tp:heard', 'trade:invite', 'fest:invite']);
     const READ_ONLY = new Set(['dragon:profile', 'fest:get', 'rel:list', 'gift:inbox', 'gift:seen', 'ledger:list', 'tp:threads', 'tp:open', 'tp:heard']);
     const on = (event, fn) => socket.on(event, (payload, ack) => {
       if (typeof ack !== 'function') ack = () => {};
       const d = me();
       if (!d) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
       const now = Date.now();
+      // GM 시험용 투명 드래곤: 보기(목록·프로필)만 되고, 주고받기·관계·말 걸기·춤 등은 양쪽 모두 막음
+      if (!READ_ONLY.has(event)) {
+        if (isTestDragon(d)) return ack({ error: '시험용 드래곤은 다른 드래곤과 어울릴 수 없다.' });
+        if (TARGETED.has(event) && isTestDragon(db.getDragon(Number(payload?.id)))) return ack({ error: '시험용 드래곤과는 어울릴 수 없다.' });
+      }
       if (!READ_ONLY.has(event)) {
         if (now - (socket.data.lastSocial || 0) < 250) return ack({ error: '숨을 고르는 중이다.' });
         socket.data.lastSocial = now;

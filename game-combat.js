@@ -3,7 +3,7 @@
 // - 강적·결투장: 매 턴 직접 고름 (실시간 결투에서 시간을 넘기면 자동으로 고름)
 // 전투 하나 = battle { kind, turn, a, b, log, over, winner }. a·b는 싸우는 쪽(fighter)
 const {
-  KIN, COMBAT, CRAFT, BREATHS, BREATH_COST, SKILLS, STATUS, ITEMS, RULES, STANCE_RULES, MIND, PLACES, PLACE_RULES, COMBOS, ENRAGE, RAID, BOSSES, BOSS, RUIN,
+  KIN, COMBAT, CRAFT, BREATHS, BREATH_COST, SKILLS, STATUS, ITEMS, RULES, STANCE_RULES, MIND, PLACES, PLACE_RULES, COMBOS, ENRAGE, RAID, BOSSES, BOSS, RUIN, REGIONS,
 } = require('./game-data');
 const logic = require('./game-logic');
 
@@ -139,7 +139,8 @@ function fromCreature(place, elite, corrupted = false, minion = null) {
   // 무리의 말이 이름에 이미 들어 있으면 두 번 붙이지 않음 (예: '어린' + '어린 ○○')
   const name = minion && !base.startsWith(`${minion} `) ? `${minion} ${base}` : base;
   return {
-    id: null, name: corrupted ? `오염된 ${name}` : name, kind: null, creature: true, region: pl.region, place, elite: !!elite, minion: !!minion, level: lv,
+    // 오염된 땅의 사냥감: '오염된 ○○' (본토의 오염된 지역, 그리고 땅 전체가 오염된 멸망한 대륙)
+    id: null, name: (corrupted || REGIONS[pl.region]?.realm === 'ruin') && !name.startsWith('오염된 ') ? `오염된 ${name}` : name, kind: null, creature: true, region: pl.region, place, elite: !!elite, minion: !!minion, level: lv,
     type: (elite && pl.eliteType) || pl.type || null, // 화면 아이콘 계통
     corrupted, mindDrain: corrupted ? MIND.monster : 0,
     hp: hpMax, hpMax, en: 0, enMax: 0,
@@ -299,7 +300,7 @@ function applyDebuff(att, def, debuff, chance, element, lines) {
     def.st[k] = Math.max(def.st[k] || 0, n);
     // 지속 피해는 건 쪽의 힘으로 정해짐
     if (k === 'burn') def.st.burnDmg = Math.round(3 + att.mag * 0.3);
-    if (k === 'poison') def.st.poisonDmg = Math.round(2 + att.mag * 0.25);
+    if (k === 'poison') def.st.poisonDmg = Math.round(3 + att.mag * 0.35); // 독: 바로 주는 피해가 약한 대신 지속 피해는 화상보다 조금 세게
     if (k === 'bleed') def.st.bleedDmg = Math.round(2 + att.atk * 0.15);
     lines.push(`${ga(def)} ${STATUS[k]} 상태가 되었다.`);
   }

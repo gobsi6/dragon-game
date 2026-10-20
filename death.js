@@ -6,7 +6,7 @@
 // - 긴 잠에 든다: 드래곤은 '잠든 드래곤'으로 기록에 남고, 계정은 새 드래곤을 만들 수 있다.
 //   독립한 새끼들이 추모하러 오고, 둥지에 남은 식구와 재산은 정해진 날 동안 다른 드래곤이 거둘 수 있다.
 //   그동안 아무도 거두지 않은 식구는 실종되고, 재산은 흩어진다.
-const { DEATH, STATS, REGIONS, ITEMS, KINDS, DAY, KIN, SKILLS } = require('./game-data');
+const { DEATH, STATS, REGIONS, ITEMS, KINDS, DAY, KIN, SKILLS, isTestDragon } = require('./game-data');
 
 const str = (v) => (typeof v === 'string' ? v.trim() : '');
 function josa(word, a, b) {
@@ -116,6 +116,8 @@ module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broa
   function help(helper, id) {
     if (helper.id === id) return { error: '스스로를 일으킬 수는 없다.' };
     const t = load(id);
+    if (isTestDragon(helper)) return { error: '시험용 드래곤은 다른 드래곤과 어울릴 수 없다.' }; // 시험용 투명 드래곤은 일으켜 줄 수도, 받을 수도 없음
+    if (isTestDragon(t)) return { error: '시험용 드래곤과는 어울릴 수 없다.' };
     if (!t || t.dead_at || !waitingOf(t)) return { error: '그 드래곤은 이제 도움을 기다리고 있지 않다.' };
     const where = t.fallen.region || t.region;
     if (helper.region !== where) return { error: `${REGIONS[where].name}에 가야 일으켜 줄 수 있다.` };

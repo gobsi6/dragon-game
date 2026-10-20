@@ -36,6 +36,7 @@
     --k-blue: #3F72A8;   --t-blue: #234A72;
     --k-purple: #9459AE; --t-purple: #5E3570;
     --k-bronze: #A3723F; --t-bronze: #6A4522;
+    --k-clear: #A9B3B9;  --t-clear: #5B666E; /* 투명 드래곤 (GM 시험용) */
 
     --serif: 'Noto Serif KR', 'AppleMyungjo', 'Batang', serif;
     --sans: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
@@ -53,6 +54,14 @@
       radial-gradient(ellipse 70% 50% at 100% 100%, rgba(148, 166, 184, .28) 0%, rgba(148, 166, 184, 0) 70%),
       linear-gradient(180deg, #ECEEEE 0%, #E1E4E5 50%, #D2D8DC 100%);
     background-attachment: fixed;
+  }
+  /* 정신이 10% 아래: 화면 바탕(틀 밖)이 어두워진다. 카드·글은 그대로 */
+  body { transition: background-color 1.2s ease; }
+  body.mind-low {
+    background-color: #2A262E;
+    background-image:
+      radial-gradient(ellipse 110% 60% at 50% 0%, rgba(90, 80, 104, .45) 0%, rgba(90, 80, 104, 0) 65%),
+      radial-gradient(ellipse 80% 50% at 50% 100%, rgba(0, 0, 0, .55) 0%, rgba(0, 0, 0, 0) 70%);
   }
   button, input { font: inherit; color: inherit; }
   button { cursor: pointer; }
@@ -1129,6 +1138,10 @@
   .pl-map .land-edge.corrupt { stroke: #4C4C52; }
   .pl-map .rname { position: absolute; left: 10px; top: 8px; font: 700 12px/1.3 var(--serif); color: var(--steel-d); letter-spacing: .04em; pointer-events: none; }
   .pl-map .rname.corrupt { color: #55555C; }
+  /* 멸망한 대륙: 어두운 바다 위의 잿빛 땅 */
+  .pl-map.dark { background: #34363C; border-color: #26282C; }
+  .pl-map.dark .rname { color: #D8D4CC; }
+  .pl-map .land-edge.dark { stroke: #1C1A18; stroke-width: 1.8; }
   /* 장소 핀: 끝이 그 자리를 가리키고, 이름표는 핀 아래에 */
   .pn { --tc: #7C857F; --pin: #FCFBF7; --pin-ink: #2A4256; position: absolute; transform: translate(-50%, -26px); display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 0; background: none; border: 0; cursor: pointer; }
   .pn .pin { width: 20px; height: 27px; overflow: visible; filter: drop-shadow(0 1.5px 1px rgba(42, 46, 51, .35)); transition: transform .15s; transform-origin: 50% 100%; }
@@ -1211,6 +1224,7 @@
   .pl-wrap.corrupt .pl-mon .ch.drop { color: #D8C59A; border-color: #5F5641; background: #3A362D; }
   .pl-wrap.corrupt .pl-mon .note { color: #BDB9C6; }
   .pl-wrap.corrupt .pl-map { background: #D6D6D8; border-color: #B4B4B8; }
+  .pl-wrap.corrupt .pl-map.dark { background: #34363C; border-color: #26282C; } /* 멸망한 대륙은 지도 칸도 어둡게 그대로 */
   /* 좁은 화면: 미니맵을 위에 넓게, 설명과 사냥감은 그 아래로 */
   @media (max-width: 620px) {
     .pl-wrap { grid-template-columns: minmax(0, 1fr); }
@@ -3525,6 +3539,7 @@
     green: '<path d="M27 73c0-28 18-45 46-47-1 28-19 47-46 47z" fill="#F7F7F5"/><path class="vein" d="M30 70L60 40M45 55l-3-10M52 48l9 2"/>',
     red: '<path d="M50 17c7 15 21 22 21 41a21 21 0 0 1-42 0c0-10 5-17 12-21 0 8 3 12 8 14-2-12 1-22 1-34z" fill="#F7F7F5"/><path class="h" d="M50 50c3 6 8 9 8 15a8 8 0 0 1-16 0c0-6 5-9 8-15z"/>',
     silver: '<path class="s" d="M22 37q7-6 14 0t14 0 14 0 14 0"/><path class="s" d="M22 50q7-6 14 0t14 0 14 0 14 0"/><path class="s" d="M22 63q7-6 14 0t14 0 14 0 14 0"/>',
+    clear: '<circle class="s" cx="50" cy="50" r="20" stroke-dasharray="5 6"/><circle cx="50" cy="50" r="4" fill="#F7F7F5"/>', // 투명 드래곤: 점선 동그라미
     // 블루: 물결이 비치는 물방울 (블랙의 산 방울과 달리 안에 물결)
     blue: '<path d="M50 18c-6 14-20 26-20 42a20 20 0 0 0 40 0c0-16-14-28-20-42z" fill="#F7F7F5"/><path class="vein" d="M38 62q6-5 12 0t12 0"/>',
     // 퍼플: 자수정 결정 하나
@@ -3693,6 +3708,7 @@
     const box = $('kinds');
     box.innerHTML = '';
     for (const [id, k] of Object.entries(S.kinds)) {
+      if (k.hidden) continue; // 투명 드래곤(GM 시험용)은 고를 수 없음
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'kind';
@@ -3749,6 +3765,7 @@
     $('mind-t').innerHTML = `<b>${me.mind}</b><span> / ${me.mindMax}</span>`;
     $('mind-bar').style.width = pct(me.mind, me.mindMax);
     $('mind-vital').classList.toggle('low', me.mind <= 10);
+    document.body.classList.toggle('mind-low', me.mind <= me.mindMax * 0.1); // 정신이 10% 아래면 바탕이 어두워짐
     $('mind-vital').classList.toggle('zero', !!me.berserkInfo);
     // 광폭화 중에는 채팅·용언을 막음 (텔레파시는 됨)
     const mute = !!me.berserk;
@@ -7841,6 +7858,13 @@
           memoEdit: !!body.querySelector('.rel-memo.editing') && !!body.querySelector('.rel-memo textarea')?.value,
         } : null;
         renderProfile(res.profile, keep);
+        // GM 시험용 투명 드래곤: 프로필은 보이지만 어울리는 버튼(관계·선물·교환·결투 등)은 빼고 안내만
+        if (S.kinds[res.profile.kind]?.test || S.kinds[S.me?.kind]?.test) {
+          body.querySelectorAll('.pf-acts').forEach((e) => e.remove());
+          const n = document.createElement('p'); n.className = 'note';
+          n.textContent = S.kinds[res.profile.kind]?.test ? '대륙의 목소리가 빚어 둔 시험용 드래곤이다. 누구와도 어울릴 수 없다.' : '시험용 드래곤은 다른 드래곤과 어울릴 수 없다.';
+          body.appendChild(n);
+        }
         if (keep) body.scrollTop = keep.top;
         if (!$('profile-dlg').open) $('profile-dlg').showModal();
       });
@@ -8981,6 +9005,11 @@
     ruins:   { land: '#E6DFC9', pillar: 13, wall: 6, grass: 16, tree: 12 },
     canyon:  { land: '#E9D6A8', mesa: 12, crack: 10, grass: 8, river: true },
     volcano: { land: '#DCD5C7', volc: 1, mtn: 9, ash: true, lava: true, rock: 16 },
+    // ── 멸망한 대륙 (오염된 땅): 어두운 잿빛 바탕에 지역마다 특징 ──
+    ruin_shore:   { land: '#6B6862', dark: true, pond: 4, wreck: 3, rock: 14, dead: 6, grass: 10, crack: 3 },  // 검은 물웅덩이, 부서진 배
+    ruin_plain:   { land: '#6E685A', dark: true, wheat: 26, dead: 10, hill: 6, dryriver: true, crack: 4 },   // 시든 밀, 말라붙은 강바닥
+    ruin_capital: { land: '#66636A', dark: true, tower: 3, wall: 10, pillar: 8, crack: 6, rock: 6 },         // 무너진 성벽과 탑
+    ruin_rift:    { land: '#58535F', dark: true, rift: true, rock: 16, crack: 12, wisp: 7, dead: 4 },        // 검게 갈라진 땅, 떠도는 빛
   };
   function terrainSvg(region, spots) {
     const L = PL_LOOK[region] || PL_LOOK.plains;
@@ -8993,9 +9022,22 @@
     const free = (x, y, pad, R = 72) => Math.hypot(x - 100, (y - 104) * 1.05) < R && pins.every(([px, py]) => Math.hypot(x - px, (y - py) * 1.2) > pad && !(Math.abs(x - px) < 46 && y > py - 4 && y < py + 30));
     const place = (n, pad, fn, R) => { let tries = 0; for (let i = 0; i < n && tries < n * 30; tries++) { const x = 22 + rnd() * 156, y = 26 + rnd() * 156; if (!free(x, y, pad, R)) continue; fn(x, y, i); i++; } };
     const f = (v) => v.toFixed(1);
-    const INK = '#4F4B3E';
+    const INK = L.dark ? '#25221F' : '#4F4B3E';
     // 강
     let water = '';
+    if (L.dryriver) { // 말라붙은 강바닥: 검게 갈라진 띠
+      const sx = 30 + rnd() * 30, pts = [];
+      for (let i = 0; i <= 6; i++) pts.push([sx + i * 23 + (rnd() - 0.5) * 12, 70 + i * 13 + Math.sin(i * 1.5) * 9]);
+      const d = pts.map((q, i) => `${i ? 'L' : 'M'}${f(q[0])},${f(q[1])}`).join(' ');
+      water = `<path d="${d}" fill="none" stroke="#4A453D" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="#857C6C" stroke-width="1" stroke-dasharray="2 3" stroke-linecap="round"/>`;
+    }
+    if (L.rift) { // 심연의 균열: 땅을 가로지르는 검은 틈과 보랏빛
+      const pts = [];
+      for (let i = 0; i <= 8; i++) pts.push([30 + i * 18 + (rnd() - 0.5) * 8, 58 + i * 11 + (i % 2 ? -6 : 6)]);
+      const up = pts.map((q, i) => `${i ? 'L' : 'M'}${f(q[0])},${f(q[1] - 3 - (i % 3))}`).join(' ');
+      const dn = pts.slice().reverse().map((q, i) => `L${f(q[0])},${f(q[1] + 3 + (i % 2) * 2)}`).join(' ');
+      water += `<path d="${up} ${dn} Z" fill="#7B4FA8" opacity=".35" transform="translate(0 1)"/><path d="${up} ${dn} Z" fill="#17131C" stroke="#9A6CC8" stroke-width="1.1" stroke-linejoin="round"/>`;
+    }
     if (L.river || L.lava) {
       const sx = 40 + rnd() * 30, pts = [];
       for (let i = 0; i <= 6; i++) pts.push([sx + i * 22 + (rnd() - 0.5) * 14, 120 + i * 9 + Math.sin(i * 1.7) * 10]);
@@ -9005,10 +9047,12 @@
         : `<path d="${d}" fill="none" stroke="#8EA6AE" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`;
     }
     // 연못
-    place(L.pond || 0, 22, (x, y) => { const rx = 7 + rnd() * 7; items.push([y, `<ellipse cx="${f(x)}" cy="${f(y)}" rx="${f(rx)}" ry="${f(rx * 0.55)}" fill="#B4C3C8" stroke="#8EA6AE" stroke-width=".8"/>`]); });
+    place(L.pond || 0, 22, (x, y) => { const rx = 7 + rnd() * 7; items.push([y, L.dark
+      ? `<ellipse cx="${f(x)}" cy="${f(y)}" rx="${f(rx)}" ry="${f(rx * 0.55)}" fill="#22272B" stroke="#4B5258" stroke-width=".8"/><path d="M${f(x - rx * 0.5)},${f(y)} q${f(rx * 0.25)},-1.2 ${f(rx * 0.5)},0" stroke="#5C646B" stroke-width=".6" fill="none"/>` // 검은 물
+      : `<ellipse cx="${f(x)}" cy="${f(y)}" rx="${f(rx)}" ry="${f(rx * 0.55)}" fill="#B4C3C8" stroke="#8EA6AE" stroke-width=".8"/>`]); });
     // 산: 밝은 쪽과 그늘진 쪽 (설원이면 흰 산, 화산이면 잿빛)
     const mtn = (x, y, s) => {
-      const light = L.snowy ? '#F8F9F7' : L.ash ? '#B9B1A3' : '#E9E3CB', dark = L.snowy ? '#C9D3D6' : L.ash ? '#8D857A' : '#C9BF9C';
+      const light = L.dark ? '#8A857D' : L.snowy ? '#F8F9F7' : L.ash ? '#B9B1A3' : '#E9E3CB', dark = L.dark ? '#57534D' : L.snowy ? '#C9D3D6' : L.ash ? '#8D857A' : '#C9BF9C';
       const top = y - s * 1.25;
       return `<path d="M${f(x - s)},${f(y)} L${f(x)},${f(top)} L${f(x + s)},${f(y)} Z" fill="${light}" stroke="${INK}" stroke-width=".8" stroke-linejoin="round"/><path d="M${f(x)},${f(top)} L${f(x + s)},${f(y)} L${f(x + s * 0.15)},${f(y)} Z" fill="${dark}"/>`
         + (L.snowy ? '' : `<path d="M${f(x - s * 0.35)},${f(top + s * 0.45)} L${f(x)},${f(top)} L${f(x + s * 0.32)},${f(top + s * 0.4)}" fill="none" stroke="#FCFBF7" stroke-width=".9" opacity=".8"/>`);
@@ -9024,19 +9068,25 @@
     if ((L.tree || 0) > 20) place(Math.round(L.tree / 6), 18, (x, y) => { for (let k = 0; k < 6; k++) { const tx = x + (rnd() - 0.5) * 26, ty = y + (rnd() - 0.5) * 20; if (free(tx, ty, 16)) items.push([ty, tree(tx, ty, 3 + rnd() * 1.8)]); } });
     else place(L.tree || 0, 16, (x, y) => { for (let k = 0; k < 3; k++) { const tx = x + (rnd() - 0.5) * 12, ty = y + (rnd() - 0.5) * 9; if (free(tx, ty, 14)) items.push([ty, tree(tx, ty, 2.6 + rnd() * 1.2)]); } });
     place(L.pine || 0, 16, (x, y) => items.push([y, `<path d="M${f(x)},${f(y - 10)} L${f(x + 4)},${f(y - 2)} L${f(x - 4)},${f(y - 2)} Z" fill="${L.snowy ? '#7E8F7A' : '#6F7F57'}" stroke="#4F5A3E" stroke-width=".6" stroke-linejoin="round"/><path d="M${f(x)},${f(y - 2)} V${f(y)}" stroke="#4F5A3E" stroke-width=".8"/>`]));
-    place(L.dead || 0, 18, (x, y) => items.push([y, `<path d="M${f(x)},${f(y)} V${f(y - 9)} M${f(x)},${f(y - 5)} l-3,-3 M${f(x)},${f(y - 7)} l3,-2.5" stroke="#5F5A48" stroke-width=".9" stroke-linecap="round" fill="none"/>`]));
+    place(L.dead || 0, 18, (x, y) => items.push([y, `<path d="M${f(x)},${f(y)} V${f(y - 9)} M${f(x)},${f(y - 5)} l-3,-3 M${f(x)},${f(y - 7)} l3,-2.5" stroke="${L.dark ? '#2B2825' : '#5F5A48'}" stroke-width=".9" stroke-linecap="round" fill="none"/>`]));
+    // 멸망한 대륙: 시든 밀, 부서진 배, 무너진 탑, 떠도는 빛
+    place(L.wheat || 0, 10, (x, y) => items.push([y, `<path d="M${f(x)},${f(y)} v-7 q1.8,-.4 2.2,-2.6 M${f(x + 3)},${f(y)} v-5 q-1.6,-.2 -2,-2" stroke="#A19370" stroke-width=".8" stroke-linecap="round" fill="none"/>`]));
+    place(L.wreck || 0, 22, (x, y) => items.push([y, `<path d="M${f(x - 9)},${f(y - 3)} Q${f(x)},${f(y + 4)} ${f(x + 9)},${f(y - 3)} L${f(x + 7)},${f(y - 5)} L${f(x - 7)},${f(y - 5)} Z" fill="#3E3934" stroke="${INK}" stroke-width=".8" stroke-linejoin="round"/><path d="M${f(x + 1)},${f(y - 5)} l-2,-9 M${f(x - 1)},${f(y - 11)} h5" stroke="#3E3934" stroke-width="1" stroke-linecap="round"/>`]));
+    place(L.tower || 0, 26, (x, y) => { const t = 14 + rnd() * 8; items.push([y, `<path d="M${f(x - 5)},${f(y)} V${f(y - t)} l2,2 l2,-3 l2,2.5 l2,-2 l2,1.5 V${f(y)} Z" fill="#8A867F" stroke="${INK}" stroke-width=".8" stroke-linejoin="round"/><rect x="${f(x - 1.2)}" y="${f(y - t * 0.6)}" width="2.4" height="3.4" fill="#2E2B28"/>`]); }, 66);
+    place(L.wisp || 0, 14, (x, y) => items.push([y, `<circle cx="${f(x)}" cy="${f(y - 4)}" r="3.2" fill="#A77FD0" opacity=".28"/><circle cx="${f(x)}" cy="${f(y - 4)}" r="1.3" fill="#D9C2F0"/>`]));
     // 언덕 ⌒, 풀, 갈대, 눈더미
-    place(L.hill || 0, 16, (x, y) => items.push([y, `<path d="M${f(x - 7)},${f(y)} Q${f(x)},${f(y - 7)} ${f(x + 7)},${f(y)}" fill="none" stroke="#9A8456" stroke-width="1.1" stroke-linecap="round"/>`]));
+    place(L.hill || 0, 16, (x, y) => items.push([y, `<path d="M${f(x - 7)},${f(y)} Q${f(x)},${f(y - 7)} ${f(x + 7)},${f(y)}" fill="none" stroke="${L.dark ? '#9A917E' : '#9A8456'}" stroke-width="1.1" stroke-linecap="round"/>`]));
     place(L.drift || 0, 14, (x, y) => items.push([y, `<path d="M${f(x - 6)},${f(y)} Q${f(x)},${f(y - 4)} ${f(x + 6)},${f(y)}" fill="none" stroke="#A8BAC0" stroke-width="1" stroke-linecap="round"/>`]));
-    place(L.grass || 0, 12, (x, y) => items.push([y, `<path d="M${f(x - 2.5)},${f(y)} l1,-3 M${f(x)},${f(y)} v-3.5 M${f(x + 2.5)},${f(y)} l-1,-3" stroke="#7A8456" stroke-width=".8" stroke-linecap="round" fill="none"/>`]));
+    place(L.grass || 0, 12, (x, y) => items.push([y, `<path d="M${f(x - 2.5)},${f(y)} l1,-3 M${f(x)},${f(y)} v-3.5 M${f(x + 2.5)},${f(y)} l-1,-3" stroke="${L.dark ? '#8E8675' : '#7A8456'}" stroke-width=".8" stroke-linecap="round" fill="none"/>`]));
     place(L.reed || 0, 12, (x, y) => items.push([y, `<path d="M${f(x - 2)},${f(y)} v-6 M${f(x)},${f(y)} v-8 M${f(x + 2)},${f(y)} v-5" stroke="#5B6247" stroke-width=".8" stroke-linecap="round"/><ellipse cx="${f(x)}" cy="${f(y - 8.5)}" rx=".9" ry="1.8" fill="#7A6A48"/>`]));
-    place(L.crack || 0, 14, (x, y) => items.push([y, `<path d="M${f(x - 6)},${f(y)} l3,-1.5 l2,1.8 l3,-2.2 l3,1" fill="none" stroke="#9A7A50" stroke-width=".8" stroke-linecap="round"/>`]));
-    place(L.rock || 0, 14, (x, y) => items.push([y, `<path d="M${f(x - 3.5)},${f(y)} L${f(x - 2)},${f(y - 3)} L${f(x + 2)},${f(y - 3.5)} L${f(x + 3.5)},${f(y)} Z" fill="#8D857A" stroke="${INK}" stroke-width=".6"/>`]));
+    place(L.crack || 0, 14, (x, y) => items.push([y, `<path d="M${f(x - 6)},${f(y)} l3,-1.5 l2,1.8 l3,-2.2 l3,1" fill="none" stroke="${L.dark ? '#9A6CC8' : '#9A7A50'}" stroke-width="${L.dark ? '1' : '.8'}" stroke-linecap="round"/>`])); // 멸망한 땅의 금은 보랏빛
+    place(L.rock || 0, 14, (x, y) => items.push([y, `<path d="M${f(x - 3.5)},${f(y)} L${f(x - 2)},${f(y - 3)} L${f(x + 2)},${f(y - 3.5)} L${f(x + 3.5)},${f(y)} Z" fill="${L.dark ? '#46423D' : '#8D857A'}" stroke="${INK}" stroke-width=".6"/>`]));
     // 유적: 기둥과 무너진 벽
-    place(L.pillar || 0, 16, (x, y) => { const t = 6 + rnd() * 5; items.push([y, `<rect x="${f(x - 2)}" y="${f(y - t)}" width="4" height="${f(t)}" fill="#E4DED0" stroke="#7D776B" stroke-width=".7"/><rect x="${f(x - 3)}" y="${f(y - t - 1.5)}" width="6" height="1.6" fill="#CBC4B4" stroke="#7D776B" stroke-width=".5"/>`]); });
-    place(L.wall || 0, 18, (x, y) => items.push([y, `<path d="M${f(x - 9)},${f(y)} V${f(y - 4)} H${f(x - 4)} V${f(y - 6)} H${f(x + 1)} V${f(y - 3)} H${f(x + 9)} V${f(y)} Z" fill="#D5CEBE" stroke="#7D776B" stroke-width=".7"/>`]));
+    const stoneA = L.dark ? '#8A867F' : '#E4DED0', stoneB = L.dark ? '#6E6A64' : '#CBC4B4', stoneC = L.dark ? '#7B776F' : '#D5CEBE', stoneInk = L.dark ? INK : '#7D776B';
+    place(L.pillar || 0, 16, (x, y) => { const t = 6 + rnd() * 5; items.push([y, `<rect x="${f(x - 2)}" y="${f(y - t)}" width="4" height="${f(t)}" fill="${stoneA}" stroke="${stoneInk}" stroke-width=".7"/><rect x="${f(x - 3)}" y="${f(y - t - 1.5)}" width="6" height="1.6" fill="${stoneB}" stroke="${stoneInk}" stroke-width=".5"/>`]); });
+    place(L.wall || 0, 18, (x, y) => items.push([y, `<path d="M${f(x - 9)},${f(y)} V${f(y - 4)} H${f(x - 4)} V${f(y - 6)} H${f(x + 1)} V${f(y - 3)} H${f(x + 9)} V${f(y)} Z" fill="${stoneC}" stroke="${stoneInk}" stroke-width=".7"/>`]));
     items.sort((p, q) => p[0] - q[0]);
-    return { land: L.land, body: water + items.map((x) => x[1]).join('') };
+    return { land: L.land, dark: !!L.dark, body: water + items.map((x) => x[1]).join('') };
   }
   // 미니맵 정사각형: 지도 칸의 짧은 변에 맞춤 (칸 크기가 바뀌면 다시)
   function fitPlMap() {
@@ -9075,12 +9125,13 @@
     sq.className = 'sq';
     sq.innerHTML = `<svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
       <defs><clipPath id="${clip}"><path d="${land}"/></clipPath></defs>
-      <path d="${land}" transform="translate(2.5 3.5)" fill="rgba(79,75,62,.14)"/>
+      <path d="${land}" transform="translate(2.5 3.5)" fill="${t.dark ? 'rgba(0,0,0,.4)' : 'rgba(79,75,62,.14)'}"/>
       <path d="${land}" fill="${t.land}"/>
       <g clip-path="url(#${clip})">${t.body}${corrupt ? '<rect width="200" height="200" fill="#5A5A62" opacity=".16"/>' : ''}</g>
-      <path d="${land}" class="land-edge${corrupt ? ' corrupt' : ''}"/>
+      <path d="${land}" class="land-edge${corrupt ? ' corrupt' : ''}${t.dark ? ' dark' : ''}"/>
     </svg>`;
     map.appendChild(sq);
+    map.classList.toggle('dark', t.dark); // 멸망한 대륙: 지도 칸 바탕도 어둡게
     fitPlMap();
     const rn = document.createElement('span');
     rn.className = `rname${corrupt ? ' corrupt' : ''}`;
@@ -9107,7 +9158,7 @@
       sq.appendChild(b);
     });
 
-    $('pl-wrap').classList.toggle('corrupt', corrupt); // 오염된 땅이면 오른쪽 칸을 어둡게
+    $('pl-wrap').classList.toggle('corrupt', corrupt || t.dark); // 오염된 땅이거나 멸망한 대륙이면 오른쪽 칸(장소·사냥감)을 어둡게
     renderPlInfo(selId, corrupt);
   }
   // 오른쪽 칸: 장소 설명과 등장하는 사냥감 (selId: 보여 줄 장소)
@@ -9150,7 +9201,7 @@
     mk.className = 'k';
     mk.textContent = '등장하는 사냥감';
     mon.appendChild(mk);
-    const pre = corrupt ? '오염된 ' : '';
+    const pre = corrupt || realmOf(S.region) === 'ruin' ? '오염된 ' : ''; // 오염된 땅·멸망한 대륙의 사냥감은 '오염된 ○○'
     const row = (cls, ico, name, lv, sub) => {
       const r = document.createElement('div');
       r.className = `row ${cls}`;
@@ -9414,7 +9465,7 @@
 
   // ── 하단 메뉴 화면: 가운데 칸에 펼치기 ──
   // 팝업(모달) 대신 지역 카드와 지도 자리에 보여 준다. 다른 메뉴를 열면 바뀌고, '대륙'이나 닫기로 돌아간다
-  const PANELS = ['char-dlg', 'nest-dlg', 'inv-dlg', 'craft-dlg', 'ledger-dlg', 'friends-dlg', 'arena-dlg']; // 텔레파시는 지금 화면 위에 팝업으로
+  const PANELS = ['char-dlg', 'nest-dlg', 'inv-dlg', 'craft-dlg', 'ledger-dlg', 'friends-dlg', 'arena-dlg', 'ruin-dlg']; // ruin-dlg: 생존자 교환 (닫을 때 가운데 칸을 되돌리려면 여기 있어야 함) // 텔레파시는 지금 화면 위에 팝업으로
   // 팝업창 바깥(어두운 배경)을 누르면 Esc와 똑같이 닫힘. 'cancel'을 막아 둔 창(확인을 눌러야 하는 창, 싸우는 중의 전투 창 등)은 그대로 남음
   // 거래·초대·그림 자르기는 잘못 눌러 취소되지 않게 바깥 누르기로는 닫지 않음
   const NO_OUTSIDE = new Set(['trade-dlg', 'invite-dlg', 'crop']);
@@ -11025,7 +11076,7 @@
       r = gmRow(s, '들이기');
       const opts = [
         ...Object.entries(GM.meta.origins).map(([k, v]) => [`human:${k}`, `인간 · ${v}`]),
-        ...Object.entries(S.kinds).map(([k, v]) => [`egg:${k}`, `알 · ${v.name}`]),
+        ...Object.entries(S.kinds).filter(([, v]) => !v.hidden).map(([k, v]) => [`egg:${k}`, `알 · ${v.name}`]),
       ];
       const pk = gSelect(r, '들일 식구', opts, GM.kinPick);
       pk.addEventListener('change', () => { GM.kinPick = pk.value; });

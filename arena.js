@@ -3,7 +3,7 @@
 // - 실시간 결투: 둘 다 접속해 있을 때. 신청 → 수락 → 둘 다 고르면 한 턴. 시간을 넘기면 자동으로 고름
 // - 자동 결투: 상대가 '자동 결투 허용'을 켜 두었으면, 접속하지 않았어도 서로의 스킬 구성대로 자동으로 싸움
 // 결투에서는 다치지 않음 (가득 찬 상태로 싸우고, 끝나면 원래대로). 전적과 명성, 경험치만 남음
-const { COMBAT, MIND, REGIONS, BOND_RULES, ITEMS } = require('./game-data');
+const { COMBAT, MIND, REGIONS, BOND_RULES, ITEMS, isTestDragon } = require('./game-data');
 
 const str = (v) => (typeof v === 'string' ? v.trim() : '');
 function josa(word, a, b) {
@@ -414,6 +414,11 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
       if (typeof ack !== 'function') ack = () => {};
       const d = me();
       if (!d) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+      // GM 시험용 투명 드래곤: 결투는 걸 수도, 받을 수도 없음 (사냥·강적 전투는 됨)
+      if (/^arena:(challenge|answer|bet-ok)$/.test(ev)) {
+        if (isTestDragon(d)) return ack({ error: '시험용 드래곤은 다른 드래곤과 어울릴 수 없다.' });
+        if (ev === 'arena:challenge' && isTestDragon(db.getDragon(Number(p?.id)))) return ack({ error: '시험용 드래곤과는 어울릴 수 없다.' });
+      }
       try { ack(fn(d, p || {}) || { ok: true }); } catch (e) { console.error('[전투]', ev, e); ack({ error: '처리하다 문제가 생겼다.' }); }
     });
 
@@ -479,17 +484,19 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
 
     on('arena:list', (d) => {
       const c = combat.combatOf(d);
-      const list = db.arenaList(d.id).map((r) => {
+      const list = db.arenaList(d.id).filter((r) => !isTestDragon(r)).map((r) => { // 시험용 드래곤은 결투 상대 목록에서 뺌
         const e = live(r.id);
         const o = e ? e.dragon : r;
         const oc = combat.combatOf(e ? e.dragon : { combat: r.combat });
         const why = duelState(d, o, oc);
         return {
           id: r.id, name: o.name, kind: o.kind, level: o.level, av: r.has_avatar ? r.avatar_ver : 0,
-          online: !!e, lastSeen: e ? Date.now() : r.lastSeen, w: oc.w, l: oc.l,
+          online: !!e, lastSeen: e ? Date.now() : r.lastSeen, at: e ? (e.at || 0) : r.lastSeen || 0, w: oc.w, l: oc.l,
           rel: db.relGet(d.id, r.id), live: why.live, auto: why.auto,
         };
       });
+      // 접속 중인 드래곤이 언제나 위, 그 안에서는 최근에 접속한 순. 접속하지 않은 드래곤은 마지막으로 본 시각 순
+      list.sort((a, b) => (b.online - a.online) || (b.at - a.at));
       return { ok: true, me: { w: c.w, l: c.l, duelOn: c.duelOn, autoDuel: c.autoDuel }, list };
     });
 

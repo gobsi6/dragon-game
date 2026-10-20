@@ -470,7 +470,7 @@ function enterWorld(socket, dragon) {
   if (arena) arena.resume(dragon.id, socket); // 새로고침 전의 싸움이 남아 있으면 이어서
   social.onEnter(socket, dragon);
   maze.onEnter(socket, dragon);
-  online.set(dragon.id, { socket, dragon });
+  online.set(dragon.id, { socket, dragon, at: Date.now() }); // at: 이번에 접속한 시각 (결투장 목록 순서 등)
   socket.join(dragon.region);
   setImmediate(() => rivalNear(dragon));
   db.touch(dragon.id);
@@ -836,7 +836,7 @@ io.on('connection', (socket) => {
     if (!/^[가-힣A-Za-z0-9]{2,12}$/.test(name)) {
       return ack({ error: '이름은 한글, 영문, 숫자로 2~12자까지 쓸 수 있다.' });
     }
-    if (!KINDS[kind]) return ack({ error: '드래곤 종류를 골라야 한다.' });
+    if (!KINDS[kind] || KINDS[kind].hidden) return ack({ error: '드래곤 종류를 골라야 한다.' }); // 투명 드래곤(시험용)은 고를 수 없음
     if (db.dragonNameTaken(name)) return ack({ error: '이미 대륙에 같은 이름의 드래곤이 있다.' });
 
     // 자유 포인트 검사: 정수, 0~perStat, 합이 정확히 points
