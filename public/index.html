@@ -12138,7 +12138,7 @@
           <div class="rm-pick"><span class="ic">${pk.kind === 'fire' ? pk.name.replace('화톳불 ', '') : pk.kind === 'pillar' ? pk.name.replace('번 기둥', '') : '입'}</span><div><b>${pk.name}</b><small>${pk.key === v.best ? '아직 밝히지 않은 곳에 가장 가깝다' : '여기서 시작한다'} · 다른 점을 누르면 그곳에서 시작한다</small></div></div>
         </section>
       </div>
-      <p class="note" style="margin:0">오늘 ${v.me.used}/${v.me.max}번 들어갔다. 지금 이 층에는 ${v.here}마리가 있다.${why ? ` ${why}` : ''}</p>
+      <p class="note" style="margin:0">오늘 ${v.me.used}/${v.me.max}번 들어갔다. 지금 이 층에는 ${v.here}명이 있다.${why ? ` ${why}` : ''}</p>
       <div class="row"><button class="btn" type="button" id="maze-dlg-close">닫기</button><button class="btn primary" type="button" id="maze-dlg-go"${canGo ? '' : ' disabled'}>${pk.name}에서 내려간다</button></div>`;
     body.querySelector('#maze-dlg-close').addEventListener('click', () => $('maze-dlg').close());
     body.querySelector('#maze-dlg-go').addEventListener('click', () => {
