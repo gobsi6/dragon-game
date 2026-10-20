@@ -343,8 +343,7 @@
   .sl-list { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
   /* 아래 '새기기': 글이 많아 길어져도 화면 아래(하단 메뉴 위)에 붙어 늘 보이게 */
   .sl-foot { position: sticky; bottom: calc(var(--dock-h, 56px) + 8px); z-index: 2; margin-top: 14px; }
-  .sl-foot { justify-content: center; }
-  .sl-foot .btn { flex: 0 0 auto; min-width: 150px; padding: 0 26px; gap: 7px; min-height: 40px; box-shadow: 0 4px 14px rgba(31, 35, 38, .14), inset 0 0 0 1px var(--steel-l); }
+  .sl-foot .btn { gap: 7px; min-height: 42px; box-shadow: 0 4px 14px rgba(31, 35, 38, .14), inset 0 0 0 1px var(--steel-l); }
   .sl-foot .sl-pen { width: 16px; height: 16px; }
   /* 글 하나 = 옅은 돌빛 판 */
   .sl-card { display: flex; flex-direction: column; gap: 7px; width: 100%; padding: 13px 14px 12px; border: 1px solid #D3D1C9; border-radius: 3px; text-align: left; cursor: pointer;
@@ -1136,9 +1135,9 @@
   #rm-svg .nd circle.b { fill: #FCFBF7; stroke: var(--k); stroke-width: 2; }
   #rm-svg .nd circle.o { fill: none; stroke: var(--k); stroke-width: 2; }
   #rm-svg .nd text.i { font: 700 13px/1 var(--serif); fill: var(--k); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
-  #rm-svg .nd text.n { font: 700 11.5px/1 var(--serif); fill: var(--ink); text-anchor: middle; pointer-events: none; paint-order: stroke; stroke: #F8F8F7; stroke-width: 3.5px; stroke-linejoin: round; }
-  #rm-svg .nd text.r { font: 600 10px/1 var(--sans); text-anchor: middle; pointer-events: none; paint-order: stroke; stroke: #FAFAF8; stroke-width: 3px; stroke-linejoin: round; }
-  #rm-svg .nd.far text.n { font-size: 10px; fill: var(--muted); }
+  #rm-svg .nd text.n { font: 700 10px/1 var(--serif); fill: var(--ink); text-anchor: middle; pointer-events: none; paint-order: stroke; stroke: #F8F8F7; stroke-width: 3.5px; stroke-linejoin: round; }
+  #rm-svg .nd text.r { font: 600 8.5px/1 var(--sans); text-anchor: middle; pointer-events: none; paint-order: stroke; stroke: #FAFAF8; stroke-width: 3px; stroke-linejoin: round; }
+  #rm-svg .nd.far text.n { font-size: 9px; fill: var(--muted); }
   #rm-svg .nd:hover circle.o, #rm-svg .nd:hover circle.b { stroke-width: 3; }
   #rm-svg .nd:focus { outline: none; } #rm-svg .nd:focus-visible circle.o, #rm-svg .nd:focus-visible circle.b { stroke: var(--steel); stroke-width: 3.5; }
   #rm-svg .ln { fill: none; stroke: var(--c); stroke-width: 1.8; stroke-linecap: round; opacity: .88; }
@@ -8942,7 +8941,7 @@
       const i = rmEl('text', { class: 'i' }, g); i.textContent = d.name[0];
       i.style.fontSize = `${Math.round(r * 0.72)}px`;
     }
-    const n = rmEl('text', { class: 'n', y: r + 13 }, g); n.textContent = d.name;
+    const n = rmEl('text', { class: 'n', y: r + 12 }, g); n.textContent = d.name;
     return g;
   }
   // 관계 이름표: 그 관계 색 글자만 (둘레에 바탕색 테를 둘러 선 위에서도 읽히게)
@@ -9043,8 +9042,8 @@
         const n = g.querySelector('.n'), ax = (p.x - 200) / 178, ay = (p.y - 200) / 178;
         if (Math.abs(ax) < 0.35) n.setAttribute('y', ay < 0 ? -(r + 7) : r + 14);
         else { n.setAttribute('x', ax > 0 ? r + 7 : -(r + 7)); n.setAttribute('y', (ay * (r + 2) + 3.5).toFixed(1)); n.style.textAnchor = ax > 0 ? 'start' : 'end'; } // CSS가 middle로 정해 두어 style로
-      } else if (up) g.querySelector('.n').setAttribute('y', -(r + 19));
-      if (p.ring === 1) rmChip(g, p.rel.label, RM_GCOL[p.rel.group], up ? -(r + 7) : r + 24);
+      } else if (up) g.querySelector('.n').setAttribute('y', -(r + 17));
+      if (p.ring === 1) rmChip(g, p.rel.label, RM_GCOL[p.rel.group], up ? -(r + 6) : r + 22);
       g.setAttribute('aria-label', p.ring === 0 ? `${dd.name}, 모습 보기` : p.ring === 1 ? `${dd.name}, ${p.rel.label}` : dd.name);
       const pick = () => (dd.id === rmC ? openProfile(dd.id) : drawRelMap(dd.id));
       g.addEventListener('click', pick);
