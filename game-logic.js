@@ -1214,6 +1214,11 @@ function useItem(d, id, have, opts = {}) {
   if (have(id) < 1) return { error: '가지고 있지 않다.' };
   const u = it.use;
   const lines = [];
+  // 지하 회랑 안에서는 회복 아이템을 쓸 수 없다. 상처는 화톳불에서만 돌본다 (maze.js heal)
+  const mzs = combatJson(d).maze;
+  const inMaze = !!mzs && typeof mzs === 'object' && mzs.fi != null;
+  const heals = u.hp != null || u.en != null || u.ap != null || u.mind != null;
+  if (inMaze && heals && !u.crown && !(u.keep && (opts.keep || !u.mind))) return { error: '지하 회랑 안에서는 회복 아이템을 쓸 수 없다. 화톳불 자리에서 상처를 돌보자.' };
   if (u.keep && (opts.keep || !u.mind)) { // 보물 상자에 넣고 잠금 (꺼낼 수 없음). 꽃다발은 '상자에 넣기'를 고를 때만, 아니면 아래에서 정신 회복
     if (!d.nest) return { error: '둥지를 틀어야 보물 상자에 간직할 수 있다.' };
     if (d.region !== d.nest) return { error: '보물 상자는 둥지에 있을 때만 열 수 있다.' };
@@ -1228,7 +1233,7 @@ function useItem(d, id, have, opts = {}) {
     const wasOn = crownOn(d);
     c.crownUntil = Date.now() + u.crown * 60000;
     lines.push(wasOn ? `시든 화관을 내려놓고 새 ${it.name}${josa(it.name, '을', '를')} 머리에 얹었다.` : `${it.name}${josa(it.name, '을', '를')} 머리에 얹었다. 하루 동안 이름 옆에 작은 꽃이 핀다.`);
-    if (u.mind && !berserkOf(d) && (d.mind ?? MIND.max) < MIND.max) {
+    if (u.mind && !inMaze && !berserkOf(d) && (d.mind ?? MIND.max) < MIND.max) { // 회랑 안에서는 화관을 써도 정신은 회복되지 않음
       const before = d.mind ?? MIND.max;
       d.mind = Math.min(MIND.max, before + u.mind);
       lines.push(`꽃향기에 정신이 ${d.mind - before} 맑아졌다.`);

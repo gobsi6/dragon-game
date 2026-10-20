@@ -2433,12 +2433,33 @@
   .rm-stair svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .rm-k { font-size: 11px; color: var(--muted); letter-spacing: .04em; }
   .rm-top { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: flex-end; justify-content: space-between; margin-top: 12px; }
-  .rm-meters { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+  .rm-meters { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; flex: 1; min-width: 0; }
   .rm-meter { display: flex; flex-direction: column; gap: 4px; min-width: 130px; flex: 1; }
   .rm-meter .h { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--ink-2); }
   .rm-meter .h b { color: var(--ink); font-variant-numeric: tabular-nums; }
   .rm-meter .bar { height: 6px; background: var(--line-in); border-radius: 3px; overflow: hidden; }
   .rm-meter .bar i { display: block; height: 100%; border-radius: 3px; }
+  /* 남은 횃불: 다른 눈금보다 크게, 줄어들면 색이 바뀜 */
+  .rm-torch { --tc: #B07A2A; --tc2: #D9A35A; --tbg: #FBF5EA; --tln: #E6D3B0; display: flex; align-items: center; gap: 12px; flex: 0 1 340px; min-width: 0; padding: 10px 14px; background: var(--tbg); border: 1px solid var(--tln); border-radius: 4px; }
+  .rm-torch .ic { flex: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #fff; border: 1px solid var(--tln); color: var(--tc); }
+  .rm-torch .ic svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .rm-torch .body { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 0; }
+  .rm-torch .h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .rm-torch .k { font-size: 12px; color: var(--ink-2); letter-spacing: .02em; }
+  .rm-torch .num b { font-size: 26px; line-height: 1; font-weight: 700; color: var(--tc); font-variant-numeric: tabular-nums; }
+  .rm-torch .num small { font-size: 12.5px; color: var(--muted); }
+  .rm-torch .bar { height: 10px; background: #fff; border: 1px solid var(--tln); border-radius: 5px; overflow: hidden; }
+  .rm-torch .bar i { display: block; height: 100%; border-radius: 5px; background: linear-gradient(90deg, var(--tc), var(--tc2)); transition: width .3s ease; }
+  .rm-torch .hint { font-size: 12px; color: var(--muted); }
+  .rm-torch.low { --tc: #B4610E; --tc2: #E08A2E; --tbg: #FDF1E2; --tln: #EBC596; }
+  .rm-torch.low .hint { color: #8A4A0A; }
+  .rm-torch.crit { --tc: #A63E4B; --tc2: #CB5A66; --tbg: #FBEDEE; --tln: #E3B4BA; }
+  .rm-torch.crit .hint, .rm-torch.out .hint { color: #8A2E37; font-weight: 600; }
+  .rm-torch.crit .ic { animation: rm-flicker 1.4s ease-in-out infinite; }
+  .rm-torch.out { --tc: #77736A; --tc2: #77736A; --tbg: #F1EFEA; --tln: #D6D2C8; }
+  @keyframes rm-flicker { 50% { opacity: .45; } }
+  @media (prefers-reduced-motion: reduce) { .rm-torch.crit .ic { animation: none; } }
+  @media (max-width: 640px) { .rm-torch { flex-basis: 100%; } }
   .rm-map { position: relative; background: #ECEBE6; border: 1px solid var(--line-in); border-radius: 3px; padding: 10px; margin-top: 12px; }
   .rm-grid { display: grid; gap: 2px; }
   .rm-c { aspect-ratio: 1; border-radius: 2px; position: relative; display: flex; align-items: center; justify-content: center; background: #F7F5EF; border: 1px solid #DDD9CE; min-width: 0; padding: 0; margin: 0; font: inherit; color: inherit; }
@@ -2451,14 +2472,14 @@
   .rm-c.mob { background: #F4E6E6; border: 2px solid #A63E4B; }
   .rm-c svg { width: 62%; height: 62%; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; position: relative; }
   .rm-c .glow { opacity: .75; display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; }
-  .rm-tok { width: 74%; height: 74%; border-radius: 50%; background: var(--c); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; line-height: 1; box-shadow: 0 0 0 1.5px #F7F5EF; position: relative; z-index: 1; overflow: hidden; }
+  .rm-tok { width: 74%; height: 74%; border-radius: 50%; background: var(--c); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; line-height: 1; box-shadow: 0 0 0 1.5px #F7F5EF; position: relative; z-index: 1; overflow: hidden; flex: none; } /* flex: none — 같은 칸의 다른 아이콘 때문에 줄어들지 않게 */
   .rm-tok img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .rm-tok.me { box-shadow: 0 0 0 2px #F7F5EF, 0 0 0 4px var(--steel); }
   .rm-tok.stuck { opacity: .6; outline: 2px dashed #A63E4B; outline-offset: 1px; }
   .rm-more { position: absolute; right: -4px; bottom: -4px; z-index: 2; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 8px; background: var(--ink); color: #fff; font-size: 10px; font-weight: 600; line-height: 16px; text-align: center; }
   .rm-mobm { position: absolute; left: -4px; bottom: -4px; z-index: 2; width: 17px; height: 17px; border-radius: 50%; background: #F7F5EF; display: flex; align-items: center; justify-content: center; color: #A63E4B; box-shadow: 0 0 0 1px #A63E4B; }
   .rm-mobm svg { width: 11px !important; height: 11px !important; stroke-width: 2.4; }
-  .rm-flag { position: absolute; top: -3px; right: -3px; width: 44% !important; height: 44% !important; fill: #E2B66F !important; stroke: #6A4522 !important; stroke-width: 2 !important; }
+  .rm-c .rm-flag { position: absolute; z-index: 3; top: -3px; right: -3px; width: 44% !important; height: 44% !important; fill: #E2B66F !important; stroke: #6A4522 !important; stroke-width: 2 !important; }
   .rm-leg { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 11.5px; color: var(--muted); margin-top: 8px; }
   .rm-leg span { display: inline-flex; align-items: center; gap: 5px; }
   .rm-leg svg, .rm-leg .sw { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
@@ -12166,8 +12187,11 @@
     const near = (r, c) => f.here.some((h) => Math.max(Math.abs(h.pos[0] - r), Math.abs(h.pos[1] - c)) <= (S.mazeRules?.sight ?? 3));
     const tok = (h, act) => {
       const url = avatarUrl(h);
-      return `<span class="rm-tok${act ? ' me' : ''}${h.stuck ? ' stuck' : ''}" style="--c:var(--k-${h.kind})" title="${h.name}">${url ? `<img src="${url}" alt="">` : h.name.charAt(0)}</span>`;
+      return `<span class="rm-tok${act ? ' me' : ''}${h.stuck ? ' stuck' : ''}" style="--c:var(--k-${h.kind})">${url ? `<img src="${url}" alt="">` : h.name.charAt(0)}</span>`;
     };
+    // 칸에 마우스를 올리면 그 칸에 있는 모두의 이름 (나를 맨 앞에)
+    const mzEsc = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+    const whoTip = (list) => [...list].sort((a, b) => (b.id === me.id) - (a.id === me.id)).map((h) => `${h.name}${h.id === me.id ? ' (나)' : ''}${h.stuck ? ' · 구덩이' : ''}`).join(', ');
     let cells = '';
     for (let r = r0; r < r0 + VH; r++) for (let c = c0; c < c0 + VW; c++) {
       if (r >= N || c >= N) { cells += '<div class="rm-c out"></div>'; continue; }
@@ -12192,7 +12216,8 @@
       else if (ch === 'F') inner += f.ways.includes(key) ? MZ_ICON.fire : MZ_ICON.ember;
       else if (ch === 'T' && f.pits.includes(key)) inner += MZ_ICON.pit;
       if (f.flags[key]) inner += MZ_ICON.flag;
-      cells += go ? `<button type="button" class="${cls}" data-r="${r}" data-c="${c}" aria-label="${r + 1}행 ${c + 1}열로 이동">${inner}</button>` : `<div class="${cls}">${inner}</div>`;
+      const tip = here.length ? mzEsc(whoTip(here)) : '';
+      cells += go ? `<button type="button" class="${cls}" data-r="${r}" data-c="${c}" aria-label="${r + 1}행 ${c + 1}열로 이동${tip ? ` · ${tip}` : ''}"${tip ? ` title="${tip}"` : ''}>${inner}</button>` : `<div class="${cls}"${tip ? ` title="${tip}"` : ''}>${inner}</div>`;
     }
     // 이 칸
     const key = `${pos[0]},${pos[1]}`, ch = rows[pos[0]][pos[1]], mob = f.mobs[key], pi = pillarIdx[key], gd = ch === 'P' ? f.guards[pi] : null;
@@ -12215,6 +12240,13 @@
       <div class="rm-row"><span>한 번 칠 때</span><b>횃불 −${atk} · 체력 −${counter}</b></div><div class="rm-row"><span>싸우지 않고 빠져나가면</span><b class="red">체력 −${pass}</b></div><div class="rm-row"><span>쓰러뜨리면</span><b>경험치 +${xp}</b></div>
       <div class="rm-k">함께 싸우는 드래곤 · ${foe.f.length ? foe.f.join(', ') : '아직 없다'}</div>`;
     const torch = my?.torch ?? 0;
+    // 횃불: 남은 양에 따라 색과 안내가 바뀜 (넉넉 / 10 이하 / 3 이하 / 다 탐)
+    const tMax = S.mazeRules?.torch ?? 40;
+    const tState = torch < 0.5 ? 'out' : torch <= 3 ? 'crit' : torch <= 10 ? 'low' : '';
+    const tHint = tState === 'out' ? '횃불이 다 탔다. 이제 밖으로 나가야 한다.'
+      : tState === 'crit' ? '곧 꺼진다. 나갈 준비를 하자.'
+      : tState === 'low' ? '횃불이 얼마 남지 않았다.'
+      : '새 길 1걸음 · 앞서 밟은 길 반 걸음';
     const btns = [];
     if (foe) btns.push(`<button class="btn primary" type="button" data-mz="maze:attack"${me.hp < fightHp || torch < atk || my?.stuck ? ' disabled' : ''}>${mob ? '파수꾼을 친다' : '수호자를 친다'}<span class="cost">횃불 −${atk}</span></button>`);
     if (ch === 'P' && gd && gd.hp <= 0 && f.lit[pi] <= 0) btns.push(`<button class="btn primary" type="button" data-mz="maze:light"${torch < 1 ? ' disabled' : ''}>${pi + 1}번 기둥에 불을 붙인다<span class="cost">횃불 −1</span></button>`);
@@ -12233,14 +12265,18 @@
         <div class="at show">${MZ_ICON.fire.replace('<svg', '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"')}<span>오늘 ${mz.used}/${mz.max}번째 · 고대도시까지 ${f.overall}%</span></div>
         ${f.deep ? '<p class="quote" style="margin-top:8px">어둠이 짙어 상하좌우만 보이고, 반나절마다 회랑이 무너진다.</p>' : ''}</div>
       <div class="rm-top"><div class="rm-meters">
-        <div class="rm-meter"><div class="h"><span>횃불</span><b>${torch} / ${S.mazeRules?.torch ?? 40}</b></div><div class="bar"><i style="width:${Math.min(100, (torch / (S.mazeRules?.torch ?? 40)) * 100)}%;background:linear-gradient(90deg,#B07A2A,#D9A35A)"></i></div></div>
+        <div class="rm-torch ${tState}" role="status" aria-label="남은 횃불 ${torch}걸음, 최대 ${tMax}걸음">
+          <span class="ic" aria-hidden="true">${MZ_ICON.fire}</span>
+          <div class="body"><div class="h"><span class="k">남은 횃불</span><span class="num"><b>${torch}</b><small> / ${tMax}걸음</small></span></div>
+            <div class="bar"><i style="width:${Math.min(100, (torch / tMax) * 100)}%"></i></div>
+            <span class="hint">${tHint}</span></div></div>
         <div class="rm-meter"><div class="h"><span>이 층의 지도</span><b>${f.pct}%</b></div><div class="bar"><i style="width:${f.pct}%;background:var(--steel)"></i></div></div>
         <div class="rm-meter"><div class="h"><span>체력</span><b>${me.hp} / ${me.hpMax}</b></div><div class="bar"><i style="width:${(me.hp / me.hpMax) * 100}%;background:linear-gradient(90deg,#8E3340,#CB5A66)"></i></div></div>
       </div></div>
       <div class="rm-map"><div class="rm-grid" style="grid-template-columns:repeat(${VW},minmax(0,1fr))">${cells}</div>
         <div class="rm-leg"><span>${MZ_ICON.warden}기둥 수호자</span><span>${MZ_ICON.fire}화톳불 자리</span><span>${MZ_ICON.mob}파수꾼</span><span>${MZ_ICON.pit}꺼진 구덩이</span><span><i class="sw" style="background:#E3ECF3;border:1px solid #3C5A73"></i>갈 수 있는 칸</span><span><i class="sw" style="background:#F7F5EF;border:1px solid #DDD9CE"></i>앞서 밟은 길 · 반 걸음</span></div></div>
       <div class="rm-pair">
-        <div class="rm-box${foe ? ' foe' : ''}"><span class="rm-k">이 칸</span><div class="nm"><b>${hereT}</b>${foe ? `<span class="lv" style="font-size:12px;padding:1px 6px;border-radius:3px;background:#8A2E27;color:#fff">Lv.${lv}</span>` : ''}</div><p>${hereX}</p>${acts}</div>
+        <div class="rm-box${foe ? ' foe' : ''}"><span class="rm-k">이 칸</span><div class="nm"><b>${hereT}</b>${foe ? `<span class="lv" style="font-size:12px;padding:1px 6px;border-radius:3px;background:#8A2E27;color:#fff">Lv.${lv}</span>` : ''}</div><p>${hereX}</p>${f.flags[key] ? `<div class="rm-row"><span>표식을 남긴 드래곤</span><b>${mzEsc(f.flags[key])}${f.flags[key] === me.name ? ' (나)' : ''}</b></div>` : ''}${acts}</div>
         <div class="rm-box"><span class="rm-k">계단의 봉인</span><div class="rm-seal">${seal}</div><span class="rm-k" style="margin-top:6px">이 층의 드래곤 ${f.here.length}</span><div class="rm-whos">${who || '<span class="rm-k">아무도 없다</span>'}</div></div>
       </div>
       <div class="actions">${btns.join('')}</div>
