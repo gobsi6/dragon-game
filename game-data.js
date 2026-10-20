@@ -279,6 +279,7 @@ const ITEMS = {
   ember_tea:    { name: '불씨 차',          rarity: 'common',   type: 'use', use: { en: 25 },  desc: '마시면 속이 뜨거워지고 기운이 돈다.' },
   sun_breath:   { name: '태양의 숨결',      rarity: 'rare',     type: 'use', use: { ap: 4 },   desc: '한 모금 들이켜면 날개에 힘이 솟는다.' },
   calm_incense: { name: '진정의 향',        rarity: 'uncommon', type: 'use', use: { mind: 40 }, desc: '빛나는 이끼와 꿀을 태운 연기가 흐려진 정신을 맑게 한다.' },
+  ash_incense:  { name: '잿빛 향',          rarity: 'common',   type: 'use', use: { mind: 20 }, desc: '멸망한 대륙의 잿빛 먼지를 빛나는 이끼와 함께 태운 향. 매캐하지만 흐려진 정신이 조금 돌아온다.' },
 
   hunter_stew:  { name: '사냥꾼의 스튜',    rarity: 'common',   type: 'use', use: { hp: 45, en: 15 }, desc: '불도마뱀 꼬리를 푹 고아 낸 뜨끈한 스튜다.' },
   hydra_tonic:  { name: '히드라 강장제',    rarity: 'rare',     type: 'use', use: { hp: 150 }, desc: '한 모금이면 찢긴 비늘 아래로 새살이 돋는다.' },
@@ -354,6 +355,9 @@ const ITEMS = {
   wyvern_guard: { name: '와이번 날개막 덮개', rarity: 'rare',   type: 'equip', slot: 'wing',  bonus: { wing: 3, scale: 1 },     desc: '오로라 빛이 도는 막이 바람을 붙잡는다.' },
   horn_tailring:{ name: '들소 뿔 꼬리고리', rarity: 'common',   type: 'equip', slot: 'tail',  bonus: { claw: 1 },               desc: '꼬리를 휘두를 때마다 묵직하게 울린다.' },
   croc_tailguard:{ name: '악어 비늘 꼬리갑', rarity: 'uncommon', type: 'equip', slot: 'tail', bonus: { scale: 2 },              desc: '꼬리 끝까지 비늘 갑옷을 덧댔다.' },
+  sea_tailguard:{ name: '해룡 비늘 꼬리갑', rarity: 'rare',     type: 'equip', slot: 'tail', bonus: { scale: 3, wing: 2 },      desc: '낚싯줄에 걸려 올라온 바다 용의 비늘을 이어 붙였다. 물결처럼 푸르게 일렁인다.' },
+  seal_ring:    { name: '옛 가문의 인장 반지', rarity: 'rare',  type: 'equip', slot: 'charm', bonus: { majesty: 3, wisdom: 1 },  desc: '잃어버린 인장을 금으로 다시 감싸 반지로 만들었다. 인간들이 보면 저도 모르게 고개를 숙인다.' },
+  rival_charm:  { name: '라이벌의 비늘 부적', rarity: 'uncommon', type: 'equip', slot: 'charm', bonus: { claw: 2, majesty: 1 }, desc: '라이벌이 떨어뜨리고 간 비늘을 룬 돌에 박았다. 볼 때마다 발톱에 힘이 들어간다.' },
   bark_tailwrap:{ name: '고목 껍질 꼬리감개', rarity: 'uncommon', type: 'equip', slot: 'tail', bonus: { scale: 1, wisdom: 1 },  desc: '살아 있는 껍질이 꼬리를 감싸 상처를 보듬는다.' },
   magma_tail:   { name: '용암 심장 꼬리날', rarity: 'rare',     type: 'equip', slot: 'tail',  bonus: { claw: 2, majesty: 1 },   desc: '꼬리 끝에서 용암이 끓는다.' },
 
@@ -540,6 +544,11 @@ const RECIPES = [
   { out: 'sphinx_claw',       needs: { sphinx_mane: 2, sun_stone: 1, sandworm_tooth: 2 },    en: 19, wis: 17 },
   { out: 'kings_crown',       needs: { crown_shard: 2, ancient_relic: 1, seal_core: 1 },     en: 20, wis: 18 },
   { out: 'elder_heart',       needs: { elder_ember: 1, magma_core: 1, fire_crystal: 2 },     en: 22, wis: 19 },
+  // 쓰임새가 없던 재료로 만드는 것
+  { out: 'ash_incense',   needs: { ashen_dust: 4, glow_moss: 1 },                       en: 4,  wis: 0 },  // 잿빛 먼지 (멸망한 대륙)
+  { out: 'sea_tailguard', needs: { sea_scale: 2, deep_pearl: 1, silver_chain: 1 },      en: 15, wis: 13 }, // 바다 용의 비늘 (낚시)
+  { out: 'seal_ring',     needs: { lost_seal: 1, gold_ore: 1, silk_scrap: 1 },          en: 13, wis: 11 }, // 잃어버린 인장 (왕도)
+  { out: 'rival_charm',   needs: { rival_scale: 2, rune_stone: 1 },                     en: 10, wis: 9 },  // 라이벌의 비늘 (이벤트)
 ];
 for (const r of RECIPES) {
   const it = ITEMS[r.out];
@@ -769,6 +778,7 @@ const KIN = {
     fish_mackerel: { bond: 3,  talent: 'guard',     sat: 20, eat: '고등어를 꼬챙이에 꿰어 구워 주자 호호 불며 먹는다.' },
     fish_flounder: { bond: 4,  talent: 'guard',     sat: 25, eat: '납작한 가자미를 보고 한참 웃더니, 구워 주자 맛있게 먹는다.' },
     fish_salmon:   { bond: 7,  talent: 'guard',     sat: 40, eat: '은빛 비늘을 하나 떼어 간직하고는 연어를 맛있게 먹는다.' },
+    fish_marlin:   { bond: 12, talent: 'guard',     sat: 70, eat: '자기 키보다 긴 청새치를 보고 입이 떡 벌어진다. 구워 주자 동네방네 자랑하며 먹는다.' },
     salmon_grill:  { bond: 12, talent: 'guard',     sat: 70, eat: '연어 구이 냄새에 달려와 뼈까지 발라 먹는다. "바다 맛이 나!"' },
     feast_plate:   { bond: 14, talent: null,        sat: 100, eat: '눈이 휘둥그레져서 한 접시씩 맛을 본다. 오늘은 잔칫날이다!' },
     red_clay: { bond: 3, talent: 'smith' }, bog_iron: { bond: 5, talent: 'smith' },
@@ -805,7 +815,7 @@ const KIN = {
   // 새끼 드래곤의 먹이와 포만감. 배부르면 가르칠 때 유대가 더 오르고 가르치기 간격이 짧아짐
   drakeFood: {
     items: {
-      fish_mackerel: { bond: 3, sat: 25 }, fish_flounder: { bond: 3, sat: 25 }, fish_salmon: { bond: 6, sat: 45 }, fish_eel: { bond: 6, sat: 40 },
+      fish_mackerel: { bond: 3, sat: 25 }, fish_flounder: { bond: 3, sat: 25 }, fish_salmon: { bond: 6, sat: 45 }, fish_eel: { bond: 6, sat: 40 }, fish_marlin: { bond: 12, sat: 90 },
       bait_meat: { bond: 4, sat: 30 }, salted_fish: { bond: 4, sat: 30 },
       roast_meat: { bond: 8, sat: 60 }, ember_snack: { bond: 7, sat: 45 }, fish_skewer: { bond: 8, sat: 55 }, dragon_feast: { bond: 14, sat: 100 },
     },

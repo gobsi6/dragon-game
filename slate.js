@@ -40,7 +40,7 @@ module.exports = function setupSlate({ io, db, entryOf }) {
       return {
         ok: true, gm: isGm(),
         post: { id: r.id, head: r.head, title: r.title, body: r.body, at: r.at, edited: r.edited_at || 0, pinned: !!r.pinned, who: who(r, 'cur_name', 'cur_kind'), mine: r.dragon_id === d.id },
-        comments: db.slate.comments(r.id).map((c) => ({ id: c.id, text: c.text, at: c.at, who: who(c), mine: c.dragon_id === d.id })),
+        comments: db.slate.comments(r.id).map((c) => ({ id: c.id, text: c.text, at: c.at, edited: !!c.edited_at, who: who(c), mine: c.dragon_id === d.id })),
       };
     });
     on('slate:post', (d, p) => {
@@ -93,6 +93,16 @@ module.exports = function setupSlate({ io, db, entryOf }) {
       socket.data.slateCmAt = now;
       db.slate.comment(r.id, d, text);
       changed({ id: r.id, comment: true, by: d.id });
+      return { ok: true };
+    }, true);
+    on('slate:recomment', (d, p) => {
+      const c = db.slate.commentGet(Number(p.id));
+      if (!c) return { error: '이미 지워진 답이다.' };
+      if (c.dragon_id !== d.id) return { error: '내가 남긴 답만 고칠 수 있다.' };
+      const text = oneLine(p.text, RULES.comment);
+      if (!text) return { error: '남길 말을 적자.' };
+      db.slate.recomment(c.id, text);
+      changed({ id: c.post_id, comment: true, by: d.id });
       return { ok: true };
     }, true);
     on('slate:uncomment', (d, p) => {

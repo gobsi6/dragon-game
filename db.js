@@ -321,6 +321,7 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS slate_comments_post ON slate_comments(post_id, at);
 `);
+if (!db.prepare('PRAGMA table_info(slate_comments)').all().some((c) => c.name === 'edited_at')) db.exec('ALTER TABLE slate_comments ADD COLUMN edited_at INTEGER'); // 답 고친 때
 
 const q = {
   countUsers:   db.prepare('SELECT COUNT(*) AS n FROM users'),
@@ -477,7 +478,7 @@ const q = {
                             FROM slate_posts p LEFT JOIN dragons d ON d.id = p.dragon_id ORDER BY p.pinned DESC, p.at DESC LIMIT ?`),
   slateGet:     db.prepare(`SELECT p.*, COALESCE(d.name, p.name) AS cur_name, COALESCE(d.kind, p.kind) AS cur_kind, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar
                             FROM slate_posts p LEFT JOIN dragons d ON d.id = p.dragon_id WHERE p.id = ?`),
-  slateCms:     db.prepare(`SELECT c.id, c.dragon_id, COALESCE(d.name, c.name) AS name, COALESCE(d.kind, c.kind) AS kind, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar, c.text, c.at
+  slateCms:     db.prepare(`SELECT c.id, c.dragon_id, COALESCE(d.name, c.name) AS name, COALESCE(d.kind, c.kind) AS kind, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar, c.text, c.at, c.edited_at
                             FROM slate_comments c LEFT JOIN dragons d ON d.id = c.dragon_id WHERE c.post_id = ? ORDER BY c.at`),
   slateAdd:     db.prepare('INSERT INTO slate_posts (dragon_id, name, kind, head, title, body, at) VALUES (?, ?, ?, ?, ?, ?, ?)'),
   slateEdit:    db.prepare('UPDATE slate_posts SET head = ?, title = ?, body = ?, edited_at = ? WHERE id = ?'),
@@ -486,6 +487,7 @@ const q = {
   slateCmAdd:   db.prepare('INSERT INTO slate_comments (post_id, dragon_id, name, kind, text, at) VALUES (?, ?, ?, ?, ?, ?)'),
   slateCmGet:   db.prepare('SELECT * FROM slate_comments WHERE id = ?'),
   slateCmDel:   db.prepare('DELETE FROM slate_comments WHERE id = ?'),
+  slateCmEdit:  db.prepare('UPDATE slate_comments SET text = ?, edited_at = ? WHERE id = ?'),
   slateLatest:  db.prepare('SELECT MAX(at) AS at FROM slate_posts'),
   slateDayN:    db.prepare('SELECT COUNT(*) AS n FROM slate_posts WHERE dragon_id = ? AND at >= ?'),
   worldGet:     db.prepare('SELECT v FROM world WHERE k = ?'),
@@ -728,6 +730,7 @@ module.exports = {
     comment: (postId, d, text) => q.slateCmAdd.run(postId, d.id, d.name, d.kind, text, Date.now()).lastInsertRowid,
     commentGet: (id) => q.slateCmGet.get(id) || null,
     uncomment: (id) => q.slateCmDel.run(id).changes > 0,
+    recomment: (id, text) => q.slateCmEdit.run(text, Date.now(), id),
     latest: () => q.slateLatest.get().at || 0,
     countSince: (dragonId, since) => q.slateDayN.get(dragonId, since).n,
   },

@@ -186,6 +186,8 @@ function personalityOf(k) {
 function tick(d, kin, now = Date.now()) {
   const out = { lines: [], items: [], hoardItems: [], gold: 0 };
   for (const k of kin) {
+    // 원정이 끝났는데 '따라나섬'이 남아 있으면 풀어 줌 (긴 잠에 든 둥지에서 거둔 식구 등. 남아 있으면 시설 일을 못 함)
+    if (k.data.onExp && !d.exp_end) k.data.onExp = false;
     // 모습이 정해지기 전에 들어온 식구 (이 기능이 생기기 전의 식구)
     if (k.status === 'home' && rollLooks(k)) out.lines.push(`${k.name}${josa(k.name, '을', '를')} 다시 찬찬히 들여다보았다. ${introOf(k)}`);
     if (k.type === 'drake' && k.status === 'home' && k.data.errand && now >= k.data.errand.end) {
@@ -447,6 +449,7 @@ function view(k, now, d) {
   if (k.type === 'human' && k.data.job && FACILITY.list[k.data.job]) {
     const w = workerOf(k, now);
     v.job = { id: k.data.job, name: FACILITY.list[k.data.job].name, working: !!w, apprentice: w ? !w.adult : false, fit: !!w?.fit };
+    if (!w) v.job.why = k.data.onExp ? '원정에 따라감' : k.data.runaway ? '둥지를 나감' : k.data.path === 'knight' ? '용기사' : '아직 어림'; // 일하지 못하는 까닭
   }
   if (k.data.runaway) v.runaway = { region: k.data.runaway.region, until: k.data.runaway.until, seeker: k.data.runaway.seeker || null };
   if (k.type === 'human' && k.status === 'home') v.canWork = FW.adultStages.includes(stageOf(k, now).name) || FW.apprenticeStages.includes(stageOf(k, now).name);
@@ -949,6 +952,7 @@ function expStart(kin, now = Date.now()) {
     const from = k.type === 'human' ? H.expeditionFrom : R.expeditionFrom;
     if (k.type === 'human' && k.data.path === 'stay') continue; // 둥지를 지키는 어른은 남음
     if (k.data.runaway || k.data.errand) continue; // 가출·심부름 중인 식구는 못 따라감
+    if (k.type === 'human' && k.data.job && FACILITY.list[k.data.job]) continue; // 시설 일을 맡은 식구는 둥지에 남아 일함
     if (ageOf(k, now) >= from) { k.data.onExp = true; k.data.expAt = now; went.push(k.name); } // expAt: 둥지 이야기에 '따라나섰다'를 적을 때
   }
   return went;

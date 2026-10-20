@@ -203,6 +203,8 @@ module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broa
     d.gold = 0;
     d.rest_at = null; d.exp_end = null; d.exp_start = null; d.exp_region = null;
     d.berserk = null; d.pending_event = null;
+    for (const k of kin) if (k.data.onExp) k.data.onExp = false; // 원정 중에 잠들었으면 따라간 식구도 둥지로
+    db.kinSaveAll(d.id, kin);
     d.fallen = { region: graveRegion, until: now + DEATH.graveDays * DAY, at: now };
     db.saveState(d);
     db.bury(d);
@@ -381,7 +383,7 @@ module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broa
       if (!db.kinMove(k.id, id, d.id)) return { error: '이미 누군가 거두었다.' };
       const kinNow = db.kinLoad(d.id);
       const moved = kinNow.find((x) => x.id === k.id);
-      if (moved && moved.type === 'human') { moved.data.lastCare = Date.now() - KIN.human.careCooldown; db.kinSaveAll(d.id, kinNow); }
+      if (moved) { moved.data.onExp = false; if (moved.type === 'human') moved.data.lastCare = Date.now() - KIN.human.careCooldown; db.kinSaveAll(d.id, kinNow); }
       d.perks = life.perksOf(kinNow);
       d.kinSummary = life.summary(kinNow, Date.now());
       const line = k.egg ? `${d.name}의 둥지에 남은 알을 품에 안았다. 이제 내 둥지의 식구다.` : `${eul(k.name)} 거두었다. 낯선 냄새에 잠시 떨더니, 곧 곁에 몸을 붙인다.`;
