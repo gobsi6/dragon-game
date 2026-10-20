@@ -671,7 +671,7 @@ const FISHING = {
   quality: { perfect: { uncommon: 2.5, rare: 4, common: 0.6 }, good: { uncommon: 1.5, rare: 2 }, ok: { rare: 0.5 }, auto: { uncommon: 0.8, rare: 0.4 } },
   bait: { bait_worm: {}, bait_shrimp: { common: 1.2 }, bait_meat: { uncommon: 1.6, rare: 1.5 }, bait_lure: { uncommon: 2, rare: 3 } },
   xp: { common: 2, uncommon: 5, rare: 12 },
-  gatherBait: 0.45, gatherSalt: 0.35,    // 해안에서 채집할 때 미끼·소금이 함께 나올 확률
+  gatherBait: 0.45, gatherSalt: 0.6,     // 해안에서 채집할 때 미끼·소금이 함께 나올 확률 (소금 0.35 → 0.6)
   coastTribute: { bait: [3, 5], fish: [1, 3], failBait: [1, 2] }, // 적대가 해안을 위협할 때: 성공하면 미끼·생선, 실패해도 미끼 조금
 };
 
