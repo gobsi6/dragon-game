@@ -37,6 +37,7 @@
     --k-purple: #9459AE; --t-purple: #5E3570;
     --k-bronze: #A3723F; --t-bronze: #6A4522;
     --k-clear: #A9B3B9;  --t-clear: #5B666E; /* 투명 드래곤 (GM 시험용) */
+    --k-orsha: #7A6E84; /* 생존자 오르샤: 잿빛 보라 바탕에 모닥불 */
 
     --serif: 'Noto Serif KR', 'AppleMyungjo', 'Batang', serif;
     --sans: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
@@ -1343,6 +1344,9 @@
   .pin-spacer { display: none; }
   .crown-fl, .who .nm .crown-fl { margin-left: 2px; color: #C0607A; font-size: 13px; vertical-align: 0; } /* 목록 줄의 회색 글자 규칙보다 앞서게 */
   .yaba-hint { background: #FBF8F1; border-style: dashed; }
+  #ruin-dlg .body > * + *, #yaba-dlg .mk-banner + * { margin-top: 10px; }
+  .ruin-shard-chip b { font: 600 13px/1 var(--sans) !important; color: #E9DDF5 !important; }
+  .ruin-shard-chip { background: rgba(167, 127, 208, .22) !important; }
   /* 창: 밝은 머리(남색 띠 · 장소 · 말 · 금화) 아래 시장 물건 줄처럼 판돈 · 조약돌 · 홀짝 · 소문을 한 장에 */
   #yaba-dlg .body > * + * { margin-top: 10px; }
   .yb-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--line-in); border-left: 3px solid #2A4256; border-radius: 4px; background: var(--surface-2); }
@@ -2738,6 +2742,11 @@
           <button class="btn" type="button" id="mob-open">말 걸기</button>
         </div>
         <div class="mob-track" id="mob-track" hidden></div>
+        <div class="mob-bar" id="orsha-bar" hidden><!-- 생존자 오르샤: 잿빛 상륙지에만. 다른 모브 드래곤처럼 따로 줄 -->
+          <span class="mob-em" id="orsha-em"></span>
+          <div class="mob-t"><b>생존자 오르샤</b><small>무너진 부두 옆 모닥불을 지키는 늙은 드래곤 · 정화의 결정 교환</small></div>
+          <button class="btn" type="button" id="orsha-open">말 걸기</button>
+        </div>
         <div class="mob-bar rm-mob-bar" id="maze-bar" hidden>
           <span class="rm-stair" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19h4v-4h4v-4h4V7h4"/><path d="M4 7l5 5"/></svg></span>
           <div class="mob-t"><b id="maze-bar-t">지하 회랑</b><small id="maze-bar-s"></small></div>
@@ -2914,9 +2923,11 @@
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="yaba-dlg-title">떠돌이 야바위꾼</h2></div>
   <div class="body">
-    <div class="yb-head">
-      <div><span class="yb-where" id="yaba-left"></span><p class="yb-say" id="yaba-say"></p></div>
-      <span class="yb-gold"><i class="coin" aria-hidden="true"></i><b id="yaba-gold"></b></span>
+    <div class="mk-banner"><!-- 머리띠: 시장·모브 드래곤과 같은 남색 띠 -->
+      <div class="mkb-top">
+        <div class="mkb-who"><span class="mkb-where" id="yaba-left"></span><span class="mkb-say" id="yaba-say"></span></div>
+        <span class="mkb-gold"><i class="coin" aria-hidden="true"></i><b id="yaba-gold"></b></span>
+      </div>
     </div>
     <div class="mk-list yb-list">
       <div class="mk-row yb-bet">
@@ -2950,8 +2961,13 @@
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="ruin-dlg-title">생존자 오르샤</h2></div>
   <div class="body">
-    <p class="note">무너진 부두 옆 모닥불을 지키는 늙은 드래곤. "정화의 결정을 가져오면, 살아남은 자들이 지켜 온 것을 내어 주겠소."</p>
-    <p class="ruin-shards" id="ruin-shards"></p>
+    <div class="mk-banner"><!-- 머리띠: 시장·모브 드래곤과 같은 남색 띠. 오른쪽은 금화 대신 가진 정화의 결정 -->
+      <div class="mkb-top">
+        <div class="mkb-who"><span class="mkb-where">잿빛 상륙지 · 무너진 부두 옆 모닥불</span><span class="mkb-say">"정화의 결정을 가져오면, 살아남은 자들이 지켜 온 것을 내어 주겠소."</span></div>
+        <span class="mkb-gold ruin-shard-chip"><b id="ruin-shards"></b></span>
+      </div>
+      <p class="mkb-note">모닥불을 지키는 늙은 드래곤. 멸망한 대륙에서 모은 정화의 결정으로 물건을 바꿀 수 있다.</p>
+    </div>
     <div class="mk-list" id="ruin-list"></div>
     <div class="row"><button class="btn" type="button" id="ruin-close">닫기</button></div>
   </div>
@@ -3540,6 +3556,7 @@
     red: '<path d="M50 17c7 15 21 22 21 41a21 21 0 0 1-42 0c0-10 5-17 12-21 0 8 3 12 8 14-2-12 1-22 1-34z" fill="#F7F7F5"/><path class="h" d="M50 50c3 6 8 9 8 15a8 8 0 0 1-16 0c0-6 5-9 8-15z"/>',
     silver: '<path class="s" d="M22 37q7-6 14 0t14 0 14 0 14 0"/><path class="s" d="M22 50q7-6 14 0t14 0 14 0 14 0"/><path class="s" d="M22 63q7-6 14 0t14 0 14 0 14 0"/>',
     clear: '<circle class="s" cx="50" cy="50" r="20" stroke-dasharray="5 6"/><circle cx="50" cy="50" r="4" fill="#F7F7F5"/>', // 투명 드래곤: 점선 동그라미
+    orsha: '<path class="s" d="M28 75L72 63M28 63l44 12"/><path d="M50 20c5 8 16 15 16 29a16 16 0 0 1-32 0c0-8 4-13 9-17c-1 7 2 11 6 12c-1-9-3-15 1-24z" fill="#F7F7F5"/><path class="h" d="M50 42c3 4 7 8 7 12a7 7 0 0 1-14 0c0-4 4-8 7-12z"/><circle cx="35" cy="30" r="2.6" fill="#F7F7F5"/><circle cx="66" cy="27" r="2" fill="#F7F7F5"/>', // 생존자 오르샤: 모닥불과 장작
     // 블루: 물결이 비치는 물방울 (블랙의 산 방울과 달리 안에 물결)
     blue: '<path d="M50 18c-6 14-20 26-20 42a20 20 0 0 0 40 0c0-16-14-28-20-42z" fill="#F7F7F5"/><path class="vein" d="M38 62q6-5 12 0t12 0"/>',
     // 퍼플: 자수정 결정 하나
@@ -6555,6 +6572,10 @@
       }
     }
     renderMazeBar(); // 지하 회랑 입구 띠·회랑 화면
+    // 생존자 오르샤 (잿빛 상륙지)
+    const ob = $('orsha-bar');
+    ob.hidden = S.region !== S.ruinRules?.gateTo || !!me.exp;
+    if (!ob.hidden && !$('orsha-em').firstChild) $('orsha-em').innerHTML = emblem('orsha', 34);
   }
   const mobChips = (list, gold) => {
     const cl = document.createElement('div'); cl.className = 'cost-list';
@@ -9465,7 +9486,7 @@
 
   // ── 하단 메뉴 화면: 가운데 칸에 펼치기 ──
   // 팝업(모달) 대신 지역 카드와 지도 자리에 보여 준다. 다른 메뉴를 열면 바뀌고, '대륙'이나 닫기로 돌아간다
-  const PANELS = ['char-dlg', 'nest-dlg', 'inv-dlg', 'craft-dlg', 'ledger-dlg', 'friends-dlg', 'arena-dlg', 'ruin-dlg']; // ruin-dlg: 생존자 교환 (닫을 때 가운데 칸을 되돌리려면 여기 있어야 함) // 텔레파시는 지금 화면 위에 팝업으로
+  const PANELS = ['char-dlg', 'nest-dlg', 'inv-dlg', 'craft-dlg', 'ledger-dlg', 'friends-dlg', 'arena-dlg']; // 텔레파시는 지금 화면 위에 팝업으로
   // 팝업창 바깥(어두운 배경)을 누르면 Esc와 똑같이 닫힘. 'cancel'을 막아 둔 창(확인을 눌러야 하는 창, 싸우는 중의 전투 창 등)은 그대로 남음
   // 거래·초대·그림 자르기는 잘못 눌러 취소되지 않게 바깥 누르기로는 닫지 않음
   const NO_OUTSIDE = new Set(['trade-dlg', 'invite-dlg', 'crop']);
@@ -9639,14 +9660,6 @@
       }
       box.appendChild(pr);
     }
-    if (S.region === S.ruinRules?.gateTo) {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'btn ruin-ex';
-      b.textContent = '생존자 오르샤와 교환';
-      b.addEventListener('click', openRuinTrade);
-      box.appendChild(b);
-    }
     // 순위는 가끔만 새로 받음
     if (Date.now() - ruinTopAt > 60000) {
       ruinTopAt = Date.now();
@@ -9659,7 +9672,7 @@
       if (!res.exchange) return toast('생존자는 잿빛 상륙지에만 있다.');
       const box = $('ruin-list');
       box.replaceChildren();
-      $('ruin-shards').textContent = `가진 정화의 결정 ${res.shards}개`;
+      $('ruin-shards').textContent = `정화의 결정 ${res.shards}개`;
       for (const x of res.exchange) {
         const it = S.items[x.id];
         const row = document.createElement('div');
@@ -9682,10 +9695,11 @@
         row.querySelector('.ctl').appendChild(bt);
         box.appendChild(row);
       }
-      if (!$('ruin-dlg').open) openPanel('ruin-dlg');
+      if (!$('ruin-dlg').open) $('ruin-dlg').showModal(); // 시장·모브 드래곤처럼 팝업으로
     });
   }
   $('ruin-close').addEventListener('click', () => $('ruin-dlg').close());
+  $('orsha-open').addEventListener('click', openRuinTrade);
 
   function renderCorrupt() {
     if (realmOf(S.region) === 'ruin') return renderRuin($('corrupt-note'));
