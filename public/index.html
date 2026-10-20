@@ -328,6 +328,79 @@
   .craft-modes button.on { background: var(--steel-d); border-color: #1E3242; color: #F4F7FA; }
   .rc-found { font: 600 11px/18px var(--sans); padding: 0 6px; border-radius: 2px; background: #F3EEFA; color: #4A3F78; border: 1px solid #D7CBEA; }
   .craft-hint { margin-top: 12px; color: #4A3F78; }
+  /* ── 석판 (게시판) ── */
+  .sl-sub { margin: 6px 0 0; text-align: center; font-size: 12.5px; color: var(--muted); }
+  .sl-bar { display: flex; align-items: flex-end; gap: 10px; margin: 14px 0 14px; }
+  .sl-bar .utabs { flex: 1; min-width: 0; margin: 0; }
+  .sl-bar .btn { flex: none; min-height: 36px; padding: 0 14px; font-size: 13px; margin-bottom: 4px; }
+  .sl-bar .btn svg, .sl-pen { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .sl-tag { display: inline-block; flex: none; font: 600 11px/18px var(--sans); padding: 0 6px; border-radius: 2px; border: 1px solid; white-space: nowrap; }
+  .sl-tag.story { color: #4A3F78; border-color: #D7CBEA; background: #F5F3FA; }
+  .sl-tag.tip { color: #2F5D45; border-color: #A9C4B2; background: #EEF4EF; }
+  .sl-tag.party { color: #6B4E12; border-color: #E2CF9E; background: #FBF6E8; }
+  .sl-tag.free { color: #4E5358; border-color: #CFD2CE; background: #F3F4F2; }
+  .sl-tag.pin { color: #fff; border-color: var(--steel-d); background: var(--steel-d); }
+  .sl-who { display: inline-flex; align-items: center; gap: 6px; min-width: 0; font-size: 12px; color: var(--muted); }
+  .sl-who .ava { width: 20px; height: 20px; flex: none; }
+  .sl-who b { font: 700 12.5px/1.2 var(--serif); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sl-cm { display: inline-flex; align-items: center; gap: 3px; font: 600 12px/1 var(--sans); color: var(--muted); }
+  .sl-cm svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+  .sl-new { width: 6px; height: 6px; border-radius: 50%; background: #A63E4B; flex: none; }
+  .sl-empty { padding: 24px 14px; text-align: center; font-size: 13px; color: var(--muted); }
+  .sl-list { display: flex; flex-direction: column; gap: 8px; }
+  /* 글 하나 = 옅은 돌빛 판 */
+  .sl-card { display: flex; flex-direction: column; gap: 7px; width: 100%; padding: 13px 14px 12px; border: 1px solid #D3D1C9; border-radius: 3px; text-align: left; cursor: pointer;
+    background: linear-gradient(180deg, #F3F2EE, #ECEBE6); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7), 0 1px 0 rgba(79, 75, 62, .06); }
+  .sl-card:hover { border-color: #A9B4BD; }
+  .sl-card:focus-visible { outline: 2px solid var(--steel); outline-offset: 2px; }
+  .sl-card.pin { border-color: #9DB3C6; background: linear-gradient(180deg, #F1F4F7, #E9EEF2); }
+  .sl-card.old { opacity: .82; }
+  .sl-card .t { display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .sl-card .t b { min-width: 0; font: 700 15px/1.35 var(--serif); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sl-card .p { margin: 0; font: 500 13px/1.6 var(--serif); color: var(--ink-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+  .sl-card .m { display: flex; align-items: center; gap: 10px; min-width: 0; font-size: 12px; color: var(--muted); }
+  .sl-card .m .sl-cm { margin-left: auto; }
+  /* 글 보기 */
+  .sl-back { display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; min-height: 32px; padding: 0 8px 0 2px; margin: 10px 0 4px; border: 0; background: none; font: 500 13px/1 var(--sans); color: var(--ink-2); }
+  .sl-back svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .sl-back:hover { color: var(--steel-d); }
+  .sl-post { padding: 18px 18px 16px; border: 1px solid #D3D1C9; border-radius: 3px; background: linear-gradient(180deg, #F5F4F0, #EEEDE8); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7); }
+  .sl-post h3 { margin: 6px 0 0; font: 700 18px/1.4 var(--serif); color: var(--ink); overflow-wrap: anywhere; }
+  .sl-post .m { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 8px 0 12px; padding-bottom: 12px; border-bottom: 1px solid #DAD8D0; font-size: 12px; color: var(--muted); }
+  .sl-post .body { margin: 0; font: 500 14.5px/1.85 var(--serif); color: var(--ink); white-space: pre-wrap; word-break: keep-all; overflow-wrap: anywhere; }
+  .sl-own { display: flex; gap: 2px; margin-left: auto; }
+  .sl-own button { min-height: 28px; padding: 0 8px; border: 0; background: none; font-size: 12px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+  .sl-own button:hover { color: var(--steel-d); }
+  .sl-own button.danger { color: #A63E4B; }
+  .sl-cms { margin-top: 16px; }
+  .sl-cms h4 { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font: 700 13px/1.4 var(--serif); color: var(--steel-d); }
+  .sl-cms h4::after { content: ""; flex: 1; height: 1px; background: var(--line-in); }
+  .sl-c { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 3px 8px; padding: 9px 2px; border-top: 1px dashed #E2E4E0; }
+  .sl-c:first-of-type { border-top: 0; }
+  .sl-c .ava { grid-row: span 2; width: 20px; height: 20px; }
+  .sl-c .h { display: flex; align-items: baseline; gap: 8px; font-size: 11.5px; color: var(--muted); }
+  .sl-c .h b { font: 700 12.5px/1.3 var(--serif); color: var(--ink-2); }
+  .sl-c .h button { margin-left: auto; padding: 0 2px; border: 0; background: none; font-size: 11.5px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+  .sl-c p { margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--ink); overflow-wrap: anywhere; }
+  .sl-cin { display: flex; gap: 6px; margin-top: 10px; }
+  .sl-cin input { flex: 1; min-width: 0; }
+  .sl-cin .btn { flex: none; min-height: 40px; padding: 0 14px; font-size: 13px; }
+  /* 새기기 · 고치기 */
+  .sl-form { display: flex; flex-direction: column; gap: 12px; margin-top: 2px; }
+  .sl-form label { display: block; }
+  .sl-form .lbl { display: block; font: 600 12px/1 var(--sans); color: var(--muted); margin-bottom: 6px; }
+  .sl-form .input { display: block; width: 100%; box-sizing: border-box; }
+  .sl-heads { display: flex; flex-wrap: wrap; gap: 6px; }
+  .sl-heads button { min-height: 32px; padding: 0 12px; border: 1px solid var(--line-in); border-radius: 3px; background: var(--surface-2); font: 500 13px/1 var(--sans); color: var(--ink-2); }
+  .sl-heads button.on { border-color: var(--steel); background: #EEF2F6; color: var(--steel-d); font-weight: 700; box-shadow: inset 0 0 0 1px var(--steel); }
+  .sl-form textarea { min-height: 180px; resize: vertical; font: 500 14px/1.7 var(--serif); }
+  .sl-form .cnt { margin-top: 4px; text-align: right; font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .sl-form > .btn { min-height: 42px; }
+  @media (max-width: 560px) {
+    .sl-bar { flex-direction: column-reverse; align-items: stretch; gap: 8px; }
+    .sl-bar .btn { align-self: flex-end; margin: 0; }
+    .sl-post { padding: 14px 13px; }
+  }
   /* 실험: 화로 세 칸 + 분류별 재료 칸 */
   .xa-forge { display: flex; flex-direction: column; gap: 10px; padding: 14px; margin: 0 0 6px; background: linear-gradient(180deg, #F4F1EA, #EFEBE2); border: 1px solid #DCD5C6; border-radius: 4px; }
   .xa-forge .h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
@@ -1041,10 +1114,16 @@
   /* 메모 한 줄: 글은 안쪽 칸에서만 말줄임(…)되고, 앞뒤 표시는 잘리지 않게 바깥에 둠 */
   /* 관계도 (동료 창 '관계도' 탭): 선 색은 관계 칩 색과 같은 계열, 스승·제자는 화살표, 지인은 점선 */
   #friends-map { --g-heart: #A0475A; --g-family: #A3792A; --g-friend: #3F7A5C; --g-mentor: #2A4256; --g-acq: #9A9C98; }
+  /* 관계도 공개 설정: 기본은 나에게만 */
+  .rm-pub { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; margin: 2px 0 4px; background: var(--surface-2); border: 1px solid var(--line-in); border-left: 3px solid #B9BDB9; border-radius: 3px; }
+  .rm-pub.on { border-left-color: var(--steel); }
+  .rm-pub .check { font: 600 13.5px/1.4 var(--sans); color: var(--ink); }
+  .rm-pub p { margin: 0; font-size: 12px; line-height: 1.6; color: var(--muted); }
   .rm-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 2px 0 2px; }
   .rm-legend span { display: inline-flex; align-items: center; gap: 6px; font: 500 12px/24px var(--sans); color: var(--ink-2); }
   .rm-legend i { position: relative; width: 18px; height: 0; border-top: 2px solid var(--c); }
   .rm-legend .acq i { border-top-style: dashed; }
+  .rm-legend .rival i { border-top: 0; height: 2px; background: repeating-linear-gradient(90deg, var(--c) 0 6px, transparent 6px 8px, var(--c) 8px 9.5px, transparent 9.5px 12px); }
   .rm-legend .mentor i::after { content: ""; position: absolute; right: -1px; top: -5px; border: 4px solid transparent; border-left: 6px solid var(--c); }
   .rm-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; min-height: 30px; }
   .rm-who { font: 700 15px/1.4 var(--serif); color: var(--steel-d); }
@@ -1068,6 +1147,7 @@
   #rm-svg .ln { fill: none; stroke: var(--c); stroke-width: 1.8; stroke-linecap: round; }
   #rm-svg .ln.acq { stroke-dasharray: 4 4; stroke-width: 1.4; }
   #rm-svg .ln.heart { stroke-width: 2.6; }
+  #rm-svg .ln.rival { stroke-dasharray: 7 3 1.5 3; stroke-width: 1.8; }
   #rm-svg .ln.far { stroke: #C9CCC8; stroke-width: 1; }
   .rm-list { display: flex; flex-direction: column; margin-top: 12px; background: var(--surface-2); border: 1px solid var(--line-in); border-radius: 4px; }
   .rm-list .er { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 4px 10px; padding: 9px 12px; border-top: 1px solid #E6E8E4; align-items: baseline; }
@@ -2078,6 +2158,9 @@
   .tp-btn[aria-pressed="true"] { background: var(--tp-l, #F1EFF8); border-color: var(--tp-b, #CFC9E6); }
   .tp-n { position: absolute; top: 3px; right: 2px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: var(--tp, #5B4E8C); color: #fff; font: 600 10.5px/17px var(--sans); text-align: center; box-shadow: 0 0 0 2px #FAFAF9; }
   .tp-n.pop { animation: badge-pop .35s ease-out; }
+  /* 석판 아이콘: 텔레파시와 같은 모양·색. 새 글이 있으면 같은 색 작은 점 */
+  .slate-dot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--tp, #5B4E8C); box-shadow: 0 0 0 2px #FAFAF9; }
+  .slate-dot.pop { animation: badge-pop .35s ease-out; }
   .iconbtn { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: transparent; border: 1px solid transparent; border-radius: 3px; color: #363B40; }
   .iconbtn:hover { border-color: var(--line-soft); }
   .menu-wrap { position: relative; }
@@ -2515,7 +2598,8 @@
     .top .tp-btn { grid-column: 4; }
     .top .menu-wrap { grid-column: 5; }
     .top .chip:nth-of-type(1) { grid-column: 1 / 4; }
-    .top .chip:nth-of-type(2) { grid-column: 4 / 6; }
+    .top .chip:nth-of-type(2) { grid-column: 3 / 5; justify-self: end; }
+    .top .slate-btn { grid-column: 5; grid-row: 2; } /* 폰: 1줄은 가득 차 있어 석판은 2줄 오른쪽 끝(메뉴 아래) */
     .top .brand .s { white-space: nowrap; }
     .top .chip { white-space: nowrap; }
   }
@@ -2807,6 +2891,7 @@
         <div class="chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3C5A73" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12M6 21h12M7 3c0 5 10 5 10 9s-10 4-10 9M17 3c0 5-10 5-10 9s10 4 10 9"/></svg><span class="l">행동력</span><span class="v" id="ap"></span><span class="next" id="ap-next"></span></div>
         <div class="chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7E8389" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/></svg><span class="l">금화</span><span class="v" id="gold"></span></div>
         <button class="iconbtn pf-open" id="pf-open" type="button" aria-label="드래곤 기록 보기" aria-expanded="false" title="드래곤 기록"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12c3-5 6.5-7 9.5-7s6.5 2 9.5 7c-3 5-6.5 7-9.5 7s-6.5-2-9.5-7z"/><path d="M12 8c-1.2 1.4-1.2 6.6 0 8 1.2-1.4 1.2-6.6 0-8z"/></svg><span class="pf-mini" aria-hidden="true"><i class="hp"><b id="pfm-hp"></b></i><i class="en"><b id="pfm-en"></b></i><i class="mind"><b id="pfm-mind"></b></i></span></button>
+        <button class="iconbtn tp-btn slate-btn" id="slate-open" type="button" aria-label="석판" title="석판" aria-pressed="false"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 20.5V8c0-2.6 2.5-4.5 5.5-4.5s5.5 1.9 5.5 4.5v12.5z"/><path d="M4.5 20.5h15"/><path d="M9.5 10h5M9.5 13.2h5M9.5 16.4h3"/></svg><span class="slate-dot" id="slate-dot" hidden></span></button>
         <button class="iconbtn tp-btn" id="tp-open" type="button" aria-label="텔레파시" title="텔레파시"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="2.2"/><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7"/><path d="M5.5 5.5a9.2 9.2 0 0 0 0 13M18.5 5.5a9.2 9.2 0 0 1 0 13"/></svg><span class="tp-n" id="tp-badge" hidden></span></button>
         <div class="menu-wrap">
           <button class="iconbtn" id="menu-btn" type="button" aria-label="설정" aria-expanded="false" aria-controls="menu"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="menu-dot" id="menu-dot" hidden></span></button>
@@ -3316,12 +3401,24 @@
   <div class="row" style="margin-top: 12px"><button class="btn" type="button" id="profile-close">닫기</button></div>
 </dialog>
 
+<dialog class="frame dlg wide" id="slate-dlg" aria-labelledby="slate-dlg-title">
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="slate-dlg-title">석판</h2></div>
+  <p class="sl-sub">대륙의 드래곤들이 발톱으로 새겨 남긴 글</p>
+  <div class="body" id="slate-body"></div>
+  <div class="row" style="margin-top: 12px"><button class="btn" type="button" id="slate-close">닫기</button></div>
+</dialog>
+
 <dialog class="frame dlg" id="friends-dlg" aria-labelledby="friends-dlg-title">
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="friends-dlg-title">동료</h2></div>
   <div class="seg dtabs" id="friends-tabs" role="group" aria-label="동료 메뉴"><button type="button" data-ft="list" class="on" aria-pressed="true">내 관계</button><button type="button" data-ft="map" aria-pressed="false">관계도</button></div>
   <div class="body" id="friends-body"></div>
   <div class="body" id="friends-map" hidden>
+    <div class="rm-pub" id="rm-pub-box">
+      <label class="check"><input type="checkbox" id="rm-pub"> 내 관계를 관계도에 보이기</label>
+      <p id="rm-pub-note"></p>
+    </div>
     <div class="rm-legend" id="rm-legend" aria-hidden="true"></div>
     <div class="rm-top"><div class="rm-who" id="rm-who"></div><button type="button" class="linkbtn" id="rm-home" hidden>나에게로 돌아가기</button></div>
     <div class="rm-box"><svg id="rm-svg" viewBox="0 0 400 400" role="group" aria-label="관계도"></svg></div>
@@ -8780,11 +8877,12 @@
   $('friends-close').addEventListener('click', () => $('friends-dlg').close());
 
   // ── 관계도: 고른 드래곤을 가운데 두고, 직접 맺은 관계는 안쪽 고리, 그 상대들이 맺은 관계는 바깥 고리 ──
-  // 서로 맺은 관계만 (혼자 붙이는 라이벌·경계·원수는 서버가 보내지 않음). 아홉 가지 관계를 다섯 묶음으로
-  const RM_GROUP = { lover: 'heart', partner: 'heart', family: 'family', relative: 'family', friend: 'friend', comrade: 'friend', mentor: 'mentor', student: 'mentor', acquaint: 'acq' };
-  const RM_GORDER = ['heart', 'family', 'friend', 'mentor', 'acq'];
-  const RM_GNAME = { heart: '연인 · 반려', family: '가족 · 친척', friend: '친구 · 동료', mentor: '스승 · 제자', acq: '지인' };
-  const RM_GCOL = { heart: '#A0475A', family: '#A3792A', friend: '#3F7A5C', mentor: '#2A4256', acq: '#9A9C98' };
+  // 서로 맺은 관계와 라이벌·원수 (나만 아는 경계는 서버가 보내지 않음). 관계를 여섯 묶음으로
+  const RM_GROUP = { lover: 'heart', partner: 'heart', family: 'family', relative: 'family', friend: 'friend', comrade: 'friend', mentor: 'mentor', student: 'mentor', acquaint: 'acq', rival: 'rival', rival2: 'rival', nemesis: 'rival', nemesis2: 'rival' };
+  const RM_GORDER = ['heart', 'family', 'friend', 'mentor', 'rival', 'acq'];
+  const RM_GNAME = { heart: '연인 · 반려', family: '가족 · 친척', friend: '친구 · 동료', mentor: '스승 · 제자', rival: '라이벌 · 원수', acq: '지인' };
+  const RM_GCOL = { heart: '#A0475A', family: '#A3792A', friend: '#3F7A5C', mentor: '#2A4256', rival: '#7A2B2B', acq: '#9A9C98' };
+  const RM_MARK = { rival: '라이벌', rival2: '숙적', nemesis: '원수', nemesis2: '원수' }; // 혼자 붙이는 표시 (2는 서로 붙인 사이)
   const RM_NS = 'http://www.w3.org/2000/svg';
   const rmEl = (tag, attrs, parent) => { const e = document.createElementNS(RM_NS, tag); for (const [k, v] of Object.entries(attrs || {})) e.setAttribute(k, v); if (parent) parent.appendChild(e); return e; };
   let friendsTab = 'list', rmData = null, rmC = null;
@@ -8800,7 +8898,8 @@
   function loadRelMap() {
     socket.emit('rel:map', {}, (res) => {
       if (res.error) return toast(res.error);
-      rmData = { dragons: new Map(res.dragons.map((d) => [d.id, d])), pairs: res.pairs };
+      rmData = { dragons: new Map(res.dragons.map((d) => [d.id, d])), pairs: res.pairs, mine: !!res.mine };
+      renderRmPub();
       if (rmC == null || !rmData.dragons.has(rmC)) rmC = S.me?.id;
       drawRelMap(rmC, true);
     });
@@ -8811,8 +8910,13 @@
     for (const [a, b, t] of rmData.pairs) {
       if (a !== x && b !== x) continue;
       const o = a === x ? b : a;
-      const tt = a === x ? t : (S.bonds?.[t]?.inv || t); // 서버의 관계는 a에게 b가 무엇인지
       if (!rmData.dragons.has(o)) continue;
+      if (RM_MARK[t]) { // 라이벌·원수: a가 b에게 붙인 표시. 한쪽만이면 화살표가 표시된 쪽을 가리킴
+        const one = !t.endsWith('2');
+        out.push({ id: o, t, group: 'rival', label: RM_MARK[t], arrow: one ? (a === x ? 'out' : 'in') : null });
+        continue;
+      }
+      const tt = a === x ? t : (S.bonds?.[t]?.inv || t); // 서버의 관계는 a에게 b가 무엇인지
       out.push({ id: o, t: tt, group: RM_GROUP[tt] || 'friend', label: S.bonds?.[tt]?.name || '동료' });
     }
     return out.sort((p, q) => RM_GORDER.indexOf(p.group) - RM_GORDER.indexOf(q.group) || rmData.dragons.get(p.id).name.localeCompare(rmData.dragons.get(q.id).name, 'ko'));
@@ -8849,6 +8953,8 @@
       rmEl('circle', { cx: 0.5, cy: 0.5, r: 0.5 }, clip);
       const m = rmEl('marker', { id: 'rm-arw', viewBox: '0 0 10 10', refX: '9', refY: '5', markerWidth: '7', markerHeight: '7', orient: 'auto-start-reverse' }, defs);
       rmEl('path', { d: 'M0,1 L9,5 L0,9 z', fill: RM_GCOL.mentor }, m);
+      const m2 = rmEl('marker', { id: 'rm-arw-r', viewBox: '0 0 10 10', refX: '9', refY: '5', markerWidth: '7', markerHeight: '7', orient: 'auto-start-reverse' }, defs);
+      rmEl('path', { d: 'M0,1 L9,5 L0,9 z', fill: RM_GCOL.rival }, m2);
       rmEl('circle', { class: 'ring-guide', cx: 200, cy: 200, r: 112 }, svg);
       rmEl('circle', { class: 'ring-guide', cx: 200, cy: 200, r: 178 }, svg);
       rmEl('g', { class: 'lines', id: 'rm-lines' }, svg);
@@ -8905,6 +9011,8 @@
         l.style.setProperty('--c', RM_GCOL[x.group]);
         if (x.t === 'student') l.setAttribute('marker-end', 'url(#rm-arw)');   // 가운데가 스승
         if (x.t === 'mentor') l.setAttribute('marker-start', 'url(#rm-arw)');  // 상대가 스승
+        if (x.arrow === 'out') l.setAttribute('marker-end', 'url(#rm-arw-r)');   // 가운데가 상대에게 붙인 표시
+        if (x.arrow === 'in') l.setAttribute('marker-start', 'url(#rm-arw-r)');  // 상대가 가운데에게 붙인 표시
       }
       lines.style.opacity = '1';
     }, first ? 0 : 380);
@@ -8952,6 +9060,23 @@
     }
   }
   $('rm-home').addEventListener('click', () => drawRelMap(S.me?.id));
+  // 내 관계를 관계도에 보일지: 끄면(기본) 나에게만, 켜면 똑같이 켠 드래곤과의 관계만 남에게 보임
+  function renderRmPub() {
+    const on = !!rmData?.mine;
+    $('rm-pub').checked = on;
+    $('rm-pub-box').classList.toggle('on', on);
+    $('rm-pub-note').textContent = on
+      ? '내 관계가 다른 드래곤의 관계도에 보인다. 상대도 이걸 켰을 때만 그 관계가 보이고, 켜지 않은 상대와의 관계는 우리 둘에게만 보인다.'
+      : '지금은 내 관계가 나에게만 보인다. 켜면, 똑같이 켠 드래곤과의 관계만 다른 드래곤에게 보인다.';
+  }
+  $('rm-pub').addEventListener('change', (e) => {
+    const on = e.target.checked;
+    socket.emit('rel:mapPublic', { on }, (res) => {
+      if (res.error) { e.target.checked = !on; return toast(res.error); }
+      toast(on ? '이제 내 관계가 관계도에 보인다.' : '이제 내 관계는 나에게만 보인다.');
+      loadRelMap();
+    });
+  });
 
   // ── 텔레파시 ──
   let tpWith = null;    // 지금 열어 둔 대화 상대 id
@@ -10042,9 +10167,170 @@
   $('tp-open').addEventListener('click', () => { if ($('tp-dlg').open) $('tp-dlg').close(); else openTpList(); });
   new MutationObserver(() => $('tp-open').setAttribute('aria-pressed', String($('tp-dlg').open))).observe($('tp-dlg'), { attributes: true, attributeFilter: ['open'] });
 
+
+  // ── 석판: 모두가 글을 새겨 남기는 게시판 ──
+  // 새 글 점: 이 기기에 드래곤마다 마지막으로 본 때를 저장하고, 그보다 새 글이 있으면 상단 아이콘에 점
+  const SL_HEADS = [['story', '이야기'], ['tip', '공략'], ['party', '모집'], ['free', '자유']];
+  const SL_HN = Object.fromEntries(SL_HEADS);
+  const SL_PEN = '<svg class="sl-pen" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/></svg>';
+  const SL_CM = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>';
+  const slKey = () => `dragon-slate-seen:${S.me?.id || 0}`;
+  const slSeen = () => { try { return Number(localStorage.getItem(slKey())) || 0; } catch { return 0; } };
+  const slSetSeen = (t) => { try { localStorage.setItem(slKey(), String(t)); } catch {} };
+  const SL = { latest: 0, tab: 'all', page: 'list', cur: null, draft: null, prevSeen: 0, rules: { title: 40, body: 1000, comment: 100 }, gm: false, posts: [] };
+  function renderSlateDot() {
+    const on = SL.latest > slSeen() && !$('slate-dlg').open;
+    const d = $('slate-dot');
+    if (on && d.hidden) { d.classList.remove('pop'); void d.offsetWidth; d.classList.add('pop'); }
+    d.hidden = !on;
+    $('slate-open').setAttribute('aria-label', on ? '석판 (새 글 있음)' : '석판');
+  }
+  const slEl = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const slAgo = (t) => { const m = Math.floor((Date.now() - t) / 60000); if (m < 1) return '방금'; if (m < 60) return `${m}분 전`; if (m < 1440) return `${Math.floor(m / 60)}시간 전`; if (m < 7 * 1440) return `${Math.floor(m / 1440)}일 전`; const d = new Date(t); return `${d.getMonth() + 1}월 ${d.getDate()}일`; };
+  const slWho = (w) => { const x = slEl('span', 'sl-who'); x.append(avaEl({ id: w.id, kind: w.kind, av: w.av }, 20), slEl('b', '', w.name)); return x; };
+  const slTag = (p) => slEl('span', `sl-tag ${p.pinned ? 'pin' : p.head}`, p.pinned ? '고정' : SL_HN[p.head] || '자유');
+  const slCm = (n) => { const c = slEl('span', 'sl-cm'); c.innerHTML = SL_CM; c.append(String(n)); c.title = `남긴 답 ${n}`; return c; };
+  function openSlate() {
+    SL.prevSeen = slSeen();
+    SL.page = 'list';
+    loadSlate(() => { openPanel('slate-dlg'); slSetSeen(Math.max(SL.latest, Date.now())); renderSlateDot(); });
+  }
+  function loadSlate(done) {
+    socket.emit('slate:list', {}, (res) => {
+      if (res.error) return toast(res.error);
+      SL.posts = res.posts; SL.rules = res.rules || SL.rules; SL.gm = !!res.gm;
+      if (SL.page === 'list') drawSlate();
+      done && done();
+    });
+  }
+  function slGo(page, cur) { SL.page = page; if (cur != null) SL.cur = cur; if (page === 'list') return loadSlate(); if (page === 'post') return loadSlatePost(); drawSlate(); }
+  function loadSlatePost() {
+    socket.emit('slate:get', { id: SL.cur }, (res) => {
+      if (res.error) { toast(res.error); SL.page = 'list'; return loadSlate(); }
+      SL.post = res.post; SL.comments = res.comments; SL.gm = !!res.gm;
+      drawSlate();
+    });
+  }
+  function slAct(event, payload, then) {
+    socket.emit(event, payload, (res) => {
+      if (res.error) { SFX.play('error'); return toast(res.error); }
+      then && then(res);
+    });
+  }
+  function drawSlate() {
+    const box = $('slate-body');
+    box.replaceChildren();
+    ({ list: slList, post: slPost, write: slWrite })[SL.page](box);
+  }
+  function slBack(box, label, to = 'list') {
+    const b = slEl('button', 'sl-back'); b.type = 'button';
+    b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>'; b.append(label);
+    b.addEventListener('click', () => slGo(to));
+    box.appendChild(b);
+  }
+  function slList(box) {
+    const bar = slEl('div', 'sl-bar');
+    const { wrap, tabs } = buildTabs([['all', '전체'], ...SL_HEADS], SL.tab, (k) => { SL.tab = k; drawSlate(); }, '말머리');
+    const w = slEl('button', 'btn primary'); w.type = 'button'; w.innerHTML = SL_PEN; w.append('새기기');
+    w.addEventListener('click', () => { SL.draft = { id: null, head: SL.tab === 'all' ? 'free' : SL.tab, title: '', body: '' }; slGo('write'); });
+    bar.append(wrap, w);
+    box.appendChild(bar);
+    showTab(tabs, 0);
+    const list = slEl('div', 'sl-list');
+    const ps = SL.posts.filter((p) => SL.tab === 'all' || p.head === SL.tab || p.pinned);
+    if (!ps.length) list.appendChild(slEl('div', 'sl-empty', SL.posts.length ? '이 말머리로 새겨진 글이 아직 없다.' : "아직 아무것도 새겨지지 않았다. '새기기'로 처음 글을 남겨 보자."));
+    for (const p of ps) {
+      const fresh = p.at > SL.prevSeen && p.who.id !== S.me?.id;
+      const c = slEl('button', `sl-card${p.pinned ? ' pin' : ''}${!p.pinned && Date.now() - p.last > 3 * 86400000 ? ' old' : ''}`); c.type = 'button';
+      const t = slEl('div', 't'); t.append(slTag(p), slEl('b', '', p.title)); if (fresh) { const n = slEl('i', 'sl-new'); n.title = '새 글'; t.appendChild(n); }
+      const m = slEl('div', 'm'); m.append(slWho(p.who), slEl('span', '', slAgo(p.at)), slCm(p.n));
+      c.append(t, slEl('p', 'p', p.preview.replace(/\s*\n\s*/g, ' ')), m);
+      c.addEventListener('click', () => slGo('post', p.id));
+      list.appendChild(c);
+    }
+    box.appendChild(list);
+  }
+  function slPost(box) {
+    const p = SL.post;
+    slBack(box, '석판으로');
+    const a = slEl('article', 'sl-post');
+    a.appendChild(slTag(p));
+    a.appendChild(slEl('h3', '', p.title));
+    const m = slEl('div', 'm');
+    m.append(slWho(p.who), slEl('span', '', `${slAgo(p.at)}${p.edited ? ' · 고침' : ''}`));
+    const own = slEl('div', 'sl-own');
+    const ob = (text, fn, cls) => { const b = slEl('button', cls || '', text); b.type = 'button'; b.addEventListener('click', fn); own.appendChild(b); };
+    if (p.mine) ob('고치기', () => { SL.draft = { id: p.id, head: p.head, title: p.title, body: p.body }; slGo('write'); });
+    if (SL.gm) ob(p.pinned ? '고정 풀기' : '고정', () => slAct('slate:pin', { id: p.id, pin: !p.pinned }, () => loadSlatePost()));
+    if (p.mine || SL.gm) ob('지우기', () => { if (confirm('이 글을 지울까? 남긴 답도 함께 사라진다.')) slAct('slate:delete', { id: p.id }, () => { toast('글을 지웠다.'); slGo('list'); }); }, 'danger');
+    if (own.children.length) m.appendChild(own);
+    a.append(m, slEl('p', 'body', p.body));
+    box.appendChild(a);
+    const cs = slEl('section', 'sl-cms');
+    cs.appendChild(slEl('h4', '', `남긴 답 ${SL.comments.length}`));
+    for (const c of SL.comments) {
+      const r = slEl('div', 'sl-c');
+      const av = avaEl({ id: c.who.id, kind: c.who.kind, av: c.who.av }, 20);
+      const h = slEl('div', 'h'); h.append(slEl('b', '', c.who.name), slAgo(c.at));
+      if (c.mine || SL.gm) { const x = slEl('button', '', '지우기'); x.type = 'button'; x.addEventListener('click', () => { if (confirm('이 답을 지울까?')) slAct('slate:uncomment', { id: c.id }, () => loadSlatePost()); }); h.appendChild(x); }
+      r.append(av, h, slEl('p', '', c.text));
+      cs.appendChild(r);
+    }
+    if (!SL.comments.length) cs.appendChild(slEl('p', 'note', '아직 남긴 답이 없다.'));
+    const f = slEl('div', 'sl-cin');
+    const i = slEl('input', 'input'); i.maxLength = SL.rules.comment; i.placeholder = `짧은 답 남기기 (${SL.rules.comment}자)`;
+    const go = slEl('button', 'btn primary', '남기기'); go.type = 'button';
+    const send = () => { const v = i.value.trim(); if (!v) return; go.disabled = true; slAct('slate:comment', { id: p.id, text: v }, () => loadSlatePost()); setTimeout(() => { go.disabled = false; }, 800); };
+    go.addEventListener('click', send);
+    i.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) send(); });
+    f.append(i, go);
+    cs.appendChild(f);
+    box.appendChild(cs);
+  }
+  function slWrite(box) {
+    const d = SL.draft;
+    slBack(box, '그만두기', d.id ? 'post' : 'list');
+    const f = slEl('div', 'sl-form');
+    const hw = slEl('div'); hw.appendChild(slEl('span', 'lbl', '말머리'));
+    const hs = slEl('div', 'sl-heads'); hs.setAttribute('role', 'group'); hs.setAttribute('aria-label', '말머리');
+    for (const [k, n] of SL_HEADS) {
+      const b = slEl('button', d.head === k ? 'on' : '', n); b.type = 'button'; b.setAttribute('aria-pressed', String(d.head === k));
+      b.addEventListener('click', () => { d.head = k; for (const x of hs.children) { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-pressed', String(on)); } });
+      hs.appendChild(b);
+    }
+    hw.appendChild(hs); f.appendChild(hw);
+    const tw = slEl('label'); tw.appendChild(slEl('span', 'lbl', '제목'));
+    const ti = slEl('input', 'input'); ti.maxLength = SL.rules.title; ti.value = d.title; ti.placeholder = `한 줄로 (${SL.rules.title}자)`;
+    ti.addEventListener('input', () => { d.title = ti.value; });
+    tw.appendChild(ti); f.appendChild(tw);
+    const bw = slEl('label'); bw.appendChild(slEl('span', 'lbl', '내용'));
+    const ta = slEl('textarea', 'input'); ta.maxLength = SL.rules.body; ta.value = d.body; ta.placeholder = `석판에 새길 이야기 (${SL.rules.body}자)`;
+    const cnt = slEl('div', 'cnt', `${d.body.length} / ${SL.rules.body}`);
+    ta.addEventListener('input', () => { d.body = ta.value; cnt.textContent = `${ta.value.length} / ${SL.rules.body}`; });
+    bw.append(ta, cnt); f.appendChild(bw);
+    const go = slEl('button', 'btn primary', d.id ? '고친 대로 새기기' : '석판에 새기기'); go.type = 'button';
+    go.addEventListener('click', () => {
+      if (!d.title.trim() || !d.body.trim()) return toast('제목과 내용을 모두 적어야 새길 수 있다.');
+      go.disabled = true;
+      socket.emit(d.id ? 'slate:edit' : 'slate:post', { id: d.id, head: d.head, title: d.title, body: d.body }, (res) => {
+        go.disabled = false;
+        if (res.error) { SFX.play('error'); return toast(res.error); }
+        SFX.play('craft');
+        if (d.id) { toast('글을 고쳤다.'); slGo('post', d.id); }
+        else { toast('석판에 글을 새겼다.'); SL.tab = 'all'; slSetSeen(Date.now()); slGo('post', res.id); }
+      });
+    });
+    f.appendChild(go);
+    box.appendChild(f);
+    if (!d.id) setTimeout(() => ti.focus(), 50);
+  }
+  $('slate-open').addEventListener('click', () => { if ($('slate-dlg').open) $('slate-dlg').close(); else openSlate(); });
+  $('slate-close').addEventListener('click', () => $('slate-dlg').close());
+  new MutationObserver(() => { $('slate-open').setAttribute('aria-pressed', String($('slate-dlg').open)); renderSlateDot(); }).observe($('slate-dlg'), { attributes: true, attributeFilter: ['open'] });
+
   // ── 하단 메뉴 화면: 가운데 칸에 펼치기 ──
   // 팝업(모달) 대신 지역 카드와 지도 자리에 보여 준다. 다른 메뉴를 열면 바뀌고, '대륙'이나 닫기로 돌아간다
-  const PANELS = ['char-dlg', 'nest-dlg', 'inv-dlg', 'craft-dlg', 'ledger-dlg', 'friends-dlg', 'arena-dlg']; // 텔레파시는 지금 화면 위에 팝업으로
+  const PANELS = ['char-dlg', 'nest-dlg', 'inv-dlg', 'craft-dlg', 'ledger-dlg', 'friends-dlg', 'arena-dlg', 'slate-dlg']; // 텔레파시는 지금 화면 위에 팝업으로
   // 팝업창 바깥(어두운 배경)을 누르면 Esc와 똑같이 닫힘. 'cancel'을 막아 둔 창(확인을 눌러야 하는 창, 싸우는 중의 전투 창 등)은 그대로 남음
   // 거래·초대·그림 자르기는 잘못 눌러 취소되지 않게 바깥 누르기로는 닫지 않음
   const NO_OUTSIDE = new Set(['trade-dlg', 'invite-dlg', 'crop']);
@@ -12425,9 +12711,20 @@
         show('create');
       }
     });
-    socket.on('me', (me) => { setMe(me); renderSayMode(); maybeWelcome(); renderMazeBar(); });
+    socket.on('me', (me) => { setMe(me); renderSayMode(); maybeWelcome(); renderMazeBar(); renderSlateDot(); });
     bindMazeSocket(); // 지하 회랑
     socket.on('notes:latest', ({ id }) => { S.notesLatest = id || 0; renderNotesDot(); });
+    socket.on('slate:latest', ({ at }) => { SL.latest = at || 0; renderSlateDot(); });
+    // 석판이 바뀜: 열어 둔 화면은 새로 받고, 닫혀 있으면 새 글 점만
+    socket.on('slate:changed', (x) => {
+      SL.latest = x.latest || 0;
+      if ($('slate-dlg').open) {
+        slSetSeen(Math.max(SL.latest, slSeen()));
+        if (SL.page === 'list') loadSlate();
+        else if (SL.page === 'post' && x.id === SL.cur) { if (x.gone) { toast('보던 글이 지워졌다.'); slGo('list'); } else if (x.by !== S.me?.id) loadSlatePost(); }
+      }
+      renderSlateDot();
+    });
     socket.on('welcome', (w) => {
       S.welcome = { text: w.text, ver: w.ver, seen: w.seen < 0 ? 0 : w.seen, shown: false };
       maybeWelcome();

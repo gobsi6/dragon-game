@@ -529,6 +529,7 @@ wxTicker.unref?.();
 // 대륙의 재앙: 모두가 함께 맞서는 거대한 적 (boss.js)
 const boss = require('./boss')({ io, db, online, logic, combat, arena, sendMe });
 // 떠돌이 야바위꾼: 하루 네 번 한 시간씩 대륙 어딘가에 판을 벌임 (yabawi.js)
+const slate = require('./slate')({ io, db, entryOf }); // 석판 (게시판)
 const yabawi = require('./yabawi')({ io, db, online, logic, sendMe, isOpen: (r) => ruin.unlocked(r) }); // ruin은 아래에서 만들어지지만, 쓰는 건 게임이 돌아갈 때라 괜찮음
 // ── 정화: 오염된 땅에서 행동할수록 모두의 기여가 쌓이고, 목표에 닿으면 그 땅의 오염이 일찍 걷힘 ──
 // 오염 시계 (GM이 즉시 일으키면 바뀜). logic이 이걸 보고 지금 오염된 곳을 셈
@@ -1812,6 +1813,7 @@ io.on('connection', (socket) => {
   });
 
   social.attach(socket);
+  slate.attach(socket);
   gm.attach(socket);
   arena.attach(socket);
   death.attach(socket);

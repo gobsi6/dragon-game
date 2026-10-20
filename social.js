@@ -473,13 +473,33 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       return v ? { ok: true, profile: v } : { error: '그런 드래곤은 없다.' };
     });
     on('rel:list', (d) => ({ ok: true, list: relList(d) }));
-    // 관계도: 긴 잠에 들지 않은 모든 드래곤(시험용 제외)과 서로 맺은 관계. 혼자 붙이는 표시(라이벌·경계·원수)는 보내지 않음
-    on('rel:map', () => {
-      const dragons = db.mapDragons().filter((x) => !isTestDragon(x))
-        .map((x) => ({ id: x.id, name: x.name, kind: x.kind, level: x.level, av: x.has_avatar ? x.avatar_ver : 0 }));
-      const ids = new Set(dragons.map((x) => x.id));
-      const pairs = db.mapBonds().filter((r) => ids.has(r.a) && ids.has(r.b)).map((r) => [r.a, r.b, r.bond || 'comrade']);
-      return { ok: true, dragons, pairs };
+    // 관계도: 서로 맺은 관계와 라이벌·원수 (혼자 붙이는 경계는 보내지 않음). 긴 잠에 든 드래곤·시험용은 빼고
+    // 공개는 고른 드래곤만: 남들 사이의 관계는 두 드래곤이 모두 '관계도에 보이기'를 켰을 때만 보임.
+    // 내가 맺은 관계는 늘 나에게 보임 (상대가 공개하지 않았어도). 공개하지 않은 드래곤은 내 상대가 아니면 아예 보내지 않음
+    on('rel:map', (d) => {
+      const all = db.mapDragons().filter((x) => !isTestDragon(x));
+      const pub = new Set(all.filter((x) => x.map_public).map((x) => x.id));
+      const alive = new Set(all.map((x) => x.id));
+      const seen = (a, b) => alive.has(a) && alive.has(b) && (a === d.id || b === d.id || (pub.has(a) && pub.has(b)));
+      const pairs = db.mapBonds().filter((r) => seen(r.a, r.b)).map((r) => [r.a, r.b, r.bond || 'comrade']);
+      // 라이벌·원수: [표시한 쪽, 표시된 쪽, 'rival'|'nemesis']. 서로 라이벌이면 한 줄로 [a, b, 'rival2'](숙적), 서로 원수면 'nemesis2'
+      const marks = new Map();
+      for (const r of db.mapMarks()) {
+        if (!seen(r.a, r.b)) continue;
+        const back = marks.get(`${r.b}-${r.a}`);
+        if (back && back[2] === r.kind) back[2] = `${r.kind}2`;
+        else marks.set(`${r.a}-${r.b}`, [r.a, r.b, r.kind]);
+      }
+      pairs.push(...marks.values());
+      const keep = new Set([d.id, ...pub]);
+      for (const [a, b] of pairs) { keep.add(a); keep.add(b); }
+      const dragons = all.filter((x) => keep.has(x.id))
+        .map((x) => ({ id: x.id, name: x.name, kind: x.kind, level: x.level, av: x.has_avatar ? x.avatar_ver : 0, pub: !!x.map_public }));
+      return { ok: true, dragons, pairs, mine: db.mapPublic(d.id) };
+    });
+    on('rel:mapPublic', (d, p) => {
+      db.setMapPublic(d.id, !!p.on);
+      return { ok: true, on: !!p.on };
     });
 
     // 동료 요청. 상대도 이미 요청을 보냈다면 바로 맺어짐

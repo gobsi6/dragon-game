@@ -130,6 +130,7 @@ addCol('exp_info', "TEXT NOT NULL DEFAULT '{}'");
 addCol('chron', "TEXT NOT NULL DEFAULT '[]'");      // 20단계: 지나온 이야기 [{ at, k: 'choice'|'mark', t }] (최근 150개)   // 19단계: 원정 목적·갈림길 { goal, fork: { id, at, pick, res }, last: 지난 원정 일지 }     // 18단계: 칭호 { have: [얻은 칭호 id], on: 단 칭호 id }
 addCol('nest_info', "TEXT NOT NULL DEFAULT '{}'");  // 21단계: 둥지 단계·설치한 덫과 결계·보물더미 가치·보물 도둑 { tier, wards, value, raidAt, calm, raid }
 addCol('ev_recent', "TEXT NOT NULL DEFAULT '[]'");  // 최근에 겪은 이벤트 [[id, 시각], …] (같은 이벤트가 연달아 뜨지 않게)
+addCol('map_public', 'INTEGER NOT NULL DEFAULT 0');  // 관계도에 내 관계를 보일지 (기본은 나에게만)
 addCol('heir', 'TEXT');                             // 22단계: 먼 여행을 떠난 드래곤에게서 의지를 이었으면 { name, kind, level, pts }
 addCol('bio', "TEXT NOT NULL DEFAULT '{}'");        // 17단계: 성별과 특징 { gender, desc }                            // 15단계: 지역 안의 장소 (없으면 지역 입구)                          // 광폭화 중이면 { at, until, region, hp, hpMax }
 if (addCol('stat_pts', 'INTEGER NOT NULL DEFAULT 0')) {
@@ -295,6 +296,32 @@ const DRAGON_FIELDS = `id, name, kind, region, avatar_ver, level, xp, hp, hp_max
   ap_at, hp_at, en_at, exp_start, exp_end, exp_region, equip, rep, stance_at, nest, rest_at, hoard_gold, fame, pending_event, traits, combat, last_seen, stat_pts, mind, mind_at, berserk, place, fallen, scars, dead_at, bio, titles, exp_info, chron, nest_info, heir, ev_recent, created_at,
   (avatar IS NOT NULL) AS has_avatar`;
 
+// 석판: 모두가 글을 새겨 남기는 게시판. 쓴 드래곤이 사라져도 글은 남도록 이름·종류를 함께 적어 둠
+db.exec(`
+  CREATE TABLE IF NOT EXISTS slate_posts (
+    id        INTEGER PRIMARY KEY,
+    dragon_id INTEGER REFERENCES dragons(id) ON DELETE SET NULL,
+    name      TEXT NOT NULL,
+    kind      TEXT,
+    head      TEXT NOT NULL,                 -- 말머리: story(이야기) / tip(공략) / party(모집) / free(자유)
+    title     TEXT NOT NULL,
+    body      TEXT NOT NULL,
+    at        INTEGER NOT NULL,
+    edited_at INTEGER,
+    pinned    INTEGER NOT NULL DEFAULT 0     -- GM이 맨 위에 고정
+  );
+  CREATE TABLE IF NOT EXISTS slate_comments (
+    id        INTEGER PRIMARY KEY,
+    post_id   INTEGER NOT NULL REFERENCES slate_posts(id) ON DELETE CASCADE,
+    dragon_id INTEGER REFERENCES dragons(id) ON DELETE SET NULL,
+    name      TEXT NOT NULL,
+    kind      TEXT,
+    text      TEXT NOT NULL,
+    at        INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS slate_comments_post ON slate_comments(post_id, at);
+`);
+
 const q = {
   countUsers:   db.prepare('SELECT COUNT(*) AS n FROM users'),
   userByName:   db.prepare('SELECT * FROM users WHERE username = ?'),
@@ -375,7 +402,13 @@ const q = {
   relList:      db.prepare(`SELECT r.to_id AS id, r.kind, r.bond, d.name, d.kind AS dkind, d.level, d.region, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar
                             FROM relations r JOIN dragons d ON d.id = r.to_id WHERE r.from_id = ? ORDER BY d.name`),
   // 관계도: 대륙의 모든 드래곤과 서로 맺은 관계 (한 쌍에 한 줄. bond는 from에게 to가 무엇인지)
-  mapDragons:   db.prepare('SELECT id, name, kind, level, avatar_ver, (avatar IS NOT NULL) AS has_avatar FROM dragons WHERE dead_at IS NULL'),
+  mapDragons:   db.prepare('SELECT id, name, kind, level, avatar_ver, (avatar IS NOT NULL) AS has_avatar, map_public FROM dragons WHERE dead_at IS NULL'),
+  // 관계도에 함께 보일 표시: 라이벌·원수 (혼자 붙이지만 상대도 아는 것만. 경계는 나만 아는 것이라 빼둠)
+  mapMarks:     db.prepare(`SELECT r.from_id AS a, r.to_id AS b, r.kind FROM relations r
+                            JOIN dragons x ON x.id = r.from_id JOIN dragons y ON y.id = r.to_id
+                            WHERE r.kind IN ('rival', 'nemesis') AND x.dead_at IS NULL AND y.dead_at IS NULL`),
+  mapPublicGet: db.prepare('SELECT map_public FROM dragons WHERE id = ?'),
+  mapPublicSet: db.prepare('UPDATE dragons SET map_public = ? WHERE id = ?'),
   mapBonds:     db.prepare(`SELECT r.from_id AS a, r.to_id AS b, r.bond FROM relations r
                             JOIN dragons x ON x.id = r.from_id JOIN dragons y ON y.id = r.to_id
                             WHERE r.kind = 'friend' AND r.from_id < r.to_id AND x.dead_at IS NULL AND y.dead_at IS NULL`),
@@ -436,6 +469,25 @@ const q = {
   offersFrom:   db.prepare('SELECT * FROM kin_offers WHERE from_id = ? ORDER BY at'),
   offerDel:     db.prepare('DELETE FROM kin_offers WHERE id = ?'),
   offersToN:    db.prepare('SELECT COUNT(*) AS n FROM kin_offers WHERE to_id = ?'),
+  // 석판 (쓴 드래곤이 남아 있으면 지금 이름·종류·그림으로)
+  slateList:    db.prepare(`SELECT p.id, p.dragon_id, COALESCE(d.name, p.name) AS name, COALESCE(d.kind, p.kind) AS kind, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar,
+                              p.head, p.title, substr(p.body, 1, 160) AS preview, p.at, p.edited_at, p.pinned,
+                              (SELECT COUNT(*) FROM slate_comments c WHERE c.post_id = p.id) AS n,
+                              (SELECT MAX(c.at) FROM slate_comments c WHERE c.post_id = p.id) AS last_c
+                            FROM slate_posts p LEFT JOIN dragons d ON d.id = p.dragon_id ORDER BY p.pinned DESC, p.at DESC LIMIT ?`),
+  slateGet:     db.prepare(`SELECT p.*, COALESCE(d.name, p.name) AS cur_name, COALESCE(d.kind, p.kind) AS cur_kind, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar
+                            FROM slate_posts p LEFT JOIN dragons d ON d.id = p.dragon_id WHERE p.id = ?`),
+  slateCms:     db.prepare(`SELECT c.id, c.dragon_id, COALESCE(d.name, c.name) AS name, COALESCE(d.kind, c.kind) AS kind, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar, c.text, c.at
+                            FROM slate_comments c LEFT JOIN dragons d ON d.id = c.dragon_id WHERE c.post_id = ? ORDER BY c.at`),
+  slateAdd:     db.prepare('INSERT INTO slate_posts (dragon_id, name, kind, head, title, body, at) VALUES (?, ?, ?, ?, ?, ?, ?)'),
+  slateEdit:    db.prepare('UPDATE slate_posts SET head = ?, title = ?, body = ?, edited_at = ? WHERE id = ?'),
+  slateDel:     db.prepare('DELETE FROM slate_posts WHERE id = ?'),
+  slatePin:     db.prepare('UPDATE slate_posts SET pinned = ? WHERE id = ?'),
+  slateCmAdd:   db.prepare('INSERT INTO slate_comments (post_id, dragon_id, name, kind, text, at) VALUES (?, ?, ?, ?, ?, ?)'),
+  slateCmGet:   db.prepare('SELECT * FROM slate_comments WHERE id = ?'),
+  slateCmDel:   db.prepare('DELETE FROM slate_comments WHERE id = ?'),
+  slateLatest:  db.prepare('SELECT MAX(at) AS at FROM slate_posts'),
+  slateDayN:    db.prepare('SELECT COUNT(*) AS n FROM slate_posts WHERE dragon_id = ? AND at >= ?'),
   worldGet:     db.prepare('SELECT v FROM world WHERE k = ?'),
   worldSet:     db.prepare('INSERT INTO world (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v'),
   berserkIds:   db.prepare('SELECT id FROM dragons WHERE berserk IS NOT NULL'),
@@ -582,6 +634,9 @@ module.exports = {
   relList: (id) => q.relList.all(id),
   mapDragons: () => q.mapDragons.all(),
   mapBonds: () => q.mapBonds.all(),
+  mapMarks: () => q.mapMarks.all(),
+  mapPublic: (id) => !!q.mapPublicGet.get(id)?.map_public,
+  setMapPublic: (id, on) => q.mapPublicSet.run(on ? 1 : 0, id),
   // 내가 입양 보낸 식구 (다른 둥지에서 아직 함께 사는)
   kinAdoptedOut: (id) => q.kinAdoptedOut.all(id).map((r) => { let data = {}; try { data = JSON.parse(r.data); } catch {} return { ...r, data }; }),
   // 관계 메모: a가 b에 대해 쓴 글. 상대(b)도 볼 수 있음 (예전에 쓴 비공개 메모는 다시 저장하기 전까지 a만 봄). 비우면 지워짐
@@ -662,6 +717,20 @@ module.exports = {
   offersFrom: (id) => q.offersFrom.all(id),
   offerDel: (id) => q.offerDel.run(id).changes > 0,
   offersToCount: (id) => q.offersToN.get(id).n,
+  slate: {
+    list: (limit = 200) => q.slateList.all(limit),
+    get: (id) => q.slateGet.get(id) || null,
+    comments: (id) => q.slateCms.all(id),
+    add: (d, head, title, body) => q.slateAdd.run(d.id, d.name, d.kind, head, title, body, Date.now()).lastInsertRowid,
+    edit: (id, head, title, body) => q.slateEdit.run(head, title, body, Date.now(), id),
+    del: (id) => q.slateDel.run(id).changes > 0,
+    pin: (id, on) => q.slatePin.run(on ? 1 : 0, id),
+    comment: (postId, d, text) => q.slateCmAdd.run(postId, d.id, d.name, d.kind, text, Date.now()).lastInsertRowid,
+    commentGet: (id) => q.slateCmGet.get(id) || null,
+    uncomment: (id) => q.slateCmDel.run(id).changes > 0,
+    latest: () => q.slateLatest.get().at || 0,
+    countSince: (dragonId, since) => q.slateDayN.get(dragonId, since).n,
+  },
   worldGet: (k, def = null) => { const r = q.worldGet.get(k); if (!r) return def; try { return JSON.parse(r.v); } catch { return def; } },
   worldSet: (k, v) => q.worldSet.run(k, JSON.stringify(v)),
   berserkIds: () => q.berserkIds.all().map((r) => r.id),
