@@ -233,9 +233,14 @@ module.exports = function setupMaze({ io, db, online, logic, sendMe, system, dea
   // ── 층 떠나기 ──
   function leave(d, fi) {
     const m = mz(d);
-    if (m.fi == null) return;
+    if (m.fi == null) return false;
     const e = entryOf(d.id); if (e) e.socket.leave(room(fi));
-    m.fi = null; m.pos = null; m.torch = 0; m.stuck = false; m.healed = false;
+    // 들어와서 아무것도 하지 않고(움직이기·치기·불 붙이기·상처 돌보기·끌어올리기 모두 안 함) 나가면 오늘 입장 1회를 돌려줌
+    // 들어온 날과 나가는 날이 다르면(자정을 넘김) 이미 오늘 횟수가 새로 시작됐으므로 돌려주지 않음
+    const refund = !!m.fresh && m.enteredDay === m.day && (m.used || 0) > 0;
+    if (refund) m.used -= 1;
+    m.fi = null; m.pos = null; m.torch = 0; m.stuck = false; m.healed = false; m.fresh = false;
+    return refund;
   }
   function knockOut(d, fi, by) {
     leave(d, fi);
@@ -278,6 +283,12 @@ module.exports = function setupMaze({ io, db, online, logic, sendMe, system, dea
     if (logic.isFallen(d)) return err('쓰러져 있다. 먼저 일어서야 한다.');
     return null;
   }
+  // 들어와서 처음 무언가를 할 때: 이때부터 입장 1회로 치고, 고대 유적에 '들어왔다'를 알림
+  function begin(d, m) {
+    if (!m.fresh) return;
+    m.fresh = false;
+    notice(`${ga(d.name)} ${m.enteredAt || '입구'}에서 지하 회랑 제 ${m.fi + 1}층에 들어왔다.`);
+  }
   function enter(d, fi, key) {
     const e0 = ready(d); if (e0) return e0;
     if (!opened(d)) return err('회랑 입구는 오르딘이 지키고 있다. 먼저 그에게 말을 걸어야 한다.');
@@ -289,9 +300,10 @@ module.exports = function setupMaze({ io, db, online, logic, sendMe, system, dea
     if ((m.used || 0) >= R.entries) return err(`오늘은 더 들어갈 수 없다. (하루 ${R.entries}번)`);
     const pt = points(fi).find((p) => p.key === key) || points(fi)[0];
     m.used = (m.used || 0) + 1; m.fi = fi; m.pos = pt.pos.slice(); m.torch = R.torch; m.stuck = false; m.healed = false; m.pity = 0;
+    m.fresh = true; m.enteredDay = m.day; m.enteredAt = pt.name; // 아직 아무것도 하지 않음 (그대로 나가면 입장 횟수를 돌려줌)
     reveal(fi, pt.pos[0], pt.pos[1]);
     const e = entryOf(d.id); if (e) e.socket.join(room(fi));
-    notice(`${ga(d.name)} ${pt.name}에서 지하 회랑 제 ${fi + 1}층에 들어왔다.`);
+    // '들어왔다' 알림은 첫 행동을 할 때 보냄 (begin). 아무것도 안 하고 나가면 알림도 없음
     return { ok: true, lines: [`${pt.name}에서 횃불 ${R.torch}걸음을 들고 내려섰다.`], floor: floorView(fi), rows: GEO[fi].rows };
   }
   function canStep(fi, m, r, c) {
@@ -340,7 +352,7 @@ module.exports = function setupMaze({ io, db, online, logic, sendMe, system, dea
     const fromKey = `${m.pos[0]},${m.pos[1]}`, fromMob = live[fi].mobs[fromKey], fpi = G.g[m.pos[0]][m.pos[1]] === 'P' ? pillarAt(fi, m.pos[0], m.pos[1]) : -1;
     const hitLv = fromMob ? fromMob.lv : fpi >= 0 && guard(fi, fpi).hp > 0 ? R.guardLv(fi) : 0;
     if (hitLv) { const dmg = R.passDmg(logic.hpCap(d), gapOf(d, hitLv)); d.hp = Math.max(0, d.hp - dmg); lines.push(`물러서는 등 뒤로 ${fromMob ? '파수꾼' : '수호자'}의 돌팔이 날아들었다. 체력 −${dmg}.`); }
-    m.torch = Math.round((m.torch - cost) * 2) / 2; m.pos = [r, c];
+    m.torch = Math.round((m.torch - cost) * 2) / 2; m.pos = [r, c]; begin(d, m);
     const k = idx(fi, r, c), key = `${r},${c}`, ch = G.g[r][c], wasNew = !FL[fi].step[k];
     FL[fi].step[k] = 1; reveal(fi, r, c);
     if (d.hp <= 0) { knockOut(d, fi, fromMob ? '돌 파수꾼' : '기둥 수호자'); broadcast(fi); save(); return { ok: true, lines: [...lines, '체력이 다해 쓰러졌다. 유적 밖으로 실려 나갔다.'], out: true }; }
@@ -382,7 +394,7 @@ module.exports = function setupMaze({ io, db, online, logic, sendMe, system, dea
     const target = mob || (g && g.hp > 0 ? g : null);
     if (!target) return err('여기에는 칠 상대가 없다.');
     const boss = !mob, lv = boss ? R.guardLv(fi) : mob.lv;
-    m.torch -= R.atk;
+    m.torch -= R.atk; begin(d, m);
     if (!target.f.some((x) => x.id === d.id)) target.f.push({ id: d.id, name: d.name });
     target.hp -= 1; if (mob) mob.at = Date.now(); else f.contrib[d.id] = dayIdx();
     const dmg = R.counter(gapOf(d, lv)); d.hp = Math.max(0, d.hp - dmg);
@@ -409,7 +421,7 @@ module.exports = function setupMaze({ io, db, online, logic, sendMe, system, dea
     if (guard(fi, pi).hp > 0) return err('수호자가 기둥을 막고 있다.');
     if (litLeft(fi, pi) > 0) return err('이미 타오르고 있다.');
     if (m.torch < R.lightCost) return err('횃불이 모자란다.');
-    m.torch -= R.lightCost; f.lit[pi] = Date.now() + R.pillarMs; f.contrib[d.id] = dayIdx();
+    m.torch -= R.lightCost; begin(d, m); f.lit[pi] = Date.now() + R.pillarMs; f.contrib[d.id] = dayIdx();
     const key = `${m.pos[0]},${m.pos[1]}`; if (!f.ways.includes(key)) f.ways.push(key);
     const lines = [`${pi + 1}번 기둥에 불을 붙였다. ${Math.round(R.pillarMs / 60000)}분 동안 타오른다.`];
     notice(`${ga(d.name)} 제 ${fi + 1}층 ${pi + 1}번 기둥에 불을 붙였다. ${Math.round(R.pillarMs / 60000)}분 동안 타오른다. (${f.lit.filter((t) => t > Date.now()).length}/4)`);
@@ -456,7 +468,7 @@ module.exports = function setupMaze({ io, db, online, logic, sendMe, system, dea
     if (m.torch < R.healCost) return err('횃불이 모자란다.');
     const cap = logic.hpCap(d), add = Math.min(cap - d.hp, Math.round(cap * R.heal));
     if (add <= 0) return err('돌볼 상처가 없다.');
-    m.torch -= R.healCost; m.healed = true; d.hp += add;
+    m.torch -= R.healCost; begin(d, m); m.healed = true; d.hp += add;
     return { ok: true, lines: [`화톳불 곁에 앉아 상처를 돌봤다. 체력 +${add}.`] };
   }
   function rescue(d, id) {
@@ -467,7 +479,7 @@ module.exports = function setupMaze({ io, db, online, logic, sendMe, system, dea
     const e = entryOf(Number(id)); const v = e && inside(e.dragon);
     if (!v || v.fi !== m.fi || !v.stuck) return err('그 드래곤은 여기 갇혀 있지 않다.');
     if (Math.abs(v.pos[0] - m.pos[0]) + Math.abs(v.pos[1] - m.pos[1]) > 1) return err('옆 칸까지 가야 끌어올릴 수 있다.');
-    m.torch -= R.rescueCost; v.stuck = false;
+    m.torch -= R.rescueCost; begin(d, m); v.stuck = false;
     db.saveState(e.dragon); sendMe(e.socket, e.dragon); e.socket.emit('notice', { title: '지하 회랑', lines: [`${ga(d.name)} 구덩이에서 끌어올려 주었다.`] });
     notice(`${ga(d.name)} ${eul(e.dragon.name)} 구덩이에서 끌어올렸다.`);
     broadcast(m.fi);
@@ -489,9 +501,9 @@ module.exports = function setupMaze({ io, db, online, logic, sendMe, system, dea
   }
   function out(d) {
     const m = inside(d); if (!m) return err('회랑 안에 있지 않다.');
-    const fi = m.fi; leave(d, fi);
+    const fi = m.fi; const refund = leave(d, fi);
     broadcast(fi);
-    return { ok: true, lines: ['횃불을 끄고 유적 밖으로 나왔다.'], out: true };
+    return { ok: true, lines: ['횃불을 끄고 유적 밖으로 나왔다.', ...(refund ? [`한 걸음도 들어가지 않았으니 오늘 들어간 횟수로 세지 않는다. (오늘 ${m.used}/${R.entries}번)`] : [])], out: true };
   }
 
   // ── 소켓 ──

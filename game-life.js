@@ -1027,6 +1027,7 @@ function ctxOf(d, kin, have, trigger, now, region = d.region) {
     have, perks: d.perks || {}, stats: logic.statsOf(d), josa,
     rivals: d.rivalsCache || [], me: d.name, regionName: REGIONS[region]?.name || '', // 라이벌 이벤트
     call: callName(d), // 아이가 나를 부르는 말 (엄마·아빠·이름)
+    chest: d.nest ? logic.chestOf(d) : [], // 보물 상자 (아이의 선물에서 이미 받은 것을 확인)
     // 날씨·계절·장소·보물더미·재앙의 흔적 (날씨·둥지 이벤트)
     weather: logic.weatherIdAt(region, now), season: logic.seasonAt(now).id, level: d.level,
     place: region === d.region ? logic.placeOf(d) : null,

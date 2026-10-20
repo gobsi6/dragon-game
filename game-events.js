@@ -53,6 +53,37 @@ const D3 = 3 * 864e5;
 const hasTrait = (k, id) => !!k.data.traits && k.data.traits.includes(id);
 const GIFT_STAGES = ['아이', '소년', '청년', '해츨링', '어린 용', '젊은 용'];
 const giftKids = (c) => [...c.humans, ...c.drakes].filter((x) => GIFT_STAGES.includes(c.stage(x)) && (x.data.bond || 0) >= 40 && c.now - (x.data.giftAt || 0) >= 2 * 864e5);
+// ── 아이의 선물: 무엇을 줄지 ──
+// 나이 단계마다 기본 목록 + 성격에 따라 더해지는 목록. 성격 목록은 두 번 넣어 더 자주 나오게 함
+// first_scale(첫 비늘)은 식구마다 한 번만 (k.data.gifts에 기록, 예전에 받은 것은 보물 상자에서 이름으로 확인)
+const GIFT_POOL = {
+  '해츨링': ['shiny_pebble', 'bird_feather', 'conch_shell', 'acorns', 'pinecone', 'old_coin'],
+  // 어린 용부터는 폴리모프로 사람 모습이 되어 말하고 손을 쓰므로, 손으로 만든 선물도 줌
+  '어린 용': ['first_scale', 'shiny_pebble', 'bird_feather', 'conch_shell', 'warm_stone', 'acorns', 'old_coin', 'kid_drawing', 'woven_band', 'paper_bird'],
+  '젊은 용': ['first_scale', 'warm_stone', 'storm_stone', 'hunt_fang', 'bird_feather', 'old_coin', 'sky_sketch', 'kid_letter', 'wood_flute'],
+  '아이': ['kid_drawing', 'flower_ring', 'clover', 'clay_dragon', 'wish_note', 'paper_bird'],
+  '소년': ['kid_letter', 'kid_drawing', 'pebble_neck', 'clay_dragon', 'woven_band', 'clover', 'paper_bird', 'paper_kite'],
+  '청년': ['kid_letter', 'wood_dragon', 'wood_flute', 'knit_scarf', 'star_map', 'portrait', 'herb_sachet'],
+};
+const GIFT_TRAIT = {
+  // 새끼 드래곤 성격
+  drake: { hunter: ['hunt_fang'], dreamy: ['dream_journal', 'sky_sketch'], curious: ['storm_stone', 'conch_shell', 'old_coin'], clingy: ['warm_stone', 'kid_drawing'],
+    swift: ['sky_sketch', 'bird_feather'], diligent: ['acorns', 'pinecone'], stubborn: ['old_coin'], clever: ['paper_bird'] },
+  // 인간 아이 성격
+  human: { flowers: ['pressed_flower', 'flower_ring', 'clover'], handy: ['wood_dragon', 'pebble_neck', 'clay_dragon', 'wood_flute'], curious: ['star_map', 'conch_shell'],
+    gentle: ['kid_letter', 'woven_band'], lonely: ['kid_letter', 'wish_note'], brave: ['wood_sword', 'paper_kite'], prankster: ['wish_note', 'shiny_pebble'],
+    steady: ['portrait'], shy: ['paper_bird'], sleepy: ['herb_sachet'] },
+};
+const GIFT_ONCE = ['first_scale']; // 식구마다 한 번만
+const GIFT_HATCH = ['shiny_pebble', 'bird_feather', 'conch_shell', 'acorns', 'pinecone', 'old_coin']; // 해츨링은 아직 폴리모프를 못 하니, 입에 물어 올 수 있는 것만
+const giftedBefore = (c, k, kind) => (k.data.gifts || []).includes(kind) || (c.chest || []).some((e) => e.k === kind && e.n === k.name);
+function pickGift(c, k, st) {
+  let pool = [...(GIFT_POOL[st] || GIFT_POOL[k.type === 'drake' ? '어린 용' : '소년'])];
+  const TR = GIFT_TRAIT[k.type === 'drake' ? 'drake' : 'human'];
+  for (const t of k.data.traits || []) for (const g of TR[t] || []) pool.push(g, g);
+  pool = pool.filter((g) => !(GIFT_ONCE.includes(g) && giftedBefore(c, k, g)) && !(st === '해츨링' && !GIFT_HATCH.includes(g)));
+  return c.pick(pool.length ? pool : [k.type === 'drake' ? 'shiny_pebble' : 'kid_drawing']);
+}
 const ready = (t, ms) => !t || Date.now() - t > ms; // 다시 일어나기까지의 간격
 
 module.exports = [
@@ -68,13 +99,8 @@ module.exports = [
       const st = c.stage(k);
       const call = c.call;
       const ga = (w) => `${w}${c.josa(w, '이', '가')}`;
-      let kind;
-      if (k.type === 'drake') kind = st === '해츨링' ? 'shiny_pebble' : c.pick(['first_scale', 'shiny_pebble', 'first_scale']);
-      else if (hasTrait(k, 'flowers')) kind = c.pick(['pressed_flower', 'flower_ring']);
-      else if (hasTrait(k, 'handy')) kind = c.pick(['wood_dragon', 'pebble_neck']);
-      else if (hasTrait(k, 'dreamy')) kind = 'kid_drawing';
-      else if (['gentle', 'clingy', 'lonely'].some((t) => hasTrait(k, t))) kind = 'kid_letter';
-      else kind = c.pick(st === '아이' ? ['kid_drawing', 'flower_ring', 'kid_drawing'] : st === '소년' ? ['kid_letter', 'pebble_neck', 'kid_drawing'] : ['kid_letter', 'wood_dragon']);
+      const kind = pickGift(c, k, st);
+      const hatch = k.type === 'drake' && st === '해츨링'; // 해츨링은 아직 말을 못 하고 용의 모습 그대로 (어린 용부터 폴리모프)
       // 상자에 함께 남길 글 (편지는 나이에 따라)
       const LETTER = {
         '아이': `${call}에게. 사랑해요. ${ga(call)} 세상에서 제일 커요. 나도 크면 ${call}처럼 하늘을 날 거예요.`,
@@ -82,16 +108,38 @@ module.exports = [
         '청년': `${call}. 어릴 땐 몰랐는데, 둥지가 얼마나 따뜻한 곳인지 이제 알 것 같아요. 키워 줘서 고마워요. 이건 쑥스러우니까 나중에 읽어요.`,
       };
       const NOTE = {
-        kid_letter: LETTER[st] || LETTER['소년'],
+        kid_letter: LETTER[st] || LETTER[{ '어린 용': '소년', '젊은 용': '청년' }[st]] || LETTER['소년'],
         kid_drawing: `${call}${c.josa(call, '이랑', '랑')} 나랑 같이 하늘을 나는 그림. 구름 위에 '${call}'${c.josa(call, '이라고', '라고')} 커다랗게 적혀 있다.`,
         pressed_flower: '책장 사이에 며칠이나 눌러 둔 거예요. 제일 예쁜 걸로 골랐어요.',
         flower_ring: '발톱엔 안 들어가니까… 그냥 갖고만 있어요!',
         wood_dragon: `${call}${c.josa(call, '을', '를')} 깎았어요. 꼬리가 좀 짧은 건 나무가 모자라서예요.`,
         pebble_neck: '강가에서 구멍 난 돌만 골라 꿰었어요. 하나도 똑같은 게 없어요.',
         first_scale: '처음으로 빠진 비늘이에요. 제일 먼저 보여 주고 싶었어요.',
-        shiny_pebble: '',
+        shiny_pebble: hatch ? '' : '제일 반짝이는 걸로 골랐어요. 보물이니까 잘 간직해요.',
+        clover: '한참 찾았어요. 이거 있으면 행운이 온대요. 다 가져요.',
+        clay_dragon: `${call}${c.josa(call, '을', '를')} 만들었어요. 날개가 짝짝이인 건… 일부러 그런 거예요.`,
+        wish_note: `${call}${c.josa(call, '이', '가')} 다치지 않게 해 주세요. 그리고 나도 언젠가 하늘을 날게 해 주세요.`,
+        woven_band: '실을 세 가지 색으로 골랐어요. 하나는 내 거, 하나는 둥지, 하나는 하늘이에요.',
+        wood_sword: `이걸로 ${call}${c.josa(call, '을', '를')} 지킬 거예요. 지금은 나무지만 나중엔 진짜로요.`,
+        wood_flute: '처음 불었을 때 새들이 대답했어요. 같이 불어요.',
+        knit_scarf: `겨울에 ${call} 목이 추워 보여서요. 조금 짧은 건… 실이 모자랐어요.`,
+        star_map: `밤마다 올려다본 별을 이어 그린 그림. 한가운데 가장 밝은 별 옆에 '${call}'${c.josa(call, '이라고', '라고')} 적혀 있다.`,
+        bird_feather: hatch ? '' : '하늘 높이 날다가 주웠어요. 이렇게 예쁜 색은 처음 봐요.',
+        conch_shell: hatch ? '' : '바닷가까지 날아갔다 왔어요. 귀에 대 보면 파도 소리가 나요.',
+        warm_stone: '한낮 내내 햇볕에 굴려 놨어요. 밤에 품고 자면 따뜻해요.',
+        storm_stone: '천둥 치던 날 혼자 날아가서 주워 왔어요. 이제 폭풍 같은 건 하나도 안 무서워요.',
+        hunt_fang: '혼자서 잡았어요. 이제 저도 사냥할 수 있어요.',
+        dream_journal: `꿈에서 본 걸 잊어버리기 전에 적어 뒀어요. ${call}도 자주 나와요.`,
+        paper_bird: `접는 법 배웠어요. 날개를 당기면 날갯짓해요. ${call}처럼!`,
+        paper_kite: `${call}처럼 높이 날라고 만들었어요. 바람 부는 날 같이 날려요.`,
+        portrait: `숯으로 그린 ${call}의 얼굴. 날개를 편 모습이 실제보다 조금 더 늠름하게 그려져 있다.`,
+        herb_sachet: '잠이 안 올 때 머리맡에 두면 좋대요. 약초는 제가 직접 골라서 말렸어요.',
+        acorns: hatch ? '' : '겨울에 배고프면 먹어요. 제일 반질반질한 것만 모았어요.',
+        pinecone: hatch ? '' : '숲에서 제일 큰 걸로 골랐어요. 냄새 맡아 봐요.',
+        old_coin: hatch ? '' : '땅속에서 반짝이길래 파냈어요. 보물더미에 넣어도 돼요!',
+        sky_sketch: '높이 날아 내려다본 둥지와 그 둘레를 그린 그림. 둥지 한가운데 작은 글씨로 "우리 집"이라고 적혀 있다.',
       };
-      return { id: k.id, kind, note: NOTE[kind] || '' };
+      return { id: k.id, kind, note: NOTE[kind] || '', hatch, human: k.type === 'human' };
     },
     text: (c, v) => {
       const k = c.k(v.id);
@@ -103,19 +151,47 @@ module.exports = [
         flower_ring: [`${nm} 풀줄기로 엮은 작은 반지를 내밀었다.`, `"선물이에요!" 반지는 발톱 끝에도 들어가지 않을 만큼 작다.`],
         wood_dragon: [`${nm} 나뭇조각으로 깎은 작은 인형을 내밀었다.`, `날개를 편 용이다. 며칠 동안 몰래 깎았다고 한다.`],
         pebble_neck: [`${nm} 조약돌 목걸이를 들고 쭈뼛거린다.`, `구멍 난 조약돌을 실에 하나하나 꿴 것이다.`],
-        first_scale: [`${nm} 무언가를 입에 물고 쪼르르 달려왔다.`, `내려놓은 것은 손톱만 한 비늘 한 조각. 처음으로 빠진 비늘이다.`],
-        shiny_pebble: [`${nm} 반짝이는 조약돌 하나를 물어 와 발치에 내려놓았다.`, `꼬리를 흔들며 올려다본다. 아무래도 보물이라는 모양이다.`],
+        first_scale: [`${nm} 사람 모습으로 쭈뼛거리며 다가왔다.`, `내민 손바닥 위에 손톱만 한 비늘 한 조각. 처음으로 빠진 비늘이다.`],
+        shiny_pebble: v.hatch ? [`${nm} 반짝이는 조약돌 하나를 물어 와 발치에 내려놓았다.`, `꼬리를 흔들며 올려다본다. 아무래도 보물이라는 모양이다.`]
+          : [`${nm} ${v.human ? '' : '사람 모습으로 '}둥지 어귀에 서서 꼭 쥔 주먹을 내밀었다.`, `손을 펴자 반짝이는 조약돌 하나가 놓여 있다.`],
+        clover: [`${nm} 풀물이 든 손을 등 뒤로 감춘 채 다가왔다.`, `내민 손바닥 위에 네잎클로버 한 줄기가 놓여 있다.`],
+        clay_dragon: [`${nm} 진흙 묻은 손으로 작은 인형을 내밀었다.`, `흙으로 빚어 말린 용이다. 날개 한쪽이 조금 더 크다.`],
+        wish_note: [`${nm} 작게 접은 쪽지를 내밀고는 얼굴이 빨개졌다.`, `"소원 적은 거예요. 지금 펴 보면 안 돼요!"`],
+        woven_band: [`${nm} 실로 땋은 팔찌를 들고 왔다.`, `"발목에라도 감아요!" 팔찌는 발톱 하나에 겨우 걸린다.`],
+        wood_sword: [`${nm} 나무 검을 허리에 차고 씩씩하게 걸어왔다.`, `"이건 ${c.call} 거예요. 내 건 또 깎으면 돼요." 손잡이에 이름이 새겨져 있다.`],
+        wood_flute: [`어디선가 서툰 피리 소리가 들려왔다. ${nm} 나무 피리를 들고 서 있다.`, `"직접 만들었어요. 가져요." 피리는 아직 따뜻하다.`],
+        knit_scarf: [`${nm} 둘둘 만 털실 뭉치 같은 것을 안고 왔다.`, `펼쳐 보니 목도리다. 겨울 내내 몰래 떴다고 한다.`],
+        star_map: [`${nm} 둘둘 만 종이를 조심스럽게 펼쳐 보였다.`, `밤하늘의 별을 하나하나 이어 그린 그림이다.`],
+        bird_feather: v.hatch ? [`${nm} 커다란 깃털을 입에 물고 자랑스럽게 걸어왔다.`, `빛을 받을 때마다 색이 바뀌는 깃털이다.`]
+          : [`${nm} 사람 모습을 하고, 머리에 깃털 하나를 꽂은 채 나타났다.`, `"하나는 내 거, 이건 ${c.call} 거." 빛을 받을 때마다 색이 바뀌는 깃털이다.`],
+        conch_shell: v.hatch ? [`${nm} 바닷바람 냄새를 풍기며 돌아왔다.`, `발치에 작은 소라 껍데기 하나를 굴려 놓았다.`]
+          : [v.human ? `${nm} 모래 묻은 발로 뛰어 들어왔다.` : `바닷바람 냄새와 함께 둥지에 내려앉은 ${k.name}${c.josa(k.name, '이', '가')} 사람 모습으로 바뀌어 다가왔다.`, `두 손에 작은 소라 껍데기 하나를 받쳐 들고 있다.`],
+        warm_stone: [`${nm} 사람 모습으로 두 손을 모은 채 종종걸음으로 다가왔다.`, `건네받은 둥근 돌이 따뜻하다. 한낮 내내 햇볕에 데운 모양이다.`],
+        storm_stone: [`${nm} 비에 흠뻑 젖은 채 날아 돌아오더니, 사람 모습으로 바뀌어 손을 내밀었다.`, `손바닥 위에 나뭇가지 무늬가 타 들어간 돌 하나. 벼락이 떨어진 자리에서 주워 왔다고 한다.`],
+        hunt_fang: [`${nm} 의기양양하게 날아 돌아와 사람 모습으로 내려섰다.`, `내민 손에 짐승의 송곳니 하나. 혼자 사냥해서 얻은 것이라고 한다.`],
+        paper_bird: [`${nm} ${v.human ? '' : '사람 모습으로 '}손바닥에 무언가를 올려놓고 조심조심 걸어왔다.`, `종이로 접은 작은 새다. 날개 끝을 당기니 파닥파닥 움직인다.`],
+        paper_kite: [`${nm} 자기 키만 한 연을 끌고 둥지로 올라왔다.`, `나뭇살에 종이를 붙인 연이다. 한가운데 서툴게 그린 용 한 마리가 있다.`],
+        portrait: [`${nm} 둘둘 만 종이를 등 뒤에 숨긴 채 헛기침을 했다.`, `펼쳐 보니 숯으로 그린 초상화다. 그려진 것은 다름 아닌 ${c.call}${c.josa(c.call, '이다', '다')}.`],
+        herb_sachet: [`${nm} 작은 천 주머니를 내밀었다. 은은한 풀 냄새가 퍼진다.`, `안에는 직접 말린 약초가 가득 들어 있다.`],
+        acorns: v.hatch ? [`${nm} 볼이 불룩해진 채 뒤뚱뒤뚱 다가왔다.`, `발치에 도토리를 하나, 둘, 셋… 우르르 쏟아 놓았다.`]
+          : [`${nm} 사람 모습으로 두 손 가득 무언가를 받쳐 들고 왔다.`, `반질반질한 도토리 한 줌이다.`],
+        pinecone: v.hatch ? [`${nm} 커다란 솔방울을 앞발로 굴리며 다가왔다.`, `솔방울을 발치까지 밀어 놓고는 뿌듯하게 앉았다.`]
+          : [`${nm} 사람 모습으로 커다란 솔방울을 품에 안고 왔다.`, `송진 냄새가 나는, 꼭지까지 온전한 솔방울이다.`],
+        old_coin: v.hatch ? [`${nm} 흙투성이 주둥이로 무언가를 물고 왔다.`, `내려놓은 것은 녹슨 동전 하나. 벌써 보물을 알아보는 모양이다.`]
+          : [`${nm} 흙 묻은 손으로 동전 하나를 내밀었다.`, `어느 옛 왕국의 것인지 모를 녹슨 동전이다. "보물이에요!"`],
+        sky_sketch: [`${nm} 바람에 헝클어진 머리를 한 사람 모습으로 종이 한 장을 내밀었다.`, `"제일 높이 날아서 내려다본 거예요." 둥지와 그 둘레가 지도처럼 그려져 있다.`],
+        dream_journal: [`${nm} 사람 모습으로 낡은 공책 한 권을 품에 안고 왔다.`, `"꿈 일기예요. 부끄러우니까 나중에 읽어요." 밤마다 꾼 꿈이 빼곡히 적혀 있다.`],
       };
       return T[v.kind] || [`${nm} 작은 선물을 들고 왔다.`];
     },
     choices: [
       { label: '보물 상자에 소중히 넣는다', run: (h, c, v) => {
-        const k = c.k(v.id); k.data.giftAt = c.now;
+        const k = c.k(v.id); k.data.giftAt = c.now; k.data.gifts = [...new Set([...(k.data.gifts || []), v.kind])]; // 준 선물 기록 (첫 비늘은 한 번만)
         h.keep(v.kind, k.name, v.note); h.bond(k, 3); h.mind(6);
         h.say(`보물 상자를 열어 가장 안쪽에 넣고 잠갔다. ${h.name(k)} 그 모습을 보고 배시시 웃었다. (유대 +3, 정신 +6)`);
       } },
       { label: '꼭 안아 주고 상자에 넣는다', run: (h, c, v) => {
-        const k = c.k(v.id); k.data.giftAt = c.now;
+        const k = c.k(v.id); k.data.giftAt = c.now; k.data.gifts = [...new Set([...(k.data.gifts || []), v.kind])]; // 준 선물 기록 (첫 비늘은 한 번만)
         h.keep(v.kind, k.name, v.note); h.bond(k, 6); h.mind(3);
         h.say(`날개로 ${k.name}${h.josa(k.name, '을', '를')} 감싸 안았다. 선물은 보물 상자 가장 안쪽에 넣고 잠갔다. (유대 +6, 정신 +3)`);
       } },
