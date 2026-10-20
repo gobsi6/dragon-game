@@ -1155,7 +1155,7 @@
   .pl-map { position: relative; min-height: 270px; background: #ECEBE6; border: 1px solid var(--line-in); border-radius: 3px; overflow: hidden; container-type: size; }
   /* 지도 그림과 장소 버튼은 가운데 정사각형 안에 (칸 모양이 바뀌어도 길 끝에 버튼이 맞도록) */
   .pl-map .sq { position: absolute; left: 50%; top: 50%; width: 270px; height: 270px; max-width: 100%; max-height: 100%; transform: translate(-50%, -50%); }
-  @supports (width: 1cqw) { .pl-map .sq { width: min(100cqw, 100cqh); height: min(100cqw, 100cqh); } }
+  @supports (width: 1cqw) { .pl-map .sq { width: min(100cqw, 100cqh, 270px); height: min(100cqw, 100cqh, 270px); } }
   /* 크기는 화면에서도 다시 맞춤 (컨테이너 단위를 모르는 브라우저에서 지도가 0 크기로 접히던 문제) */
   .pl-map .sq > svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
   .pl-map .land-edge { fill: none; stroke: #4F4B3E; stroke-width: 1.5; stroke-linejoin: round; }
@@ -4338,7 +4338,7 @@
     volcano: ['뜨거운 공기가 날개를 밀어 올렸다.', '잿가루가 눈처럼 흩날렸다.', '땅 밑에서 낮은 울림이 올라왔다.'],
     ruin: ['잿빛 바람에 섞인 낯선 냄새에 숨을 골랐다.', '무너진 마을의 굴뚝에서 아직도 가는 연기가 오르는 것 같았다.', '어디선가 오래된 노랫소리가 들리는 것 같았다. 뒤돌아보지 않았다.', '검게 물든 숲 위를 서둘러 지나갔다.'],
   };
-  // 함께 간 식구의 말: 나잇대마다 다르게 (child 아기~소년, young 청소년, adult 어른·노년, drake 새끼 드래곤)
+  // 함께 간 식구의 말: 나잇대마다 다르게 (child 아기~소년, young 청년, adult 어른·노년, drake 새끼 드래곤)
   const TRIP_KIN = {
     child: ['{call}, 저기 봐! 저기!', '{call}, 꽉 잡고 있을게!', '구름 만져 보고 싶어!', '우와, 엄청 높다!', '배고파… 조금만 쉬었다 가자.', '졸려… 등 위에서 자도 돼?', '바람이 간지러워!', '방금 그거 봤어? 엄청 빨랐어!', '언제 도착해?',
       '{call}, 저 구름 토끼처럼 생겼다!', '내 그림자 봐! 엄청 작아!', '새들이 우리 따라와!', '{call} 비늘 따뜻하다…', '높이 나니까 귀가 멍멍해.', '이거 나중에 친구들한테 다 자랑할 거야!',
@@ -4360,7 +4360,7 @@
     young: ['이번엔 나도 도움이 될 거야.', '준비됐어. 가자.', '짐은 내가 들게.', '오늘은 내가 길을 볼게.', '이번엔 뭘 찾게 될까.', '출발하자. 해 지기 전에 닿게.', '{call}, 무리하지 말고 가자.'],
     adult: ['길은 내가 봐 둘게.', '조심해서 다녀오자.'], drake: ['(신이 나서 날개를 파닥였다)'],
   };
-  // 지역마다 아이·청소년이 하는 말 (꾸밈 이야기 중 식구의 말 차례에 가끔 섞임)
+  // 지역마다 아이·청년이 하는 말 (꾸밈 이야기 중 식구의 말 차례에 가끔 섞임)
   const TRIP_KIN_REGION = {
     plains: { child: ['풀밭이 바다처럼 출렁거려!', '저기 들소다! 엄청 많아!', '{call}, 풀밭에 내려가서 굴러 보고 싶어!'], young: ['평원은 어디서 봐도 끝이 없네.', '들소 떼가 움직이는 방향을 보면 바람을 알 수 있대.'] },
     snow: { child: ['눈 먹어 봐도 돼?', '{call}, 손이 꽁꽁 얼었어. 비늘에 대고 있을게.', '하얀 거밖에 안 보여!', '눈사람 만들고 싶다!'], young: ['숨 쉴 때마다 하얀 김이 나와.', '설원은 조용해서 좋아. 대신 너무 춥지만.', '얼음 동굴 쪽은 가까이 가지 말자.'] },
@@ -7782,9 +7782,9 @@
       '{a}[이/가] {o}[이/가] 사냥하는 모습을 숨죽여 지켜보고 있다.',
     ],
   };
-  const STAGE_GROUP = { '아기': 'babyH', '아이': 'kidH', '소년': 'kidH', '청소년': 'youthH', '어른': 'adultH', '노년': 'elderH', '해츨링': 'hatch', '어린 용': 'littleD', '젊은 용': 'olderD', '다 자란 용': 'olderD' };
+  const STAGE_GROUP = { '아기': 'babyH', '아이': 'kidH', '소년': 'kidH', '청년': 'youthH', '어른': 'adultH', '노년': 'elderH', '해츨링': 'hatch', '어린 용': 'littleD', '젊은 용': 'olderD', '다 자란 용': 'olderD' };
   const SMALL = new Set(['아기', '아이', '해츨링']);   // 돌봄을 받는 어린 식구
-  const GROWN = new Set(['청소년', '어른', '노년', '젊은 용', '다 자란 용']);
+  const GROWN = new Set(['청년', '어른', '노년', '젊은 용', '다 자란 용']);
   const joinNames = (list) => list.map((k, i) => (i < list.length - 1 ? `${k.name}${josa(k.name, '과', '와')}` : k.name)).join(' ');
   function storyMoment(slot, all, n, salt = 0) {
     const rnd = storyRng((slot % 1000003) * 7919 + all.reduce((a, k) => a + k.id * 97, 0) + salt * 104729);
@@ -9139,7 +9139,7 @@
     if (!sq) return;
     const w = map.clientWidth, h = map.clientHeight;
     if (!w || !h) return; // 숨겨져 있을 때는 그대로 (보이면 ResizeObserver가 다시 맞춤)
-    const n = Math.min(w, h);
+    const n = Math.min(w, h, 270); // 270 넘게 키우지 않음 (오른쪽 칸이 길어져 지도 칸이 늘어나도 그림 크기는 그대로)
     sq.style.width = `${n}px`;
     sq.style.height = `${n}px`;
     map.style.setProperty('--lbw', `${Math.round(n * 0.42)}px`); // 이름표 최대 폭
