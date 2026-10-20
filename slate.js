@@ -1,7 +1,7 @@
 // 석판: 모두가 글을 새겨 남기는 게시판 (말머리 · 짧은 답 · GM 고정)
 const { isTestDragon } = require('./game-data');
 
-const HEADS = ['story', 'tip', 'party', 'free'];      // 이야기 · 공략 · 모집 · 자유
+const HEADS = ['story', 'tip', 'party', 'free'];      // 말머리 (지금 화면에서는 고르지 않아 늘 free로 새김)
 const RULES = {
   title: 40, body: 1000, comment: 100,                // 글자 수
   postGap: 30 * 1000, perDay: 20,                     // 글 간격, 하루에 새길 수 있는 글 수
