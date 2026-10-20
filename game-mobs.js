@@ -133,6 +133,50 @@ const MOBS = {
           done: '비문이 완성되었다. "용과 인간이 함께 재앙을 봉인하였노라." 오르딘이 룬을 새긴 관을 건넨다. "자네가 이 이야기의 마지막 장을 열었네."' },
       ],
     },
+    gate: {
+      title: '땅속으로 이어진 계단',
+      key: 'corridor',
+      // 아직 자격이 없을 때 회랑 입구 띠에 보이는 말
+      locked: '회랑 입구는 오르딘이 지키고 있다. 먼저 그에게 말을 걸어야 한다.',
+      ch: [
+        { intro: '무너진 회랑 벽 뒤에서 계단을 하나 찾았네. 땅속 깊이, 끝이 보이지 않을 만큼 이어져 있더군. 그런데 입구에 봉인 문양이 새겨져 있어. 읽으려면 룬 돌이 필요하네. 세 개만 가져다주게.',
+          g: { bring: { rune_stone: 3 } }, t: 1,
+          done: '오르딘이 룬 돌을 문양 위에 하나씩 올려놓는다. 돌이 희미하게 빛나며 글자가 떠올랐다. "…\'잠든 돌이 길을 지킨다\'라. 좋지 않은 소식이군."' },
+        { intro: '문양에 따르면 회랑 안에는 돌 파수꾼들이 잠들어 있다네. 발소리에 깨어나는 놈들이지. 자네가 그놈들을 감당할 수 있는지 먼저 보고 싶네. 무너진 회랑에서 돌 파수꾼 둘을 쓰러뜨려 주게.',
+          g: { win: 'ruins_hall', n: 2 }, t: 1,
+          done: '돌 파수꾼이 무너진 자리에서, 오르딘이 부서진 돌 조각을 살핀다. "이것들보다 깊은 곳에 있는 놈들은 더 단단하겠지. 그래도 자네라면 해 볼 만하겠어."' },
+        { intro: '마지막일세. 계단 아래에 옛 탐사대가 남긴 표식이 있다고 비문에 적혀 있는데, 그 위치를 알려면 회랑 벽의 그림을 한 번 더 살펴야 하네. 회랑을 한 번 탐사해 주게.',
+          g: { explore: 'ruins', n: 1 }, t: 1,
+          done: '벽화 구석에서 작은 불꽃 문양을 찾아냈다. 오르딘이 고개를 끄덕이며 횃불 하나를 건넨다. "옛 탐사대는 불을 피운 자리마다 이 문양을 남겼네. 이제 자네도 내려갈 수 있어."' },
+      ],
+      // 마지막 장을 끝낸 직후, 이어서 한 줄씩 보여 주는 안내 (규칙 설명)
+      guide: [
+        '횃불 하나로 마흔 걸음일세. 누가 이미 지나간 길은 반만 타고, 아직 아무도 밟지 않은 길은 온전히 타지.',
+        '옛 탐사대가 피운 화톳불 자리를 찾게. 찾아 둔 자리에서는 다음번에 곧장 내려갈 수 있고, 불 곁에서 상처도 돌볼 수 있다네. 횃불 한 걸음이면 되지.',
+        '돌 파수꾼은 그냥 지나치면 등 뒤를 세게 친다네. 횃불을 써서 싸울지, 한 대 맞고 지나갈지 잘 고르게.',
+        '층마다 아래로 가는 계단이 봉인돼 있네. 네 기둥을 지키는 수호자를 쓰러뜨리고, 네 기둥에 함께 불을 밝혀야 풀리지. 혼자서는 어려우니 다른 드래곤을 부르게.',
+        '비문에 따르면, 일곱 번째 층 아래에 고대도시가 잠들어 있다네. …나도 그 문이 열리는 걸 보고 싶군.',
+      ],
+      // 자격을 얻은 뒤 말을 걸면 (greet 대신)
+      greetIn: '회랑은 어떤가? 내려갈 때마다 무엇을 보았는지 들려주게. 기록해 두고 있으니.',
+      // 층이 정복될 때: 대륙 소식 한 줄 + 그 뒤 말을 걸면 오르딘이 하는 말
+      floors: {
+        1: { news: '오르딘이 지하 회랑 제 1층의 지도를 다 그렸다고 알렸다.',
+             say: '첫 층의 봉인이 풀렸군! 계단 아래에서 더 오래된 공기가 올라오고 있네. 벽돌 쌓는 법부터 달라.' },
+        2: { news: '오르딘이 제 2층 벽에서 고대 문자를 새로 찾았다.',
+             say: '제 2층 벽의 글자는 제단의 비문과 같은 손으로 쓰였네. 같은 시대, 같은 이들이 이 길을 팠다는 뜻이지.' },
+        3: { news: '지하 회랑 제 3층이 정복되었다. 오르딘이 밤새 두루마리를 펼쳐 두었다.',
+             say: '수호자들이 지키던 기둥 말일세. 네 기둥에 새겨진 이름이 모두 다르더군. 문지기였던 용들의 이름일지도 모르겠네.' },
+        4: { news: '지하 회랑 제 4층이 정복되었다. 아래쪽에서 바람이 끊겼다.',
+             say: '이제부터는 바람이 없네. 다음 층부터는 어둠이 짙어질 걸세. 횃불이 비추는 곳이 훨씬 좁아질 테니 조심하게.' },
+        5: { news: '어둠 속 제 5층이 정복되었다. 무너지는 회랑 사이로 길이 열렸다.',
+             say: '회랑이 스스로 무너지고 다시 열린다지? 길이 살아 있는 것처럼 말이야. 누군가 이곳을 아직도 지키고 있는 걸세.' },
+        6: { news: '제 6층이 정복되었다. 오르딘이 고대도시의 문장을 그리기 시작했다.',
+             say: '벽화 속에 성문이 보이기 시작했네. 용과 인간이 나란히 서 있는 문이야. 거의 다 왔어.' },
+        7: { news: '지하 회랑의 일곱 층이 모두 밝혀졌다. 고대도시로 가는 길이 열렸다.',
+             say: '…해냈군. 자네들 모두가. 저 아래 문 너머에 무엇이 있든, 이 길을 연 건 자네들일세. 내 기록의 마지막 장에 모두의 이름을 적어 두겠네.' },
+      },
+    },
   },
   morgana: {
     region: 'forest', name: '모르가나', kind: 'green', who: '독안개 숲의 약초사',
@@ -465,37 +509,44 @@ function abandon(d, mobId, i) {
 }
 
 // ── 이야기 퀘스트 ───────────────────────────────────
-function storyOf(m, mobId) {
-  const s = m.story[mobId];
+// kind: 'story'(이야기) 또는 'gate'(지하 회랑 입장 부탁). 저장 자리는 story[mobId], story[mobId#gate]
+const storyKey = (mobId, kind) => (kind === 'gate' ? `${mobId}#gate` : mobId);
+const bookOf = (mb, kind) => (kind === 'gate' ? mb.gate : mb.story);
+function storyOf(m, mobId, kind = 'story') {
+  const s = m.story[storyKey(mobId, kind)];
   return s && typeof s === 'object' ? s : { ch: 0, base: null };
 }
-function storyAccept(d, mobId) {
+function storyAccept(d, mobId, kind = 'story') {
   const err = here(d, mobId);
   if (err) return err;
   const mb = MOBS[mobId];
+  const bk = bookOf(mb, kind);
+  if (!bk) return { error: '그런 이야기는 없다.' };
   const m = stateOf(d);
-  const s = storyOf(m, mobId);
-  const c = mb.story.ch[s.ch];
+  const s = storyOf(m, mobId, kind);
+  const c = bk.ch[s.ch];
   if (!c) return { error: '이 이야기는 이미 끝까지 들었다.' };
   if (s.base != null) return { error: '이미 듣고 있는 이야기다.' };
-  m.story[mobId] = { ch: s.ch, base: isBring(c.g) ? 0 : countOf(d, goalKey(c.g)) };
-  return { title: `${mb.story.title} · ${s.ch + 1}장`, lines: [`"${c.intro}"`, `할 일: ${goalText(c.g)}`] };
+  m.story[storyKey(mobId, kind)] = { ch: s.ch, base: isBring(c.g) ? 0 : countOf(d, goalKey(c.g)) };
+  return { title: `${bk.title} · ${s.ch + 1}장`, lines: [`"${c.intro}"`, `할 일: ${goalText(c.g)}`] };
 }
-function storyProgress(d, mobId) {
+function storyProgress(d, mobId, kind = 'story') {
   const m = stateOf(d);
-  const s = storyOf(m, mobId);
-  const c = MOBS[mobId].story.ch[s.ch];
+  const s = storyOf(m, mobId, kind);
+  const c = bookOf(MOBS[mobId], kind)?.ch[s.ch];
   if (!c || s.base == null || isBring(c.g)) return null;
   const n = goalN(c.g);
   return { have: Math.min(n, countOf(d, goalKey(c.g)) - s.base), n };
 }
-function storyTurnIn(d, mobId, have) {
+function storyTurnIn(d, mobId, have, kind = 'story') {
   const err = here(d, mobId);
   if (err) return err;
   const mb = MOBS[mobId];
+  const bk = bookOf(mb, kind);
+  if (!bk) return { error: '그런 이야기는 없다.' };
   const m = stateOf(d);
-  const s = storyOf(m, mobId);
-  const c = mb.story.ch[s.ch];
+  const s = storyOf(m, mobId, kind);
+  const c = bk.ch[s.ch];
   if (!c) return { error: '이 이야기는 이미 끝까지 들었다.' };
   if (s.base == null) return { error: '먼저 이야기를 들어야 한다.' };
   let items = [];
@@ -504,18 +555,23 @@ function storyTurnIn(d, mobId, have) {
     if (lack.length) return { error: `${lack.map(([id, n]) => `${ITEMS[id].name} ${n}개`).join(', ')}가 있어야 한다.` };
     items = takeItems(c.g.bring);
   } else {
-    const p = storyProgress(d, mobId);
+    const p = storyProgress(d, mobId, kind);
     if (p.have < p.n) return { error: `아직 다 하지 못했다. (${p.have}/${p.n})` };
   }
-  const last = s.ch === mb.story.ch.length - 1;
-  m.story[mobId] = { ch: s.ch + 1, base: null };
+  const last = s.ch === bk.ch.length - 1;
+  m.story[storyKey(mobId, kind)] = { ch: s.ch + 1, base: null };
   const r = payReward(d, c.t, c.g, { item: c.item });
   const lines = [c.done, ...r.lines];
-  if (last) {
-    lines.push(`'${mb.story.title}' 이야기를 끝까지 들었다.`, ...logic.traitCount(d, 'mobstory'));
-    logic.chron(d, 'mark', `${mb.name}의 이야기 '${mb.story.title}'${josa(mb.story.title, '을', '를')} 끝까지 함께했다.`);
+  if (last && kind === 'gate') {
+    // 입장 자격: combat JSON에 남긴다 (maze.js가 읽음). 이어서 안내 다섯 줄
+    logic.combatJson(d)[bk.key || 'corridor'] = true;
+    lines.push(...(bk.guide || []).map((t) => `"${t}"`));
+    logic.chron(d, 'mark', `${mb.name}에게서 지하 회랑으로 내려가는 길을 들었다.`);
+  } else if (last) {
+    lines.push(`'${bk.title}' 이야기를 끝까지 들었다.`, ...logic.traitCount(d, 'mobstory'));
+    logic.chron(d, 'mark', `${mb.name}의 이야기 '${bk.title}'${josa(bk.title, '을', '를')} 끝까지 함께했다.`);
   }
-  return { title: `${mb.story.title} · ${s.ch + 1}장`, lines, items: [...items, ...r.items], gold: r.gold };
+  return { title: `${bk.title} · ${s.ch + 1}장`, lines, items: [...items, ...r.items], gold: r.gold };
 }
 
 // ── 용족 교환소 ─────────────────────────────────────
@@ -555,13 +611,19 @@ function greetOf(d, mb) {
 }
 function activeView(d) {
   const m = stateOf(d);
-  return m.act.map((a) => {
+  const gates = Object.entries(MOBS).filter(([, mb]) => mb.gate).map(([id, mb]) => {
+    const s = storyOf(m, id, 'gate'); const c = mb.gate.ch[s.ch];
+    if (!c || s.base == null) return null;
+    const p = isBring(c.g) ? null : storyProgress(d, id, 'gate');
+    return { mob: id, i: -1, gate: true, name: mb.name, region: mb.region, regionName: REGIONS[mb.region].name, text: `${mb.gate.title} · ${goalText(c.g)}`, have: p?.have ?? 0, n: p?.n ?? 0, ready: !!p && p.have >= p.n };
+  }).filter(Boolean);
+  return [...gates, ...m.act.map((a) => {
     const mb = MOBS[a.mob];
     const q = mb?.pool[a.i];
     if (!q) return null;
     const p = progressOf(d, a);
     return { mob: a.mob, i: a.i, name: mb.name, region: mb.region, regionName: REGIONS[mb.region].name, text: goalText(q.g), have: p.have, n: p.n, ready: p.have >= p.n };
-  }).filter(Boolean);
+  }).filter(Boolean)];
 }
 // 내 정보에 붙는 요약 (어디서든 보임)
 function summary(d) {
@@ -602,6 +664,21 @@ function view(d, mobId, have, now = Date.now()) {
       prog: storyProgress(d, mobId),
     } : null,
   };
+  // 지하 회랑 입장 부탁 (있는 드래곤만)
+  let gate = null;
+  if (mb.gate) {
+    const gs = storyOf(m, mobId, 'gate');
+    const gc = mb.gate.ch[gs.ch];
+    gate = {
+      title: mb.gate.title, total: mb.gate.ch.length, ch: gs.ch, done: !gc,
+      past: mb.gate.ch.slice(0, gs.ch).map((x) => x.done),
+      cur: gc ? {
+        intro: gc.intro, text: goalText(gc.g), accepted: gs.base != null, bring: isBring(gc.g), reward: rewardFor(d, gc.t, gc.g), item: null,
+        needs: isBring(gc.g) ? Object.entries(gc.g.bring).map(([id, n]) => ({ id, n, have: have(id) })) : null,
+        prog: storyProgress(d, mobId, 'gate'),
+      } : null,
+    };
+  }
   const used = todayTrades(m, now);
   const usedW = weekTrades(m, now);
   const trades = mb.trades.map((o, i) => ({
@@ -612,8 +689,9 @@ function view(d, mobId, have, now = Date.now()) {
     locked: o.needStory && storyOf(m, mobId).ch < mb.story.ch.length ? `'${mb.story.title}' 이야기를 끝까지 들으면 열린다` : null,
   }));
   return {
-    id: mobId, name: mb.name, kind: mb.kind, who: mb.who, desc: mb.desc, greet: greetOf(d, mb).text, fame: greetOf(d, mb).fame, mood: greetOf(d, mb).mood, region: mb.region,
-    offers, story, trades, act: activeView(d), max: MOB_RULES.maxActive,
+    id: mobId, name: mb.name, kind: mb.kind, who: mb.who, desc: mb.desc,
+    greet: gate?.done && mb.gate.greetIn ? mb.gate.greetIn : greetOf(d, mb).text, fame: greetOf(d, mb).fame, mood: greetOf(d, mb).mood, region: mb.region,
+    offers, story, gate, trades, act: activeView(d), max: MOB_RULES.maxActive,
     resetAt: (logic.dayIdx(now) + 1) * 86400000 - 9 * 3600000,
   };
 }

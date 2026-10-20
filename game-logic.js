@@ -1244,6 +1244,24 @@ function useItem(d, id, have, opts = {}) {
     lines.push(`설치한 ${it.name}: ${w[u.nestWard]}/${NEST.wardMax}`);
     return { title: it.name, lines, items: [{ id, qty: -1 }] };
   }
+  if (u.scar) { // 옛 샘의 정수: 가장 최근 상흔 하나를 씻어 냄, 30일에 한 번
+    let sc = d.scars;
+    if (typeof sc === 'string') { try { sc = JSON.parse(sc || '[]'); } catch { sc = []; } }
+    sc = Array.isArray(sc) ? sc : [];
+    if (!sc.length) return { error: '씻어 낼 상흔이 없다.' };
+    const c = combatJson(d), wait = 30 * 86400000, left = (c.scarHealAt || 0) + wait - Date.now();
+    if (left > 0) return { error: `몸이 아직 지난 정수를 받아들이는 중이다. ${Math.ceil(left / 86400000)}일 뒤에 다시 마실 수 있다.` };
+    const key = sc.pop();
+    const st = STATS.find((s) => s.key === key);
+    d[key] = (d[key] || 0) + 1;
+    if (key === 'scale') d.hp_max += 5;   // 상흔을 입을 때 깎인 만큼 되돌림 (death.js revive)
+    if (key === 'wisdom') d.en_max += 2;
+    d.scars = sc;
+    c.scarHealAt = Date.now();
+    chron(d, 'mark', `옛 샘의 정수로 ${st ? st.name : key}의 상흔을 씻어 냈다.`);
+    lines.push(`차가운 물이 목을 타고 내려가자 ${st ? st.name : key}의 상흔이 희미해지더니 사라졌다. (${st ? st.name : key} +1)`, sc.length ? `남은 상흔 ${sc.length}개.` : '이제 몸에 상흔이 하나도 없다.', '다음 정수는 30일 뒤에 받아들일 수 있다.');
+    return { title: it.name, lines, items: [{ id, qty: -1 }] };
+  }
   if (u.recipe) {
     const r = readRecipeScroll(d);
     if (r.error) return r;

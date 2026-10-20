@@ -194,6 +194,13 @@ const ITEMS = {
   tr_map_piece:   { name: '왕국의 지도 조각', rarity: 'uncommon', cat: 'treasure', value: 250, desc: '카르넴 왕국의 옛 지도 한 귀퉁이. 지금은 없는 강과 마을이 그려져 있다.' },
   tr_star_orb:    { name: '별을 담은 유리구슬', rarity: 'uncommon', cat: 'treasure', value: 320, desc: '안에서 작은 별빛이 천천히 돈다. 멸망 전 아이들이 가지고 놀던 장난감이었다고 한다.' },
   tr_dragon_idol: { name: '오염된 용 석상', rarity: 'rare', cat: 'treasure', value: 450, desc: '검게 물든 용 석상. 둥지에 두면 이상하게도 마음이 가라앉는다.' },
+  // ── 지하 회랑: 파수꾼·수호자를 쓰러뜨리면 아주 드물게 (cat: treasure) ──
+  mz_scale_charm: { name: '고대 용의 비늘 장식', rarity: 'rare', cat: 'treasure', value: 300, desc: '회랑 벽에 박혀 있던 비늘. 누구의 것인지 모르지만, 손에 쥐면 희미하게 따뜻하다.' },
+  mz_crystal_eye: { name: '잠든 수정 눈',       rarity: 'rare', cat: 'treasure', value: 380, desc: '돌 파수꾼의 눈이었던 수정. 어둠 속에서 아주 느리게 깜박인다.' },
+  mz_king_seal:   { name: '옛 왕의 인장',       rarity: 'rare', cat: 'treasure', value: 500, desc: '지하 회랑을 판 이들의 인장. 용과 사람의 손이 함께 새겨져 있다.' },
+  // 상흔을 하나 씻어 냄: 지하 회랑 수호자(아주 드물게) · 멸망한 대륙 생존자 교환. 30일에 한 번 (game-logic.js useItem)
+  scar_tonic:     { name: '옛 샘의 정수', rarity: 'rare', type: 'use', use: { scar: 1 }, value: 900, desc: '고대도시 아래 샘에서 스며 나온 물을 정화의 결정으로 맑힌 것. 마시면 가장 최근에 입은 상흔 하나가 씻겨 나간다. 몸이 받아들이는 것은 30일에 한 번뿐이다.' },
+  mz_city_key:    { name: '고대도시의 열쇠 조각', rarity: 'rare', cat: 'treasure', value: 650, desc: '일곱 층 아래 문의 열쇠였던 것. 조각만으로도 보물더미가 묘하게 환해진다.' },
   tr_ash_mirror:  { name: '잿빛 거울',     rarity: 'rare',     cat: 'treasure', value: 500, desc: '비추면 잿빛 하늘만 보이는 거울. 가끔 멸망 전의 맑은 하늘이 스친다.' },
   tr_broken_crown:{ name: '카르넴의 깨진 왕관', rarity: 'rare', cat: 'treasure', value: 700, desc: '마지막 왕이 쓰던 왕관. 반쪽이 떨어져 나갔지만 보석은 아직 빛난다.' },
   tr_last_claw:   { name: '거대 고룡의 발톱', rarity: 'rare',   cat: 'treasure', value: 900, desc: '대륙이 무너지던 날까지 싸운 거대한 고룡의 발톱. 사람 키보다 길고, 아직 따뜻하다.' },
@@ -682,6 +689,7 @@ const RUIN = {
     { id: 'fire_crystal',   cost: 15 }, { id: 'eternal_ice', cost: 15 }, { id: 'sun_stone', cost: 15 },
     { id: 'heartwood',      cost: 15 }, { id: 'bog_pearl', cost: 15 }, { id: 'deep_pearl', cost: 15 }, { id: 'ancient_relic', cost: 15 },
     { id: 'ashen_core',     cost: 40 },
+    { id: 'scar_tonic',     cost: 400 }, // 상흔을 하나 씻어 냄 (30일에 한 번 쓸 수 있음)
     { id: 'tr_map_piece',   cost: 60 }, { id: 'tr_star_orb', cost: 80 }, { id: 'tr_dragon_idol', cost: 120 },
   ],
   // 강적·사냥에서 나오는 것 (멸망한 대륙)
@@ -1103,6 +1111,9 @@ const TITLES = [
   { id: 'lord_swamp',   name: '늪의 군주',       cond: { count: 'huntwin:swamp', at: 30 },   mod: { region: 'swamp',   atk: 1.08, taken: 0.92 }, eff: '검은 늪에서 공격 +8%, 받는 피해 −8%' },
   { id: 'lord_snow',    name: '설원의 방랑자',   cond: { count: 'huntwin:snow', at: 30 },    mod: { region: 'snow',    atk: 1.08, taken: 0.92 }, eff: '북부 설원에서 공격 +8%, 받는 피해 −8%' },
   { id: 'lord_ruins',   name: '폐허의 파수꾼',   cond: { count: 'huntwin:ruins', at: 30 },   mod: { region: 'ruins',   atk: 1.08, taken: 0.92 }, eff: '고대 유적에서 공격 +8%, 받는 피해 −8%' },
+  // 지하 회랑 개척자: 그 층의 봉인이 풀린 날 수호자를 치거나 기둥을 밝힌 이 (maze.js)
+  ...[1, 2, 3, 4, 5, 6, 7].map((n) => ({ id: `maze_f${n}`, name: `제 ${n}층의 개척자`, cond: { count: `mazef${n}`, at: 1 }, mod: {}, eff: `지하 회랑 제 ${n}층의 봉인을 함께 풀었다` })),
+  { id: 'maze_city', name: '고대도시의 문을 연 자', cond: { count: 'mazecity', at: 1 }, mod: { xp: 1.03 }, eff: '경험치 +3%' },
   { id: 'lord_canyon',  name: '협곡의 맹금',     cond: { count: 'huntwin:canyon', at: 30 },  mod: { region: 'canyon',  atk: 1.08, taken: 0.92 }, eff: '태양 협곡에서 공격 +8%, 받는 피해 −8%' },
   { id: 'lord_volcano', name: '불꽃을 걷는 자',  cond: { count: 'huntwin:volcano', at: 30 }, mod: { region: 'volcano', atk: 1.08, taken: 0.92 }, eff: '잿빛 화산에서 공격 +8%, 받는 피해 −8%' },
   // 강적
@@ -1156,7 +1167,7 @@ const TITLES = [
   { id: 'yb_gambler', name: '홀짝의 귀재', cond: { count: 'yabawi', at: 30 }, mod: { huntGold: 1.05 }, eff: '사냥 금화 +5%' },
 ];
 // 칭호 조건을 사람이 읽는 글로
-const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: '둥지에서 {n}번 쉬기', craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격', heir: '먼 여행을 떠난 드래곤의 의지를 잇기', teach: '제자를 {n}번 가르치기', surpass: '스승의 레벨을 따라잡기', sendoff: '다 자란 식구를 {n}번 떠나보내기', corrupt: '오염된 땅에서 {n}번 행동하기', purify: '오염된 땅을 {n}번 정화하기', firstcraft: '숨겨진 제작법을 대륙에서 처음 찾아내기', masterwork: '대성공 {n}번', mobquest: '모브 드래곤의 의뢰 {n}번 마치기', mobstory: '모브 드래곤의 이야기 {n}개를 끝까지 듣기', yabawimeet: '떠돌이 야바위꾼을 {n}번 만나기 (나타날 때마다 한 번)', yabawi: '야바위꾼과 홀짝 {n}판', dance: '왕도 축제에서 {n}번 춤추기' };
+const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: '둥지에서 {n}번 쉬기', craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격', heir: '먼 여행을 떠난 드래곤의 의지를 잇기', teach: '제자를 {n}번 가르치기', surpass: '스승의 레벨을 따라잡기', sendoff: '다 자란 식구를 {n}번 떠나보내기', corrupt: '오염된 땅에서 {n}번 행동하기', purify: '오염된 땅을 {n}번 정화하기', firstcraft: '숨겨진 제작법을 대륙에서 처음 찾아내기', masterwork: '대성공 {n}번', mobquest: '모브 드래곤의 의뢰 {n}번 마치기', mobstory: '모브 드래곤의 이야기 {n}개를 끝까지 듣기', yabawimeet: '떠돌이 야바위꾼을 {n}번 만나기 (나타날 때마다 한 번)', yabawi: '야바위꾼과 홀짝 {n}판', dance: '왕도 축제에서 {n}번 춤추기', ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map((n) => [`mazef${n}`, `지하 회랑 제 ${n}층의 봉인이 풀린 날 수호자를 치거나 기둥을 밝히기`])), mazecity: '지하 회랑 일곱 층을 모두 밝힌 날 함께하기' };
 
 // ── 장소와 사냥터 난이도 ───────────────────────────
 // 야생 지역마다 장소가 넷. 입구는 쉽고 안쪽일수록 사냥터 난이도가 높다 (셋째까지 Lv.1~12, 넷째는 고레벨 구역 Lv.13~24).

@@ -246,6 +246,7 @@ const meOf = (d) => ({
   ruin: ruin.view(d),
   fallen: logic.isFallen(d) ? death.view(d) : null,
   titles: logic.titlesView(d),
+  maze: maze.meView(d),               // 지하 회랑: 자격·횃불·오늘 입장
   dexNew: logic.dexHasNew(d), // 도감에 아직 열어 보지 않은 새 칸
   achNew: logic.achHasNew(d), // 아직 열어 보지 않은 새 업적
   yabawi: yabawi.here(d),     // 같은 장소에 야바위꾼이 있으면 { until, greet … }
@@ -468,6 +469,7 @@ function enterWorld(socket, dragon) {
   sendMe(socket, dragon); // 접속할 때 새로 이룬 칭호도 확인
   if (arena) arena.resume(dragon.id, socket); // 새로고침 전의 싸움이 남아 있으면 이어서
   social.onEnter(socket, dragon);
+  maze.onEnter(socket, dragon);
   online.set(dragon.id, { socket, dragon });
   socket.join(dragon.region);
   setImmediate(() => rivalNear(dragon));
@@ -496,6 +498,8 @@ const BERSERK = '광폭화한 몸이 제멋대로 날뛴다. 누군가 진정시
 
 // 쓰러짐·상흔·죽음·남긴 둥지 (death.js)
 const death = require('./death')({ io, db, online, logic, life, sendMe, broadcastPresence });
+// 지하 회랑: 고대 유적 아래 일곱 층의 공유 미로 (maze.js)
+const maze = require('./maze')({ io, db, online, logic, sendMe, system, death });
 // ── 계절과 날씨: 시각으로 정해짐. 바뀌면 모두에게 알리고, 그 지역 이야기 창에도 한 줄 ──
 function weatherAll(now = Date.now()) {
   const se = logic.seasonAt(now);
@@ -795,6 +799,7 @@ io.on('connection', (socket) => {
       list: Object.fromEntries(Object.entries(FACILITY.list).map(([id, F]) => [id, { ...F,
         fit: [F.talent ? `${TALENTS[F.talent].name} 재주` : null, ...F.traits.map((t) => KIN_TRAITS[t]?.name)].filter(Boolean).join(', ') }])),
     },
+    mazeRules: maze.forClient(),
     ruinRules: { name: RUIN.name, crossAp: RUIN.crossAp, minLevel: RUIN.minLevel, gateTo: RUIN.gateTo, drain: RUIN.drain },
     fishing: { region: FISHING.region, window: FISHING.window },
     bonds: require('./game-data').BONDS, marks: require('./game-data').MARKS, bondRules: require('./game-data').BOND_RULES,
@@ -1257,6 +1262,9 @@ io.on('connection', (socket) => {
   itemAction('mob:abandon', (d, p) => mobs.abandon(d, str(p.mob), p.i));
   itemAction('mob:story', (d, p) => mobs.storyAccept(d, str(p.mob)));
   itemAction('mob:storyturn', (d, p, have) => mobs.storyTurnIn(d, str(p.mob), have));
+  itemAction('mob:gate', (d, p) => mobs.storyAccept(d, str(p.mob), 'gate'));        // 지하 회랑 입장 부탁
+  itemAction('mob:gateturn', (d, p, have) => mobs.storyTurnIn(d, str(p.mob), have, 'gate'));
+  maze.bind(socket, () => entryOf(socket));
   itemAction('mob:trade', (d, p, have) => mobs.trade(d, str(p.mob), p.i, have));
   socket.on('order:list', (payload, ack) => {
     if (typeof ack !== 'function') return;
