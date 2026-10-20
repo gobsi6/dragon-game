@@ -12286,11 +12286,20 @@
     body.querySelector('#maze-dlg-go').addEventListener('click', () => {
       mazeAct('maze:enter', { fi: v.fi, point: MZ.pick }, (res) => { $('maze-dlg').close(); SFX.play('coin'); showResult({ title: `지하 회랑 제 ${v.fi + 1}층`, lines: res.lines }); renderMazeBar(); });
     });
-    body.addEventListener('click', (e) => {
-      const pin = e.target.closest('.rm-pin'); if (pin) { MZ.pick = pin.dataset.key; renderMazeDlg(); return; }
-      const st = e.target.closest('.rm-step[data-fi]'); if (st && st.tagName === 'BUTTON') { fetchMaze(+st.dataset.fi, (res) => { MZ.dlgView = res.view; MZ.dlgFi = res.view.fi; MZ.pick = res.view.best; renderMazeDlg(); }); }
-    });
   }
+  // 지도 점·층 버튼 누르기: 창 몸통에 한 번만 붙임
+  // (예전에는 renderMazeDlg가 그릴 때마다 붙여서, 누를 때마다 처리기가 두 배로 늘어나 빠르게 누르면 멈췄음)
+  $('maze-dlg-body').addEventListener('click', (e) => {
+    if (!MZ.dlgView) return;
+    const pin = e.target.closest('.rm-pin[data-key]'); // 기둥 상태·표식 표시(data-key 없음)는 고를 수 없는 점
+    if (pin) { if (MZ.pick !== pin.dataset.key) { MZ.pick = pin.dataset.key; renderMazeDlg(); } return; }
+    const st = e.target.closest('.rm-step[data-fi]');
+    if (st && st.tagName === 'BUTTON' && !MZ.dlgLoading && +st.dataset.fi !== MZ.dlgView.fi) {
+      MZ.dlgLoading = true; // 층을 불러오는 동안 같은 요청을 거듭 보내지 않음
+      fetchMaze(+st.dataset.fi, (res) => { MZ.dlgLoading = false; MZ.dlgView = res.view; MZ.dlgFi = res.view.fi; MZ.pick = res.view.best; renderMazeDlg(); });
+      setTimeout(() => { MZ.dlgLoading = false; }, 3000); // 응답이 오지 않아도 잠기지 않게
+    }
+  });
 
   // ── 회랑 화면 ──
   function renderMazeCard() {
