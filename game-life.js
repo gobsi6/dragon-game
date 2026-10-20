@@ -71,9 +71,12 @@ function rollLooks(k) {
   if (k.data.sex || k.status === 'egg' || k.status === 'cold') return false;
   const L = KIN_LOOKS[k.type];
   k.data.sex = Math.random() < 0.5 ? 'm' : 'f';
+  const nowStage = stageOf(k, Date.now()).name;
+  const offPhase = (m) => (KIN_LOOKS.grow[k.type]?.phase || []).some((p) => p.mark === m && !p.stages.includes(nowStage)); // 지금 나잇대에 어울리지 않는 모습
+  const marks = L.mark.filter((m) => !offPhase(m));
   k.data.looks = k.type === 'human'
-    ? [pick(L.hair), pick(L.eyes), pick(L.mark)]
-    : [`${pick(L.scale)} ${(KINDS[k.data.kind]?.name || '').replace(/\s*드래곤$/, '')} 비늘`.replace(/\s+/g, ' '), pick(L.horn), pick(L.eyes), pick(L.mark)];
+    ? [pick(L.hair), pick(L.eyes), pick(marks)]
+    : [`${pick(L.scale)} ${(KINDS[k.data.kind]?.name || '').replace(/\s*드래곤$/, '')} 비늘`.replace(/\s+/g, ' '), pick(L.horn), pick(L.eyes), pick(marks)];
   const pool = Object.keys(KIN_TRAITS).filter((id) => KIN_TRAITS[id].for === k.type || KIN_TRAITS[id].for === 'both');
   const got = [];
   while (got.length < TR.count && pool.length) got.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
@@ -87,12 +90,34 @@ function rollLooks(k) {
   }
   return true;
 }
+// ── 자라면서 바뀌는 모습 (KIN_LOOKS.grow) ──
+// grew: 방금 한 단계 자랐으면 true (새로 생기거나 옅어지는 변화는 자랄 때만). 나잇대를 지난 모습은 언제든 정리함
+function growLooks(k, now, grew) {
+  const G = KIN_LOOKS.grow[k.type];
+  if (!G || !Array.isArray(k.data.looks) || !k.data.sex) return [];
+  const st = stageOf(k, now).name, L = k.data.looks, lines = [];
+  const say = (t, s = '') => t.replace('{n}', k.name).replace('{s}', s).replace('{가}', josa(s, '이', '가'));
+  const drop = (m) => { const i = L.indexOf(m); if (i >= 0) L.splice(i, 1); return i >= 0; };
+  // 나잇대를 지난 모습은 사라짐 (예: 소년이 되면 앞니 빠진 웃음이 사라짐)
+  for (const p of G.phase) if (L.includes(p.mark) && !p.stages.includes(st) && drop(p.mark)) lines.push(say(p.lose));
+  if (!grew) return lines;
+  for (const p of G.phase) if (p.stages[0] === st && !L.includes(p.mark) && Math.random() < p.chance) { L.push(p.mark); lines.push(say(p.gain)); }
+  for (const f of G.fade) if (f.at === st && L.includes(f.mark) && Math.random() < f.chance && drop(f.mark)) lines.push(say(f.lose));
+  if (G.hair && G.hair.at === st && k.type === 'human' && L[0] !== G.hair.to) L[0] = G.hair.to; // 노년: 흰머리 (알림은 원래 있는 '흰 서리' 문장)
+  const S = G.scar, stages = k.type === 'human' ? KIN.human.stages : KIN.drake.stages;
+  const fromI = stages.findIndex((x) => x.name === S.from), nowI = stages.findIndex((x) => x.name === st);
+  if (S && nowI >= fromI && fromI >= 0 && L.filter((m) => S.list.includes(m)).length < S.max && Math.random() < S.chance) {
+    const sc = pick(S.list.filter((m) => !L.includes(m)));
+    if (sc) { L.push(sc); lines.push(say(S.line, sc)); }
+  }
+  return lines;
+}
 // "윤기 도는 레드 비늘에 굽은 뿔. 영리하고 응석받이 같다." 같은 소개
 const traitNames = (k) => (k.data.traits || []).map((id) => KIN_TRAITS[id]?.name).filter(Boolean);
 function introOf(k) {
   const sex = KIN_LOOKS.sex[k.type][k.data.sex];
   const [a, b, c] = k.data.looks;
-  const look = k.type === 'human' ? `${a}에 ${b}, ${c}` : `${a}에 ${b}`;
+  const look = k.type === 'human' ? (c ? `${a}에 ${b}, ${c}` : `${a}에 ${b}`) : `${a}에 ${b}`;
   const who = `${sex}아이`;
   return `${who}${josa(who, '이다', '다')}. ${look}. ${traitNames(k).map((n) => `'${n}'`).join(', ')} 성격이다.`;
 }
@@ -257,11 +282,13 @@ function tick(d, kin, now = Date.now()) {
         out.lines.push(...logic.traitCount(d, 'neglect')); // 특성: 냉담
       }
       const st = stageOf(k, now);
-      if (st.i > (k.data.stage || 0)) {
+      const grewH = st.i > (k.data.stage || 0);
+      if (grewH) {
         k.data.stage = st.i;
         if (a < H.adultDay) out.lines.push(`${ga(k)} 자라서 '${st.name}'${josa(st.name, '이', '가')} 되었다.`);
         else if (st.name === '노년' && a < H.lifespan) out.lines.push(`${k.name}의 머리에 흰 서리가 내렸다. 남은 날이 많지 않다.`);
       }
+      out.lines.push(...growLooks(k, now, grewH)); // 자라면서 모습이 조금 바뀜
       if (a >= H.adultDay && !k.data.talent) {
         k.data.talent = topLean(k);
         out.lines.push(`${ga(k)} 어른이 되었다. 재주는 '${TALENTS[k.data.talent].name}'. 둥지에서 갈 길을 정해 주자.`);
@@ -317,10 +344,12 @@ function tick(d, kin, now = Date.now()) {
       k.data.tickAt = now;
       const a = ageOf(k, now);
       const st = stageOf(k, now);
-      if (st.i > (k.data.stage || 0)) {
+      const grewD = st.i > (k.data.stage || 0);
+      if (grewD) {
         k.data.stage = st.i;
         out.lines.push(`${ga(k)} 자라서 '${st.name}'${josa(st.name, '이', '가')} 되었다.`);
       }
+      out.lines.push(...growLooks(k, now, grewD)); // 자라면서 모습이 조금 바뀜
       // 젊은 용부터 혼자 사냥해 옴
       if (a >= R.huntFrom && !k.data.onExp && !k.data.errand) {
         let n = 0;
@@ -953,11 +982,11 @@ function expStart(kin, now = Date.now()) {
   }
   return went;
 }
-// 함께 간 식구의 이름·종류·나잇대 (원정 길 팝업의 말: 아이·청년·어른, 새끼 드래곤)
+// 함께 간 식구의 이름·종류·나잇대 (원정 길 팝업의 말: 아이·청소년·어른, 새끼 드래곤)
 const ageGroup = (k, now) => {
   const s = stageOf(k, now).name;
   if (k.type === 'drake') return s === '해츨링' ? 'drake' : ['젊은 용', '다 자란 용'].includes(s) ? 'adult' : 'young'; // 어린 용부터는 폴리모프를 해서 말을 함
-  return ['어른', '노년'].includes(s) ? 'adult' : s === '청년' ? 'young' : 'child';
+  return ['어른', '노년'].includes(s) ? 'adult' : s === '청소년' ? 'young' : 'child';
 };
 const expWent = (kin, now = Date.now()) => kin.filter((k) => k.status === 'home' && k.data.onExp).map((k) => ({ name: k.name, age: ageGroup(k, now) }));
 // 함께 간 식구 수. 호기심 많은 식구는 조금 더 쳐 줌
