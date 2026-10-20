@@ -58,6 +58,29 @@
   }
   /* 정신이 10% 아래: 화면 바탕(틀 밖)이 어두워진다. 카드·글은 그대로 */
   body { transition: background-color 1.2s ease; }
+  /* 멸망한 대륙: 바탕이 잿빛으로 조금 어두워지고, 뒤로 재가 대각선으로 흩날림 (정신이 낮으면 아래 mind-low가 더 어둡게 덮음) */
+  body.realm-ruin {
+    background-color: #B6B5BA; /* 잿빛에 보라~파랑이 아주 옅게 */
+    background-image:
+      radial-gradient(ellipse 110% 60% at 50% 0%, rgba(212, 211, 217, .9) 0%, rgba(212, 211, 217, 0) 65%),
+      radial-gradient(ellipse 70% 50% at 100% 100%, rgba(92, 88, 116, .22) 0%, rgba(92, 88, 116, 0) 70%),
+      radial-gradient(ellipse 60% 45% at 0% 100%, rgba(84, 92, 112, .1) 0%, rgba(84, 92, 112, 0) 70%),
+      linear-gradient(180deg, #C7C6CB 0%, #B8B7BD 50%, #A6A5AC 100%);
+  }
+  .ash-fx { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; opacity: 0; transition: opacity 1.2s ease; }
+  body.realm-ruin .ash-fx { opacity: 1; }
+  .ash-fx i { position: absolute; top: -6vh; left: var(--x); width: var(--s); height: var(--s); border-radius: 50%;
+    background: radial-gradient(circle, rgba(32, 31, 38, var(--o)) 0%, rgba(32, 31, 38, 0) 70%); /* 흐린 점: blur 필터 대신 그라데이션이라 가벼움 */
+    animation: ash-fall var(--d) linear var(--w) infinite; will-change: transform, opacity; }
+  @keyframes ash-fall {
+    0% { transform: translate3d(0, 0, 0); opacity: 0; }
+    12% { opacity: 1; }
+    80% { opacity: .8; }
+    100% { transform: translate3d(32vw, 112vh, 0); opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) { .ash-fx { display: none; } }
+  /* 내용(틀)은 재 위에 */
+  body > #game, body > .wrap, body > main { position: relative; z-index: 1; }
   body.mind-low {
     background-color: #2A262E;
     background-image:
@@ -2570,7 +2593,7 @@
   .rm-pin.flag { width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 1.5px solid #6A4522; cursor: default; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
   .rm-pin.flag svg { width: 11px; height: 11px; fill: #E2B66F; stroke: #6A4522; stroke-width: 2.2; }
   .rm-pin.flag::after { display: none; }
-  .rm-pin.on { width: 34px; height: 34px; background: var(--steel-d); box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--steel-d); z-index: 2; }
+  .rm-pin.on { width: 24px; height: 24px; font-size: 10.5px; background: var(--steel-d); box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px var(--steel-d); z-index: 2; } /* 고른 시작점: 다른 점보다 조금만 크게 */
   .rm-pin svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .rm-pick { display: flex; align-items: center; gap: 10px; margin-top: 8px; padding: 8px 10px; border: 1px solid var(--steel-l); background: #F4F7FA; border-radius: 3px; }
   .rm-pick b { font-family: var(--serif); font-size: 14.5px; }
@@ -9124,7 +9147,24 @@
   if (window.ResizeObserver) new ResizeObserver(fitPlMap).observe($('pl-map'));
   else window.addEventListener('resize', fitPlMap);
   const PIN = '<svg class="pin" viewBox="0 0 24 32" aria-hidden="true"><path d="M12 31c-1.2-4.6-9.5-11-9.5-18.4A9.5 9.5 0 0 1 21.5 12.6C21.5 20 13.2 26.4 12 31z"/><circle cx="12" cy="12.4" r="3.6"/></svg>';
+  // 멸망한 대륙 바탕: 잿빛 + 흩날리는 재 (재 층은 처음 들어갈 때 한 번 만듦)
+  function renderRealmBg() {
+    const ruin = realmOf(S.region) === 'ruin';
+    document.body.classList.toggle('realm-ruin', ruin);
+    if (ruin && !document.querySelector('.ash-fx')) {
+      const box = document.createElement('div'); box.className = 'ash-fx'; box.setAttribute('aria-hidden', 'true');
+      const n = window.innerWidth < 640 ? 14 : 26; // 휴대폰은 조금 적게
+      for (let i = 0; i < n; i++) {
+        const a = document.createElement('i');
+        const s = 5 + Math.random() * 12;
+        a.style.cssText = `--x:${(Math.random() * 120 - 30).toFixed(1)}vw;--s:${s.toFixed(1)}px;--o:${(0.45 + Math.random() * 0.35).toFixed(2)};--d:${(11 + Math.random() * 12).toFixed(1)}s;--w:${(-Math.random() * 20).toFixed(1)}s`;
+        box.appendChild(a);
+      }
+      document.body.prepend(box);
+    }
+  }
   function renderPlaces() {
+    renderRealmBg();
     const ids = S.regionPlaces?.[S.region];
     $('places').hidden = !ids;
     const cur = ids && ids.includes(S.me?.place) ? S.places[S.me.place] : null;
