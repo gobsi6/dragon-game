@@ -374,6 +374,11 @@ const q = {
     WHERE k.status IN ('home', 'egg') AND d.dead_at IS NULL AND json_extract(k.data, '$.adoptedFromId') = ?`),
   relList:      db.prepare(`SELECT r.to_id AS id, r.kind, r.bond, d.name, d.kind AS dkind, d.level, d.region, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar
                             FROM relations r JOIN dragons d ON d.id = r.to_id WHERE r.from_id = ? ORDER BY d.name`),
+  // 관계도: 대륙의 모든 드래곤과 서로 맺은 관계 (한 쌍에 한 줄. bond는 from에게 to가 무엇인지)
+  mapDragons:   db.prepare('SELECT id, name, kind, level, avatar_ver, (avatar IS NOT NULL) AS has_avatar FROM dragons WHERE dead_at IS NULL'),
+  mapBonds:     db.prepare(`SELECT r.from_id AS a, r.to_id AS b, r.bond FROM relations r
+                            JOIN dragons x ON x.id = r.from_id JOIN dragons y ON y.id = r.to_id
+                            WHERE r.kind = 'friend' AND r.from_id < r.to_id AND x.dead_at IS NULL AND y.dead_at IS NULL`),
   reqGet:       db.prepare('SELECT at FROM friend_requests WHERE from_id = ? AND to_id = ?'),
   reqAdd:       db.prepare('INSERT OR IGNORE INTO friend_requests (from_id, to_id, at) VALUES (?, ?, ?)'),
   reqDel:       db.prepare('DELETE FROM friend_requests WHERE from_id = ? AND to_id = ?'),
@@ -575,6 +580,8 @@ module.exports = {
   relSet: (a, b, kind) => q.relSet.run(a, b, kind, Date.now()),
   relDel: (a, b) => q.relDel.run(a, b),
   relList: (id) => q.relList.all(id),
+  mapDragons: () => q.mapDragons.all(),
+  mapBonds: () => q.mapBonds.all(),
   // 내가 입양 보낸 식구 (다른 둥지에서 아직 함께 사는)
   kinAdoptedOut: (id) => q.kinAdoptedOut.all(id).map((r) => { let data = {}; try { data = JSON.parse(r.data); } catch {} return { ...r, data }; }),
   // 관계 메모: a가 b에 대해 쓴 글. 상대(b)도 볼 수 있음 (예전에 쓴 비공개 메모는 다시 저장하기 전까지 a만 봄). 비우면 지워짐

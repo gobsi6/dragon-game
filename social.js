@@ -445,7 +445,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     // 관계를 바꾼 직후 화면이 목록과 프로필을 다시 불러오는데, 여기에 걸리면 화면이 바뀌지 않고 멈춰 있었음
     // p.id가 상대 드래곤인 요청들 (시험용 드래곤이면 막음)
     const TARGETED = new Set(['rel:request', 'rel:accept', 'rel:decline', 'rel:cancel', 'rel:unfriend', 'rel:mark', 'rel:memo', 'heal:other', 'rel:teach', 'kin:offer', 'gift:send', 'tp:open', 'tp:send', 'tp:heard', 'trade:invite', 'fest:invite']);
-    const READ_ONLY = new Set(['dragon:profile', 'fest:get', 'rel:list', 'gift:inbox', 'gift:seen', 'ledger:list', 'tp:threads', 'tp:open', 'tp:heard']);
+    const READ_ONLY = new Set(['dragon:profile', 'fest:get', 'rel:list', 'rel:map', 'gift:inbox', 'gift:seen', 'ledger:list', 'tp:threads', 'tp:open', 'tp:heard']);
     const on = (event, fn) => socket.on(event, (payload, ack) => {
       if (typeof ack !== 'function') ack = () => {};
       const d = me();
@@ -473,6 +473,14 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       return v ? { ok: true, profile: v } : { error: '그런 드래곤은 없다.' };
     });
     on('rel:list', (d) => ({ ok: true, list: relList(d) }));
+    // 관계도: 긴 잠에 들지 않은 모든 드래곤(시험용 제외)과 서로 맺은 관계. 혼자 붙이는 표시(라이벌·경계·원수)는 보내지 않음
+    on('rel:map', () => {
+      const dragons = db.mapDragons().filter((x) => !isTestDragon(x))
+        .map((x) => ({ id: x.id, name: x.name, kind: x.kind, level: x.level, av: x.has_avatar ? x.avatar_ver : 0 }));
+      const ids = new Set(dragons.map((x) => x.id));
+      const pairs = db.mapBonds().filter((r) => ids.has(r.a) && ids.has(r.b)).map((r) => [r.a, r.b, r.bond || 'comrade']);
+      return { ok: true, dragons, pairs };
+    });
 
     // 동료 요청. 상대도 이미 요청을 보냈다면 바로 맺어짐
     // 관계 청하기: p.bond = 상대가 나에게 무엇이 되었으면 하는지 (없으면 동료). 이미 맺은 사이면 관계를 바꾸자는 청

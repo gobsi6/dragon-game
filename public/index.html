@@ -328,13 +328,43 @@
   .craft-modes button.on { background: var(--steel-d); border-color: #1E3242; color: #F4F7FA; }
   .rc-found { font: 600 11px/18px var(--sans); padding: 0 6px; border-radius: 2px; background: #F3EEFA; color: #4A3F78; border: 1px solid #D7CBEA; }
   .craft-hint { margin-top: 12px; color: #4A3F78; }
-  .exp-slots { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px; margin: 8px 0 12px; background: #fff; border: 1px dashed var(--line-soft); border-radius: 4px; }
-  .exp-slot { min-width: 84px; padding: 6px 10px; text-align: center; font-size: 12.5px; color: var(--muted); border: 1px solid var(--line-in); border-radius: 3px; background: var(--surface-2); }
-  .exp-slot.on { color: var(--ink); font-weight: 600; border-color: #9DB3C6; background: #F4F7FA; }
-  .exp-slots .btn { margin-left: auto; min-height: 34px; font-size: 13px; }
-  .exp-pick { display: flex; flex-wrap: wrap; gap: 5px; }
-  .exp-chip { min-height: 30px; font-size: 12.5px; }
-  .exp-chip:disabled { opacity: .45; }
+  /* 실험: 화로 세 칸 + 분류별 재료 칸 */
+  .xa-forge { display: flex; flex-direction: column; gap: 10px; padding: 14px; margin: 0 0 6px; background: linear-gradient(180deg, #F4F1EA, #EFEBE2); border: 1px solid #DCD5C6; border-radius: 4px; }
+  .xa-forge .h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .xa-forge .h b { font: 700 14px/1.3 var(--serif); color: #5A4A2E; }
+  .xa-forge .h small { font-size: 12px; color: #8A7B5E; }
+  .xa-slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .xa-slot { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 64px; padding: 6px 8px; border: 1.5px dashed #C9BFA9; border-radius: 4px; background: rgba(255, 255, 255, .45); color: #9A8E76; font: 500 12.5px/1.3 var(--sans); text-align: center; }
+  .xa-slot:not(.on) small { font-size: 10.5px; color: #B5A88C; }
+  .xa-slot .n { font: 700 11px/1 var(--sans); color: #B5A88C; }
+  .xa-slot.on { border: 1px solid #B9A77F; background: #FFFDF8; color: var(--ink); cursor: pointer; box-shadow: 0 1px 0 rgba(90, 74, 46, .08); }
+  .xa-slot.on b { font: 700 14px/1.3 var(--serif); word-break: keep-all; }
+  .xa-slot.on small { font-size: 11px; color: var(--muted); }
+  .xa-slot.on::after { content: "×"; position: absolute; top: 3px; right: 6px; font: 400 14px/1 var(--sans); color: #A9A08C; }
+  .xa-slot.on:hover { border-color: #8A7B5E; }
+  .xa-slot.on:focus-visible { outline: 2px solid var(--steel); outline-offset: 2px; }
+  .xa-go { min-height: 42px; }
+  .xa-note { margin: 0; font-size: 12px; line-height: 1.5; color: #8A7B5E; text-align: center; }
+  .xa-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+  .xa-mat { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 7px; min-height: 42px; padding: 0 10px; border: 1px solid var(--line-in); border-radius: 3px; background: var(--surface-2); text-align: left; cursor: pointer; }
+  .xa-mat::before { content: ""; width: 6px; height: 6px; transform: rotate(45deg); background: var(--r); }
+  .xa-mat.common { --r: #9A9C98; } .xa-mat.uncommon { --r: #3C5A73; } .xa-mat.rare { --r: #B8913A; }
+  .xa-mat b { min-width: 0; font: 700 13.5px/1.25 var(--serif); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .xa-mat small { font: 600 11px/1 var(--sans); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .xa-mat:hover:not(:disabled) { border-color: #9DB2C3; }
+  .xa-mat:focus-visible { outline: 2px solid var(--steel); outline-offset: 1px; }
+  .xa-mat.on { border-color: var(--steel); background: #EEF2F6; box-shadow: inset 0 0 0 1px var(--steel); }
+  .xa-mat.on small { display: none; }
+  .xa-mat .ord { display: none; width: 18px; height: 18px; border-radius: 50%; background: var(--steel-d); color: #fff; font: 700 11px/18px var(--sans); text-align: center; }
+  .xa-mat.on .ord { display: block; }
+  .xa-mat:disabled { opacity: .42; cursor: default; }
+  .xa-found { margin: 16px 0 0; padding: 10px 12px; border-left: 2px solid #B9AEDB; background: #F5F3FA; font-size: 12.5px; line-height: 1.6; color: #4A3F78; }
+  .xa-found b { font-weight: 600; }
+  @media (max-width: 560px) {
+    .xa-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .xa-slot { min-height: 58px; }
+    .xa-slot.on b { font-size: 13px; }
+  }
   .gearw .gw-acts { display: flex; gap: 6px; }
   .gearw .gw-acts .btn { min-height: 34px; padding: 0 12px; font-size: 13px; }
   .gw-mw, .gw-el, .gw-worn { font: 600 11px/18px var(--sans); padding: 0 6px; border-radius: 2px; }
@@ -1009,6 +1039,45 @@
   .rel-memo.view .h .linkbtn { flex: none; font-size: 12px; min-height: 0; }
   .rel-memo.view p { margin: 0; padding: 10px 12px; background: var(--surface-2); border: 1px solid var(--line-in); border-radius: 3px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
   /* 메모 한 줄: 글은 안쪽 칸에서만 말줄임(…)되고, 앞뒤 표시는 잘리지 않게 바깥에 둠 */
+  /* 관계도 (동료 창 '관계도' 탭): 선 색은 관계 칩 색과 같은 계열, 스승·제자는 화살표, 지인은 점선 */
+  #friends-map { --g-heart: #A0475A; --g-family: #A3792A; --g-friend: #3F7A5C; --g-mentor: #2A4256; --g-acq: #9A9C98; }
+  .rm-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 2px 0 2px; }
+  .rm-legend span { display: inline-flex; align-items: center; gap: 6px; font: 500 12px/24px var(--sans); color: var(--ink-2); }
+  .rm-legend i { position: relative; width: 18px; height: 0; border-top: 2px solid var(--c); }
+  .rm-legend .acq i { border-top-style: dashed; }
+  .rm-legend .mentor i::after { content: ""; position: absolute; right: -1px; top: -5px; border: 4px solid transparent; border-left: 6px solid var(--c); }
+  .rm-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; min-height: 30px; }
+  .rm-who { font: 700 15px/1.4 var(--serif); color: var(--steel-d); }
+  .rm-who small { margin-left: 6px; font: 400 12px/1 var(--sans); color: var(--muted); }
+  .rm-top .linkbtn { min-height: 30px; font-size: 12px; }
+  .rm-box { width: 100%; max-width: 440px; margin: 0 auto; }
+  .rm-box svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .rm-hint { margin: 4px 0 0; font-size: 12px; line-height: 1.6; color: var(--muted); }
+  #rm-svg .ring-guide { fill: none; stroke: #E4E6E2; stroke-width: 1; stroke-dasharray: 2 5; }
+  #rm-svg g.mv { transition: transform .55s cubic-bezier(.16, 1, .3, 1), opacity .4s; }
+  #rm-svg .lines { transition: opacity .25s; }
+  #rm-svg .nd { cursor: pointer; }
+  #rm-svg .nd circle.b { fill: #FCFBF7; stroke: var(--k); stroke-width: 2; }
+  #rm-svg .nd circle.o { fill: none; stroke: var(--k); stroke-width: 2; }
+  #rm-svg .nd text.i { font: 700 13px/1 var(--serif); fill: var(--k); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+  #rm-svg .nd text.n { font: 700 11.5px/1 var(--serif); fill: var(--ink); text-anchor: middle; pointer-events: none; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round; }
+  #rm-svg .nd text.r { font: 600 10px/1 var(--sans); text-anchor: middle; pointer-events: none; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
+  #rm-svg .nd.far text.n { font-size: 10px; fill: var(--muted); }
+  #rm-svg .nd:hover circle.o, #rm-svg .nd:hover circle.b { stroke-width: 3; }
+  #rm-svg .nd:focus { outline: none; } #rm-svg .nd:focus-visible circle.o, #rm-svg .nd:focus-visible circle.b { stroke: var(--steel); stroke-width: 3.5; }
+  #rm-svg .ln { fill: none; stroke: var(--c); stroke-width: 1.8; stroke-linecap: round; }
+  #rm-svg .ln.acq { stroke-dasharray: 4 4; stroke-width: 1.4; }
+  #rm-svg .ln.heart { stroke-width: 2.6; }
+  #rm-svg .ln.far { stroke: #C9CCC8; stroke-width: 1; }
+  .rm-list { display: flex; flex-direction: column; margin-top: 12px; background: var(--surface-2); border: 1px solid var(--line-in); border-radius: 4px; }
+  .rm-list .er { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 4px 10px; padding: 9px 12px; border-top: 1px solid #E6E8E4; align-items: baseline; }
+  .rm-list .er:first-child { border-top: 0; }
+  .rm-list .er > b { font: 600 12px/1.6 var(--sans); color: var(--c); }
+  .rm-list .names { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+  .rm-list .none { padding: 14px 12px; font-size: 13px; color: var(--muted); }
+  .rm-nm { padding: 0; border: 0; background: none; font: 700 13.5px/1.6 var(--serif); color: var(--ink); text-decoration: underline dotted #B9C2C9; text-underline-offset: 3px; }
+  .rm-nm:hover { color: var(--steel-d); }
+  .rm-nm small { margin-left: 3px; font: 400 11px/1 var(--sans); color: var(--muted); }
   .fr-row .memo { display: flex; align-items: baseline; min-width: 0; margin-top: 2px; font-size: 12px; color: #6B5A3A; }
   .fr-row .memo .mt { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .fr-row .memo::before { content: "✎"; flex: none; margin-right: 4px; color: #A8936A; }
@@ -2369,25 +2438,25 @@
   }
 
   /* ── 메뉴 단계 구분 ─────────────────────────────
-     창 안의 큰 탭(상태·둥지·소지품·시장·모브 드래곤): 서류철 탭. 고른 탭이 아래 내용과 이어지고 나머지는 뒤로 물러남
+     창 안의 큰 탭(상태·둥지·소지품·시장·모브 드래곤·동료): 서류철 탭. 고른 탭이 아래 내용과 이어지고 나머지는 뒤로 물러남
      그 안의 작은 탭(보물더미의 넣은 보물/소지품): 글자 + 밑줄
      행동 버튼(.btn)은 그대로라, 탭과 버튼이 서로 닮지 않음. 기록 리본·거래 기록 거르기·머리띠는 손대지 않음 */
-  .seg.ctabs, .seg.dtabs.three, #mk-tabs, #mob-tabs {
+  .seg.ctabs, .seg.dtabs.three, #mk-tabs, #mob-tabs, #friends-tabs {
     display: flex; flex-wrap: nowrap; align-items: flex-end; gap: 4px;
     padding: 0 2px; border: 0; border-bottom: 1px solid var(--line); background: none;
   }
-  .seg.ctabs button, .seg.dtabs.three button, #mk-tabs button, #mob-tabs button {
+  .seg.ctabs button, .seg.dtabs.three button, #mk-tabs button, #mob-tabs button, #friends-tabs button {
     flex: 1 1 0; min-width: 0; position: relative; z-index: 0;
     min-height: 38px; margin-bottom: -1px; padding: 8px 6px;
     border: 1px solid var(--line-soft); border-bottom-color: var(--line); border-radius: 3px 3px 0 0;
     background: #E4E5E1; color: var(--muted); font: 500 14px/1.25 var(--serif); letter-spacing: .02em;
     box-shadow: none; transform: none;
   }
-  .seg.ctabs button + button, .seg.dtabs.three button + button, #mk-tabs button + button, #mob-tabs button + button { border-left: 1px solid var(--line-soft); }
-  .seg.ctabs button:not(.on):hover, .seg.dtabs.three button:not(.on):hover, #mk-tabs button:not(.on):hover, #mob-tabs button:not(.on):hover {
+  .seg.ctabs button + button, .seg.dtabs.three button + button, #mk-tabs button + button, #mob-tabs button + button, #friends-tabs button + button { border-left: 1px solid var(--line-soft); }
+  .seg.ctabs button:not(.on):hover, .seg.dtabs.three button:not(.on):hover, #mk-tabs button:not(.on):hover, #mob-tabs button:not(.on):hover, #friends-tabs button:not(.on):hover {
     background: #EDEEEA; color: var(--ink); border-color: var(--line-soft); border-bottom-color: var(--line); box-shadow: none; transform: none;
   }
-  .seg.ctabs button.on, .seg.dtabs.three button.on, #mk-tabs button.on, #mob-tabs button.on {
+  .seg.ctabs button.on, .seg.dtabs.three button.on, #mk-tabs button.on, #mob-tabs button.on, #friends-tabs button.on {
     z-index: 1; min-height: 44px;
     background: var(--surface); color: var(--ink); font-weight: 700;
     border-color: var(--line); border-top: 3px solid var(--steel-d); border-bottom-color: var(--surface);
@@ -3250,7 +3319,15 @@
 <dialog class="frame dlg" id="friends-dlg" aria-labelledby="friends-dlg-title">
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="friends-dlg-title">동료</h2></div>
+  <div class="seg dtabs" id="friends-tabs" role="group" aria-label="동료 메뉴"><button type="button" data-ft="list" class="on" aria-pressed="true">내 관계</button><button type="button" data-ft="map" aria-pressed="false">관계도</button></div>
   <div class="body" id="friends-body"></div>
+  <div class="body" id="friends-map" hidden>
+    <div class="rm-legend" id="rm-legend" aria-hidden="true"></div>
+    <div class="rm-top"><div class="rm-who" id="rm-who"></div><button type="button" class="linkbtn" id="rm-home" hidden>나에게로 돌아가기</button></div>
+    <div class="rm-box"><svg id="rm-svg" viewBox="0 0 400 400" role="group" aria-label="관계도"></svg></div>
+    <p class="rm-hint">가운데 드래곤과 직접 맺은 관계는 안쪽 고리, 그 상대들이 맺은 관계는 바깥 고리에 흐리게 놓인다. 누구든 누르면 그 드래곤이 가운데로 오고, 가운데를 한 번 더 누르면 그 드래곤의 모습을 본다.</p>
+    <div class="rm-list" id="rm-list"></div>
+  </div>
   <div class="row" style="margin-top: 12px"><button class="btn" type="button" id="friends-close">닫기</button></div>
 </dialog>
 
@@ -7312,51 +7389,73 @@
       box.appendChild(p);
     }
   }
-  // 실험: 가진 재료 중 2~3가지를 골라 섞어 봄
+  // 실험: 가진 재료 중 2~3가지를 골라 화로에 넣어 봄. 위는 화로 세 칸(누르면 뺌), 아래는 분류별 재료 칸(누르면 넣음)
   function renderExperiment(box, ci) {
-    const p = document.createElement('p');
-    p.className = 'note';
-    p.textContent = `재료 2~3가지를 골라 화로에 넣어 본다. 숨겨진 제작법과 재료가 맞으면 그 제작법을 알게 된다. 고른 재료는 하나씩 사라지고 기력 ${S.craftRules?.experimentEn || 4}이 든다.`;
-    box.appendChild(p);
-    const mats = Object.entries(invCache).filter(([id, q]) => q > 0 && S.items[id] && S.items[id].type !== 'equip')
-      .sort(([a], [b2]) => S.items[a].name.localeCompare(S.items[b2].name, 'ko'));
+    const EN = S.craftRules?.experimentEn || 4;
+    const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+    const mats = Object.entries(invCache).filter(([id, q]) => q > 0 && S.items[id] && S.items[id].type !== 'equip');
     mixPick = mixPick.filter((id) => (invCache[id] || 0) > 0);
-    const pick = document.createElement('div');
-    pick.className = 'exp-pick';
-    const slots = document.createElement('div');
-    slots.className = 'exp-slots';
+    const toggle = (id) => { mixPick = mixPick.includes(id) ? mixPick.filter((x) => x !== id) : mixPick.length < 3 ? [...mixPick, id] : mixPick; renderCraft(); };
+    // ── 화로 ──
+    const f = el('div', 'xa-forge');
+    const h = el('div', 'h');
+    h.append(el('b', '', '화로'), el('small', '', `재료 2~3가지 · 기력 ${EN}`));
+    f.appendChild(h);
+    const slots = el('div', 'xa-slots');
     for (let i = 0; i < 3; i++) {
-      const sl = document.createElement('span');
       const id = mixPick[i];
-      sl.className = `exp-slot${id ? ' on' : ''}`;
-      sl.textContent = id ? S.items[id].name : (i < 2 ? '재료' : '(선택)');
-      slots.appendChild(sl);
+      if (id) {
+        const sl = el('button', 'xa-slot on');
+        sl.type = 'button';
+        sl.title = '눌러서 빼기';
+        sl.setAttribute('aria-label', `${S.items[id].name} 빼기`);
+        sl.append(el('b', '', S.items[id].name), el('small', '', `남은 ${Math.max(0, (invCache[id] || 0) - 1)}`));
+        sl.addEventListener('click', () => toggle(id));
+        slots.appendChild(sl);
+      } else {
+        const sl = el('div', 'xa-slot');
+        sl.append(el('span', 'n', `${i + 1}`), el('span', '', i < 2 ? '재료' : '하나 더'));
+        if (i === 2) sl.appendChild(el('small', '', '넣지 않아도 된다'));
+        slots.appendChild(sl);
+      }
     }
-    const go = document.createElement('button');
+    f.appendChild(slots);
+    const go = el('button', 'btn primary xa-go', `섞어 보기 · 기력 ${EN}`);
     go.type = 'button';
-    go.className = 'btn primary';
-    go.textContent = `섞어 보기 · 기력 ${S.craftRules?.experimentEn || 4}`;
-    go.disabled = mixPick.length < 2 || S.me.en < (S.craftRules?.experimentEn || 4) || !!S.me.exp;
+    go.disabled = mixPick.length < 2 || S.me.en < EN || !!S.me.exp;
     go.addEventListener('click', () => { const ids = mixPick.slice(); mixPick = []; itemAct('craft:experiment', { items: ids }); });
-    slots.appendChild(go);
-    box.appendChild(slots);
-    if (!mats.length) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = '섞어 볼 재료가 없다.'; box.appendChild(e); return; }
+    f.appendChild(go);
+    f.appendChild(el('p', 'xa-note', S.me.en < EN ? `기력이 모자라다. (기력 ${S.me.en} / ${EN})` : '숨겨진 제작법과 맞으면 그 제작법을 알게 된다. 넣은 재료는 하나씩 사라진다.'));
+    box.appendChild(f);
+    if (!mats.length) { box.appendChild(el('div', 'empty', '섞어 볼 재료가 없다.')); }
+    // ── 재료: 소지품과 같은 분류·순서 ──
+    const XCATS = ['treasure', 'use', 'buff', 'meal', 'fish', 'trophy', 'mat'];
+    const XCAT_NAME = { treasure: '보물', use: '회복약', buff: '강화 음식', meal: '식구 요리', fish: '낚시', trophy: '사냥 전리품', mat: '재료' };
+    const order = { rare: 0, uncommon: 1, common: 2 };
+    mats.sort(([a], [b2]) => XCATS.indexOf(itemCat(S.items[a])) - XCATS.indexOf(itemCat(S.items[b2])) || order[S.items[a].rarity] - order[S.items[b2].rarity] || S.items[a].name.localeCompare(S.items[b2].name, 'ko'));
+    let last = null, grid = null;
     for (const [id, q] of mats) {
-      const c = document.createElement('button');
-      c.type = 'button';
+      const it = S.items[id], c = itemCat(it);
+      if (c !== last) {
+        last = c;
+        box.appendChild(el('h3', 'inv-h', XCAT_NAME[c] || '재료'));
+        grid = el('div', 'xa-grid');
+        box.appendChild(grid);
+      }
       const on = mixPick.includes(id);
-      c.className = `chipbtn exp-chip${on ? ' on' : ''}`;
-      c.textContent = `${S.items[id].name} ${q}`;
-      c.disabled = !on && mixPick.length >= 3;
-      c.addEventListener('click', () => { mixPick = on ? mixPick.filter((x) => x !== id) : [...mixPick, id]; renderCraft(); });
-      pick.appendChild(c);
+      const b = el('button', `xa-mat ${it.rarity || 'common'}${on ? ' on' : ''}`);
+      b.type = 'button';
+      b.title = it.name;
+      b.append(el('b', '', it.name), el('small', '', `×${q}`), el('span', 'ord', on ? String(mixPick.indexOf(id) + 1) : ''));
+      b.disabled = !on && mixPick.length >= 3;
+      b.setAttribute('aria-pressed', String(on));
+      b.addEventListener('click', () => toggle(id));
+      grid.appendChild(b);
     }
-    box.appendChild(pick);
     if (ci.known.length) {
-      const h = document.createElement('p');
-      h.className = 'note';
-      h.textContent = `찾아낸 제작법: ${ci.known.map((o) => S.items[o]?.name || o).join(', ')}`;
-      box.appendChild(h);
+      const fd = el('p', 'xa-found');
+      fd.append(el('b', '', '찾아낸 제작법'), ` · ${ci.known.map((o) => S.items[o]?.name || o).join(', ')}`);
+      box.appendChild(fd);
     }
   }
   // 다듬기: 가진 장신구를 강화하고 속성을 새김 (최대 강화는 craftRules.enhance 단계 수)
@@ -8611,7 +8710,7 @@
   $('gift-dlg').addEventListener('cancel', (e) => e.preventDefault()); // Esc로 닫지 않음 (확인을 눌러야 사라짐)
 
   // ── 동료 메뉴 ──
-  function openFriends() { loadRel(() => { renderFriends(); openPanel('friends-dlg'); }); }
+  function openFriends() { loadRel(() => { renderFriends(); openPanel('friends-dlg'); if (friendsTab === 'map') loadRelMap(); }); }
   function renderFriends() {
     const l = S.relList;
     const body = $('friends-body');
@@ -8679,6 +8778,180 @@
   }
   $('dock-friends').addEventListener('click', openFriends);
   $('friends-close').addEventListener('click', () => $('friends-dlg').close());
+
+  // ── 관계도: 고른 드래곤을 가운데 두고, 직접 맺은 관계는 안쪽 고리, 그 상대들이 맺은 관계는 바깥 고리 ──
+  // 서로 맺은 관계만 (혼자 붙이는 라이벌·경계·원수는 서버가 보내지 않음). 아홉 가지 관계를 다섯 묶음으로
+  const RM_GROUP = { lover: 'heart', partner: 'heart', family: 'family', relative: 'family', friend: 'friend', comrade: 'friend', mentor: 'mentor', student: 'mentor', acquaint: 'acq' };
+  const RM_GORDER = ['heart', 'family', 'friend', 'mentor', 'acq'];
+  const RM_GNAME = { heart: '연인 · 반려', family: '가족 · 친척', friend: '친구 · 동료', mentor: '스승 · 제자', acq: '지인' };
+  const RM_GCOL = { heart: '#A0475A', family: '#A3792A', friend: '#3F7A5C', mentor: '#2A4256', acq: '#9A9C98' };
+  const RM_NS = 'http://www.w3.org/2000/svg';
+  const rmEl = (tag, attrs, parent) => { const e = document.createElementNS(RM_NS, tag); for (const [k, v] of Object.entries(attrs || {})) e.setAttribute(k, v); if (parent) parent.appendChild(e); return e; };
+  let friendsTab = 'list', rmData = null, rmC = null;
+  const rmSlots = new Map();
+  function setFriendsTab(t) {
+    friendsTab = t;
+    for (const b of $('friends-tabs').children) { const on = b.dataset.ft === t; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); }
+    $('friends-body').hidden = t !== 'list';
+    $('friends-map').hidden = t !== 'map';
+    if (t === 'map') loadRelMap();
+  }
+  for (const b of $('friends-tabs').children) b.addEventListener('click', () => setFriendsTab(b.dataset.ft));
+  function loadRelMap() {
+    socket.emit('rel:map', {}, (res) => {
+      if (res.error) return toast(res.error);
+      rmData = { dragons: new Map(res.dragons.map((d) => [d.id, d])), pairs: res.pairs };
+      if (rmC == null || !rmData.dragons.has(rmC)) rmC = S.me?.id;
+      drawRelMap(rmC, true);
+    });
+  }
+  // x의 관계: [{ id, t: 상대가 x에게 무엇인지, group, label }]
+  function rmRel(x) {
+    const out = [];
+    for (const [a, b, t] of rmData.pairs) {
+      if (a !== x && b !== x) continue;
+      const o = a === x ? b : a;
+      const tt = a === x ? t : (S.bonds?.[t]?.inv || t); // 서버의 관계는 a에게 b가 무엇인지
+      if (!rmData.dragons.has(o)) continue;
+      out.push({ id: o, t: tt, group: RM_GROUP[tt] || 'friend', label: S.bonds?.[tt]?.name || '동료' });
+    }
+    return out.sort((p, q) => RM_GORDER.indexOf(p.group) - RM_GORDER.indexOf(q.group) || rmData.dragons.get(p.id).name.localeCompare(rmData.dragons.get(q.id).name, 'ko'));
+  }
+  function rmLegend() {
+    const box = $('rm-legend');
+    if (box.children.length) return;
+    for (const g of RM_GORDER) {
+      const s = document.createElement('span'); s.className = g; s.style.setProperty('--c', RM_GCOL[g]);
+      s.innerHTML = '<i></i>'; s.append(RM_GNAME[g]); box.appendChild(s);
+    }
+  }
+  function rmNode(parent, d, r, far) {
+    const g = rmEl('g', { class: `nd${far ? ' far' : ''}`, tabindex: '0', role: 'button' }, parent);
+    g.style.setProperty('--k', `var(--k-${d.kind}, #8C9AA6)`);
+    rmEl('circle', { class: 'b', r }, g);
+    const url = avatarUrl(d);
+    if (url) {
+      rmEl('image', { href: url, x: -r, y: -r, width: r * 2, height: r * 2, 'clip-path': 'url(#rm-clip)', preserveAspectRatio: 'xMidYMid slice' }, g);
+      rmEl('circle', { class: 'o', r }, g);
+    } else {
+      const i = rmEl('text', { class: 'i' }, g); i.textContent = d.name[0];
+      i.style.fontSize = `${Math.round(r * 0.72)}px`;
+    }
+    const n = rmEl('text', { class: 'n', y: r + 13 }, g); n.textContent = d.name;
+    return g;
+  }
+  function drawRelMap(c, first) {
+    const svg = $('rm-svg');
+    rmLegend();
+    if (!svg.firstChild) {
+      const defs = rmEl('defs', {}, svg);
+      const clip = rmEl('clipPath', { id: 'rm-clip', clipPathUnits: 'objectBoundingBox' }, defs);
+      rmEl('circle', { cx: 0.5, cy: 0.5, r: 0.5 }, clip);
+      const m = rmEl('marker', { id: 'rm-arw', viewBox: '0 0 10 10', refX: '9', refY: '5', markerWidth: '7', markerHeight: '7', orient: 'auto-start-reverse' }, defs);
+      rmEl('path', { d: 'M0,1 L9,5 L0,9 z', fill: RM_GCOL.mentor }, m);
+      rmEl('circle', { class: 'ring-guide', cx: 200, cy: 200, r: 112 }, svg);
+      rmEl('circle', { class: 'ring-guide', cx: 200, cy: 200, r: 178 }, svg);
+      rmEl('g', { class: 'lines', id: 'rm-lines' }, svg);
+      rmEl('g', { id: 'rm-nodes' }, svg);
+    }
+    rmC = c;
+    const me = S.me?.id;
+    const d = rmData.dragons.get(c);
+    if (!d) return;
+    const who = $('rm-who');
+    who.replaceChildren(d.name);
+    const sm = document.createElement('small'); sm.textContent = `${S.kinds[d.kind]?.name || ''} · Lv. ${d.level}${c === me ? ' · 나' : ''}`; who.appendChild(sm);
+    $('rm-home').hidden = c === me;
+    // 자리 정하기
+    const r1 = rmRel(c);
+    const n1 = r1.length;
+    const R1 = n1 > 10 ? 120 : 112;
+    const near = new Set(r1.map((x) => x.id));
+    const pos = new Map([[c, { x: 200, y: 200, ring: 0 }]]);
+    r1.forEach((x, i) => { const a = -Math.PI / 2 + (i / Math.max(n1, 1)) * Math.PI * 2; pos.set(x.id, { x: 200 + R1 * Math.cos(a), y: 200 + R1 * Math.sin(a), ring: 1, a, rel: x }); });
+    // 바깥 고리: 처음 만난 상대 곁에 놓되, 너무 붙으면 고리를 따라 밀어 둠
+    const far = [];
+    const seen = new Set([c, ...near]);
+    const sector = (Math.PI * 2) / Math.max(n1, 1);
+    for (const x of r1) {
+      const kids = rmRel(x.id).filter((y) => !seen.has(y.id));
+      kids.forEach((y) => seen.add(y.id));
+      const spread = Math.min(sector * 0.86, kids.length * 0.24);
+      kids.forEach((y, j) => far.push({ id: y.id, parent: x.id, a: pos.get(x.id).a + (kids.length === 1 ? 0 : -spread / 2 + (j / (kids.length - 1)) * spread) }));
+    }
+    if (far.length) {
+      far.sort((p, q) => p.a - q.a);
+      const gap = Math.min(0.2, (Math.PI * 2) / far.length);
+      for (let i = 1; i < far.length; i++) if (far[i].a < far[i - 1].a + gap) far[i].a = far[i - 1].a + gap;
+      const over = far[far.length - 1].a - far[0].a - (Math.PI * 2 - gap);
+      if (over > 0) far.forEach((f, i) => { f.a -= over * (i / Math.max(far.length - 1, 1)); });
+      for (const f of far) pos.set(f.id, { x: 200 + 178 * Math.cos(f.a), y: 200 + 178 * Math.sin(f.a), ring: 2, parent: f.parent });
+    }
+    // 선: 잠깐 감췄다가 자리를 잡은 뒤 다시
+    const lines = $('rm-lines');
+    lines.style.opacity = '0';
+    setTimeout(() => {
+      if (rmC !== c) return;
+      lines.replaceChildren();
+      for (const p of pos.values()) {
+        if (p.ring !== 2) continue;
+        const q = pos.get(p.parent);
+        rmEl('line', { class: 'ln far', x1: q.x, y1: q.y, x2: p.x, y2: p.y }, lines);
+      }
+      for (const p of pos.values()) {
+        if (p.ring !== 1) continue;
+        const x = p.rel, dx = p.x - 200, dy = p.y - 200, L = Math.hypot(dx, dy);
+        const l = rmEl('line', { class: `ln ${x.group}`, x1: 200 + dx * (29 / L), y1: 200 + dy * (29 / L), x2: 200 + dx * ((L - 20) / L), y2: 200 + dy * ((L - 20) / L) }, lines);
+        l.style.setProperty('--c', RM_GCOL[x.group]);
+        if (x.t === 'student') l.setAttribute('marker-end', 'url(#rm-arw)');   // 가운데가 스승
+        if (x.t === 'mentor') l.setAttribute('marker-start', 'url(#rm-arw)');  // 상대가 스승
+      }
+      lines.style.opacity = '1';
+    }, first ? 0 : 380);
+    // 드래곤: 자리마다 하나씩 두고 옮겨 다님 (처음 보는 드래곤은 가운데에서 나옴)
+    const layer = $('rm-nodes');
+    for (const [id] of rmSlots) if (!rmData.dragons.has(id)) { rmSlots.get(id).remove(); rmSlots.delete(id); }
+    for (const dd of rmData.dragons.values()) {
+      let slot = rmSlots.get(dd.id);
+      if (!slot) { slot = rmEl('g', { class: 'mv' }, layer); slot.style.transform = 'translate(200px, 200px) scale(.4)'; slot.style.opacity = '0'; rmSlots.set(dd.id, slot); }
+      slot.replaceChildren();
+      const p = pos.get(dd.id);
+      if (!p) { slot.style.opacity = '0'; slot.style.pointerEvents = 'none'; slot.style.transform = 'translate(200px, 200px) scale(.4)'; continue; }
+      const r = p.ring === 0 ? 27 : p.ring === 1 ? 18 : 11;
+      const g = rmNode(slot, dd, r, p.ring === 2);
+      const up = p.ring > 0 && p.y < 170; // 위쪽에 놓인 드래곤은 이름표를 원 위에 (가운데에서 오는 선이 이름표를 지나지 않게)
+      if (p.ring === 0) g.querySelector('.n').remove();
+      else if (up) g.querySelector('.n').setAttribute('y', p.ring === 1 ? -(r + 19) : -(r + 6));
+      if (p.ring === 1) { const t = rmEl('text', { class: 'r', y: up ? -(r + 6) : r + 25 }, g); t.textContent = p.rel.label; t.style.fill = RM_GCOL[p.rel.group]; }
+      g.setAttribute('aria-label', p.ring === 0 ? `${dd.name}, 모습 보기` : p.ring === 1 ? `${dd.name}, ${p.rel.label}` : dd.name);
+      const pick = () => (dd.id === rmC ? openProfile(dd.id) : drawRelMap(dd.id));
+      g.addEventListener('click', pick);
+      g.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+      slot.style.pointerEvents = '';
+      slot.style.opacity = '1';
+      slot.style.transform = `translate(${p.x}px, ${p.y}px)`;
+    }
+    // 아래 목록: 관계별 이름
+    const list = $('rm-list');
+    list.replaceChildren();
+    if (!n1) { const e = document.createElement('div'); e.className = 'none'; e.textContent = c === me ? "아직 맺은 관계가 없다. '이곳의 드래곤'에서 이름을 눌러 관계를 청해 보자." : '아직 맺은 관계가 없다.'; list.appendChild(e); return; }
+    const by = new Map();
+    for (const x of r1) { if (!by.has(x.label)) by.set(x.label, { g: x.group, ids: [] }); by.get(x.label).ids.push(x.id); }
+    for (const [label, { g, ids }] of by) {
+      const row = document.createElement('div'); row.className = 'er'; row.style.setProperty('--c', RM_GCOL[g]);
+      const b = document.createElement('b'); b.textContent = label; row.appendChild(b);
+      const names = document.createElement('div'); names.className = 'names';
+      for (const id of ids) {
+        const nb = document.createElement('button'); nb.type = 'button'; nb.className = 'rm-nm'; nb.textContent = rmData.dragons.get(id).name;
+        if (id === me) { const s2 = document.createElement('small'); s2.textContent = '나'; nb.appendChild(s2); }
+        nb.addEventListener('click', () => drawRelMap(id));
+        names.appendChild(nb);
+      }
+      row.appendChild(names);
+      list.appendChild(row);
+    }
+  }
+  $('rm-home').addEventListener('click', () => drawRelMap(S.me?.id));
 
   // ── 텔레파시 ──
   let tpWith = null;    // 지금 열어 둔 대화 상대 id
