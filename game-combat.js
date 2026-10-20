@@ -816,8 +816,10 @@ function eliteReward(d, b) {
     logic.traitCount(d, 'elite');
     if (b.place) logic.dexWin(d, `${b.place}!`); // 도감
     logic.traitCount(d, `elite:${PLACES[b.place]?.region || d.region}`); // 모브 드래곤 의뢰: 지역별 강적
+    if (b.place) logic.traitCount(d, `elite:${b.place}`); // 모브 드래곤 의뢰: 이름을 대 준 바로 그 강적 (사냥터별)
     logic.traitCount(d, 'huntwin');
     logic.traitCount(d, `huntwin:${PLACES[b.place]?.region || d.region}`);
+    if (b.place) logic.traitCount(d, `huntwin:${b.place}`); // 모브 드래곤 의뢰 '그 사냥터에서 n번 이기기': 강적도 한 번으로 셈
     d.gold += gold;
     const t = [...items.map(logic.itemLabel), `금화 ${gold}닢`].join(', ');
     lines.push(`${eul(foe)} 쓰러뜨렸다! ${t}${josa(t, '을', '를')} 얻었다.`);

@@ -1429,6 +1429,7 @@
   .mob-card .tier { font: 600 11px/18px var(--sans); padding: 0 6px; border-radius: 2px; border: 1px solid var(--line-in); color: var(--ink-2); background: #fff; }
   .mob-card .tier.t2 { color: #3C5A73; border-color: #9DB3C6; background: #EEF2F6; }
   .mob-card .tier.t3 { color: #7A5A16; border-color: #E2D2A6; background: #FBF6E8; }
+  .mob-card .tier.t4 { color: #fff; border-color: #8A2E27; background: #8A2E27; }
   .mob-card .mc-say { font-size: 12.5px; line-height: 1.55; color: var(--muted); }
   .mob-card .mc-foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .mob-card .mc-foot .sp { flex: 1; }
@@ -6453,7 +6454,7 @@
 
   // ── 모브 드래곤: 의뢰 · 이야기 · 교환 ──
   let mobTab = 'quest';
-  const MOB_TIER = { 1: '쉬움', 2: '보통', 3: '어려움' };
+  const MOB_TIER = { 1: '쉬움', 2: '보통', 3: '어려움', 4: '숙련' };
   // ── 떠돌이 야바위꾼: 같은 장소에 있을 때만 줄이 보이고, 말을 걸면 홀짝 한 판 ──
   const yabaLeft = (until) => Math.max(1, Math.ceil((until - Date.now()) / 60000));
   function renderYabaBar() {

@@ -18,6 +18,7 @@ const MOB_RULES = {
     1: { gold: 35,  xp: 25,  fame: 2 },
     2: { gold: 70,  xp: 55,  fame: 3 },
     3: { gold: 140, xp: 110, fame: 5 },
+    4: { gold: 260, xp: 220, fame: 6 }, // 숙련: 지역에서 가장 깊은 사냥터 (Lv13~24)
   },
 };
 
@@ -43,6 +44,7 @@ const MOBS = {
       { t: 2, g: { winR: 'plains', n: 5 }, say: '사냥감 다섯을 쓰러뜨려 와라. 그럼 너를 조금은 인정해 주지.' },
       { t: 2, g: { bring: { wolf_pelt: 3, beast_hide: 2 } }, say: '겨울이 오기 전에 깔개를 새로 깔아야겠다.' },
       { t: 3, g: { elite: 'plains' }, say: '뿔 꺾인 들소왕이 또 나타났다더군. 놈의 콧대를 꺾어 와.' },
+      { t: 4, g: { win: 'plains_keep', n: 2 }, say: '무너진 성채의 기사단이 아직도 용 사냥 깃발을 걸어 놨더군. 둘만 쓰러뜨려 와라. 그 정도는 해야 용이라 부르지.' },
     ],
     trades: [
       { give: { wolf_pelt: 3 }, get: { hunter_stew: 1 } },
@@ -78,6 +80,7 @@ const MOBS = {
       { t: 2, g: { bring: { frost_lichen: 2, ice_shard: 3 } }, say: '오래된 상처에 바를 연고를 만들 거야.' },
       { t: 3, g: { win: 'snow_peak', n: 1 }, say: '오로라 봉우리의 와이번… 한 마리만 잡아 줄래? 날개막이 필요해.' },
       { t: 3, g: { elite: 'snow' }, say: '서리 늑대 우두머리가 무리를 이끌고 내려왔어.' },
+      { t: 4, g: { win: 'snow_glacier', n: 1 }, say: '영원의 빙하에서 거인이 깨어났대. 한 번만… 정말 조심해서 다녀와 줄래?' },
     ],
     trades: [
       { give: { ice_shard: 4 }, get: { frost_lichen: 1 } },
@@ -113,6 +116,7 @@ const MOBS = {
       { t: 2, g: { bring: { old_scroll: 2 } }, say: '바랜 두루마리 두 장이면 이 문장을 다 읽을 수 있겠어.' },
       { t: 3, g: { win: 'ruins_crypt', n: 2 }, say: '묘실의 해골 기사들… 그들이 무엇을 지키는지 알고 싶네.' },
       { t: 3, g: { elite: 'ruins' }, say: '깨어난 수호 골렘을 다시 재워 주게.' },
+      { t: 4, g: { win: 'ruins_vault', n: 1 }, say: '잊힌 왕의 금고를 지키는 근위대가 있다네. 하나만 쓰러뜨려 주면 그들의 갑옷에 새긴 문장을 읽을 수 있을 걸세.' },
     ],
     trades: [
       { give: { rune_stone: 5 }, get: { old_scroll: 1 } },
@@ -192,6 +196,7 @@ const MOBS = {
       { t: 2, g: { count: 'corrupt', n: 3 }, say: '오염된 땅의 풀을 연구하고 싶어. 그곳에서 세 번 움직여 보고 이야기해 줘.' },
       { t: 3, g: { win: 'forest_heart', n: 1 }, say: '나무 수호자가 화가 났어. 진정시켜… 아니, 쓰러뜨려 줘.' },
       { t: 3, g: { elite: 'forest' }, say: '여왕 거미가 알을 낳기 전에!' },
+      { t: 4, g: { win: 'forest_root', n: 2 }, say: '뿌리굴의 썩은 뿌리 괴물이 숲 전체를 병들게 하고 있어. 둘만 베어 내 줘.' },
     ],
     trades: [
       { give: { poison_herb: 4 }, get: { glow_moss: 1 } },
@@ -227,6 +232,7 @@ const MOBS = {
       { t: 2, g: { bring: { croc_scale: 3, bog_iron: 1 } }, say: '비늘 갑옷을 손볼 거다.' },
       { t: 3, g: { win: 'swamp_mire', n: 1 }, say: '작은 히드라의 피… 한 방울이면 충분해.' },
       { t: 3, g: { elite: 'swamp' }, say: '늪의 늙은 악어. 놈이 내 꼬리를 물었었지.' },
+      { t: 4, g: { win: 'swamp_abyss', n: 2 }, say: '늪의 심연에 바실리스크가 산다. 눈을 마주치지 말고 둘만 처리해 와.' },
     ],
     trades: [
       { give: { black_reed: 4 }, get: { bog_iron: 1 } },
@@ -262,6 +268,7 @@ const MOBS = {
       { t: 2, g: { count: 'expedition', n: 1 }, say: '원정 한 번 다녀와서 바깥 소식을 들려줘. 장사엔 소문이 제일이야.' },
       { t: 3, g: { win: 'canyon_cliff', n: 1 }, say: '그리핀 깃털! 아주 비싸게 팔리거든.' },
       { t: 3, g: { elite: 'canyon' }, say: '황금 꼬리 전갈의 꼬리… 진짜 금일까?' },
+      { t: 4, g: { win: 'canyon_temple', n: 1 }, say: '모래에 묻힌 신전의 스핑크스! 그 뒤에 뭐가 있는지 생각만 해도 꼬리가 떨려. 한 번만 이겨 줘!' },
     ],
     trades: [
       { give: { red_clay: 4 }, get: { gold_ore: 1 } },
@@ -298,6 +305,7 @@ const MOBS = {
       { t: 2, g: { count: 'craft', n: 3 }, say: '네 손으로 뭔가 세 개 만들어 와 봐. 실력을 보자.' },
       { t: 3, g: { win: 'volcano_crater', n: 1 }, say: '화염 거인… 한 번 겨뤄 볼 만한 상대다.' },
       { t: 3, g: { elite: 'volcano' }, say: '용암 도롱뇽 군주가 내 화로를 노린다.' },
+      { t: 4, g: { win: 'volcano_core', n: 1 }, say: '불의 심장부의 용암 와이번. 그놈을 이기면 내 모루 앞에 설 자격을 주지.' },
     ],
     trades: [
       { give: { volcanic_ash: 4 }, get: { obsidian: 1 } },
@@ -329,10 +337,13 @@ const josa = (w, a, b) => {
   return (c - 0xac00) % 28 ? a : b;
 };
 const isBring = (g) => !!g.bring;
-function goalKey(g) {
+// 강적 의뢰가 이름을 대는 강적(ELITES)이 사는 사냥터. 그 지역의 다른 강적을 쓰러뜨려도 세지 않도록 사냥터로 셈
+const ELITE_PLACE = Object.fromEntries(Object.entries(ELITES).map(([r, name]) => [r, Object.keys(PLACES).find((p) => PLACES[p].region === r && PLACES[p].elite === name) || null]));
+// legacy: 이 고침 전에 맡은 의뢰는 예전처럼 지역의 아무 강적으로 셈 (맡을 때 센 값과 맞추려고)
+function goalKey(g, legacy = false) {
   if (g.win) return `huntwin:${g.win}`;
   if (g.winR) return `huntwin:${g.winR}`;
-  if (g.elite) return `elite:${g.elite}`;
+  if (g.elite) return !legacy && ELITE_PLACE[g.elite] ? `elite:${ELITE_PLACE[g.elite]}` : `elite:${g.elite}`;
   if (g.gather) return `gather:${g.gather}`;
   if (g.explore) return `explore:${g.explore}`;
   return g.count;
@@ -457,7 +468,7 @@ function accept(d, mobId, i, now = Date.now()) {
   if (done.includes(key)) return { error: '오늘은 이미 이 의뢰를 맡았다.' };
   if (m.act.length >= MOB_RULES.maxActive) return { error: `의뢰는 한 번에 ${MOB_RULES.maxActive}개까지만 맡을 수 있다.` };
   done.push(key);
-  m.act.push({ mob: mobId, i, base: countOf(d, goalKey(q.g)), at: now });
+  m.act.push({ mob: mobId, i, base: countOf(d, goalKey(q.g)), k: goalKey(q.g), at: now }); // k: 맡을 때 쓴 셈 이름
   const mb = MOBS[mobId];
   return { title: mb.name, lines: [`"${q.say}"`, `의뢰를 맡았다: ${goalText(q.g)}`, `다 하면 ${mb.name}에게 돌아와 알려 주자.`] };
 }
@@ -465,7 +476,7 @@ function progressOf(d, a) {
   const q = MOBS[a.mob]?.pool[a.i];
   if (!q) return null;
   const n = goalN(q.g);
-  return { have: Math.min(n, countOf(d, goalKey(q.g)) - a.base), n };
+  return { have: Math.min(n, Math.max(0, countOf(d, a.k || goalKey(q.g, true)) - a.base)), n };
 }
 function turnIn(d, mobId, i, have, now = Date.now()) {
   const err = here(d, mobId);
@@ -527,7 +538,7 @@ function storyAccept(d, mobId, kind = 'story') {
   const c = bk.ch[s.ch];
   if (!c) return { error: '이 이야기는 이미 끝까지 들었다.' };
   if (s.base != null) return { error: '이미 듣고 있는 이야기다.' };
-  m.story[storyKey(mobId, kind)] = { ch: s.ch, base: isBring(c.g) ? 0 : countOf(d, goalKey(c.g)) };
+  m.story[storyKey(mobId, kind)] = { ch: s.ch, base: isBring(c.g) ? 0 : countOf(d, goalKey(c.g)), k: isBring(c.g) ? null : goalKey(c.g) };
   return { title: `${bk.title} · ${s.ch + 1}장`, lines: [`"${c.intro}"`, `할 일: ${goalText(c.g)}`] };
 }
 function storyProgress(d, mobId, kind = 'story') {
@@ -536,7 +547,7 @@ function storyProgress(d, mobId, kind = 'story') {
   const c = bookOf(MOBS[mobId], kind)?.ch[s.ch];
   if (!c || s.base == null || isBring(c.g)) return null;
   const n = goalN(c.g);
-  return { have: Math.min(n, countOf(d, goalKey(c.g)) - s.base), n };
+  return { have: Math.min(n, Math.max(0, countOf(d, s.k || goalKey(c.g, true)) - s.base)), n };
 }
 function storyTurnIn(d, mobId, have, kind = 'story') {
   const err = here(d, mobId);
