@@ -181,6 +181,30 @@ app.post('/api/login', async (req, res) => {
   res.json({ token });
 });
 
+// 석판 그림 올리기: 그림 파일 그대로(바이트)를 받음. 로그인 토큰은 Authorization: Bearer, 크기는 ?w=&h=
+app.post('/api/slate-img', express.raw({ type: ['image/webp', 'image/jpeg', 'image/png'], limit: '330kb' }), (req, res) => {
+  const token = str((req.get('authorization') || '').replace(/^Bearer\s+/i, ''));
+  const user = token ? db.getSessionUser(token) : null;
+  if (!user) return res.status(401).json({ error: '다시 로그인해야 한다.' });
+  const d = db.getDragonByUser(user.id);
+  const type = String(req.get('content-type') || '').split(';')[0].trim();
+  const r = slate.uploadImg(d, type, req.body, req.query.w, req.query.h);
+  res.status(r.error ? 400 : 200).json(r);
+});
+app.use((err, req, res, next) => { // 받는 크기를 넘으면 (express.raw의 limit)
+  if (err && err.type === 'entity.too.large') return res.status(413).json({ error: '그림이 너무 크다.' });
+  next(err);
+});
+// 석판 그림 (번호마다 내용이 바뀌지 않으니 오래 저장해 둬도 됨)
+app.get('/slate-img/:id', (req, res) => {
+  const row = db.slate.imgGet(Number(req.params.id));
+  if (!row) return res.status(404).end();
+  res.set('Content-Type', row.type);
+  res.set('Cache-Control', 'public, max-age=31536000, immutable');
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.send(row.data);
+});
+
 // 프로필 그림. 주소 끝의 ?v=버전 덕분에 그림을 바꾸면 새로 받아집니다.
 app.get('/avatar/:id', (req, res) => {
   const row = db.getAvatar(Number(req.params.id));

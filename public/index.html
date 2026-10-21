@@ -400,6 +400,19 @@
   .sl-form textarea { min-height: 180px; resize: vertical; font: 500 14px/1.7 var(--serif); }
   .sl-form .cnt { margin-top: 4px; text-align: right; font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .sl-form > .btn { min-height: 42px; }
+  /* 석판 그림: 새기기 화면의 작은 미리보기 · 글 보기의 그림 */
+  .sl-imgpick { display: flex; flex-direction: column; gap: 6px; }
+  .sl-thumbs { display: flex; flex-wrap: wrap; gap: 8px; }
+  .sl-thumbs:empty { display: none; }
+  .sl-thumb { position: relative; width: 84px; height: 84px; border: 1px solid var(--line-in); border-radius: 3px; overflow: hidden; background: #fff; }
+  .sl-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .sl-thumb.busy::after { content: "올리는 중"; position: absolute; inset: 0; display: grid; place-items: center; background: rgba(250, 250, 248, .78); font-size: 11px; color: var(--ink-2); }
+  .sl-thumb-x { position: absolute; top: 3px; right: 3px; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%; background: rgba(31, 35, 38, .7); color: #fff; font: 600 14px/22px var(--sans); cursor: pointer; }
+  .sl-addimg { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px; font-size: 13px; }
+  .sl-addimg svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .sl-imgs { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+  .sl-img { display: block; border: 1px solid #DAD8D0; border-radius: 3px; overflow: hidden; background: #fff; }
+  .sl-img img { display: block; width: 100%; height: auto; max-height: 520px; object-fit: contain; background: #F3F2EE; }
   @media (max-width: 560px) {
     .sl-post { padding: 14px 13px; }
   }
@@ -10241,6 +10254,41 @@
   const slWho = (w) => { const x = slEl('span', 'sl-who'); x.append(avaEl({ id: w.id, kind: w.kind, av: w.av }, 20), slEl('b', '', w.name)); return x; };
   const slTag = () => slEl('span', 'sl-tag pin', '고정'); // GM이 고정한 글 표시
   const slCm = (n) => { const c = slEl('span', 'sl-cm'); c.innerHTML = SL_CM; c.append(String(n)); c.title = `남긴 답 ${n}`; return c; };
+  // 석판 그림 줄이기: 긴 변 1024px, webp 품질 75%(안 되면 jpeg). 300KB가 넘으면 품질·크기를 더 낮춤 → 대개 한 장 70~180KB
+  const SL_IMG_MAX = 300 * 1024;
+  function slShrink(file) {
+    return new Promise((ok, no) => {
+      if (!/^image\//.test(file.type)) return no(new Error('그림 파일만 넣을 수 있다.'));
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = async () => {
+        URL.revokeObjectURL(url);
+        const toBlob = (c, type, q) => new Promise((r) => c.toBlob(r, type, q));
+        let side = 1024, q = 0.75, blob = null, w = 0, h = 0;
+        for (let t = 0; t < 6; t++) {
+          const k = Math.min(1, side / Math.max(img.naturalWidth, img.naturalHeight));
+          w = Math.max(1, Math.round(img.naturalWidth * k)); h = Math.max(1, Math.round(img.naturalHeight * k));
+          const c = document.createElement('canvas'); c.width = w; c.height = h;
+          const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(img, 0, 0, w, h);
+          blob = await toBlob(c, 'image/webp', q);
+          if (!blob || blob.type !== 'image/webp') blob = await toBlob(c, 'image/jpeg', q);
+          if (blob && blob.size <= SL_IMG_MAX) break;
+          q = Math.max(0.5, q - 0.1); side = Math.round(side * 0.82);
+        }
+        if (!blob || blob.size > SL_IMG_MAX) return no(new Error('그림이 너무 크다.'));
+        ok({ blob, url: URL.createObjectURL(blob), w, h });
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); no(new Error('그림 파일을 읽지 못했다.')); };
+      img.src = url;
+    });
+  }
+  // 그림 올리기: 소켓이 아니라 HTTP로 (그림만 크게 받도록 서버가 따로 받음)
+  async function slUpload(sm) {
+    const r = await fetch(`/api/slate-img?w=${sm.w}&h=${sm.h}`, { method: 'POST', headers: { 'Content-Type': sm.blob.type, Authorization: `Bearer ${store.get() || ''}` }, body: sm.blob });
+    let res = {}; try { res = await r.json(); } catch {}
+    if (!r.ok || res.error) throw new Error(res.error || '그림을 올리지 못했다.');
+    return res;
+  }
   function openSlate() {
     SL.prevSeen = slSeen();
     SL.page = 'list';
@@ -10304,11 +10352,22 @@
     const m = slEl('div', 'm');
     m.append(slWho(p.who), slEl('span', '', `${slAgo(p.at)}${p.edited ? ' · 고침' : ''}`));
     const own = slEl('div', 'sl-own');
-    if (p.mine) own.appendChild(slIcon('edit', '고치기', () => { SL.draft = { id: p.id, head: p.head, title: p.title, body: p.body }; slGo('write'); }));
+    if (p.mine) own.appendChild(slIcon('edit', '고치기', () => { SL.draft = { id: p.id, head: p.head, title: p.title, body: p.body, imgs: (p.imgs || []).map((x) => ({ ...x })) }; slGo('write'); }));
     if (SL.gm) own.appendChild(slIcon('pin', p.pinned ? '고정 풀기' : '맨 위에 고정', () => slAct('slate:pin', { id: p.id, pin: !p.pinned }, () => loadSlatePost()), p.pinned ? 'on' : ''));
     if (p.mine || SL.gm) own.appendChild(slIcon('del', '지우기', () => { if (confirm('이 글을 지울까? 남긴 답도 함께 사라진다.')) slAct('slate:delete', { id: p.id }, () => { toast('글을 지웠다.'); slGo('list'); }); }));
     if (own.children.length) m.appendChild(own);
     a.append(m, slEl('p', 'body', p.body));
+    // 그림: 글을 열었을 때만 보임 (목록에는 없음). 누르면 원래 크기로 새 창에
+    if (p.imgs?.length) {
+      const g = slEl('div', 'sl-imgs');
+      for (const im of p.imgs) {
+        const l = slEl('a', 'sl-img'); l.href = `/slate-img/${im.id}`; l.target = '_blank'; l.rel = 'noopener';
+        const img = slEl('img'); img.src = `/slate-img/${im.id}`; img.alt = `${p.title}에 붙은 그림`; img.loading = 'lazy'; img.decoding = 'async';
+        if (im.w && im.h) { img.width = im.w; img.height = im.h; }
+        l.appendChild(img); g.appendChild(l);
+      }
+      a.appendChild(g);
+    }
     box.appendChild(a);
     const cs = slEl('section', 'sl-cms');
     cs.appendChild(slEl('h4', '', `남긴 답 ${SL.comments.length}`));
@@ -10361,11 +10420,55 @@
     const cnt = slEl('div', 'cnt', `${d.body.length} / ${SL.rules.body}`);
     ta.addEventListener('input', () => { d.body = ta.value; cnt.textContent = `${ta.value.length} / ${SL.rules.body}`; });
     bw.append(ta, cnt); f.appendChild(bw);
+    // 그림 (최대 3장): 고른 그림은 이 기기에서 줄여서 한 장씩 올려 둠 → 새길 때 함께 붙음
+    d.imgs ||= [];
+    const MAXI = SL.rules.imgs || 3;
+    const iw = slEl('div', 'sl-imgpick');
+    const lbl = slEl('span', 'lbl', `그림 (${MAXI}장까지 · 글을 열었을 때만 보인다)`);
+    const strip = slEl('div', 'sl-thumbs');
+    const file = slEl('input'); file.type = 'file'; file.accept = 'image/*'; file.multiple = true; file.hidden = true;
+    const add = slEl('button', 'btn sl-addimg'); add.type = 'button';
+    add.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="1.5"/><circle cx="9" cy="10" r="1.6"/><path d="M5 17l4.5-4.5 3 3 2.5-2.5L19 17"/></svg><span>그림 넣기</span>';
+    const drawThumbs = () => {
+      strip.replaceChildren();
+      d.imgs.forEach((im, i) => {
+        const t = slEl('div', `sl-thumb${im.busy ? ' busy' : ''}`);
+        const img = slEl('img'); img.src = im.url || `/slate-img/${im.id}`; img.alt = `그림 ${i + 1}`;
+        const x = slEl('button', 'sl-thumb-x', '×'); x.type = 'button'; x.title = '이 그림 빼기'; x.setAttribute('aria-label', `그림 ${i + 1} 빼기`);
+        x.addEventListener('click', () => { d.imgs.splice(i, 1); drawThumbs(); });
+        t.append(img); if (!im.busy) t.append(x);
+        strip.appendChild(t);
+      });
+      add.hidden = d.imgs.length >= MAXI;
+    };
+    add.addEventListener('click', () => file.click());
+    file.addEventListener('change', async () => {
+      const files = [...file.files].slice(0, MAXI - d.imgs.length);
+      file.value = '';
+      for (const fl of files) {
+        const im = { busy: true, url: '' };
+        d.imgs.push(im); drawThumbs();
+        try {
+          const sm = await slShrink(fl);
+          im.url = sm.url; drawThumbs();
+          const res = await slUpload(sm);
+          im.id = res.id; im.w = sm.w; im.h = sm.h; im.busy = false;
+        } catch (e) {
+          d.imgs.splice(d.imgs.indexOf(im), 1);
+          toast(e.message || '그림을 올리지 못했다.');
+        }
+        drawThumbs();
+        await new Promise((r) => setTimeout(r, 1600)); // 서버의 올리기 간격
+      }
+    });
+    iw.append(lbl, strip, add, file); f.appendChild(iw);
+    drawThumbs();
     const go = slEl('button', 'btn primary', d.id ? '고친 대로 새기기' : '석판에 새기기'); go.type = 'button';
     go.addEventListener('click', () => {
       if (!d.title.trim() || !d.body.trim()) return toast('제목과 내용을 모두 적어야 새길 수 있다.');
+      if (d.imgs?.some((x) => x.busy)) return toast('그림을 올리는 중이다. 잠시만 기다리자.');
       go.disabled = true;
-      socket.emit(d.id ? 'slate:edit' : 'slate:post', { id: d.id, head: d.head, title: d.title, body: d.body }, (res) => {
+      socket.emit(d.id ? 'slate:edit' : 'slate:post', { id: d.id, head: d.head, title: d.title, body: d.body, imgs: (d.imgs || []).map((x) => x.id) }, (res) => {
         go.disabled = false;
         if (res.error) { SFX.play('error'); return toast(res.error); }
         SFX.play('craft');

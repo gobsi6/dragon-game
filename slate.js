@@ -4,6 +4,7 @@ const { isTestDragon } = require('./game-data');
 const HEADS = ['story', 'tip', 'party', 'free'];      // 말머리 (지금 화면에서는 고르지 않아 늘 free로 새김)
 const RULES = {
   title: 40, body: 1000, comment: 100,                // 글자 수
+  imgs: 3, imgMax: 320 * 1024, imgGap: 1500,          // 글 하나에 그림 몇 장, 한 장 최대 크기(바이트), 올리는 간격
   postGap: 30 * 1000, perDay: 20,                     // 글 간격, 하루에 새길 수 있는 글 수
   commentGap: 3 * 1000,
   list: 200,                                          // 목록에 보여 줄 글 수
@@ -16,6 +17,15 @@ module.exports = function setupSlate({ io, db, entryOf }) {
   const who = (r, nameKey = 'name', kindKey = 'kind') => ({ id: r.dragon_id || null, name: r[nameKey], kind: r[kindKey], av: r.has_avatar ? r.avatar_ver : 0 });
   const latest = () => db.slate.latest();
   const changed = (extra) => io.emit('slate:changed', { latest: latest(), ...extra });
+
+  // 그림 붙이기: 내가 올린 그림 중 글에 아직 안 붙었거나 이 글에 붙은 것만. 빠진 그림은 지움
+  function setImgs(d, postId, ids) {
+    const want = [...new Set((Array.isArray(ids) ? ids : []).map(Number).filter(Boolean))].slice(0, RULES.imgs);
+    const ok = want.filter((id) => { const m = db.slate.imgMeta(id); return m && m.dragon_id === d.id && (m.post_id == null || m.post_id === postId); });
+    for (const old of db.slate.imgsOf(postId)) if (!ok.includes(old.id)) db.slate.imgDel(old.id);
+    ok.forEach((id, i) => db.slate.imgSet(id, postId, i));
+  }
+  db.slate.imgPrune(Date.now() - 86400000); // 서버가 켜질 때: 하루 넘게 글에 안 붙은 그림 정리
 
   function attach(socket) {
     socket.emit('slate:latest', { at: latest() });
@@ -39,7 +49,7 @@ module.exports = function setupSlate({ io, db, entryOf }) {
       if (!r) return { error: '이미 지워진 글이다.' };
       return {
         ok: true, gm: isGm(),
-        post: { id: r.id, head: r.head, title: r.title, body: r.body, at: r.at, edited: r.edited_at || 0, pinned: !!r.pinned, who: who(r, 'cur_name', 'cur_kind'), mine: r.dragon_id === d.id },
+        post: { id: r.id, head: r.head, title: r.title, body: r.body, at: r.at, edited: r.edited_at || 0, pinned: !!r.pinned, who: who(r, 'cur_name', 'cur_kind'), mine: r.dragon_id === d.id, imgs: db.slate.imgsOf(r.id) },
         comments: db.slate.comments(r.id).map((c) => ({ id: c.id, text: c.text, at: c.at, edited: !!c.edited_at, who: who(c), mine: c.dragon_id === d.id })),
       };
     });
@@ -52,6 +62,7 @@ module.exports = function setupSlate({ io, db, entryOf }) {
       if (db.slate.countSince(d.id, now - DAY) >= RULES.perDay) return { error: `하루에 ${RULES.perDay}개까지 새길 수 있다.` };
       socket.data.slateAt = now;
       const id = db.slate.add(d, head, title, body);
+      setImgs(d, id, p.imgs);
       changed({ by: d.id, id });
       return { ok: true, id };
     }, true);
@@ -63,6 +74,7 @@ module.exports = function setupSlate({ io, db, entryOf }) {
       const title = oneLine(p.title, RULES.title), body = clean(p.body, RULES.body);
       if (!title || !body) return { error: '제목과 내용을 모두 적어야 한다.' };
       db.slate.edit(r.id, head, title, body);
+      setImgs(d, r.id, p.imgs);
       changed({ id: r.id });
       return { ok: true };
     }, true);
@@ -114,5 +126,20 @@ module.exports = function setupSlate({ io, db, entryOf }) {
       return { ok: true };
     }, true);
   }
-  return { attach };
+  // 그림 올리기 (글을 새기기 전에 한 장씩, HTTP로 받음: server.js의 /api/slate-img). 돌려줌: 그림 번호 → 새길 때 imgs로 보냄
+  // 소켓으로 받지 않는 까닭: 소켓 한 번에 받는 크기를 키우면 모든 요청에 똑같이 커지므로
+  const imgAt = new Map(); // 드래곤마다 마지막으로 올린 때
+  function uploadImg(d, type, buf, w, h) {
+    if (!d) return { error: '먼저 드래곤을 만들어야 한다.' };
+    if (isTestDragon(d)) return { error: '시험용 드래곤은 석판에 새길 수 없다.' };
+    if (!['image/webp', 'image/jpeg', 'image/png'].includes(type) || !Buffer.isBuffer(buf) || !buf.length) return { error: '그림 파일을 읽지 못했다. 다른 그림으로 해 보자.' };
+    if (buf.length > RULES.imgMax) return { error: '그림이 너무 크다.' };
+    const now = Date.now();
+    if (now - (imgAt.get(d.id) || 0) < RULES.imgGap) return { error: '조금 천천히 올리자.' };
+    if (db.slate.imgPending(d.id) >= RULES.imgs * 3) return { error: '올려 두고 쓰지 않은 그림이 많다. 먼저 글을 새기자.' };
+    imgAt.set(d.id, now);
+    const clamp = (v) => Math.max(0, Math.min(4096, Math.floor(Number(v) || 0)));
+    return { ok: true, id: db.slate.imgAdd(d.id, type, buf, clamp(w), clamp(h)) };
+  }
+  return { attach, uploadImg, RULES };
 };

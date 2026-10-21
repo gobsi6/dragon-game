@@ -322,6 +322,20 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS slate_comments_post ON slate_comments(post_id, at);
 `);
 if (!db.prepare('PRAGMA table_info(slate_comments)').all().some((c) => c.name === 'edited_at')) db.exec('ALTER TABLE slate_comments ADD COLUMN edited_at INTEGER'); // 답 고친 때
+// 석판 그림: 먼저 올려 두고(post_id 없음) 글을 새길 때 그 글에 붙임. 글이 지워지면 함께 지워짐
+db.exec(`
+  CREATE TABLE IF NOT EXISTS slate_images (
+    id        INTEGER PRIMARY KEY,
+    post_id   INTEGER REFERENCES slate_posts(id) ON DELETE CASCADE,
+    dragon_id INTEGER NOT NULL,
+    type      TEXT NOT NULL,
+    data      BLOB NOT NULL,
+    w         INTEGER, h INTEGER,
+    ord       INTEGER NOT NULL DEFAULT 0,
+    at        INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS slate_images_post ON slate_images(post_id, ord);
+`);
 
 const q = {
   countUsers:   db.prepare('SELECT COUNT(*) AS n FROM users'),
@@ -489,6 +503,14 @@ const q = {
   slateCmDel:   db.prepare('DELETE FROM slate_comments WHERE id = ?'),
   slateCmEdit:  db.prepare('UPDATE slate_comments SET text = ?, edited_at = ? WHERE id = ?'),
   slateLatest:  db.prepare('SELECT MAX(at) AS at FROM slate_posts'),
+  slateImgAdd:  db.prepare('INSERT INTO slate_images (dragon_id, type, data, w, h, at) VALUES (?, ?, ?, ?, ?, ?)'),
+  slateImgGet:  db.prepare('SELECT id, post_id, dragon_id, type, data FROM slate_images WHERE id = ?'),
+  slateImgMeta: db.prepare('SELECT id, post_id, dragon_id FROM slate_images WHERE id = ?'),
+  slateImgsOf:  db.prepare('SELECT id, w, h FROM slate_images WHERE post_id = ? ORDER BY ord, id'),
+  slateImgSet:  db.prepare('UPDATE slate_images SET post_id = ?, ord = ? WHERE id = ?'),
+  slateImgDel:  db.prepare('DELETE FROM slate_images WHERE id = ?'),
+  slateImgPend: db.prepare('SELECT COUNT(*) AS n FROM slate_images WHERE dragon_id = ? AND post_id IS NULL'),
+  slateImgOld:  db.prepare('DELETE FROM slate_images WHERE post_id IS NULL AND at < ?'),
   slateDayN:    db.prepare('SELECT COUNT(*) AS n FROM slate_posts WHERE dragon_id = ? AND at >= ?'),
   worldGet:     db.prepare('SELECT v FROM world WHERE k = ?'),
   worldSet:     db.prepare('INSERT INTO world (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v'),
@@ -732,6 +754,14 @@ module.exports = {
     uncomment: (id) => q.slateCmDel.run(id).changes > 0,
     recomment: (id, text) => q.slateCmEdit.run(text, Date.now(), id),
     latest: () => q.slateLatest.get().at || 0,
+    imgAdd: (dragonId, type, buf, w, h) => Number(q.slateImgAdd.run(dragonId, type, buf, w || null, h || null, Date.now()).lastInsertRowid),
+    imgGet: (id) => q.slateImgGet.get(id) || null,
+    imgMeta: (id) => q.slateImgMeta.get(id) || null,
+    imgsOf: (postId) => q.slateImgsOf.all(postId),
+    imgSet: (id, postId, ord) => q.slateImgSet.run(postId, ord, id),
+    imgDel: (id) => q.slateImgDel.run(id),
+    imgPending: (dragonId) => q.slateImgPend.get(dragonId).n,
+    imgPrune: (before) => q.slateImgOld.run(before).changes, // 글에 붙지 않고 남은 그림 정리
     countSince: (dragonId, since) => q.slateDayN.get(dragonId, since).n,
   },
   worldGet: (k, def = null) => { const r = q.worldGet.get(k); if (!r) return def; try { return JSON.parse(r.v); } catch { return def; } },
