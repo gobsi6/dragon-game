@@ -1143,8 +1143,16 @@ function tidyGear(d, have) {
 }
 // ── 마을 제작 의뢰: 마을마다 하루 3개 (날마다 바뀜, 모두에게 같음) ──
 const dayIdx = (now = Date.now()) => Math.floor((now + 9 * 3600000) / 86400000); // 한국 날짜
+// 의뢰에서 빼는 재료: 멸망한 대륙에서만 나오는 것(그 지역 채집표에만 있는 것) + 이벤트로만 얻는 것
+// (멸망한 대륙에 가 보지 못한 드래곤에게 그 재료가 드는 물건을 의뢰하면 너무 어려움)
+const ORDER_SKIP = (() => {
+  const inRuin = new Set(), inOther = new Set();
+  for (const [r, t] of Object.entries(REGION_LOOT)) for (const arr of Object.values(t)) for (const id of arr) (r.startsWith('ruin_') ? inRuin : inOther).add(id);
+  return new Set([...[...inRuin].filter((id) => !inOther.has(id)), 'rival_scale']);
+})();
 function ordersOf(town, now = Date.now()) {
-  const pool = RECIPES.filter((r) => !r.hidden && r.wis <= CRAFT.orders.maxWis && ['use', 'equip'].includes(ITEMS[r.out].type) && !ITEMS[r.out].use?.nestWard).map((r) => r.out);
+  const pool = RECIPES.filter((r) => !r.hidden && r.wis <= CRAFT.orders.maxWis && ['use', 'equip'].includes(ITEMS[r.out].type) && !ITEMS[r.out].use?.nestWard
+    && !Object.keys(r.needs).some((id) => ORDER_SKIP.has(id))).map((r) => r.out);
   let seed = dayIdx(now) * 9973 + [...town].reduce((a, c) => a * 31 + c.charCodeAt(0), 7);
   const rnd = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
   const out = [];
