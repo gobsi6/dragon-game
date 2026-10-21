@@ -465,6 +465,10 @@ function enterWorld(socket, dragon) {
   }
   socket.data.dragonId = dragon.id;
   logic.regen(dragon);
+  { // 예전 걸작 기록을 따로 된 '걸작 ○○'으로 옮김 (한 번만 일어남)
+    const mw = logic.migrateMasterwork(dragon, (id) => db.itemCount(dragon.id, id));
+    if (mw.changed) db.saveState(dragon, mw.items);
+  }
   syncKin(socket, dragon);
   sendMe(socket, dragon); // 접속할 때 새로 이룬 칭호도 확인
   if (arena) arena.resume(dragon.id, socket); // 새로고침 전의 싸움이 남아 있으면 이어서

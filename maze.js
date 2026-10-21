@@ -183,6 +183,7 @@ module.exports = function setupMaze({ io, db, online, logic, sendMe, system, dea
       fi, N: G.N, deep: deep(fi), pct: pct(fi), reached: f.reached, unsealed: !!f.unsealed, conquered: f.conquered, opened: !!f.opened,
       rev: enc(FL[fi].rev), step: enc(FL[fi].step), pits: f.pits, flags: f.flags, ways: f.ways,
       lit: f.lit.map((t) => Math.max(0, t - Date.now())),
+      pillars: G.pillars, // 기둥 자리 (번호 순서). 수호자·불 기록(guards·lit)이 이 순서를 따름
       guards: G.pillars.map((p, pi) => { const g = guard(fi, pi); return { hp: g.hp, hpMax: g.hpMax, f: g.f.map((x) => x.name), lv: R.guardLv(fi) }; }),
       mobs: Object.fromEntries(Object.entries(live[fi].mobs).map(([k, m]) => [k, { lv: m.lv, hp: m.hp, hpMax: m.hpMax, f: m.f.map((x) => x.name) }])),
       here: hereOn(fi), overall: overall(), city: W.city,

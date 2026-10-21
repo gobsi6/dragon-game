@@ -1630,6 +1630,16 @@ for (const r of RECIPES) {
   FACILITY.cookable.push(r.out);
 }
 
+// 걸작 장신구: 장신구마다 '걸작 ○○'(id__mw)을 따로 둠. 주 능력치 +1이 이미 들어 있고, 강화·각인도 걸작은 걸작대로 따로 기록됨
+// (예전에는 같은 장신구 전체에 걸작 표시가 붙어 일반·걸작이 한 칸에 겹쳤음)
+for (const [id, it] of Object.entries(ITEMS)) {
+  if (it.type !== 'equip' || id.endsWith('__mw')) continue;
+  const main = Object.entries(it.bonus || {}).sort((a, b) => b[1] - a[1])[0]?.[0];
+  ITEMS[`${id}__mw`] = { ...it, name: `걸작 ${it.name}`, mwOf: id, value: Math.round((it.value || 1) * 1.6),
+    bonus: main ? { ...it.bonus, [main]: it.bonus[main] + 1 } : { ...it.bonus },
+    desc: `${it.desc} 대성공으로 태어난 걸작이라 손끝이 닿은 자리마다 빛이 서려 있다.` };
+}
+
 // ── 보물 상자: 보물더미 안의 잠긴 상자. 아이의 선물·받은 꽃다발 같은 특별한 물건을 넣음 ──
 // 한번 넣으면 꺼내거나 팔 수 없고, 보물 도둑도 손대지 못함. 하나마다 value만큼 보물더미 가치에 더해짐
 // fmt — of: '루비의 그림' / from: '하늘에게 받은 들꽃 꽃다발' / plain: 이름만 · say: false면 함께 남은 글이 말이 아니라 설명 (따옴표 없이)

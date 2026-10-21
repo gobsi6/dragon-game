@@ -183,6 +183,25 @@ function titlesView(d) {
 
 // ── 장신구와 실제 능력치 ───────────────────────────
 // 저장 공간에는 글자(JSON)로 들어 있으니 객체로 바꿔 둠
+// 예전 걸작 기록 옮기기: 장신구 전체에 붙어 있던 걸작 표시(gear[id].mw)를 실제 '걸작 ○○' 한 개로 바꿈
+// 차고 있던 것이 있으면 그것을, 아니면 소지품의 하나를 걸작으로. 그 장신구의 강화·각인 기록도 걸작 쪽으로 옮김
+function migrateMasterwork(d, have) {
+  const g = gearOf(d), eq = equipOf(d), items = [];
+  let changed = false;
+  for (const [id, rec] of Object.entries(g)) {
+    if (!rec?.mw || !ITEMS[`${id}__mw`]) continue;
+    changed = true;
+    const mw = `${id}__mw`;
+    const { mw: _x, ...rest } = rec;
+    const slot = Object.keys(eq).find((k) => eq[k] === id);
+    if (slot) eq[slot] = mw;
+    else if (have(id) > 0) items.push({ id, qty: -1 }, { id: mw, qty: 1 });
+    else { g[id] = rest; continue; } // 지금 가진 것이 없으면 표시만 지움
+    g[mw] = { ...(g[mw] || {}), ...rest };
+    delete g[id];
+  }
+  return { items, changed };
+}
 function equipOf(d) {
   // 예전 저장 버그로 여러 겹 감싸진 값도 다 풀어 냄 (다음 저장 때 바르게 고쳐져 들어감)
   for (let i = 0; typeof d.equip === 'string' && i < 10; i++) {
@@ -202,7 +221,7 @@ function bonusOf(d) {
     expRare += it.expRare || 0;
     // 강화(+1~+3)와 걸작: 그 장신구의 주 능력치에 더함
     const g = gearOf(d)[id];
-    if (g) { const main = mainStat(it); if (main) b[main] += (g.plus || 0) + (g.mw ? 1 : 0); }
+    if (g) { const main = mainStat(it); if (main) b[main] += (g.plus || 0) + (g.mw ? 1 : 0); } // 걸작은 이제 따로 된 물건(id__mw)이라 g.mw는 옛 기록에만
   }
   b.majesty += fameTier(d.fame || 0).majesty; // 용족 명성
   if (d.nest) b.majesty += hoardTier(nestInfo(d).value || 0)?.majesty || 0; // 보물더미
@@ -1013,12 +1032,12 @@ function craft(d, outId, have, focus = null) {
   const lines = [];
   let qty = 1;
   let great = false;
+  let madeId = r.out;
   if (f != null) lines.push(f >= 0.85 ? '불길을 완벽하게 다스렸다!' : f >= 0.55 ? '불길을 제법 잘 다스렸다.' : '불길이 조금 흔들렸다.');
   if (Math.random() < chance) {
     great = true;
-    const g = gearOf(d);
-    if (it.type === 'equip' && !g[r.out]?.mw) {
-      g[r.out] = { ...(g[r.out] || {}), mw: true };
+    if (it.type === 'equip' && ITEMS[`${r.out}__mw`]) {
+      madeId = `${r.out}__mw`; // 걸작은 따로 된 물건으로 (일반 장신구와 겹치지 않게)
       lines.push(`대성공! 손끝에서 빛이 일더니 ${name}${josa(name, '이', '가')} 걸작으로 태어났다. (${STATS.find((x) => x.key === mainStat(it))?.name || '능력치'} +1)`);
     } else {
       qty = 2;
@@ -1026,12 +1045,12 @@ function craft(d, outId, have, focus = null) {
     }
     lines.push(...traitCount(d, 'masterwork'));
   } else lines.push(`${name}${josa(name, '을', '를')} 만들었다.`);
-  items.push({ id: r.out, qty });
+  items.push({ id: madeId, qty });
   traitCount(d, 'craft'); // 칭호: 제작 횟수
   let xp = 4 + Math.floor(r.en / 2) + (great ? 4 : 0);
   xp = xpOf(d, xp);
   const levelUp = gainXp(d, xp);
-  return { title: great ? '제작 · 대성공' : '제작', lines, items, made: [{ id: r.out, qty }], gold: 0, xp, levelUp, great };
+  return { title: great ? '제작 · 대성공' : '제작', lines, items, made: [{ id: madeId, qty }], gold: 0, xp, levelUp, great };
 }
 // 실험: 재료 2~3가지를 하나씩 넣어 섞어 봄. 숨겨진 제작법과 재료가 같으면 알게 됨
 function experiment(d, ids, have) {
@@ -1901,7 +1920,7 @@ function dexOf(d) {
   if (!x.f || typeof x.f !== 'object') x.f = {};
   return x;
 }
-const dexKey = (id) => ITEMS[id]?.cooked || id;
+const dexKey = (id) => ITEMS[id]?.cooked || ITEMS[id]?.mwOf || id; // 정성 들인 요리·걸작은 본래 물건으로 셈
 // 처음 만난 사냥감이면 true
 function dexMeet(d, key, now = Date.now()) {
   const m = dexOf(d).m;
@@ -2008,7 +2027,7 @@ function dexView(d) {
   const fishIds = new Set(FISHING.fish.map((f) => f.id));
   const items = DEX_CATS.map(([k, name]) => ({ cat: k, name, list: [] }));
   for (const [id, it] of Object.entries(ITEMS)) {
-    if (it.cooked || fishIds.has(id)) continue;
+    if (it.cooked || it.mwOf || fishIds.has(id)) continue;
     const at = x.i[id];
     const src = dexSources(d, id);
     const row = at != null
@@ -2039,7 +2058,7 @@ function dexHasNew(d) {
 const DEX_ALL = (() => { // 도감의 모든 칸 (분류별 물건 id 포함)
   const fishIds = new Set(FISHING.fish.map((f) => f.id));
   const cats = {};
-  for (const [id, it] of Object.entries(ITEMS)) if (!it.cooked && !fishIds.has(id)) (cats[dexCat(it)] ||= []).push(id);
+  for (const [id, it] of Object.entries(ITEMS)) if (!it.cooked && !it.mwOf && !fishIds.has(id)) (cats[dexCat(it)] ||= []).push(id);
   const beasts = Object.values(REGION_PLACES).flat().flatMap((p) => [p, `${p}!`]);
   return { cats, beasts, bosses: Object.keys(BOSSES).map((r) => `boss:${r}`), fish: [...fishIds], items: Object.values(cats).flat() };
 })();
@@ -2119,6 +2138,7 @@ const achHasNew = (d) => { const t = combatJson(d).achSeenAt || 0; return Object
 const hooks = {};
 
 module.exports = {
+  migrateMasterwork,
   hooks, BOND_TOGETHER: BOND_RULES.together,
   seasonAt, weatherOf, weatherIdAt, weatherFx, fxText, fxProse, weatherDebug, SLOT_MS,
   nestInfo, nestTier, maxKinOf, expandNest, checkRaid, raidView, chaseCheck,

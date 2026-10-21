@@ -1226,6 +1226,7 @@
   .gift-box .gp-it { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px; min-height: 40px; padding: 6px 10px; border: 1px solid transparent; background: none; text-align: left; cursor: pointer; font: inherit; color: var(--ink); }
   .gift-box .gp-it b { font: 600 13.5px/1.3 var(--serif); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .gift-box .gp-it small { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+  .gift-box .gp-it b .gw-mw { margin-left: 6px; font-style: normal; vertical-align: 1px; }
   .gift-box .gp-it span { min-width: 34px; text-align: right; font: 600 12.5px/1 var(--sans); color: var(--muted); font-variant-numeric: tabular-nums; }
   .gift-box .gp-it + .gp-it { border-top-color: var(--line-in); } /* 물건 사이 구분선 */
   .gift-box .gp-it:hover { background: #F2F4F1; }
@@ -8715,7 +8716,7 @@
     const tags = [...new Set(own.map(([id]) => tagOf(id)))];
     const drawPick = () => {
       const q = own.find(([id]) => id === gp.id)?.[1] || 0;
-      gpSel.textContent = gp.id ? `${S.items[gp.id].name} · 가진 것 ${q}` : '물건 없이 보낸다';
+      gpSel.textContent = gp.id ? `${S.items[gp.id].name} · 가진 것 ${q}` : '물건 없이 보낸다'; // 걸작은 이름에 '걸작'이 붙어 있음
       gpSel.classList.toggle('on', !!gp.id);
       gpNum.disabled = !gp.id;
       gpNum.max = q || '';
@@ -8728,12 +8729,13 @@
       for (const [id, n] of hits) {
         const b = document.createElement('button');
         b.type = 'button';
-        b.className = `gp-it${gp.id === id ? ' on' : ''}`;
+        b.className = `gp-it${gp.id === id ? ' on' : ''}${S.items[id].mwOf ? ' mw' : ''}`;
         b.setAttribute('role', 'option');
         b.setAttribute('aria-selected', String(gp.id === id));
         b.innerHTML = '<b></b><small></small><span></span>';
-        b.querySelector('b').textContent = S.items[id].name;
+        b.querySelector('b').textContent = S.items[id].mwOf ? (S.items[S.items[id].mwOf]?.name || S.items[id].name) : S.items[id].name; // 걸작은 이름 대신 옆 표시로
         b.querySelector('small').textContent = tagOf(id);
+        if (S.items[id].mwOf) { const t = document.createElement('i'); t.className = 'gw-mw'; t.textContent = '걸작'; b.querySelector('b').appendChild(t); } // 걸작 장신구는 표시를 붙여 일반과 구분
         b.querySelector('span').textContent = `×${n}`;
         b.addEventListener('click', () => { gp.id = gp.id === id ? '' : id; drawList(); drawPick(); }); // 다시 누르면 고르기 취소
         gpList.appendChild(b);
@@ -13175,8 +13177,10 @@
     const occ = {}; for (const h of f.here) (occ[`${h.pos[0]},${h.pos[1]}`] ||= []).push(h);
     const fireNo = {}; let fno = 0; for (const k of f.ways) { const [wr, wc] = k.split(',').map(Number); if (rows[wr][wc] === 'F') fireNo[k] = ++fno; } // 화톳불 번호: 들어갈 곳 고르기와 같은 번호
     const nearFire = (pp) => { let best = 0, bd = 1e9; for (const [k, no] of Object.entries(fireNo)) { const [wr, wc] = k.split(',').map(Number); const dd = Math.abs(wr - pp[0]) + Math.abs(wc - pp[1]); if (dd < bd) { bd = dd; best = no; } } return best; };
-    const pillarIdx = {}; let pn = 0;
-    for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (rows[r][c] === 'P') pillarIdx[`${r},${c}`] = pn++;
+    // 기둥 번호: 서버가 보낸 순서 그대로 (수호자·불 기록이 이 순서. 지도 위→아래 순서와 달라 엉뚱한 기둥의 수호자가 보이던 문제)
+    const pillarIdx = {};
+    if (Array.isArray(f.pillars)) f.pillars.forEach((p, i) => { pillarIdx[`${p[0]},${p[1]}`] = i; });
+    else { let pn = 0; for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (rows[r][c] === 'P') pillarIdx[`${r},${c}`] = pn++; }
     const near = (r, c) => f.here.some((h) => Math.max(Math.abs(h.pos[0] - r), Math.abs(h.pos[1] - c)) <= (S.mazeRules?.sight ?? 3));
     const tok = (h, act) => {
       const url = avatarUrl(h);
