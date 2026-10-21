@@ -51,7 +51,7 @@ const statName = (k) => STATS.find((x) => x.key === k)?.name || k;
 const bestStat = (kind) => Object.entries(KINDS[kind].stats).sort((a, b) => b[1] - a[1])[0][0]; // 그 종류가 가장 강한 능력치
 const D3 = 3 * 864e5;
 const hasTrait = (k, id) => !!k.data.traits && k.data.traits.includes(id);
-const GIFT_STAGES = ['아이', '소년', '청소년', '해츨링', '어린 용', '젊은 용'];
+const GIFT_STAGES = ['아이', '소년', '청년', '해츨링', '어린 용', '젊은 용'];
 const giftKids = (c) => [...c.humans, ...c.drakes].filter((x) => GIFT_STAGES.includes(c.stage(x)) && (x.data.bond || 0) >= 40 && c.now - (x.data.giftAt || 0) >= 2 * 864e5);
 // ── 아이의 선물: 무엇을 줄지 ──
 // 나이 단계마다 기본 목록 + 성격에 따라 더해지는 목록. 성격 목록은 두 번 넣어 더 자주 나오게 함
@@ -63,7 +63,7 @@ const GIFT_POOL = {
   '젊은 용': ['first_scale', 'warm_stone', 'storm_stone', 'hunt_fang', 'bird_feather', 'old_coin', 'sky_sketch', 'kid_letter', 'wood_flute'],
   '아이': ['kid_drawing', 'flower_ring', 'clover', 'clay_dragon', 'wish_note', 'paper_bird'],
   '소년': ['kid_letter', 'kid_drawing', 'pebble_neck', 'clay_dragon', 'woven_band', 'clover', 'paper_bird', 'paper_kite'],
-  '청소년': ['kid_letter', 'wood_dragon', 'wood_flute', 'knit_scarf', 'star_map', 'portrait', 'herb_sachet'],
+  '청년': ['kid_letter', 'wood_dragon', 'wood_flute', 'knit_scarf', 'star_map', 'portrait', 'herb_sachet'],
 };
 const GIFT_TRAIT = {
   // 새끼 드래곤 성격
@@ -105,10 +105,10 @@ module.exports = [
       const LETTER = {
         '아이': `${call}에게. 사랑해요. ${ga(call)} 세상에서 제일 커요. 나도 크면 ${call}처럼 하늘을 날 거예요.`,
         '소년': `${call}, 오늘도 고마워요. 사냥 나갈 때마다 조금 걱정했는데, 무사히 돌아와 줘서 좋아요. 다음엔 나도 데려가 줘요.`,
-        '청소년': `${call}. 어릴 땐 몰랐는데, 둥지가 얼마나 따뜻한 곳인지 이제 알 것 같아요. 키워 줘서 고마워요. 이건 쑥스러우니까 나중에 읽어요.`,
+        '청년': `${call}. 어릴 땐 몰랐는데, 둥지가 얼마나 따뜻한 곳인지 이제 알 것 같아요. 키워 줘서 고마워요. 이건 쑥스러우니까 나중에 읽어요.`,
       };
       const NOTE = {
-        kid_letter: LETTER[st] || LETTER[{ '어린 용': '소년', '젊은 용': '청소년' }[st]] || LETTER['소년'],
+        kid_letter: LETTER[st] || LETTER[{ '어린 용': '소년', '젊은 용': '청년' }[st]] || LETTER['소년'],
         kid_drawing: `${call}${c.josa(call, '이랑', '랑')} 나랑 같이 하늘을 나는 그림. 구름 위에 '${call}'${c.josa(call, '이라고', '라고')} 커다랗게 적혀 있다.`,
         pressed_flower: '책장 사이에 며칠이나 눌러 둔 거예요. 제일 예쁜 걸로 골랐어요.',
         flower_ring: '발톱엔 안 들어가니까… 그냥 갖고만 있어요!',
@@ -419,8 +419,8 @@ module.exports = [
     title: '아이의 물음',
     when: ['wake'],
     weight: 2,
-    cond: (c) => c.humans.some((x) => ['아이', '소년', '청소년'].includes(c.stage(x))),
-    setup: (c) => ({ id: c.pick(c.humans.filter((x) => ['아이', '소년', '청소년'].includes(c.stage(x)))).id }),
+    cond: (c) => c.humans.some((x) => ['아이', '소년', '청년'].includes(c.stage(x))),
+    setup: (c) => ({ id: c.pick(c.humans.filter((x) => ['아이', '소년', '청년'].includes(c.stage(x)))).id }),
     text: (c, v) => { const k = c.k(v.id); return [`${k.name}${c.josa(k.name, '이', '가')} 꼬리에 기대앉아 묻는다.`, '"나는 왜 사람이고, 너는 왜 용이야?"']; },
     choices: [
       { label: '사람의 마을 이야기를 들려준다', run: (h, c, v) => { const k = c.k(v.id); h.bond(k, 5); h.lean(k, 'herbalist', 2); h.say('약초 냄새 가득한 시장 이야기에 아이의 눈이 반짝였다.'); } },
@@ -1343,12 +1343,11 @@ module.exports = [
   },
   {
     id: 'first_love',
-    title: '아이의 첫사랑',
+    title: '청년의 첫사랑',
     when: ['wake', 'explore'],
     weight: 3,
-    // 아이마다 한 번: 세 선택지 모두 그 아이의 firstLove를 남기므로, 한 번 고르면 다시 뜨지 않음
-    cond: (c) => c.humans.some((x) => c.stage(x) === '청소년' && !x.data.firstLove),
-    setup: (c) => ({ id: c.pick(c.humans.filter((x) => c.stage(x) === '청소년' && !x.data.firstLove)).id, other: c.pick(['리라', '한별', '에린', '도윤', '마루', '시아']) }),
+    cond: (c) => c.humans.some((x) => c.stage(x) === '청년' && !x.data.firstLove),
+    setup: (c) => ({ id: c.pick(c.humans.filter((x) => c.stage(x) === '청년' && !x.data.firstLove)).id, other: c.pick(['리라', '한별', '에린', '도윤', '마루', '시아']) }),
     text: (c, v) => { const k = c.k(v.id); return [`요즘 ${k.name}${c.josa(k.name, '이', '가')} 자꾸 마을 쪽 하늘만 바라본다.`, `마을에 사는 ${v.other}${c.josa(v.other, '과', '와')} 강가에서 몰래 만난다는 걸 알게 되었다. 들킨 줄 알자 얼굴이 새빨개졌다.`]; },
     choices: [
       { label: '만나러 가도 된다고 한다', run: (h, c, v) => {
@@ -1407,7 +1406,7 @@ module.exports = [
     cond: (c) => c.humans.some((x) => adultHuman(c, x) && canMate(c, x)),
     setup: (c) => {
       const k = c.pick(c.humans.filter((x) => adultHuman(c, x) && canMate(c, x)));
-      const love = k.data.firstLove && k.data.firstLove !== '-' ? k.data.firstLove : null; // 청소년 때의 첫사랑이 있으면 그 사람
+      const love = k.data.firstLove && k.data.firstLove !== '-' ? k.data.firstLove : null; // 청년 때의 첫사랑이 있으면 그 사람
       return { id: k.id, partner: love || c.pick(PARTNER_NAMES), love: !!love };
     },
     text: (c, v) => {

@@ -315,7 +315,6 @@ function tick(d, kin, now = Date.now()) {
     if (k.type === 'drake' && k.status === 'home') {
       // 어미의 성향을 보고 자람
       const dt = Math.max(0, now - (k.data.tickAt || now));
-      k.data.stanceMs ||= {}; // 예전 기록에 없으면 새로 (없으면 접속이 막혔음)
       k.data.stanceMs[d.stance] = (k.data.stanceMs[d.stance] || 0) + dt;
       k.data.tickAt = now;
       const a = ageOf(k, now);
@@ -946,32 +945,23 @@ function freeDrake(d, kin, k, now) {
 }
 
 // ── 원정에 함께 가는 식구 ──────────────────────────
-// 원정에 따라갈 수 있는 식구인지
-function canFollow(k, now = Date.now()) {
-  if (k.status !== 'home') return false;
-  const from = k.type === 'human' ? H.expeditionFrom : R.expeditionFrom;
-  if (k.type === 'human' && k.data.path === 'stay') return false; // 둥지를 지키는 어른은 남음
-  if (k.data.runaway || k.data.errand) return false; // 가출·심부름 중인 식구는 못 따라감
-  if (k.type === 'human' && k.data.job && FACILITY.list[k.data.job]) return false; // 시설 일을 맡은 식구는 둥지에 남아 일함
-  return ageOf(k, now) >= from;
-}
-// 원정 떠나기 창에 보여 줄, 데려갈 수 있는 식구 (고르게 함)
-const expCandidates = (kin, now = Date.now()) => kin.filter((k) => canFollow(k, now)).map((k) => ({ id: k.id, name: k.name, type: k.type, stage: stageOf(k, now).name }));
-// stay: 이번에는 둥지에 두고 갈 식구 id 목록
-function expStart(kin, now = Date.now(), stay = []) {
-  const keep = new Set((Array.isArray(stay) ? stay : []).map(Number));
+function expStart(kin, now = Date.now()) {
   const went = [];
   for (const k of kin) {
-    if (!canFollow(k, now) || keep.has(k.id)) continue;
-    k.data.onExp = true; k.data.expAt = now; went.push(k.name); // expAt: 둥지 이야기에 '따라나섰다'를 적을 때
+    if (k.status !== 'home') continue;
+    const from = k.type === 'human' ? H.expeditionFrom : R.expeditionFrom;
+    if (k.type === 'human' && k.data.path === 'stay') continue; // 둥지를 지키는 어른은 남음
+    if (k.data.runaway || k.data.errand) continue; // 가출·심부름 중인 식구는 못 따라감
+    if (k.type === 'human' && k.data.job && FACILITY.list[k.data.job]) continue; // 시설 일을 맡은 식구는 둥지에 남아 일함
+    if (ageOf(k, now) >= from) { k.data.onExp = true; k.data.expAt = now; went.push(k.name); } // expAt: 둥지 이야기에 '따라나섰다'를 적을 때
   }
   return went;
 }
-// 함께 간 식구의 이름·종류·나잇대 (원정 길 팝업의 말: 아이·청소년·어른, 새끼 드래곤)
+// 함께 간 식구의 이름·종류·나잇대 (원정 길 팝업의 말: 아이·청년·어른, 새끼 드래곤)
 const ageGroup = (k, now) => {
   const s = stageOf(k, now).name;
-  if (k.type === 'drake') return s === '해츨링' ? 'drake' : ['젊은 용', '다 자란 용'].includes(s) ? 'dadult' : 'dyoung'; // 해츨링은 말을 못 하고(몸짓), 어린 용부터는 말을 함 (드래곤다운 말)
-  return ['어른', '노년'].includes(s) ? 'adult' : s === '청소년' ? 'young' : 'child';
+  if (k.type === 'drake') return s === '해츨링' ? 'drake' : ['젊은 용', '다 자란 용'].includes(s) ? 'adult' : 'young'; // 어린 용부터는 폴리모프를 해서 말을 함
+  return ['어른', '노년'].includes(s) ? 'adult' : s === '청년' ? 'young' : 'child';
 };
 const expWent = (kin, now = Date.now()) => kin.filter((k) => k.status === 'home' && k.data.onExp).map((k) => ({ name: k.name, age: ageGroup(k, now) }));
 // 함께 간 식구 수. 호기심 많은 식구는 조금 더 쳐 줌
@@ -1211,7 +1201,6 @@ function chooseEvent(d, kin, have, idx, now = Date.now()) {
 }
 
 module.exports = {
-  expCandidates,
   tick, perksOf, summary, views, homeKin, stageOf,
   care, rename, choosePath, incubate, train, release,
   expStart, expFinish, companions, restTogether,
