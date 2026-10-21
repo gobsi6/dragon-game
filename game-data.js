@@ -6,8 +6,8 @@ const STATS = [
   { key: 'claw',    name: '발톱', desc: '공격할 때 입히는 피해가 커진다.' },
   { key: 'scale',   name: '비늘', desc: '최대 체력이 늘고 받는 피해가 줄어든다.' },
   { key: 'wing',    name: '날개', desc: '공격을 잘 피하고, 먼저 움직이며, 빠르게 난다.' },
-  { key: 'wisdom',  name: '지혜', desc: '마법과 제작에 능하고, 숨은 것을 잘 찾아낸다.' },
-  { key: 'majesty', name: '위엄', desc: '인간을 설득하거나 위협하는 힘이 커진다.' },
+  { key: 'wisdom',  name: '지혜', desc: '숨결과 스킬의 힘이 깊어지고, 제작에 능하며, 숨은 것을 잘 찾아낸다.' },
+  { key: 'majesty', name: '위엄', desc: '기세로 상대를 누르고 얼어붙음·마비·지속 피해를 잘 버틴다. 인간을 설득하거나 위협하는 힘도 커진다.' },
 ];
 
 // 처음 만들 때 나눠 주는 자유 포인트
@@ -587,6 +587,7 @@ const NEST = {
   moveCost: 30,                     // 둥지를 옮길 때 드는 금화 (처음 틀 때는 무료)
   homeFlightAp: 0,                  // 어디서든 둥지로 곧장 날아갈 때 드는 행동력 (0이면 들지 않음)
   rest: { hp: 4, en: 4, ap: 2 },    // 쉬는 동안 회복이 몇 배 빨라지는지
+  restCountMin: 10,                 // 이만큼(분) 이상 쉬고 깨어나야 '둥지에서 쉬기' 횟수로 셈 (특성·칭호·업적)
   // 둥지 단계: 넓힐수록 식구가 늘고 쉬는 회복이 빨라짐. 둥지를 옮기면 한 단계 낮아짐 (설치한 덫·결계도 남겨 두고 감)
   // kin: 함께 살 식구 수, rest: 쉬는 회복 배율(위 rest에 곱함), raidLoss: 도둑이 들었을 때 잃는 양 배율, cost: 넓히는 데 드는 것
   tiers: [
@@ -639,10 +640,10 @@ const RAID = {
 };
 
 // ── 둥지 시설: 둥지 단계마다 지을 수 있는 칸. 시설마다 식구 한 명에게 일을 맡길 수 있음 ──
-// 힘(power) = 1(시설만) + 일하는 식구 (어른 1, 소년·청년 견습 0.5) × (잘 맞으면 1.5). 부엌은 일하는 식구가 있어야 쓸 수 있음
+// 힘(power) = 1(시설만) + 일하는 식구 (어른 1, 소년·청소년 견습 0.5) × (잘 맞으면 1.5). 부엌은 일하는 식구가 있어야 쓸 수 있음
 const FACILITY = {
   slots: [2, 3, 4],                       // 보금자리 · 넓은 동굴 · 용의 성채
-  worker: { adult: 1, apprentice: 0.5, fit: 1.5, apprenticeStages: ['소년', '청년'], adultStages: ['어른', '노년'] },
+  worker: { adult: 1, apprentice: 0.5, fit: 1.5, apprenticeStages: ['소년', '청소년'], adultStages: ['어른', '노년'] },
   list: {
     forge:   { name: '공방',   cost: { gold: 250, items: { bog_iron: 4, red_clay: 4, obsidian: 2 } }, talent: 'smith', traits: ['handy'],
       desc: '둥지에서 만들면 기력이 덜 들고 대성공·강화가 잘 된다.', en: 0.05, great: 0.015, rate: 0.5 },
@@ -680,7 +681,7 @@ const FISHING = {
   quality: { perfect: { uncommon: 2.5, rare: 4, common: 0.6 }, good: { uncommon: 1.5, rare: 2 }, ok: { rare: 0.5 }, auto: { uncommon: 0.8, rare: 0.4 } },
   bait: { bait_worm: {}, bait_shrimp: { common: 1.2 }, bait_meat: { uncommon: 1.6, rare: 1.5 }, bait_lure: { uncommon: 2, rare: 3 } },
   xp: { common: 2, uncommon: 5, rare: 12 },
-  gatherBait: 0.45, gatherSalt: 0.5,     // 해안에서 채집할 때 미끼·소금이 함께 나올 확률 (소금 0.35 → 0.6 → 0.5)
+  gatherBait: 0.45, gatherSalt: 0.6,     // 해안에서 채집할 때 미끼·소금이 함께 나올 확률 (소금 0.35 → 0.6 → 0.5 → 0.6)
   coastTribute: { bait: [3, 5], fish: [1, 3], failBait: [1, 2] }, // 적대가 해안을 위협할 때: 성공하면 미끼·생선, 실패해도 미끼 조금
 };
 
@@ -691,6 +692,7 @@ const RUIN = {
   crossAp: 3, minLevel: 20,                      // 바다를 건널 때 (오갈 때마다)
   drain: 2,                                      // 이 땅의 정신 소모 배율 (지역 drain을 곱함). 정신 보호 장신구가 줄여 줌
   eliteChance: 0.15,                             // 이 땅에서 강적을 만날 확률 (본토의 오염된 땅 MIND.eliteChance보다 낮게)
+  eliteHp: 0.25,                                 // 강적에게는 장소 체력 배율(hpMul)을 이만큼만 더함 (0이면 본토 강적과 같은 체력, 1이면 사냥감과 같은 배율)
   together: 0.7,                                 // 같은 지역에 다른 드래곤이 있으면 정신 소모 ×
   // 모두의 정화도 목표: 최근 활동한 입장 가능(레벨 minLevel 이상) 드래곤 수 × goalPer (인원이 몇이든 걸리는 기간이 비슷하게)
   goalPer: 3300,                                 // 드래곤 하나당 몫. 하루 110점쯤(사냥 20번꼴) 쌓는 보통 강도로 한 달
@@ -714,7 +716,7 @@ const RUIN = {
   // 강적·사냥에서 나오는 것 (멸망한 대륙)
   coreDrop: { elite: 0.3, hunt: 0.03 },          // 잿빛 심장
   treasure: { elite: 0.05, hunt: 0.006, pool: ['tr_map_piece', 'tr_star_orb', 'tr_dragon_idol', 'tr_ash_mirror', 'tr_broken_crown', 'tr_last_claw'] },
-  // 희귀 장비: 강적을 이기면 아주 드물게. 강적을 pity번 만날 때까지 못 얻었으면 그다음 승리에서 반드시
+  // 희귀 장비: 강적을 이기면 아주 드물게. 숨은 천장: 아직 하나도 못 얻었는데 강적을 pity번 만났으면 그다음 승리(사냥이든 강적이든)에서 반드시 (첫 장비만, 화면에는 알리지 않음)
   gear: { elite: 0.015, hunt: 0.001, pity: 40, pool: ['erebus_eye', 'knight_gauntlet', 'void_ring', 'abyss_membrane'] },
 };
 
@@ -734,7 +736,7 @@ const KIN = {
   human: {
     stages: [
       { name: '아기', from: 0 }, { name: '아이', from: 1 }, { name: '소년', from: 2 },
-      { name: '청년', from: 4 }, { name: '어른', from: 11 }, { name: '노년', from: 18 },
+      { name: '청소년', from: 4 }, { name: '어른', from: 11 }, { name: '노년', from: 18 },
     ],
     adultDay: 11,                     // 이날 재주가 정해지고 갈 길을 고름
     lifespan: 25,                     // 이날이 지나면 세상을 떠남 (어른 1주 + 노년 1주)
@@ -757,7 +759,7 @@ const KIN = {
       { name: '해츨링', from: 0 }, { name: '어린 용', from: 4 }, { name: '젊은 용', from: 11 }, { name: '다 자란 용', from: 18 },
     ],
     independentDay: 18,               // 이날부터 독립시킬 수 있음 (미뤄도 됨)
-    expeditionFrom: 4,                // 어린 용부터 원정에 따라감
+    expeditionFrom: 2,                // 해츨링 2일째부터 원정에 따라감 (인간 아이의 소년과 같은 날. 4 → 2)
     huntFrom: 11, huntEvery: DAY,     // 젊은 용부터 혼자 사냥해서 가져옴
     trainCooldown: 6 * 60 * 60 * 1000, trainAp: 1, trainEn: 5,
     trainLimit: [4, 8, 12, 16],       // 단계별로 가르칠 수 있는 누적 횟수
@@ -981,6 +983,12 @@ const CREATURES = {
 };
 
 // 지역별 장면. 탐사 결과와 원정 기록에 쓰임
+// 인간의 마을에서 우호·은둔 드래곤이 사람 모습으로 다닐 때의 탐사 장면 (그 밖에는 SCENES)
+const SCENES_HUMAN = {
+  capital: ['성문을 지나 시장 골목에 섞여 들었다.', '빵 굽는 냄새를 따라 좁은 골목을 걸었다.', '광장 분수 곁에 앉아 오가는 사람들을 구경했다.',
+    '성당 종소리에 맞춰 비둘기들이 머리 위로 날아올랐다.', '대장간 앞에서 망치 소리를 한참 들었다. 대장장이가 연장 하나를 들어 보이며 자랑했다.', '골목 아이들이 낯선 나그네라며 힐끔힐끔 쳐다보았다.'],
+  coast: ['어촌 선창을 거닐었다. 짠 바람에 그물 냄새가 실려 왔다.', '어부들 틈에 끼어 오늘 잡은 생선 자랑을 들었다.', '바닷가 주막 처마 밑에서 파도 소리를 들었다.', '모래톱을 맨발로 걸으며 떠밀려 온 것들을 살폈다.'],
+};
 const SCENES = {
   ruin_shore: ['검은 파도가 무너진 부두를 핥고 지나갔다.', '모닥불 곁에서 생존자들이 낮은 목소리로 노래를 불렀다.', '모래에 반쯤 묻힌 배의 뼈대를 발견했다.', '잿가루가 바닷바람에 실려 눈처럼 흩날렸다.', '누군가 모래 위에 그려 둔 용과 사람의 그림이 반쯤 지워져 있었다.'],
   ruin_plain: ['검게 마른 이삭이 바람에 서걱거렸다.', '허수아비 하나가 고개를 돌려 이쪽을 보는 것 같았다.', '무너진 농가의 화덕에 아직 온기가 남아 있었다.', '먼 하늘에서 뼈가 부딪히는 소리가 들렸다.', '말라붙은 우물 바닥에서 무언가가 반짝였다.'],
@@ -1187,7 +1195,7 @@ const TITLES = [
   { id: 'yb_gambler', name: '홀짝의 귀재', cond: { count: 'yabawi', at: 30 }, mod: { huntGold: 1.05 }, eff: '사냥 금화 +5%' },
 ];
 // 칭호 조건을 사람이 읽는 글로
-const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: '둥지에서 {n}번 쉬기', craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격', heir: '먼 여행을 떠난 드래곤의 의지를 잇기', teach: '제자를 {n}번 가르치기', surpass: '스승의 레벨을 따라잡기', sendoff: '다 자란 식구를 {n}번 떠나보내기', corrupt: '오염된 땅에서 {n}번 행동하기', purify: '오염된 땅을 {n}번 정화하기', firstcraft: '숨겨진 제작법을 대륙에서 처음 찾아내기', masterwork: '대성공 {n}번', mobquest: '모브 드래곤의 의뢰 {n}번 마치기', mobstory: '모브 드래곤의 이야기 {n}개를 끝까지 듣기', yabawimeet: '떠돌이 야바위꾼을 {n}번 만나기 (나타날 때마다 한 번)', yabawi: '야바위꾼과 홀짝 {n}판', dance: '왕도 축제에서 {n}번 춤추기', ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map((n) => [`mazef${n}`, `지하 회랑 제 ${n}층의 봉인이 풀린 날 수호자를 치거나 기둥을 밝히기`])), mazecity: '지하 회랑 일곱 층을 모두 밝힌 날 함께하기' };
+const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: `둥지에서 {n}번 쉬기 (한 번에 ${NEST.restCountMin}분 이상)`, craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격', heir: '먼 여행을 떠난 드래곤의 의지를 잇기', teach: '제자를 {n}번 가르치기', surpass: '스승의 레벨을 따라잡기', sendoff: '다 자란 식구를 {n}번 떠나보내기', corrupt: '오염된 땅에서 {n}번 행동하기', purify: '오염된 땅을 {n}번 정화하기', firstcraft: '숨겨진 제작법을 대륙에서 처음 찾아내기', masterwork: '대성공 {n}번', mobquest: '모브 드래곤의 의뢰 {n}번 마치기', mobstory: '모브 드래곤의 이야기 {n}개를 끝까지 듣기', yabawimeet: '떠돌이 야바위꾼을 {n}번 만나기 (나타날 때마다 한 번)', yabawi: '야바위꾼과 홀짝 {n}판', dance: '왕도 축제에서 {n}번 춤추기', ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map((n) => [`mazef${n}`, `지하 회랑 제 ${n}층의 봉인이 풀린 날 수호자를 치거나 기둥을 밝히기`])), mazecity: '지하 회랑 일곱 층을 모두 밝힌 날 함께하기' };
 
 // ── 장소와 사냥터 난이도 ───────────────────────────
 // 야생 지역마다 장소가 넷. 입구는 쉽고 안쪽일수록 사냥터 난이도가 높다 (셋째까지 Lv.1~12, 넷째는 고레벨 구역 Lv.13~24).
@@ -1257,7 +1265,7 @@ const PLACES = {
     desc: '잿가루가 섞인 검은 모래. 밟을 때마다 껍질이 부서지는 소리가 난다.' },
   ruin_field:    { region: 'ruin_plain', name: '시든 밀밭', level: 23, hpMul: 1.9, creature: '농부 무리', type: 'human', eliteType: 'construct', elite: '허수아비 군주', weak: ['fire', 'poison'], resist: ['earth'], special: { name: '낫질', power: 1.0, hits: 2 },
     desc: '검게 마른 이삭 사이로 낫을 든 그림자들이 천천히 걸어 다닌다.' },
-  ruin_river:    { region: 'ruin_plain', name: '말라붙은 강바닥', level: 24, hpMul: 2.0, creature: '뼈 와이번', type: 'flyer', elite: '뼈만 남은 와이번 왕', weak: ['spirit', 'fire'], resist: ['poison', 'ice'], special: { name: '썩은 숨결', power: 1.3, debuff: { poison: 3 } },
+  ruin_river:    { region: 'ruin_plain', name: '말라붙은 강바닥', level: 24, hpMul: 2.0, creature: '뼈 와이번', type: 'flyer', elite: '뼈만 남은 와이번 왕', weak: ['spirit', 'fire'], resist: ['poison', 'ice'], special: { name: '썩은 숨결', power: 1.0, debuff: { poison: 2 } },
     desc: '강이 흐르던 자리에 갈라진 진흙만 남았다. 하늘에서 뼈가 부딪히는 소리가 들린다.' },
   ruin_gate:     { region: 'ruin_capital', name: '무너진 성문', level: 25, hpMul: 2.1, creature: '기사단', type: 'human', elite: '마지막 기사단장', weak: ['lightning', 'spirit'], resist: ['earth'], special: { name: '돌격 대열', power: 1.4, debuff: { weaken: 2 } },
     desc: '부서진 성문 앞에 갑옷을 입은 기사들이 아직 대열을 지키고 서 있다.' },
@@ -1381,6 +1389,16 @@ const COMBAT = {
   creature: { hp: [34, 3.3], atk: [12, 0.45], def: [3.5, 0.4], eliteHp: 1.8, eliteAtk: 1.3, highFrom: 12, hpHigh: 2, atkHigh: 0.3 }, // 초반은 조금 더 아프게, 레벨당 오르는 폭은 줄여 후반 벽을 낮춤 (예전: hp [27, 4.2], atk [8, 0.85], 강적 공격 1.2)
   // 난이도: 사냥·강적의 사냥감 세기 배율 (1이면 예전과 같음). 올리면 사냥감이 더 단단하고 아프게 문다
   difficulty: { hp: 1.08, atk: 1.08 },
+  // 사냥감이 거는 화상·중독의 세기 기울기 (1이면 예전과 같음). 레벨이 오를수록 커지는데 비늘로 막히지 않아 높은 사냥터만 튀던 것을 누름
+  creatureDot: 0.5,
+  // 지혜: 스킬 효과 배율 = 1 + 지혜 × wisSkill (포식·자수정 숨결의 흡수, 숨 고르기의 기력, 스킬이 상태 이상을 걸 확률). 피해·지속 피해에는 붙지 않음
+  wisSkill: 0.01,
+  // 스킬을 한 번도 고르지 않은 드래곤이 들고 가는 스킬 (배운 것만, 이 순서로). 모자라면 배운 순서대로 채움
+  defaultSkills: ['tail', 'mend', 'roar'],
+  // 위엄: 사냥감·도둑의 위엄 = base + 레벨 × per (포효가 통할 확률을 정함. 대륙의 재앙은 따로)
+  creatureMaj: { base: 4, per: 0.5 },
+  // 위엄: 드래곤이 얼어붙음·마비를 떨쳐 낼 확률, 화상·중독·출혈이 한 턴 짧아질 확률 = 위엄 × per (최대 max)
+  majResist: { per: 0.012, max: 0.35 },
   // 무리 조우: 사냥하다 여러 마리를 한꺼번에 만남. 함께 나온 사냥감은 조금 약하고(체력·공격 배율), 쓰러뜨린 만큼 전리품이 더 나옴
   group: {
     from: 2,             // 사냥터 Lv. 이만큼부터 무리가 나옴
@@ -1396,15 +1414,15 @@ const COMBAT = {
 // 종류마다 하나뿐인 숨결. 기력 12, 3턴마다
 const BREATHS = {
   red:    { name: '화염 숨결',   element: 'fire',      power: 1.35, debuff: { burn: 3 }, desc: '불길을 쏟아 큰 피해를 주고, 세 턴 동안 불태운다.' },
-  black:  { name: '산 숨결',     element: 'acid',      power: 1.1,  debuff: { acid: 3 }, desc: '비늘을 녹여 세 턴 동안 상대의 방어를 절반으로 만들고, 받는 피해를 15% 늘린다.' },
-  white:  { name: '눈보라 숨결', element: 'ice',       power: 1.0,  debuff: { freeze: 1 }, chance: 0.6, desc: '얼음 폭풍으로 피해를 주고, 높은 확률로 한 턴 얼려 움직이지 못하게 한다.' },
+  black:  { name: '산 숨결',     element: 'acid',      power: 1.35,  debuff: { acid: 3 }, desc: '비늘을 녹여 세 턴 동안 상대의 방어를 절반으로 만들고, 받는 피해를 15% 늘린다.' },
+  white:  { name: '눈보라 숨결', element: 'ice',       power: 1.0,  debuff: { freeze: 1 }, chance: 0.45, desc: '얼음 폭풍으로 피해를 주고, 절반 가까운 확률로 한 턴 얼려 움직이지 못하게 한다.' },
   gold:   { name: '번개 숨결',   element: 'lightning', power: 1.7,  debuff: { stun: 1 }, chance: 0.3, desc: '가장 강한 한 방. 가끔 상대를 마비시켜 한 턴 쉬게 한다.' },
   green:  { name: '독 숨결',     element: 'poison',    power: 0.9,  debuff: { poison: 3 }, desc: '짙은 독안개로 세 턴 동안 중독시킨다.' },
   clear:  { name: '투명한 숨결', element: 'mist', power: 0.8, desc: '시험용 숨결. 바람이 스칠 뿐 아무 일도 일어나지 않는다.' },
   silver: { name: '안개 숨결',   element: 'mist',      power: 0.8,  self: { evade: 3 }, desc: '은빛 안개에 몸을 숨겨, 세 턴 동안 공격을 잘 피한다.' },
-  blue:   { name: '해일 숨결',   element: 'water',     power: 1.05, debuff: { soak: 2 }, desc: '거센 물살로 피해를 주고, 두 턴 동안 흠뻑 젖게 해 굼뜨게 만든다 (속도 −30%, 잘 피하지 못함). 젖은 적에게 꼬리치기를 하면 넘어뜨린다.' },
-  purple: { name: '자수정 숨결', element: 'spirit',    power: 0.95, drain: 0.55, cleanse: 1, desc: '보랏빛 결정을 쏟아 피해를 주고, 입힌 피해의 55%만큼 체력을 되찾으며 나쁜 상태 하나를 씻어 낸다.' },
-  bronze: { name: '모래 폭풍 숨결', element: 'earth',  power: 1.0,  self: { stone: 3 }, desc: '모래와 돌 조각을 쏟아 피해를 주고, 세 턴 동안 비늘이 돌처럼 굳어 받는 피해가 30% 준다.' },
+  blue:   { name: '해일 숨결',   element: 'water',     power: 0.9, debuff: { soak: 2 }, desc: '거센 물살로 피해를 주고, 두 턴 동안 흠뻑 젖게 해 굼뜨게 만든다 (속도 −30%, 잘 피하지 못함). 젖은 적에게 꼬리치기를 하면 넘어뜨린다.' },
+  purple: { name: '자수정 숨결', element: 'spirit',    power: 1.15, drain: 0.55, cleanse: 1, desc: '보랏빛 결정을 쏟아 피해를 주고, 입힌 피해의 55%만큼 체력을 되찾으며 나쁜 상태 하나를 씻어 낸다.' },
+  bronze: { name: '모래 폭풍 숨결', element: 'earth',  power: 1.2,  self: { stone: 3 }, desc: '모래와 돌 조각을 쏟아 피해를 주고, 세 턴 동안 비늘이 돌처럼 굳어 받는 피해가 30% 준다.' },
 };
 const BREATH_COST = { en: 12, cd: 3 };
 const ELEMENTS = { fire: '화염', acid: '산', ice: '얼음', lightning: '번개', poison: '독', mist: '안개', water: '물', spirit: '정화', earth: '대지' };
@@ -1421,7 +1439,7 @@ const SKILLS = {
   tail:   { name: '꼬리치기',     lv: 1, en: 4,  cd: 1, power: 1.25, desc: '꼬리를 휘둘러 묵직하게 친다. 피해 ×1.25.' },
   harden: { name: '비늘 세우기',  lv: 2, en: 5,  cd: 3, self: { harden: 2 }, desc: '비늘을 곤두세워 두 턴 동안 받는 피해가 절반이 된다.' },
   roar:   { name: '포효',         lv: 3, en: 6,  cd: 3, debuff: { weaken: 3 }, majesty: true, desc: '세 턴 동안 상대의 공격을 30% 꺾는다. 위엄이 높을수록 잘 통한다. 적이 여럿이면 모두에게 울린다.' },
-  mend:   { name: '치유',         lv: 4, en: 8,  cd: 5, heal: { base: 6, mag: 0.9, pct: 0.12 }, cleanse: true, desc: '치유 마법으로 상처를 아물게 해 체력을 되찾고 화상·중독·출혈을 씻어 낸다. 지혜가 높을수록 많이 회복한다. 쓰러진 드래곤을 일으킬 때도 더 많이 회복시킨다.' },
+  mend:   { name: '치유',         lv: 4, en: 8,  cd: 5, heal: { base: 6, mag: 1.5, pct: 0.08 }, cleanse: true, desc: '치유 마법으로 상처를 아물게 해 체력을 되찾고 화상·중독·출혈을 씻어 낸다. 지혜가 높을수록 많이 회복한다. 쓰러진 드래곤을 일으킬 때도 더 많이 회복시킨다.' },
   gust:   { name: '날개 돌풍',    lv: 5, en: 6,  cd: 3, power: 0.8, self: { dodge: 1 }, desc: '거센 바람으로 피해 ×0.8, 다음 공격 한 번을 60% 확률로 흘려보낸다.' },
   headbutt: { name: '박치기',     lv: 6, en: 7,  cd: 3, power: 1.0, debuff: { stun: 1 }, chance: 0.3, desc: '뿔로 들이받아 피해 ×1.0, 30% 확률로 한 턴 마비시킨다. 마비되면 급소 찌르기로 이어진다.' },
   rend:   { name: '찢어발기기',   lv: 7, en: 8,  cd: 3, power: 1.2, debuff: { bleed: 3 }, desc: '발톱으로 깊이 찢어 피해 ×1.2, 세 턴 동안 피를 흘리게 한다.' },
@@ -1812,7 +1830,7 @@ const ACHIEVEMENTS = [
   { id: 'q_bison',    name: '들소의 천적',       desc: '들소 떼를 100마리 쓰러뜨리기',           cond: { kills: ['plains_field', 100] } },
   { id: 'q_wolfking', name: '외눈 늑대왕의 숙적', desc: '외눈 늑대왕을 10번 쓰러뜨리기',         cond: { kills: ['plains_hill!', 10] } },
   { id: 'q_regular',  name: '재앙의 단골손님',   desc: '같은 대륙의 재앙을 10번 쓰러뜨리기',     cond: { bossKills: 10 } },
-  { id: 'q_sleepy',   name: '겨울잠',            desc: '둥지에서 200번 쉬기',                     cond: { count: ['rest', 200] } },
+  { id: 'q_sleepy',   name: '겨울잠',            desc: `둥지에서 200번 쉬기 (한 번에 ${NEST.restCountMin}분 이상)`,                     cond: { count: ['rest', 200] } },
   { id: 'h_broke',  hidden: true, name: '주머니가 가볍다', desc: '레벨 5가 넘어서 금화를 한 닢도 남기지 않기', cond: { goldZero: 5 } },
   { id: 'h_rich',   hidden: true, name: '금화 이불',       desc: '금화를 5,000닢 넘게 지니고 다니기',       cond: { goldAt: 5000 } },
   { id: 'h_dawn',   hidden: true, name: '새벽 네 시의 용', desc: '새벽 네 시에 대륙을 거닐기',              cond: { hourKST: 4 } },
@@ -1823,6 +1841,7 @@ const ACHIEVEMENTS = [
 ];
 
 module.exports = {
+  SCENES_HUMAN,
   PLAY_KINDS: Object.keys(KINDS).filter((k) => !KINDS[k].hidden), // 고를 수 있는 종족 (무작위로 뽑을 때도 이것만)
   isTestDragon: (d) => !!d && !!KINDS[d.kind]?.test,                // GM 시험용 투명 드래곤인가
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, FESTIVAL, TITLES, TITLE_COUNT_NAMES, ACHIEVEMENTS, YABAWI, KEEPSAKES,

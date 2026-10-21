@@ -4,7 +4,7 @@
 // 저장은 부르는 쪽(server.js)이 db.saveState(d, items)로 합니다.
 
 const {
-  REGIONS, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, RECIPES, SLOTS, STANCES, SHOPS, REP_TIERS, repTier, TRADE, NEST, hoardTier, RAID, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, ELEMENTS,
+  REGIONS, ITEMS, REGION_LOOT, CREATURES, SCENES, SCENES_HUMAN, RULES, RECIPES, SLOTS, STANCES, SHOPS, REP_TIERS, repTier, TRADE, NEST, hoardTier, RAID, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, ELEMENTS,
   CRAFT, SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, SKILLS, FISHING, RUIN, FACILITY, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG, BOSSES, ACHIEVEMENTS, KEEPSAKES,
 } = require('./game-data');
 
@@ -698,7 +698,7 @@ function explore(d) {
   const st = statsOf(d);
   if (d.stance === 'hermit') st.wisdom += SR.hermit.exploreWisdom; // 은둔: 숨은 것을 잘 찾음
 
-  const lines = [pick(SCENES[d.region])];
+  const lines = [pick((d.stance !== 'hostile' && SCENES_HUMAN[d.region]) || SCENES[d.region])]; // 마을에선 우호·은둔이면 사람 모습 장면
   let items = [];
   let gold = 0;
   const r = Math.random();

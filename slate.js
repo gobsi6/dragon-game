@@ -4,7 +4,7 @@ const { isTestDragon } = require('./game-data');
 const HEADS = ['story', 'tip', 'party', 'free'];      // 말머리 (지금 화면에서는 고르지 않아 늘 free로 새김)
 const RULES = {
   title: 40, body: 1000, comment: 100,                // 글자 수
-  imgs: 3, imgMax: 600000, imgGap: 1500,              // 글 하나에 그림 몇 장, 한 장 최대 크기(base64 글자 수, 약 450KB), 올리는 간격
+  imgs: 3, imgMax: 320 * 1024, imgGap: 1500,          // 글 하나에 그림 몇 장, 한 장 최대 크기(바이트), 올리는 간격
   postGap: 30 * 1000, perDay: 20,                     // 글 간격, 하루에 새길 수 있는 글 수
   commentGap: 3 * 1000,
   list: 200,                                          // 목록에 보여 줄 글 수
@@ -40,10 +40,13 @@ module.exports = function setupSlate({ io, db, entryOf }) {
     });
     const mine = (row, d) => row && (row.dragon_id === d.id || isGm());
 
-    on('slate:list', () => ({
+    on('slate:list', (d) => ({
       ok: true, rules: RULES, gm: isGm(),
-      posts: db.slate.list(RULES.list).map((r) => ({ id: r.id, head: r.head, title: r.title, preview: r.preview, at: r.at, edited: !!r.edited_at, pinned: !!r.pinned, n: r.n, last: Math.max(r.at, r.last_c || 0), who: who(r) })),
+      posts: db.slate.list(RULES.list).map((r) => ({ id: r.id, head: r.head, title: r.title, preview: r.preview, at: r.at, edited: !!r.edited_at, pinned: !!r.pinned, n: r.n, last: Math.max(r.at, r.last_c || 0),
+        lastC: r.last_c || 0, lastBy: r.last_by || null, mine: r.dragon_id === d.id, who: who(r) })),
     }));
+    // 접속할 때 한 번: 가장 새 글, 내 글에 달린 가장 새 답의 때 (아이콘 점)
+    on('slate:peek', (d) => ({ ok: true, latest: latest(), replyAt: db.slate.replyAt(d.id) }));
     on('slate:get', (d, p) => {
       const r = db.slate.get(Number(p.id));
       if (!r) return { error: '이미 지워진 글이다.' };
@@ -87,19 +90,6 @@ module.exports = function setupSlate({ io, db, entryOf }) {
       changed({ id: r.id, gone: true });
       return { ok: true };
     }, true);
-    // 그림 올리기 (글을 새기기 전에 한 장씩). 돌려줌: 그림 번호 → 새길 때 imgs로 보냄
-    on('slate:img', (d, p) => {
-      const m = /^data:image\/(webp|jpeg|png);base64,([A-Za-z0-9+/=]+)$/.exec(typeof p.dataUrl === 'string' ? p.dataUrl : '');
-      if (!m) return { error: '그림 파일을 읽지 못했다. 다른 그림으로 해 보자.' };
-      if (m[2].length > RULES.imgMax) return { error: '그림이 너무 크다.' };
-      const now = Date.now();
-      if (now - (socket.data.slateImgAt || 0) < RULES.imgGap) return { error: '조금 천천히 올리자.' };
-      if (db.slate.imgPending(d.id) >= RULES.imgs * 3) return { error: '올려 두고 쓰지 않은 그림이 많다. 먼저 글을 새기자.' };
-      socket.data.slateImgAt = now;
-      const w = Math.max(0, Math.min(4096, Math.floor(Number(p.w) || 0))), h = Math.max(0, Math.min(4096, Math.floor(Number(p.h) || 0)));
-      const id = db.slate.imgAdd(d.id, `image/${m[1]}`, Buffer.from(m[2], 'base64'), w, h);
-      return { ok: true, id };
-    }, true);
     on('slate:pin', (d, p) => {
       if (!isGm()) return { error: 'GM만 고정할 수 있다.' };
       const r = db.slate.get(Number(p.id));
@@ -117,7 +107,8 @@ module.exports = function setupSlate({ io, db, entryOf }) {
       if (now - (socket.data.slateCmAt || 0) < RULES.commentGap) return { error: '숨을 고르는 중이다.' };
       socket.data.slateCmAt = now;
       db.slate.comment(r.id, d, text);
-      changed({ id: r.id, comment: true, by: d.id });
+      // 글쓴이에게: 누가 내 글에 답을 남겼는지 (모두에게 가는 알림에 실어 보내고, 화면이 글쓴이일 때만 알림)
+      changed({ id: r.id, comment: true, by: d.id, owner: r.dragon_id || null, byName: d.name, title: r.title });
       return { ok: true };
     }, true);
     on('slate:recomment', (d, p) => {
@@ -139,5 +130,20 @@ module.exports = function setupSlate({ io, db, entryOf }) {
       return { ok: true };
     }, true);
   }
-  return { attach };
+  // 그림 올리기 (글을 새기기 전에 한 장씩, HTTP로 받음: server.js의 /api/slate-img). 돌려줌: 그림 번호 → 새길 때 imgs로 보냄
+  // 소켓으로 받지 않는 까닭: 소켓 한 번에 받는 크기를 키우면 모든 요청에 똑같이 커지므로
+  const imgAt = new Map(); // 드래곤마다 마지막으로 올린 때
+  function uploadImg(d, type, buf, w, h) {
+    if (!d) return { error: '먼저 드래곤을 만들어야 한다.' };
+    if (isTestDragon(d)) return { error: '시험용 드래곤은 석판에 새길 수 없다.' };
+    if (!['image/webp', 'image/jpeg', 'image/png'].includes(type) || !Buffer.isBuffer(buf) || !buf.length) return { error: '그림 파일을 읽지 못했다. 다른 그림으로 해 보자.' };
+    if (buf.length > RULES.imgMax) return { error: '그림이 너무 크다.' };
+    const now = Date.now();
+    if (now - (imgAt.get(d.id) || 0) < RULES.imgGap) return { error: '조금 천천히 올리자.' };
+    if (db.slate.imgPending(d.id) >= RULES.imgs * 3) return { error: '올려 두고 쓰지 않은 그림이 많다. 먼저 글을 새기자.' };
+    imgAt.set(d.id, now);
+    const clamp = (v) => Math.max(0, Math.min(4096, Math.floor(Number(v) || 0)));
+    return { ok: true, id: db.slate.imgAdd(d.id, type, buf, clamp(w), clamp(h)) };
+  }
+  return { attach, uploadImg, RULES };
 };

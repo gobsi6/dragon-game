@@ -781,9 +781,11 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
 
     // ── 선물 ──
     // ── 왕도 축제: 지금 축제 여부와 이 지역에서 함께 출 수 있는 드래곤 ──
+    // 다음 축제가 시작하는 때 (축제가 아닐 때 화면이 그때 한 번만 다시 묻도록)
+    const festNext = (now = Date.now()) => { for (let t = now; t < now + 8 * DAY; t += 3600000) { const h = Math.floor(t / 3600000) * 3600000; if (festivalNow(h)) return h; } return now + DAY; };
     on('fest:get', (d) => {
       const fest = festivalNow();
-      if (!fest) return { ok: true, on: false };
+      if (!fest) return { ok: true, on: false, next: festNext(), region: FESTIVAL.region };
       const done = dancedWith(d, fest.key);
       const list = [];
       if (d.region === FESTIVAL.region) {
@@ -792,7 +794,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
           list.push({ id, name: e.dragon.name, kind: e.dragon.kind, level: e.dragon.level, av: e.dragon.has_avatar ? e.dragon.avatar_ver : 0, done: done.includes(id), why: danceWhy(d, e.dragon, fest) });
         }
       }
-      return { ok: true, on: true, here: d.region === FESTIVAL.region, until: fest.until, count: done.length, list };
+      return { ok: true, on: true, here: d.region === FESTIVAL.region, until: fest.until, count: done.length, list, region: FESTIVAL.region };
     });
     on('fest:invite', (d, p) => {
       const fest = festivalNow();

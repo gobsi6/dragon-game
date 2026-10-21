@@ -32,11 +32,12 @@ function combatOf(d) {
   return c;
 }
 const learned = (d) => Object.keys(SKILLS).filter((id) => SKILLS[id].lv <= d.level);
-// 들고 가는 스킬: 고른 것 중 배운 것만. 고른 적이 없으면 배운 순서대로
+// 들고 가는 스킬: 고른 것 중 배운 것만. 고른 적이 없으면 COMBAT.defaultSkills 순서로 (배운 것만), 모자라면 배운 순서대로 채움
 function loadout(d) {
   const c = combatOf(d);
   const have = learned(d);
-  const pickd = Array.isArray(c.skills) ? c.skills.filter((id) => have.includes(id)) : have;
+  const pref = (COMBAT.defaultSkills || []).filter((id) => have.includes(id));
+  const pickd = Array.isArray(c.skills) ? c.skills.filter((id) => have.includes(id)) : [...pref, ...have.filter((id) => !pref.includes(id))];
   return pickd.slice(0, COMBAT.maxSkills);
 }
 function setSkills(d, list) {
@@ -93,6 +94,9 @@ function fromDragon(d, context) {
   };
 }
 // 레벨별 사냥감 기본 세기. Lv12를 넘으면 레벨당 hpHigh·atkHigh가 더 붙음 (고레벨 구역)
+const creatureMaj = (lv) => (COMBAT.creatureMaj ? COMBAT.creatureMaj.base + lv * COMBAT.creatureMaj.per : 6 + lv * 2);
+// 지혜: 스킬 효과 배율 (사냥감은 1)
+const wisK = (f) => (f.creature ? 1 : 1 + (f.mag || 0) * (COMBAT.wisSkill || 0));
 function creatureBase(lv) {
   const K = COMBAT.creature;
   const hi = Math.max(0, lv - (K.highFrom || 12));
@@ -104,7 +108,8 @@ function creatureBase(lv) {
 }
 // place: 장소 id (사냥터 난이도 = 사냥감 레벨). corrupted: 오염된 땅의 몬스터 (조금 더 세고, 입힌 피해만큼 정신도 깎음)
 // minion: 무리에 함께 나온 사냥감이면 이름 앞에 붙일 말 ('어린' 등). 체력·공격이 조금 낮음
-// 멸망한 대륙에서 이겼을 때 드물게 나오는 것: 잿빛 심장, 보물, 희귀 장비 (천장: 강적을 pity번 만났으면 그다음 승리에서 반드시)
+// 멸망한 대륙에서 이겼을 때 드물게 나오는 것: 잿빛 심장, 보물, 희귀 장비
+// (숨은 천장: 희귀 장비를 아직 하나도 얻지 못했는데 강적을 pity번 만났으면, 그다음 승리에서 반드시. 첫 장비 하나만 지켜 주고 그 뒤는 운)
 function ruinFinds(d, kind, lines) {
   const out = [];
   if (Math.random() < RUIN.coreDrop[kind]) { out.push('ashen_core'); lines.push('식지 않은 잿빛 심장 하나가 재 속에서 뛰고 있었다.'); }
@@ -116,7 +121,8 @@ function ruinFinds(d, kind, lines) {
   }
   const c = logic.combatJson(d);
   const G = RUIN.gear;
-  if (Math.random() < G[kind] || (kind === 'elite' && c.ruinPity >= G.pity)) {
+  const firstYet = !G.pool.some((id) => c.dex?.i?.[id]); // 도감에 희귀 장비가 하나도 없음 = 아직 첫 장비 전
+  if (Math.random() < G[kind] || (firstYet && c.ruinPity >= G.pity)) {
     const g = pick(G.pool);
     out.push(g);
     c.ruinPity = 0;
@@ -133,7 +139,7 @@ function fromCreature(place, elite, corrupted = false, minion = null) {
   const G = COMBAT.group;
   const DF = COMBAT.difficulty || { hp: 1, atk: 1 }; // 난이도 배율
   const CB = creatureBase(lv);
-  const ruinMul = pl.hpMul ? (elite ? 1 + (pl.hpMul - 1) * 0.5 : pl.hpMul) : 1; // 멸망한 대륙: 체력이 훨씬 높음 (강적은 절반만 적용해 잡을 길을 남김)
+  const ruinMul = pl.hpMul ? (elite ? 1 + (pl.hpMul - 1) * (RUIN.eliteHp ?? 0.5) : pl.hpMul) : 1; // 멸망한 대륙: 체력이 훨씬 높음 (강적은 RUIN.eliteHp만큼만 적용해 잡을 길을 남김)
   const hpMax = Math.round(CB.hp * (elite ? K.eliteHp : 1) * (minion ? G.hp : 1) * DF.hp * ruinMul);
   const base = elite ? pl.elite : pl.creature;
   // 무리의 말이 이름에 이미 들어 있으면 두 번 붙이지 않음 (예: '어린' + '어린 ○○')
@@ -144,7 +150,7 @@ function fromCreature(place, elite, corrupted = false, minion = null) {
     type: (elite && pl.eliteType) || pl.type || null, // 화면 아이콘 계통
     corrupted, mindDrain: corrupted ? MIND.monster : 0,
     hp: hpMax, hpMax, en: 0, enMax: 0,
-    atk: CB.atk * (elite ? K.eliteAtk : 1) * (corrupted ? MIND.monsterAtk : 1) * (minion ? G.atk : 1) * DF.atk, def: CB.def, spd: 6 + lv * 2, mag: 4 + lv * 2, maj: 6 + lv * 2,
+    atk: CB.atk * (elite ? K.eliteAtk : 1) * (corrupted ? MIND.monsterAtk : 1) * (minion ? G.atk : 1) * DF.atk, def: CB.def, spd: 6 + lv * 2, mag: 4 + lv * 2, maj: creatureMaj(lv),
     taken: 1, element: cc.special.element || null,
     breath: null, skills: [], special: cc.special,
     weak: cc.weak, resist: cc.resist,
@@ -292,15 +298,28 @@ function dodged(att, def, lines) {
   return false;
 }
 // 상태 이상 걸기 (저항하는 속성이면 통하지 않음)
+// 위엄: 드래곤이 얼어붙음·마비를 기세로 떨쳐 냄 (떨쳐 냈으면 true)
+function resisted(def, lines, k) {
+  const MR = COMBAT.majResist;
+  if (def.creature || !MR || Math.random() >= Math.min(MR.max, (def.maj || 0) * MR.per)) return false;
+  lines.push(`${ga(def)} 기세로 버텨 내 ${STATUS[k]}에 빠지지 않았다.`);
+  return true;
+}
 function applyDebuff(att, def, debuff, chance, element, lines) {
   if (!debuff) return;
   if (element && def.resist.includes(element)) return;
   if (chance != null && Math.random() >= chance) return;
-  for (const [k, n] of Object.entries(debuff)) {
+  // 위엄: 드래곤은 기세로 얼어붙음·마비를 떨쳐 내고, 지속 피해를 한 턴 짧게 버팀
+  const MR = COMBAT.majResist;
+  const resist = !def.creature && MR ? Math.min(MR.max, (def.maj || 0) * MR.per) : 0;
+  for (let [k, n] of Object.entries(debuff)) {
+    if ((k === 'freeze' || k === 'stun') && resisted(def, lines, k)) continue;
+    if (resist && (k === 'burn' || k === 'poison' || k === 'bleed') && n > 1 && Math.random() < resist) n -= 1;
     def.st[k] = Math.max(def.st[k] || 0, n);
-    // 지속 피해는 건 쪽의 힘으로 정해짐
-    if (k === 'burn') def.st.burnDmg = Math.round(3 + att.mag * 0.3);
-    if (k === 'poison') def.st.poisonDmg = Math.round(3 + att.mag * 0.35); // 독: 바로 주는 피해가 약한 대신 지속 피해는 화상보다 조금 세게
+    // 지속 피해는 건 쪽의 힘으로 정해짐. 사냥감(사냥·강적·도둑)은 비늘로 막히지 않는 피해라 기울기를 COMBAT.creatureDot배로 (대륙의 재앙은 그대로)
+    const dot = att.creature && !att.boss ? (COMBAT.creatureDot ?? 1) : 1;
+    if (k === 'burn') def.st.burnDmg = Math.round(3 + att.mag * 0.3 * dot);
+    if (k === 'poison') def.st.poisonDmg = Math.round(3 + att.mag * 0.35 * dot); // 독: 바로 주는 피해가 약한 대신 지속 피해는 화상보다 조금 세게
     if (k === 'bleed') def.st.bleedDmg = Math.round(2 + att.atk * 0.15);
     lines.push(`${ga(def)} ${STATUS[k]} 상태가 되었다.`);
   }
@@ -352,7 +371,7 @@ function perform(b, f, foe, act, lines) {
       (f.used ||= []).push(s.name);
       f.cd[act.id] = s.cd + 1; // 이번 턴 끝에 하나 줄어듦
       if (s.self) for (const [k, n] of Object.entries(s.self)) f.st[k] = n;
-      if (s.enGain) { const before = f.en; f.en = Math.min(f.enMax, f.en + s.enGain); lines.push(`${ga(f)} 숨을 깊이 골랐다. 기력을 ${Math.round(f.en - before)} 되찾았다.`); }
+      if (s.enGain) { const before = f.en; f.en = Math.min(f.enMax, f.en + Math.round(s.enGain * wisK(f))); lines.push(`${ga(f)} 숨을 깊이 골랐다. 기력을 ${Math.round(f.en - before)} 되찾았다.`); }
       if (s.heal) {
         const h = healAmount(f, s);
         const before = f.hp;
@@ -386,12 +405,12 @@ function perform(b, f, foe, act, lines) {
           for (const o of foesOf(b)) if (o !== foe && alive(o)) hit(f, o, s.power * COMBAT.group.splash, { magic: true, element: s.element }, lines, `숨결이 번져 ${o.name}에게도`);
         }
         if (dealt) {
-          if (s.drain) { const h = Math.round(dealt * s.drain); f.hp = Math.min(f.hpMax, f.hp + h); lines.push(`${ga(f)} 체력을 ${h} 되찾았다.`); }
+          if (s.drain) { const h = Math.round(dealt * s.drain * wisK(f)); f.hp = Math.min(f.hpMax, f.hp + h); lines.push(`${ga(f)} 체력을 ${h} 되찾았다.`); }
           if (s.cleanse) { // 퍼플: 나쁜 상태 하나를 씻어 냄
             const bad = ['burn', 'poison', 'bleed', 'weaken', 'acid', 'soak'].find((k) => has(f, k));
             if (bad) { f.st[bad] = 0; lines.push(`보랏빛 결정이 ${STATUS[bad]}${josa(STATUS[bad], '을', '를')} 씻어 냈다.`); }
           }
-          const chance = s.majesty ? clamp(0.5 + (f.maj - foe.maj) * 0.04, 0.2, 0.95) : s.chance;
+          const chance = s.majesty ? clamp(0.5 + (f.maj - foe.maj) * 0.04, 0.2, 0.95) : s.chance != null && !s.isBreath ? Math.min(0.95, s.chance * wisK(f)) : s.chance; // 스킬의 확률은 지혜로 (숨결은 그대로)
           applyDebuff(f, foe, s.debuff, chance, s.isBreath ? s.element : null, lines);
         }
       } else {
@@ -420,7 +439,8 @@ function perform(b, f, foe, act, lines) {
 function comboAfter(f, foe, cb, lines) {
   if (cb.key === 'shatter') { foe.st.freeze = 0; foe.st.brittle = 0; lines.push(`${foe.name}의 몸을 덮은 얼음이 산산조각 났다!`); }
   if (cb.key === 'vital') { foe.st.dazed = 0; }
-  if (cb.key === 'surge' && foe.hp > 0) { foe.st.stun = Math.max(foe.st.stun || 0, foe.acted === f.turnNow ? 2 : 1); foe.st.soak = 0; lines.push(`${ga(foe)} 젖은 몸으로 미끄러져 넘어졌다! (한 턴 마비)`); }
+  if (cb.key === 'surge' && foe.hp > 0 && resisted(foe, lines, 'stun')) { foe.st.soak = 0; }
+  else if (cb.key === 'surge' && foe.hp > 0) { foe.st.stun = Math.max(foe.st.stun || 0, foe.acted === f.turnNow ? 2 : 1); foe.st.soak = 0; lines.push(`${ga(foe)} 젖은 몸으로 미끄러져 넘어졌다! (한 턴 마비)`); }
   if (cb.key === 'wildfire' && foe.hp > 0) {
     const n = foe.st.burnDmg || 3;
     foe.hp = Math.max(0, foe.hp - n);
@@ -866,7 +886,7 @@ function fromThief(T, lv, name, minion, trapped) {
     id: null, name, kind: null, creature: true, region: null, place: null, elite: false, minion, level: lv, type: 'thief',
     corrupted: false, mindDrain: 0,
     hp: Math.round(hpMax * (trapped ? RAID.trapHp : 1)), hpMax, en: 0, enMax: 0,
-    atk: CB.atk * (minion ? G.atk : 1), def: CB.def, spd: 6 + lv * 2, mag: 4 + lv * 2, maj: 6 + lv * 2,
+    atk: CB.atk * (minion ? G.atk : 1), def: CB.def, spd: 6 + lv * 2, mag: 4 + lv * 2, maj: creatureMaj(lv),
     taken: 1, element: null, breath: null, skills: [],
     special: T.special,
     weak: T.weak, resist: T.resist,

@@ -51,7 +51,7 @@ const statName = (k) => STATS.find((x) => x.key === k)?.name || k;
 const bestStat = (kind) => Object.entries(KINDS[kind].stats).sort((a, b) => b[1] - a[1])[0][0]; // 그 종류가 가장 강한 능력치
 const D3 = 3 * 864e5;
 const hasTrait = (k, id) => !!k.data.traits && k.data.traits.includes(id);
-const GIFT_STAGES = ['아이', '소년', '청년', '해츨링', '어린 용', '젊은 용'];
+const GIFT_STAGES = ['아이', '소년', '청소년', '해츨링', '어린 용', '젊은 용'];
 const giftKids = (c) => [...c.humans, ...c.drakes].filter((x) => GIFT_STAGES.includes(c.stage(x)) && (x.data.bond || 0) >= 40 && c.now - (x.data.giftAt || 0) >= 2 * 864e5);
 // ── 아이의 선물: 무엇을 줄지 ──
 // 나이 단계마다 기본 목록 + 성격에 따라 더해지는 목록. 성격 목록은 두 번 넣어 더 자주 나오게 함
@@ -63,7 +63,7 @@ const GIFT_POOL = {
   '젊은 용': ['first_scale', 'warm_stone', 'storm_stone', 'hunt_fang', 'bird_feather', 'old_coin', 'sky_sketch', 'kid_letter', 'wood_flute'],
   '아이': ['kid_drawing', 'flower_ring', 'clover', 'clay_dragon', 'wish_note', 'paper_bird'],
   '소년': ['kid_letter', 'kid_drawing', 'pebble_neck', 'clay_dragon', 'woven_band', 'clover', 'paper_bird', 'paper_kite'],
-  '청년': ['kid_letter', 'wood_dragon', 'wood_flute', 'knit_scarf', 'star_map', 'portrait', 'herb_sachet'],
+  '청소년': ['kid_letter', 'wood_dragon', 'wood_flute', 'knit_scarf', 'star_map', 'portrait', 'herb_sachet'],
 };
 const GIFT_TRAIT = {
   // 새끼 드래곤 성격
@@ -105,10 +105,10 @@ module.exports = [
       const LETTER = {
         '아이': `${call}에게. 사랑해요. ${ga(call)} 세상에서 제일 커요. 나도 크면 ${call}처럼 하늘을 날 거예요.`,
         '소년': `${call}, 오늘도 고마워요. 사냥 나갈 때마다 조금 걱정했는데, 무사히 돌아와 줘서 좋아요. 다음엔 나도 데려가 줘요.`,
-        '청년': `${call}. 어릴 땐 몰랐는데, 둥지가 얼마나 따뜻한 곳인지 이제 알 것 같아요. 키워 줘서 고마워요. 이건 쑥스러우니까 나중에 읽어요.`,
+        '청소년': `${call}. 어릴 땐 몰랐는데, 둥지가 얼마나 따뜻한 곳인지 이제 알 것 같아요. 키워 줘서 고마워요. 이건 쑥스러우니까 나중에 읽어요.`,
       };
       const NOTE = {
-        kid_letter: LETTER[st] || LETTER[{ '어린 용': '소년', '젊은 용': '청년' }[st]] || LETTER['소년'],
+        kid_letter: LETTER[st] || LETTER[{ '어린 용': '소년', '젊은 용': '청소년' }[st]] || LETTER['소년'],
         kid_drawing: `${call}${c.josa(call, '이랑', '랑')} 나랑 같이 하늘을 나는 그림. 구름 위에 '${call}'${c.josa(call, '이라고', '라고')} 커다랗게 적혀 있다.`,
         pressed_flower: '책장 사이에 며칠이나 눌러 둔 거예요. 제일 예쁜 걸로 골랐어요.',
         flower_ring: '발톱엔 안 들어가니까… 그냥 갖고만 있어요!',
@@ -204,21 +204,22 @@ module.exports = [
     when: ['explore'],
     weight: 3,
     cond: (c) => c.stance === 'friendly' && c.town && c.rep >= 20 && c.nest && !c.full,
+    // 마을이라 사람 모습으로 성문을 지나던 참 (c.human)
     text: () => [
-      '성문 곁 그늘에 작은 바구니 하나가 놓여 있다.',
-      '안에서 강보에 싸인 아기가 드래곤을 올려다보며 방긋 웃는다.',
+      '성문을 지나던 참에, 그늘에 놓인 작은 바구니가 눈에 들어왔다.',
+      '안에서 강보에 싸인 아기가 낯선 나그네를 올려다보며 방긋 웃는다.',
       '지나가던 아낙이 "부디 그 아이를…" 하고 말끝을 흐린다.',
     ],
     choices: [
       { label: '둥지로 데려가 기른다', run: (h, c) => {
         h.adopt('abandoned'); h.rep(c.region, 5);
-        h.say('바구니를 조심스레 발톱에 걸고 날아올랐다. 마을 사람들이 고개 숙여 배웅한다.');
+        h.say('바구니를 품에 안고 성문 밖으로 나섰다. 사람들의 눈길이 닿지 않는 언덕에서 본래 모습으로 돌아가 날아올랐다. 아낙이 멀리서 고개 숙여 배웅한다.');
       } },
       { label: '고아원에 맡기고 금화를 보탠다 (금화 20)', need: (c) => (c.d.gold < 20 ? '금화가 모자란다.' : null), run: (h, c) => {
         h.gold(-20); h.rep(c.region, 6);
-        h.say('아기를 고아원 문 앞에 데려다주고 금화를 남겼다.');
+        h.say('바구니를 안고 고아원 문을 두드려 아기를 맡기고, 금화 주머니를 함께 건넸다.');
       } },
-      { label: '그냥 지나친다', run: (h) => h.say('바구니를 뒤로하고 날아올랐다. 등 뒤로 작은 울음소리가 들렸다.') },
+      { label: '그냥 지나친다', run: (h) => h.say('바구니를 뒤로하고 사람들 틈으로 걸어갔다. 등 뒤로 작은 울음소리가 들렸다.') },
     ],
   },
   {
@@ -375,17 +376,17 @@ module.exports = [
     when: ['explore'],
     weight: 3,
     cond: (c) => c.stance === 'friendly' && c.region === 'capital' && c.rep >= 40,
-    text: () => ['왕도에 축제가 열렸다. 거리마다 깃발이 나부끼고 음악이 흐른다.', '아이들이 드래곤을 보고 손을 흔든다.'],
+    text: () => ['왕도에 축제가 열렸다. 거리마다 깃발이 나부끼고 음악이 흐른다.', '인파에 섞여 걷는데, 아이 하나가 소매를 잡아끌며 같이 춤추자고 한다.'],
     choices: [
-      { label: '광장에 내려앉아 함께 즐긴다', run: (h, c) => {
+      { label: '사람들 틈에서 함께 즐긴다', run: (h, c) => {
         h.rep(c.region, 4); h.gold(15); h.fame(-2);
-        h.say('사람들이 꽃과 금화를 던져 주었다. 드래곤들은 이 모습을 탐탁지 않게 여길 것이다.');
+        h.say('아이 손에 이끌려 광장을 몇 바퀴나 돌았다. 상인들이 낯선 나그네에게 꽃과 동전을 쥐여 주었다. 드래곤들은 이 모습을 탐탁지 않게 여길 것이다.');
       } },
-      { label: '하늘에 불꽃을 뿜어 축하한다 (기력 8)', need: (c) => (c.d.en < 8 ? '기력이 모자란다.' : null), run: (h, c) => {
+      { label: '본래 모습으로 하늘에 올라 불꽃을 뿜는다 (기력 8)', need: (c) => (c.d.en < 8 ? '기력이 모자란다.' : null), run: (h, c) => {
         h.en(-8); h.rep(c.region, 8); h.fame(-1);
-        h.say('밤하늘에 숨결을 흩뿌리자 거리 전체가 환호성으로 뒤덮였다.');
+        h.say('광장 끝 그늘에서 폴리모프를 풀고 밤하늘로 솟구쳤다. 숨결을 흩뿌리자 거리 전체가 환호성으로 뒤덮였다.');
       } },
-      { label: '멀리서 지켜본다', run: (h) => h.say('구름 위에서 축제의 불빛을 한참 내려다보았다.') },
+      { label: '멀리서 지켜본다', run: (h) => h.say('성벽 위 망루 그늘에 기대어 축제의 불빛을 한참 내려다보았다.') },
     ],
   },
 
@@ -419,8 +420,8 @@ module.exports = [
     title: '아이의 물음',
     when: ['wake'],
     weight: 2,
-    cond: (c) => c.humans.some((x) => ['아이', '소년', '청년'].includes(c.stage(x))),
-    setup: (c) => ({ id: c.pick(c.humans.filter((x) => ['아이', '소년', '청년'].includes(c.stage(x)))).id }),
+    cond: (c) => c.humans.some((x) => ['아이', '소년', '청소년'].includes(c.stage(x))),
+    setup: (c) => ({ id: c.pick(c.humans.filter((x) => ['아이', '소년', '청소년'].includes(c.stage(x)))).id }),
     text: (c, v) => { const k = c.k(v.id); return [`${k.name}${c.josa(k.name, '이', '가')} 꼬리에 기대앉아 묻는다.`, '"나는 왜 사람이고, 너는 왜 용이야?"']; },
     choices: [
       { label: '사람의 마을 이야기를 들려준다', run: (h, c, v) => { const k = c.k(v.id); h.bond(k, 5); h.lean(k, 'herbalist', 2); h.say('약초 냄새 가득한 시장 이야기에 아이의 눈이 반짝였다.'); } },
@@ -828,18 +829,19 @@ module.exports = [
     when: ['explore'],
     weight: 5,
     cond: (c) => c.season === 'autumn' && c.town,
-    text: (c) => [`${c.regionName}에 수확제가 열렸다. 곡식 단과 과일 바구니가 광장을 가득 메웠다.`, '사람들이 하늘의 그림자를 올려다보며 웅성거린다.'],
+    text: (c) => [`${c.regionName}에 수확제가 열렸다. 곡식 단과 과일 바구니가 광장을 가득 메웠다.`,
+      c.human ? '광장 어귀에 서자, 햇과일 냄새와 흥겨운 피리 소리가 밀려왔다.' : '사람들이 하늘의 그림자를 올려다보며 웅성거린다.'],
     choices: [
-      { label: '광장에 내려앉아 어울린다', show: (c) => c.stance !== 'hostile', run: (h, c) => {
+      { label: '광장에서 사람들과 어울린다', show: (c) => c.stance !== 'hostile', run: (h, c) => {
         h.rep(c.region, 5); h.en(10); h.give(pick(['honey_salve', 'strong_wine', 'salted_fish']));
-        h.say('아이들이 겁도 없이 꼬리에 매달리고, 어른들은 햇과일과 술을 내왔다. (기력 +10)');
+        h.say('아이들이 낯선 나그네의 손을 잡아끌어 춤판에 끼워 주고, 어른들은 햇과일과 술을 내왔다. (기력 +10)');
       } },
       { label: '공물을 요구한다', show: (c) => c.stance === 'hostile', run: (h, c) => {
         const g = randInt(25, 50);
         h.gold(g); h.rep(c.region, -6); h.fame(1);
         h.say(`광장 한가운데 내려앉아 포효하자, 촌장이 떨리는 손으로 금화 ${g}닢을 바쳤다.`);
       } },
-      { label: '멀리서 바라본다', run: (h) => { h.mind(10); h.say('지붕 위에서 축제의 불빛을 한참 내려다보았다. (정신 +10)'); } },
+      { label: '멀리서 바라본다', run: (h, c) => { h.mind(10); h.say(c.human ? '광장 가장자리 처마 밑에 앉아 축제의 불빛을 한참 바라보았다. (정신 +10)' : '지붕 위에서 축제의 불빛을 한참 내려다보았다. (정신 +10)'); } },
     ],
   },
 
@@ -1343,11 +1345,12 @@ module.exports = [
   },
   {
     id: 'first_love',
-    title: '청년의 첫사랑',
+    title: '아이의 첫사랑',
     when: ['wake', 'explore'],
     weight: 3,
-    cond: (c) => c.humans.some((x) => c.stage(x) === '청년' && !x.data.firstLove),
-    setup: (c) => ({ id: c.pick(c.humans.filter((x) => c.stage(x) === '청년' && !x.data.firstLove)).id, other: c.pick(['리라', '한별', '에린', '도윤', '마루', '시아']) }),
+    // 아이마다 한 번: 세 선택지 모두 그 아이의 firstLove를 남기므로, 한 번 고르면 다시 뜨지 않음
+    cond: (c) => c.humans.some((x) => c.stage(x) === '청소년' && !x.data.firstLove),
+    setup: (c) => ({ id: c.pick(c.humans.filter((x) => c.stage(x) === '청소년' && !x.data.firstLove)).id, other: c.pick(['리라', '한별', '에린', '도윤', '마루', '시아']) }),
     text: (c, v) => { const k = c.k(v.id); return [`요즘 ${k.name}${c.josa(k.name, '이', '가')} 자꾸 마을 쪽 하늘만 바라본다.`, `마을에 사는 ${v.other}${c.josa(v.other, '과', '와')} 강가에서 몰래 만난다는 걸 알게 되었다. 들킨 줄 알자 얼굴이 새빨개졌다.`]; },
     choices: [
       { label: '만나러 가도 된다고 한다', run: (h, c, v) => {
@@ -1406,7 +1409,7 @@ module.exports = [
     cond: (c) => c.humans.some((x) => adultHuman(c, x) && canMate(c, x)),
     setup: (c) => {
       const k = c.pick(c.humans.filter((x) => adultHuman(c, x) && canMate(c, x)));
-      const love = k.data.firstLove && k.data.firstLove !== '-' ? k.data.firstLove : null; // 청년 때의 첫사랑이 있으면 그 사람
+      const love = k.data.firstLove && k.data.firstLove !== '-' ? k.data.firstLove : null; // 청소년 때의 첫사랑이 있으면 그 사람
       return { id: k.id, partner: love || c.pick(PARTNER_NAMES), love: !!love };
     },
     text: (c, v) => {
