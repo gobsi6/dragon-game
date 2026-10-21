@@ -387,7 +387,8 @@ module.exports = function setupMaze({ io, db, online, logic, sendMe, system, dea
       } else { m.pity = (m.pity || 0) + 1; lines.push(deep(fi) ? '어둠이 짙어 바로 옆만 겨우 보인다.' : '무너진 회랑을 걷는다.'); }
     }
     if (m.torch < 0.5) lines.push('횃불이 다 탔다. 더 나아갈 수 없다. 이제 밖으로 나가야 한다.');
-    checkSeal(fi);
+    const sealLines = checkSeal(fi); // 지도를 밝혀 봉인이 풀렸으면 걸은 드래곤에게도 바로 알려 줌
+    if (sealLines.length) lines.push(`지도가 ${R.target}%를 넘어서는 순간, ${sealLines[0]}`);
     save(); broadcast(fi);
     return { ok: true, lines };
   }

@@ -8569,7 +8569,7 @@
         if (!b || id === r.bond || (b.needs && r.bond !== b.needs)) return null;
         const title = id === 'mentor' ? `${p.name}${josa(p.name, '이', '가')} 나보다 레벨이 ${BR.mentorGap} 이상 높아야 한다.` : id === 'student' ? `내가 ${p.name}보다 레벨이 ${BR.mentorGap} 이상 높아야 한다.` : b.label;
         const text = { lover: '마음 고백' }[id] || b.name;
-        return { text, title, cls: id === 'lover' ? 'bp-heart' : '', run: () => socialAct('rel:request', { id: p.id, bond: id }, refreshProfile) };
+        return { text, title, cls: id === 'lover' ? 'bp-heart' : '', run: () => { if (markWarn(p.name, r.mine, '청할까')) socialAct('rel:request', { id: p.id, bond: id }, refreshProfile); } };
       };
       const g = (ids) => ids.map(it).filter(Boolean);
       popChips('bond', [
@@ -8596,7 +8596,7 @@
       n.className = 'l ask';
       n.textContent = `${p.name}${josa(p.name, '이', '가')} ${B[r.gotBond]?.ask || '관계를 청했다'}.`;
       g1.appendChild(n);
-      btn(g1, '받아들이기', () => socialAct('rel:accept', { id: p.id }, refreshProfile), { primary: true });
+      btn(g1, '받아들이기', () => { if (markWarn(p.name, r.mine, '받아들일까')) socialAct('rel:accept', { id: p.id }, refreshProfile); }, { primary: true });
       btn(g1, '거절', () => socialAct('rel:decline', { id: p.id }, refreshProfile));
     }
     if (r.mine === 'friend') {
@@ -8876,7 +8876,7 @@
     const where = (x) => `<span class="dot${x.online ? ' on' : ''}"></span>${x.online ? (x.away ? '원정 중' : S.regions[x.region]?.name || '') : '접속 안 함'} · ${kindLv(x)}`;
     const askText = (x) => `${S.bonds?.[x.bond]?.ask || '관계를 청했다'} · ${kindLv(x)}`;
     section('받은 관계 요청', l.incoming, askText, (x, a) => {
-      btn(a, '받아들이기', () => socialAct('rel:accept', { id: x.id }), true);
+      btn(a, '받아들이기', () => { const mk = ['rivals', 'nemesis', 'wary'].find((k) => (l[k] || []).some((y) => y.id === x.id)); if (markWarn(x.name, mk && { rivals: 'rival', nemesis: 'nemesis', wary: 'wary' }[mk], '받아들일까')) socialAct('rel:accept', { id: x.id }); }, true);
       btn(a, '거절', () => socialAct('rel:decline', { id: x.id }));
     });
     const bondChip = (x) => `<span class="relb ${bondCls(x.bond)}">${bondName(x.bond)}</span> `;
@@ -8900,6 +8900,12 @@
   $('dock-friends').addEventListener('click', openFriends);
   $('friends-close').addEventListener('click', () => $('friends-dlg').close());
 
+  // 표시(라이벌·원수·경계)를 붙여 둔 상대와 관계를 맺으려 할 때 한 번 묻기 (맺어지면 표시는 사라짐)
+  function markWarn(name, mine, verb) {
+    const nm = { rival: '라이벌', nemesis: '원수', wary: '경계' }[mine];
+    if (!nm) return true;
+    return confirm(`관계를 맺으면 ${name}에게 붙여 둔 ${nm} 표시는 사라진다. 그래도 ${verb}?`);
+  }
   // ── 관계도: 고른 드래곤을 가운데 두고, 직접 맺은 관계는 안쪽 고리, 그 상대들이 맺은 관계는 바깥 고리 ──
   // 서로 맺은 관계와 라이벌·원수 (나만 아는 경계는 서버가 보내지 않음). 관계를 여섯 묶음으로
   const RM_GROUP = { lover: 'heart', partner: 'heart', family: 'family', relative: 'family', friend: 'friend', comrade: 'friend', mentor: 'mentor', student: 'mentor', acquaint: 'acq', rival: 'rival', rival2: 'rival', nemesis: 'rival', nemesis2: 'rival' };

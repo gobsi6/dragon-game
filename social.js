@@ -77,14 +77,36 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     const n = bondName(bond);
     return n === bondName(invOf(bond)) ? `${name}${josa(name, '과', '와')} ${n} 사이가 되었다.` : `${name}${josa(name, '이', '가')} 나의 ${n}${josa(n, '이', '가')} 되었다.`;
   };
-  // 관계를 맺음 (a가 청하고 b가 받아들임)
+  // 관계를 맺기 전 서로 붙여 둔 표시(라이벌·원수·경계): 관계가 맺어지면 사라지므로 기록과 알림에 남김
+  // mine: 내가 상대에게 붙인 것, theirs: 상대가 나에게 붙인 것 (경계는 상대가 모르는 표시라 theirs에서는 뺌)
+  const MARK_KINDS = ['rival', 'nemesis', 'wary'];
+  const pastOf = (mine, theirs) => {
+    mine = MARK_KINDS.includes(mine) ? mine : null;
+    theirs = theirs === 'rival' || theirs === 'nemesis' ? theirs : null;
+    if (!mine && !theirs) return null;
+    if (mine === 'rival' && theirs === 'rival') return { was: '숙적이던', end: '서로 숙적이던 사이는 끝났다.' };
+    if (mine === 'nemesis' && theirs === 'nemesis') return { was: '서로 원수이던', end: '서로 품었던 원한을 내려놓았다.' };
+    if (mine === 'rival') return { was: '라이벌로 여기던', end: '붙여 두었던 라이벌 표시는 사라졌다.' };
+    if (mine === 'nemesis') return { was: '원수로 여기던', end: '품고 있던 원한을 내려놓았다.' };
+    if (mine === 'wary') return { was: '경계하던', end: '경계하던 마음도 거두었다.' };
+    if (theirs === 'rival') return { was: '나를 라이벌로 지목했던', end: '상대가 붙였던 라이벌 표시도 사라졌다.' };
+    return { was: '나를 원수로 여기던', end: '상대가 품었던 원한도 사라졌다.' };
+  };
+  // 관계를 맺음 (a가 청하고 b가 받아들임). 돌려줌: { a, b } 각자에게 사라진 표시 안내 (없으면 null)
   function bondMake(a, b, bond) {
+    const ma = db.relGet(a, b), mb = db.relGet(b, a);
+    const pa = pastOf(ma, mb), pb = pastOf(mb, ma);
     db.befriend(a, b, bond, invOf(bond));
     const A = loadD(a), B = loadD(b);
     const nA = bondName(bond), nB = bondName(invOf(bond));
-    logic.chron(A, 'mark', `${B.name}${josa(B.name, '과', '와')} ${nA === nB ? `${nA} 사이가 되었다` : `${B.name}${josa(B.name, '이', '가')} 나의 ${nA}${josa(nA, '이', '가')} 되었다`}.`);
-    logic.chron(B, 'mark', `${A.name}${josa(A.name, '과', '와')} ${nA === nB ? `${nB} 사이가 되었다` : `${A.name}${josa(A.name, '이', '가')} 나의 ${nB}${josa(nB, '이', '가')} 되었다`}.`);
+    const pre = (p) => (p ? `${p.was} ` : '');
+    // 예: '숙적이던 카이렌과 친구 사이가 되었다.' / '라이벌로 여기던 카이렌이 나의 스승이 되었다.'
+    const say = (p, other, n, same) => `${pre(p)}${other}${same ? `${josa(other, '과', '와')} ${n} 사이가 되었다` : `${josa(other, '이', '가')} 나의 ${n}${josa(n, '이', '가')} 되었다`}.`;
+    logic.chron(A, 'mark', say(pa, B.name, nA, nA === nB));
+    logic.chron(B, 'mark', say(pb, A.name, nB, nA === nB));
     db.saveState(A); db.saveState(B);
+    for (const id of [a, b]) { const e = live(id); if (e) refreshRivals(e.dragon); }
+    return { a: pa?.end || null, b: pb?.end || null };
   }
   const sameRegion = (a, b) => {
     const x = live(a), y = live(b);
@@ -513,15 +535,14 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       const name = db.getDragon(id).name;
       // 상대도 같은 관계를 청해 두었으면 바로 맺어짐
       if (db.reqBond(id, d.id) === invOf(bond)) {
-        bondMake(id, d.id, invOf(bond));
-        const text = `${ga(d.name)} 청을 받아들였다. ${becameText(d.name, invOf(bond)).replace(`${d.name}${josa(d.name, '과', '와')} `, '이제 ')}`;
+        const gone = bondMake(id, d.id, invOf(bond));
+        const text = `${ga(d.name)} 청을 받아들였다. ${becameText(d.name, invOf(bond)).replace(`${d.name}${josa(d.name, '과', '와')} `, '이제 ')}${gone.a ? ` ${gone.a}` : ''}`;
         if (live(id)) tell(id, 'notice', { title: '관계', lines: [text] }); else db.noteAdd(id, text);
         relChanged(id);
-        return { ok: true, lines: [becameText(name, bond)] };
+        return { ok: true, lines: [becameText(name, bond), ...(gone.b ? [gone.b] : [])] };
       }
       db.reqAddBond(d.id, id, bond);
-      // 관계를 청하면서 붙여 둔 라이벌·경계·원수 표시는 지움
-      if (db.relGet(d.id, id) && !isFriend(d.id, id)) db.relDel(d.id, id);
+      // 붙여 둔 라이벌·경계·원수 표시는 관계가 실제로 맺어질 때 지움 (그때 기록·알림에 남김. 거절되면 표시는 그대로)
       const text = `${ga(d.name)} ${BONDS[bond].ask}. 동료 메뉴에서 받아들일 수 있다.`;
       if (live(id)) tell(id, 'notice', { title: '관계 요청', lines: [text] }); else db.noteAdd(id, text);
       relChanged(id);
@@ -533,12 +554,12 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       if (!bond) return { error: '받은 요청이 없다.' };
       const why = bondWhy(id, d.id, bond);
       if (why) return { error: why };
-      bondMake(id, d.id, bond);
+      const gone = bondMake(id, d.id, bond);
       const name = db.getDragon(id).name;
-      const text = `${ga(d.name)} 청을 받아들였다. ${becameText(d.name, bond).replace(`${d.name}${josa(d.name, '과', '와')} `, '이제 ')}`;
+      const text = `${ga(d.name)} 청을 받아들였다. ${becameText(d.name, bond).replace(`${d.name}${josa(d.name, '과', '와')} `, '이제 ')}${gone.a ? ` ${gone.a}` : ''}`;
       if (live(id)) tell(id, 'notice', { title: '관계', lines: [text] }); else db.noteAdd(id, text);
       relChanged(id);
-      return { ok: true, lines: [becameText(name, invOf(bond))] };
+      return { ok: true, lines: [becameText(name, invOf(bond)), ...(gone.b ? [gone.b] : [])] };
     });
     on('rel:decline', (d, p) => {
       const id = target(p);
