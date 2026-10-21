@@ -5089,6 +5089,26 @@
   // 프로필 카드의 장신구 자리
   // ── 즐겨찾기 (칭호·제작법): 이 기기에 드래곤마다 따로 저장 ──
   // 즐겨찾기: 서버에 드래곤마다 저장 (S.me.favs). 예전에 이 기기에만 저장해 두던 것은 처음 한 번 서버로 옮김
+  const risenLocal = () => { try { const v = JSON.parse(localStorage.getItem('dragon-risen-hide') || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
+  // ── 읽음 표시: 서버에 드래곤마다 저장 (S.me.seen). 다른 브라우저로 들어와도 같은 알림이 다시 뜨지 않게. 예전에 이 기기에만 기억하던 것은 처음 한 번 서버로 옮김 ──
+  const SEEN = {
+    num: (key) => Number(S.me?.seen?.[key]) || 0,
+    list: (key) => (Array.isArray(S.me?.seen?.[key]) ? S.me.seen[key] : []),
+    set(key, value) {
+      if (!S.me) return;
+      S.me.seen = { ...(S.me.seen || {}), [key]: value };
+      socket.emit('seen:set', { key, value }, () => {});
+    },
+    migrate() {
+      if (!S.me) return;
+      const ln = (() => { try { return Number(localStorage.getItem(NOTES_KEY)) || 0; } catch { return 0; } })();
+      if (ln > this.num('notes')) this.set('notes', ln);
+      const ls = (() => { try { return Number(localStorage.getItem(slKey())) || 0; } catch { return 0; } })();
+      if (ls > this.num('slate')) this.set('slate', ls);
+      const lr = risenLocal();
+      if (lr.some((x) => !this.list('risen').includes(x))) this.set('risen', [...new Set([...this.list('risen'), ...lr])].slice(-30));
+    },
+  };
   const FAV = {
     key: (kind) => `dragon-fav:${kind}:${S.me?.id || 0}`,
     local(kind) { try { const v = JSON.parse(localStorage.getItem(this.key(kind)) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } },
@@ -6937,7 +6957,7 @@
   $('welcome-dlg').addEventListener('cancel', (e) => { if ($('welcome-dlg').dataset.mark) e.preventDefault(); }); // 처음엔 Esc로 닫지 않고 확인을 눌러야
   // ── 업데이트 노트: 메뉴에서. 읽지 않은 새 노트가 있으면 메뉴에 빨간 점 (읽은 판은 이 기기에 기억) ──
   const NOTES_KEY = 'dragon-notes-seen';
-  const notesSeen = () => { try { return Number(localStorage.getItem(NOTES_KEY)) || 0; } catch { return 0; } };
+  const notesSeen = () => Math.max(SEEN.num('notes'), (() => { try { return Number(localStorage.getItem(NOTES_KEY)) || 0; } catch { return 0; } })()); // 서버(드래곤마다)와 이 기기 중 큰 쪽
   function renderNotesDot() {
     const unread = (S.notesLatest || 0) > notesSeen();
     $('menu-dot').hidden = !unread;
@@ -6989,6 +7009,7 @@
       const top = res.list[0]?.id || 0;
       S.notesLatest = Math.max(S.notesLatest || 0, top);
       try { localStorage.setItem(NOTES_KEY, String(S.notesLatest)); } catch {}
+      if (S.notesLatest > SEEN.num('notes')) SEEN.set('notes', S.notesLatest);
       renderNotesDot();
     });
   }
@@ -10190,7 +10211,7 @@
       box.appendChild(row);
     }
     // 도움을 청했다가 다시 일어선 드래곤 (3시간 동안, 닫으면 이 기기에서는 숨김)
-    const hidden = (() => { try { return JSON.parse(localStorage.getItem('dragon-risen-hide') || '[]'); } catch { return []; } })();
+    const hidden = [...new Set([...SEEN.list('risen'), ...risenLocal()])]; // 서버(드래곤마다)와 이 기기에서 닫은 것
     for (const x of S.risen || []) {
       if (x.id === S.me?.id || hidden.includes(`${x.id}:${x.at}`) || S.rescues.some((r) => r.id === x.id)) continue;
       const row = document.createElement('div');
@@ -10203,7 +10224,7 @@
       t.querySelector('small').textContent = `${x.where} · ${x.how === 'rescued' ? `${x.by}의 도움으로` : '상흔을 입고 스스로'} · ${ago >= 60 ? `${Math.floor(ago / 60)}시간` : `${ago}분`} 전`;
       const cb = document.createElement('button');
       cb.type = 'button'; cb.className = 'btn'; cb.textContent = '확인';
-      cb.addEventListener('click', () => { try { localStorage.setItem('dragon-risen-hide', JSON.stringify([...hidden, `${x.id}:${x.at}`].slice(-30))); } catch {} renderRescues(); });
+      cb.addEventListener('click', () => { const l = [...hidden, `${x.id}:${x.at}`].slice(-30); try { localStorage.setItem('dragon-risen-hide', JSON.stringify(l)); } catch {} SEEN.set('risen', l); renderRescues(); });
       row.append(t, cb);
       box.appendChild(row);
     }
@@ -10327,8 +10348,8 @@
   };
   const slIcon = (kind, label, fn, cls = '') => { const b = slEl('button', `sl-ic ${kind} ${cls}`); b.type = 'button'; b.innerHTML = SL_IC[kind]; b.title = label; b.setAttribute('aria-label', label); b.addEventListener('click', fn); return b; };
   const slKey = () => `dragon-slate-seen:${S.me?.id || 0}`;
-  const slSeen = () => { try { return Number(localStorage.getItem(slKey())) || 0; } catch { return 0; } };
-  const slSetSeen = (t) => { try { localStorage.setItem(slKey(), String(t)); } catch {} };
+  const slSeen = () => Math.max(SEEN.num('slate'), (() => { try { return Number(localStorage.getItem(slKey())) || 0; } catch { return 0; } })()); // 서버(드래곤마다)와 이 기기 중 큰 쪽
+  const slSetSeen = (t) => { try { localStorage.setItem(slKey(), String(t)); } catch {} if (t > SEEN.num('slate')) SEEN.set('slate', t); };
   const SL = { latest: 0, replyAt: 0, peeked: false, page: 'list', cur: null, draft: null, prevSeen: 0, rules: { title: 40, body: 1000, comment: 100 }, gm: false, posts: [] };
   function renderSlateDot() {
     const on = Math.max(SL.latest, SL.replyAt) > slSeen() && !$('slate-dlg').open; // 새 글이나, 내 글에 달린 새 답
@@ -13010,7 +13031,8 @@
       }
     });
     socket.on('me', (me) => {
-      setMe(me); renderSayMode(); maybeWelcome(); renderMazeBar(); renderSlateDot(); FAV.migrate();
+      setMe(me); renderSayMode(); maybeWelcome(); renderMazeBar(); FAV.migrate(); SEEN.migrate(); renderSlateDot(); renderNotesDot();
+      if (!S.seenReady) { S.seenReady = true; renderRescues(); } // 서버의 읽음 표시를 받은 뒤 한 번 다시 그림 (먼저 온 '다시 일어선 드래곤' 알림)
       if (!SL.peeked) { SL.peeked = true; socket.emit('slate:peek', {}, (r) => { if (r?.ok) { SL.latest = Math.max(SL.latest, r.latest || 0); SL.replyAt = r.replyAt || 0; renderSlateDot(); } }); } // 내 글에 새 답이 왔는지
     });
     bindMazeSocket(); // 지하 회랑

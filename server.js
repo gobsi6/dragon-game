@@ -310,6 +310,7 @@ function giftSender(d, id) {
 const meOf = (d) => ({
   duelUnseen: db.duelUnseen(d.id),       // 아직 확인하지 않은, 받은 자동 결투 수
   favs: logic.combatJson(d).favs || null, // 즐겨찾기 (물건·제작법·칭호). 서버에 드래곤마다 저장해서 기기를 바꿔도 남음
+  seen: logic.combatJson(d).seen || null, // 읽음 표시 (업데이트 노트·석판·다시 일어선 드래곤). 기기를 바꿔도 같은 알림이 다시 뜨지 않게
   ...publicDragon(d),
   level: d.level, xp: d.xp, xpMax: logic.xpNeed(d.level), levelMax: logic.atMaxLevel(d),
   hp: d.hp, hpMax: logic.hpCap(d), en: d.en, enMax: logic.enCap(d),
@@ -1059,6 +1060,26 @@ function onConnect(socket) {
     const list = [...new Set((Array.isArray(payload?.list) ? payload.list : []).map((x) => str(x)).filter((x) => x && x.length <= 60))].slice(0, 300);
     const c = logic.combatJson(entry.dragon);
     c.favs = { ...(c.favs || {}), [kind]: list };
+    db.saveState(entry.dragon);
+    ack({ ok: true });
+  });
+  // 읽음 표시 저장: { key: 'notes'|'slate', value: 숫자 } 또는 { key: 'risen', value: ['id:at'…] } (브라우저가 아니라 드래곤마다 기억)
+  socket.on('seen:set', (payload, ack) => {
+    if (typeof ack !== 'function') ack = () => {};
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+    const key = str(payload?.key);
+    const c = logic.combatJson(entry.dragon);
+    const seen = { ...(c.seen || {}) };
+    if (key === 'notes' || key === 'slate') {
+      const v = Number(payload?.value);
+      if (!Number.isFinite(v) || v < 0) return ack({ error: '이상한 값이다.' });
+      if (v <= (seen[key] || 0)) return ack({ ok: true }); // 뒤로 돌아가지 않음
+      seen[key] = v;
+    } else if (key === 'risen') {
+      seen.risen = [...new Set((Array.isArray(payload?.value) ? payload.value : []).map((x) => str(x)).filter((x) => x && x.length <= 40))].slice(-30);
+    } else return ack({ error: '알 수 없는 읽음 표시다.' });
+    c.seen = seen;
     db.saveState(entry.dragon);
     ack({ ok: true });
   });
