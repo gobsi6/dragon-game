@@ -338,6 +338,7 @@
   .sl-who b { font: 700 12.5px/1.2 var(--serif); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .sl-cm { display: inline-flex; align-items: center; gap: 3px; font: 600 12px/1 var(--sans); color: var(--muted); }
   .sl-cm svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+  .sl-newreply { flex: none; font: 600 10.5px/17px var(--sans); padding: 0 6px; border-radius: 2px; color: #5B4E8C; background: #F1EEF7; border: 1px solid #D9D2EA; }
   .sl-new { width: 6px; height: 6px; border-radius: 50%; background: #A63E4B; flex: none; }
   .sl-empty { padding: 24px 14px; text-align: center; font-size: 13px; color: var(--muted); }
   .sl-list { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
@@ -918,8 +919,16 @@
   .trip-bname { font-size: 11px; font-weight: 600; color: #5B6066; }
   .trip-b p { margin: 0; padding: 8px 11px; border-radius: 12px 12px 12px 3px; background: #fff; border: 1px solid #DCDDD8; font-size: 13.5px; line-height: 1.55; color: var(--ink); word-break: keep-all; }
   .trip-b.kid p { background: #FFFDF5; border-color: #E9E1C6; }
+  /* 원정 떠나기: 함께 갈 식구 고르기 */
+  .exp-kin { display: flex; flex-wrap: wrap; gap: 6px 8px; }
+  .exp-kin-it { gap: 6px; min-height: 34px; padding: 0 10px 0 8px; border: 1px solid var(--line-in); border-radius: 3px; background: var(--surface-2); cursor: pointer; }
+  .exp-kin-it b { font: 600 13px/1 var(--serif); color: var(--ink); }
+  .exp-kin-it small { font-size: 11.5px; color: var(--muted); }
+  .exp-kin-it:has(input:not(:checked)) { opacity: .62; }
+  .exp-kin-note { margin-top: 6px; }
   .trip-b.kid.adult p { background: #F4F6F8; border-color: #D3DAE0; }
   .trip-b.kid.drake p { background: #F6F3EE; border-color: #E2D9C9; font-style: italic; color: #5B6066; }
+  .trip-b.kid.dyoung p, .trip-b.kid.dadult p { background: #F3F1EA; border-color: #DDD5C2; } /* 말하는 새끼 드래곤 (해츨링 몸짓과 같은 계열, 기울이지 않음) */
   .trip-b.item p { background: #EEF2F6; border-color: #B9C7D3; }
   .trip-b.item p b { color: #2E4A60; }
   .trip-b.rare p { background: #FBF6E8; border-color: #E2CF9E; }
@@ -2190,6 +2199,11 @@
   /* 석판 아이콘: 텔레파시와 같은 모양·색. 새 글이 있으면 같은 색 작은 점 */
   .slate-dot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--tp, #5B4E8C); box-shadow: 0 0 0 2px #FAFAF9; }
   .slate-dot.pop { animation: badge-pop .35s ease-out; }
+  .gm-autobk { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line-in); }
+  .gm-autobk-name { flex: 1; min-width: 0; font-size: 13px; color: var(--ink-2); }
+  #brand-home { cursor: pointer; border-radius: 4px; }
+  #brand-home:hover .t { color: var(--steel-d); }
+  #brand-home:focus-visible { outline: 2px solid var(--steel); outline-offset: 3px; }
   @media (min-width: 521px) { .top .slate-btn { margin-right: -6px; } } /* 석판과 텔레파시를 한 묶음처럼 조금 붙임 (폰은 줄이 달라 그대로) */
   .iconbtn { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: transparent; border: 1px solid transparent; border-radius: 3px; color: #363B40; }
   .iconbtn:hover { border-color: var(--line-soft); }
@@ -2913,7 +2927,7 @@
 <div id="game" hidden style="min-height: 100vh; display: flex; flex-direction: column">
   <header class="top">
     <div class="in">
-      <div class="brand">
+      <div class="brand" id="brand-home" role="button" tabindex="0" title="대륙으로 돌아가기" aria-label="용의 대륙 · 대륙 화면으로 돌아가기">
         <svg width="34" height="38" viewBox="0 0 34 38" fill="none" aria-hidden="true"><path d="M17 2l14 5v11c0 9-6 15-14 18C9 33 3 27 3 18V7z" fill="#F7F7F5" stroke="#3C5A73" stroke-width="1.6" stroke-linejoin="round"/><path d="M17 6l10 3.6V18c0 6.8-4.4 11.4-10 13.8C11.4 29.4 7 24.8 7 18V9.6z" stroke="#9DB3C6"/><path d="M11 19.5c3-1 4-4 6-7 2 3 3 6 6 7-2 0-4 1-6 4-2-3-4-4-6-4z" fill="#3C5A73"/></svg>
         <div><div class="t">용의 대륙</div><div class="s" id="online-count"></div></div>
       </div>
@@ -3161,6 +3175,11 @@
     <div class="opts goals" id="exp-goals" role="group" aria-label="원정 목적"></div>
     <h3 class="exp-h">얼마나 오래</h3>
     <div class="opts" id="exp-opts" role="group" aria-label="원정 시간"></div>
+    <div id="exp-kin-box" hidden>
+      <h3 class="exp-h">함께 갈 식구</h3>
+      <div class="exp-kin" id="exp-kin" role="group" aria-label="함께 갈 식구"></div>
+      <p class="note exp-kin-note">체크를 풀면 이번 원정에는 둥지에 남는다. 함께 간 식구 하나마다 찾는 물건이 조금 늘어난다.</p>
+    </div>
     <p class="note">길게 보낼수록 드문 물건을 찾을 가능성이 커진다. 가는 길에 한 번 갈림길을 만나는데, 그때 고르지 않으면 성향대로 저절로 고른다. 떠난 동안에는 채팅만 할 수 있고, 브라우저를 닫아도 원정은 계속된다.</p>
     <button type="button" class="linkbtn" id="exp-last" hidden>지난 원정 일지 다시 보기</button>
     <label class="check"><input type="checkbox" id="exp-notify"> 돌아오면 알림 받기 (이 창이 열려 있을 때)</label>
@@ -4517,6 +4536,22 @@
   // ── 원정 ──
   let expPick = null;
   let expGoal = 'gather';
+  let expStay = new Set(); // 이번에 둥지에 두고 갈 식구 (창을 열 때마다 모두 데려가는 것으로 시작)
+  function renderExpKin(list) {
+    const box = $('exp-kin');
+    box.replaceChildren();
+    $('exp-kin-box').hidden = !list.length;
+    for (const k of list) {
+      const l = document.createElement('label');
+      l.className = 'check exp-kin-it';
+      const c = document.createElement('input'); c.type = 'checkbox'; c.checked = !expStay.has(k.id);
+      c.addEventListener('change', () => { if (c.checked) expStay.delete(k.id); else expStay.add(k.id); });
+      const b = document.createElement('b'); b.textContent = k.name;
+      const sm = document.createElement('small'); sm.textContent = k.stage;
+      l.append(c, b, sm);
+      box.appendChild(l);
+    }
+  }
   function renderExpGoals() {
     const box = $('exp-goals');
     box.replaceChildren();
@@ -4559,6 +4594,9 @@
     if (S.expGoals?.[expGoal]?.wild && S.regions[S.region]?.tag !== '야생') expGoal = 'gather';
     renderExpGoals();
     renderExpOpts();
+    expStay = new Set();
+    renderExpKin([]);
+    socket.emit('exp:who', {}, (res) => { if (res?.ok) renderExpKin(res.kin || []); });
     $('exp-last').hidden = !S.me?.expLast;
     $('exp-dlg').showModal();
   });
@@ -4575,7 +4613,7 @@
     if (want && 'Notification' in window && Notification.permission === 'default') {
       try { await Notification.requestPermission(); } catch {}
     }
-    socket.emit('exp:start', { minutes: expPick, goal: expGoal }, (res) => {
+    socket.emit('exp:start', { minutes: expPick, goal: expGoal, stay: [...expStay] }, (res) => {
       if (res.error) return toast(res.error);
       $('exp-dlg').close();
       $('result').hidden = true;
@@ -4622,7 +4660,7 @@
     volcano: ['뜨거운 공기가 날개를 밀어 올렸다.', '잿가루가 눈처럼 흩날렸다.', '땅 밑에서 낮은 울림이 올라왔다.'],
     ruin: ['잿빛 바람에 섞인 낯선 냄새에 숨을 골랐다.', '무너진 마을의 굴뚝에서 아직도 가는 연기가 오르는 것 같았다.', '어디선가 오래된 노랫소리가 들리는 것 같았다. 뒤돌아보지 않았다.', '검게 물든 숲 위를 서둘러 지나갔다.'],
   };
-  // 함께 간 식구의 말: 나잇대마다 다르게 (child 아기~소년, young 청년, adult 어른·노년, drake 새끼 드래곤)
+  // 함께 간 식구의 말: 나잇대마다 다르게 (child 아기~소년, young 청소년, adult 어른·노년 / drake 해츨링(몸짓만), dyoung 어린 용, dadult 젊은 용·다 자란 용)
   const TRIP_KIN = {
     child: ['{call}, 저기 봐! 저기!', '{call}, 꽉 잡고 있을게!', '구름 만져 보고 싶어!', '우와, 엄청 높다!', '배고파… 조금만 쉬었다 가자.', '졸려… 등 위에서 자도 돼?', '바람이 간지러워!', '방금 그거 봤어? 엄청 빨랐어!', '언제 도착해?',
       '{call}, 저 구름 토끼처럼 생겼다!', '내 그림자 봐! 엄청 작아!', '새들이 우리 따라와!', '{call} 비늘 따뜻하다…', '높이 나니까 귀가 멍멍해.', '이거 나중에 친구들한테 다 자랑할 거야!',
@@ -4637,33 +4675,56 @@
       '가끔은 나도 {call}처럼 날 수 있으면 좋겠어.', '오늘 밤 불침번은 내가 설게.', '혼자서도 할 수 있다는 거, 보여 줄게.', '{call}, 고마워. 데려와 줘서.', '하늘 위에선 걱정이 작아지는 것 같아.',
       '어릴 땐 등 위에서 맨날 잠들었었지.', '저 별 이름, 전에 알려 줬던 거 기억나.', '언젠가 나도 누군가를 이렇게 데리고 다닐 수 있을까.'],
     adult: ['{call}, 조금 쉬어 가요. 날개가 지쳐 보여요.', '바람이 바뀌는군. 서두르지 말고 가자.', '저 구름 모양을 보니 내일은 비가 오겠어.', '이 길은 예전에도 와 본 적이 있지.', '조금 쉬어 가는 게 좋겠어. 날개가 지쳐 보여.', '저쪽은 위험하니 돌아가자.', '이렇게 함께 다니는 것도 오랜만이네.'],
-    drake: ['(꼬리를 흔들며 끼룩 하고 울었다)', '(작은 날개를 열심히 퍼덕였다)', '(저 아래를 향해 작게 불꽃을 뿜어 보았다)', '(바람을 타 보려다 비틀거렸다)', '(등에 바짝 붙어 고개를 묻었다)'],
+    // 해츨링: 아직 말을 못 해서 몸짓으로만
+    drake: ['(꼬리를 흔들며 끼룩 하고 울었다)', '(작은 날개를 열심히 퍼덕였다)', '(저 아래를 향해 작게 불꽃을 뿜어 보았다)', '(바람을 타 보려다 비틀거렸다)', '(등에 바짝 붙어 고개를 묻었다)',
+      '(지나가는 새를 잡으려다 놓치고 시무룩해졌다)', '(구름 속을 지날 때마다 재채기를 했다)', '(비늘 틈에 코를 박고 새근새근 잠들었다)', '(날개 끝을 물고 장난을 쳤다)',
+      '(바람에 날려 갈 뻔하다가 발톱으로 꼭 붙잡았다)', '(작은 뿔로 등을 콕콕 찔렀다)', '(목을 길게 빼고 아래를 내려다보았다)', '(흉내 내듯 작게 울음소리를 냈다)',
+      '(햇살이 비치자 눈을 가늘게 뜨고 몸을 쭉 폈다)', '(배에서 꼬르륵 소리가 나자 고개를 갸웃했다)', '(내 날갯짓에 맞춰 제 날개도 따라 펼쳤다)', '(꼬리를 내 꼬리에 감고 놓지 않았다)'],
+    // 어린 용: 폴리모프로 말을 배우는 중. 들뜨고 솔직한 말투
+    dyoung: ['{call}, 나도 내 날개로 조금만 날아 볼래!', '방금 그 바람, 탔어! 봤어?', '{call}처럼 크게 날갯짓하는 거 아직 어려워.', '불 뿜는 거 연습해도 돼? 저 바위에다가!',
+      '하늘 냄새가 둥지랑 달라.', '저 아래 짐승들이 우릴 보고 숨었어. 내가 무서운가 봐!', '날개가 조금 아파… 그래도 안 내릴 거야.', '{call}, 비늘이 반짝여서 눈부셔.',
+      '나 아까보다 높이 날았지?', '언제 나도 {call}만큼 커?', '구름 위는 따뜻할 줄 알았는데 춥다.', '저 새들은 왜 우리랑 같이 안 날아?',
+      '돌아가면 오늘 배운 바람길, 다른 애들한테 알려 줄 거야.', '{call}, 꼬리 잡고 따라가도 돼?', '사람 말 하는 거, 이제 꽤 늘었지?', '내 불꽃 아직 작지만, 언젠간 커질 거야.'],
+    // 젊은 용 · 다 자란 용: 함께 나는 짝처럼 듬직한 말투
+    dadult: ['{call}, 내가 앞에서 바람을 갈라 줄게.', '이 높이면 사냥감이 다 보여.', '왼쪽 날개를 조금 낮춰. 기류가 바뀌어.', '예전엔 {call} 등에 업혀서 왔던 길이지.',
+      '같이 나란히 나니까 하늘이 좁게 느껴지네.', '저 산 너머는 내가 먼저 살펴보고 올게.', '{call}, 숨 고르고 가자. 나는 아직 괜찮아.', '불꽃이 필요하면 말만 해.',
+      '이제는 내가 {call}을 지켜 줄 차례야.', '바람이 무겁네. 비가 오기 전에 닿자.', '어릴 땐 이 길이 끝없이 길었는데.', '언젠가 나도 내 둥지를 갖게 되겠지.'],
   };
   const TRIP_KIN_START = {
     child: ['같이 가서 신나!', '꽉 잡을게!', '출발이다!', '오늘은 어디 가?', '간식 챙겼어!', '{call} 등 꽉 잡았어!', '나 하나도 안 무서워!', '모험이다, 모험!'],
     young: ['이번엔 나도 도움이 될 거야.', '준비됐어. 가자.', '짐은 내가 들게.', '오늘은 내가 길을 볼게.', '이번엔 뭘 찾게 될까.', '출발하자. 해 지기 전에 닿게.', '{call}, 무리하지 말고 가자.'],
-    adult: ['길은 내가 봐 둘게.', '조심해서 다녀오자.'], drake: ['(신이 나서 날개를 파닥였다)'],
+    adult: ['길은 내가 봐 둘게.', '조심해서 다녀오자.'],
+    drake: ['(신이 나서 날개를 파닥였다)', '(등 위로 기어올라 자리를 잡았다)', '(출발한다는 걸 알았는지 꼬리를 동그랗게 말았다)', '(작게 끼룩 울며 하늘을 올려다보았다)'],
+    dyoung: ['나도 같이 갈래! 이번엔 오래 날 수 있어!', '오늘은 내 날개로 따라갈게!', '{call}, 출발! 출발!', '어디 가? 멀리 가?'],
+    dadult: ['준비됐어. 내가 옆에서 날게.', '오늘 바람 좋다. 가자, {call}.', '짐은 내 등에 실어.'],
   };
-  // 지역마다 아이·청년이 하는 말 (꾸밈 이야기 중 식구의 말 차례에 가끔 섞임)
+  // 지역마다 아이·청소년이 하는 말 (꾸밈 이야기 중 식구의 말 차례에 가끔 섞임)
   const TRIP_KIN_REGION = {
-    plains: { child: ['풀밭이 바다처럼 출렁거려!', '저기 들소다! 엄청 많아!', '{call}, 풀밭에 내려가서 굴러 보고 싶어!'], young: ['평원은 어디서 봐도 끝이 없네.', '들소 떼가 움직이는 방향을 보면 바람을 알 수 있대.'] },
-    snow: { child: ['눈 먹어 봐도 돼?', '{call}, 손이 꽁꽁 얼었어. 비늘에 대고 있을게.', '하얀 거밖에 안 보여!', '눈사람 만들고 싶다!'], young: ['숨 쉴 때마다 하얀 김이 나와.', '설원은 조용해서 좋아. 대신 너무 춥지만.', '얼음 동굴 쪽은 가까이 가지 말자.'] },
+    plains: { child: ['풀밭이 바다처럼 출렁거려!', '저기 들소다! 엄청 많아!', '{call}, 풀밭에 내려가서 굴러 보고 싶어!'], young: ['평원은 어디서 봐도 끝이 없네.', '들소 떼가 움직이는 방향을 보면 바람을 알 수 있대.'], dyoung: ['들소 한 마리쯤은 나도 잡을 수 있을 것 같아!'] },
+    snow: { dyoung: ['내 입김이 하얗게 나와! 불꽃은 안 나오고!'], child: ['눈 먹어 봐도 돼?', '{call}, 손이 꽁꽁 얼었어. 비늘에 대고 있을게.', '하얀 거밖에 안 보여!', '눈사람 만들고 싶다!'], young: ['숨 쉴 때마다 하얀 김이 나와.', '설원은 조용해서 좋아. 대신 너무 춥지만.', '얼음 동굴 쪽은 가까이 가지 말자.'] },
     ruins: { child: ['저 돌 기둥 엄청 커!', '옛날 사람들은 여기서 뭐 했어?', '저기 그림 새겨져 있어!'], young: ['이 돌에 새긴 글자, 언젠가 읽을 수 있으면 좋겠어.', '무너진 데도 이렇게 아름다울 수 있구나.'] },
     forest: { child: ['나무가 하늘까지 닿을 것 같아!', '안개 냄새 이상해…', '{call}, 숲속에 요정 있어?'], young: ['안개가 짙어. 낮게 날지 말자.', '고목 쪽에서 뭔가 움직이는 소리가 났어.'] },
     swamp: { child: ['으, 냄새!', '물속에서 뭐가 쳐다봤어!', '반딧불이다! 하나만 잡아 줘!'], young: ['늪 위로는 빨리 지나가는 게 좋겠어.', '저 거품, 그냥 거품은 아닌 것 같은데.'] },
-    coast: { child: ['바다다! 엄청 넓어!', '{call}, 물고기 잡아 줘!', '파도 소리가 쿵쿵해!'], young: ['바다 냄새, 좋다.', '저 멀리 배가 보여. 어디까지 가는 걸까.'] },
+    coast: { dyoung: ['파도 위로 낮게 날아 보고 싶어!'], child: ['바다다! 엄청 넓어!', '{call}, 물고기 잡아 줘!', '파도 소리가 쿵쿵해!'], young: ['바다 냄새, 좋다.', '저 멀리 배가 보여. 어디까지 가는 걸까.'] },
     canyon: { child: ['야호— 하면 대답해!', '바위가 빨개! 불난 거 아니지?'], young: ['협곡 바람은 갑자기 바뀌어. 조심해.', '절벽에 둥지 튼 새들, 대단하다.'] },
-    volcano: { child: ['뜨거워! 발 데일 것 같아!', '{call}, 산이 숨 쉬는 소리가 나!'], young: ['재가 눈에 들어가. 조금만 높이 날자.', '여긴 오래 있을 곳이 못 돼.'] },
+    volcano: { dyoung: ['여기 따뜻해서 좋아. 둥지보다 따뜻해!'], child: ['뜨거워! 발 데일 것 같아!', '{call}, 산이 숨 쉬는 소리가 나!'], young: ['재가 눈에 들어가. 조금만 높이 날자.', '여긴 오래 있을 곳이 못 돼.'] },
     capital: { child: ['사람이 엄청 많아!', '{call}, 저기 성에 깃발 있어!'], young: ['인간들 도시는 언제 봐도 시끄럽네.'] },
     ruin: { child: ['{call}, 여기 무서워…', '왜 다 회색이야?', '집에 가고 싶어…'], young: ['여기선 나도 정신 단단히 차릴게.', '이 땅에도 예전엔 누가 살았겠지.', '{call}, 너무 오래 있지 말자.'] },
   };
   // 실제로 일어난 일에 식구가 하는 말 (싸움 · 귀한 발견 · 다침 · 쉬어 감 · 갈림길)
   const TRIP_KIN_REACT = {
-    fight: { child: ['{call} 최고야!', '우와, 한 방에!', '나도 크면 저렇게 할 거야!', '무, 무서웠던 거 아니야!', '{call}, 안 다쳤어?'], young: ['깔끔했어. 다친 데는 없지?', '다음엔 나도 거들게.', '등 뒤는 내가 봐 둘게.', '역시 대단해.'], adult: ['잘했어. 그래도 무리는 하지 마.'], drake: ['(덩달아 작게 으르렁거렸다)'] },
-    rare: { child: ['반짝반짝해! 나 만져 봐도 돼?', '보물이다, 보물!', '{call}, 그거 나 주면 안 돼?'], young: ['그거, 꽤 귀한 것 같은데.', '눈이 밝네, {call}.', '오늘 운이 좋다.'], adult: ['좋은 걸 찾았구나.'], drake: ['(눈을 동그랗게 뜨고 들여다보았다)'] },
-    scrape: { child: ['{call}, 아파? 호 해 줄게.', '괜찮아? 피 나?'], young: ['괜찮아? 잠깐 쉬어 가자.', '상처는 돌아가서 꼭 보자.'], adult: ['서두르지 말자. 천천히 가.'], drake: ['(걱정스럽게 끼룩 울었다)'] },
-    heal: { child: ['따뜻해… 여기서 자고 싶다.', '조금만 더 있다 가자!'], young: ['이런 쉼도 필요하지.', '볕이 좋다.'], adult: ['잘 쉬었다.'], drake: ['(볕 아래 동그랗게 몸을 말았다)'] },
-    fork: { child: ['{call} 말대로 할래!', '어느 쪽이든 따라갈게!'], young: ['좋은 선택이었어.', '나라도 그 길을 골랐을 거야.'], adult: ['그래, 그 길이 낫겠지.'], drake: ['(고개를 갸웃했다)'] },
+    fight: { child: ['{call} 최고야!', '우와, 한 방에!', '나도 크면 저렇게 할 거야!', '무, 무서웠던 거 아니야!', '{call}, 안 다쳤어?'], young: ['깔끔했어. 다친 데는 없지?', '다음엔 나도 거들게.', '등 뒤는 내가 봐 둘게.', '역시 대단해.'], adult: ['잘했어. 그래도 무리는 하지 마.'],
+      drake: ['(덩달아 작게 으르렁거렸다)', '(놀라서 날개 밑으로 쏙 숨었다가 고개를 내밀었다)', '(쓰러진 짐승 쪽으로 작은 불꽃을 뿜었다)'],
+      dyoung: ['나도 불 뿜었어! 봤지? 조금이지만!', '다음엔 내가 먼저 덤빌 거야!', '{call}, 그 꼬리 휘두르는 거 나도 가르쳐 줘!'], dadult: ['한쪽은 내가 맡았어. 다친 데 없지?', '호흡이 잘 맞았어.', '내 발톱도 이제 제법이지?'] },
+    rare: { child: ['반짝반짝해! 나 만져 봐도 돼?', '보물이다, 보물!', '{call}, 그거 나 주면 안 돼?'], young: ['그거, 꽤 귀한 것 같은데.', '눈이 밝네, {call}.', '오늘 운이 좋다.'], adult: ['좋은 걸 찾았구나.'],
+      drake: ['(눈을 동그랗게 뜨고 들여다보았다)', '(반짝이는 것을 앞발로 톡톡 건드려 보았다)', '(제 보물인 양 품에 끌어안으려 했다)'],
+      dyoung: ['보물이다! 둥지 보물더미에 넣자!', '반짝이는 건 다 좋아!', '{call}, 그거 내가 들고 갈래!'], dadult: ['보물더미가 또 빛나겠네.', '좋은 눈이야, {call}.'] },
+    scrape: { child: ['{call}, 아파? 호 해 줄게.', '괜찮아? 피 나?'], young: ['괜찮아? 잠깐 쉬어 가자.', '상처는 돌아가서 꼭 보자.'], adult: ['서두르지 말자. 천천히 가.'],
+      drake: ['(걱정스럽게 끼룩 울었다)', '(다친 자리를 작은 혀로 핥아 주었다)'], dyoung: ['{call}, 비늘 긁혔어! 괜찮아?', '내가 대신 앞에서 날까?'], dadult: ['잠깐 내려앉자. 내가 주위를 볼게.'] },
+    heal: { child: ['따뜻해… 여기서 자고 싶다.', '조금만 더 있다 가자!'], young: ['이런 쉼도 필요하지.', '볕이 좋다.'], adult: ['잘 쉬었다.'],
+      drake: ['(볕 아래 동그랗게 몸을 말았다)', '(내 날개 밑으로 파고들어 금세 잠들었다)'], dyoung: ['볕 좋다… 비늘이 따끈따끈해.', '조금만 더 누워 있자!'], dadult: ['날개를 쉬게 하는 것도 비행이지.'] },
+    fork: { child: ['{call} 말대로 할래!', '어느 쪽이든 따라갈게!'], young: ['좋은 선택이었어.', '나라도 그 길을 골랐을 거야.'], adult: ['그래, 그 길이 낫겠지.'],
+      drake: ['(고개를 갸웃했다)', '(내가 고른 쪽으로 먼저 고개를 돌렸다)'], dyoung: ['그쪽! 그쪽이 재밌을 것 같아!'], dadult: ['좋아. 그 길로 가자.'] },
   };
   // 원정마다 같은 이야기가 나오도록, 출발 시각으로 정해지는 난수
   // 아이가 보호자를 부르는 말: 성별 칸이 여성이면 엄마, 남성이면 아빠, 그 밖에는 이름
@@ -4671,6 +4732,9 @@
   function tripRand(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
   // 실제로 일어난 일 (서버가 떠날 때 정해 둔 시간표)을 이야기로
   const TRIP_PICK = (r, arr) => arr[Math.floor(r() * arr.length)];
+  // 나잇대별 대사 고르기: 새끼 드래곤 몫이 없으면 비슷한 인간 쪽으로 (어린 용 → 청소년, 젊은 용 이상 → 어른)
+  const TRIP_AGE_FB = { dyoung: 'young', dadult: 'adult' };
+  const tripLines = (obj, age) => (obj && (obj[age] || obj[TRIP_AGE_FB[age]] || obj.child)) || [];
   function tripReal(x, r) {
     const it = x.id && S.items[x.id];
     // 무엇을 주웠는지는 돌아와서 알게 (귀한 정도만 넌지시)
@@ -4694,7 +4758,7 @@
     // 함께 간 식구 {name, age} (예전 원정은 이름만 있음 → 아이로)
     const kin = (e.went?.length ? e.went : TRIP_WENT).map((k) => (typeof k === 'string' ? { name: k, age: 'child' } : k));
     const out = [{ at: e.start, parts: [`${rg?.name || '먼 곳'}${ro(rg?.name || '먼 곳')} 날개를 펼쳤다.${kin.length ? ` ${kin.map((k) => k.name).join(', ')}${josa(kin.at(-1).name, '이', '가')} 함께 따라나섰다.` : ''}`] }];
-    if (kin.length) out.push({ at: e.start + 4000, parts: [TRIP_PICK(tripRand(seed + 11), TRIP_KIN_START[kin[0].age] || TRIP_KIN_START.child).replace('{call}', tripCall())], who: kin[0].name, age: kin[0].age });
+    if (kin.length) out.push({ at: e.start + 4000, parts: [TRIP_PICK(tripRand(seed + 11), tripLines(TRIP_KIN_START, kin[0].age)).replace('{call}', tripCall())], who: kin[0].name, age: kin[0].age });
     const until = Math.min(now, e.end);
     // 실제로 일어난 일
     const real = (e.plan || []).map((x) => ({ at: e.start + x.t, x })).filter((y) => y.at <= until);
@@ -4708,7 +4772,7 @@
       const rr = tripRand(seed + y.x.t + 7);
       if (R && kin.length && (key === 'rare' || rr() < 0.5)) {
         const k = kin[Math.floor(rr() * kin.length)];
-        out.push({ at: y.at + 5000, parts: [TRIP_PICK(rr, R[k.age] || R.child).replace('{call}', tripCall())], who: k.name, age: k.age });
+        out.push({ at: y.at + 5000, parts: [TRIP_PICK(rr, tripLines(R, k.age)).replace('{call}', tripCall())], who: k.name, age: k.age });
       }
     }
     // 갈림길
@@ -4717,7 +4781,7 @@
       out.push({ at: f.at, parts: [`갈림길에 닿았다. ${f.text}`], real: true });
       if (f.picked) {
         out.push({ at: f.at + 1000, parts: [`— ${f.picked}. ${f.outcome || ''}`], real: true });
-        if (kin.length) { const rr = tripRand(seed + f.at), k = kin[Math.floor(rr() * kin.length)]; out.push({ at: f.at + 6000, parts: [TRIP_PICK(rr, TRIP_KIN_REACT.fork[k.age] || TRIP_KIN_REACT.fork.child).replace('{call}', tripCall())], who: k.name, age: k.age }); }
+        if (kin.length) { const rr = tripRand(seed + f.at), k = kin[Math.floor(rr() * kin.length)]; out.push({ at: f.at + 6000, parts: [TRIP_PICK(rr, tripLines(TRIP_KIN_REACT.fork, k.age)).replace('{call}', tripCall())], who: k.name, age: k.age }); }
       }
     }
     // 사이사이 꾸밈 이야기 (실제 일과 너무 붙지 않게)
@@ -4732,8 +4796,8 @@
       let text;
       if (pickKin) { // 아이의 말: 최근에 한 말은 다시 하지 않음
         const k = kin[Math.floor(r() * kin.length)];
-        const kinLocal = TRIP_KIN_REGION[rg?.realm === 'ruin' ? 'ruin' : e.region]?.[k.age];
-        const pool = kinLocal && r() < 0.35 ? kinLocal : TRIP_KIN[k.age] || TRIP_KIN.child;
+        const kinLocal = TRIP_KIN_REGION[rg?.realm === 'ruin' ? 'ruin' : e.region]?.[k.age]; // 지역 말은 그 나잇대 몫이 있을 때만
+        const pool = kinLocal && r() < 0.35 ? kinLocal : tripLines(TRIP_KIN, k.age);
         let q = pool[Math.floor(r() * pool.length)], tries = 0;
         while (recent.includes(q) && tries++ < 10) q = pool[Math.floor(r() * pool.length)];
         recent.push(q); if (recent.length > 10) recent.shift();
@@ -5024,14 +5088,34 @@
 
   // 프로필 카드의 장신구 자리
   // ── 즐겨찾기 (칭호·제작법): 이 기기에 드래곤마다 따로 저장 ──
+  // 즐겨찾기: 서버에 드래곤마다 저장 (S.me.favs). 예전에 이 기기에만 저장해 두던 것은 처음 한 번 서버로 옮김
   const FAV = {
     key: (kind) => `dragon-fav:${kind}:${S.me?.id || 0}`,
-    list(kind) { try { const v = JSON.parse(localStorage.getItem(this.key(kind)) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } },
+    local(kind) { try { const v = JSON.parse(localStorage.getItem(this.key(kind)) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } },
+    list(kind) {
+      const sv = S.me?.favs?.[kind];
+      if (Array.isArray(sv)) return [...sv];
+      return this.local(kind); // 서버에 아직 없으면 이 기기 것을 (곧 옮겨짐)
+    },
     has(kind, id) { return this.list(kind).includes(id); },
+    save(kind, l) {
+      if (S.me) S.me.favs = { ...(S.me.favs || {}), [kind]: l };
+      try { localStorage.setItem(this.key(kind), JSON.stringify(l)); } catch {}
+      socket.emit('fav:set', { kind, list: l }, (res) => { if (res?.error) toast(res.error); });
+    },
     toggle(kind, id) {
       const l = this.list(kind), i = l.indexOf(id);
       if (i >= 0) l.splice(i, 1); else l.push(id);
-      try { localStorage.setItem(this.key(kind), JSON.stringify(l)); } catch {}
+      this.save(kind, l);
+    },
+    // 접속할 때: 서버에 없는 종류는 이 기기에 남아 있던 것을 서버로 옮김
+    migrate() {
+      if (!S.me) return;
+      for (const kind of ['items', 'recipes', 'titles']) {
+        if (Array.isArray(S.me.favs?.[kind])) continue;
+        const l = this.local(kind);
+        if (l.length) this.save(kind, l);
+      }
     },
   };
   function favBtn(kind, id, after) {
@@ -5158,7 +5242,8 @@
       if (res.error) { SFX.play('error'); return toast(res.error); }
       SFX.play({ 'item:drop': 'drop', craft: 'craft' }[event] || 'use');
       if (res.result?.lines) toast(res.result.lines.join(' '));
-      fetchInv(() => { if ($('inv-dlg').open) renderInv(); if ($('craft-dlg').open) renderCraft(); });
+      // 다시 그려도 보던 자리에 머물게 (쓰고 나서 맨 위로 올라가지 않게)
+      fetchInv(() => { if ($('inv-dlg').open) keepScroll($('inv-dlg'), renderInv); if ($('craft-dlg').open) keepScroll($('craft-dlg'), renderCraft); });
     });
   }
   function renderInv() {
@@ -8256,9 +8341,9 @@
       '{a}[이/가] {o}[이/가] 사냥하는 모습을 숨죽여 지켜보고 있다.',
     ],
   };
-  const STAGE_GROUP = { '아기': 'babyH', '아이': 'kidH', '소년': 'kidH', '청년': 'youthH', '어른': 'adultH', '노년': 'elderH', '해츨링': 'hatch', '어린 용': 'littleD', '젊은 용': 'olderD', '다 자란 용': 'olderD' };
+  const STAGE_GROUP = { '아기': 'babyH', '아이': 'kidH', '소년': 'kidH', '청소년': 'youthH', '어른': 'adultH', '노년': 'elderH', '해츨링': 'hatch', '어린 용': 'littleD', '젊은 용': 'olderD', '다 자란 용': 'olderD' };
   const SMALL = new Set(['아기', '아이', '해츨링']);   // 돌봄을 받는 어린 식구
-  const GROWN = new Set(['청년', '어른', '노년', '젊은 용', '다 자란 용']);
+  const GROWN = new Set(['청소년', '어른', '노년', '젊은 용', '다 자란 용']);
   const joinNames = (list) => list.map((k, i) => (i < list.length - 1 ? `${k.name}${josa(k.name, '과', '와')}` : k.name)).join(' ');
   function storyMoment(slot, all, n, salt = 0) {
     const rnd = storyRng((slot % 1000003) * 7919 + all.reduce((a, k) => a + k.id * 97, 0) + salt * 104729);
@@ -10241,13 +10326,13 @@
   const slKey = () => `dragon-slate-seen:${S.me?.id || 0}`;
   const slSeen = () => { try { return Number(localStorage.getItem(slKey())) || 0; } catch { return 0; } };
   const slSetSeen = (t) => { try { localStorage.setItem(slKey(), String(t)); } catch {} };
-  const SL = { latest: 0, page: 'list', cur: null, draft: null, prevSeen: 0, rules: { title: 40, body: 1000, comment: 100 }, gm: false, posts: [] };
+  const SL = { latest: 0, replyAt: 0, peeked: false, page: 'list', cur: null, draft: null, prevSeen: 0, rules: { title: 40, body: 1000, comment: 100 }, gm: false, posts: [] };
   function renderSlateDot() {
-    const on = SL.latest > slSeen() && !$('slate-dlg').open;
+    const on = Math.max(SL.latest, SL.replyAt) > slSeen() && !$('slate-dlg').open; // 새 글이나, 내 글에 달린 새 답
     const d = $('slate-dot');
     if (on && d.hidden) { d.classList.remove('pop'); void d.offsetWidth; d.classList.add('pop'); }
     d.hidden = !on;
-    $('slate-open').setAttribute('aria-label', on ? '석판 (새 글 있음)' : '석판');
+    $('slate-open').setAttribute('aria-label', on ? (SL.replyAt > slSeen() ? '석판 (내 글에 새 답 있음)' : '석판 (새 글 있음)') : '석판');
   }
   const slEl = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const slAgo = (t) => { const m = Math.floor((Date.now() - t) / 60000); if (m < 1) return '방금'; if (m < 60) return `${m}분 전`; if (m < 1440) return `${Math.floor(m / 60)}시간 전`; if (m < 7 * 1440) return `${Math.floor(m / 1440)}일 전`; const d = new Date(t); return `${d.getMonth() + 1}월 ${d.getDate()}일`; };
@@ -10336,6 +10421,7 @@
       const fresh = p.at > SL.prevSeen && p.who.id !== S.me?.id;
       const c = slEl('button', `sl-card${p.pinned ? ' pin' : ''}${!p.pinned && Date.now() - p.last > 3 * 86400000 ? ' old' : ''}`); c.type = 'button';
       const t = slEl('div', 't'); if (p.pinned) t.appendChild(slTag(p)); t.appendChild(slEl('b', '', p.title)); if (fresh) { const n = slEl('i', 'sl-new'); n.title = '새 글'; t.appendChild(n); }
+      if (p.mine && p.lastC > SL.prevSeen && p.lastBy && p.lastBy !== S.me?.id) t.appendChild(slEl('span', 'sl-newreply', '새 답')); // 내 글에 지난번 뒤로 남이 단 답
       const m = slEl('div', 'm'); m.append(slWho(p.who), slEl('span', '', slAgo(p.at)), slCm(p.n));
       c.append(t, slEl('p', 'p', p.preview.replace(/\s*\n\s*/g, ' ')), m);
       c.addEventListener('click', () => slGo('post', p.id));
@@ -10485,6 +10571,11 @@
   $('slate-write').addEventListener('click', () => { SL.draft = { id: null, head: 'free', title: '', body: '' }; slGo('write'); });
   new MutationObserver(() => { $('slate-open').setAttribute('aria-pressed', String($('slate-dlg').open)); renderSlateDot(); }).observe($('slate-dlg'), { attributes: true, attributeFilter: ['open'] });
 
+  // 상단의 '용의 대륙'을 누르면 대륙(첫 화면)으로: 아래 메뉴의 '대륙'을 누른 것과 같고, 맨 위로 올림
+  const goHome = () => { $('dock-map').click(); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  $('brand-home').addEventListener('click', goHome);
+  $('brand-home').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goHome(); } });
+
   // ── 하단 메뉴 화면: 가운데 칸에 펼치기 ──
   // 팝업(모달) 대신 지역 카드와 지도 자리에 보여 준다. 다른 메뉴를 열면 바뀌고, '대륙'이나 닫기로 돌아간다
   const PANELS = ['char-dlg', 'nest-dlg', 'inv-dlg', 'craft-dlg', 'ledger-dlg', 'friends-dlg', 'arena-dlg', 'slate-dlg']; // 텔레파시는 지금 화면 위에 팝업으로
@@ -10588,7 +10679,7 @@
   let festLast = null;
   function loadFest() {
     if (!S.me) return;
-    socket.emit('fest:get', {}, (res) => { if (res && !res.error) renderFest(res); });
+    socket.emit('fest:get', {}, (res) => { if (res && !res.error) { renderFest(res); scheduleFest(); } });
   }
   function renderFest(f) {
     festLast = f;
@@ -10622,7 +10713,18 @@
       fl.appendChild(r);
     }
   }
-  setInterval(() => { if (S.me && S.region) loadFest(); }, 30000); // 광장에 드나드는 드래곤, 축제 시작·끝
+  // 축제 정보 다시 묻기: 왕도 광장에 있고 축제 중일 때만 30초마다 (함께 춤출 드래곤이 드나듦)
+  // 그 밖에는 축제가 시작하거나 끝나는 때에만 한 번 묻고, 남은 시간 글씨는 이 기기에서 1분마다 고침
+  let festTimer = 0;
+  function scheduleFest() {
+    clearTimeout(festTimer);
+    const f = festLast;
+    if (!f) return;
+    const now = Date.now();
+    const at = f.on ? (f.here ? now + 30000 : f.until + 3000) : (f.next || now + 6 * 3600000) + 3000;
+    festTimer = setTimeout(() => { if (S.me) loadFest(); }, Math.max(5000, Math.min(at - now, 6 * 3600000))); // 길어도 6시간마다는 한 번 확인
+  }
+  setInterval(() => { if (festLast?.on && !festLast.here) renderFest(festLast); }, 60000); // '○시간 뒤에 끝난다' 글씨만
   let festInv = null;
   function onFestInvited(x) {
     festInv = x.id;
@@ -12383,6 +12485,42 @@
         $('gm-dlg').close();
       } catch (e) { toast(e.message); }
     });
+    // 자동 백업: 서버가 하루 한 번 볼륨에 만들어 두는 사본 (최근 7일)
+    const auto = gEl('div', 'gm-autobk');
+    auto.appendChild(gEl('p', 'note', '자동 백업 · 서버가 하루 한 번 저장 파일 사본을 만들어 최근 7일 치를 남겨 둔다. 내려받거나 그날로 바로 되돌릴 수 있다.'));
+    const list = gEl('div', 'gm-autobk-list');
+    list.appendChild(gEl('p', 'note', '불러오는 중…'));
+    auto.appendChild(list);
+    sec.appendChild(auto);
+    const kb = (n) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)}MB` : `${Math.max(1, Math.round(n / 1024))}KB`);
+    fetch('/api/gm/autobackups', { headers: { Authorization: `Bearer ${store.get()}` } }).then((r) => r.json()).then((j) => {
+      list.replaceChildren();
+      if (!j.list?.length) { list.appendChild(gEl('p', 'note', '아직 만들어진 자동 백업이 없다. (서버가 켜지고 30초 뒤에 첫 사본을 만든다)')); return; }
+      for (const b of j.list) {
+        const row = gmRow(list);
+        const d = b.name.match(/(\d{4})(\d{2})(\d{2})/);
+        row.appendChild(gEl('span', 'gm-autobk-name', `${d ? `${Number(d[2])}월 ${Number(d[3])}일` : b.name} · ${kb(b.size)}`));
+        gBtn(row, '내려받기', async () => {
+          try {
+            const res = await fetch(`/api/gm/autobackup/${encodeURIComponent(b.name)}`, { headers: { Authorization: `Bearer ${store.get()}` } });
+            if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `내려받지 못했다. (${res.status})`);
+            const url = URL.createObjectURL(await res.blob());
+            const a = document.createElement('a'); a.href = url; a.download = `dragon-continent-${b.name}`; document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+          } catch (e) { toast(e.message); }
+        }, 'link');
+        gBtn(row, '이날로 되돌리기…', async () => {
+          if (!confirm(`${d ? `${Number(d[2])}월 ${Number(d[3])}일` : b.name} 자동 백업으로 되돌릴까?\n\n대륙의 모든 계정·드래곤이 그날 사본을 만든 때로 돌아간다. 그 뒤에 생긴 일은 사라진다.\n서버가 잠깐 다시 켜지고, 접속한 모두가 다시 연결된다.`)) return;
+          try {
+            const res = await fetch('/api/gm/restore-auto', { method: 'POST', headers: { Authorization: `Bearer ${store.get()}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: b.name }) });
+            const r2 = await res.json().catch(() => ({}));
+            if (!res.ok || r2.error) throw new Error(r2.error || `되돌리지 못했다. (${res.status})`);
+            toast(`되돌리는 중이다. (드래곤 ${r2.dragons}마리) 잠시 뒤 다시 연결된다.`);
+            $('gm-dlg').close();
+          } catch (e) { toast(e.message); }
+        }, 'link');
+      }
+    }).catch(() => { list.replaceChildren(gEl('p', 'note', '자동 백업 목록을 불러오지 못했다.')); });
   }
 
   function renderGmLog(body) {
@@ -12868,13 +13006,21 @@
         show('create');
       }
     });
-    socket.on('me', (me) => { setMe(me); renderSayMode(); maybeWelcome(); renderMazeBar(); renderSlateDot(); });
+    socket.on('me', (me) => {
+      setMe(me); renderSayMode(); maybeWelcome(); renderMazeBar(); renderSlateDot(); FAV.migrate();
+      if (!SL.peeked) { SL.peeked = true; socket.emit('slate:peek', {}, (r) => { if (r?.ok) { SL.latest = Math.max(SL.latest, r.latest || 0); SL.replyAt = r.replyAt || 0; renderSlateDot(); } }); } // 내 글에 새 답이 왔는지
+    });
     bindMazeSocket(); // 지하 회랑
     socket.on('notes:latest', ({ id }) => { S.notesLatest = id || 0; renderNotesDot(); });
     socket.on('slate:latest', ({ at }) => { SL.latest = at || 0; renderSlateDot(); });
     // 석판이 바뀜: 열어 둔 화면은 새로 받고, 닫혀 있으면 새 글 점만
     socket.on('slate:changed', (x) => {
       SL.latest = x.latest || 0;
+      if (x.comment && x.owner && x.owner === S.me?.id && x.by !== S.me?.id && x.byName) {
+        SL.replyAt = Date.now();
+        const reading = $('slate-dlg').open && SL.page === 'post' && SL.cur === x.id; // 그 글을 보고 있으면 알림 대신 바로 보임
+        if (!reading) toast(`${x.byName}${josa(x.byName, '이', '가')} 석판의 내 글 '${x.title}'에 답을 남겼다.`);
+      }
       if ($('slate-dlg').open) {
         slSetSeen(Math.max(SL.latest, slSeen()));
         if (SL.page === 'list') loadSlate();

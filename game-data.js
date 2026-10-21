@@ -639,10 +639,10 @@ const RAID = {
 };
 
 // ── 둥지 시설: 둥지 단계마다 지을 수 있는 칸. 시설마다 식구 한 명에게 일을 맡길 수 있음 ──
-// 힘(power) = 1(시설만) + 일하는 식구 (어른 1, 소년·청년 견습 0.5) × (잘 맞으면 1.5). 부엌은 일하는 식구가 있어야 쓸 수 있음
+// 힘(power) = 1(시설만) + 일하는 식구 (어른 1, 소년·청소년 견습 0.5) × (잘 맞으면 1.5). 부엌은 일하는 식구가 있어야 쓸 수 있음
 const FACILITY = {
   slots: [2, 3, 4],                       // 보금자리 · 넓은 동굴 · 용의 성채
-  worker: { adult: 1, apprentice: 0.5, fit: 1.5, apprenticeStages: ['소년', '청년'], adultStages: ['어른', '노년'] },
+  worker: { adult: 1, apprentice: 0.5, fit: 1.5, apprenticeStages: ['소년', '청소년'], adultStages: ['어른', '노년'] },
   list: {
     forge:   { name: '공방',   cost: { gold: 250, items: { bog_iron: 4, red_clay: 4, obsidian: 2 } }, talent: 'smith', traits: ['handy'],
       desc: '둥지에서 만들면 기력이 덜 들고 대성공·강화가 잘 된다.', en: 0.05, great: 0.015, rate: 0.5 },
@@ -734,7 +734,7 @@ const KIN = {
   human: {
     stages: [
       { name: '아기', from: 0 }, { name: '아이', from: 1 }, { name: '소년', from: 2 },
-      { name: '청년', from: 4 }, { name: '어른', from: 11 }, { name: '노년', from: 18 },
+      { name: '청소년', from: 4 }, { name: '어른', from: 11 }, { name: '노년', from: 18 },
     ],
     adultDay: 11,                     // 이날 재주가 정해지고 갈 길을 고름
     lifespan: 25,                     // 이날이 지나면 세상을 떠남 (어른 1주 + 노년 1주)
@@ -757,7 +757,7 @@ const KIN = {
       { name: '해츨링', from: 0 }, { name: '어린 용', from: 4 }, { name: '젊은 용', from: 11 }, { name: '다 자란 용', from: 18 },
     ],
     independentDay: 18,               // 이날부터 독립시킬 수 있음 (미뤄도 됨)
-    expeditionFrom: 4,                // 어린 용부터 원정에 따라감
+    expeditionFrom: 2,                // 해츨링 2일째부터 원정에 따라감 (인간 아이의 소년과 같은 날. 4 → 2)
     huntFrom: 11, huntEvery: DAY,     // 젊은 용부터 혼자 사냥해서 가져옴
     trainCooldown: 6 * 60 * 60 * 1000, trainAp: 1, trainEn: 5,
     trainLimit: [4, 8, 12, 16],       // 단계별로 가르칠 수 있는 누적 횟수

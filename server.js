@@ -115,6 +115,58 @@ app.post('/api/gm/restore', express.raw({ type: 'application/octet-stream', limi
   setTimeout(() => { db.closeDb(); process.exit(1); }, 800);
 });
 
+// ── 자동 백업: 하루 한 번 볼륨 안 backups 폴더에 저장 파일 사본 (최근 7개만 남김) ──
+// 이름은 auto-YYYYMMDD.db (한국 날짜). 서버가 켜질 때와 그 뒤 한 시간마다, 오늘 것이 없으면 만듦
+const AUTO_BK = { dir: path.join(path.dirname(db.DB_PATH), 'backups'), keep: 7, re: /^auto-\d{8}\.db$/ };
+const kstDay = () => new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10).replace(/-/g, '');
+function autoBackups() {
+  try {
+    return fs.readdirSync(AUTO_BK.dir).filter((n) => AUTO_BK.re.test(n)).sort().reverse()
+      .map((name) => { const st = fs.statSync(path.join(AUTO_BK.dir, name)); return { name, size: st.size, at: st.mtimeMs }; });
+  } catch { return []; }
+}
+function autoBackup() {
+  try {
+    fs.mkdirSync(AUTO_BK.dir, { recursive: true });
+    const name = `auto-${kstDay()}.db`, to = path.join(AUTO_BK.dir, name);
+    if (fs.existsSync(to)) return;
+    const tmp = `${to}.tmp`;
+    db.snapshot(tmp);
+    fs.renameSync(tmp, to); // 다 만든 뒤에 이름을 붙여, 만드는 도중에 꺼져도 반쪽 파일이 남지 않게
+    for (const old of autoBackups().slice(AUTO_BK.keep)) fs.unlink(path.join(AUTO_BK.dir, old.name), () => {});
+    console.log(`[자동 백업] ${name}`);
+  } catch (e) { console.error('[자동 백업 실패]', e.message); }
+}
+setTimeout(autoBackup, 30 * 1000);
+setInterval(autoBackup, 60 * 60 * 1000);
+// GM: 자동 백업 목록 · 내려받기 · 그 시점으로 되돌리기
+app.get('/api/gm/autobackups', (req, res) => {
+  if (!gmFromReq(req)) return res.status(403).json({ error: 'GM만 쓸 수 있다.' });
+  res.json({ ok: true, list: autoBackups() });
+});
+app.get('/api/gm/autobackup/:name', (req, res) => {
+  const gm = gmFromReq(req);
+  if (!gm) return res.status(403).json({ error: 'GM만 쓸 수 있다.' });
+  const name = String(req.params.name || '');
+  if (!AUTO_BK.re.test(name) || !fs.existsSync(path.join(AUTO_BK.dir, name))) return res.status(404).json({ error: '그런 백업은 없다.' });
+  db.gmLog(gm.username, null, `자동 백업 내려받음 (${name})`);
+  res.download(path.join(AUTO_BK.dir, name), `dragon-continent-${name}`);
+});
+app.post('/api/gm/restore-auto', (req, res) => {
+  const gm = gmFromReq(req);
+  if (!gm) return res.status(403).json({ error: 'GM만 쓸 수 있다.' });
+  const name = String(req.body?.name || '');
+  const file = path.join(AUTO_BK.dir, name);
+  if (!AUTO_BK.re.test(name) || !fs.existsSync(file)) return res.status(404).json({ error: '그런 백업은 없다.' });
+  const chk = db.checkBackup(file);
+  if (chk.error) return res.status(400).json(chk);
+  db.stageRestore(file);
+  db.gmLog(gm.username, null, `자동 백업으로 되돌리기 (${name}, 드래곤 ${chk.dragons}마리)`);
+  res.json({ ok: true, ...chk });
+  io.emit('gm:announce', { text: 'GM이 저장 파일을 되돌리는 중이다. 잠시 뒤 다시 연결된다.', at: Date.now() });
+  setTimeout(() => { db.closeDb(); process.exit(1); }, 800);
+});
+
 app.get('/api/version', (req, res) => {
   res.set('Cache-Control', 'no-store');
   res.json({ v: clientVersion() });
@@ -257,6 +309,7 @@ function giftSender(d, id) {
 
 const meOf = (d) => ({
   duelUnseen: db.duelUnseen(d.id),       // 아직 확인하지 않은, 받은 자동 결투 수
+  favs: logic.combatJson(d).favs || null, // 즐겨찾기 (물건·제작법·칭호). 서버에 드래곤마다 저장해서 기기를 바꿔도 남음
   ...publicDragon(d),
   level: d.level, xp: d.xp, xpMax: logic.xpNeed(d.level), levelMax: logic.atMaxLevel(d),
   hp: d.hp, hpMax: logic.hpCap(d), en: d.en, enMax: logic.enCap(d),
@@ -797,7 +850,31 @@ io.use((socket, next) => {
   next();
 });
 
+// ── 안전망: 요청 하나에서 오류가 나도 서버 전체가 꺼지지 않게 ──
+// 소켓의 모든 요청 처리기를 감싸서, 오류가 나면 기록에 남기고 그 사람에게만 '잠시 뒤에 다시 해 보자'를 돌려줌
+const softFail = (where, err, args = []) => {
+  console.error(`[오류] ${where}:`, err && err.stack ? err.stack : err);
+  const ack = args[args.length - 1];
+  if (typeof ack === 'function') { try { ack({ error: '잠시 뒤에 다시 해 보자.' }); } catch {} }
+};
+function guardSocket(socket) {
+  const rawOn = socket.on.bind(socket);
+  socket.on = (event, fn) => rawOn(event, (...args) => {
+    try {
+      const r = fn(...args);
+      if (r && typeof r.catch === 'function') r.catch((e) => softFail(event, e, args));
+    } catch (e) { softFail(event, e, args); }
+  });
+}
+// 타이머 등 그 밖의 곳에서 놓친 오류도 기록만 하고 서버는 계속 돎 (Railway가 다시 켜는 동안 모두가 끊기지 않게)
+process.on('uncaughtException', (e) => console.error('[놓친 오류]', e && e.stack ? e.stack : e));
+process.on('unhandledRejection', (e) => console.error('[놓친 오류(비동기)]', e && e.stack ? e.stack : e));
+
 io.on('connection', (socket) => {
+  guardSocket(socket);
+  try { onConnect(socket); } catch (e) { softFail('접속', e); }
+});
+function onConnect(socket) {
   const user = socket.data.user;
   const dragon = db.getDragonByUser(user.id);
 
@@ -972,6 +1049,19 @@ io.on('connection', (socket) => {
     ack({ ok: true, notice: arrows, crossed });
   });
 
+  // 즐겨찾기 저장: { kind: 'items'|'recipes'|'titles', list: [id…] } (기기를 바꾸거나 브라우저 기록을 지워도 남도록 서버에)
+  socket.on('fav:set', (payload, ack) => {
+    if (typeof ack !== 'function') ack = () => {};
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+    const kind = str(payload?.kind);
+    if (!['items', 'recipes', 'titles'].includes(kind)) return ack({ error: '알 수 없는 즐겨찾기다.' });
+    const list = [...new Set((Array.isArray(payload?.list) ? payload.list : []).map((x) => str(x)).filter((x) => x && x.length <= 60))].slice(0, 300);
+    const c = logic.combatJson(entry.dragon);
+    c.favs = { ...(c.favs || {}), [kind]: list };
+    db.saveState(entry.dragon);
+    ack({ ok: true });
+  });
   socket.on('dragon:avatar', (payload, ack) => {
     if (typeof ack !== 'function') ack = () => {};
     const entry = entryOf(socket);
@@ -1088,7 +1178,7 @@ io.on('connection', (socket) => {
     const kin = syncKin(socket, d);
     const res = logic.startExpedition(d, Number(payload?.minutes), str(payload?.goal) || 'gather');
     if (res.error) return ack(res);
-    const went = life.expStart(kin);
+    const went = life.expStart(kin, Date.now(), payload?.stay); // stay: 이번엔 둥지에 두고 갈 식구
     logic.planExpedition(d, life.companions(kin)); // 길 위의 일을 미리 정해 둠 (팝업에 보여 주고, 돌아오면 그대로 받음)
     logic.expInfo(d).went = life.expWent(kin); // 함께 간 식구 (이름과 나잇대: 원정 길 이야기에)
     refreshKin(d, kin);
@@ -1097,6 +1187,15 @@ io.on('connection', (socket) => {
     broadcastPresence(d.region);
     system(d.region, `${d.name}${josa(d.name, '이', '가')} 원정을 떠났다.`, socket);
     ack({ ok: true, went });
+  });
+
+  // 원정 떠나기 창: 데려갈 수 있는 식구 목록
+  socket.on('exp:who', (payload, ack) => {
+    if (typeof ack !== 'function') return;
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+    const kin = syncKin(socket, entry.dragon);
+    ack({ ok: true, kin: life.expCandidates(kin) });
   });
 
   // 도감 (상태 화면에서 열 때 받아 감). 도감이 생기기 전의 기록도 이때 옮겨 옴
@@ -1862,7 +1961,7 @@ io.on('connection', (socket) => {
     broadcastPresence(d.region);
     broadcastCounts();
   });
-});
+}
 
 server.listen(PORT, () => {
   console.log(`용의 대륙 서버가 http://localhost:${PORT} 에서 열렸어요.`);

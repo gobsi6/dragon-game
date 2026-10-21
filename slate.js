@@ -40,10 +40,13 @@ module.exports = function setupSlate({ io, db, entryOf }) {
     });
     const mine = (row, d) => row && (row.dragon_id === d.id || isGm());
 
-    on('slate:list', () => ({
+    on('slate:list', (d) => ({
       ok: true, rules: RULES, gm: isGm(),
-      posts: db.slate.list(RULES.list).map((r) => ({ id: r.id, head: r.head, title: r.title, preview: r.preview, at: r.at, edited: !!r.edited_at, pinned: !!r.pinned, n: r.n, last: Math.max(r.at, r.last_c || 0), who: who(r) })),
+      posts: db.slate.list(RULES.list).map((r) => ({ id: r.id, head: r.head, title: r.title, preview: r.preview, at: r.at, edited: !!r.edited_at, pinned: !!r.pinned, n: r.n, last: Math.max(r.at, r.last_c || 0),
+        lastC: r.last_c || 0, lastBy: r.last_by || null, mine: r.dragon_id === d.id, who: who(r) })),
     }));
+    // 접속할 때 한 번: 가장 새 글, 내 글에 달린 가장 새 답의 때 (아이콘 점)
+    on('slate:peek', (d) => ({ ok: true, latest: latest(), replyAt: db.slate.replyAt(d.id) }));
     on('slate:get', (d, p) => {
       const r = db.slate.get(Number(p.id));
       if (!r) return { error: '이미 지워진 글이다.' };
@@ -104,7 +107,8 @@ module.exports = function setupSlate({ io, db, entryOf }) {
       if (now - (socket.data.slateCmAt || 0) < RULES.commentGap) return { error: '숨을 고르는 중이다.' };
       socket.data.slateCmAt = now;
       db.slate.comment(r.id, d, text);
-      changed({ id: r.id, comment: true, by: d.id });
+      // 글쓴이에게: 누가 내 글에 답을 남겼는지 (모두에게 가는 알림에 실어 보내고, 화면이 글쓴이일 때만 알림)
+      changed({ id: r.id, comment: true, by: d.id, owner: r.dragon_id || null, byName: d.name, title: r.title });
       return { ok: true };
     }, true);
     on('slate:recomment', (d, p) => {

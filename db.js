@@ -488,7 +488,8 @@ const q = {
   slateList:    db.prepare(`SELECT p.id, p.dragon_id, COALESCE(d.name, p.name) AS name, COALESCE(d.kind, p.kind) AS kind, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar,
                               p.head, p.title, substr(p.body, 1, 160) AS preview, p.at, p.edited_at, p.pinned,
                               (SELECT COUNT(*) FROM slate_comments c WHERE c.post_id = p.id) AS n,
-                              (SELECT MAX(c.at) FROM slate_comments c WHERE c.post_id = p.id) AS last_c
+                              (SELECT MAX(c.at) FROM slate_comments c WHERE c.post_id = p.id) AS last_c,
+                              (SELECT c.dragon_id FROM slate_comments c WHERE c.post_id = p.id ORDER BY c.at DESC LIMIT 1) AS last_by
                             FROM slate_posts p LEFT JOIN dragons d ON d.id = p.dragon_id ORDER BY p.pinned DESC, p.at DESC LIMIT ?`),
   slateGet:     db.prepare(`SELECT p.*, COALESCE(d.name, p.name) AS cur_name, COALESCE(d.kind, p.kind) AS cur_kind, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar
                             FROM slate_posts p LEFT JOIN dragons d ON d.id = p.dragon_id WHERE p.id = ?`),
@@ -503,6 +504,9 @@ const q = {
   slateCmDel:   db.prepare('DELETE FROM slate_comments WHERE id = ?'),
   slateCmEdit:  db.prepare('UPDATE slate_comments SET text = ?, edited_at = ? WHERE id = ?'),
   slateLatest:  db.prepare('SELECT MAX(at) AS at FROM slate_posts'),
+  // 내 글에 남이 단 가장 새 답의 때 (석판 아이콘 점)
+  slateReplyAt: db.prepare(`SELECT MAX(c.at) AS at FROM slate_comments c JOIN slate_posts p ON p.id = c.post_id
+                            WHERE p.dragon_id = ? AND (c.dragon_id IS NULL OR c.dragon_id != ?)`),
   slateImgAdd:  db.prepare('INSERT INTO slate_images (dragon_id, type, data, w, h, at) VALUES (?, ?, ?, ?, ?, ?)'),
   slateImgGet:  db.prepare('SELECT id, post_id, dragon_id, type, data FROM slate_images WHERE id = ?'),
   slateImgMeta: db.prepare('SELECT id, post_id, dragon_id FROM slate_images WHERE id = ?'),
@@ -754,6 +758,7 @@ module.exports = {
     uncomment: (id) => q.slateCmDel.run(id).changes > 0,
     recomment: (id, text) => q.slateCmEdit.run(text, Date.now(), id),
     latest: () => q.slateLatest.get().at || 0,
+    replyAt: (dragonId) => q.slateReplyAt.get(dragonId, dragonId).at || 0,
     imgAdd: (dragonId, type, buf, w, h) => Number(q.slateImgAdd.run(dragonId, type, buf, w || null, h || null, Date.now()).lastInsertRowid),
     imgGet: (id) => q.slateImgGet.get(id) || null,
     imgMeta: (id) => q.slateImgMeta.get(id) || null,
