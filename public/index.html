@@ -5063,7 +5063,7 @@
     if (it.type === 'equip') {
       const out = Object.entries(it.bonus || {}).map(([k, v]) => `${statName(k)} +${v}`);
       if (it.expRare) out.push(`원정 귀한 물건 +${Math.round(it.expRare * 100)}%`);
-      if (it.mindWard) out.push(`깎이는 정신 −${Math.round((1 - it.mindWard) * 100)}%`);
+      if (it.mindWard) out.push(`깎이는 정신 ${it.mindWard > 1 ? '+' : '−'}${Math.round(Math.abs(1 - it.mindWard) * 100)}%`); // 1보다 크면 더 깎임 (심연의 왕관·속삭이는 반지)
       const g = it.gear || {}; // 희귀 장비의 특별한 효과 (사냥·강적에서만)
       if (g.vsCorrupt) out.push(`오염된 적에게 주는 피해 +${Math.round((g.vsCorrupt - 1) * 100)}%`);
       if (g.eliteAtk) out.push(`강적에게 주는 피해 +${Math.round((g.eliteAtk - 1) * 100)}%`);
