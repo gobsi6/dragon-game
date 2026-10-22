@@ -53,7 +53,7 @@ module.exports = function setupSlate({ io, db, entryOf }) {
       return {
         ok: true, gm: isGm(),
         post: { id: r.id, head: r.head, title: r.title, body: r.body, at: r.at, edited: r.edited_at || 0, pinned: !!r.pinned, who: who(r, 'cur_name', 'cur_kind'), mine: r.dragon_id === d.id, imgs: db.slate.imgsOf(r.id) },
-        comments: db.slate.comments(r.id).map((c) => ({ id: c.id, text: c.text, at: c.at, edited: !!c.edited_at, who: who(c), mine: c.dragon_id === d.id })),
+        comments: db.slate.comments(r.id).map((c) => ({ id: c.id, text: c.text, at: c.at, edited: !!c.edited_at, who: who(c), mine: c.dragon_id === d.id, parent: c.parent_id || null })),
       };
     });
     on('slate:post', (d, p) => {
@@ -105,10 +105,18 @@ module.exports = function setupSlate({ io, db, entryOf }) {
       if (!text) return { error: '남길 말을 적자.' };
       const now = Date.now();
       if (now - (socket.data.slateCmAt || 0) < RULES.commentGap) return { error: '숨을 고르는 중이다.' };
+      // 대댓글: parent가 있으면 그 답 밑에 (답글에 다시 답하면 맨 위 답 밑으로 모아 한 단계만)
+      let parent = null;
+      if (p.parent) {
+        parent = db.slate.commentGet(Number(p.parent));
+        if (!parent || parent.post_id !== r.id) return { error: '답할 답이 지워졌다.' };
+        if (parent.parent_id) parent = db.slate.commentGet(parent.parent_id) || parent;
+      }
       socket.data.slateCmAt = now;
-      db.slate.comment(r.id, d, text);
-      // 글쓴이에게: 누가 내 글에 답을 남겼는지 (모두에게 가는 알림에 실어 보내고, 화면이 글쓴이일 때만 알림)
-      changed({ id: r.id, comment: true, by: d.id, owner: r.dragon_id || null, byName: d.name, title: r.title });
+      db.slate.comment(r.id, d, text, parent ? parent.id : null);
+      // 글쓴이에게: 누가 내 글에 답을 남겼는지 · 답의 주인에게: 내 답에 답글이 달렸는지 (모두에게 가는 알림에 실어 보내고, 화면이 그 드래곤일 때만 알림)
+      const replyTo = p.parent ? db.slate.commentGet(Number(p.parent)) : null;
+      changed({ id: r.id, comment: true, by: d.id, owner: r.dragon_id || null, byName: d.name, title: r.title, replyTo: replyTo?.dragon_id || null });
       return { ok: true };
     }, true);
     on('slate:recomment', (d, p) => {

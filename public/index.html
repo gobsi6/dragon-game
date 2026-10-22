@@ -376,6 +376,14 @@
   .sl-ic.pin.on svg { fill: currentColor; }
   .sl-ic:focus-visible { outline: 2px solid var(--steel); outline-offset: -2px; }
   .sl-c .sl-own { margin: -6px -4px -6px auto; }
+  .sl-c.reply { margin-left: 26px; padding-left: 10px; border-top: 0; border-left: 2px solid var(--line-in); } /* 답글: 답 밑에 들여 씀 */
+  .sl-c .sl-cf { grid-column: 2; display: flex; }
+  .sl-rb { padding: 2px 0; border: 0; background: none; font: 600 11.5px var(--sans); color: var(--muted); cursor: pointer; }
+  .sl-rb:hover { color: var(--steel-d); text-decoration: underline; }
+  .sl-rin { margin: 4px 0 8px 36px; flex-wrap: wrap; } /* 답글 입력칸: 좁으면 단추가 아랫줄로 */
+  .sl-rin .input { flex: 1 1 160px; min-width: 0; }
+  .sl-rin .btn { flex: none; }
+  @media (max-width: 520px) { .sl-rin { margin-left: 12px; } .sl-c.reply { margin-left: 14px; } }
   .sl-c .sl-ic { width: 26px; height: 26px; }
   .sl-c .sl-ic svg { width: 14px; height: 14px; }
   .sl-cedit { display: flex; gap: 6px; margin-top: 2px; }
@@ -11179,8 +11187,13 @@
     box.appendChild(a);
     const cs = slEl('section', 'sl-cms');
     cs.appendChild(slEl('h4', '', `남긴 답 ${SL.comments.length}`));
-    for (const c of SL.comments) {
-      const r = slEl('div', 'sl-c');
+    // 답(맨 위)을 쓴 차례대로, 그 밑에 답글을 쓴 차례대로
+    const tops = SL.comments.filter((c) => !c.parent || !SL.comments.some((x) => x.id === c.parent));
+    const kids = (id) => SL.comments.filter((c) => c.parent === id);
+    const ordered = tops.flatMap((c) => [c, ...kids(c.id)]);
+    for (const c of ordered) {
+      const isReply = !!c.parent && SL.comments.some((x) => x.id === c.parent);
+      const r = slEl('div', `sl-c${isReply ? ' reply' : ''}`);
       const av = avaEl({ id: c.who.id, kind: c.who.kind, av: c.who.av }, 20);
       const h = slEl('div', 'h'); h.append(slEl('b', '', c.who.name), `${slAgo(c.at)}${c.edited ? ' · 고침' : ''}`);
       const body = slEl('p', '', c.text);
@@ -11199,9 +11212,31 @@
         body.replaceWith(f);
         i.focus(); i.setSelectionRange(i.value.length, i.value.length);
       }));
-      if (c.mine || SL.gm) ic.appendChild(slIcon('del', '답 지우기', () => { if (confirm('이 답을 지울까?')) slAct('slate:uncomment', { id: c.id }, () => loadSlatePost()); }));
+      if (c.mine || SL.gm) ic.appendChild(slIcon('del', '답 지우기', () => { if (confirm(!isReply && kids(c.id).length ? '이 답을 지울까? 달린 답글도 함께 지워진다.' : '이 답을 지울까?')) slAct('slate:uncomment', { id: c.id }, () => loadSlatePost()); }));
       if (ic.children.length) h.appendChild(ic);
-      r.append(av, h, body);
+      // 답글 달기: 누르면 바로 밑에 입력칸 (답글에 답하면 같은 답 밑에 모이고, 누구에게 답하는지 이름이 앞에 붙음)
+      const rb = slEl('button', 'sl-rb', '답글'); rb.type = 'button';
+      rb.addEventListener('click', () => {
+        const old = cs.querySelector('.sl-rin'); if (old) { const same = old.dataset.for === String(c.id); old.remove(); if (same) return; }
+        const f2 = slEl('div', 'sl-cin sl-rin'); f2.dataset.for = String(c.id);
+        const i2 = slEl('input', 'input'); i2.maxLength = SL.rules.comment; i2.placeholder = `${c.who.name}에게 답글 (${SL.rules.comment}자)`;
+        if (isReply) i2.value = `@${c.who.name} `;
+        const ok = slEl('button', 'btn primary', '남기기'); ok.type = 'button';
+        const no = slEl('button', 'btn', '취소'); no.type = 'button';
+        const send2 = () => { const v = i2.value.trim(); if (!v || v === `@${c.who.name}`) return toast('남길 말을 적자.'); ok.disabled = true; slAct('slate:comment', { id: p.id, text: v, parent: c.id }, () => loadSlatePost()); setTimeout(() => { ok.disabled = false; }, 800); };
+        ok.addEventListener('click', send2);
+        no.addEventListener('click', () => f2.remove());
+        i2.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) send2(); if (e.key === 'Escape') { e.stopPropagation(); f2.remove(); } });
+        f2.append(i2, ok, no);
+        // 그 답의 마지막 답글 뒤에 (답글이 없으면 바로 밑에)
+        const topId = isReply ? c.parent : c.id;
+        const after = [...cs.querySelectorAll('.sl-c')].filter((x) => x.dataset.top === String(topId)).pop() || r;
+        after.after(f2);
+        i2.focus(); i2.setSelectionRange(i2.value.length, i2.value.length);
+      });
+      r.dataset.top = String(isReply ? c.parent : c.id);
+      const ft = slEl('div', 'sl-cf'); ft.appendChild(rb);
+      r.append(av, h, body, ft);
       cs.appendChild(r);
     }
     if (!SL.comments.length) cs.appendChild(slEl('p', 'note', '아직 남긴 답이 없다.'));
@@ -13765,6 +13800,11 @@
     // 석판이 바뀜: 열어 둔 화면은 새로 받고, 닫혀 있으면 새 글 점만
     socket.on('slate:changed', (x) => {
       SL.latest = x.latest || 0;
+      if (x.comment && x.replyTo && x.replyTo === S.me?.id && x.by !== S.me?.id && x.byName && x.owner !== S.me?.id) {
+        SL.replyAt = Date.now();
+        const reading = $('slate-dlg').open && SL.page === 'post' && SL.cur === x.id;
+        if (!reading) toast(`${x.byName}${josa(x.byName, '이', '가')} 석판 '${x.title}'의 내 답에 답글을 남겼다.`);
+      }
       if (x.comment && x.owner && x.owner === S.me?.id && x.by !== S.me?.id && x.byName) {
         SL.replyAt = Date.now();
         const reading = $('slate-dlg').open && SL.page === 'post' && SL.cur === x.id; // 그 글을 보고 있으면 알림 대신 바로 보임

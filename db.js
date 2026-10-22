@@ -322,6 +322,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS slate_comments_post ON slate_comments(post_id, at);
 `);
 if (!db.prepare('PRAGMA table_info(slate_comments)').all().some((c) => c.name === 'edited_at')) db.exec('ALTER TABLE slate_comments ADD COLUMN edited_at INTEGER'); // 답 고친 때
+if (!db.prepare('PRAGMA table_info(slate_comments)').all().some((c) => c.name === 'parent_id')) db.exec('ALTER TABLE slate_comments ADD COLUMN parent_id INTEGER'); // 대댓글: 어느 답에 단 답인지
 // 석판 그림: 먼저 올려 두고(post_id 없음) 글을 새길 때 그 글에 붙임. 글이 지워지면 함께 지워짐
 db.exec(`
   CREATE TABLE IF NOT EXISTS slate_images (
@@ -494,20 +495,20 @@ const q = {
                             FROM slate_posts p LEFT JOIN dragons d ON d.id = p.dragon_id ORDER BY p.pinned DESC, p.at DESC LIMIT ?`),
   slateGet:     db.prepare(`SELECT p.*, COALESCE(d.name, p.name) AS cur_name, COALESCE(d.kind, p.kind) AS cur_kind, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar
                             FROM slate_posts p LEFT JOIN dragons d ON d.id = p.dragon_id WHERE p.id = ?`),
-  slateCms:     db.prepare(`SELECT c.id, c.dragon_id, COALESCE(d.name, c.name) AS name, COALESCE(d.kind, c.kind) AS kind, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar, c.text, c.at, c.edited_at
+  slateCms:     db.prepare(`SELECT c.id, c.dragon_id, COALESCE(d.name, c.name) AS name, COALESCE(d.kind, c.kind) AS kind, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar, c.text, c.at, c.edited_at, c.parent_id
                             FROM slate_comments c LEFT JOIN dragons d ON d.id = c.dragon_id WHERE c.post_id = ? ORDER BY c.at`),
   slateAdd:     db.prepare('INSERT INTO slate_posts (dragon_id, name, kind, head, title, body, at) VALUES (?, ?, ?, ?, ?, ?, ?)'),
   slateEdit:    db.prepare('UPDATE slate_posts SET head = ?, title = ?, body = ?, edited_at = ? WHERE id = ?'),
   slateDel:     db.prepare('DELETE FROM slate_posts WHERE id = ?'),
   slatePin:     db.prepare('UPDATE slate_posts SET pinned = ? WHERE id = ?'),
-  slateCmAdd:   db.prepare('INSERT INTO slate_comments (post_id, dragon_id, name, kind, text, at) VALUES (?, ?, ?, ?, ?, ?)'),
+  slateCmAdd:   db.prepare('INSERT INTO slate_comments (post_id, dragon_id, name, kind, text, at, parent_id) VALUES (?, ?, ?, ?, ?, ?, ?)'),
   slateCmGet:   db.prepare('SELECT * FROM slate_comments WHERE id = ?'),
-  slateCmDel:   db.prepare('DELETE FROM slate_comments WHERE id = ?'),
+  slateCmDel:   db.prepare('DELETE FROM slate_comments WHERE id = ? OR parent_id = ?'), // 답을 지우면 그 답에 달린 답글도 함께
   slateCmEdit:  db.prepare('UPDATE slate_comments SET text = ?, edited_at = ? WHERE id = ?'),
   slateLatest:  db.prepare('SELECT MAX(at) AS at FROM slate_posts'),
-  // 내 글에 남이 단 가장 새 답의 때 (석판 아이콘 점)
+  // 내 글이나 내가 단 답에 남이 단 가장 새 답의 때 (석판 아이콘 점)
   slateReplyAt: db.prepare(`SELECT MAX(c.at) AS at FROM slate_comments c JOIN slate_posts p ON p.id = c.post_id
-                            WHERE p.dragon_id = ? AND (c.dragon_id IS NULL OR c.dragon_id != ?)`),
+                            WHERE (p.dragon_id = ? OR c.parent_id IN (SELECT id FROM slate_comments WHERE dragon_id = ?)) AND (c.dragon_id IS NULL OR c.dragon_id != ?)`),
   slateImgAdd:  db.prepare('INSERT INTO slate_images (dragon_id, type, data, w, h, at) VALUES (?, ?, ?, ?, ?, ?)'),
   slateImgGet:  db.prepare('SELECT id, post_id, dragon_id, type, data FROM slate_images WHERE id = ?'),
   slateImgMeta: db.prepare('SELECT id, post_id, dragon_id FROM slate_images WHERE id = ?'),
@@ -755,12 +756,12 @@ module.exports = {
     edit: (id, head, title, body) => q.slateEdit.run(head, title, body, Date.now(), id),
     del: (id) => q.slateDel.run(id).changes > 0,
     pin: (id, on) => q.slatePin.run(on ? 1 : 0, id),
-    comment: (postId, d, text) => q.slateCmAdd.run(postId, d.id, d.name, d.kind, text, Date.now()).lastInsertRowid,
+    comment: (postId, d, text, parentId = null) => q.slateCmAdd.run(postId, d.id, d.name, d.kind, text, Date.now(), parentId).lastInsertRowid,
     commentGet: (id) => q.slateCmGet.get(id) || null,
-    uncomment: (id) => q.slateCmDel.run(id).changes > 0,
+    uncomment: (id) => q.slateCmDel.run(id, id).changes > 0,
     recomment: (id, text) => q.slateCmEdit.run(text, Date.now(), id),
     latest: () => q.slateLatest.get().at || 0,
-    replyAt: (dragonId) => q.slateReplyAt.get(dragonId, dragonId).at || 0,
+    replyAt: (dragonId) => q.slateReplyAt.get(dragonId, dragonId, dragonId).at || 0,
     imgAdd: (dragonId, type, buf, w, h) => Number(q.slateImgAdd.run(dragonId, type, buf, w || null, h || null, Date.now()).lastInsertRowid),
     imgGet: (id) => q.slateImgGet.get(id) || null,
     imgMeta: (id) => q.slateImgMeta.get(id) || null,
