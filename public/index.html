@@ -786,6 +786,7 @@
   .kin-more-item:hover { background: #EEF2F6; color: var(--ink); }
   .kin-more-item.off { color: #9EA3A7; }
   .kin-body { display: flex; flex-direction: column; gap: 8px; padding: 10px 14px 14px; border-top: 1px solid var(--line-in); }
+  .kin-away-note { padding: 8px 10px; border-left: 2px solid #C9922F; background: #FBF2DE; color: #6E4A12 !important; border-radius: 2px; }
   .kin-touch { display: flex; flex-direction: column; gap: 6px; }
   .kin-touch .kt-h { display: flex; align-items: baseline; gap: 8px; font-size: 12.5px; }
   .kin-touch .kt-h b { color: var(--ink-2); }
@@ -5918,7 +5919,7 @@
     const k = n.kin;
     const canAct = !!n.here && !S.me.exp;
     if (!k.home.length) note('아직 함께 사는 식구가 없다. 탐사나 원정 중에 아이나 알을 만날지도 모른다.');
-    else if (!canAct) note('식구를 돌보려면 둥지에 있어야 한다.');
+    else if (!canAct) { note(S.me.exp ? '원정 중에는 식구를 돌볼 수 없다.' : '둥지에 있을 때만 식구를 돌볼 수 있다.'); wrap.lastChild.classList.add('kin-away-note'); }
     for (const v of k.home) wrap.appendChild(kinCard(v, canAct));
     if (k.past.length) {
       const h2 = document.createElement('h3');
@@ -6008,6 +6009,7 @@
     return bits.join(' · ');
   }
   function kinCard(v, canAct, partner = null) {
+    KIN_CAN_ACT = !!canAct; // 교감 칸도 돌보기처럼 둥지에 있을 때만
     const R = S.kinRules;
     const card = document.createElement('div');
     card.className = 'kin-card';
@@ -6406,6 +6408,7 @@
   // ── 접히는 식구 카드: 한 줄 요약(얼굴·이름·유대·배·지금 상태)만 보이고, 누르면 아래로 펼쳐짐 ──
   // 이름 바꾸기·입양 보내기는 오른쪽 위 ⋯ 메뉴로. 펼친 식구는 둥지 창을 다시 그려도 펼친 채로
   const KIN_OPEN = new Map();
+  let KIN_CAN_ACT = true;
   let KIN_MENU = null; // ⋯ 메뉴가 열린 식구
   const KIN_ORDER = ['egg', 'age', 'traits', 'hint', 'touch', 'acts', 'about', 'friends', 'family', 'stats', 'look', 'diary', 'adopt'];
   function kinPills(v, partner) {
@@ -6441,7 +6444,7 @@
         : n.classList.contains('kin-diary') ? 'diary' : n.classList.contains('kin-adopt') ? 'adopt' : n.classList.contains('kin-look') ? (v.status === 'egg' ? 'egg' : 'look')
           : n.classList.contains('kin-meta') ? (v.status === 'egg' || v.runaway ? 'egg' : 'about') : 'about');
     // 교감: 쓰다듬기·안아 주기 등 (자기 둥지 식구만). 아이가 조르는 것이 있으면 그 단추가 빛남
-    if (!partner && v.touchActs?.length && v.status !== 'egg') {
+    if (!partner && KIN_CAN_ACT && v.touchActs?.length && v.status !== 'egg') {
       const tb = document.createElement('div');
       tb.className = 'kin-touch';
       tb.dataset.sec = 'touch';
