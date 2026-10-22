@@ -3034,7 +3034,7 @@
   </div>
   <form id="auth-form">
     <label class="field"><span>아이디</span><input class="input" name="username" autocomplete="username" required maxlength="16"></label>
-    <label class="field"><span>비밀번호</span><input class="input" name="password" type="password" autocomplete="current-password" required maxlength="64"></label>
+    <label class="field"><span>비밀번호 <small id="auth-pw-hint" hidden>8~64자</small></span><input class="input" name="password" type="password" autocomplete="current-password" required maxlength="64"></label>
     <label class="field" id="auth-link-f" hidden><span>계정</span><input class="input" name="link" maxlength="40" autocomplete="off">
       <small class="hint">GM과 연결된 계정을 적어주세요 (2차일 경우 1차 계정 입력)</small></label>
     <p class="error" id="auth-error" role="alert"></p>
@@ -3067,6 +3067,16 @@
       <div id="trait-pick-new"></div>
     </section>
     <label class="field"><span>이름 (2~12자)</span><input class="input" name="name" required maxlength="12" autocomplete="off"></label>
+    <!-- 성별과 특징: 비워도 시작할 수 있고, 나중에 설정에서 바꿀 수 있음 -->
+    <div class="field"><span>성별 <small>적지 않아도 된다</small></span>
+      <div class="bio-g">
+        <select id="cr-gender-sel" aria-label="성별 고르기"><option value="">정하지 않음</option><option>남성</option><option>여성</option><option value="__other">직접 쓰기</option></select>
+        <input class="input" id="cr-gender" maxlength="12" placeholder="12자까지" aria-label="성별 직접 쓰기" hidden>
+      </div>
+    </div>
+    <label class="field"><span>특징 <small id="cr-count">적지 않아도 된다 · 나중에 설정에서 바꿀 수 있다</small></span>
+      <textarea class="input" id="cr-desc" maxlength="300" rows="3" placeholder="예: 왼쪽 뿔이 부러져 있다. 반짝이는 것을 모으는 버릇이 있고, 비 오는 날을 싫어한다."></textarea>
+    </label>
     <p class="error" id="create-error" role="alert"></p>
     <div class="row"><button class="btn primary" type="submit">이 드래곤으로 시작</button></div>
   </form>
@@ -3885,7 +3895,7 @@
       <button class="linkbtn" type="button" id="pw-open">비밀번호 바꾸기</button>
       <div class="pw-form" id="pw-form" hidden>
         <label class="field"><span>지금 비밀번호</span><input class="input" type="password" id="pw-cur" autocomplete="current-password"></label>
-        <label class="field"><span>새 비밀번호 <small>4~64자</small></span><input class="input" type="password" id="pw-new" autocomplete="new-password"></label>
+        <label class="field"><span>새 비밀번호 <small>8~64자</small></span><input class="input" type="password" id="pw-new" autocomplete="new-password"></label>
         <label class="field"><span>새 비밀번호 한 번 더</span><input class="input" type="password" id="pw-new2" autocomplete="new-password"></label>
         <p class="error" id="pw-error" role="alert"></p>
         <div class="row"><button class="btn" type="button" id="pw-cancel">그만두기</button><button class="btn primary" type="button" id="pw-go">바꾸기</button></div>
@@ -4110,6 +4120,7 @@
     const mode = b.dataset.mode;
     for (const t of $('auth-tabs').children) { const on = t === b; t.classList.toggle('on', on); t.setAttribute('aria-selected', String(on)); }
     $('auth-link-f').hidden = mode !== 'register';
+    $('auth-pw-hint').hidden = mode !== 'register'; // 계정 만들 때만 길이 안내
     $('auth-go').dataset.mode = mode;
     $('auth-go').textContent = mode === 'register' ? '계정 만들기' : '로그인';
     $('auth-form').password.autocomplete = mode === 'register' ? 'new-password' : 'current-password';
@@ -4121,6 +4132,7 @@
     const f = e.target;
     $('auth-error').textContent = '';
     try {
+      if (mode === 'register' && f.password.value.length < 8) { $('auth-error').textContent = '비밀번호는 8자 이상으로 정해야 한다.'; return; } // 서버에 보내기 전에 바로 알려 줌
       const res = await fetch(`/api/${mode}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -4240,12 +4252,17 @@
       box.appendChild(b);
     }
   }
+  // 성별 '직접 쓰기'를 고르면 적는 칸이 열림 · 특징은 남은 글자 수
+  $('cr-gender-sel').addEventListener('change', () => { const o = $('cr-gender-sel').value === '__other'; $('cr-gender').hidden = !o; if (o) $('cr-gender').focus(); });
+  $('cr-desc').addEventListener('input', () => { const n = $('cr-desc').value.length; $('cr-count').textContent = n ? `${n} / 300` : '적지 않아도 된다 · 나중에 설정에서 바꿀 수 있다'; });
   $('create-form').addEventListener('submit', (e) => {
     e.preventDefault();
     $('create-error').textContent = '';
     if (!S.pickKind) return ($('create-error').textContent = '드래곤 종류를 골라야 한다.');
     if (!TP.good || !TP.bad) return ($('create-error').textContent = '긍정 특성과 부정 특성을 하나씩 골라야 한다.');
-    socket.emit('dragon:create', { name: e.target.name.value, kind: S.pickKind, alloc, traits: { good: TP.good, bad: TP.bad } }, (res) => {
+    const gsel = $('cr-gender-sel').value;
+    const bio = { gender: gsel === '__other' ? $('cr-gender').value.trim() : gsel, desc: $('cr-desc').value };
+    socket.emit('dragon:create', { name: e.target.name.value, kind: S.pickKind, alloc, traits: { good: TP.good, bad: TP.bad }, bio }, (res) => {
       if (res.error) return ($('create-error').textContent = res.error);
       setMe(res.dragon);
       show('game');
@@ -12575,7 +12592,7 @@
   $('pw-go').addEventListener('click', () => {
     const cur = $('pw-cur').value, next = $('pw-new').value;
     if (next !== $('pw-new2').value) { $('pw-error').textContent = '새 비밀번호 두 칸이 서로 다르다.'; return; }
-    if (next.length < 4) { $('pw-error').textContent = '새 비밀번호는 4자 이상이어야 한다.'; return; }
+    if (next.length < 8) { $('pw-error').textContent = '새 비밀번호는 8자 이상이어야 한다.'; return; }
     socket.emit('account:password', { current: cur, next }, (res) => {
       if (res.error) { $('pw-error').textContent = res.error; return; }
       closePw();

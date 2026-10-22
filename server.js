@@ -64,6 +64,42 @@ const AVATAR_MAX = 400000;  // 프로필 그림 최대 크기 (base64 글자 수
 const AVATAR_COOLDOWN = 5000;
 
 const app = express();
+// ── 보안 ──
+// Railway는 앞에 프록시가 있어서, 접속한 사람의 진짜 주소는 X-Forwarded-For에 담겨 옴 (로그인 시도 제한에 씀)
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
+// 보안 머리말: 다른 사이트가 이 게임을 몰래 틀 안에 띄우지 못하게(클릭 가로채기), 파일 종류를 속이지 못하게,
+// 화면이 불러올 수 있는 곳을 이 서버와 구글 글꼴로만 (스크립트를 끼워 넣어도 바깥으로 정보를 보내기 어렵게)
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com data:",
+  "img-src 'self' data: blob:",
+  "connect-src 'self' ws: wss:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join('; ');
+app.use((req, res, next) => {
+  res.set('Content-Security-Policy', CSP);
+  res.set('X-Frame-Options', 'DENY');
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.set('Referrer-Policy', 'same-origin');
+  res.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  if (req.secure) res.set('Strict-Transport-Security', 'max-age=15552000');
+  next();
+});
+// 로그인·가입 시도 제한: 같은 곳(주소)에서 너무 많이 틀리면, 같은 아이디로 너무 많이 틀리면 잠시 막음 (비밀번호 맞히기 방지)
+const LIMIT = {
+  login: { ip: 20, user: 8, windowMs: 15 * 60 * 1000 },   // 15분 동안 같은 주소 20번 · 같은 아이디 8번 틀리면
+  register: { ip: 5, windowMs: 60 * 60 * 1000 },          // 한 시간에 같은 주소에서 계정 5개까지
+};
+const tries = new Map(); // 열쇠 → [시각, ...]
+const hit = (key, windowMs) => { const now = Date.now(); const a = (tries.get(key) || []).filter((t) => now - t < windowMs); a.push(now); tries.set(key, a); return a.length; };
+const count = (key, windowMs) => { const now = Date.now(); const a = (tries.get(key) || []).filter((t) => now - t < windowMs); tries.set(key, a); return a.length; };
+setInterval(() => { const now = Date.now(); for (const [k, a] of tries) if (!a.some((t) => now - t < 60 * 60 * 1000)) tries.delete(k); }, 10 * 60 * 1000).unref?.();
 app.use(compression()); // 화면 파일을 압축해서 보냄 (index.html 480KB → 약 120KB)
 app.use(express.json({ limit: '10kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -173,7 +209,26 @@ app.get('/api/version', (req, res) => {
 });
 
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, { maxHttpBufferSize: 1e6 }); // 한 번에 받는 크기 (프로필 그림이 가장 큼)
+// 한 연결이 짧은 사이에 너무 많은 요청을 보내면 잠시 무시 (서버를 멈추게 하려는 도배 방지). 보통 놀이는 1초에 몇 번이 고작
+const FLOOD = { perSec: 30, burst: 60 };
+io.use((socket, next) => {
+  let tokens = FLOOD.burst, last = Date.now(), warned = 0;
+  socket.use((packet, nxt) => {
+    const now = Date.now();
+    tokens = Math.min(FLOOD.burst, tokens + ((now - last) / 1000) * FLOOD.perSec);
+    last = now;
+    if (tokens < 1) {
+      const ack = packet[packet.length - 1];
+      if (typeof ack === 'function') ack({ error: '너무 빨리 누르고 있다. 잠시 숨을 고르자.' });
+      if (now - warned > 10000) { warned = now; console.warn(`[도배] ${socket.id} ${packet[0]}`); }
+      return;
+    }
+    tokens -= 1;
+    nxt();
+  });
+  next();
+});
 
 // ── 도우미 ─────────────────────────────────────────
 
@@ -204,12 +259,14 @@ app.post('/api/register', async (req, res) => {
   if (!/^[가-힣A-Za-z0-9_]{2,16}$/.test(username)) {
     return res.status(400).json({ error: '아이디는 한글, 영문, 숫자, _로 2~16자까지 쓸 수 있다.' });
   }
-  if (password.length < 4 || password.length > 64) {
-    return res.status(400).json({ error: '비밀번호는 4~64자로 정해야 한다.' });
+  if (password.length < 8 || password.length > 64) { // 새 계정은 8자 이상 (이미 있는 계정은 그대로 로그인됨)
+    return res.status(400).json({ error: '비밀번호는 8~64자로 정해야 한다.' });
   }
+  if (count(`reg:${req.ip}`, LIMIT.register.windowMs) >= LIMIT.register.ip) return res.status(429).json({ error: '계정을 너무 많이 만들었다. 잠시 뒤에 다시 해 보자.' });
   if (db.getUserByName(username)) {
     return res.status(409).json({ error: '이미 있는 아이디다. 다른 아이디를 골라야 한다.' });
   }
+  hit(`reg:${req.ip}`, LIMIT.register.windowMs);
   const isGm = db.countUsers() === 0; // 처음 만든 계정이 GM
   const link = str(req.body?.link).replace(/\s+/g, ' ').trim().slice(0, 40); // GM과 연결된 계정 (GM 확인용 메모)
   // 비밀번호 암호화(약 70ms)는 비동기로: 그동안 다른 드래곤의 행동이 멈추지 않게
@@ -224,10 +281,16 @@ app.post('/api/register', async (req, res) => {
 app.post('/api/login', async (req, res) => {
   const username = str(req.body?.username);
   const password = typeof req.body?.password === 'string' ? req.body.password : '';
+  const L = LIMIT.login, ipKey = `login:${req.ip}`, userKey = `login-user:${username.toLowerCase()}`;
+  if (count(ipKey, L.windowMs) >= L.ip || count(userKey, L.windowMs) >= L.user) {
+    return res.status(429).json({ error: '비밀번호를 너무 여러 번 틀렸다. 15분쯤 뒤에 다시 해 보자.' });
+  }
   const user = db.getUserByName(username);
   if (!user || !(await bcrypt.compare(password, user.pw_hash))) {
+    hit(ipKey, L.windowMs); hit(userKey, L.windowMs);
     return res.status(401).json({ error: '아이디나 비밀번호가 맞지 않는다.' });
   }
+  tries.delete(userKey); // 맞히면 그 아이디의 틀린 횟수는 지움
   const token = crypto.randomBytes(24).toString('hex');
   db.createSession(token, user.id);
   res.json({ token });
@@ -1002,6 +1065,12 @@ function onConnect(socket) {
     const { hpMax, enMax } = derive(final);
     const created = db.createDragon(user.id, name, kind, KINDS[kind].home, final, hpMax, enMax);
     logic.chooseTraits(created, good, bad);
+    // 성별과 특징: 처음부터 적어 둘 수 있음 (비워도 됨, 나중에 설정에서 바꿈. 규칙은 bio:set과 같음)
+    {
+      const gender = str(payload?.bio?.gender).replace(/\s+/g, ' ').slice(0, BIO.genderMax);
+      const desc = (typeof payload?.bio?.desc === 'string' ? payload.bio.desc : '').replace(/\r/g, '').replace(/\n{3,}/g, '\n\n').trim().slice(0, BIO.descMax);
+      if (gender || desc) { created.bio = { gender, desc }; db.setBio(created.id, created.bio); }
+    }
     created.hp = logic.hpCap(created); created.en = logic.enCap(created); created.ap = logic.apCap(created); // 처음엔 행동력도 가득
     // 먼 여행을 떠난 드래곤의 의지: 능력치 포인트와 칭호
     const legacy = db.legacyGet(user.id);
@@ -1893,7 +1962,7 @@ function onConnect(socket) {
     const cur = typeof payload?.current === 'string' ? payload.current : '';
     const next = typeof payload?.next === 'string' ? payload.next : '';
     if (!u || !cur || !(await bcrypt.compare(cur, u.pw_hash))) return ack({ error: '지금 비밀번호가 맞지 않는다.' });
-    if (next.length < 4 || next.length > 64) return ack({ error: '새 비밀번호는 4~64자로 정해야 한다.' });
+    if (next.length < 8 || next.length > 64) return ack({ error: '새 비밀번호는 8~64자로 정해야 한다.' });
     if (next === cur) return ack({ error: '지금 비밀번호와 다른 비밀번호를 정하자.' });
     db.setPassword(u.id, await bcrypt.hash(next, 10), socket.handshake.auth?.token || null);
     ack({ ok: true });
