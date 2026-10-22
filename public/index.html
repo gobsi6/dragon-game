@@ -11051,6 +11051,7 @@
     edit: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/></svg>',
     pin: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6l-1 5 3 3v2H7v-2l3-3z"/><path d="M12 14v6"/></svg>',
     del: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14"/><path d="M10 7V4.5h4V7"/><path d="M7 7l1 13h8l1-13"/><path d="M10.5 11v5.5M13.5 11v5.5"/></svg>',
+    reply: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5"/><path d="M4 12h9a6 6 0 0 1 6 6v1"/></svg>',
   };
   const slIcon = (kind, label, fn, cls = '') => { const b = slEl('button', `sl-ic ${kind} ${cls}`); b.type = 'button'; b.innerHTML = SL_IC[kind]; b.title = label; b.setAttribute('aria-label', label); b.addEventListener('click', fn); return b; };
   const slKey = () => `dragon-slate-seen:${S.me?.id || 0}`;
@@ -11215,8 +11216,7 @@
       if (c.mine || SL.gm) ic.appendChild(slIcon('del', '답 지우기', () => { if (confirm(!isReply && kids(c.id).length ? '이 답을 지울까? 달린 답글도 함께 지워진다.' : '이 답을 지울까?')) slAct('slate:uncomment', { id: c.id }, () => loadSlatePost()); }));
       if (ic.children.length) h.appendChild(ic);
       // 답글 달기: 누르면 바로 밑에 입력칸 (답글에 답하면 같은 답 밑에 모이고, 누구에게 답하는지 이름이 앞에 붙음)
-      const rb = slEl('button', 'sl-rb', '답글'); rb.type = 'button';
-      rb.addEventListener('click', () => {
+      const rb = slIcon('reply', '답글 달기', () => {
         const old = cs.querySelector('.sl-rin'); if (old) { const same = old.dataset.for === String(c.id); old.remove(); if (same) return; }
         const f2 = slEl('div', 'sl-cin sl-rin'); f2.dataset.for = String(c.id);
         const i2 = slEl('input', 'input'); i2.maxLength = SL.rules.comment; i2.placeholder = `${c.who.name}에게 답글 (${SL.rules.comment}자)`;
@@ -11234,9 +11234,10 @@
         after.after(f2);
         i2.focus(); i2.setSelectionRange(i2.value.length, i2.value.length);
       });
+      ic.prepend(rb);
+      if (!h.contains(ic)) h.appendChild(ic);
       r.dataset.top = String(isReply ? c.parent : c.id);
-      const ft = slEl('div', 'sl-cf'); ft.appendChild(rb);
-      r.append(av, h, body, ft);
+      r.append(av, h, body);
       cs.appendChild(r);
     }
     if (!SL.comments.length) cs.appendChild(slEl('p', 'note', '아직 남긴 답이 없다.'));
