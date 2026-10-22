@@ -5,7 +5,7 @@
 
 const {
   REGIONS, ITEMS, REGION_LOOT, CREATURES, SCENES, SCENES_HUMAN, RULES, RECIPES, SLOTS, STANCES, SHOPS, REP_TIERS, repTier, TRADE, NEST, hoardTier, RAID, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, ELEMENTS,
-  CRAFT, SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, SKILLS, FISHING, RUIN, FACILITY, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG, BOSSES, ACHIEVEMENTS, KEEPSAKES,
+  HOARD_TIERS, CRAFT, SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, SKILLS, FISHING, RUIN, FACILITY, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG, BOSSES, ACHIEVEMENTS, KEEPSAKES,
 } = require('./game-data');
 
 const SR = STANCE_RULES;
@@ -220,7 +220,7 @@ function bonusOf(d) {
     for (const [k, v] of Object.entries(it.bonus || {})) b[k] += v;
     expRare += it.expRare || 0;
     // 강화(+1~+3)와 걸작: 그 장신구의 주 능력치에 더함
-    const g = gearOf(d)[id];
+    const g = gearOn(d, id);
     if (g) { const main = mainStat(it); if (main) b[main] += (g.plus || 0) + (g.mw ? 1 : 0); } // 걸작은 이제 따로 된 물건(id__mw)이라 g.mw는 옛 기록에만
   }
   b.majesty += fameTier(d.fame || 0).majesty; // 용족 명성
@@ -987,6 +987,10 @@ const gearOf = (d) => {
   for (const g of Object.values(c.gear)) if (g && g.plus > CRAFT.enhance.length) g.plus = CRAFT.enhance.length; // 최대 강화가 줄었을 때 예전 기록을 맞춤
   return c.gear;
 };
+// 강화·각인은 같은 장신구 여러 개 가운데 '한 개'에만 붙음. at: 그 한 개가 어디 있는지 ('eq' 착용 중 / 'inv' 소지품)
+// (예전 기록에는 at이 없음: 그 장신구를 차고 있으면 착용 중인 것으로 봄)
+const gearAt = (d, id) => gearOf(d)[id]?.at || (Object.values(equipOf(d)).includes(id) ? 'eq' : 'inv');
+const gearOn = (d, id) => { const g = gearOf(d)[id]; return g && gearAt(d, id) === 'eq' ? g : null; }; // 차고 있는 그 한 개가 강화된 것일 때만
 const mainStat = (it) => Object.entries(it.bonus || {}).sort((a, b) => b[1] - a[1])[0]?.[0] || null; // 가장 크게 올려 주는 능력치
 const knownRecipes = (d) => { const c = combatJson(d); if (!Array.isArray(c.recipes)) c.recipes = []; return c.recipes; };
 const recipeKnown = (d, r) => !r.hidden || knownRecipes(d).includes(r.out);
@@ -995,8 +999,7 @@ const forgeP = (d) => (atForge(d) ? facPower(d, 'forge') : 0); // 공방의 힘 
 // 각인: 속성별 피해 배율 (착용한 장신구에 새긴 것만)
 function engraveOf(d) {
   const m = {};
-  const g = gearOf(d);
-  for (const id of Object.values(equipOf(d))) { const e = g[id]?.elem; if (e) m[e] = (m[e] || 1) * CRAFT.engrave.power; }
+  for (const id of Object.values(equipOf(d))) { const e = gearOn(d, id)?.elem; if (e) m[e] = (m[e] || 1) * CRAFT.engrave.power; }
   return m;
 }
 // 대성공 확률 (focus: 불 조절 점수 0~1, 없으면 null)
@@ -1110,7 +1113,7 @@ function enhanceGear(d, id, have) {
   const rate = Math.min(1, step.rate + (atForge(d) ? CRAFT.forgeRate * (1 + FACILITY.list.forge.rate * (forgeP(d) - 1)) : 0));
   const lines = [];
   if (Math.random() < rate) {
-    g[id] = { ...(g[id] || {}), plus: lv + 1 };
+    g[id] = { ...(g[id] || {}), plus: lv + 1, at: gearAt(d, id) }; // 강화된 한 개 (없었으면 차고 있는 것, 아니면 소지품의 하나)
     lines.push(`망치 소리가 울려 퍼졌다. ${it.name}${josa(it.name, '이', '가')} +${lv + 1}로 강화되었다! (${STATS.find((x) => x.key === mainStat(it))?.name || '능력치'} +1)`);
     if (lv + 1 === CRAFT.enhance.length) chron(d, 'mark', `${it.name}${josa(it.name, '을', '를')} +${lv + 1}까지 강화했다.`);
   } else {
@@ -1132,14 +1135,20 @@ function engraveGear(d, id, elem, have) {
   for (const [x, n] of Object.entries(need)) if (have(x) < n) return { error: `${ITEMS[x].name}${josa(ITEMS[x].name, '이', '가')} 모자란다. (${n}개 필요)` };
   d.gold -= CRAFT.engrave.gold;
   const old = g[id]?.elem;
-  g[id] = { ...(g[id] || {}), elem };
+  g[id] = { ...(g[id] || {}), elem, at: gearAt(d, id) };
   const items = Object.entries(need).map(([x, n]) => ({ id: x, qty: -n }));
   return { title: '각인', lines: [`${it.name}에 ${ELEMENTS[elem]} 룬을 새겼다.${old ? ` (먼저 있던 ${ELEMENTS[old]} 룬은 지워졌다)` : ''}`, `착용하면 ${ELEMENTS[elem]} 공격 피해 +${Math.round((CRAFT.engrave.power - 1) * 100)}%`], items, gold: -CRAFT.engrave.gold };
 }
 // 장신구를 모두 잃으면 기록도 지움 (팔거나 버리거나 줬을 때)
+// 같은 것이 여러 개면 보통 것부터 나가고, 강화된 한 개는 마지막까지 남음 (소지품에서 다 나가면 그때 지움)
 function tidyGear(d, have) {
-  const g = gearOf(d);
-  for (const id of Object.keys(g)) if (!ownsGear(d, id, have)) delete g[id];
+  const g = gearOf(d), worn = Object.values(equipOf(d));
+  for (const id of Object.keys(g)) {
+    const at = gearAt(d, id);
+    if (at === 'eq' && !worn.includes(id)) { if (have(id) > 0) g[id].at = 'inv'; else delete g[id]; }
+    else if (at === 'inv' && have(id) < 1) delete g[id];
+    else if (!g[id].at) g[id].at = at;
+  }
 }
 // ── 마을 제작 의뢰: 마을마다 하루 3개 (날마다 바뀜, 모두에게 같음) ──
 const dayIdx = (now = Date.now()) => Math.floor((now + 9 * 3600000) / 86400000); // 한국 날짜
@@ -1149,6 +1158,12 @@ const ORDER_SKIP = (() => {
   const inRuin = new Set(), inOther = new Set();
   for (const [r, t] of Object.entries(REGION_LOOT)) for (const arr of Object.values(t)) for (const id of arr) (r.startsWith('ruin_') ? inRuin : inOther).add(id);
   return new Set([...[...inRuin].filter((id) => !inOther.has(id)), 'rival_scale']);
+})();
+// 의뢰 물건 대신 낼 수 있는 더 좋은 것: 장신구는 걸작, 요리는 정성 들인 것 (보상 CRAFT.orders.bonus배)
+const ORDER_ALT = (() => {
+  const m = {};
+  for (const [id, it] of Object.entries(ITEMS)) { if (it.mwOf) m[it.mwOf] = id; if (it.cooked) m[it.cooked] = id; }
+  return m;
 })();
 function ordersOf(town, now = Date.now()) {
   const pool = RECIPES.filter((r) => !r.hidden && r.wis <= CRAFT.orders.maxWis && ['use', 'equip'].includes(ITEMS[r.out].type) && !ITEMS[r.out].use?.nestWard
@@ -1162,7 +1177,7 @@ function ordersOf(town, now = Date.now()) {
     if (used.has(id)) continue;
     used.add(id);
     const qty = ITEMS[id].type === 'equip' ? 1 : 1 + Math.floor(rnd() * 3);
-    out.push({ key: `${town}:${id}`, id, qty, gold: Math.round((ITEMS[id].value || 10) * qty * CRAFT.orders.gold), rep: CRAFT.orders.rep });
+    out.push({ key: `${town}:${id}`, id, qty, gold: Math.round((ITEMS[id].value || 10) * qty * CRAFT.orders.gold), rep: CRAFT.orders.rep, alt: ORDER_ALT[id] || null, bonus: CRAFT.orders.bonus || 1 });
   }
   return out;
 }
@@ -1173,7 +1188,12 @@ function ordersView(d, now = Date.now()) {
   const done = c.orders?.day === dayIdx(now) ? c.orders.done || [] : [];
   return { town, list: ordersOf(town, now).map((o) => ({ ...o, done: done.includes(o.key) })), resetAt: (dayIdx(now) + 1) * 86400000 - 9 * 3600000 };
 }
-function fillOrder(d, key, have, now = Date.now()) {
+// 납품할 것을 플레이어가 고름: 보통 물건으로만, 또는 alt(걸작·정성 들인 것)를 먼저 쓰고 모자란 몫만 보통 물건으로 (alt 몫은 보상을 더 받음)
+function orderPay(o, nAlt) {
+  const per = o.gold / o.qty;
+  return Math.round(per * (o.qty - nAlt) + per * nAlt * (o.bonus || 1));
+}
+function fillOrder(d, key, have, now = Date.now(), useAlt = false) {
   const err = marketCheck(d);
   if (err) return err;
   const o = ordersOf(d.region, now).find((x) => x.key === key);
@@ -1181,12 +1201,23 @@ function fillOrder(d, key, have, now = Date.now()) {
   const c = combatJson(d);
   if (c.orders?.day !== dayIdx(now)) c.orders = { day: dayIdx(now), done: [] };
   if (c.orders.done.includes(key)) return { error: '오늘은 이미 이 의뢰를 마쳤다.' };
-  if (have(o.id) < o.qty) return { error: `${ITEMS[o.id].name} ${o.qty}개가 있어야 한다.` };
+  const nAlt = useAlt && o.alt ? Math.min(have(o.alt), o.qty) : 0;
+  const n = o.qty - nAlt;
+  if (useAlt && !nAlt) return { error: `${ITEMS[o.alt || o.id].name}${josa(ITEMS[o.alt || o.id].name, '이', '가')} 없다.` };
+  if (have(o.id) < n) return { error: nAlt ? `모자란 몫을 채울 ${ITEMS[o.id].name}${josa(ITEMS[o.id].name, '이', '가')} ${n}개 더 있어야 한다.` : `${ITEMS[o.id].name} ${o.qty}개가 있어야 한다.` };
   c.orders.done.push(key);
-  d.gold += o.gold;
+  const gold = orderPay(o, nAlt);
+  d.gold += gold;
   addRep(d, d.region, o.rep);
-  const what = `${ITEMS[o.id].name}${o.qty > 1 ? ` ${o.qty}개` : ''}`;
-  return { title: '의뢰', lines: [`${what}${josa(o.qty > 1 ? '개' : ITEMS[o.id].name, '을', '를')} 건네자 의뢰인이 활짝 웃었다.`, `금화 ${o.gold}닢, ${REGIONS[d.region].name} 평판 +${o.rep}`], items: [{ id: o.id, qty: -o.qty }], gold: o.gold };
+  const items = [];
+  if (n) items.push({ id: o.id, qty: -n });
+  if (nAlt) items.push({ id: o.alt, qty: -nAlt });
+  const altPart = `${ITEMS[o.alt]?.name || ''}${nAlt > 1 ? ` ${nAlt}개` : ''}`;
+  const what = nAlt ? `${altPart}${n ? `${josa(nAlt > 1 ? '개' : altPart, '과', '와')} ${ITEMS[o.id].name}${n > 1 ? ` ${n}개` : ''}` : ''}` : `${ITEMS[o.id].name}${o.qty > 1 ? ` ${o.qty}개` : ''}`;
+  const lines = [`${what}${josa(what.endsWith('개') ? '개' : what, '을', '를')} 건네자 의뢰인이 활짝 웃었다.`];
+  if (nAlt) lines.push(ITEMS[o.alt].mwOf ? '솜씨에 감탄한 의뢰인이 웃돈을 얹어 주었다.' : '정성이 듬뿍 담긴 것을 알아본 의뢰인이 웃돈을 얹어 주었다.');
+  lines.push(`금화 ${gold}닢, ${REGIONS[d.region].name} 평판 +${o.rep}`);
+  return { title: '의뢰', lines, items, gold };
 }
 // ── 둥지 공방(화로) ──
 function buildForge(d, have) {
@@ -1209,7 +1240,7 @@ function craftView(d) {
     hiddenLeft: RECIPES.filter((r) => r.hidden && !knownRecipes(d).includes(r.out)).length,
     great: Math.round(greatChance(d) * 1000) / 10,
     forge: atForge(d), hasForge: !!(d.nest && nestInfo(d).forge),
-    gear: { ...gearOf(d) },
+    gear: Object.fromEntries(Object.entries(gearOf(d)).map(([id, g]) => [id, { ...g, at: gearAt(d, id) }])), // at: 강화된 한 개가 어디 있는지
   };
 }
 
@@ -1343,12 +1374,19 @@ function useItem(d, id, have, opts = {}) {
 }
 
 // ── 장신구 착용 ────────────────────────────────────
-function equip(d, id, have) {
+function equip(d, id, have, plain = false) {
   if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
   const it = ITEMS[id];
   if (!it || it.type !== 'equip') return { error: '착용할 수 없는 물건이다.' };
   if (have(id) < 1) return { error: '가지고 있지 않다.' };
-  const eq = equipOf(d);
+  const eq = equipOf(d), g = gearOf(d);
+  const prev = eq[it.slot];
+  const prevAt = prev && g[prev] ? gearAt(d, prev) : null;
+  if (prev && prev !== id && prevAt === 'eq') g[prev].at = 'inv'; // 벗은 것이 강화된 한 개였으면 소지품으로
+  if (g[id] && gearAt(d, id) === 'inv') {
+    // 소지품에 강화된 한 개가 있음: 보통 것을 고르지 않았다면 그것을 참 (보통 것은 강화된 것 말고도 하나 더 있어야 고를 수 있음)
+    if (!(plain && have(id) >= 2)) g[id].at = 'eq';
+  } else if (g[id] && prev === id && prevAt === 'eq' && plain) g[id].at = 'inv'; // 같은 것을 보통 것으로 바꿔 참
   const items = [{ id, qty: -1 }];
   if (eq[it.slot]) items.push({ id: eq[it.slot], qty: 1 }); // 원래 차고 있던 것은 소지품으로
   eq[it.slot] = id;
@@ -1362,6 +1400,8 @@ function unequip(d, slot) {
   const eq = equipOf(d);
   if (!eq[slot]) return { error: '비어 있는 자리다.' };
   const items = [{ id: eq[slot], qty: 1 }];
+  const g = gearOf(d);
+  if (g[eq[slot]] && gearAt(d, eq[slot]) === 'eq') g[eq[slot]].at = 'inv'; // 강화된 한 개가 소지품으로
   delete eq[slot];
   clampVitals(d);
   return { ok: true, items };
@@ -1738,6 +1778,19 @@ function nestInfo(d) {
   return n;
 }
 const nestTier = (d) => NEST.tiers[d.nest ? nestInfo(d).tier : 0];
+// 둥지 한 줄 요약 (내 둥지 창·프로필·동료 목록): 단계, 보물더미 단계(금액은 빼고), 지은 시설, 식구 (home: life.summary의 home)
+function nestLine(d, home) {
+  if (!d.nest) return null;
+  const ni = nestInfo(d);
+  const ht = hoardTier(ni.value || 0);
+  const fac = facOf(d);
+  return {
+    region: d.nest, tier: ni.tier,
+    hoard: ht ? HOARD_TIERS.indexOf(ht) + 1 : 0,
+    facs: Object.keys(FACILITY.list).filter((id) => fac[id]),
+    kin: (home || []).map((k) => ({ name: k.name, type: k.type, egg: k.status === 'egg', away: k.away || null })),
+  };
+}
 // ── 둥지 시설 ─────────────────────────────────────
 // 지은 시설 { 시설 id: { at } }. 예전의 화로(forge: true)는 공방으로 옮김
 function facOf(d) {
@@ -2166,4 +2219,6 @@ module.exports = {
   dexOf, dexMeet, dexWin, dexItems, dexBackfill, dexView, dexSeen, dexHasNew, // 도감
   checkAch, achView, achSeen, achHasNew, // 업적
   chestOf, chestAdd, chestValue, chestView, chestMigrate, crownOn, // 보물 상자 · 화관
+  nestLine, // 둥지 한 줄 요약
+  gearAt, gearOn, // 강화된 한 개가 어디 있는지
 };

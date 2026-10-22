@@ -3,7 +3,7 @@
 // - 강적·결투장: 매 턴 직접 고름 (실시간 결투에서 시간을 넘기면 자동으로 고름)
 // 전투 하나 = battle { kind, turn, a, b, log, over, winner }. a·b는 싸우는 쪽(fighter)
 const {
-  KIN, COMBAT, CRAFT, BREATHS, BREATH_COST, SKILLS, STATUS, ITEMS, RULES, STANCE_RULES, MIND, PLACES, PLACE_RULES, COMBOS, ENRAGE, RAID, BOSSES, BOSS, RUIN, REGIONS,
+  KIN, KIN_GROW, COMBAT, CRAFT, BREATHS, BREATH_COST, SKILLS, STATUS, ITEMS, RULES, STANCE_RULES, MIND, PLACES, PLACE_RULES, COMBOS, ENRAGE, RAID, BOSSES, BOSS, RUIN, REGIONS,
 } = require('./game-data');
 const logic = require('./game-logic');
 
@@ -80,7 +80,7 @@ function fromDragon(d, context) {
     id: d.id, name: d.name, kind: d.kind, creature: false, av: d.has_avatar ? d.avatar_ver : 0, // 프로필 그림 (결투·진정에서 상대에게 보임)
     hp: hunt ? d.hp : hpMax, hp0: hunt ? d.hp : hpMax, hpMax, en: hunt ? d.en : enMax, enMax, // hp0: 싸움을 시작할 때의 체력 (잃은 체력 계산)
     atk: atk * (bf?.atk || 1) * (ti.atk || 1), def: st.scale, spd: st.wing + (bf?.spd || 0), mag: st.wisdom * (bf?.mag || 1), maj: st.majesty,
-    taken: (hunt ? tm.huntDmg * (d.perks?.knight ? 0.7 : 1) : 1) * (bf?.taken || 1) * (ti.taken || 1) * love * (gm?.taken || 1), // 받는 피해 배율
+    taken: (hunt ? tm.huntDmg * (d.perks?.knight ? 0.7 : 1) * (ally?.guard ? KIN_GROW.shieldmate : 1) : 1) * (bf?.taken || 1) * (ti.taken || 1) * love * (gm?.taken || 1), // 받는 피해 배율 (등을 맡기는 새끼가 곁에 있으면 조금 덜)
     vsCorrupt: gm?.vsCorrupt || 1,
     healMult: ti.heal || 1,
     engrave: logic.engraveOf(d), // 장신구에 새긴 속성: 그 속성 공격 피해 배율
@@ -263,10 +263,10 @@ const STATUS_LIST = (ks) => ks.map((k) => STATUS[k]).join('·');
 
 // 피해 계산. magic: 숨결처럼 비늘을 덜 타는 공격
 function damage(att, def, power, opt = {}) {
-  const { magic = false, element = null } = opt;
+  const { magic = false, element = null, armorK = 0.5 } = opt; // armorK: 상대 비늘을 얼마나 받는지 (보통 공격 0.5, 함께 싸우는 새끼는 덜)
   let atk = att.atk * (has(att, 'weaken') ? 0.7 : 1) * (has(att, 'fury') ? 1.35 : 1); // 역린
   let armor = def.def * (has(def, 'acid') ? 0.5 : 1);
-  let raw = magic ? (att.mag * 1.0 + atk * 0.5) * power - armor * 0.25 : atk * power - armor * 0.5;
+  let raw = magic ? (att.mag * 1.0 + atk * 0.5) * power - armor * 0.25 : atk * power - armor * armorK;
   raw *= att.swing ? rand(1 - att.swing, 1 + att.swing) : rand(0.85, 1.15); // 결투는 흔들림이 더 커서 약한 쪽에도 기회가 생김
   let note = '';
   if (element && att.elemW?.[element]) raw *= att.elemW[element]; // 날씨: 비에는 불이 약해지고 번개가 세짐
@@ -286,16 +286,27 @@ function damage(att, def, power, opt = {}) {
   return { dmg: Math.max(1, Math.round(raw)), note };
 }
 // 피하기: 날개(속도) 차이와 안개·돌풍
+// 빗나감: 돌풍(다음 한 번) · 흙먼지(공격하는 쪽이 앞을 못 봄) · 속도와 안개로 피하기가 겹쳐도
+// 한 번 공격이 빗나갈 확률은 모두 합쳐 COMBAT.dodgeCap까지 (겹쳐 쌓여 한 대도 못 맞히는 일이 없게)
 function dodged(att, def, lines) {
-  if (has(def, 'dodge')) {
-    def.st.dodge = 0; // 돌풍: 다음 공격 한 번을 높은 확률로 흘려보냄
-    if (Math.random() < COMBAT.gustDodge) { lines.push(`${ga(def)} 돌풍을 타고 공격을 흘려보냈다.`); return true; }
-    lines.push(`${ga(def)} 돌풍을 탔지만 공격이 스쳤다.`);
+  const gust = has(def, 'dodge') ? COMBAT.gustDodge : 0;
+  if (gust) def.st.dodge = 0; // 돌풍: 다음 공격 한 번
+  const blind = has(att, 'blind') ? 0.25 : 0; // 흙먼지
+  const evade = has(def, 'soak') ? 0.02 : clamp(0.05 + (spdOf(def) - spdOf(att)) * 0.015, 0.03, 0.3) + (has(def, 'evade') ? 0.4 : 0);
+  // 연속 빗나감 보호: 이 공격자가 COMBAT.missRun번 연달아 빗나갔으면 이번엔 반드시 맞음 (돌풍은 써 버린 채로)
+  const miss = (att.missRun || 0) >= (COMBAT.missRun ?? 99) ? 0 : Math.min(COMBAT.dodgeCap ?? 1, 1 - (1 - gust) * (1 - blind) * (1 - Math.min(1, evade)));
+  if (Math.random() >= miss) {
+    att.missRun = 0;
+    if (gust) lines.push(`${ga(def)} 돌풍을 탔지만 공격이 스쳤다.`);
+    return false;
   }
-  if (has(att, 'blind') && Math.random() < 0.25) { lines.push(`${ga(att)} 앞이 보이지 않아 헛손질했다.`); return true; } // 흙먼지
-  const p = has(def, 'soak') ? 0.02 : clamp(0.05 + (spdOf(def) - spdOf(att)) * 0.015, 0.03, 0.3) + (has(def, 'evade') ? 0.4 : 0);
-  if (Math.random() < p) { lines.push(`${ga(def)} 날렵하게 피했다.`); return true; }
-  return false;
+  // 어느 쪽으로 빗나갔는지는 각각의 몫에 비례해 고름 (문장만 다름)
+  att.missRun = (att.missRun || 0) + 1;
+  const w = [gust, blind, evade], r = Math.random() * (gust + blind + evade);
+  if (r < w[0]) lines.push(`${ga(def)} 돌풍을 타고 공격을 흘려보냈다.`);
+  else if (r < w[0] + w[1]) lines.push(`${ga(att)} 앞이 보이지 않아 헛손질했다.`);
+  else lines.push(`${ga(def)} 날렵하게 피했다.`);
+  return true;
 }
 // 상태 이상 걸기 (저항하는 속성이면 통하지 않음)
 // 위엄: 드래곤이 얼어붙음·마비를 기세로 떨쳐 냄 (떨쳐 냈으면 true)
@@ -485,7 +496,8 @@ function allyStrike(b, ally, lines) {
   if (!foe || foe.hp <= 0) return;
   const A = KIN.drakeHelp.ally;
   const att = { name: ally.name, atk: ally.atk, mag: 0, spd: 0, maj: 0, st: {}, level: 1, taken: 1 };
-  const dealt = hit(att, foe, ally.hunter ? A.hunterPower : A.power, {}, lines, `${ga(att)} 함께 덤벼들었다!`);
+  const dealt = hit(att, foe, ally.hunter ? A.hunterPower : A.power, { armorK: A.armor ?? 0.5 }, lines, `${ga(att)} 함께 덤벼들었다!`);
+  b.allyHits = (b.allyHits || 0) + 1; // 함께 싸운 셈 (끝날 때 자람 기록으로)
   if (dealt && ally.clever && foe.hp > 0 && Math.random() < A.cleverDaze) {
     foe.st.dazed = Math.max(foe.st.dazed || 0, 2);
     lines.push(`영리한 ${ally.name}${josa(ally.name, '이', '가')} 빈틈을 파고들어 ${foe.name}${josa(foe.name, '이', '가')} 휘청인다.`);
@@ -712,7 +724,14 @@ function hunt(d) {
 
 // 사냥 결과: 체력·기력을 남은 만큼으로. 쓰러뜨린 사냥감마다 전리품 (무리면 함께 나온 사냥감은 조금 적게)
 // 결과의 fall: 물러나지 않고 졌음 (쓰러짐)
+// 곁에 둔 새끼와 함께 싸운 횟수를 드래곤에 적어 둠 (둥지 식구를 불러올 때 자람 기록으로 옮겨짐)
+function noteAlly(d, b) {
+  if (!b.allyHits || !b.a.ally?.id) return;
+  const c = logic.combatJson(d);
+  (c.allyFights ||= {})[b.a.ally.id] = (c.allyFights[b.a.ally.id] || 0) + 1;
+}
 function huntReward(d, b, c) {
+  noteAlly(d, b);
   const me = b.a;
   const foes = foesOf(b);
   d.hp = Math.max(1, Math.round(me.hp));
@@ -811,6 +830,7 @@ const foeCorrupt = (b) => !!b.b.corrupted;
 
 // 강적과의 싸움이 끝났을 때 (이기면 큰 보상)
 function eliteReward(d, b) {
+  noteAlly(d, b);
   const me = b.a;
   const foe = b.b;
   d.hp = Math.max(1, Math.round(me.hp));

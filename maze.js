@@ -203,10 +203,23 @@ module.exports = function setupMaze({ io, db, online, logic, sendMe, system, dea
     return out;
   }
   // 가장 가까운 찾은 화톳불 (구덩이 알림 등에 쓰는 위치 표시). 이름은 points()의 번호와 같다
+  // 거리는 벽을 돌아 길을 따라 걸어서 잼 (가로·세로 칸 수로 재면 벽 너머 화톳불이 '근처'로 붙었음)
   function nearFire(fi, r, c) {
-    let best = null, bd = 1e9;
-    for (const p of points(fi)) { if (p.kind !== 'fire') continue; const dd = Math.abs(p.pos[0] - r) + Math.abs(p.pos[1] - c); if (dd < bd) { bd = dd; best = p; } }
-    return best ? ` ${best.name} 근처` : '';
+    const G = GEO[fi], N = G.N, fires = new Map(points(fi).filter((p) => p.kind === 'fire').map((p) => [p.pos[0] * N + p.pos[1], p]));
+    if (!fires.size) return '';
+    const seen = new Uint8Array(N * N), q = [r * N + c];
+    seen[r * N + c] = 1;
+    for (let h = 0; h < q.length; h++) {
+      const k = q[h];
+      if (fires.has(k)) return ` ${fires.get(k).name} 근처`;
+      const kr = Math.floor(k / N), kc = k % N;
+      for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nr = kr + dr, nc = kc + dc;
+        if (nr < 0 || nc < 0 || nr >= N || nc >= N || G.g[nr][nc] === '#' || seen[nr * N + nc]) continue;
+        seen[nr * N + nc] = 1; q.push(nr * N + nc);
+      }
+    }
+    return '';
   }
   // 아직 밝히지 않은 곳에 가장 가까운 지점
   function bestPoint(fi) {

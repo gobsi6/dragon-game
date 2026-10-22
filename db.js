@@ -386,6 +386,7 @@ const q = {
   kinSave:      db.prepare('UPDATE kin SET status = ?, name = ?, data = ? WHERE id = ? AND dragon_id = ?'),
   dragonById:   db.prepare(`SELECT ${DRAGON_FIELDS} FROM dragons WHERE id = ?`),
   dragonsIn:    db.prepare(`SELECT ${DRAGON_FIELDS} FROM dragons WHERE region = ? AND dead_at IS NULL ORDER BY last_seen DESC`),
+  nestsAll:     db.prepare('SELECT id, name, nest FROM dragons WHERE nest IS NOT NULL AND dead_at IS NULL AND id != ?'), // 둥지를 튼 드래곤 (소꿉친구 찾기)
   addGold:      db.prepare('UPDATE dragons SET gold = gold + ? WHERE id = ?'),
   relGet:       db.prepare('SELECT kind FROM relations WHERE from_id = ? AND to_id = ?'),
   relSet:       db.prepare(`INSERT INTO relations (from_id, to_id, kind, at) VALUES (?, ?, ?, ?)
@@ -655,6 +656,7 @@ module.exports = {
   duelGet: (id) => { const r = q.duelGet.get(id); if (r) { try { r.data = JSON.parse(r.data); } catch { r.data = {}; } } return r; },
   duelUnseen: (id) => q.duelUnseen.get(id).n,
   duelSeenAll: (id) => q.duelSeenAll.run(id),
+  nestsAll: (exceptId) => q.nestsAll.all(exceptId),
   dragonsIn: (region) => q.dragonsIn.all(region),   // 이 지역에 머무는 드래곤 (접속하지 않은 드래곤 포함, 긴 잠에 든 드래곤 제외)
   relGet: (a, b) => q.relGet.get(a, b)?.kind || null,
   relSet: (a, b, kind) => q.relSet.run(a, b, kind, Date.now()),

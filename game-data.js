@@ -652,11 +652,11 @@ const FACILITY = {
     kitchen: { name: '부엌',   cost: { gold: 150, items: { red_clay: 6, bog_iron: 2, salt_crystal: 2 } }, talent: null, traits: ['glutton', 'handy', 'gentle'],
       desc: '재료를 건네면 일하는 아이가 바로 요리한다. 아이가 만든 요리는 더 좋다. (보호자의 기력은 들지 않음)',
       uses: { adult: 3, apprentice: 2, glutton: 1 }, extra: { glutton: 0.3, handy: 0.2 }, eat: 0.3, share: { sat: 15, bond: 1 } },
-    tower:   { name: '망루',   cost: { gold: 180, items: { beast_hide: 4, bog_iron: 3, obsidian: 1 } }, talent: 'guard', traits: ['brave'],
+    tower:   { name: '망루',   cost: { gold: 180, items: { beast_hide: 4, bog_iron: 3, obsidian: 1 } }, talent: 'guard', traits: ['brave', 'lookout'],
       desc: '보물 도둑이 덜 든다.', raid: 0.25, raidMax: 0.75 },
-    library: { name: '서고',   cost: { gold: 200, items: { silk_scrap: 3, brass_button: 2, glow_moss: 2 } }, talent: null, traits: ['curious', 'steady'],
+    library: { name: '서고',   cost: { gold: 200, items: { silk_scrap: 3, brass_button: 2, glow_moss: 2 } }, talent: null, traits: ['curious', 'steady', 'bookworm'],
       desc: '보호자가 얻는 경험치가 늘고, 식구 이야기(이벤트)가 조금 더 자주 생긴다.', xp: 0.04, event: 0.1 },
-    spa:     { name: '온천',   cost: { gold: 220, items: { volcanic_ash: 4, obsidian: 2, sea_shell: 4 } }, talent: null, traits: ['sleepy', 'lonely'],
+    spa:     { name: '온천',   cost: { gold: 220, items: { volcanic_ash: 4, obsidian: 2, sea_shell: 4 } }, talent: null, traits: ['sleepy', 'lonely', 'waterbaby'],
       desc: '둥지에서 쉴 때 행동력·체력·기력과 정신이 더 빨리 찬다.', rest: 0.12, mind: 0.25 },
   },
   // 부엌 요리: '정성 들인 ○○'. 식구 요리는 유대·배 ×, 강화 음식은 지속 시간 ×, 새끼 먹이는 유대·배 ×
@@ -704,6 +704,7 @@ const RUIN = {
   exchange: [
     { id: 'purify_incense', cost: 6 },
     { id: 'holy_water',     cost: 2 },
+    { id: 'herbal_ointment', cost: 1 }, { id: 'moss_salve', cost: 2 }, { id: 'hydra_salve', cost: 4 }, // 체력 회복 (50 · 70 · 120)
     { id: 'recipe_scroll',  cost: 12 },
     { id: 'ghost_lantern',  cost: 30 },
     { id: 'pure_amulet',    cost: 70 },
@@ -812,7 +813,7 @@ const KIN = {
       satPerHour: 8,                             // 다녀오면 배가 이만큼씩 줆
       trophy: 0.25,                              // 다 자란 용은 가끔 그 지역 사냥감의 전리품도
     },
-    ally: { from: ['어린 용', '젊은 용', '다 자란 용'], base: 4, claw: 1.2, wing: 0.5, stage: { '어린 용': 2, '젊은 용': 4, '다 자란 용': 6 }, power: 0.25, hunterPower: 0.31, cleverDaze: 0.2 },
+    ally: { from: ['어린 용', '젊은 용', '다 자란 용'], base: 4, claw: 1.2, wing: 0.5, stage: { '어린 용': 2, '젊은 용': 4, '다 자란 용': 6 }, power: 0.35, hunterPower: 0.43, armor: 0.25, cleverDaze: 0.2 }, // armor: 사냥감 비늘을 이만큼만 받음 (보통 공격은 0.5). 예전 power 0.25, hunterPower 0.31
   },
   // 새끼 드래곤의 먹이와 포만감. 배부르면 가르칠 때 유대가 더 오르고 가르치기 간격이 짧아짐
   drakeFood: {
@@ -855,15 +856,21 @@ const TALENTS = {
 const KIN_LOOKS = {
   sex: { human: { m: '남자', f: '여자' }, drake: { m: '남자', f: '여자' } }, // 인간 아이와 새끼 드래곤 모두 같은 표기
   human: {
-    hair: ['까만 머리', '갈색 머리', '붉은 머리', '금빛 머리', '잿빛 머리', '밤색 곱슬머리'],
-    eyes: ['검은 눈', '갈색 눈', '푸른 눈', '초록 눈', '회색 눈'],
-    mark: ['주근깨', '보조개', '덧니', '눈 밑 점', '짙은 눈썹', '긴 속눈썹', '앞니 빠진 웃음', '귀가 조금 큼'],
+    hair: ['까만 머리', '갈색 머리', '붉은 머리', '금빛 머리', '잿빛 머리', '밤색 곱슬머리',
+      '은빛 머리', '밀빛 머리', '짧게 자른 까만 머리', '땋아 내린 갈색 머리', '부스스한 붉은 머리', '구불거리는 금빛 머리', '까치집 머리'],
+    eyes: ['검은 눈', '갈색 눈', '푸른 눈', '초록 눈', '회색 눈',
+      '호박색 눈', '짙은 밤색 눈', '잿빛 푸른 눈', '처진 눈', '동그란 눈', '가늘고 긴 눈', '양쪽 색이 다른 눈'],
+    mark: ['주근깨', '보조개', '눈 밑 점', '짙은 눈썹', '긴 속눈썹', '앞니 빠진 웃음',
+      '콧등의 작은 흉터', '발그레한 볼', '손등의 반점', '한쪽 보조개', '오른쪽 귀의 점', '웃음이 많은 입매', '햇볕에 그을린 얼굴', '뽀얀 얼굴'],
+    build: ['통통한 볼', '가녀린 체구', '또래보다 큰 키', '작고 다부진 체구', '팔다리가 긴 체구', '동글동글한 체구', '마르고 날랜 체구'], // 체격 (나중에 생긴 칸: 예전 아이는 처음 볼 때 채워 줌)
   },
   drake: {
-    scale: ['짙은', '옅은', '얼룩무늬', '윤기 도는', '잿빛 감도는'], // + 종류 이름 비늘 (예: 윤기 도는 레드 비늘)
-    horn: ['곧은 뿔', '굽은 뿔', '짧고 뭉툭한 뿔', '갈래진 뿔', '나선 뿔'],
-    eyes: ['호박색 눈', '청록 눈', '은빛 눈', '붉은 눈', '금빛 눈'],
-    mark: ['꼬리 끝이 두 갈래', '이마에 별 무늬', '날개막에 반점', '한쪽 뿔이 조금 짧음', '등가시가 유난히 큼', '목덜미에 흰 비늘 한 줌'],
+    scale: ['짙은', '옅은', '얼룩무늬', '윤기 도는', '잿빛 감도는', '반짝이는', '광택 없는', '테두리가 짙은', '군데군데 빛바랜', '무지갯빛 도는'], // + 종류 이름 비늘 (예: 윤기 도는 레드 비늘)
+    horn: ['곧은 뿔', '굽은 뿔', '짧고 뭉툭한 뿔', '갈래진 뿔', '나선 뿔', '작게 돋은 뿔', '뒤로 누운 뿔', '매끈한 흰 뿔'],
+    eyes: ['호박색 눈', '청록 눈', '은빛 눈', '붉은 눈', '금빛 눈', '보랏빛 눈', '잿빛 눈', '연둣빛 눈', '깊은 검은 눈', '양쪽 색이 다른 눈'],
+    mark: ['꼬리 끝이 두 갈래', '날개막에 반점', '한쪽 뿔이 조금 짧음', '등가시가 유난히 큼', '목덜미에 흰 비늘 한 줌',
+      '날개 끝이 갈라짐', '배 비늘이 유난히 밝음', '콧등에 작은 흉터', '발톱 하나가 흰색', '등에 줄무늬'],
+    tail: ['긴 채찍 꼬리', '굵고 짧은 꼬리', '끝에 가시가 난 꼬리', '끝이 뭉툭한 꼬리', '돌돌 말리는 꼬리', '지느러미 같은 꼬리'], // 꼬리 (나중에 생긴 칸)
   },
 };
 // 성격: 식구마다 2개. for는 인간(human)·새끼 드래곤(drake) 중 누구에게 붙는지
@@ -880,6 +887,14 @@ const KIN_TRAITS = {
   handy:     { for: 'human', name: '손재주 좋은',   desc: '대장장이 쪽으로 조금 기울어 태어난다.' },
   flowers:   { for: 'human', name: '풀꽃을 좋아하는', desc: '약초꾼 쪽으로 조금 기울어 태어난다.' },
   curious:   { for: 'both',  name: '호기심 많은',   desc: '원정에 따라가면 찾는 물건이 조금 더 늘어난다.' },
+  chatterbox:{ for: 'human', name: '수다쟁이',      desc: '원정에서 돌아오면 다녀온 이야기를 늘어놓느라 유대가 1 더 오른다.' },
+  songbird:  { for: 'human', name: '노래를 좋아하는', desc: '둥지에서 함께 쉬면 노래를 불러 유대가 1 더 오른다.' },
+  tidy:      { for: 'human', name: '깔끔한',        desc: '둥지 시설에서 일하는 날마다 유대가 1 더 오른다.' },
+  bookworm:  { for: 'human', name: '책벌레',        desc: '서고 일에 잘 맞는다.' },
+  waterbaby: { for: 'human', name: '물놀이를 좋아하는', desc: '온천 일에 잘 맞는다.' },
+  lookout:   { for: 'human', name: '높은 곳을 좋아하는', desc: '망루 일에 잘 맞는다.' },
+  picky:     { for: 'human', flaw: true, name: '편식하는', desc: '먹을 것을 건네면 유대가 1 덜 오르지만, 가장 좋아하는 요리를 먹으면 2 더 오른다.' },
+  crybaby:   { for: 'human', flaw: true, name: '울보',     desc: '외로워할 때 유대가 1 더 줄지만, 다시 돌봐 주면 유대가 2 더 오른다.' },
   // 새끼 드래곤
   clever:    { for: 'drake', name: '영리한',        desc: '가르칠 때 네 번에 한 번꼴로 능력치가 1 더 오른다.' },
   diligent:  { for: 'drake', name: '부지런한',      desc: '가르치기 간격이 2시간 짧다.' },
@@ -888,6 +903,35 @@ const KIN_TRAITS = {
   swift:     { for: 'drake', name: '날쌘',          desc: '원정에서 자랄 때 날개 쪽으로 잘 자란다.' },
   stubborn:  { for: 'drake', name: '고집 센',       desc: '원정에서 자랄 때 발톱 쪽으로 잘 자란다.' },
   dreamy:    { for: 'drake', name: '꿈꾸는',        desc: '원정에서 자랄 때 지혜 쪽으로 잘 자란다.' },
+  proud:     { for: 'drake', name: '자존심 센',     desc: '원정에서 자랄 때 위엄 쪽으로 잘 자란다.' },
+  bold:      { for: 'drake', name: '겁 없는',       desc: '함께 싸울 때 주는 피해가 10% 크다.' },
+  sharpnose: { for: 'drake', name: '코가 예민한',   desc: '심부름에서 귀한 것을 조금 더 잘 찾아온다.' },
+  sleepyhead:{ for: 'drake', flaw: true, name: '늦잠꾸러기', desc: '가르치기 간격이 1시간 길지만, 배가 천천히 꺼진다.' },
+  foodie:    { for: 'drake', flaw: true, name: '입맛 까다로운', desc: '좋아하는 먹이를 주면 유대가 3 더 오르지만, 다른 먹이에는 1 덜 오른다.' },
+  // ── 자라며 생기는 성격 (grown: 태어날 때는 붙지 않음. 어떻게 키웠는지에 따라 KIN_GROW가 붙여 줌) ──
+  // 인간 아이
+  homebody:  { for: 'human', grown: true, name: '둥지를 좋아하는', desc: '둥지에서 함께 쉬면 유대가 1.5배로 오른다.' },
+  adventurer:{ for: 'human', grown: true, name: '모험을 좋아하는', desc: '원정에 따라가면 찾는 물건이 조금 더 늘어난다.' },
+  sturdy:    { for: 'human', grown: true, name: '튼튼한',         desc: '배가 천천히 꺼진다.' },
+  warm:      { for: 'human', grown: true, name: '정 많은',        desc: '돌볼 때 유대가 1 더 오르고, 선물을 더 자주 만들어 온다.' },
+  capable:   { for: 'human', grown: true, name: '야무진',         desc: '둥지 시설에서 일하는 힘이 25% 크다.' },
+  tough:     { for: 'human', grown: true, name: '혼자서도 씩씩한', desc: '한동안 돌보지 못해도 유대가 4분의 1 덜 줄어든다.' },
+  fussy:     { for: 'human', grown: true, flaw: true, name: '투정쟁이',   desc: '배가 고파지면 입이 삐죽 나와 유대가 1 줄지만, 가장 좋아하는 요리를 먹으면 유대가 3 더 오른다.' },
+  willful:   { for: 'human', grown: true, flaw: true, name: '제멋대로인', desc: '돌볼 때 네 번에 한 번은 딴청을 피워 유대가 1 덜 오르지만, 그때 어디서 주워 온 것을 내민다.' },
+  opened:    { for: 'human', grown: true, name: '마음을 연',      desc: '수줍던 아이가 마음을 열었다. 돌볼 때 유대가 2 더 오른다.' },
+  // 새끼 드래곤
+  fierce:    { for: 'drake', grown: true, name: '사나운',         desc: '함께 싸울 때 주는 피해가 20% 크다.' },
+  windrider: { for: 'drake', grown: true, name: '바람을 타는',     desc: '심부름을 25% 빨리 다녀온다.' },
+  stargazer: { for: 'drake', grown: true, name: '별을 읽는',       desc: '심부름에서 귀한 것을 더 잘 찾아온다.' },
+  shieldmate:{ for: 'drake', grown: true, name: '등을 맡기는',     desc: '함께 싸울 때 보호자가 받는 피해가 5% 준다.' },
+  pathfinder:{ for: 'drake', grown: true, name: '길눈 밝은',       desc: '심부름에서 한 번 더 주워 온다.' },
+  affable:   { for: 'drake', grown: true, name: '살가운',          desc: '가르칠 때 유대가 1 더 오른다.' },
+  steadfast: { for: 'drake', grown: true, name: '듬직한',          desc: '가르치기 간격이 1시간 짧다.' },
+  greedy:    { for: 'drake', grown: true, flaw: true, name: '먹성 좋은', desc: '배가 20% 빨리 꺼지지만, 배부를 때 가르치면 유대가 1 더 오른다.' },
+  wild:      { for: 'drake', grown: true, flaw: true, name: '천방지축', desc: '가르치기 간격이 1시간 길지만, 원정에서 자랄 때 가끔 능력치가 하나 더 오른다.' },
+  sociable:  { for: 'human', grown: true, name: '친구가 많은',     desc: '다른 둥지의 아이와 놀다 오면 유대가 2 더 오른다.' },
+  packmate:  { for: 'drake', grown: true, name: '어울리기 좋아하는', desc: '다른 둥지의 아이와 놀다 오면 유대가 2 더 오른다.' },
+  dignified: { for: 'drake', grown: true, name: '속 깊은',         desc: '응석받이가 다 자라 속이 깊어졌다. 가르칠 때 유대가 2 더 오르고, 먹이를 주면 1 더 오른다.' },
 };
 const KIN_TRAIT_RULES = {
   count: 2,                                        // 식구마다 붙는 성격 수
@@ -896,6 +940,63 @@ const KIN_TRAIT_RULES = {
   cleverChance: 0.25, diligentMs: 2 * 60 * 60 * 1000,
   curiousBonus: 1 / 3,                             // 원정 동행 하나를 이만큼 더 쳐 줌 (KIN.companionBonus 15% × 1/3 ≈ +5%)
   growBias: 0.5,                                   // 날쌘·고집 센·꿈꾸는: 원정에서 자랄 때 그쪽 능력치가 고를 확률
+};
+
+// ── 소꿉친구: 가까운 둥지(같은 지역이나 바로 이웃한 지역)의 아이끼리 가끔 함께 놀다 옴 ──
+// 둥지 소식을 불러올 때 everyMs마다 한 번 chance 확률로. 함께 논 횟수가 friendAt이 되면 단짝
+// 놀 수 있는 나이: 인간은 아이·소년·청소년, 새끼는 어린 용·젊은 용 (원정·심부름·가출 중이면 빠짐)
+const KIN_PLAY = {
+  everyMs: 8 * 60 * 60 * 1000, chance: 0.5, friendAt: 3, keepFriends: 6, sameFriend: 0.6, bond: 1, sociable: 2,
+  stages: ['아이', '소년', '청소년', '어린 용', '젊은 용'],
+  // {a} 우리 아이, {b} 다른 둥지 아이, {o} 그 아이의 보호자
+  scenes: {
+    hh: ['{a}[이/가] {o}의 둥지 {b}[과/와] 개울가에서 물수제비를 뜨며 놀다 왔다.', '{a}[이/가] {o}의 둥지 {b}[과/와] 들판에서 술래잡기를 하다 해 질 녘에야 돌아왔다.',
+      '{a}[이/가] {o}의 둥지 {b}[과/와] 나무 위에 둘만의 비밀 기지를 만들었다며 자랑한다.', '{a}[이/가] {o}의 둥지 {b}[과/와] 들꽃으로 화관을 엮어 서로 씌워 주고 왔다.'],
+    hd: ['{a}[이/가] {o}의 둥지 새끼 {b}의 등에 올라타 언덕을 한 바퀴 돌고 왔다.', '{a}[이/가] {o}의 둥지 새끼 {b}에게 막대기 던지기 놀이를 가르쳐 주고 왔다.'],
+    dh: ['{a}[이/가] {o}의 둥지 아이 {b}[을/를] 등에 태우고 언덕을 한 바퀴 돌고 왔다.', '{a}[이/가] {o}의 둥지 아이 {b}[이/가] 던지는 막대기를 물어 오며 한참을 놀다 왔다.'],
+    dd: ['{a}[이/가] {o}의 둥지 새끼 {b}[과/와] 하늘에서 누가 더 높이 나나 겨루고 왔다.', '{a}[이/가] {o}의 둥지 새끼 {b}[과/와] 바위 위에 나란히 엎드려 낮잠을 자고 왔다.',
+      '{a}[이/가] {o}의 둥지 새끼 {b}[과/와] 작은 불씨를 주고받으며 장난치다 왔다.'],
+  },
+  bestLine: '{a}[과/와] {o}의 둥지 {b}[은/는] 이제 단짝이다.',
+};
+
+// ── 자라며 생기는 성격: 어떻게 키웠는지 남는 자람 기록(k.data.grow)에 따라 ──
+// 자람 기록: rest 함께 쉼 · trip 원정 동행 · food 먹을 것 · friend 다른 둥지 아이와 놂 · warm/trust/strict/free 이벤트에서 고른 태도
+//           neglect 오래 못 돌봄 · hungry 배고파짐 · claw/wing/wisdom 가르친 능력치 · fight 함께 싸움 · errand 심부름
+// 점수 = 기록 합 ÷ unit. 자라는 단계가 바뀔 때 점수가 1 이상인 것 중 가장 큰 쪽이 붙고,
+// 단계와 상관없이 점수가 special 이상이 되면 그 순간에도 붙는다 ('특별한 순간'). 자라며 붙는 성격은 max개까지
+const KIN_GROW = {
+  max: 3, special: 3, hint: 0.5,                   // hint: 이 점수가 넘으면 식구 카드에 '요즘 ~한 것 같다' 힌트
+  openedBond: 80,                                  // 수줍은 아이가 이 유대를 넘으면 '마음을 연'으로
+  sturdySat: 0.8, greedySat: 1.2,                  // 배가 꺼지는 빠르기 배율
+  capable: 1.25, tough: 0.75, fierce: 1.2, shieldmate: 0.95, windrider: 0.75, stargazer: 0.03,
+  bold: 1.1, sharpnose: 0.02, sleepySat: 0.85,     // 타고난 성격: 겁 없는(함께 싸울 때 피해) · 코가 예민한(심부름 귀한 것) · 늦잠꾸러기(배 꺼지는 빠르기)
+  hourMs: 60 * 60 * 1000, willfulChance: 0.25, wildChance: 0.25, warmGift: 1.5,
+  paths: {
+    human: [
+      { trait: 'homebody',   keys: ['rest'],             unit: 4, hint: '요즘 둥지에서 뒹구는 시간을 제일 좋아하는 것 같다.',  why: '둥지에서 함께 뒹굴던 날들이 몸에 배었다.' },
+      { trait: 'adventurer', keys: ['trip'],             unit: 4, hint: '요즘 바깥 이야기만 나오면 눈이 반짝이는 것 같다.',   why: '함께 다녀온 먼 길들이 마음에 남았다.' },
+      { trait: 'sturdy',     keys: ['food'],             unit: 6, hint: '요즘 밥을 먹고 나면 볼이 통통하게 차오르는 것 같다.', why: '잘 먹고 자란 몸이 단단해졌다.' },
+      { trait: 'warm',       keys: ['warm'],             unit: 2, hint: '요즘 부쩍 살갑게 구는 것 같다.',                     why: '받은 다정함을 그대로 닮아 간다.' },
+      { trait: 'capable',    keys: ['trust', 'strict'],  unit: 2, hint: '요즘 제 일은 제가 하려고 드는 것 같다.',             why: '스스로 해내던 날들이 아이를 야무지게 했다.' },
+      { trait: 'tough',      keys: ['neglect'],          unit: 2, hint: '요즘 혼자 있는 데 익숙해진 것 같다.',                why: '혼자 기다리던 날들을 씩씩하게 견뎌 냈다.' },
+      { trait: 'fussy',      keys: ['hungry'],           unit: 3, hint: '요즘 배가 고프면 금방 입이 삐죽 나오는 것 같다.',    why: '배고픈 날이 잦았던 탓인지 투정이 늘었다.' },
+      { trait: 'willful',    keys: ['free'],             unit: 2, hint: '요즘 하고 싶은 대로만 하려는 것 같다.',              why: '하고 싶은 대로 두었더니 고집이 자랐다.' },
+      { trait: 'sociable',   keys: ['friend'],           unit: 3, hint: '요즘 옆 둥지 친구 이야기를 자주 하는 것 같다.',      why: '다른 둥지 아이들과 어울리던 날들이 아이를 밝게 했다.' },
+    ],
+    drake: [
+      { trait: 'fierce',     keys: ['claw'],             unit: 3, hint: '요즘 바위만 보면 발톱을 갈아 대는 것 같다.',          why: '발톱 쓰는 법을 배우며 기세가 사나워졌다.' },
+      { trait: 'windrider',  keys: ['wing'],             unit: 3, hint: '요즘 바람 부는 날이면 들뜨는 것 같다.',              why: '바람을 타는 법이 날개에 익었다.' },
+      { trait: 'stargazer',  keys: ['wisdom'],           unit: 3, hint: '요즘 밤하늘을 오래 올려다보는 것 같다.',             why: '별을 읽는 밤이 쌓여 눈이 깊어졌다.' },
+      { trait: 'shieldmate', keys: ['fight'],            unit: 15, hint: '요즘 싸움터에서 등 뒤를 곧잘 지키는 것 같다.',       why: '함께 싸운 날들이 서로의 등을 맡기게 했다.' },
+      { trait: 'pathfinder', keys: ['errand'],           unit: 3, hint: '요즘 먼 길을 다녀오는 게 즐거운 것 같다.',           why: '혼자 다녀온 심부름 길이 눈에 익었다.' },
+      { trait: 'affable',    keys: ['warm'],             unit: 2, hint: '요즘 부쩍 품을 파고드는 것 같다.',                   why: '받은 다정함을 그대로 닮아 간다.' },
+      { trait: 'steadfast',  keys: ['trust', 'strict'],  unit: 2, hint: '요즘 꼬리를 곧게 세우고 의젓하게 구는 것 같다.',     why: '스스로 견뎌 낸 날들이 새끼를 듬직하게 했다.' },
+      { trait: 'greedy',     keys: ['hungry'],           unit: 3, hint: '요즘 먹을 것만 보면 눈빛이 달라지는 것 같다.',       why: '배고픈 날이 잦았던 탓인지 먹성이 좋아졌다.' },
+      { trait: 'wild',       keys: ['free'],             unit: 2, hint: '요즘 둥지 안을 마구 뛰어다니는 것 같다.',            why: '하고 싶은 대로 두었더니 천방지축이 되었다.' },
+      { trait: 'packmate',   keys: ['friend'],           unit: 3, hint: '요즘 다른 둥지 쪽 하늘을 자주 바라보는 것 같다.',    why: '다른 둥지 새끼들과 어울리던 날들이 마음을 열게 했다.' },
+    ],
+  },
 };
 const HUMAN_NAMES = ['미르', '엘라', '토비', '세린', '리안', '하나', '오웬', '루카', '니나', '테오', '소이', '다온', '에반', '유나', '카이', '로웬'];
 const DRAKE_NAMES = ['아르', '벨카', '시엘', '모라크', '카이렌', '이그', '루미', '타르', '세라', '노크', '베른', '이즈'];
@@ -1347,7 +1448,7 @@ const CRAFT = {
   // 속성 각인: 그 속성 공격(숨결·스킬) 피해 배율. 재료는 속성마다 다름
   engrave: { power: 1.12, gold: 40, items: { fire: { fire_crystal: 1 }, ice: { eternal_ice: 1 }, lightning: { sun_stone: 1 }, earth: { obsidian: 2 }, poison: { poison_herb: 3 }, mist: { glow_moss: 2 }, acid: { toad_gland: 2 }, water: { deep_pearl: 1 }, spirit: { silver_clover: 1 } } },
   // 마을 제작 의뢰: 마을마다 하루 3개. 보상 = 물건 값 × 개수 × gold, 평판 +rep
-  orders: { perTown: 3, gold: 1.6, rep: 4, maxWis: 12 },
+  orders: { perTown: 3, gold: 1.6, rep: 4, maxWis: 12, bonus: 1.5 }, // bonus: 걸작·정성 들인 요리로 채운 몫의 보상 배율
   // 둥지 공방(화로): 둥지에서 만들 때 기력 −20%, 대성공 +3%
   forge: { cost: { gold: 250, items: { bog_iron: 4, red_clay: 4, obsidian: 2 } }, en: 0.8 },
 };
@@ -1375,7 +1476,9 @@ const COMBAT = {
   eliteChance: 0.12,       // 사냥하다 강적을 만날 확률 (레벨 2부터)
   eliteFrom: 2,
   maxSkills: 3,            // 숨결 말고 들고 갈 수 있는 스킬 수
-  gustDodge: 0.6,          // 날개 돌풍을 탄 뒤 다음 공격을 흘려보낼 확률 (예전에는 반드시)
+  gustDodge: 0.6,
+  dodgeCap: 0.6,
+  missRun: 2,                       // 연속 빗나감 보호: 같은 공격자가 이만큼 연달아 빗나가면 다음 공격은 반드시 맞음                    // 한 번 공격이 빗나갈 확률의 상한 (돌풍·흙먼지·속도·안개가 겹쳐도)          // 날개 돌풍을 탄 뒤 다음 공격을 흘려보낼 확률 (예전에는 반드시)
   turnSeconds: 30,         // 실시간 결투에서 한 턴을 고르는 시간. 넘기면 자동으로 고름
   inviteSeconds: 30,       // 결투 신청을 기다리는 시간
   // 내기 결투: 실시간 결투에서만. 둘 다 걸고, 진 쪽이 건 것을 이긴 쪽이 가져감
@@ -1846,6 +1949,6 @@ module.exports = {
   isTestDragon: (d) => !!d && !!KINDS[d.kind]?.test,                // GM 시험용 투명 드래곤인가
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, FESTIVAL, TITLES, TITLE_COUNT_NAMES, ACHIEVEMENTS, YABAWI, KEEPSAKES,
   PURIFY, CRAFT, SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, FISHING, RUIN, FACILITY, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
-  DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
+  DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, KIN_GROW, KIN_PLAY, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
   COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, DEPART, BONDS, MARKS, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG,
 };

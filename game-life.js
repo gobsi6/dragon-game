@@ -6,7 +6,7 @@
 // 모든 함수는 식구 목록 kin을 직접 바꿉니다. 새 식구는 id가 null이고, 저장은 server.js가 합니다.
 
 const {
-  ITEMS, KINDS, REGIONS, SHOPS, STATS, REGION_LOOT, PLACES, FACILITY, RECIPES, DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, EVENT_RULES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES,
+  ITEMS, KINDS, REGIONS, SHOPS, STATS, REGION_LOOT, PLACES, FACILITY, RECIPES, DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, EVENT_RULES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, KIN_GROW, KIN_PLAY,
 } = require('./game-data');
 const logic = require('./game-logic');
 const EVENTS = require('./game-events');
@@ -66,15 +66,116 @@ function nearestTown(region) {
 // ── 타고난 모습 (성별·생김새·성격) ─────────────────
 const TR = KIN_TRAIT_RULES;
 const hasT = (k, id) => !!k.data.traits && k.data.traits.includes(id);
+
+// ── 함께한 날들: 아이마다 겪은 일을 남김 (떠난 뒤에도 '지난 식구'에서 볼 수 있음) ──
+const DIARY_MAX = 60;
+const ORIGIN_LINE = { abandoned: '성문 곁 바구니에서 발견되어 둥지로 왔다.', lost: '홀로 남은 채 발견되어 둥지로 왔다.', tribute: '마을이 바친 아이로 둥지에 왔다.' };
+// 일기가 없던 식구(이 기능 전부터 있던 식구 포함)에게 첫 장을 씀
+function diaryStart(k) {
+  if (k.data.diary || k.status === 'egg' || k.status === 'cold') return;
+  k.data.diary = [{ at: k.data.born || Date.now(), t: k.type === 'drake' ? '알에서 깨어났다.' : (ORIGIN_LINE[k.data.origin] || '둥지 식구가 되었다.') }];
+}
+function diary(k, text, now = Date.now()) {
+  if (!k || !k.data) return;
+  diaryStart(k);
+  if (!k.data.diary) return;
+  k.data.diary.push({ at: now, t: text });
+  if (k.data.diary.length > DIARY_MAX) k.data.diary.splice(1, k.data.diary.length - DIARY_MAX); // 첫 장은 늘 남김
+}
+
+// ── 자라며 생기는 성격 (KIN_GROW) ─────────────────
+const GR = KIN_GROW;
+const clingyish = (k) => hasT(k, 'clingy') || hasT(k, 'dignified'); // 응석받이가 자라 속이 깊어져도 정은 그대로
+// 자람 기록에 더함 (함께 쉼·원정·먹을 것·고른 태도·가르친 능력치 …)
+function growAdd(k, key, n = 1) {
+  if (!k || !k.data || k.status !== 'home') return;
+  const g = (k.data.grow ||= {});
+  g[key] = (g[key] || 0) + n;
+}
+const grownCount = (k) => (k.data.traits || []).filter((id) => KIN_TRAITS[id]?.grown).length;
+// 아직 붙지 않은 성격 가운데 자람 기록 점수가 가장 큰 것
+function growBest(k) {
+  const g = k.data.grow || {};
+  let best = null;
+  for (const p of GR.paths[k.type] || []) {
+    if (hasT(k, p.trait)) continue;
+    const v = p.keys.reduce((a, key) => a + (g[key] || 0), 0) / p.unit;
+    if (!best || v > best.v) best = { ...p, v };
+  }
+  return best;
+}
+// 성격이 붙을 때인지 봄. stageUp: 자라는 단계가 막 바뀜 (점수 1 이상) / 아니면 특별한 순간 (점수 special 이상)
+function growCheck(d, k, lines, stageUp) {
+  if (k.status !== 'home' || grownCount(k) >= GR.max) return;
+  const b = growBest(k);
+  if (!b || b.v < (stageUp ? 1 : GR.special)) return;
+  (k.data.traits ||= []).push(b.trait);
+  const name = KIN_TRAITS[b.trait].name;
+  lines.push(stageUp
+    ? `${b.why} ${k.name}에게 '${name}' 성격이 생겼다.`
+    : `어느 날 문득 알게 되었다. ${b.why} ${k.name}에게 '${name}' 성격이 생겼다.`);
+  logic.chron(d, 'mark', `${k.name}에게 '${name}' 성격이 생겼다.`);
+  diary(k, `'${name}' 성격이 생겼다. ${b.why}`);
+}
+// 성격이 자람: 수줍은 → 마음을 연 (유대가 높아지면), 응석받이 → 속 깊은 (다 자란 용이 되면)
+function growUp(d, k, lines, from, to, line) {
+  if (!hasT(k, from) || hasT(k, to)) return;
+  k.data.traits = k.data.traits.map((id) => (id === from ? to : id));
+  lines.push(line);
+  logic.chron(d, 'mark', `${k.name}의 '${KIN_TRAITS[from].name}' 성격이 자라 '${KIN_TRAITS[to].name}' 성격이 되었다.`);
+  diary(k, `'${KIN_TRAITS[from].name}' 성격이 자라 '${KIN_TRAITS[to].name}' 성격이 되었다.`);
+}
+// 식구 카드의 힌트: 가장 두드러진 기록 (아직 붙지 않았을 때)
+function growHint(k) {
+  if (k.status !== 'home' || grownCount(k) >= GR.max) return null;
+  const b = growBest(k);
+  return b && b.v >= GR.hint ? b.hint : null;
+}
+// ── 소꿉친구 (KIN_PLAY): 다른 둥지의 아이와 놀기. server.js가 가까운 둥지를 찾아 부름 ──
+const PL = KIN_PLAY;
+// {a}[이/가] 같은 자리에 이름을 넣고 조사를 맞춤
+const fillT = (tpl, names) => tpl.replace(/\{([abo])\}(\[([^/\]]+)\/([^\]]+)\])?/g, (m, w, _x, j1, j2) => { const nm = names[w] || ''; return j1 ? `${nm}${josa(nm, j1, j2)}` : nm; });
+// 지금 놀러 나갈 수 있는 식구 (둥지에 있고, 원정·심부름·가출 중이 아니고, 놀 나이)
+const playable = (kin, now = Date.now()) => kin.filter((k) => k.status === 'home' && !k.data.onExp && !k.data.errand && !k.data.runaway && !k.data.companion && PL.stages.includes(stageOf(k, now).name));
+const friendKey = (ownerId, k) => `${ownerId}:${k.id}`;
+// a(내 아이, 보호자 me)와 b(다른 둥지 아이, 보호자 other)가 함께 놂. 두 아이의 기록을 모두 바꾸고, 양쪽 보호자에게 보일 문장을 돌려줌
+function playTogether(a, me, b, other, now = Date.now()) {
+  const meet = (x, y, yOwner) => {
+    const fr = (x.data.friends ||= {});
+    const f = (fr[friendKey(yOwner.id, y)] ||= { n: 0 });
+    Object.assign(f, { name: y.name, type: y.type, owner: yOwner.name, ownerId: yOwner.id, at: now });
+    f.n += 1;
+    // 친구가 너무 많아지면 가장 덜 만난 친구부터 잊음
+    const keys = Object.keys(fr);
+    if (keys.length > PL.keepFriends) delete fr[keys.sort((p, q) => fr[p].n - fr[q].n || fr[p].at - fr[q].at)[0]];
+    x.data.bond = clamp(x.data.bond + PL.bond + (hasT(x, 'sociable') || hasT(x, 'packmate') ? PL.sociable : 0)); // 친구가 많은·어울리기 좋아하는
+    growAdd(x, 'friend');
+    return f.n;
+  };
+  const n = meet(a, b, other); meet(b, a, me);
+  if (n === 1) { diary(a, `${other.name}의 둥지 ${b.name}${josa(b.name, '과', '와')} 처음 만나 함께 놀았다.`, now); diary(b, `${me.name}의 둥지 ${a.name}${josa(a.name, '과', '와')} 처음 만나 함께 놀았다.`, now); }
+  if (n === PL.friendAt) { diary(a, `${other.name}의 둥지 ${b.name}${josa(b.name, '과', '와')} 단짝이 되었다.`, now); diary(b, `${me.name}의 둥지 ${a.name}${josa(a.name, '과', '와')} 단짝이 되었다.`, now); }
+  const kind = (x) => (x.type === 'human' ? 'h' : 'd');
+  const sceneFor = (x, y, yOwner) => fillT(pick(PL.scenes[kind(x) + kind(y)]), { a: x.name, b: y.name, o: yOwner.name });
+  const mine = [sceneFor(a, b, other)], theirs = [sceneFor(b, a, me)];
+  if (n === PL.friendAt) {
+    mine.push(fillT(PL.bestLine, { a: a.name, b: b.name, o: other.name }));
+    theirs.push(fillT(PL.bestLine, { a: b.name, b: a.name, o: me.name }));
+  }
+  return { mine, theirs, best: n >= PL.friendAt };
+}
+// 가장 친한 친구 (첫사랑 상대 고르기 등)
+const bestFriends = (k, type = null) => Object.values(k.data.friends || {}).filter((f) => f.n >= PL.friendAt && (!type || f.type === type)).sort((p, q) => q.n - p.n);
+const satMul = (k) => (hasT(k, 'sturdy') ? GR.sturdySat : 1) * (hasT(k, 'greedy') ? GR.greedySat : 1) * (hasT(k, 'sleepyhead') ? GR.sleepySat : 1); // 튼튼한·늦잠꾸러기: 천천히, 먹성 좋은: 빨리
 // 아직 모습이 정해지지 않은 식구에게 한 번만 정해 줌 (알은 깨어날 때)
 function rollLooks(k) {
   if (k.data.sex || k.status === 'egg' || k.status === 'cold') return false;
   const L = KIN_LOOKS[k.type];
   k.data.sex = Math.random() < 0.5 ? 'm' : 'f';
   k.data.looks = k.type === 'human'
-    ? [pick(L.hair), pick(L.eyes), pick(L.mark)]
-    : [`${pick(L.scale)} ${(KINDS[k.data.kind]?.name || '').replace(/\s*드래곤$/, '')} 비늘`.replace(/\s+/g, ' '), pick(L.horn), pick(L.eyes), pick(L.mark)];
-  const pool = Object.keys(KIN_TRAITS).filter((id) => KIN_TRAITS[id].for === k.type || KIN_TRAITS[id].for === 'both');
+    ? [pick(L.hair), pick(L.eyes), pick(L.mark), pick(L.build)]
+    : [`${pick(L.scale)} ${(KINDS[k.data.kind]?.name || '').replace(/\s*드래곤$/, '')} 비늘`.replace(/\s+/g, ' '), pick(L.horn), pick(L.eyes), pick(L.mark), pick(L.tail)];
+  const pool = Object.keys(KIN_TRAITS).filter((id) => (KIN_TRAITS[id].for === k.type || KIN_TRAITS[id].for === 'both') && !KIN_TRAITS[id].grown);
   const got = [];
   while (got.length < TR.count && pool.length) got.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
   k.data.traits = got;
@@ -87,12 +188,19 @@ function rollLooks(k) {
   }
   return true;
 }
+// 나중에 생긴 생김새 칸(인간: 체격, 새끼: 꼬리)을 예전 식구에게도 한 번 채워 줌
+function fillLooks(k) {
+  if (!Array.isArray(k.data.looks) || !k.data.sex) return;
+  const L = KIN_LOOKS[k.type];
+  if (k.type === 'human' && k.data.looks.length === 3) k.data.looks.push(pick(L.build));
+  if (k.type === 'drake' && k.data.looks.length === 4) k.data.looks.push(pick(L.tail));
+}
 // "윤기 도는 레드 비늘에 굽은 뿔. 영리하고 응석받이 같다." 같은 소개
 const traitNames = (k) => (k.data.traits || []).map((id) => KIN_TRAITS[id]?.name).filter(Boolean);
 function introOf(k) {
   const sex = KIN_LOOKS.sex[k.type][k.data.sex];
-  const [a, b, c] = k.data.looks;
-  const look = k.type === 'human' ? `${a}에 ${b}, ${c}` : `${a}에 ${b}`;
+  const [a, b, c, e] = k.data.looks;
+  const look = k.type === 'human' ? `${a}에 ${b}, ${c}${e ? `, ${e}` : ''}` : `${a}에 ${b}${k.data.looks[4] ? `, ${k.data.looks[4]}` : ''}`; // 체격·꼬리 칸이 있으면 함께
   const who = `${sex}아이`;
   return `${who}${josa(who, '이다', '다')}. ${look}. ${traitNames(k).map((n) => `'${n}'`).join(', ')} 성격이다.`;
 }
@@ -106,11 +214,12 @@ function satUpdate(k, now, keeper, R = HG, floor = keeper ? HG.keeperFloor : 0) 
   if (k.data.sat == null) { k.data.sat = R.start; k.data.satAt = now; }
   const s0 = k.data.sat;
   const hours = Math.max(0, (now - (k.data.satAt || now)) / 3600000);
-  let s = s0 - hours * R.perHour;
+  const rate = R.perHour * satMul(k); // 튼튼한: 천천히, 먹성 좋은: 빨리
+  let s = s0 - hours * rate;
   if (floor) s = Math.max(s, Math.min(s0, floor));
   s = Math.max(0, s);
   // 배부름(full 위)에 머문 시간만큼 유대
-  const fullMs = s0 > R.full ? Math.min(hours, (s0 - R.full) / R.perHour) * 3600000 : 0;
+  const fullMs = s0 > R.full ? Math.min(hours, (s0 - R.full) / rate) * 3600000 : 0;
   k.data.fullAcc = (k.data.fullAcc || 0) + fullMs;
   let up = 0;
   while (k.data.fullAcc >= R.fullBondEvery) { k.data.fullAcc -= R.fullBondEvery; up++; }
@@ -159,6 +268,7 @@ function hatch(k, at) {
   if (k.data.preBond) k.data.bond = clamp(k.data.bond + k.data.preBond);
   if (k.data.preStat && k.data.stats[k.data.preStat] != null) k.data.stats[k.data.preStat] += 1;
   rollLooks(k);
+  diaryStart(k); // '알에서 깨어났다.'
 }
 
 // 어른이 될 때 정해지는 재주: 가장 많이 기운 쪽 (같으면 자라 온 내력대로)
@@ -185,11 +295,18 @@ function personalityOf(k) {
 // 접속하거나 무언가를 할 때마다 부름. 지난 시간만큼 한꺼번에 계산함
 function tick(d, kin, now = Date.now()) {
   const out = { lines: [], items: [], hoardItems: [], gold: 0 };
+  // 곁에 둔 새끼와 함께 싸운 횟수 (전투 쪽이 드래곤에 적어 둔 것을 자람 기록으로)
+  const cj = logic.combatJson(d);
+  if (cj.allyFights) {
+    for (const [id, n] of Object.entries(cj.allyFights)) growAdd(kin.find((x) => x.id === Number(id)), 'fight', n);
+    delete cj.allyFights;
+  }
   for (const k of kin) {
     // 원정이 끝났는데 '따라나섬'이 남아 있으면 풀어 줌 (긴 잠에 든 둥지에서 거둔 식구 등. 남아 있으면 시설 일을 못 함)
     if (k.data.onExp && !d.exp_end) k.data.onExp = false;
     // 모습이 정해지기 전에 들어온 식구 (이 기능이 생기기 전의 식구)
     if (k.status === 'home' && rollLooks(k)) out.lines.push(`${k.name}${josa(k.name, '을', '를')} 다시 찬찬히 들여다보았다. ${introOf(k)}`);
+    if (k.status === 'home') { fillLooks(k); diaryStart(k); }
     if (k.type === 'drake' && k.status === 'home' && k.data.errand && now >= k.data.errand.end) {
       const seek = k.data.errand.seek;
       if (seek) {
@@ -233,7 +350,7 @@ function tick(d, kin, now = Date.now()) {
     if (k.type === 'drake' && k.status === 'home') {
       const wasHungry = k.data.sat != null && k.data.sat < DF.hungry;
       satUpdate(k, now, false, DF, drakeFloor(k, now));
-      if (!wasHungry && k.data.sat < DF.hungry) out.lines.push(`${ga(k)} 배가 고픈지 둥지 바닥을 발톱으로 긁으며 칭얼거린다.`);
+      if (!wasHungry && k.data.sat < DF.hungry) { out.lines.push(`${ga(k)} 배가 고픈지 둥지 바닥을 발톱으로 긁으며 칭얼거린다.`); growAdd(k, 'hungry'); }
     }
     if (k.type === 'human' && k.status === 'home') {
       const a = ageOf(k, now);
@@ -242,17 +359,22 @@ function tick(d, kin, now = Date.now()) {
       const day = logic.dayIdx(now);
       if (wk && k.data.jobDay !== day) { // 일하는 날마다: 유대 조금, 견습이면 그 시설의 재주 쪽으로
         k.data.jobDay = day;
-        k.data.bond = clamp(k.data.bond + 1);
+        k.data.bond = clamp(k.data.bond + 1 + (hasT(k, 'tidy') ? 1 : 0)); // 깔끔한: 1 더
         const tl = FACILITY.list[k.data.job].talent;
         if (!wk.adult && tl && !k.data.talent && k.data.lean) k.data.lean[tl] = (k.data.lean[tl] || 0) + 2;
       }
       const wasHungry = k.data.sat != null && k.data.sat < HG.hungry;
       satUpdate(k, now, hasKeeper(kin, k));
-      if (!wasHungry && k.data.sat < HG.hungry) out.lines.push(`${ga(k)} 배가 고픈지 자꾸 둥지 입구를 기웃거린다.`);
+      if (!wasHungry && k.data.sat < HG.hungry) {
+        out.lines.push(`${ga(k)} 배가 고픈지 자꾸 둥지 입구를 기웃거린다.`);
+        growAdd(k, 'hungry');
+        if (hasT(k, 'fussy')) { k.data.bond = clamp(k.data.bond - 1); out.lines.push(`투정쟁이 ${k.name}${josa(k.name, '이', '가')} 입을 삐죽 내밀었다. (유대 −1)`); }
+      }
       // 오래 돌보지 않으면 유대가 줄어듦 (외로움을 타는: 하루 일찍 · 의젓한: 절반만)
       const idle = Math.floor((now - k.data.lastCare) / DAY) - (H.neglectAfter - (hasT(k, 'lonely') ? 1 : 0));
       if (idle > (k.data.decayed || 0)) {
-        const n = Math.ceil((idle - (k.data.decayed || 0)) * H.neglectPerDay * (hasT(k, 'steady') ? 0.5 : 1));
+        const n = Math.ceil((idle - (k.data.decayed || 0)) * H.neglectPerDay * (hasT(k, 'steady') ? 0.5 : 1) * (hasT(k, 'tough') ? GR.tough : 1)) + (hasT(k, 'crybaby') ? 1 : 0); // 울보: 1 더
+        growAdd(k, 'neglect');
         k.data.bond = clamp(k.data.bond - n);
         k.data.decayed = idle;
         out.lines.push(`${ga(k)} 외로워한다. 한동안 돌봐 주지 못했다. (유대 −${n})`);
@@ -261,12 +383,16 @@ function tick(d, kin, now = Date.now()) {
       const st = stageOf(k, now);
       if (st.i > (k.data.stage || 0)) {
         k.data.stage = st.i;
-        if (a < H.adultDay) out.lines.push(`${ga(k)} 자라서 '${st.name}'${josa(st.name, '이', '가')} 되었다.`);
-        else if (st.name === '노년' && a < H.lifespan) out.lines.push(`${k.name}의 머리에 흰 서리가 내렸다. 남은 날이 많지 않다.`);
+        if (a < H.adultDay) { out.lines.push(`${ga(k)} 자라서 '${st.name}'${josa(st.name, '이', '가')} 되었다.`); diary(k, `'${st.name}'${josa(st.name, '이', '가')} 되었다.`, now); }
+        else if (st.name === '노년' && a < H.lifespan) { out.lines.push(`${k.name}의 머리에 흰 서리가 내렸다. 남은 날이 많지 않다.`); diary(k, '머리에 흰 서리가 내렸다.', now); }
+        if (st.name !== '노년') growCheck(d, k, out.lines, true); // 자라는 단계마다 성격 하나
       }
+      growCheck(d, k, out.lines, false); // 특별한 순간
+      if (k.data.bond >= GR.openedBond) growUp(d, k, out.lines, 'shy', 'opened', `늘 숨어서 내다보던 ${ga(k)} 오늘은 먼저 다가와 손을 잡았다. 수줍던 ${k.name}${josa(k.name, '이', '가')} 마음을 열었다.`);
       if (a >= H.adultDay && !k.data.talent) {
         k.data.talent = topLean(k);
         out.lines.push(`${ga(k)} 어른이 되었다. 재주는 '${TALENTS[k.data.talent].name}'. 둥지에서 갈 길을 정해 주자.`);
+        diary(k, `어른이 되었다. 재주는 '${TALENTS[k.data.talent].name}'.`, now);
       }
       // 약초꾼은 꿀 고약을 만들어 둠
       if (k.data.path === 'stay' && k.data.talent === 'herbalist') {
@@ -281,6 +407,7 @@ function tick(d, kin, now = Date.now()) {
       }
       // 인간의 생은 드래곤보다 훨씬 짧음
       if (a >= H.lifespan) {
+        diary(k, `긴 잠에 들었다. ${Math.floor(a)}일의 생이었다.`, now);
         k.status = 'dead';
         k.data.ended = now;
         const id = keepsakeOf(k);
@@ -323,7 +450,11 @@ function tick(d, kin, now = Date.now()) {
       if (st.i > (k.data.stage || 0)) {
         k.data.stage = st.i;
         out.lines.push(`${ga(k)} 자라서 '${st.name}'${josa(st.name, '이', '가')} 되었다.`);
+        diary(k, `'${st.name}'${josa(st.name, '이', '가')} 되었다.`, now);
+        growCheck(d, k, out.lines, true); // 자라는 단계마다 성격 하나
+        if (st.name === '다 자란 용') growUp(d, k, out.lines, 'clingy', 'dignified', `늘 꼬리를 물고 따라다니던 ${ga(k)} 이제는 말없이 곁에 앉아 먼저 마음을 살핀다. 응석받이의 속이 깊어졌다.`);
       }
+      growCheck(d, k, out.lines, false); // 특별한 순간
       // 젊은 용부터 혼자 사냥해 옴
       if (a >= R.huntFrom && !k.data.onExp && !k.data.errand) {
         let n = 0;
@@ -373,8 +504,8 @@ function perksOf(kin, now = Date.now()) {
       const A = DH.ally, st = k.data.stats;
       p.ally = {
         id: k.id, name: k.name, kind: k.data.kind,
-        atk: Math.round(A.base + st.claw * A.claw + st.wing * A.wing + (A.stage[stageOf(k, now).name] || 0)),
-        hunter: hasT(k, 'hunter'), clever: hasT(k, 'clever'),
+        atk: Math.round((A.base + st.claw * A.claw + st.wing * A.wing + (A.stage[stageOf(k, now).name] || 0)) * (hasT(k, 'fierce') ? GR.fierce : 1) * (hasT(k, 'bold') ? GR.bold : 1)), // 사나운·겁 없는
+        hunter: hasT(k, 'hunter'), clever: hasT(k, 'clever'), guard: hasT(k, 'shieldmate'), // 등을 맡기는
       };
     }
   }
@@ -399,7 +530,9 @@ function perksOf(kin, now = Date.now()) {
 // 프로필에 보여 줄 짧은 요약
 function summary(kin, now) {
   return {
-    home: kin.filter(isHome).map((k) => ({ name: k.name, type: k.type, stage: stageOf(k, now).name })),
+    // away: 원정·심부름·가출로 둥지를 비움 (둥지 한 줄 요약에서 흐리게)
+    home: kin.filter(isHome).map((k) => ({ name: k.name, type: k.type, stage: stageOf(k, now).name, status: k.status,
+      away: k.data.onExp ? 'exp' : k.data.errand ? 'errand' : k.data.runaway ? 'runaway' : null })),
     lineage: kin.filter((k) => k.type === 'drake' && k.status === 'independent').length,
   };
 }
@@ -423,7 +556,7 @@ function view(k, now, d) {
   // 포만감과 기분 (인간 식구)
   if (k.type === 'human' && k.status === 'home' && k.data.sat != null) {
     const hrs = Math.max(0, (now - (k.data.satAt || now)) / 3600000);
-    const s = Math.max(0, k.data.sat - hrs * HG.perHour);
+    const s = Math.max(0, k.data.sat - hrs * HG.perHour * satMul(k));
     v.sat = Math.round(s);
     v.satWord = satWord(s);
     v.mood = s < HG.hungry ? 'hungry' : s >= HG.full && k.data.bond >= 60 ? 'happy' : 'calm';
@@ -432,7 +565,7 @@ function view(k, now, d) {
   if (k.type === 'drake' && k.status === 'home') {
     const fl = drakeFloor(k, now);
     const hrs = Math.max(0, (now - (k.data.satAt || now)) / 3600000);
-    const s = Math.max(fl ? Math.min(k.data.sat ?? DF.start, fl) : 0, (k.data.sat ?? DF.start) - hrs * DF.perHour);
+    const s = Math.max(fl ? Math.min(k.data.sat ?? DF.start, fl) : 0, (k.data.sat ?? DF.start) - hrs * DF.perHour * satMul(k));
     v.sat = Math.round(s);
     v.satWord = satWord(s);
     v.mood = s < DF.hungry ? 'hungry' : s >= DF.full && k.data.bond >= 60 ? 'happy' : 'calm';
@@ -461,7 +594,11 @@ function view(k, now, d) {
     v.sex = k.data.sex;
     v.sexName = KIN_LOOKS.sex[k.type][k.data.sex];
     v.looks = k.data.looks || [];
-    v.traits = (k.data.traits || []).filter((id) => KIN_TRAITS[id]).map((id) => ({ id, name: KIN_TRAITS[id].name, desc: KIN_TRAITS[id].desc }));
+    v.traits = (k.data.traits || []).filter((id) => KIN_TRAITS[id]).map((id) => ({ id, name: KIN_TRAITS[id].name, desc: KIN_TRAITS[id].desc, grown: !!KIN_TRAITS[id].grown, flaw: !!KIN_TRAITS[id].flaw }));
+    v.hint = growHint(k); // '요즘 ~한 것 같다'
+    // 다른 둥지의 친구 (많이 만난 순서로 셋까지)
+    const fr = Object.values(k.data.friends || {}).sort((p, q) => q.n - p.n).slice(0, 3);
+    if (fr.length) v.friends = fr.map((f) => ({ name: f.name, owner: f.owner, best: f.n >= PL.friendAt }));
   }
   if (isHome(k)) v.nextIn = st.next != null ? (st.next - a) * DAY : null;
   if (k.type === 'human') {
@@ -493,6 +630,9 @@ function view(k, now, d) {
   if (k.data.onExp && k.data.expAt) v.expAt = k.data.expAt;
   if (k.data.expBack && now - k.data.expBack < 3 * 3600000) v.expBack = k.data.expBack;
   if (!isHome(k)) v.ended = k.data.ended || null;
+  // 함께한 날들: 며칠째인지와 함께 (새것이 위로)
+  diaryStart(k);
+  if (k.data.diary) { const b0 = k.data.born || k.data.diary[0].at; v.diary = k.data.diary.map((x) => ({ d: Math.max(1, Math.floor((x.at - b0) / DAY) + 1), t: x.t })).reverse(); }
   return v;
 }
 function views(kin, now, d) {
@@ -516,7 +656,7 @@ function feedDrake(d, kin, k, item, have, now) {
   satUpdate(k, now, false, DF, drakeFloor(k, now));
   const hungry = k.data.sat < DF.hungry;
   const fav = (ITEMS[item]?.cooked || item) === DF.kindFav[k.data.kind];
-  const gain = f.bond + (fav ? DF.favBond : 0) + (hasT(k, 'clingy') ? 1 : 0);
+  const gain = Math.max(1, f.bond + (fav ? DF.favBond : 0) + (clingyish(k) ? 1 : 0) + (hasT(k, 'foodie') ? (fav ? 3 : -1) : 0)); // 입맛 까다로운
   k.data.bond = clamp(k.data.bond + gain);
   k.data.sat = Math.min(100, k.data.sat + f.sat);
   k.data.lastFeed = now;
@@ -555,11 +695,18 @@ function care(d, kin, id, item, have, now = Date.now(), opt = {}) {
   if (hasT(k, 'gentle')) mood += 1;
   if (hasT(k, 'glutton') && food) mood += 2;
   if (hasT(k, 'shy')) mood += k.data.bond < 40 ? -1 : 2;
-  if (fav) mood += HG.favBond;
+  if (hasT(k, 'opened')) mood += 2;   // 마음을 연
+  if (hasT(k, 'warm')) mood += 1;     // 정 많은
+  if (hasT(k, 'picky') && food) mood += fav ? 2 : -1; // 편식하는
+  const cried = hasT(k, 'crybaby') && (k.data.decayed || 0) > 0; // 울보: 외로워하던 참에 다시 돌봐 줌
+  if (cried) mood += 2;
+  if (fav) mood += HG.favBond + (hasT(k, 'fussy') ? 3 : 0); // 투정쟁이: 좋아하는 요리엔 더
+  const sulk = hasT(k, 'willful') && Math.random() < GR.willfulChance; // 제멋대로인: 가끔 딴청
+  if (sulk) mood -= 1;
   let gain = Math.max(1, c.bond + logic.traitMods(d).bond + mood);
   if (hungry && !food) gain = Math.max(1, Math.round(gain * HG.hungryGift)); // 배고프면 장난감에 마음이 덜 감
   k.data.bond = clamp(k.data.bond + gain);
-  if (food) k.data.sat = Math.min(100, k.data.sat + c.sat * (hasT(k, 'glutton') ? 1.2 : 1));
+  if (food) { k.data.sat = Math.min(100, k.data.sat + c.sat * (hasT(k, 'glutton') ? 1.2 : 1)); growAdd(k, 'food'); }
   if (!k.data.talent && c.talent) k.data.lean[c.talent] += 1;
   k.data.lastCare = now;
   k.data.decayed = 0;
@@ -575,9 +722,17 @@ function care(d, kin, id, item, have, now = Date.now(), opt = {}) {
     if (!k.data.favKnown) { k.data.favKnown = true; lines.push(`${ga(k)} 눈을 반짝였다. ${k.name}${josa(k.name, '은', '는')} ${name}${josa(name, '을', '를')} 가장 좋아하는 것 같다!`); }
     else lines.push(`가장 좋아하는 ${name}이다. ${ga(k)} 몸을 흔들며 좋아한다.`);
   }
+  if (cried) lines.push(`울보 ${k.name}${josa(k.name, '이', '가')} 왈칵 울음을 터뜨리며 품에 안겼다.`);
   if (hasT(k, 'glutton') && food) lines.push(`먹보 ${k.name}${josa(k.name, '은', '는')} 눈 깜짝할 새 먹어 치우고 입맛을 다신다.`);
+  else if (hasT(k, 'picky') && food && !fav) lines.push(`편식하는 ${k.name}${josa(k.name, '이', '가')} 깨작깨작 먹는 시늉만 한다.`);
   else if (hasT(k, 'shy')) lines.push(k.data.bond - gain < 40 ? `수줍은 ${k.name}${josa(k.name, '은', '는')} 받아 들고 슬그머니 등을 돌린다.` : `${k.name}${josa(k.name, '이', '가')} 이제는 수줍게 웃으며 다가온다.`);
   const items = [{ id: item, qty: -1 }];
+  if (sulk) {
+    const got = pick(TR.pranksterItems);
+    items.push({ id: got, qty: 1 });
+    const gn = ITEMS[got].name;
+    lines.push(`제멋대로인 ${k.name}${josa(k.name, '은', '는')} 딴청을 피우다가, 어디서 주워 온 ${gn}${josa(gn, '을', '를')} 쑥 내밀었다.`);
+  }
   if (hasT(k, 'prankster') && Math.random() < TR.pranksterChance) {
     const got = pick(TR.pranksterItems);
     items.push({ id: got, qty: 1 });
@@ -604,11 +759,13 @@ function choosePath(d, kin, id, path, town, now = Date.now()) {
   if (!k || k.type !== 'human' || !k.data.talent || k.data.path) return { error: '지금은 정할 수 없다.' };
   if (path === 'stay') {
     k.data.path = 'stay';
+    diary(k, '둥지에 남기로 했다.', now);
     return { title: k.name, lines: [`${ga(k)} 둥지에 남기로 했다. ${TALENTS[k.data.talent].desc}`] };
   }
   if (path === 'knight') {
     if (k.data.bond < H.knightBond) return { error: `용기사로 삼으려면 유대가 ${H.knightBond} 이상이어야 한다.` };
     k.data.path = 'knight';
+    diary(k, '용기사가 되어 등에 올라탔다.', now);
     return { title: k.name, lines: [`${ga(k)} 등에 올라탔다. 이제 용기사로서 함께 사냥하고 싸운다.`, '사냥 때 발톱 +3, 받는 피해 30% 감소, 위협 성공률 +10%.'] };
   }
   if (path === 'return') {
@@ -616,6 +773,7 @@ function choosePath(d, kin, id, path, town, now = Date.now()) {
     const r = logic.repOf(d);
     const before = r[town] || 0;
     r[town] = clamp(Math.max(before, -20) + H.returnRep, -100, 100);
+    diary(k, `${REGIONS[town].name}${josa(REGIONS[town].name, '으로', '로')} 돌아갔다.`, now);
     k.status = 'returned';
     k.data.path = 'return';
     k.data.ended = now;
@@ -737,7 +895,7 @@ function workerOf(k, now = Date.now()) {
   if (!adult && !FW.apprenticeStages.includes(stg)) return null;
   const F = FACILITY.list[k.data.job];
   const fit = (F.talent && k.data.talent === F.talent) || F.traits.some((t) => hasT(k, t));
-  return { adult, fit, part: (adult ? FW.adult : FW.apprentice) * (fit ? FW.fit : 1) };
+  return { adult, fit, part: (adult ? FW.adult : FW.apprentice) * (fit ? FW.fit : 1) * (hasT(k, 'capable') ? GR.capable : 1) }; // 야무진
 }
 function setJob(d, kin, id, fac, now = Date.now()) {
   const k = findKin(kin, id);
@@ -840,7 +998,7 @@ function sendErrand(kin, id, region, minutes, allowRuin, now = Date.now()) {
   }
   const m = Number(minutes);
   if (!EH.minutes.includes(m)) return { error: '심부름 시간을 골라야 한다.' };
-  k.data.errand = { region, start: now, end: now + m * 60000, minutes: m };
+  k.data.errand = { region, start: now, end: now + m * 60000 * (hasT(k, 'windrider') ? GR.windrider : 1), minutes: m }; // 바람을 타는: 빨리 다녀옴
   return { title: k.name, lines: [`${k.name}에게 ${r.name}${josa(r.name, '으로', '로')} 심부름을 보냈다. (${m >= 60 ? `${m / 60}시간` : `${m}분`})`, `${ga(k)} 고개를 끄덕이고 힘차게 날아올랐다.`] };
 }
 // 돌아온 심부름: 그 지역의 재료를 줍고, 배가 줄어듦
@@ -850,8 +1008,9 @@ function finishErrand(k, now) {
   k.data.errand = null;
   const st = k.data.stats || {};
   const loot = REGION_LOOT[e.region] || {};
-  const n = (EH.rolls[e.minutes] || 3) + (EH.stageRolls[stageOf(k, now).name] || 0) + Math.floor((st.wing || 0) / EH.wingPer);
-  const rareUp = (st.wisdom || 0) * EH.wisdomRare * (hasT(k, 'curious') ? 1.5 : 1);
+  const n = (EH.rolls[e.minutes] || 3) + (EH.stageRolls[stageOf(k, now).name] || 0) + Math.floor((st.wing || 0) / EH.wingPer) + (hasT(k, 'pathfinder') ? 1 : 0); // 길눈 밝은
+  const rareUp = (st.wisdom || 0) * EH.wisdomRare * (hasT(k, 'curious') ? 1.5 : 1) + (hasT(k, 'stargazer') ? GR.stargazer : 0) + (hasT(k, 'sharpnose') ? GR.sharpnose : 0); // 별을 읽는·코가 예민한
+  growAdd(k, 'errand');
   const ids = [];
   for (let i = 0; i < n; i++) {
     const r = Math.random();
@@ -885,7 +1044,7 @@ function setCompanion(kin, id, now = Date.now()) {
   k.data.companion = true;
   return { title: k.name, lines: [`${ga(k)} 날개를 펼치고 곁에 섰다. 이제 사냥과 강적과의 싸움에 함께 나선다.`] };
 }
-const trainCd = (k) => (R.trainCooldown - (hasT(k, 'diligent') ? TR.diligentMs : 0)) * (drakeFull(k) ? DF.fullTrainCd : 1); // 부지런한·배부름: 간격이 짧음
+const trainCd = (k) => (R.trainCooldown - (hasT(k, 'diligent') ? TR.diligentMs : 0) - (hasT(k, 'steadfast') ? GR.hourMs : 0) + (hasT(k, 'wild') ? GR.hourMs : 0) + (hasT(k, 'sleepyhead') ? GR.hourMs : 0)) * (drakeFull(k) ? DF.fullTrainCd : 1); // 부지런한·듬직한·배부름: 짧음, 천방지축: 김
 function train(d, kin, id, stat, now = Date.now(), opt = {}) {
   const err = opt.away ? null : atNest(d);
   if (err) return { error: err };
@@ -903,8 +1062,9 @@ function train(d, kin, id, stat, now = Date.now(), opt = {}) {
   d.ap -= R.trainAp;
   d.en -= R.trainEn;
   const up = hasT(k, 'clever') && Math.random() < TR.cleverChance ? 2 : 1; // 영리한: 가끔 한 번 더
-  const bondUp = 3 + (hasT(k, 'clingy') ? 2 : 0) + (drakeFull(k) ? DF.fullTrainBond : 0); // 응석받이·배부름
+  const bondUp = 3 + (clingyish(k) ? 2 : 0) + (hasT(k, 'affable') ? 1 : 0) + (drakeFull(k) ? DF.fullTrainBond + (hasT(k, 'greedy') ? 1 : 0) : 0); // 응석받이·속 깊은·살가운·배부름(먹성 좋은은 더)
   k.data.stats[stat] += up;
+  if (['claw', 'wing', 'wisdom'].includes(stat)) growAdd(k, stat); // 자람 기록: 가르친 쪽
   k.data.trains += 1;
   k.data.lastTrain = now;
   k.data.bond = clamp(k.data.bond + bondUp);
@@ -912,7 +1072,7 @@ function train(d, kin, id, stat, now = Date.now(), opt = {}) {
   const how = { claw: '바위를 할퀴는 법', scale: '비늘을 단단히 세우는 법', wing: '바람을 타는 법', wisdom: '별을 읽는 법', majesty: '포효하는 법' }[stat];
   const lines = [`${k.name}에게 ${how}을 가르쳤다.`];
   if (up > 1) lines.push(`영리한 ${k.name}${josa(k.name, '은', '는')} 한 번 보고 두 가지를 깨우쳤다.`);
-  if (hasT(k, 'clingy')) lines.push(`${ga(k)} 끝나자마자 품으로 파고든다.`);
+  if (clingyish(k)) lines.push(hasT(k, 'dignified') ? `${ga(k)} 끝나자 가만히 머리를 기대 왔다.` : `${ga(k)} 끝나자마자 품으로 파고든다.`);
   lines.push(`${name} +${up}, 유대 +${bondUp}`);
   return { title: k.name, lines };
 }
@@ -930,6 +1090,7 @@ function release(d, kin, id, now = Date.now()) {
 function freeDrake(d, kin, k, now) {
   const sum = STAT_KEYS.reduce((a, s) => a + k.data.stats[s], 0);
   const gain = 8 + Math.floor(sum / 4) + (k.data.bond >= 60 ? 4 : 0);
+  diary(k, '다 자라 둥지를 떠났다.', now);
   k.status = 'independent';
   k.data.ended = now;
   k.data.lastGift = now;
@@ -975,7 +1136,7 @@ const ageGroup = (k, now) => {
 };
 const expWent = (kin, now = Date.now()) => kin.filter((k) => k.status === 'home' && k.data.onExp).map((k) => ({ name: k.name, age: ageGroup(k, now) }));
 // 함께 간 식구 수. 호기심 많은 식구는 조금 더 쳐 줌
-const companions = (kin) => kin.filter((k) => k.data.onExp && k.status === 'home').reduce((a, k) => a + 1 + (hasT(k, 'curious') ? TR.curiousBonus : 0), 0);
+const companions = (kin) => kin.filter((k) => k.data.onExp && k.status === 'home').reduce((a, k) => a + 1 + (hasT(k, 'curious') ? TR.curiousBonus : 0) + (hasT(k, 'adventurer') ? TR.curiousBonus : 0), 0); // 호기심 많은·모험을 좋아하는
 function expFinish(kin, minutes) {
   const lines = [];
   const back = [];
@@ -985,15 +1146,16 @@ function expFinish(kin, minutes) {
     if (k.status !== 'home') continue;
     k.data.expBack = Date.now(); // 둥지 이야기에 '돌아왔다'를 적을 때
     back.push(k.name);
-    k.data.bond = clamp(k.data.bond + 3 + (hasT(k, 'brave') ? 2 : 0)); // 씩씩한: 원정이 즐거움
+    k.data.bond = clamp(k.data.bond + 3 + (hasT(k, 'brave') ? 2 : 0) + (hasT(k, 'chatterbox') ? 1 : 0)); // 씩씩한: 원정이 즐거움, 수다쟁이: 1 더
     if (k.type === 'human') {
       k.data.trips += 1;
+      growAdd(k, 'trip');
       if (!k.data.talent) k.data.lean.guard += KIN.tripTalent;
     } else {
-      const n = Math.min(2, Math.floor(minutes / 60));
+      const n = Math.min(2, Math.floor(minutes / 60)) + (hasT(k, 'wild') && minutes >= 60 && Math.random() < GR.wildChance ? 1 : 0); // 천방지축: 가끔 하나 더
       const got = [];
       // 날쌘·고집 센·꿈꾸는: 그쪽으로 잘 자람
-      const bias = hasT(k, 'swift') ? 'wing' : hasT(k, 'stubborn') ? 'claw' : hasT(k, 'dreamy') ? 'wisdom' : null;
+      const bias = hasT(k, 'swift') ? 'wing' : hasT(k, 'stubborn') ? 'claw' : hasT(k, 'dreamy') ? 'wisdom' : hasT(k, 'proud') ? 'majesty' : null;
       for (let i = 0; i < n; i++) {
         const s = bias && Math.random() < TR.growBias ? bias : pick(STAT_KEYS);
         k.data.stats[s] += 1;
@@ -1014,7 +1176,8 @@ function restTogether(kin, minutes) {
   for (const k of hs) {
     const dbl = hasT(k, 'sleepy') || hasT(k, 'lonely'); // 잠꾸러기·외로움을 타는: 두 배
     const fullUp = (k.data.sat ?? 0) >= HG.full ? HG.restFull : 1;   // 배부르면 더 푹 쉼
-    k.data.bond = clamp(k.data.bond + Math.round(n * (dbl ? 2 : 1) * fullUp));
+    k.data.bond = clamp(k.data.bond + Math.round(n * (dbl ? 2 : hasT(k, 'homebody') ? 1.5 : 1) * fullUp) + (hasT(k, 'songbird') ? 1 : 0)); // 둥지를 좋아하는: 1.5배, 노래를 좋아하는: 1 더
+    growAdd(k, 'rest');
     if (dbl) extra.push(k.name);
   }
   const names = hs.map((k) => k.name).join(', ');
@@ -1098,7 +1261,9 @@ function rollEvent(d, kin, have, trigger, now = Date.now(), force = false) {
   if (pending(d)) return null;
   if (!force && Math.random() >= (EVENT_RULES.chance[trigger] || 0) * (1 + FACILITY.list.library.event * logic.facPower(d, 'library'))) return null; // 서고: 이야기가 조금 더 자주
   const c = ctxOf(d, kin, have, trigger, now);
-  const list = EVENTS.filter((e) => e.when.includes(trigger) && safe(() => e.cond(c)) && weightOf(e, c) > 0);
+  // 멸망한 대륙에서는 그 땅의 이벤트(ruin)와 어울리는 오염 이벤트(ruinToo)만, 다른 곳에서는 멸망한 대륙 이벤트를 빼고
+  const inRuin = logic.isRuin(c.region);
+  const list = EVENTS.filter((e) => (inRuin ? e.ruin || e.ruinToo : !e.ruin) && e.when.includes(trigger) && safe(() => e.cond(c)) && weightOf(e, c) > 0);
   if (!list.length) return null;
   // 최근에 본 이벤트는 무게를 줄임. 후보가 모두 최근 것뿐이면 그만큼 아예 덜 일어남
   const recent = recentOf(d);
@@ -1207,12 +1372,36 @@ function chooseEvent(d, kin, have, idx, now = Date.now()) {
     josa,
   };
   ch.run(h, c, vars);
+  // 키우는 태도 (다정·믿음·엄격·자유): 그 일을 겪은 식구의 자람 기록에
+  if (ch.tone) for (const id of new Set([vars?.id, vars?.a, vars?.b, vars?.m].filter((x) => x != null))) growAdd(kin.find((x) => x.id === id), ch.tone);
+  // 함께한 날들: 그 일을 겪은 식구에게 '이벤트 이름: 고른 것'
+  {
+    const lb = typeof ch.label === 'function' ? ch.label(c, vars) : ch.label;
+    for (const id of new Set([vars?.id, vars?.a, vars?.b, vars?.m].filter((x) => x != null))) {
+      const kk = kin.find((x) => x.id === id);
+      if (kk && (kk.status === 'home' || kk.status === 'independent')) diary(kk, `'${e.title}' — ${lb.replace(/\s*\([^)]*\)\s*$/, '')}.`, now); // 끝의 (금화 15) 같은 값은 뺌
+    }
+  }
   d.pending_event = null;
   const label = typeof ch.label === 'function' ? ch.label(c, vars) : ch.label;
   return { title: e.title, lines: out.lines, items: out.items, hoardItems: out.hoardItems, gold: out.gold, choice: label, tells: out.tells, sends: out.sends, purify: out.purify };
 }
 
+// GM 도구: 자람 기록과 가장 가까운 성격, 친구
+function growInfo(k) {
+  if (k.status !== 'home') return null;
+  const b = growBest(k);
+  return {
+    grow: { ...(k.data.grow || {}) },
+    traits: (k.data.traits || []).map((id) => ({ name: KIN_TRAITS[id]?.name || id, grown: !!KIN_TRAITS[id]?.grown })),
+    best: b ? { name: KIN_TRAITS[b.trait].name, v: Math.round(b.v * 100) / 100 } : null,
+    grown: grownCount(k), max: GR.max, special: GR.special,
+    friends: Object.values(k.data.friends || {}).sort((p, q) => q.n - p.n).map((f) => ({ name: f.name, owner: f.owner, n: f.n })),
+  };
+}
+
 module.exports = {
+  playable, playTogether, bestFriends, growInfo,
   expCandidates,
   tick, perksOf, summary, views, homeKin, stageOf,
   care, rename, choosePath, incubate, train, release,

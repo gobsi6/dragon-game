@@ -512,7 +512,10 @@
     /* 폰: '제작' 단추는 이름 줄에서 빼고 오른쪽 단추 칸 맨 위에 세로로 맞춤 */
     .inv .it b .use-n:not(.in-acts) { display: none; }
     .inv .it .use-n.in-acts { display: inline-flex; justify-content: center; min-height: 30px; }
-    .inv .it .acts { flex-direction: column; align-items: stretch; width: 76px; }
+    .inv .it .acts { flex-direction: column; align-items: stretch; width: 60px; } /* 사용·착용·버리기 단추 칸을 좁게 */
+    .inv .it .acts .btn { padding: 0 4px; }
+    .inv .it .use-n.in-acts { padding: 0 4px; gap: 3px; }
+    .inv .it .acts:has(.drop-yes) { width: auto; max-width: 52vw; } /* 버리기 확인 중에는 글자만큼 넓힘 */
   }
   /* 쓰임새 창 */
   .uses-list { display: flex; flex-direction: column; gap: 10px; margin: 6px 0 12px; }
@@ -629,6 +632,12 @@
   .mk-go .coin { width: 13px; height: 13px; color: currentColor; }
   .mk-go .coin::after { width: 6px; height: 6px; }
   .ord-rw { display: inline-flex; align-items: center; gap: 5px; font: 600 12.5px/1 var(--sans); color: #6A4E12; white-space: nowrap; }
+  .mk-alt { color: #5C4A2A; border-color: #CDBF9F; box-shadow: inset 0 0 0 2px var(--surface-2), inset 0 0 0 3px #EFE7D6; } /* 걸작·정성 들인 것으로 납품: 양피지빛 */
+  @media (max-width: 520px) { /* 폰: 보상은 한 줄, 아래에 두 버튼을 나란히 */
+    .mk-row .ctl:has(.mk-go ~ .mk-go) { flex: 1 1 100%; flex-wrap: wrap; } /* 버튼이 둘(걸작으로·만들기)이면 */
+    .mk-row .ctl:has(.mk-go ~ .mk-go) .ord-rw { flex: 1 1 100%; }
+    .mk-row .ctl:has(.mk-go ~ .mk-go) .mk-go { flex: 1 1 0; min-width: 0; }
+  }
   .mk-row .lock { font-size: 12px; color: var(--muted); text-align: right; }
   /* 물건 태그 */
   .itags { display: inline-flex; gap: 3px; margin-left: 6px; vertical-align: 1px; white-space: nowrap; }
@@ -724,6 +733,80 @@
   .kin-trait { min-height: 26px; padding: 0 9px; font: 600 12px/24px var(--sans); color: #2E4A60; background: #EEF2F6; border: 1px solid #B9C7D3; border-radius: 13px; cursor: pointer; }
   .kin-trait:hover { background: #E2E9F0; }
   .kin-trait[aria-expanded="true"] { background: var(--steel-d); border-color: var(--steel-d); color: #F4F7FA; }
+  .kin-trait.grown { color: #5C4A2A; background: #F4EFE3; border-color: #CDBF9F; } /* 자라며 생긴 성격 */
+  .kin-trait.grown:hover { background: #ECE4D2; }
+  .kin-trait.grown[aria-expanded="true"] { background: #7A6440; border-color: #7A6440; color: #FAF6EE; }
+  .kin-hint { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--muted); }
+  /* 둥지 한 줄 요약 (둥지 창 맨 위 · 프로필 · 동료 목록). 바탕은 둥지가 있는 지역 색으로 옅게 */
+  .nest-line { --nl-bg: #EEF0E4; --nl-line: #D6DAC6; --nl-ink: #4F5A3A; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 8px 10px; background: var(--nl-bg); border: 1px solid var(--nl-line); border-radius: 3px; color: var(--nl-ink); font-size: 12.5px; line-height: 1.5; }
+  .nest-line.plain { --nl-bg: #F2F3F1; --nl-line: #DDDFDB; --nl-ink: #4E5358; } /* 어느 지역인지 모를 때 (동료가 아닌 드래곤의 프로필) */
+  .nest-line .it { display: inline-flex; align-items: center; gap: 5px; }
+  .nest-line .it svg { width: 17px; height: 17px; flex: none; }
+  .nest-line .it.nm { font: 600 13px var(--serif); color: var(--ink); }
+  .nest-line .it.hd svg { color: #7A5A16; }
+  .nest-line .names { color: var(--ink-2); }
+  .nest-line .names .off { opacity: .55; }
+  .nest-line.sm { margin-top: 4px; padding: 3px 7px; gap: 3px 10px; font-size: 11.5px; border: 0; }
+  .nest-line.sm .it svg { width: 15px; height: 15px; }
+  .nest-line.sm .it.nm { font: 500 11.5px var(--sans); color: var(--nl-ink); }
+  .fr-row .nest-line.sm { display: flex; width: fit-content; max-width: 100%; }
+  /* 접히는 식구 카드 (요약 줄 + 펼침) */
+  .kin-card.fold { padding: 0; gap: 0; }
+  .kin-top { position: relative; display: flex; align-items: stretch; }
+  .kin-sum { flex: 1; min-width: 0; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px 4px 10px 12px; border: 0; background: none; text-align: left; color: inherit; border-radius: 3px 0 0 0; }
+  .kin-sum:hover { background: #F6F7F5; }
+  .kin-sum .kin-face { margin: 0; align-self: start; } /* 칸이 높아져도 얼굴은 늘 왼쪽 위, 이름 옆에 */
+  .kin-id { min-width: 0; }
+  .kin-id .nm { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+  .kin-id .nm b { font: 700 17px/1.3 var(--serif); }
+  .kin-mini { display: flex; flex-direction: column; gap: 3px; margin-top: 5px; max-width: 400px; } /* 넓은 화면에서 유대·배 막대를 길게 (폰에서는 칸 너비만큼) */
+  .kin-mini .bond { gap: 7px; font-size: 11px; }
+  .kin-mini .bond > span:first-child { min-width: 1.6em; }
+  .kin-mini .bond > span:last-child { min-width: 2.6em; font-size: 11px; }
+  .kin-sum-r { display: flex; align-items: center; gap: 8px; }
+  .kin-pills { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .kin-pill { display: inline-flex; align-items: center; gap: 5px; padding: 0 8px; font-size: 11.5px; line-height: 22px; border-radius: 11px; white-space: nowrap; background: #F2F3F1; color: var(--muted); }
+  .kin-pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .7; }
+  .kin-pill.ok { background: #E7F1EA; color: #2B5240; }
+  .kin-pill.warm { background: #F4EFE3; color: #5C4A2A; }
+  .kin-pill.warn { background: #F6E9EC; color: #8A3D52; }
+  .kin-corner { flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 8px 6px 0; } /* 오른쪽: 위에 ⋯, 아래 모서리에 펼치기 ⌄ */
+  .kin-corner .kin-more { order: 1; }
+  .kin-chev-btn { order: 2; margin-top: auto; width: 26px; height: 24px; display: grid; place-items: center; border: 1px solid transparent; border-radius: 3px; background: none; color: var(--muted); }
+  .kin-chev-btn { border-color: #DDDFDB; background: #FCFCFB; } /* 펼치기: 옅은 한 줄 테두리로 버튼임을 보여 줌 (⋯는 테두리 없음) */
+  .kin-chev-btn:hover { border-color: var(--line-soft); color: var(--ink); background: #F2F3F1; }
+  .kin-card.open .kin-chev-btn { border-color: #C9D3DC; background: #EEF2F6; color: var(--steel-d); } /* 펼친 카드는 바탕을 살짝 채움 */
+  .kin-chev { width: 7px; height: 7px; margin-top: -3px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); transition: transform .15s, margin .15s; }
+  .kin-card.open .kin-chev { transform: rotate(-135deg); margin-top: 3px; }
+  .kin-more { position: relative; flex: none; }
+  .kin-more-btn { width: 32px; height: 30px; display: grid; place-items: center; border: 1px solid transparent; border-radius: 3px; background: none; color: var(--muted); }
+  .kin-more-btn:hover, .kin-more-btn[aria-expanded="true"] { border-color: var(--line-soft); color: var(--ink); background: #F2F3F1; }
+  .kin-more-menu { position: absolute; right: 0; top: 34px; z-index: 4; min-width: 150px; padding: 4px; background: #FCFCFB; border: 1px solid #C9CCC8; border-radius: 4px; box-shadow: 0 8px 22px rgba(31, 35, 38, .14); }
+  .kin-more-item { display: block; width: 100%; min-height: 36px; padding: 0 10px; border: 0; border-radius: 3px; background: none; text-align: left; font-size: 13px; color: var(--ink-2); }
+  .kin-more-item:hover { background: #EEF2F6; color: var(--ink); }
+  .kin-more-item.off { color: #9EA3A7; }
+  .kin-body { display: flex; flex-direction: column; gap: 8px; padding: 10px 14px 14px; border-top: 1px solid var(--line-in); }
+  .kin-body > .kin-acts { padding: 8px 0; border-top: 1px dashed var(--line-in); border-bottom: 1px dashed var(--line-in); }
+  .kin-body > .kin-acts .lbl { margin-top: 4px; font-weight: 600; color: var(--ink-2); } /* 건네기·먹이·가르치기 같은 칸 제목 */
+  .kin-body > .kin-acts .lbl:first-child { margin-top: 0; }
+  .kin-body .kin-look .kin-sex { display: none; } /* 성별은 요약 줄에 있음 */
+  .kin-id .nm .kin-chip { white-space: nowrap; }
+  .kin-pills.m { display: none; }
+  @media (max-width: 520px) {
+    .kin-sum-r .kin-pills { display: none; }
+    .kin-pills.m { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+    .kin-mini { max-width: none; }
+  }
+  /* 함께한 날들 */
+  .kin-diary { margin: 2px 0 0; font-size: 12.5px; }
+  .kin-diary > summary { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; cursor: pointer; color: var(--steel-d); font-weight: 600; list-style: none; }
+  .kin-diary > summary::-webkit-details-marker { display: none; }
+  .kin-diary > summary::before { content: ''; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); transition: transform .15s; }
+  .kin-diary[open] > summary::before { transform: rotate(45deg); }
+  .kin-diary ol { margin: 4px 0 0; padding: 8px 10px 4px; list-style: none; max-height: 240px; overflow-y: auto; background: #FBF8F0; border-left: 2px solid #CDBF9F; }
+  .kin-diary li { display: grid; grid-template-columns: 3.4em 1fr; gap: 8px; padding: 3px 0; line-height: 1.55; color: var(--ink-2); }
+  .kin-diary li b { font: 600 11.5px/1.9 var(--sans); color: #7A6440; text-align: right; }
+  .kin-past .kin-diary { padding: 0 2px 6px; }
   .kin-trait-desc { margin: 0; padding: 6px 10px; font-size: 12px; line-height: 1.55; color: #2E4A60; background: #EEF2F6; border-left: 2px solid #7E97AC; }
   .kin-trait-desc[hidden] { display: none; }
   .kin-meta { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--ink-2); }
@@ -793,6 +876,9 @@
   .fac-todo .btn.primary { background: var(--fg); border-color: var(--fg); }
   .fac-todo.cook { flex-wrap: wrap; }
   .fac-cook { display: flex; gap: 6px; align-items: center; margin-left: auto; }
+  .fac-todo.cook .fac-whotxt { flex: 1 1 140px; min-width: 0; } /* 좁은 창(시설 창·폰)에서 제목이 한 글자씩 꺾이지 않게 */
+  .fac-todo.cook .fac-cook { flex: 1 1 220px; justify-content: flex-end; }
+  .fac-todo.cook .fac-cook select { flex: 1; min-width: 0; }
   .fac-cook .kin-sel { min-height: 38px; }
   .fac-todo.idle { background: #F2F5F8; border: 1px dashed #9DB2C3; }
   .fac-idle { flex: 1; font-size: 13px; color: #2E4A60; }
@@ -1259,6 +1345,47 @@
   .gift-box .gp-sel { flex: 1; min-width: 0; font-size: 13px; color: var(--muted); }
   .gift-box .gp-sel.on { color: var(--ink); font-weight: 600; }
   .gift-box .num:disabled { opacity: .5; }
+  /* 성향 설명: 세 칸을 같은 자리에 겹쳐 두고 하나만 보임 (높이가 늘 같아 깜빡이지 않음) */
+  #stance-note { display: grid; padding: 8px 10px; border-left: 2px solid transparent; border-radius: 2px; transition: background-color .12s, border-color .12s; }
+  #stance-note > .sn { grid-area: 1 / 1; visibility: hidden; }
+  #stance-note > .sn.on { visibility: visible; }
+  #stance-note.peek { border-left-color: var(--steel); background: #EEF2F6; } /* 다른 성향 설명을 미리 보는 중 */
+  #stance-note .peek-h { display: block; margin-bottom: 2px; font: 600 12px var(--sans); color: var(--steel-d); }
+  #stance-note:not(.peek) .peek-h { color: var(--muted); }
+  /* 소지품의 제작 버튼과 제작 창의 '방금 만든 것' */
+  .inv-tools { display: flex; justify-content: flex-end; margin: -2px 0 6px; }
+  .inv-tools .btn { gap: 6px; }
+  .dlg-x { position: absolute; top: 10px; right: 10px; z-index: 2; width: 34px; height: 34px; border: 1px solid transparent; border-radius: 3px; background: none; font-size: 20px; line-height: 1; color: var(--muted); }
+  .dlg-x:hover { border-color: var(--line-soft); color: var(--ink); }
+  .craft-made { position: sticky; top: 0; z-index: 3; display: flex; flex-direction: column; gap: 6px; margin: 4px 0 10px; padding: 10px 12px; border: 1px solid #CFE0D4; border-radius: 3px; background: #EEF6F0; box-shadow: 0 4px 10px rgba(31, 35, 38, .08); } /* 목록을 내려 만들어도 위에 붙어 보임 */
+  .craft-made .cm-h { margin: 0; font: 600 12px var(--sans); color: #2B5240; }
+  .cm-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+  .cm-nm { flex: 1 1 140px; font: 600 14px/1.3 var(--serif); }
+  .cm-nm small { margin-left: 6px; font: 500 12px var(--sans); color: var(--muted); }
+  .cm-row .btn { min-height: 32px; font-size: 12.5px; }
+  .cm-row .cm-who { min-height: 32px; width: auto; max-width: 9em; font-size: 12.5px; }
+  .cm-wait { font-size: 12px; color: var(--muted); }
+  /* 둥지 창: 탭 아래 시설 창 열기 */
+  /* 둥지 시설·제작처럼 다른 창을 여는 큰 단추: 아이콘 칸 + 제목 + 한 줄 설명 */
+  /* 바탕은 다른 단추처럼 흰색, 색은 왼쪽 아이콘 칸과 제목에만 (화면의 옅은 색 칸들 사이에서 '누르는 것'으로 보이게) */
+  .fac-open { --fo-bg: #F4EFE3; --fo-line: #D9C9A6; --fo-ink: #7A5A16; width: 100%; justify-content: flex-start; gap: 12px; min-height: 58px; margin: 10px 0 4px; padding: 8px 12px 8px 8px; text-align: left; }
+  .fac-open.fo-craft { --fo-bg: #EAF0F5; --fo-line: #B7C7D5; --fo-ink: var(--steel-d); }
+  .fac-open:hover { border-color: var(--fo-ink); } /* 마우스를 올리면 테두리 색만 바뀜 */
+  .fac-open .fo-ic { flex: none; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 4px; background: var(--fo-bg); border: 1px solid var(--fo-line); color: var(--fo-ink); }
+  .fac-open .fo-ic svg { width: 24px; height: 24px; }
+  .fac-open .fo-tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .fac-open .fo-t { font: 700 15px/1.3 var(--serif); color: var(--fo-ink); }
+  .fac-open small { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--ink-2); }
+  .fac-open > i { flex: none; width: 8px; height: 8px; margin-right: 4px; border-right: 2px solid var(--fo-ink); border-bottom: 2px solid var(--fo-ink); transform: rotate(-45deg); }
+  .src-box .src-make { margin-top: 6px; min-height: 30px; font-size: 12px; }
+  .gw-copy { display: block; margin-top: 2px; font-size: 11.5px; color: var(--muted); } /* 강화 탭: 같은 장신구가 여럿일 때 */
+  /* 물건 고르기 버튼과 펼쳐지는 상자 (GM 도구 등) */
+  .gp-field { flex: 1; min-width: 160px; justify-content: space-between; gap: 8px; text-align: left; font-weight: 500; }
+  .gp-field span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .gp-field i { flex: none; width: 7px; height: 7px; margin-top: -3px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); }
+  .gp-field[aria-expanded="true"] { border-color: var(--steel); }
+  .gp-field[aria-expanded="true"] i { transform: rotate(-135deg); margin-top: 3px; }
+  .gp-box { margin: 6px 0 10px; }
   .fr-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 4px; border-top: 1px solid var(--line-in); cursor: pointer; }
   .fr-row:hover { background: #F2F3F1; }
   .fr-row .ava { width: 34px; height: 34px; }
@@ -2071,7 +2198,7 @@
   .gm-kin { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 8px 10px; background: #fff; border: 1px solid var(--line-in); }
   .gm-kin .t { min-width: 180px; }
   .gm-kin .t b { display: block; font: 700 14px/1.35 var(--serif); }
-  .gm-kin .t small { font-size: 12px; color: var(--muted); }
+  .gm-kin .t small { display: block; font-size: 12px; color: var(--muted); } /* 자람 기록 줄이 여럿이라 한 줄씩 */
   .gm-kin .num { width: 64px; }
   .gm-ta { min-height: 96px; padding: 10px 12px; resize: vertical; font: inherit; line-height: 1.6; }
   .legacy-note { margin: 0 0 16px; padding: 12px 14px; border: 1px solid #E2CF9E; border-left: 3px solid #B8913A; background: #FBF6E8; }
@@ -2133,6 +2260,7 @@
   .cost-list span.src[aria-expanded="true"] { color: #fff; background: var(--steel-d); border-color: var(--steel-d); }
   .cost-list span.src.lack[aria-expanded="true"] { background: #A63E4B; border-color: #A63E4B; }
   .cost-list + .src-box { margin: -2px 0 10px; }
+  .mob-card .src-box { margin: 8px 0 0; } /* 모브 의뢰·교환 카드 안: 재료 줄이나 아랫줄 바로 밑에 */
   .hoard-tier { flex-basis: 100%; display: flex; flex-direction: column; gap: 6px; margin-top: 4px; font-size: 13px; color: #6B5A3A; }
   .hoard-tier b { color: #4E3A10; font-weight: 600; }
   .hoard-tier .hb { height: 6px; background: #EFE6CC; overflow: hidden; }
@@ -3190,12 +3318,24 @@
 <dialog class="frame dlg wide" id="craft-dlg" aria-labelledby="craft-dlg-title">
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="craft-dlg-title">제작</h2></div>
-  <div class="seg dtabs three" role="group" aria-label="소지품 메뉴"><button type="button" data-go="inv">소지품</button><button type="button" data-go="craft" class="on">제작</button><button type="button" data-go="log">주고받은 기록</button></div>
+  <button type="button" class="dlg-x" id="craft-x" aria-label="제작 창 닫기">×</button>
   <div class="body">
     <p class="note" id="craft-status"></p>
+    <div class="craft-made" id="craft-made" hidden></div>
     <div id="craft-list"></div>
     <div class="row"><button class="btn" type="button" id="craft-close">닫기</button></div>
   </div>
+</dialog>
+
+<dialog class="frame dlg wide" id="fac-dlg" aria-labelledby="fac-dlg-title">
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="fac-dlg-title">둥지 시설</h2></div>
+  <button type="button" class="dlg-x" id="fac-x" aria-label="시설 창 닫기">×</button>
+  <div class="body">
+    <div class="craft-made" id="fac-made" hidden></div>
+    <div id="fac-pane"></div>
+  </div>
+  <div class="row"><button class="btn" type="button" id="fac-close">닫기</button></div>
 </dialog>
 
 <dialog class="frame dlg" id="forge-dlg" aria-labelledby="forge-what">
@@ -3764,10 +3904,11 @@
 <dialog class="frame dlg wide" id="inv-dlg" aria-labelledby="inv-dlg-title">
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="inv-dlg-title">소지품</h2></div>
-  <div class="seg dtabs three" role="group" aria-label="소지품 메뉴"><button type="button" data-go="inv" class="on">소지품</button><button type="button" data-go="craft">제작</button><button type="button" data-go="log">주고받은 기록</button></div>
+  <div class="seg ctabs" role="group" aria-label="소지품 메뉴"><button type="button" data-go="inv" class="on">소지품</button><button type="button" data-go="log">주고받은 기록</button></div>
   <div class="body">
     <h3>착용 중인 장신구</h3>
     <div class="inv-gear" id="inv-gear"></div>
+    <button type="button" class="btn fac-open fo-craft" id="inv-craft"><span class="fo-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l9.2-9.2"/><path d="M11.4 6.6 15 3l6 6-3.6 3.6Z"/><path d="M13.2 8.4l2.4 2.4"/></svg></span><span class="fo-tx"><span class="fo-t">제작</span><small>만들기 · 실험 · 다듬기(강화·각인)</small></span><i aria-hidden="true"></i></button>
     <h3>가진 물건</h3>
     <div class="inv" id="inv-list"></div>
     <div class="row"><button class="btn" type="button" id="inv-close">닫기</button></div>
@@ -3777,7 +3918,7 @@
 <dialog class="frame dlg wide" id="ledger-dlg" aria-labelledby="ledger-dlg-title">
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="ledger-dlg-title">주고받은 기록</h2></div>
-  <div class="seg dtabs three" role="group" aria-label="소지품 메뉴"><button type="button" data-go="inv">소지품</button><button type="button" data-go="craft">제작</button><button type="button" data-go="log" class="on">주고받은 기록</button></div>
+  <div class="seg ctabs" role="group" aria-label="소지품 메뉴"><button type="button" data-go="inv">소지품</button><button type="button" data-go="log" class="on">주고받은 기록</button></div>
   <div class="body">
     <p class="note" style="margin: 0">선물, 교환, 이벤트로 오간 선물, GM 지급이 남는다. 최근 90일 동안 300개까지 보관한다.</p>
     <div class="mk-tabs" id="ledger-filter" role="tablist" aria-label="기록 거르기"><button type="button" role="tab" data-f="all" class="on">전체</button><button type="button" role="tab" data-f="in">받은 것</button><button type="button" role="tab" data-f="out">보낸 것</button><button type="button" role="tab" data-f="trade">교환</button></div>
@@ -5155,7 +5296,7 @@
   function gearDetail(id) {
     const it = S.items[id];
     if (!it) return [];
-    const g = S.me?.craft?.gear?.[id] || {};
+    const g0 = S.me?.craft?.gear?.[id], g = g0?.at === 'eq' ? g0 : {}; // 차고 있는 것이 강화된 그 한 개일 때만
     const main = Object.entries(it.bonus || {}).sort((a, b) => b[1] - a[1])[0]?.[0];
     const out = [effectText(it)];
     if (g.plus && main) out.push(`강화 +${g.plus}: ${statName(main)} +${g.plus} 더`);
@@ -5191,7 +5332,7 @@
     h.innerHTML = '<i class="slot-t"><small></small><span></span></i>';
     h.querySelector('small').textContent = sl.name;
     h.prepend(slotIcon(sl.key));
-    const gm = S.me.craft?.gear?.[id];
+    const gm0 = S.me.craft?.gear?.[id], gm = gm0?.at === 'eq' ? gm0 : null; // 차고 있는 것이 강화된 그 한 개일 때만
     h.querySelector('span').textContent = `${S.items[id].name}${gm?.plus ? ` +${gm.plus}` : ''}${gm?.mw ? ' ★' : ''}`;
     h.addEventListener('click', () => { if (open) gearOpen[where].delete(sl.key); else gearOpen[where].add(sl.key); redraw(); });
     slot.appendChild(h);
@@ -5257,9 +5398,12 @@
       done && done(res);
     });
   }
+  // 제작 창을 열어 둔 동안 만든 것 (위쪽 '방금 만든 것' 줄)
+  const CRAFT_MADE = [];
   function itemAct(event, payload) {
     socket.emit(event, payload, (res) => {
       if (res.error) { SFX.play('error'); return toast(res.error); }
+      if (event === 'craft') for (const m of res.result?.made || []) if (m.qty > 0 && !CRAFT_MADE.includes(m.id)) CRAFT_MADE.unshift(m.id);
       SFX.play({ 'item:drop': 'drop', craft: 'craft' }[event] || 'use');
       if (res.result?.lines) toast(res.result.lines.join(' '));
       // 다시 그려도 보던 자리에 머물게 (쓰고 나서 맨 위로 올라가지 않게)
@@ -5337,7 +5481,14 @@
         : invTab === 'fav' ? '즐겨찾기한 물건이 없다. 물건 이름 앞의 ☆를 누르면 여기에 모인다.' : '이 분류의 물건이 없다.';
       box.appendChild(p);
     }
+    // 강화·각인된 한 개가 소지품에 있으면 그 한 개는 따로 한 줄로 (나머지는 보통 것)
+    const rows = [];
     for (const [id, qty] of list) {
+      const gm = S.items[id]?.type === 'equip' ? S.me.craft?.gear?.[id] : null;
+      if (gm && gm.at === 'inv') { rows.push([id, 1, 'enh']); if (qty > 1) rows.push([id, qty - 1, 'plain']); }
+      else rows.push([id, qty, gm ? 'plain' : '']);
+    }
+    for (const [id, qty, kind] of rows) {
       const it = S.items[id];
       const cat = groupOf(id);
       if (cat !== lastCat) {
@@ -5357,7 +5508,7 @@
       const row = document.createElement('div');
       row.className = `it ${it.rarity}`;
       row.innerHTML = '<b><span class="nm"></span><span class="q"></span></b><small></small>';
-      const gmod = it.type === 'equip' ? S.me.craft?.gear?.[id] : null;
+      const gmod = kind === 'enh' ? S.me.craft?.gear?.[id] : null; // 보통 것 줄에는 강화·각인 표시 없음
       row.querySelector('.nm').textContent = `${it.name}${gmod?.plus ? ` +${gmod.plus}` : ''}`;
       row.querySelector('.nm').append(itemTags(it));
       row.querySelector('.q').textContent = `×${qty}`;
@@ -5411,7 +5562,7 @@
           b.type = 'button';
           b.className = 'btn';
           b.textContent = it.type === 'use' ? (it.use?.keep && !it.use?.mind ? '상자에 넣기' : it.use?.crown ? '머리에 얹기' : '사용') : '착용';
-          b.addEventListener('click', () => itemAct(it.type === 'use' ? 'item:use' : 'equip', { item: id }));
+          b.addEventListener('click', () => itemAct(it.type === 'use' ? 'item:use' : 'equip', kind === 'plain' ? { item: id, plain: true } : { item: id })); // 보통 것 줄: 강화되지 않은 것을 참
           acts.appendChild(b);
           // 꽃다발: 써서 정신을 맑히거나, 보물 상자에 넣어 간직하거나
           if (it.use?.keep && it.use?.mind) {
@@ -5432,7 +5583,7 @@
       const asking = () => {
         acts.replaceChildren();
         const mk = (text, cls, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = `btn ${cls}`; b.textContent = text; b.addEventListener('click', fn); acts.appendChild(b); };
-        mk(qty > 1 ? '1개 버리기' : '버리기', 'drop-yes', () => itemAct('item:drop', { item: id, qty: 1 }));
+        mk(qty > 1 ? '1개 버리기' : '버리기', 'drop-yes', () => itemAct('item:drop', { item: id, qty: 1, enh: kind === 'enh' })); // 강화된 줄이면 그 한 개를 버림
         if (qty > 1) mk(`모두 버리기 (${qty})`, 'drop-yes', () => itemAct('item:drop', { item: id, qty }));
         mk('취소', '', normal);
       };
@@ -5559,8 +5710,8 @@
     craftMode = 'make'; craftTab = 'all'; craftSlot = 'all'; craftCan = false;
     fetchInv(() => {
       renderCraft();
-      openPanel('craft-dlg');
-      setTimeout(() => { // 패널이 화면으로 미끄러져 들어온 뒤에
+      showCraft();
+      setTimeout(() => { // 창이 뜬 뒤에
         const row = document.querySelector(`#craft-list .recipe[data-out="${out}"]`);
         if (!row) return;
         row.scrollIntoView({ block: 'center', behavior: 'smooth' });
@@ -5685,6 +5836,7 @@
     card.appendChild(box);
     socket.emit('rel:list', {}, (res) => {
       box.replaceChildren();
+      requestAnimationFrame(() => revealBox(box)); // 펼친 동료 목록이 화면 밖이면 따라 내려감
       const friends = res.list?.friends || [];
       const p = document.createElement('p');
       p.className = 'note';
@@ -5725,7 +5877,8 @@
     socket.emit(event, payload, (res) => {
       if (res.error) { SFX.play('error'); return toast(res.error); }
       if (/^hoard:/.test(event)) SFX.play('coin');
-      if (big) { $('nest-dlg').close(); showResult(res.result); return; }
+      if (event === 'nest:cook') for (const m of res.result?.items || []) if (m.qty > 0 && !FAC_MADE.includes(m.id)) FAC_MADE.unshift(m.id);
+      if (big) { $('fac-dlg').close(); $('nest-dlg').close(); showResult(res.result); return; }
       toast(res.result.lines.join(' '));
       if ($('nest-dlg').open) openNest();
       if (res.result.event) openEvent(res.result.event);
@@ -5768,12 +5921,33 @@
         const fam = familyText(v);
         row.querySelector('span').textContent = [what, fam].filter(Boolean).join(' · ');
         list.appendChild(row);
+        const dy = kinDiary(v); if (dy) list.appendChild(dy); // 떠난 뒤에도 남는 함께한 날들
       }
       wrap.appendChild(list);
     }
     return wrap;
   }
   // 반려의 둥지에 와 있을 때: 그 집 식구를 함께 돌봄 (아이에게 물건 건네기, 새끼 가르치기)
+  // 함께한 날들: 접어 두었다가 펼쳐 봄 (며칠째 · 있었던 일)
+  const DIARY_OPEN = new Set(); // 펼쳐 둔 일기 (둥지 창을 다시 그려도 펼친 채로)
+  function kinDiary(v) {
+    if (!v.diary?.length) return null;
+    const dt = document.createElement('details');
+    dt.className = 'kin-diary';
+    dt.open = DIARY_OPEN.has(v.id);
+    dt.addEventListener('toggle', () => { if (dt.open) DIARY_OPEN.add(v.id); else DIARY_OPEN.delete(v.id); });
+    const sm = document.createElement('summary');
+    sm.textContent = `함께한 날들 · ${v.diary.length}`;
+    const ol = document.createElement('ol');
+    for (const e of v.diary) {
+      const li = document.createElement('li');
+      const b = document.createElement('b'); b.textContent = `${e.d}일째`;
+      const t = document.createElement('span'); t.textContent = e.t;
+      li.append(b, t); ol.appendChild(li);
+    }
+    dt.append(sm, ol);
+    return dt;
+  }
   function partnerKinSection(pk) {
     const wrap = document.createElement('div');
     wrap.className = 'partner-kin';
@@ -5882,6 +6056,7 @@
       const tx = document.createElement('span');
       tx.textContent = (v.looks || []).join(' · ');
       lk.append(sx, tx);
+      lk.dataset.sec = 'look';
       card.appendChild(lk);
       if (v.traits?.length) {
         const tw = document.createElement('div');
@@ -5893,21 +6068,29 @@
         for (const t of v.traits) {
           const b = document.createElement('button');
           b.type = 'button';
-          b.className = 'kin-trait';
+          b.className = `kin-trait${t.grown ? ' grown' : ''}`;
           b.textContent = t.name;
-          b.title = t.desc;
+          b.title = t.grown ? `자라며 생긴 성격. ${t.desc}` : t.desc;
           b.setAttribute('aria-expanded', 'false');
           b.addEventListener('click', () => {
             const open = b.getAttribute('aria-expanded') !== 'true';
             for (const x of tw.children) x.setAttribute('aria-expanded', 'false');
             b.setAttribute('aria-expanded', String(open));
             desc.hidden = !open;
-            desc.textContent = open ? `${t.name}: ${t.desc}` : '';
+            desc.textContent = open ? `${t.name}${t.grown ? ' (자라며 생긴 성격)' : ''}: ${t.desc}` : '';
           });
           tw.appendChild(b);
         }
         card.append(tw, desc);
       }
+      if (v.hint) { const hn = document.createElement('p'); hn.className = 'kin-hint'; hn.textContent = v.hint; card.appendChild(hn); } // 자람 기록 힌트: '요즘 ~한 것 같다'
+      if (v.friends?.length) { // 다른 둥지의 친구
+        const fp = document.createElement('p'); fp.className = 'kin-meta';
+        fp.textContent = `친구: ${v.friends.map((f) => `${f.name}(${f.owner}의 둥지)${f.best ? ' · 단짝' : ''}`).join(', ')}`;
+        fp.dataset.sec = 'friends';
+        card.appendChild(fp);
+      }
+      const dy = kinDiary(v); if (dy) card.appendChild(dy); // 함께한 날들
     } else if (v.status === 'egg') {
       const lk = document.createElement('p');
       lk.className = 'kin-look';
@@ -5918,7 +6101,7 @@
     const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     // 짝과 자녀 (식구 이벤트로 생김)
     const family = familyText(v);
-    if (family) meta(esc(family), 'family');
+    if (family) meta(esc(family), 'family').dataset.sec = 'family';
     const acts = document.createElement('div');
     acts.className = 'kin-acts';
     const btn = (text, fn, disabled, title) => {
@@ -5951,7 +6134,7 @@
         }
       }
       if (acts.children.length) card.appendChild(acts);
-      return card;
+      return kinFold(card, v, head, partner, '가출 중');
     }
 
     if (v.status === 'egg') {
@@ -5969,7 +6152,7 @@
       if (v.lifeLeft != null) parts.push(`남은 생 약 ${dur(v.lifeLeft)}`);
       else if (v.nextIn != null) parts.push(`다음 성장까지 ${dur(v.nextIn)}`);
       if (v.onExp) parts.push('원정에 따라감');
-      meta(esc(parts.join(' · ')));
+      meta(esc(parts.join(' · '))).dataset.sec = 'age';
       const bond = document.createElement('div');
       bond.className = 'bond';
       bond.innerHTML = `<span>유대</span><div class="bar"><i style="width: ${v.bond}%"></i></div><span>${v.bond}</span>`;
@@ -5980,7 +6163,7 @@
         sat.innerHTML = `<span>배</span><div class="bar"><i style="width: ${v.sat}%"></i></div><span>${esc(v.satWord)}</span>`;
         sat.title = `포만감 ${v.sat} / 100`;
         card.appendChild(sat);
-        if (v.favFood && S.items[v.favFood]) meta(`가장 좋아하는 음식: <b>${esc(S.items[v.favFood].name)}</b>`, 'fav');
+        if (v.favFood && S.items[v.favFood]) meta(`가장 좋아하는 음식: <b>${esc(S.items[v.favFood].name)}</b>`, 'fav').dataset.sec = 'about';
       }
     }
 
@@ -5989,9 +6172,9 @@
       if (v.talent) {
         const t = S.talents[v.talent];
         const path = { stay: '둥지에 남음', knight: '용기사' }[v.path];
-        meta(`재주 <b>${t.name}</b>${path ? ` · ${path}` : ''}. ${esc(v.path === 'knight' ? '사냥 때 발톱 +3, 받는 피해 30% 감소, 위협 성공률 +10%.' : t.desc)}`, 'talent');
+        meta(`재주 <b>${t.name}</b>${path ? ` · ${path}` : ''}. ${esc(v.path === 'knight' ? '사냥 때 발톱 +3, 받는 피해 30% 감소, 위협 성공률 +10%.' : t.desc)}`, 'talent').dataset.sec = 'about';
       } else {
-        meta(`${esc(origin)} ${v.lean ? `요즘은 <b>${S.talents[v.lean].name}</b> 쪽으로 기우는 것 같다.` : '아직 기질이 드러나지 않았다.'}`, 'talent');
+        meta(`${esc(origin)} ${v.lean ? `요즘은 <b>${S.talents[v.lean].name}</b> 쪽으로 기우는 것 같다.` : '아직 기질이 드러나지 않았다.'}`, 'talent').dataset.sec = 'about';
       }
       if (canAct && v.choosePath && !partner) {
         label('갈 길 정하기');
@@ -6027,7 +6210,7 @@
       const why = v.persByChoice ? `그동안 겪은 일들로 ${pers} 성격으로 자라는 중` // 선택지로 기운 성격
         : same ? `보호자를 닮아 ${pers} 성격으로 자라는 중`
         : `보호자가 ${STN[v.personality]} 성향이던 때를 가장 오래 보고 자라 ${pers} 성격으로 크는 중`;
-      meta(`가르친 횟수 ${v.trains}/${v.trainLimit} · ${why}${same ? '' : `. 지금의 ${STN[nowSt]} 성향으로 오래 지내면 차츰 바뀐다`}`);
+      meta(`가르친 횟수 ${v.trains}/${v.trainLimit} · ${why}${same ? '' : `. 지금의 ${STN[nowSt]} 성향으로 오래 지내면 차츰 바뀐다`}`).dataset.sec = 'about';
       // 보호자를 돕는 법: 곁에 두기(함께 싸움), 심부름
       if (v.companion) meta('<b>곁에 둔 새끼</b> · 사냥과 강적·재앙과의 싸움에 함께 나서 매 턴 덤벼든다.', 'talent');
       if (v.errand) meta(`<b>심부름 중</b> · ${esc(S.regions[v.errand.region]?.name || '')} · ${dur(Math.max(0, v.errand.end - Date.now()))} 뒤 돌아온다`, 'talent');
@@ -6087,11 +6270,298 @@
       btn('제안 거두기', () => socket.emit('kin:offer:cancel', { id: pend.id }, (r) => { if (r.error) return toast(r.error); toast(r.lines.join(' ')); openNest(); }));
     }
     if (acts.children.length) card.appendChild(acts);
+    return kinFold(card, v, head, partner);
+  }
+
+  // ── 둥지 한 줄 요약: 둥지 모습(동굴 입구) · 식구 · 보물더미(보물 상자) · 시설 ──
+  // n: { region, tier, hoard(0~3), facs:[id], kin:[{name, away}] } (서버 logic.nestLine과 같은 모양)
+  // opts.title: 앞에 붙일 둥지 이름 · opts.short: 동료 목록처럼 짧게 (식구·시설은 수만)
+  const NL_ICON = {"nest": ["<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 20 C4 13.6 7.8 10 12 10 C16.2 10 20 13.6 21 20\"/><path d=\"M9.8 20 C9.8 17.2 10.8 15.8 12 15.8 C13.2 15.8 14.2 17.2 14.2 20\"/><path d=\"M1.6 20 H22.4\"/></svg>", "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M2.6 20 C2.6 11 6.8 5 12 5 C17.2 5 21.4 11 21.4 20\"/><path d=\"M7 20 C7 13.6 9.2 10 12 10 C14.8 10 17 13.6 17 20\"/><path d=\"M1.6 20 H22.4\"/><path d=\"M4.6 9.6 L6.2 11 M19.4 9.6 L17.8 11\"/></svg>", "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 20 V8.2 H7.2 V20 M16.8 20 V8.2 H21 V20\"/><path d=\"M3 8.2 V6.2 H4.4 V8.2 M5.8 8.2 V6.2 H7.2 V8.2 M16.8 8.2 V6.2 H18.2 V8.2 M19.6 8.2 V6.2 H21 V8.2\"/><path d=\"M7.2 11 H16.8\"/><path d=\"M9.6 20 V15.2 C9.6 13.8 10.7 12.8 12 12.8 C13.3 12.8 14.4 13.8 14.4 15.2 V20\"/><path d=\"M1.6 20 H22.4\"/></svg>"], "hoard": ["<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4.4 11.2 H19.6 V19.6 H4.4 Z\"/><path d=\"M4.4 11.2 C4.4 7.8 7.6 5.8 12 5.8 C16.4 5.8 19.6 7.8 19.6 11.2\"/><path d=\"M10.8 11.2 H13.2 V14.2 H10.8 Z\"/></svg>", "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4.4 11.4 H19.6 V19.6 H4.4 Z\"/><path d=\"M4.4 11.4 L5.8 5.2 H18.2 L19.6 11.4\"/><path d=\"M6.2 11.4 C7.4 9.6 9 9.6 10.2 11.4 C11.4 9.4 13 9.4 14.2 11.4 C15.4 9.8 17 9.8 17.8 11.4\"/><path d=\"M10.8 13.4 H13.2 V16.2 H10.8 Z\"/><path d=\"M20.4 2.1 L21.075 2.925 L21.9 3.6 L21.075 4.275 L20.4 5.1 L19.724999999999998 4.275 L18.9 3.6 L19.724999999999998 2.925 Z\" fill=\"currentColor\" stroke=\"none\"/></svg>", "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4.4 12.6 H19.6 V20.6 H4.4 Z\"/><path d=\"M4.4 12.6 L5.6 7.8 H18.4 L19.6 12.6\"/><path d=\"M5.2 12.6 C6.6 10.2 8.6 10.2 10 12.2 C11.4 9.8 13.6 9.8 14.8 12.2 C16.2 10.4 18 10.6 19 12.6\"/><path d=\"M8.2 7.8 L7.8 3.4 L10.1 5.3 L12 2.6 L13.9 5.3 L16.2 3.4 L15.8 7.8\"/><circle cx=\"12\" cy=\"2.6\" r=\".5\" fill=\"currentColor\" stroke=\"none\"/><path d=\"M10.8 14.6 H13.2 V17.4 H10.8 Z\"/><path d=\"M4.2 2.8999999999999995 L4.965 3.8349999999999995 L5.9 4.6 L4.965 5.364999999999999 L4.2 6.3 L3.435 5.364999999999999 L2.5 4.6 L3.435 3.8349999999999995 Z\" fill=\"currentColor\" stroke=\"none\"/><path d=\"M20.2 3.7 L20.875 4.525 L21.7 5.2 L20.875 5.875 L20.2 6.7 L19.525 5.875 L18.7 5.2 L19.525 4.525 Z\" fill=\"currentColor\" stroke=\"none\"/><path d=\"M21.6 8.8 L22.05 9.350000000000001 L22.6 9.8 L22.05 10.25 L21.6 10.8 L21.150000000000002 10.25 L20.6 9.8 L21.150000000000002 9.350000000000001 Z\" fill=\"currentColor\" stroke=\"none\"/></svg>"], "fac": {"forge": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3.5 9 H15 C15 11 16.8 12 20.5 12 V13.2 H15.2 L14 15.4 H16.4 V18.6 H7.6 V15.4 H10 L8.8 13.2 C5.6 13.2 3.5 11.6 3.5 9 Z\"/></svg>", "herb": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 20.5 V11\"/><path d=\"M12 13.4 C8 13.4 5.8 10.6 5.8 7 C9.2 7 12 9.4 12 13.4 Z\"/><path d=\"M12 11.2 C12 7.4 14.8 4.8 18.4 4.8 C18.4 8.6 15.6 11.2 12 11.2 Z\"/><path d=\"M7 20.5 H17\"/></svg>", "kitchen": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4.6 11.2 H19.4 V14.6 C19.4 17.8 16.4 20.2 12 20.2 C7.6 20.2 4.6 17.8 4.6 14.6 Z\"/><path d=\"M2.8 12.6 H4.6 M19.4 12.6 H21.2\"/><path d=\"M10 8.6 C9 7 10.8 5.6 9.8 3.6 M14 8.6 C13 7 14.8 5.6 13.8 3.6\"/></svg>", "tower": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M8 21 L9 9.4 H15 L16 21 Z\"/><path d=\"M6.8 9.4 H17.2 L15.6 5.4 H8.4 Z\"/><path d=\"M12 5.4 V2.4 L14.6 3.2 L12 4\"/><path d=\"M11 13.4 H13 V15.8 H11 Z\"/></svg>", "library": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4.6 19.6 V6 H8.8 V19.6 Z\"/><path d=\"M8.8 19.6 V8 H12.8 V19.6 Z\"/><path d=\"M13.8 19.8 L16.6 7.6 L20.2 8.4 L17.4 20.6 Z\"/><path d=\"M6.7 9 V10.6 M10.8 11 V12.6\"/></svg>", "spa": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 15.6 H21\"/><path d=\"M4 18.6 C6 17 8 20 10 18.6 C12 17 14 20 16 18.6 C18 17 20 20 20 18.6\"/><path d=\"M8.4 12.4 C7.4 10.8 9.2 9.4 8.2 7.4 M12.4 12.4 C11.4 10.8 13.2 9.4 12.2 7.4 M16.4 12.4 C15.4 10.8 17.2 9.4 16.2 7.4\"/></svg>"}, "face": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"13\" r=\"8.5\"></circle><path d=\"M3.65 11.4Q8.6 10.6 12 6.4Q15.4 10.6 20.35 11.4\"></path><circle cx=\"9\" cy=\"14.6\" r=\".95\" fill=\"currentColor\" stroke=\"none\"></circle><circle cx=\"15\" cy=\"14.6\" r=\".95\" fill=\"currentColor\" stroke=\"none\"></circle></svg>"};
+  const NL_REGION = {"plains": ["#EEF0E4", "#D6DAC6", "#4F5A3A"], "snow": ["#E8EEF3", "#C9D5DF", "#3C5A73"], "ruins": ["#EDEBF1", "#D3CFDC", "#4E4A63"], "forest": ["#E5EEE6", "#C6D8C9", "#365A43"], "swamp": ["#E6E9E2", "#C9CFC2", "#41483A"], "canyon": ["#F4ECDF", "#E0D0B5", "#6E4E22"], "volcano": ["#F2E6E3", "#DEC6C0", "#6A3229"], "coast": ["#E4EEF0", "#C2D6DB", "#2F5A66"]}; // [바탕, 테두리, 글자]
+  const NL_AWAY = { exp: '원정 중', errand: '심부름 중', runaway: '가출 중' };
+  function nestLineEl(n, opts = {}) {
+    const l = document.createElement('div');
+    l.className = `nest-line${opts.short ? ' sm' : ''}`;
+    const R = n.region && NL_REGION[n.region];
+    if (R) { l.style.setProperty('--nl-bg', R[0]); l.style.setProperty('--nl-line', R[1]); l.style.setProperty('--nl-ink', R[2]); } else l.classList.add('plain');
+    const item = (svg, cls) => { const s = document.createElement('span'); s.className = `it${cls ? ` ${cls}` : ''}`; s.innerHTML = svg; l.appendChild(s); return s; };
+    const tierName = S.nestRules?.tiers?.[n.tier]?.name || '';
+    item(NL_ICON.nest[n.tier] || NL_ICON.nest[0], 'nm').append(opts.short ? tierName : `${opts.title ? `${opts.title} · ` : ''}${tierName}`);
+    if (n.kin?.length) {
+      const k = item(NL_ICON.face);
+      if (opts.short) k.append(`식구 ${n.kin.length}`);
+      else {
+        const nm = document.createElement('span'); nm.className = 'names';
+        n.kin.forEach((x, i) => {
+          if (i) nm.append(' · ');
+          const e = document.createElement('span'); e.textContent = x.away ? `${x.name}(${NL_AWAY[x.away] || '나가 있음'})` : x.name;
+          if (x.away) e.className = 'off';
+          nm.appendChild(e);
+        });
+        k.append('식구 ', nm);
+      }
+    }
+    if (n.hoard) item(NL_ICON.hoard[n.hoard - 1], 'hd').append(S.hoardTiers?.[n.hoard - 1]?.name || '');
+    if (n.facs?.length) item(NL_ICON.fac[n.facs[0]] || '').append(opts.short ? `시설 ${n.facs.length}` : `시설 ${n.facs.map((id) => S.facility?.list?.[id]?.name || id).join(' · ')}`);
+    return l;
+  }
+  // 내 둥지 창에서: 받은 둥지 정보(nest:get)로 같은 모양을 만듦
+  function myNestLine(n) {
+    const ht = S.hoardTiers || [];
+    let hoard = 0; ht.forEach((t, i) => { if ((n.value || 0) >= t.at) hoard = i + 1; });
+    const order = Object.keys(S.facility?.list || {});
+    const built = new Set((n.facilities?.built || []).map((f) => f.id));
+    return {
+      region: n.region, tier: n.tier || 0, hoard,
+      facs: order.filter((id) => built.has(id)),
+      kin: (n.kin?.home || []).map((v) => ({ name: v.name, away: v.onExp ? 'exp' : v.errand ? 'errand' : v.runaway ? 'runaway' : null })),
+    };
+  }
+
+  // ── 물건 고르기 상자: 선물 보내기와 같은 모양 (이름으로 찾기 + 종류로 거르기 + 눌러서 고르기) ──
+  // list: [[id, 개수 또는 null]] · cur: 지금 고른 id · onPick(id): 고르면 부름
+  function itemPickBox(list, cur, onPick, { label = '물건', placeholder = '물건 이름으로 찾기', byCat = false } = {}) {
+    const box = document.createElement('div');
+    box.className = 'gift-box gp-box';
+    box.innerHTML = '<div class="gp"><input class="input gp-q" type="search" autocomplete="off"><div class="gp-tags" role="group" aria-label="물건 종류"></div><div class="gp-list" role="listbox"></div></div>';
+    const qIn = box.querySelector('.gp-q'), tagsEl = box.querySelector('.gp-tags'), listEl = box.querySelector('.gp-list');
+    qIn.placeholder = placeholder; qIn.setAttribute('aria-label', `${label} 찾기`); listEl.setAttribute('aria-label', label);
+    const st = { q: '', tag: '' };
+    const tagOf = (id) => (byCat ? itemCatName(S.items[id]) : itemTagText(S.items[id])); // byCat: 물건이 많을 때 종류로만 거름 (드묾·희귀까지 나누면 칸이 너무 많음)
+    const tags = [...new Set(list.map(([id]) => tagOf(id)))];
+    const drawList = () => {
+      listEl.replaceChildren();
+      const q = st.q.trim().toLowerCase();
+      const hits = list.filter(([id]) => S.items[id] && (!st.tag || tagOf(id) === st.tag) && (!q || S.items[id].name.toLowerCase().includes(q)));
+      for (const [id, n] of hits.slice(0, 300)) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = `gp-it${cur === id ? ' on' : ''}`;
+        b.setAttribute('role', 'option'); b.setAttribute('aria-selected', String(cur === id));
+        b.innerHTML = '<b></b><small></small><span></span>';
+        b.querySelector('b').textContent = S.items[id].name;
+        b.querySelector('small').textContent = itemTagText(S.items[id]);
+        b.querySelector('span').textContent = n != null ? `×${n}` : '';
+        b.addEventListener('click', () => onPick(id));
+        listEl.appendChild(b);
+      }
+      if (!hits.length) { const e = document.createElement('p'); e.className = 'note gp-empty'; e.textContent = '찾는 물건이 없다.'; listEl.appendChild(e); }
+      else if (hits.length > 300) { const e = document.createElement('p'); e.className = 'note gp-empty'; e.textContent = `${hits.length - 300}개가 더 있다. 이름으로 찾아보자.`; listEl.appendChild(e); }
+    };
+    const drawTags = () => {
+      tagsEl.replaceChildren();
+      if (tags.length < 2) { tagsEl.hidden = true; return; }
+      for (const t of ['', ...tags]) {
+        const c = document.createElement('button');
+        c.type = 'button'; c.className = `gp-tag${st.tag === t ? ' on' : ''}`; c.setAttribute('aria-pressed', String(st.tag === t)); c.textContent = t || '전체';
+        c.addEventListener('click', () => { st.tag = t; drawTags(); drawList(); });
+        tagsEl.appendChild(c);
+      }
+    };
+    qIn.addEventListener('input', () => { st.q = qIn.value; drawList(); });
+    drawTags(); drawList();
+    return box;
+  }
+  // 고른 물건을 보여 주는 버튼. 누르면 after 아래에 고르기 상자가 펼쳐지고, 그 자리까지 스크롤이 따라감
+  function itemPickField(parent, list, cur, onPick, opts = {}) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn gp-field';
+    const label = () => { b.textContent = ''; const t = document.createElement('span'); t.textContent = S.items[cur]?.name || '물건 고르기'; const v = document.createElement('i'); v.setAttribute('aria-hidden', 'true'); b.append(t, v); };
+    label();
+    b.setAttribute('aria-label', `${opts.label || '물건'}: ${S.items[cur]?.name || '고르지 않음'}`);
+    let box = null;
+    b.addEventListener('click', () => {
+      if (box) { box.remove(); box = null; b.setAttribute('aria-expanded', 'false'); return; }
+      box = itemPickBox(list, cur, (id) => { cur = id; label(); onPick(id); box.remove(); box = null; b.setAttribute('aria-expanded', 'false'); b.focus(); }, opts);
+      (opts.after || parent).after(box);
+      b.setAttribute('aria-expanded', 'true');
+      requestAnimationFrame(() => { revealBox(box); box.querySelector('.gp-q').focus({ preventScroll: true }); });
+    });
+    parent.appendChild(b);
+    return { el: b, set: (id) => { cur = id; label(); } };
+  }
+
+  // 펼친 상자를 창 안에서 보이게 스크롤 (다 들어가면 필요한 만큼만, 화면보다 크면 상자 맨 위에 맞춤)
+  function revealBox(el) {
+    const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const tall = el.getBoundingClientRect().height > window.innerHeight * 0.8;
+    el.scrollIntoView({ block: tall ? 'start' : 'nearest', behavior: smooth ? 'smooth' : 'auto' });
+  }
+  // ── 접히는 식구 카드: 한 줄 요약(얼굴·이름·유대·배·지금 상태)만 보이고, 누르면 아래로 펼쳐짐 ──
+  // 이름 바꾸기·입양 보내기는 오른쪽 위 ⋯ 메뉴로. 펼친 식구는 둥지 창을 다시 그려도 펼친 채로
+  const KIN_OPEN = new Map();
+  let KIN_MENU = null; // ⋯ 메뉴가 열린 식구
+  const KIN_ORDER = ['egg', 'age', 'traits', 'hint', 'acts', 'about', 'friends', 'family', 'stats', 'look', 'diary', 'adopt'];
+  function kinPills(v, partner) {
+    const out = [];
+    const add = (t, cls = '') => out.push([t, cls]);
+    if (v.status === 'egg') add(v.hatchIn == null ? '품어 주기' : '품는 중', v.hatchIn == null ? 'ok' : 'wait');
+    else if (v.runaway) add('가출 중', 'warn');
+    else if (v.onExp) add('원정에 따라감', 'wait');
+    else if (v.type === 'human') {
+      if (v.choosePath && !partner) add('갈 길 정하기', 'ok');
+      else if (v.careIn > 0) add(`돌보기 ${dur(v.careIn)} 뒤`, 'wait');
+      else add('돌볼 수 있음', 'ok');
+    } else {
+      if (v.companion) add('곁에 둠', 'warm');
+      if (v.errand) add('심부름 중', 'wait');
+      else if (v.canRelease && !partner) add('독립할 수 있음', 'ok');
+      else if (v.trains >= v.trainLimit) add('더 자라야 가르침', 'wait');
+      else if (v.trainIn > 0) add(`가르치기 ${dur(v.trainIn)} 뒤`, 'wait');
+      else add('가르칠 수 있음', 'ok');
+    }
+    return out.slice(0, 2);
+  }
+  function kinFold(card, v, head, partner, forcePill) {
+    const key = `${partner ? `p${partner.id}:` : ''}${v.id}`;
+    if (!KIN_OPEN.has(key)) KIN_OPEN.set(key, !partner && (NEST_LAST?.nest?.kin?.home || []).length === 1); // 식구가 하나뿐이면 처음부터 펼침
+    const open = KIN_OPEN.get(key);
+    card.classList.add('fold');
+    card.classList.toggle('open', open);
+    // 펼칠 내용: 자리표대로 순서를 맞춤 (유대·배 막대는 요약 줄로)
+    const secOf = (n) => n.dataset.sec || (n.classList.contains('kin-traits') || n.classList.contains('kin-trait-desc') ? 'traits'
+      : n.classList.contains('kin-hint') ? 'hint' : n.classList.contains('kin-acts') ? 'acts' : n.classList.contains('kin-stats') ? 'stats'
+        : n.classList.contains('kin-diary') ? 'diary' : n.classList.contains('kin-adopt') ? 'adopt' : n.classList.contains('kin-look') ? (v.status === 'egg' ? 'egg' : 'look')
+          : n.classList.contains('kin-meta') ? (v.status === 'egg' || v.runaway ? 'egg' : 'about') : 'about');
+    const parts = [...card.children].filter((n) => n !== head);
+    const bars = parts.filter((n) => n.classList.contains('bond'));
+    const rest = parts.filter((n) => !n.classList.contains('bond'));
+    rest.sort((a, b) => KIN_ORDER.indexOf(secOf(a)) - KIN_ORDER.indexOf(secOf(b)));
+    // 요약 줄 (누르면 펼침)
+    const sum = document.createElement('button');
+    sum.type = 'button';
+    sum.className = 'kin-sum';
+    sum.setAttribute('aria-expanded', String(open));
+    const face = head.querySelector('.kin-face');
+    const idb = document.createElement('div');
+    idb.className = 'kin-id';
+    const nmRow = document.createElement('div');
+    nmRow.className = 'nm';
+    const nmB = head.querySelector('b');
+    const chip = head.querySelector('.kin-chip');
+    nmRow.append(nmB, chip);
+    if (v.sex) { const sx = document.createElement('span'); sx.className = `kin-sex ${v.sex}`; sx.textContent = `${v.sex === 'm' ? '♂' : '♀'} ${v.sexName}`; nmRow.appendChild(sx); }
+    idb.appendChild(nmRow);
+    if (bars.length) { const mini = document.createElement('div'); mini.className = 'kin-mini'; mini.append(...bars); idb.appendChild(mini); }
+    const right = document.createElement('div');
+    right.className = 'kin-sum-r';
+    const pl = document.createElement('div');
+    pl.className = 'kin-pills';
+    for (const [t, cls] of forcePill ? [[forcePill, 'warn']] : kinPills(v, partner)) { const x = document.createElement('span'); x.className = `kin-pill ${cls}`; x.textContent = t; pl.appendChild(x); }
+    const plM = pl.cloneNode(true); // 폰: 이름 아래 한 줄로
+    plM.classList.add('m');
+    idb.appendChild(plM);
+    right.append(pl);
+    sum.append(face || document.createElement('span'), idb, right);
+    // 펼치기 아이콘: 오른쪽 위 ⋯ 옆에 고정 (칸 높이와 상관없이 이름 줄 높이)
+    const chevBtn = document.createElement('button');
+    chevBtn.type = 'button';
+    chevBtn.className = 'kin-chev-btn';
+    chevBtn.setAttribute('aria-label', `${v.name} ${open ? '접기' : '펼치기'}`);
+    chevBtn.setAttribute('aria-expanded', String(open));
+    chevBtn.innerHTML = '<span class="kin-chev" aria-hidden="true"></span>';
+    const toggle = () => { // 그 자리에서 펼치고 접음 (창 전체를 다시 그리지 않음)
+      const o = !card.classList.contains('open');
+      KIN_OPEN.set(key, o);
+      card.classList.toggle('open', o);
+      card.querySelector(':scope > .kin-body').hidden = !o;
+      sum.setAttribute('aria-expanded', String(o));
+      chevBtn.setAttribute('aria-expanded', String(o));
+      chevBtn.setAttribute('aria-label', `${v.name} ${o ? '접기' : '펼치기'}`);
+    };
+    sum.addEventListener('click', toggle);
+    chevBtn.addEventListener('click', toggle);
+    // ⋯ 메뉴: 머리줄에 있던 버튼(이름 바꾸기·입양 보내기)을 그대로 옮김
+    const btns = [...head.querySelectorAll('.kin-head-btns button')];
+    const top = document.createElement('div');
+    top.className = 'kin-top';
+    top.appendChild(sum);
+    const corner = document.createElement('div');
+    corner.className = 'kin-corner';
+    corner.appendChild(chevBtn);
+    if (btns.length) {
+      const more = document.createElement('div');
+      more.className = 'kin-more';
+      const mb = document.createElement('button');
+      mb.type = 'button';
+      mb.className = 'kin-more-btn';
+      mb.setAttribute('aria-label', `${v.name} 더 보기`);
+      mb.setAttribute('aria-expanded', String(KIN_MENU === key));
+      mb.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>';
+      const menu = document.createElement('div');
+      menu.className = 'kin-more-menu';
+      menu.hidden = KIN_MENU !== key;
+      for (const b of btns) { b.className = `kin-more-item${b.classList.contains('off') ? ' off' : ''}`; b.addEventListener('click', () => { KIN_MENU = null; menu.hidden = true; mb.setAttribute('aria-expanded', 'false'); }); menu.appendChild(b); }
+      mb.addEventListener('click', (e) => { e.stopPropagation(); KIN_MENU = KIN_MENU === key ? null : key; menu.hidden = KIN_MENU !== key; mb.setAttribute('aria-expanded', String(KIN_MENU === key)); });
+      more.append(mb, menu);
+      corner.appendChild(more);
+    }
+    top.appendChild(corner);
+    const body = document.createElement('div');
+    body.className = 'kin-body';
+    body.hidden = !open;
+    body.append(...rest);
+    card.replaceChildren(top, body);
+    // 입양 고르기(adoptPicker)는 카드 끝에 상자를 붙이므로, 붙으면 펼친 내용 안으로 옮김
+    new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) if (n.classList?.contains('kin-adopt')) { body.hidden = false; card.classList.add('open'); body.appendChild(n); } }).observe(card, { childList: true });
     return card;
   }
+  // ⋯ 메뉴 바깥을 누르면 닫음
+  document.addEventListener('click', (e) => {
+    if (!KIN_MENU || e.target.closest('.kin-more')) return;
+    KIN_MENU = null;
+    for (const m of document.querySelectorAll('.kin-more-menu')) m.hidden = true;
+    for (const b of document.querySelectorAll('.kin-more-btn')) b.setAttribute('aria-expanded', 'false');
+  });
 
   // 둥지 정보와 소지품을 한꺼번에 받아 옴 (예전엔 하나 받고 나서 다음을 받아서 열릴 때 느렸음)
   let NEST_TAB = 'nest'; // 둥지 창에서 마지막으로 본 탭 (다시 그려도 유지)
+  let NEST_SHOW = null;  // 둥지 창의 탭을 바꾸는 함수 (시설 창에서 '식구 보기'로)
+  let FAC_LAST = null;   // 시설 창을 그릴 둥지 정보
+  const FAC_MADE = [];   // 시설 창을 열어 둔 동안 부엌에서 만든 것
+  function openFac() { if (!FAC_LAST) return; drawFacPane(); if (!$('fac-dlg').open) $('fac-dlg').showModal(); }
+  function drawFacPane() {
+    const pane = $('fac-pane');
+    keepScroll($('fac-dlg'), () => { pane.replaceChildren(); drawFacilities(pane, FAC_LAST.n, FAC_LAST.me); drawFacMade(); });
+  }
+  // 부엌에서 방금 만든 것: 그 자리에서 식구에게 먹이거나 바로 씀 (둥지 창으로 오가지 않게)
+  function drawFacMade() {
+    const box = $('fac-made'), n = FAC_LAST?.n;
+    box.replaceChildren();
+    const ids = FAC_MADE.filter((id) => S.items[id]).slice(0, 4);
+    box.hidden = !ids.length || !n;
+    if (box.hidden) return;
+    const h = document.createElement('p'); h.className = 'cm-h'; h.textContent = '방금 만든 것';
+    box.appendChild(h);
+    const R = S.kinRules;
+    for (const id of ids) {
+      const it = S.items[id], cnt = invCache[id] || 0;
+      const r = document.createElement('div'); r.className = 'cm-row';
+      const t = document.createElement('span'); t.className = 'cm-nm'; t.textContent = it.name;
+      const q = document.createElement('small'); q.textContent = cnt ? `×${cnt}` : '다 썼다'; t.appendChild(q);
+      r.appendChild(t);
+      const forHuman = !!R.care?.[id], forDrake = !!R.drakeFood?.items?.[id];
+      if (cnt && n.here && (forHuman || forDrake)) {
+        // 줄 수 있는 식구: 이 음식을 먹는 쪽(아이·새끼), 집에 있고, 지금 돌볼 수 있는 아이
+        const can = n.kin.home.filter((v) => v.status !== 'egg' && !v.onExp && !v.runaway && ((forHuman && v.type === 'human' && !(v.careIn > 0)) || (forDrake && v.type === 'drake' && !(v.feedIn > 0))));
+        if (can.length) {
+          const sel = document.createElement('select'); sel.className = 'input cm-who'; sel.setAttribute('aria-label', `${it.name} 줄 식구`);
+          for (const v of can) { const o = document.createElement('option'); o.value = v.id; o.textContent = v.name; sel.appendChild(o); }
+          const b = document.createElement('button'); b.type = 'button'; b.className = 'btn primary'; b.textContent = '먹이기';
+          b.addEventListener('click', () => nestAct('kin:care', { id: Number(sel.value), item: id }));
+          r.append(sel, b);
+        } else { const w = document.createElement('small'); w.className = 'cm-wait'; w.textContent = '지금 먹일 수 있는 식구가 없다'; r.appendChild(w); }
+      } else if (cnt && it.type === 'use') {
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'btn primary'; b.textContent = '바로 사용';
+        b.addEventListener('click', () => nestAct('item:use', { item: id }));
+        r.appendChild(b);
+      }
+      const v = document.createElement('button'); v.type = 'button'; v.className = 'btn'; v.textContent = '식구 보기';
+      v.addEventListener('click', () => { $('fac-dlg').close(); if (NEST_SHOW) NEST_SHOW('kin'); });
+      r.appendChild(v);
+      box.appendChild(r);
+    }
+  }
   let HOARD_SUB = 'in';  // 보물더미 탭 안: 쌓인 보물(in) / 소지품(out)
   let NEST_LAST = null;  // 마지막으로 받은 둥지 정보 (시설 탭에서 식구를 고를 때 서버를 다시 부르지 않고 그림)
   const renderNestAgain = () => { if (NEST_LAST) keepScroll($('nest-dlg'), () => drawNest(NEST_LAST)); };
@@ -6340,6 +6810,7 @@
           if (!town) row.appendChild(btn(`${S.regions[S.region].name}에 둥지 틀기`, () => nestAct('nest:build'), true, !!me.exp));
         } else {
           st.querySelector('.where').textContent = `${S.regions[n.region].name}의 둥지`;
+          { const nl = nestLineEl(myNestLine(n)); nl.style.marginTop = '8px'; note.after(nl); } // 둥지 한 줄 요약
           if (n.here) {
             note.textContent = me.restAt ? '지금 둥지에서 쉬고 있다.' : '둥지에서 쉬면 회복이 빨라진다. 쉬는 동안에는 채팅과 제작, 보물더미 정리만 할 수 있다.';
             row.appendChild(me.restAt ? btn('깨어나기', () => nestAct('rest:stop'), true) : btn('둥지에서 쉬기', () => nestAct('rest:start'), true, !!me.exp));
@@ -6397,7 +6868,6 @@
             ['nest', '둥지', `${T0[n.tier || 0].name} · ${(n.tier || 0) + 1}/${T0.length}단계`],
             ['kin', '식구', `${n.kin.home.length}/${n.maxKin || S.kinRules.maxKin}`],
             ['hoard', '보물더미', `가치 ${n.value.toLocaleString()}`],
-            ['fac', '시설', `${n.facilities?.built.length || 0}/${n.facilities?.slots || 2}칸`],
           ];
           if (!defs.some((x) => x[0] === NEST_TAB)) NEST_TAB = 'nest';
           const tabs = document.createElement('div');
@@ -6431,6 +6901,17 @@
           };
           tabs.addEventListener('click', (e) => { const b = e.target.closest('[data-nt]'); if (b && !b.classList.contains('on')) show(b.dataset.nt); });
           show(NEST_TAB);
+          NEST_SHOW = show;
+          // 시설은 둥지 창 위에 겹쳐 뜨는 창으로 (요리한 것을 닫고 바로 식구에게 먹일 수 있게)
+          const fb = document.createElement('button');
+          fb.type = 'button'; fb.className = 'btn fac-open';
+          const built = n.facilities?.built || [];
+          fb.innerHTML = '<span class="fo-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11.2 12 4.6l8.5 6.6"/><path d="M5.6 9.6V19.4h12.8V9.6"/><path d="M10 19.4v-4.6h4v4.6"/><path d="M16.2 7.4V4.2h1.8v4.6"/></svg></span><span class="fo-tx"><span class="fo-t">둥지 시설</span><small></small></span><i aria-hidden="true"></i>';
+          fb.classList.add('fo-fac');
+          fb.querySelector('small').textContent = built.length ? `${built.map((f) => S.facility?.list?.[f.id]?.name || f.id).join(' · ')} · ${built.length}/${n.facilities?.slots || 2}칸` : `아직 지은 시설이 없다 · ${n.facilities?.slots || 2}칸`;
+          fb.addEventListener('click', () => openFac());
+          tabs.after(fb);
+          P.fac = $('fac-pane');
         }
 
         // 둥지 이야기: 식구들이 지금 뭘 하며 지내는지 (30분마다 새 장면)
@@ -6605,8 +7086,9 @@
             wl.appendChild(r4);
           }
           host.appendChild(wl);
-          // 시설 (공방·약초밭·부엌·망루·서고·온천): 시설 탭에서
-          drawFacilities(P.fac, n, me);
+          // 시설 (공방·약초밭·부엌·망루·서고·온천): 시설 창에서 (열려 있으면 새 정보로 다시 그림)
+          FAC_LAST = { n, me };
+          if ($('fac-dlg').open) drawFacPane();
           host = P.hoard;
           const h5 = document.createElement('h3');
           h5.textContent = '보물 넣고 꺼내기';
@@ -6712,7 +7194,34 @@
       hostile: `<b class="pro">장점</b> 위협 공물 ${r.hostile.intimidateGold}배, 위협할수록 용족 명성 상승, 사냥 때 발톱 +${r.hostile.huntClaw}. <b class="con">단점</b> 시장 이용 불가, 마을에 날아들면 궁수 피해, 마을과 원수가 되면 현상금이 걸려 야생에서 습격당한다.`,
     }[s] || '';
   }
-  function renderStanceNote() { $('stance-note').innerHTML = stanceNote(S.me?.stance); }
+  // 세 성향의 설명을 한 칸에 겹쳐 두고 하나만 보이게 함: 칸 높이가 늘 가장 긴 설명에 맞춰져 있어서,
+  // 미리 보기로 바꿔도 아래가 밀리거나 스크롤 막대가 생겼다 사라지지 않음 (그래서 단추가 움직여 깜빡이던 일이 없음)
+  const STANCE_NAME = { friendly: '우호', hermit: '은둔', hostile: '적대' };
+  let STANCE_PEEK = null, STANCE_T = 0;
+  function renderStanceNote() {
+    const n = $('stance-note'), cur = S.me?.stance;
+    n.replaceChildren();
+    for (const k of ['friendly', 'hermit', 'hostile']) {
+      const d = document.createElement('div'); d.className = 'sn'; d.dataset.s = k;
+      d.innerHTML = `<span class="peek-h">${k === cur ? '지금 성향' : `${STANCE_NAME[k]}${ro(STANCE_NAME[k])} 바꾸면`}</span>${stanceNote(k)}`;
+      n.appendChild(d);
+    }
+    showStanceNote(STANCE_PEEK || cur);
+  }
+  function showStanceNote(k) {
+    const n = $('stance-note'), cur = S.me?.stance;
+    for (const d of n.children) d.classList.toggle('on', d.dataset.s === k);
+    n.classList.toggle('peek', !!k && k !== cur);
+  }
+  function peekStance(k) {
+    // 살짝 늦게 바꿔서 단추 사이를 스치기만 할 때는 그대로 둠
+    clearTimeout(STANCE_T);
+    STANCE_T = setTimeout(() => { STANCE_PEEK = k && k !== S.me?.stance ? k : null; showStanceNote(STANCE_PEEK || S.me?.stance); }, k ? 80 : 160);
+  }
+  $('stance').addEventListener('mouseover', (e) => { const b = e.target.closest('button[data-s]'); if (b) peekStance(b.dataset.s); });
+  $('stance').addEventListener('mouseleave', () => peekStance(null));
+  $('stance').addEventListener('focusin', (e) => { const b = e.target.closest('button[data-s]'); if (b) peekStance(b.dataset.s); });
+  $('stance').addEventListener('focusout', (e) => { if (!$('stance').contains(e.relatedTarget)) peekStance(null); });
 
   // ── 성향 바꾸기 ──
   $('stance').addEventListener('click', (e) => {
@@ -6725,7 +7234,8 @@
       const friends = Object.entries(S.me.rep || {}).filter(([, v]) => v.value >= S.stanceRules.friendly.specialFrom).map(([r]) => S.regions[r].name);
       if (friends.length) warn = `\n\n배신: ${friends.join(', ')}의 평판이 즉시 원수로 떨어진다.`;
     }
-    if (!confirm(`성향을 '${name}'${ro(name)} 바꿀까? 바꾼 뒤 ${hours}시간 동안은 다시 바꿀 수 없다.${warn}`)) return;
+    const desc = stanceNote(b.dataset.s).replace(/<b class="pro">장점<\/b>/, '\n\n장점:').replace(/<b class="con">단점<\/b>/, '\n단점:').replace(/<[^>]+>/g, '');
+    if (!confirm(`성향을 '${name}'${ro(name)} 바꿀까? 바꾼 뒤 ${hours}시간 동안은 다시 바꿀 수 없다.${desc}${warn}`)) { peekStance(null); return; }
     socket.emit('stance:set', { stance: b.dataset.s }, (res) => {
       if (res.error) return toast(res.error);
       showResult(res.result);
@@ -6843,20 +7353,41 @@
               const row = marketRow(x.id, x.done ? 'locked' : '');
               const sm = row.querySelector('small');
               const have = invCache[x.id] || 0;
-              const u = document.createElement('span'); u.className = 'unit'; u.textContent = `${x.qty}개 필요 · 가진 것 ${have}`;
+              const altHave = x.alt ? invCache[x.alt] || 0 : 0; // 걸작·정성 들인 것
+              const nAlt = Math.min(altHave, x.qty); // 걸작으로 납품을 고르면: 걸작을 먼저, 모자란 몫만 보통 물건
+              const canAlt = !x.done && nAlt > 0 && have >= x.qty - nAlt;
+              const altPay = Math.round((x.gold / x.qty) * (x.qty - nAlt) + (x.gold / x.qty) * nAlt * (x.bonus || 1));
+              const altWord = x.alt ? (S.items[x.alt].mwOf ? '걸작' : '정성 들인 것') : '';
+              const u = document.createElement('span'); u.className = 'unit'; u.textContent = `${x.qty}개 필요 · 가진 것 ${have}${altHave ? ` (${S.items[x.alt].mwOf ? '걸작' : '정성 들인 것'} ${altHave})` : ''}`;
               sm.prepend(u, ' · ');
               const ctl = row.querySelector('.ctl');
               const rw = document.createElement('span'); rw.className = 'ord-rw';
               const c = document.createElement('i'); c.className = 'coin'; c.setAttribute('aria-hidden', 'true');
               rw.append(c, `${x.gold}닢 · 평판 +${x.rep}`);
+              const fill = (alt) => socket.emit('order:fill', { key: x.key, alt }, (r2) => {
+                if (r2.error) { SFX.play('error'); return toast(r2.error); }
+                SFX.play('coin'); toast(r2.result.lines.join(' ')); fetchInv(() => openMarket());
+              });
               const bt = document.createElement('button'); bt.type = 'button'; bt.className = 'btn primary mk-go';
               bt.textContent = x.done ? '오늘 납품함' : '납품하기';
               bt.disabled = x.done || have < x.qty;
-              bt.addEventListener('click', () => socket.emit('order:fill', { key: x.key }, (r2) => {
-                if (r2.error) { SFX.play('error'); return toast(r2.error); }
-                SFX.play('coin'); toast(r2.result.lines.join(' ')); fetchInv(() => openMarket());
-              }));
+              bt.addEventListener('click', () => fill(false));
               ctl.append(rw, bt);
+              // 가진 게 모자라면 그 자리에서 제작 창을 띄움 (만들고 닫으면 이 의뢰 목록이 새로 그려짐)
+              const orec = S.recipes?.find((r) => r.out === x.id);
+              if (!x.done && have < x.qty && !canAlt && orec && (!orec.hidden || (S.me?.craft?.known || []).includes(x.id))) {
+                const mb = document.createElement('button'); mb.type = 'button'; mb.className = 'btn mk-go'; mb.textContent = '만들기';
+                mb.addEventListener('click', () => goRecipe(x.id));
+                ctl.appendChild(mb);
+              }
+              // 걸작·정성 들인 것이 있으면 그것으로 납품할지 따로 고름 (보상을 더 받음)
+              if (canAlt) {
+                const ab = document.createElement('button'); ab.type = 'button'; ab.className = 'btn mk-go mk-alt';
+                ab.textContent = `${altWord}으로 · ${altPay}닢`;
+                ab.title = `${S.items[x.alt].name}${nAlt < x.qty ? ` ${nAlt}개와 ${S.items[x.id].name} ${x.qty - nAlt}개` : ''}${josa(nAlt < x.qty ? '개' : S.items[x.alt].name, '을', '를')} 건넨다. ${altWord} 몫은 보상 ${Math.round(((x.bonus || 1) - 1) * 100)}% 더`;
+                ab.addEventListener('click', () => fill(true));
+                ctl.appendChild(ab);
+              }
               list.appendChild(row);
             }
             $('mk-n-order').textContent = o.list.filter((x) => !x.done).length;
@@ -7166,9 +7697,13 @@
     ob.hidden = S.region !== S.ruinRules?.gateTo || !!me.exp;
     if (!ob.hidden && !$('orsha-em').firstChild) $('orsha-em').innerHTML = emblem('orsha', 34);
   }
-  const mobChips = (list, gold) => {
+  // 모브의 부탁·이야기·교환 재료 칩. host(카드)를 주면 칩을 눌러 얻는 곳을 볼 수 있음 (anchor 뒤에 펼침, 없으면 칩 줄 바로 아래)
+  const mobChips = (list, gold, host = null, anchor = null) => {
     const cl = document.createElement('div'); cl.className = 'cost-list';
-    for (const x of list || []) { const sp = document.createElement('span'); sp.textContent = `${S.items[x.id]?.name || x.id} ${x.have ?? 0}/${x.n}`; if ((x.have ?? 0) < x.n) sp.className = 'lack'; cl.appendChild(sp); }
+    for (const x of list || []) {
+      const sp = document.createElement('span'); sp.textContent = `${S.items[x.id]?.name || x.id} ${x.have ?? 0}/${x.n}`; if ((x.have ?? 0) < x.n) sp.className = 'lack'; cl.appendChild(sp);
+      if (host) srcChip(sp, x.id, host, anchor || cl);
+    }
     if (gold) { const sp = document.createElement('span'); sp.textContent = `금화 ${S.me.gold}/${gold}`; if (S.me.gold < gold) sp.className = 'lack'; cl.appendChild(sp); }
     return cl;
   };
@@ -7230,7 +7765,7 @@
           if (o.carried) { const cr = document.createElement('span'); cr.className = 'mc-carried'; cr.textContent = '지난날 맡은 의뢰'; top.appendChild(cr); }
           const say = document.createElement('span'); say.className = 'mc-say'; say.textContent = `"${o.say}"`;
           c.append(top, say);
-          if (o.bring) c.appendChild(mobChips(o.needs));
+          if (o.bring) c.appendChild(mobChips(o.needs, 0, c));
           const foot = document.createElement('div'); foot.className = 'mc-foot';
           foot.appendChild(mobReward(o.reward));
           const sp = document.createElement('span'); sp.className = 'sp'; foot.appendChild(sp);
@@ -7282,7 +7817,7 @@
           c.appendChild(top);
           if (cu.accepted) {
             const say = document.createElement('span'); say.className = 'mc-say'; say.textContent = `"${cu.intro}"`; c.appendChild(say);
-            if (cu.bring) c.appendChild(mobChips(cu.needs));
+            if (cu.bring) c.appendChild(mobChips(cu.needs, 0, c));
           } else {
             const say = document.createElement('span'); say.className = 'mc-say'; say.textContent = `${m.name}${josa(m.name, '이', '가')} 무언가 말하고 싶은 눈치다.`; c.appendChild(say);
           }
@@ -7317,7 +7852,7 @@
           const lf = document.createElement('span'); lf.className = 'prog'; lf.textContent = o.locked || (o.left > 0 ? `${when} ${o.left}번 남음` : `${when}은 끝`);
           const sp = document.createElement('span'); sp.className = 'sp';
           const lack = o.give.some((x) => x.have < x.n) || (o.gold && S.me.gold < o.gold);
-          foot.append(mobChips(o.give, o.gold), sp, lf, mobBtn('바꾸기', true, !!o.locked || o.left <= 0 || lack, () => mobAct('mob:trade', { mob: m.id, i: o.i })));
+          foot.append(mobChips(o.give, o.gold, c, foot), sp, lf, mobBtn('바꾸기', true, !!o.locked || o.left <= 0 || lack, () => mobAct('mob:trade', { mob: m.id, i: o.i }))); // 재료를 누르면 얻는 곳이 카드 아래에 펼쳐짐
           c.appendChild(foot);
           body.appendChild(c);
         }
@@ -7470,7 +8005,15 @@
       for (const t of list) { const li = document.createElement('li'); li.textContent = t; ul.appendChild(li); }
       box.appendChild(ul);
     }
+    // 제작으로 만들 수 있는 재료면 바로 제작 창을 띄움 (지금 창 위에)
+    const rec = S.recipes?.find((r) => r.out === id);
+    if (rec && (!rec.hidden || (S.me?.craft?.known || []).includes(id))) {
+      const mk = document.createElement('button'); mk.type = 'button'; mk.className = 'btn src-make'; mk.textContent = '만들러 가기';
+      mk.addEventListener('click', () => goRecipe(id));
+      box.appendChild(mk);
+    }
     if (anchor) anchor.after(box); else row.appendChild(box);
+    requestAnimationFrame(() => revealBox(box)); // 펼친 얻는 곳이 화면 밖이면 따라 내려감
   }
   // 재료 칩을 눌러서 얻는 곳을 볼 수 있게 함 (제작 탭과 같은 방식)
   function srcChip(chip, id, row, anchor) {
@@ -7493,9 +8036,37 @@
     requestAnimationFrame(() => els.forEach((e, i) => { if (Math.abs(e.scrollTop - tops[i]) > 1) e.scrollTop = tops[i]; }));
   }
   function renderCraft() { keepScroll($('craft-dlg'), drawCraft); }
+  // '방금 만든 것': 제작 창 위쪽에 쌓이고, 그 자리에서 바로 쓰거나 참 (소지품으로 오가지 않게)
+  function drawCraftMade() {
+    const box = $('craft-made');
+    box.replaceChildren();
+    const ids = CRAFT_MADE.filter((id) => S.items[id]).slice(0, 4);
+    box.hidden = !ids.length;
+    if (!ids.length) return;
+    const h = document.createElement('p'); h.className = 'cm-h'; h.textContent = '방금 만든 것';
+    box.appendChild(h);
+    for (const id of ids) {
+      const it = S.items[id], n = invCache[id] || 0;
+      const r = document.createElement('div'); r.className = 'cm-row';
+      const t = document.createElement('span'); t.className = 'cm-nm'; t.textContent = it.name;
+      const q = document.createElement('small'); q.textContent = n ? `×${n}` : '다 썼다'; t.appendChild(q);
+      r.appendChild(t);
+      if (n && (it.type === 'use' || it.type === 'equip')) {
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'btn primary';
+        b.textContent = it.type === 'equip' ? '바로 착용' : it.use?.keep && !it.use?.mind ? '상자에 넣기' : it.use?.crown ? '머리에 얹기' : '바로 사용';
+        b.addEventListener('click', () => itemAct(it.type === 'equip' ? 'equip' : 'item:use', { item: id }));
+        r.appendChild(b);
+      }
+      const v = document.createElement('button'); v.type = 'button'; v.className = 'btn'; v.textContent = '소지품에서 보기';
+      v.addEventListener('click', () => { $('craft-dlg').close(); if (!$('inv-dlg').open) openInv(); });
+      r.appendChild(v);
+      box.appendChild(r);
+    }
+  }
   function drawCraft() {
     const me = S.me;
     const ci = me.craft || { known: [], needs: {}, hiddenLeft: 0, great: 0, gear: {} };
+    drawCraftMade();
     $('craft-status').textContent = `기력 ${me.en} / ${me.enMax}, 지혜 ${me.stats.wisdom}. 대성공 ${ci.great}%${ci.forge ? ' · 공방의 화로를 쓰는 중' : ''}`;
     const box = $('craft-list');
     const craftTabX = box.querySelector('.utabs')?.scrollLeft || 0;
@@ -7740,6 +8311,15 @@
       if (g.elem) { const t = document.createElement('span'); t.className = 'gw-el'; t.textContent = `${ELEM_NAME[g.elem]} 각인`; bn.appendChild(t); }
       if (worn.includes(id)) { const t = document.createElement('span'); t.className = 'gw-worn'; t.textContent = '착용 중'; bn.appendChild(t); }
       row.querySelector('.eff').textContent = effectText(it);
+      // 같은 장신구가 여러 개면 강화·각인은 그중 한 개에만 (어느 것인지 알려 줌)
+      const copies = (invCache[id] || 0) + (worn.includes(id) ? 1 : 0);
+      if (copies > 1) {
+        const n = document.createElement('small'); n.className = 'gw-copy';
+        n.textContent = (g.plus || g.elem)
+          ? `같은 것 ${copies}개 중 한 개만 강화된다 · 강화된 것은 ${g.at === 'eq' ? '착용 중' : '소지품에 있음'}`
+          : `같은 것 ${copies}개 중 한 개만 강화된다 · ${worn.includes(id) ? '착용 중인 것' : '소지품의 한 개'}부터`;
+        row.querySelector('.nm').appendChild(n);
+      }
       const acts = row.querySelector('.gw-acts');
       const needs = row.querySelector('.needs');
       const step = R.enhance[g.plus || 0];
@@ -7837,8 +8417,27 @@
   });
   $('forge-dlg').addEventListener('close', () => { if (forgeGame) { forgeGame.done = true; cancelAnimationFrame(forgeGame.raf); } });
   let craftTab = 'all', craftCan = false, craftSlot = 'all'; // craftSlot: 장신구 탭의 부위
-  function openCraft() { fetchInv(() => { renderCraft(); openPanel('craft-dlg'); }); }
+  // 제작 창: 소지품 위에 겹쳐 뜨는 팝업. 닫으면 아래의 소지품이 그대로 있어서 방금 만든 것을 바로 쓸 수 있음
+  function openCraft() { fetchInv(() => { renderCraft(); showCraft(); }); }
+  function showCraft() {
+    const dlg = $('craft-dlg');
+    if (dlg.classList.contains('as-panel')) { document.body.appendChild(dlg); dlg.classList.remove('as-panel'); } // 예전처럼 가운데 칸에 붙어 있던 경우
+    if (!dlg.open) dlg.showModal();
+  }
   $('craft-close').addEventListener('click', () => $('craft-dlg').close());
+  $('craft-x').addEventListener('click', () => $('craft-dlg').close());
+  $('fac-x').addEventListener('click', () => $('fac-dlg').close());
+  $('fac-close').addEventListener('click', () => $('fac-dlg').close());
+  $('fac-dlg').addEventListener('close', () => { FAC_MADE.length = 0; $('fac-made').hidden = true; });
+  $('nest-dlg').addEventListener('close', () => { if ($('fac-dlg').open) $('fac-dlg').close(); });
+  $('craft-dlg').addEventListener('close', () => {
+    CRAFT_MADE.length = 0; $('craft-made').hidden = true; // '방금 만든 것'은 창을 열어 둔 동안만
+    // 다른 창 위에서 열었던 제작 창이면, 아래 창을 새 정보로 (방금 만든 것으로 바로 납품·건네기)
+    if ($('market-dlg')?.open) openMarket();
+    if ($('mob-dlg')?.open) openMob();
+    if ($('nest-dlg')?.open) openNest();
+  });
+  $('inv-craft').addEventListener('click', () => openCraft());
 
   $('inv-close').addEventListener('click', () => $('inv-dlg').close());
 
@@ -8280,6 +8879,42 @@
       swift: ['{a}[이/가] 둥지 위를 쏜살같이 맴돌다가 바람을 가르며 내려앉았다.', '{a}[이/가] 떨어지는 나뭇잎을 땅에 닿기 전에 모두 낚아챘다.'],
       stubborn: ['{a}[은/는] 자기 자리라며 아무리 불러도 보물더미에서 내려오지 않는다.', '{a}[이/가] 싫다는 대답을 오늘만 열 번은 했다.'],
       dreamy: ['{a}[이/가] 구름 모양을 하나하나 짚어 가며 이름을 붙이고 있다.', '{a}[이/가] 어젯밤 꾼 꿈이 진짜였다고 우기고 있다.'],
+      // 타고난 성격 (새로 생긴 것)
+      chatterbox: ['{a}[이/가] 아침부터 쉬지 않고 어제 본 것들을 늘어놓는다.', '{a}[이/가] 식구들을 붙잡고 지어낸 모험담을 들려주고 있다.'],
+      songbird: ['{a}[이/가] 빨래를 널며 처음 듣는 노래를 흥얼거린다.', '{a}[이/가] 둥지 입구에 앉아 바람 소리에 맞춰 노래를 부른다.'],
+      tidy: ['{a}[이/가] 둥지 바닥의 깃털과 비늘 조각을 말끔히 쓸어 냈다.', '{a}[이/가] 보물더미 옆 물건들을 크기대로 가지런히 정리해 두었다.'],
+      bookworm: ['{a}[이/가] 낡은 책 한 권을 끌어안고 둥지 구석에서 꼼짝도 하지 않는다.', '{a}[이/가] 책에서 읽은 옛 용의 이름을 줄줄 외운다.'],
+      waterbaby: ['{a}[이/가] 개울에 발을 담그고 물수제비를 뜨고 있다.', '{a}[이/가] 비가 오자 신이 나서 웅덩이마다 뛰어든다.'],
+      lookout: ['{a}[이/가] 둥지 위 가장 높은 바위에 올라 먼 곳을 바라본다.', '{a}[이/가] 나무 꼭대기에 올라가 내려오지 않겠다고 버틴다.'],
+      picky: ['{a}[이/가] 그릇에서 싫어하는 것만 골라 옆으로 밀어 두었다.', '{a}[이/가] 오늘 저녁 메뉴를 듣더니 코를 찡그린다.'],
+      crybaby: ['{a}[이/가] 넘어지자마자 울음부터 터뜨렸다가 금세 그쳤다.', '{a}[이/가] 슬픈 옛이야기를 듣다가 눈물을 뚝뚝 흘린다.'],
+      proud: ['{a}[이/가] 가슴을 쭉 펴고 보물더미 꼭대기에 올라앉았다.', '{a}[이/가] 칭찬을 들어도 당연하다는 듯 고개를 치켜든다.'],
+      bold: ['{a}[이/가] 둥지에 기어든 큰 뱀에게 겁도 없이 덤벼들었다.', '{a}[이/가] 천둥이 치자 오히려 하늘을 향해 으르렁거렸다.'],
+      sharpnose: ['{a}[이/가] 코를 킁킁거리며 바위틈에 숨겨 둔 간식을 찾아냈다.', '{a}[이/가] 바람에 실려 온 냄새를 맡고 고개를 번쩍 들었다.'],
+      sleepyhead: ['{a}[이/가] 해가 높이 떴는데도 날개를 이불 삼아 쿨쿨 잔다.', '{a}[이/가] 가르치는 중에 꾸벅꾸벅 졸았다.'],
+      foodie: ['{a}[이/가] 먹이를 한 입 먹어 보더니 고개를 홱 돌렸다.', '{a}[이/가] 좋아하는 먹이 냄새에 둥지 끝에서 날아왔다.'],
+      // 자라며 생긴 성격
+      homebody: ['{a}[이/가] 둥지 구석 제일 따뜻한 자리에 몸을 말고 누워 있다.', '{a}[은/는] 바깥 날씨가 아무리 좋아도 둥지가 제일이라고 한다.'],
+      adventurer: ['{a}[이/가] 다음 원정은 어디로 가느냐고 벌써 짐을 꾸리고 있다.', '{a}[이/가] 지난 원정에서 본 것들을 손짓 발짓으로 이야기한다.'],
+      sturdy: ['{a}[이/가] 무거운 장작을 한 아름 번쩍 들어 옮겼다.', '{a}[은/는] 찬바람이 불어도 콧물 한 번 안 흘린다.'],
+      warm: ['{a}[이/가] {o}의 날개 밑에 담요를 살며시 덮어 주었다.', '{a}[이/가] 오늘 있었던 일을 하나도 빼놓지 않고 들려준다.'],
+      capable: ['{a}[이/가] 시키지도 않았는데 둥지 살림을 척척 정리해 두었다.', '{a}[이/가] 자기 몫의 일을 끝내고 다른 식구 일까지 거들고 있다.'],
+      tough: ['{a}[이/가] 혼자서도 잘 놀았다며 씩 웃는다.', '{a}[이/가] 넘어져도 툭툭 털고 일어나 다시 뛰어간다.'],
+      fussy: ['{a}[이/가] 오늘 저녁은 맛있는 걸로 해 달라고 졸라 댄다.', '{a}[이/가] 밥그릇을 들여다보더니 입을 삐죽 내민다.'],
+      willful: ['{a}[이/가] 하지 말라는 일만 골라 하다가 들키자 딴청을 피운다.', '{a}[은/는] 오늘도 자기 마음대로 둥지 가구를 옮겨 놓았다.'],
+      opened: ['{a}[이/가] 먼저 다가와 오늘 주운 조약돌을 보여 준다.', '{a}[이/가] 예전엔 숨어 있던 바위 위에 올라가 노래를 부른다.'],
+      fierce: ['{a}[이/가] 둥지 앞 바위에 발톱을 갈며 으르렁 소리를 연습한다.', '{a}[이/가] 그림자만 움직여도 털을 곤두세우고 몸을 낮춘다.'],
+      windrider: ['{a}[이/가] 바람이 세게 부는 틈을 타 둥지 위로 높이 솟구쳤다.', '{a}[이/가] 날개를 편 채 바람에 몸을 맡기고 둥둥 떠 있다.'],
+      stargazer: ['{a}[이/가] 밤하늘의 별자리를 하나하나 짚으며 중얼거린다.', '{a}[이/가] 별이 가장 잘 보이는 바위에 올라 꼼짝도 하지 않는다.'],
+      shieldmate: ['{a}[이/가] {o}의 등 뒤에 서서 주위를 살피고 있다.', '{a}[이/가] 사냥에서 돌아와 {o}의 상처를 혀로 핥아 준다.'],
+      pathfinder: ['{a}[이/가] 바닥에 발톱으로 먼 길의 지도를 그려 보인다.', '{a}[이/가] 다음 심부름은 언제냐는 듯 둥지 입구에서 기다린다.'],
+      affable: ['{a}[이/가] 머리를 {o}에게 부비며 그르렁거린다.', '{a}[이/가] 다른 식구 곁에 바짝 붙어 낮잠을 잔다.'],
+      steadfast: ['{a}[이/가] 꼬리를 곧게 세우고 둥지 입구를 지키고 섰다.', '{a}[이/가] 어린 식구들이 다투자 사이에 들어가 말렸다.'],
+      greedy: ['{a}[이/가] 보물더미 옆 생선 냄새를 맡고 코를 벌름거린다.', '{a}[이/가] 방금 먹었는데 또 입을 크게 벌리고 기다린다.'],
+      wild: ['{a}[이/가] 둥지 안을 뱅글뱅글 뛰어다니다 보물더미에 머리를 박았다.', '{a}[이/가] 꼬리를 쫓아 빙빙 돌다가 어지러운지 털썩 주저앉았다.'],
+      sociable: ['{a}[이/가] 옆 둥지 친구들에게 나눠 줄 과자를 싸고 있다.', '{a}[이/가] 동네 아이들 이름을 손가락으로 꼽으며 자랑한다.'],
+      packmate: ['{a}[이/가] 다른 둥지 쪽 하늘을 보며 꼬리를 흔든다.', '{a}[이/가] 친구들과 놀던 언덕에 혼자 가 앉아 있다.'],
+      dignified: ['{a}[이/가] {o}의 기분을 먼저 알아채고 조용히 곁에 앉는다.', '{a}[이/가] 어린 식구가 따라오자 천천히 걸음을 맞춰 준다.'],
     },
     job: {
       forge: ['{a}[이/가] 공방에서 풀무질을 거들며 얼굴에 검댕을 묻혔다.', '{a}[이/가] 공방에서 갓 두드린 쇠붙이를 물에 담가 치익 소리를 냈다.'],
@@ -8315,6 +8950,15 @@
       winter: ['{a}[이/가] 입김을 후후 불며 누가 더 멀리 가나 혼자 겨룬다.', '{a}[이/가] 불가에 바짝 붙어 앉아 꼬리 끝을 녹이고 있다.'],
     },
     mate: ['{a}[이/가] 짝과 함께 둥지 입구에서 해 지는 걸 바라보았다.', '{a}[이/가] 짝에게 줄 선물을 고르느라 보물더미를 뒤적인다.'],
+    friend: [
+      '{a}[이/가] 다음에 {b}[이/가] 놀러 오면 보여 줄 거라며 반짝이는 돌을 골라 두었다.',
+      '{a}[이/가] 오늘 {b}[과/와] 무엇을 하고 놀았는지 신이 나서 이야기한다.',
+    ],
+    bestFriend: [
+      '{a}[이/가] 단짝 {b}에게 줄 편지를 쓰다가 몇 번이나 지우고 다시 쓴다.',
+      '{a}[은/는] {b} 이야기만 나오면 웃음이 떠나지 않는다.',
+      '{a}[이/가] {b}[과/와] 나눠 가진 조약돌을 오늘도 목에 걸고 있다.',
+    ],
     pairHH: [
       '{a}[과/와] {b}[이/가] 둥지 앞에서 술래잡기를 하며 한참을 뛰어다녔다.',
       '{a}[이/가] {b}에게 몰래 숨겨 둔 사탕 반쪽을 나눠 주었다.',
@@ -8397,6 +9041,8 @@
       const [x, y] = both === STORY.pairHD && a.type === 'drake' ? [b, a] : [a, b]; // 사람과 용이면 사람을 앞에
       return storyText(pickOf(rnd, both), x.name, y.name);
     }
+    // 다른 둥지의 친구 이야기
+    if (a.friends?.length && rnd() < 0.18) { const f = pickOf(rnd, a.friends); return storyText(pickOf(rnd, f.best ? STORY.bestFriend : STORY.friend), a.name, f.name); }
     const pool = [];
     const add = (arr, w = 1) => { if (arr) for (let i = 0; i < w; i++) pool.push(...arr); };
     add(STORY[STAGE_GROUP[a.stage]] || []);
@@ -8580,8 +9226,10 @@
     if (p.bio?.gender) row('성별', p.bio.gender);
     row('인간을 대하는 방식', p.stanceName);
     row('용족 명성', p.fame);
-    if (p.nest) row('둥지', S.regions[p.nest]?.name || p.nest);
-    row('둥지 식구', p.kin.length ? p.kin.map((k) => `${k.name}(${k.stage})`).join(', ') : '없음');
+    if (!p.nestLine) { // 둥지가 없으면 예전처럼 글로
+      if (p.nest) row('둥지', S.regions[p.nest]?.name || p.nest);
+      row('둥지 식구', p.kin.length ? p.kin.map((k) => `${k.name}(${k.stage})`).join(', ') : '없음');
+    }
     if (p.lineage) row('계보', `${p.lineage}마리 독립`);
     if (p.heir) row('이어받은 의지', `${p.heir.name} (레벨 ${p.heir.level} ${p.heir.kindName})`);
     if (p.departed) {
@@ -8592,6 +9240,7 @@
     }
     if (p.bio?.desc) { const bd = document.createElement('p'); bd.className = 'pf-bio'; bd.textContent = p.bio.desc; body.appendChild(bd); }
     body.appendChild(rows);
+    if (p.nestLine) { const nl = nestLineEl(p.nestLine, { title: p.nestLine.region ? `${S.regions[p.nestLine.region]?.name || ''}의 둥지` : '둥지' }); nl.style.margin = '10px 0 0'; body.appendChild(nl); } // 둥지 한 줄 요약 (식구 이름까지)
     if (p.traits?.length) {
       const h = document.createElement('div');
       h.className = 'gear';
@@ -8814,7 +9463,10 @@
     // 거래
     const g2 = grp('거래');
     btn(g2, '교환하기', () => socialAct('trade:invite', { id: p.id }, refreshProfile), { disabled: !!p.can.trade });
-    const giftBtn = btn(g2, '선물 보내기', () => { gift.hidden = !gift.hidden; }, { disabled: !!p.can.gift, instant: true });
+    const giftBtn = btn(g2, '선물 보내기', () => {
+      gift.hidden = !gift.hidden;
+      if (!gift.hidden) requestAnimationFrame(() => revealBox(gift)); // 펼친 선물 칸이 화면 아래로 숨지 않게 따라 내려감
+    }, { disabled: !!p.can.gift, instant: true });
     why(g2, p.can.trade && p.can.gift ? p.can.gift : p.can.trade ? `교환: ${p.can.trade}` : '');
     const gift = document.createElement('div');
     gift.className = 'gift-box';
@@ -8972,6 +9624,7 @@
         t.innerHTML = '<b></b><small></small>';
         t.querySelector('b').textContent = x.name;
         t.querySelector('small').innerHTML = sub(x);
+        if (x.nest) t.appendChild(nestLineEl(x.nest, { short: true })); // 동료 목록: 둥지 한 줄 요약 (짧게)
         for (const [text, cls, who] of [[x.memo, 'memo', '내 메모'], [x.theirMemo, 'memo theirs', `${x.name}의 메모`]]) {
           if (!text) continue;
           const m = document.createElement('span');
@@ -10602,7 +11255,7 @@
 
   // ── 하단 메뉴 화면: 가운데 칸에 펼치기 ──
   // 팝업(모달) 대신 지역 카드와 지도 자리에 보여 준다. 다른 메뉴를 열면 바뀌고, '대륙'이나 닫기로 돌아간다
-  const PANELS = ['char-dlg', 'nest-dlg', 'inv-dlg', 'craft-dlg', 'ledger-dlg', 'friends-dlg', 'arena-dlg', 'slate-dlg']; // 텔레파시는 지금 화면 위에 팝업으로
+  const PANELS = ['char-dlg', 'nest-dlg', 'inv-dlg', 'ledger-dlg', 'friends-dlg', 'arena-dlg', 'slate-dlg']; // 텔레파시·제작은 지금 화면 위에 팝업으로 (제작은 소지품 위에 겹쳐 뜸)
   // 팝업창 바깥(어두운 배경)을 누르면 Esc와 똑같이 닫힘. 'cancel'을 막아 둔 창(확인을 눌러야 하는 창, 싸우는 중의 전투 창 등)은 그대로 남음
   // 거래·초대·그림 자르기는 잘못 눌러 취소되지 않게 바깥 누르기로는 닫지 않음
   const NO_OUTSIDE = new Set(['trade-dlg', 'invite-dlg', 'crop']);
@@ -11667,6 +12320,7 @@
     };
     box.querySelector('.gp-q').addEventListener('input', (e) => { q = e.target.value.trim().toLowerCase(); drawList(); });
     drawList();
+    requestAnimationFrame(() => { if (host.isConnected && !host.hidden) revealBox(box); }); // 펼친 걸 물건 칸이 화면 밖이면 따라 내려감
     return { get: () => ({ gold: Math.max(0, Math.min(maxGold, Math.floor(Number(goldIn.value) || 0))), items: [...picked].map(([id, qty]) => ({ id, qty })) }) };
   }
   let betMode = null; // { kind: 'challenge', x, pick } | { kind: 'confirm', id }
@@ -12100,18 +12754,21 @@
     gBtn(r, '빼기', () => gmDo('statPts', { n: -Math.abs(+ptsIn.value) }));
     r.appendChild(gEl('span', 'gm-val', `남은 포인트 ${d.statPts || 0}`));
     r = gmRow(s, '물건');
-    const items = Object.entries(S.items).sort((a, b) => a[1].name.localeCompare(b[1].name, 'ko')).map(([id, x]) => [id, x.name]);
-    const it = gSelect(r, '물건', items, GM.item);
-    it.addEventListener('change', () => { GM.item = it.value; });
+    // 물건 고르기: 긴 드롭다운 대신 선물 보내기처럼 찾아서 고르는 상자 (이 드래곤이 가진 개수도 함께)
+    const owned = Object.fromEntries(d.items.map((x) => [x.item, x.qty]));
+    const allItems = Object.keys(S.items).sort((a, b) => S.items[a].name.localeCompare(S.items[b].name, 'ko')).map((id) => [id, owned[id] ?? null]);
+    if (!GM.item || !S.items[GM.item]) GM.item = allItems[0][0];
+    const itRow = r;
+    const it = itemPickField(r, allItems, GM.item, (id) => { GM.item = id; }, { after: itRow, label: '줄 물건', byCat: true });
     const qty = gNum(r, '개수', 1, '72px');
-    gBtn(r, '주기', () => gmDo('item', { item: it.value, qty: Math.abs(+qty.value) }));
-    gBtn(r, '빼기', () => gmDo('item', { item: it.value, qty: -Math.abs(+qty.value) }));
+    gBtn(r, '주기', () => gmDo('item', { item: GM.item, qty: Math.abs(+qty.value) }));
+    gBtn(r, '빼기', () => gmDo('item', { item: GM.item, qty: -Math.abs(+qty.value) }));
     const chips = gEl('div', 'gm-chips');
     for (const x of d.items) {
       if (!S.items[x.item]) continue;
       const c = gEl('button', null, `${S.items[x.item].name} ×${x.qty}`);
       c.type = 'button'; c.title = '눌러서 위 물건 칸에 고르기';
-      c.addEventListener('click', () => { it.value = x.item; GM.item = x.item; qty.value = x.qty; });
+      c.addEventListener('click', () => { GM.item = x.item; it.set(x.item); qty.value = x.qty; });
       chips.appendChild(c);
     }
     s.appendChild(gEl('small', 'note', d.items.length ? '소지품 (누르면 위 칸에 골라짐)' : '소지품이 비어 있다.'));
@@ -12196,6 +12853,15 @@
       if (k.bond != null && k.status !== 'egg') bits.push(`유대 ${k.bond}`);
       if (k.talent) bits.push(`재주 ${S.talents[k.talent]?.name || k.talent}`);
       t.appendChild(gEl('small', null, bits.join(' · ')));
+      // 자람 기록 (게임 화면에는 힌트로만 보이는 숫자)
+      const gi = k.grow;
+      if (gi) {
+        const GN = { rest: '함께 쉼', trip: '원정', food: '먹을 것', friend: '친구와 놂', warm: '다정', trust: '믿음', strict: '엄격', free: '자유', neglect: '못 돌봄', hungry: '배고픔', claw: '발톱', wing: '날개', wisdom: '지혜', fight: '함께 싸움', errand: '심부름' };
+        const rec = Object.entries(gi.grow).map(([key, n]) => `${GN[key] || key} ${n}`).join(' · ') || '아직 없음';
+        t.appendChild(gEl('small', null, `성격: ${gi.traits.map((x) => (x.grown ? `${x.name}(자람)` : x.name)).join(', ') || '없음'} · 자라며 생긴 것 ${gi.grown}/${gi.max}`));
+        t.appendChild(gEl('small', null, `자람 기록: ${rec}${gi.best ? ` · 가장 가까운 성격 '${gi.best.name}' ${gi.best.v} (단계 1, 특별한 순간 ${gi.special})` : ''}`));
+        if (gi.friends.length) t.appendChild(gEl('small', null, `친구: ${gi.friends.map((f) => `${f.name}(${f.owner}) ${f.n}번`).join(', ')}`));
+      }
       row.appendChild(t);
       const a = gEl('div', 'gm-r');
       const live = k.status === 'home' || k.status === 'egg';
@@ -12240,14 +12906,13 @@
         if (GM.tab === 'give') renderGm();
       });
     }
-    const itemOpts = Object.entries(S.items).sort((a, b) => a[1].name.localeCompare(b[1].name, 'ko')).map(([id, x]) => [id, x.name]);
+    const itemOpts = Object.keys(S.items).sort((a, b) => S.items[a].name.localeCompare(S.items[b].name, 'ko')).map((id) => [id, null]);
     if (!G.rows[0].item) G.rows[0].item = itemOpts[0][0];
 
     let s = gmSection(body, '줄 물건', '같은 물건을 두 번 고르면 개수가 합쳐진다.');
     G.rows.forEach((row, i) => {
       const r = gmRow(s);
-      const it = gSelect(r, '물건', itemOpts, row.item);
-      it.addEventListener('change', () => { row.item = it.value; });
+      itemPickField(r, itemOpts, row.item, (id) => { row.item = id; }, { after: r, label: `줄 물건 ${i + 1}`, byCat: true });
       const qty = gNum(r, '개수', row.qty, '72px');
       qty.min = 1;
       qty.addEventListener('input', () => { row.qty = qty.value; });
@@ -13243,7 +13908,7 @@
   // 창 안의 탭: 지금 창을 닫고 옆 창을 연다 (아래 메뉴는 같은 칸이 계속 눌린 채)
   const TAB_OPEN = { inv: () => openInv(), craft: () => openCraft(), log: () => openLedger(), friends: () => openFriends(), tp: () => openTpList() };
   document.addEventListener('click', (e) => {
-    const b = e.target.closest('.dtabs [data-go]');
+    const b = e.target.closest('.dtabs [data-go], .ctabs [data-go]'); // 소지품·주고받은 기록은 상태 창과 같은 서류철 탭
     if (!b || b.classList.contains('on')) return;
     // 가운데 칸에 펼치는 화면끼리는 지금 창을 먼저 닫지 않음 (새 창이 준비되면 openPanel이 바꿔 끼움).
     // 먼저 닫으면 소지품을 받아 오는 동안 대륙 지도가 잠깐 비쳐 보였음
@@ -13291,7 +13956,7 @@
       const g = document.createElement('span'); g.className = 'mc-goal'; g.textContent = cu.accepted ? cu.text : '아직 듣지 않은 부탁';
       top.append(tg, g); c.appendChild(top);
       const say = document.createElement('span'); say.className = 'mc-say'; say.textContent = cu.accepted ? `"${cu.intro}"` : `${m.name}${josa(m.name, '이', '가')} 땅속으로 이어진 계단 이야기를 꺼내려 한다.`; c.appendChild(say);
-      if (cu.accepted && cu.bring) c.appendChild(mobChips(cu.needs));
+      if (cu.accepted && cu.bring) c.appendChild(mobChips(cu.needs, 0, c));
       const foot = document.createElement('div'); foot.className = 'mc-foot';
       foot.appendChild(mobReward(cu.reward));
       const sp = document.createElement('span'); sp.className = 'sp'; foot.appendChild(sp);
@@ -13456,7 +14121,20 @@
     const r0 = Math.max(0, Math.min(N - VH, pos[0] - Math.floor(VH / 2))), c0 = Math.max(0, Math.min(N - VW, pos[1] - Math.floor(VW / 2)));
     const occ = {}; for (const h of f.here) (occ[`${h.pos[0]},${h.pos[1]}`] ||= []).push(h);
     const fireNo = {}; let fno = 0; for (const k of f.ways) { const [wr, wc] = k.split(',').map(Number); if (rows[wr][wc] === 'F') fireNo[k] = ++fno; } // 화톳불 번호: 들어갈 곳 고르기와 같은 번호
-    const nearFire = (pp) => { let best = 0, bd = 1e9; for (const [k, no] of Object.entries(fireNo)) { const [wr, wc] = k.split(',').map(Number); const dd = Math.abs(wr - pp[0]) + Math.abs(wc - pp[1]); if (dd < bd) { bd = dd; best = no; } } return best; };
+    // 구덩이에 빠진 드래곤 곁의 화톳불: 벽을 돌아 길을 따라 가장 가까운 찾은 화톳불 (서버의 구덩이 알림과 같은 셈)
+    const nearFire = (pp) => {
+      const seen = new Set([`${pp[0]},${pp[1]}`]), q = [pp];
+      for (let h = 0; h < q.length; h++) {
+        const [kr, kc] = q[h], key = `${kr},${kc}`;
+        if (fireNo[key]) return fireNo[key];
+        for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nr = kr + dr, nc = kc + dc, nk = `${nr},${nc}`;
+          if (nr < 0 || nc < 0 || nr >= N || nc >= N || rows[nr][nc] === '#' || seen.has(nk)) continue;
+          seen.add(nk); q.push([nr, nc]);
+        }
+      }
+      return 0;
+    };
     // 기둥 번호: 서버가 보낸 순서 그대로 (수호자·불 기록이 이 순서. 지도 위→아래 순서와 달라 엉뚱한 기둥의 수호자가 보이던 문제)
     const pillarIdx = {};
     if (Array.isArray(f.pillars)) f.pillars.forEach((p, i) => { pillarIdx[`${p[0]},${p[1]}`] = i; });

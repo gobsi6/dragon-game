@@ -293,6 +293,8 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       region: friend || self || near ? d.region : null,
       place: friend || self || near ? logic.placeOf(d) : null,   // 지역 안의 장소
       nest: friend || self ? d.nest || null : null,
+      // 둥지 한 줄 요약: 누구에게나 보임 (식구 이름 포함). 어느 지역인지는 동료·자기 자신에게만
+      nestLine: (() => { const l = d.dead_at ? null : logic.nestLine(d, kin?.home); if (l && !(friend || self)) l.region = null; return l; })(),
       self,
       rel: self ? null : {
         mine: db.relGet(viewer.id, d.id),                 // friend(관계를 맺음) / rival / wary / nemesis / null
@@ -324,6 +326,9 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
         row.bond = r.bond || 'comrade';
         row.region = e ? e.dragon.region : r.region;
         row.away = !!e?.dragon.exp_end;
+        // 둥지 한 줄 요약 (동료 목록에는 짧게)
+        const fd = e ? e.dragon : db.getDragon(r.id);
+        if (fd && fd.nest && !fd.dead_at) row.nest = logic.nestLine(fd, (e ? fd.kinSummary : life.summary(db.kinLoad(fd.id), Date.now()))?.home);
         out.friends.push(row);
       } else if (r.kind === 'rival') { row.mutual = db.relGet(r.id, me.id) === 'rival'; out.rivals.push(row); }
       else if (r.kind === 'wary') out.wary.push(row);

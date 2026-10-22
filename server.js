@@ -18,7 +18,7 @@ const {
 const logic = require('./game-logic');
 const mobs = require('./game-mobs'); // 모브 드래곤: 의뢰·이야기·교환
 const life = require('./game-life');
-const { REGION_LOOT, SHOPS_SPECIAL, RUIN, FACILITY, KIN_TRAITS } = require('./game-data');
+const { REGION_LOOT, SHOPS_SPECIAL, RUIN, FACILITY, KIN_TRAITS, KIN_PLAY } = require('./game-data');
 
 // ── 물건을 얻는 곳: 제작 화면에서 재료를 누르면 보여 줌. 서버를 켤 때 한 번 정리해 둠 ──
 const ITEM_SOURCES = (() => {
@@ -382,9 +382,41 @@ function pendingId(d) {
 
 // ── 둥지 식구 ──────────────────────────────────────
 // 지난 시간만큼 식구의 일을 계산하고(성장, 노화, 부화, 선물), 소식이 있으면 알림
+// ── 소꿉친구: 가까운 둥지(같은 지역이나 바로 이웃한 지역)의 아이와 가끔 함께 놀다 옴 (KIN_PLAY) ──
+function playdate(d, kin, now) {
+  const P = KIN_PLAY;
+  if (!d.nest) return [];
+  const c = logic.combatJson(d);
+  if (now - (c.playAt || 0) < P.everyMs) return [];
+  c.playAt = now;
+  if (Math.random() >= P.chance) return [];
+  const mine = life.playable(kin, now);
+  if (!mine.length) return [];
+  const near = new Set([d.nest, ...(REGIONS[d.nest]?.links || [])]); // 같은 지역과 바로 이웃한 지역
+  const others = db.nestsAll(d.id).filter((o) => near.has(o.nest)).sort(() => Math.random() - 0.5);
+  for (const o of others) {
+    const oe = online.get(o.id);
+    const od = oe ? oe.dragon : db.getDragon(o.id);
+    if (!od) continue;
+    const okin = db.kinLoad(o.id);
+    const theirs = life.playable(okin, now);
+    if (!theirs.length) continue;
+    // 이미 친구인 짝이 있으면 그 둘이 다시 만날 때가 많음
+    const pairs = [];
+    for (const a of mine) for (const b of theirs) if (a.data.friends?.[`${o.id}:${b.id}`]) pairs.push([a, b]);
+    const [a, b] = pairs.length && Math.random() < P.sameFriend ? pairs[Math.floor(Math.random() * pairs.length)]
+      : [mine[Math.floor(Math.random() * mine.length)], theirs[Math.floor(Math.random() * theirs.length)]];
+    const r = life.playTogether(a, d, b, od, now);
+    if (oe) refreshKin(oe.dragon, okin); else db.kinSaveAll(o.id, okin);
+    social.tellRival(o.id, r.theirs.join(' '), '둥지 소식');
+    return r.mine;
+  }
+  return [];
+}
 function syncKin(socket, d, now = Date.now()) {
   const kin = db.kinLoad(d.id);
   const t = life.tick(d, kin, now);
+  t.lines.push(...playdate(d, kin, now));
   refreshKin(d, kin);
   db.saveState(d, t.items, t.hoardItems);
   if (t.lines.length && socket) {
@@ -1365,7 +1397,7 @@ function onConnect(socket) {
       // 이벤트가 다른 드래곤에게 남긴 소식 (라이벌 이벤트)
       for (const t of res.tells || []) social.tellRival(t.id, t.text, t.title);
       for (const g of res.sends || []) social.eventGift(d, g.id, g.items, g.msg); // 이벤트로 보낸 선물
-      if (res.purify) res.lines = [...(res.lines || []), ...purify.add(d, 'event', res.purify)]; // 이벤트로 쌓은 정화 기여
+      if (res.purify) res.lines = [...(res.lines || []), ...(logic.isRuin(d.region) ? ruin.add(d, 'event', res.purify) : purify.add(d, 'event', res.purify))]; // 이벤트로 쌓은 정화 기여 (멸망한 대륙이면 그 땅의 정화로)
       delete res.tells; delete res.sends; delete res.purify;
       // 지나온 이야기에 남길 선택·사건
       const cr = CHRON_ON[event];
@@ -1395,7 +1427,7 @@ function onConnect(socket) {
   itemAction('nest:job', (d, p, have, kin) => life.setJob(d, kin, p.kin, str(p.fac)));
   itemAction('nest:harvest', (d, p, have, kin) => life.harvest(d, kin));
   itemAction('nest:cook', (d, p, have, kin) => life.cook(d, kin, str(p.recipe), have));
-  itemAction('order:fill', (d, p, have) => logic.fillOrder(d, str(p.key), have));
+  itemAction('order:fill', (d, p, have) => logic.fillOrder(d, str(p.key), have, Date.now(), p?.alt === true)); // alt: 걸작·정성 들인 것으로 채워 납품
   // ── 모브 드래곤 ──
   socket.on('mob:get', (payload, ack) => {
     if (typeof ack !== 'function') return;
@@ -1441,9 +1473,11 @@ function onConnect(socket) {
     if (n < 1) return { error: '가지고 있지 않다.' };
     const q = Math.max(1, Math.min(n, Math.floor(Number(p.qty)) || 1));
     const what = q > 1 ? `${it.name} ${q}개` : it.name;
+    // 강화된 줄에서 버렸으면 그 강화된 한 개가 나감 (보통 줄에서 버리면 보통 것부터)
+    if (p.enh === true && it.type === 'equip' && logic.gearAt(d, id) === 'inv') delete logic.gearOf(d)[id];
     return { title: '소지품', lines: [`${what}${josa(q > 1 ? '개' : it.name, '을', '를')} 버렸다.`], items: [{ id, qty: -q }] };
   });
-  itemAction('equip', (d, p, have) => logic.equip(d, str(p.item), have));
+  itemAction('equip', (d, p, have) => logic.equip(d, str(p.item), have, p.plain === true)); // plain: 강화되지 않은 보통 것을 참
   itemAction('unequip', (d, p) => logic.unequip(d, str(p.slot)));
 
   // ── 인간 마을 ──

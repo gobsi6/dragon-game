@@ -88,6 +88,7 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
         incubating: k.status === 'egg' ? !!k.data.incubateAt : null,
         eggDays: k.status === 'egg' ? +((now - k.data.found) / DAY).toFixed(1) : null,
         talent: k.data.talent || null, path: k.data.path || null,
+        grow: life.growInfo(k), // 자람 기록·가장 가까운 성격·친구 (숫자 맞추기용)
       })),
     };
   }
