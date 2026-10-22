@@ -1552,6 +1552,7 @@ function onConnect(socket) {
 
   // ── 둥지 식구 ──
   itemAction('kin:care', (d, p, have, kin) => life.care(d, kin, p.id, str(p.item), have));
+  itemAction('kin:touch', (d, p, have, kin) => life.touch(d, kin, Number(p.id), str(p.act))); // 교감: 쓰다듬기·안아 주기 등
   // ── 반려의 둥지에서 그 집 식구 돌보기 (인간 아이 돌보기, 새끼 드래곤 가르치기). 유대·능력치는 반려의 식구에게 쌓임 ──
   const partnerHome = (d) => {
     const ph = logic.hooks.partnerNest(d);

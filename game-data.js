@@ -932,6 +932,10 @@ const KIN_TRAITS = {
   sociable:  { for: 'human', grown: true, name: '친구가 많은',     desc: '다른 둥지의 아이와 놀다 오면 유대가 2 더 오른다.' },
   packmate:  { for: 'drake', grown: true, name: '어울리기 좋아하는', desc: '다른 둥지의 아이와 놀다 오면 유대가 2 더 오른다.' },
   dignified: { for: 'drake', grown: true, name: '속 깊은',         desc: '응석받이가 다 자라 속이 깊어졌다. 가르칠 때 유대가 2 더 오르고, 먹이를 주면 1 더 오른다.' },
+  spoiled:    { for: 'human', grown: true, flaw: true, name: '응석받이',   desc: '교감할 때 유대가 1 더 오르지만, 하루 넘게 교감이 없으면 서운해서 유대가 2 준다.' },
+  aloof:      { for: 'human', grown: true, flaw: true, name: '새침한',     desc: '교감할 때 유대가 1 덜 오르지만, 한동안 교감을 못 받아도 서운해하지 않는다.' },
+  babyish:    { for: 'drake', grown: true, flaw: true, name: '어리광쟁이', desc: '교감할 때 유대가 1 더 오르지만, 하루 넘게 교감이 없으면 서운해서 유대가 2 준다.' },
+  aloofd:     { for: 'drake', grown: true, flaw: true, name: '새침한',     desc: '교감할 때 유대가 1 덜 오르지만, 한동안 교감을 못 받아도 서운해하지 않는다.' },
 };
 const KIN_TRAIT_RULES = {
   count: 2,                                        // 식구마다 붙는 성격 수
@@ -983,6 +987,8 @@ const KIN_GROW = {
       { trait: 'fussy',      keys: ['hungry'],           unit: 3, hint: '요즘 배가 고프면 금방 입이 삐죽 나오는 것 같다.',    why: '배고픈 날이 잦았던 탓인지 투정이 늘었다.' },
       { trait: 'willful',    keys: ['free'],             unit: 2, hint: '요즘 하고 싶은 대로만 하려는 것 같다.',              why: '하고 싶은 대로 두었더니 고집이 자랐다.' },
       { trait: 'sociable',   keys: ['friend'],           unit: 3, hint: '요즘 옆 둥지 친구 이야기를 자주 하는 것 같다.',      why: '다른 둥지 아이들과 어울리던 날들이 아이를 밝게 했다.' },
+      { trait: 'spoiled',    keys: ['pamper'],           unit: 4, hint: '요즘 보호자 곁에서 떨어지려 하지 않는 것 같다.',     why: '너무 자주 안기고 쓰다듬어진 탓에 응석이 늘었다.' },
+      { trait: 'aloof',      keys: ['smother'],          unit: 4, hint: '요즘 보호자가 다가가면 슬쩍 피하는 것 같다.',         why: '너무 자주 챙겨 주는 손길이 조금 귀찮아졌다.' },
     ],
     drake: [
       { trait: 'fierce',     keys: ['claw'],             unit: 3, hint: '요즘 바위만 보면 발톱을 갈아 대는 것 같다.',          why: '발톱 쓰는 법을 배우며 기세가 사나워졌다.' },
@@ -995,9 +1001,46 @@ const KIN_GROW = {
       { trait: 'greedy',     keys: ['hungry'],           unit: 3, hint: '요즘 먹을 것만 보면 눈빛이 달라지는 것 같다.',       why: '배고픈 날이 잦았던 탓인지 먹성이 좋아졌다.' },
       { trait: 'wild',       keys: ['free'],             unit: 2, hint: '요즘 둥지 안을 마구 뛰어다니는 것 같다.',            why: '하고 싶은 대로 두었더니 천방지축이 되었다.' },
       { trait: 'packmate',   keys: ['friend'],           unit: 3, hint: '요즘 다른 둥지 쪽 하늘을 자주 바라보는 것 같다.',    why: '다른 둥지 새끼들과 어울리던 날들이 마음을 열게 했다.' },
+      { trait: 'babyish',    keys: ['pamper'],           unit: 4, hint: '요즘 날개 밑으로 자꾸 파고드는 것 같다.',             why: '너무 자주 안기고 쓰다듬어진 탓에 어리광이 늘었다.' },
+      { trait: 'aloofd',     keys: ['smother'],          unit: 4, hint: '요즘 다가가면 고개를 홱 돌리는 것 같다.',             why: '너무 자주 챙겨 주는 손길이 조금 귀찮아졌다.' },
     ],
   },
 };
+// ── 교감: 쓰다듬기·안아 주기 같은, 물건 없이 함께하는 행동 ─────────
+// 자라는 단계마다 좋아하는 것(like)·싫어하는 것(dislike)이 다르고, 하루에 cap번을 넘기면 과보호가 쌓여 성격이 바뀜
+const KIN_TOUCH = {
+  cap: 4,                                   // 하루에 알맞은 교감 횟수 (넘기면 유대는 오르지 않고 과보호가 쌓임)
+  bond: { like: 3, ok: 2, dislike: 0 },     // 좋아하는 것·보통·싫어하는 것일 때 오르는 유대
+  boredH: 8, lonelyH: 30,                   // 교감 없이 이만큼 지나면 심심함 · 서운함
+  happyH: 3,                                // 좋아하는 교감 뒤 이만큼은 신남
+  night: [22, 6],                           // 이 시각(한국 시간) 사이에는 졸림
+  ask: { chance: 0.1, everyH: 6, waitMin: 90, bond: 4, missH: 6 }, // 아이가 먼저 조름: 한 시간마다 확률, 최소 간격, 기다려 주는 시간, 받아 주면 더 오르는 유대, 놓치면 서운한 시간
+  spoiledLoss: 2,                           // 응석받이·어리광쟁이: 하루 넘게 교감이 없으면 줄어드는 유대
+  acts: {
+    pat:   { name: '쓰다듬기' },
+    hug:   { name: '안아 주기' },
+    play:  { name: '놀아 주기' },
+    story: { name: '이야기 들려주기' },
+    ride:  { name: '등에 태워 주기', for: 'human' },
+    fly:   { name: '함께 날기', for: 'drake' },
+  },
+  likes: {
+    '아기':     { like: ['hug', 'pat'], dislike: [] },
+    '아이':     { like: ['play', 'ride', 'hug'], dislike: [] },
+    '소년':     { like: ['play', 'ride', 'story'], dislike: [] },
+    '청소년':   { like: ['story', 'ride'], dislike: ['hug', 'pat'] },
+    '어른':     { like: ['story'], dislike: ['pat'] },
+    '노년':     { like: ['story', 'hug'], dislike: [] },
+    '해츨링':   { like: ['pat', 'hug'], dislike: [] },
+    '어린 용':  { like: ['pat', 'play'], dislike: [] },
+    '젊은 용':  { like: ['fly', 'play'], dislike: ['hug'] },
+    '다 자란 용': { like: ['fly', 'story'], dislike: ['pat', 'hug'] },
+  },
+  // 타고난 성격이 더 좋아하는 것 (단계보다 앞섬)
+  traitLikes: { prankster: ['play'], brave: ['play', 'ride'], bookworm: ['story'], chatterbox: ['story'], lookout: ['ride'], waterbaby: ['play'],
+    bold: ['play'], wild: ['play'], dreamy: ['story'], stargazer: ['story'], swift: ['fly'], windrider: ['fly'], clingy: ['hug'], lonely: ['hug'] },
+};
+
 const HUMAN_NAMES = ['미르', '엘라', '토비', '세린', '리안', '하나', '오웬', '루카', '니나', '테오', '소이', '다온', '에반', '유나', '카이', '로웬'];
 const DRAKE_NAMES = ['아르', '벨카', '시엘', '모라크', '카이렌', '이그', '루미', '타르', '세라', '노크', '베른', '이즈'];
 
@@ -1715,6 +1758,14 @@ const BOSS = {
   // 쓰러뜨렸을 때: 금화 = 레벨 × (goldBase + goldShare × 내 몫), 재앙의 핵, 명성
   goldBase: 15, goldShare: 120, core: 1, topCore: 1, top: 3, fame: 2, lastFame: 3,
   news: [0.5, 0.25],       // 체력이 이만큼 아래로 떨어지면 대륙에 알림
+  // 지난 재앙에서 배우기: 끝날 때마다 '한 번 맞설 때 실제 평균 피해'와 '얼마 만에 쓰러졌는지'를 기록해 다음 재앙 체력을 맞춤
+  tune: {
+    targetFrac: 0.5,       // 머무는 시간(lastsHours)의 이만큼 지나서 쓰러지는 게 목표 (18시간 × 0.5 = 9시간)
+    learn: 0.5,            // 새 기록을 이만큼 반영 (나머지는 지난 값 유지: 한 번의 들쭉날쭉에 휘둘리지 않게)
+    stepMax: 1.5, stepMin: 0.75, // 한 번에 체력 배율이 이 사이로만 바뀜
+    multMin: 0.6, multMax: 4,    // 체력 배율의 범위
+    minTries: 4,           // 맞선 횟수가 이보다 적으면 피해 기록은 반영하지 않음
+  },
 };
 // 사냥감의 전투 성질: 약점(피해 ×1.5)과 저항(피해 ×0.5, 상태 이상이 통하지 않음), 특기
 const CREATURE_COMBAT = {
@@ -1949,6 +2000,6 @@ module.exports = {
   isTestDragon: (d) => !!d && !!KINDS[d.kind]?.test,                // GM 시험용 투명 드래곤인가
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, FESTIVAL, TITLES, TITLE_COUNT_NAMES, ACHIEVEMENTS, YABAWI, KEEPSAKES,
   PURIFY, CRAFT, SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, FISHING, RUIN, FACILITY, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
-  DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, KIN_GROW, KIN_PLAY, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
+  DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, KIN_GROW, KIN_PLAY, KIN_TOUCH, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
   COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, DEPART, BONDS, MARKS, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG,
 };

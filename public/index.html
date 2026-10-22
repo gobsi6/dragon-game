@@ -786,6 +786,14 @@
   .kin-more-item:hover { background: #EEF2F6; color: var(--ink); }
   .kin-more-item.off { color: #9EA3A7; }
   .kin-body { display: flex; flex-direction: column; gap: 8px; padding: 10px 14px 14px; border-top: 1px solid var(--line-in); }
+  .kin-touch { display: flex; flex-direction: column; gap: 6px; }
+  .kin-touch .kt-h { display: flex; align-items: baseline; gap: 8px; font-size: 12.5px; }
+  .kin-touch .kt-h b { color: var(--ink-2); }
+  .kin-touch .kt-h small { color: var(--muted); }
+  .kin-touch .kt-ask { margin: 0; padding: 6px 10px; font-size: 12.5px; color: #6E4A12; background: #FBF2DE; border-left: 2px solid #C9922F; border-radius: 2px; }
+  .kin-touch .kt-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .kin-touch .kt-btn { min-height: 32px; padding: 0 10px; font-size: 12.5px; }
+  .kin-touch .kt-btn.asked { border-color: #C9922F; background: #FBF2DE; color: #6E4A12; font-weight: 600; box-shadow: inset 0 0 0 1px #C9922F; }
   .kin-body > .kin-acts { padding: 8px 0; border-top: 1px dashed var(--line-in); border-bottom: 1px dashed var(--line-in); }
   .kin-body > .kin-acts .lbl { margin-top: 4px; font-weight: 600; color: var(--ink-2); } /* 건네기·먹이·가르치기 같은 칸 제목 */
   .kin-body > .kin-acts .lbl:first-child { margin-top: 0; }
@@ -6399,10 +6407,12 @@
   // 이름 바꾸기·입양 보내기는 오른쪽 위 ⋯ 메뉴로. 펼친 식구는 둥지 창을 다시 그려도 펼친 채로
   const KIN_OPEN = new Map();
   let KIN_MENU = null; // ⋯ 메뉴가 열린 식구
-  const KIN_ORDER = ['egg', 'age', 'traits', 'hint', 'acts', 'about', 'friends', 'family', 'stats', 'look', 'diary', 'adopt'];
+  const KIN_ORDER = ['egg', 'age', 'traits', 'hint', 'touch', 'acts', 'about', 'friends', 'family', 'stats', 'look', 'diary', 'adopt'];
   function kinPills(v, partner) {
     const out = [];
     const add = (t, cls = '') => out.push([t, cls]);
+    // 기분 (교감): 조르는 중·서운함은 눈에 띄게
+    if (v.mood && v.status !== 'egg') add(v.mood.name, { ask: 'warn', sad: 'warn', pout: 'warn', happy: 'ok', bored: 'wait', sleepy: 'wait', calm: '' }[v.mood.key] ?? '');
     if (v.status === 'egg') add(v.hatchIn == null ? '품어 주기' : '품는 중', v.hatchIn == null ? 'ok' : 'wait');
     else if (v.runaway) add('가출 중', 'warn');
     else if (v.onExp) add('원정에 따라감', 'wait');
@@ -6418,7 +6428,7 @@
       else if (v.trainIn > 0) add(`가르치기 ${dur(v.trainIn)} 뒤`, 'wait');
       else add('가르칠 수 있음', 'ok');
     }
-    return out.slice(0, 2);
+    return out.slice(0, 3);
   }
   function kinFold(card, v, head, partner, forcePill) {
     const key = `${partner ? `p${partner.id}:` : ''}${v.id}`;
@@ -6430,6 +6440,37 @@
       : n.classList.contains('kin-hint') ? 'hint' : n.classList.contains('kin-acts') ? 'acts' : n.classList.contains('kin-stats') ? 'stats'
         : n.classList.contains('kin-diary') ? 'diary' : n.classList.contains('kin-adopt') ? 'adopt' : n.classList.contains('kin-look') ? (v.status === 'egg' ? 'egg' : 'look')
           : n.classList.contains('kin-meta') ? (v.status === 'egg' || v.runaway ? 'egg' : 'about') : 'about');
+    // 교감: 쓰다듬기·안아 주기 등 (자기 둥지 식구만). 아이가 조르는 것이 있으면 그 단추가 빛남
+    if (!partner && v.touchActs?.length && v.status !== 'egg') {
+      const tb = document.createElement('div');
+      tb.className = 'kin-touch';
+      tb.dataset.sec = 'touch';
+      const h = document.createElement('div');
+      h.className = 'kt-h';
+      h.innerHTML = '<b>교감</b>';
+      const cnt = document.createElement('small');
+      cnt.textContent = `오늘 ${v.touch.n}/${v.touch.cap}${v.touch.n >= v.touch.cap ? ' · 오늘은 충분히 함께했다' : ''}`;
+      h.appendChild(cnt);
+      tb.appendChild(h);
+      if (v.ask) {
+        const a = document.createElement('p');
+        a.className = 'kt-ask';
+        a.textContent = `${v.name}${josa(v.name, '이', '가')} ${v.ask.line}. (${Math.max(1, Math.ceil(v.ask.left / 60000))}분 안에 '${v.ask.name}'를 해 주자)`;
+        tb.appendChild(a);
+      }
+      const row = document.createElement('div');
+      row.className = 'kt-row';
+      for (const a of v.touchActs) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = `btn kt-btn${v.ask?.act === a.id ? ' asked' : ''}`;
+        b.textContent = a.name;
+        b.addEventListener('click', () => nestAct('kin:touch', { id: v.id, act: a.id }));
+        row.appendChild(b);
+      }
+      tb.appendChild(row);
+      card.appendChild(tb);
+    }
     const parts = [...card.children].filter((n) => n !== head);
     const bars = parts.filter((n) => n.classList.contains('bond'));
     const rest = parts.filter((n) => !n.classList.contains('bond'));
@@ -13076,6 +13117,20 @@
     // 날씨는 아래 '계절과 날씨'에서
     const hrs = gNum(r3, '시간 뒤', '', '72px');
     gBtn(r3, '정하기', () => gmCall('gm:boss:next', { hours: +hrs.value }, () => toast('다음 재앙 시각을 정했다.')));
+    // 체력 맞춤: 지난 재앙에서 잰 실제 피해와 쓰러지는 빠르기로 다음 재앙 체력을 맞춤 (여기서 보고 바꿀 수 있음)
+    const rTune = gmRow(sec, '체력 맞춤');
+    const tinfo = document.createElement('p'); tinfo.className = 'note'; tinfo.style.flexBasis = '100%'; tinfo.textContent = '불러오는 중…';
+    rTune.appendChild(tinfo);
+    const tm = gNum(rTune, '체력 배율', '', '72px');
+    const showTune = (res) => {
+      const t = res.tune || {}, last = (t.log || [])[0];
+      tm.value = (t.mult || 1).toFixed(2);
+      tinfo.textContent = `실제 한 번 피해: 처음 공식의 ×${(t.ratio || 1).toFixed(2)} · 체력 배율 ×${(t.mult || 1).toFixed(2)}${res.target ? ` · 목표: ${res.target}시간쯤 지나 쓰러지기` : ''}`
+        + (last ? ` · 지난 재앙: ${last.done === 'win' ? `${last.hours}시간 만에 쓰러짐` : '떠나 버림'} (맞선 횟수 ${last.tries}, 한 번 평균 ${last.avg})` : ' · 아직 끝난 재앙 기록이 없다');
+    };
+    socket.emit('gm:boss:tune', {}, (res) => { if (!res.error) showTune(res); }); // 읽기만 (gmCall은 다시 그려서 끝없이 되풀이됨)
+    gBtn(rTune, '정하기', () => gmCall('gm:boss:tune', { mult: +tm.value }, () => toast('다음 재앙부터 적용된다.')));
+    gBtn(rTune, '처음으로', () => { if (confirm('체력 맞춤을 처음(배율 1)으로 되돌릴까?')) gmCall('gm:boss:tune', { reset: true }, () => toast('처음으로 되돌렸다.')); }, 'warn');
 
     // 계절과 날씨
     const ws = gmSection(body, '계절과 날씨', S.wx ? `지금 ${S.wx.season.name}. 지역마다 ${'3'}시간마다 바뀐다. 여기서 바꾸면 정한 시간 동안 그 날씨가 된다.` : '');

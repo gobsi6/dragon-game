@@ -6,7 +6,7 @@
 // 모든 함수는 식구 목록 kin을 직접 바꿉니다. 새 식구는 id가 null이고, 저장은 server.js가 합니다.
 
 const {
-  ITEMS, KINDS, REGIONS, SHOPS, STATS, REGION_LOOT, PLACES, FACILITY, RECIPES, DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, EVENT_RULES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, KIN_GROW, KIN_PLAY,
+  ITEMS, KINDS, REGIONS, SHOPS, STATS, REGION_LOOT, PLACES, FACILITY, RECIPES, DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, EVENT_RULES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, KIN_GROW, KIN_PLAY, KIN_TOUCH,
 } = require('./game-data');
 const logic = require('./game-logic');
 const EVENTS = require('./game-events');
@@ -307,6 +307,7 @@ function tick(d, kin, now = Date.now()) {
     // 모습이 정해지기 전에 들어온 식구 (이 기능이 생기기 전의 식구)
     if (k.status === 'home' && rollLooks(k)) out.lines.push(`${k.name}${josa(k.name, '을', '를')} 다시 찬찬히 들여다보았다. ${introOf(k)}`);
     if (k.status === 'home') { fillLooks(k); diaryStart(k); }
+    if (k.status === 'home') touchTick(k, now, out); // 교감: 아이가 먼저 조르기 · 놓침 · 서운함
     if (k.type === 'drake' && k.status === 'home' && k.data.errand && now >= k.data.errand.end) {
       const seek = k.data.errand.seek;
       if (seek) {
@@ -631,6 +632,13 @@ function view(k, now, d) {
   if (k.data.expBack && now - k.data.expBack < 3 * 3600000) v.expBack = k.data.expBack;
   if (!isHome(k)) v.ended = k.data.ended || null;
   // 함께한 날들: 며칠째인지와 함께 (새것이 위로)
+  if (k.status === 'home') {
+    const md = moodOf(k, now), t = k.data.touch || {};
+    v.mood = md ? { key: md, name: MOODS[md] } : null;
+    v.touch = { n: t.day === kstDay(now) ? t.n : 0, cap: TC.cap };
+    v.touchActs = Object.entries(TC.acts).filter(([, a]) => !a.for || a.for === k.type).map(([id, a]) => ({ id, name: a.name }));
+    if (k.data.ask && k.data.ask.until > now) v.ask = { act: k.data.ask.act, name: TC.acts[k.data.ask.act].name, line: ASK_LINE[k.data.ask.act], left: k.data.ask.until - now };
+  }
   diaryStart(k);
   if (k.data.diary) { const b0 = k.data.born || k.data.diary[0].at; v.diary = k.data.diary.map((x) => ({ d: Math.max(1, Math.floor((x.at - b0) / DAY) + 1), t: x.t })).reverse(); }
   return v;
@@ -670,6 +678,143 @@ function feedDrake(d, kin, k, item, have, now) {
   lines.push(`유대 +${gain} · ${satWord(k.data.sat)}`);
   return { title: k.name, lines, items: [{ id: item, qty: -1 }] };
 }
+// ── 교감: 쓰다듬기·안아 주기·놀아 주기·이야기·등에 태우기/함께 날기 ──────────
+// 물건·행동력 없이 하루 몇 번. 단계와 성격마다 좋아하는 것이 다르고, 기분에 따라 반응이 달라짐.
+// 하루 KIN_TOUCH.cap번을 넘기면 유대는 오르지 않고 과보호가 쌓여 '응석받이/어리광쟁이' 또는 '새침한'으로 자람
+const TC = KIN_TOUCH;
+const kstDay = (now) => new Date(now + 9 * 3600000).toISOString().slice(0, 10);
+const kstHour = (now) => new Date(now + 9 * 3600000).getUTCHours();
+const isNight = (now) => { const h = kstHour(now); const [a, b] = TC.night; return a > b ? h >= a || h < b : h >= a && h < b; };
+const touchOf = (k, now) => { const t = k.data.touch || (k.data.touch = { day: '', n: 0, last: 0, liked: 0 }); if (t.day !== kstDay(now)) { t.day = kstDay(now); t.n = 0; } return t; };
+// 이 식구가 좋아하는 것·싫어하는 것 (성격이 더 좋아하는 것이 단계보다 앞섬)
+function prefOf(k, act, now) {
+  const L = TC.likes[stageOf(k, now).name] || { like: [], dislike: [] };
+  const byTrait = (k.data.traits || []).some((t) => (TC.traitLikes[t] || []).includes(act));
+  if (byTrait || L.like.includes(act)) return 'like';
+  if (L.dislike.includes(act)) return 'dislike';
+  return 'ok';
+}
+// 지금 기분 (식구 카드에 한 단어로)
+const MOODS = { pout: '뾰로통', ask: '조르는 중', sleepy: '졸림', sad: '서운함', bored: '심심함', happy: '신남', calm: '평온' };
+function moodOf(k, now) {
+  if (k.status !== 'home' || k.type === 'egg') return null;
+  const t = k.data.touch || {};
+  const today = t.day === kstDay(now);
+  if (today && t.n > TC.cap) return 'pout';
+  if (k.data.ask && k.data.ask.until > now) return 'ask';
+  if (isNight(now)) return 'sleepy';
+  const lonelyOk = hasT(k, 'aloof') || hasT(k, 'aloofd') || hasT(k, 'tough');
+  if (!lonelyOk && ((k.data.askMissed && now - k.data.askMissed < TC.ask.missH * 3600000) || (t.last && now - t.last > TC.lonelyH * 3600000))) return 'sad';
+  if (!t.last || now - t.last > TC.boredH * 3600000) return 'bored';
+  if (t.liked && now - t.liked < TC.happyH * 3600000) return 'happy';
+  return 'calm';
+}
+// 넘치게 챙기면 어느 쪽으로 자랄지: 품을 파고드는 성격이면 응석 쪽, 제 고집이 있는 성격이면 새침 쪽 (나머지는 식구마다 정해짐)
+const SOFT = ['gentle', 'lonely', 'shy', 'crybaby', 'clingy', 'warm', 'affable', 'sleepy', 'opened', 'dreamy'];
+const FIRM = ['willful', 'wild', 'brave', 'bold', 'proud', 'stubborn', 'tough', 'capable', 'steadfast', 'fierce', 'steady', 'tidy'];
+function overdoKey(k) {
+  const tr = k.data.traits || [];
+  const soft = tr.filter((x) => SOFT.includes(x)).length, firm = tr.filter((x) => FIRM.includes(x)).length;
+  if (soft !== firm) return soft > firm ? 'pamper' : 'smother';
+  return k.id % 2 ? 'pamper' : 'smother';
+}
+const TOUCH_FIRST = { pat: '처음 머리를 쓰다듬어 주었다.', hug: '처음 꼭 안아 주었다.', play: '처음 함께 놀아 주었다.', story: '처음 이야기를 들려주었다.', ride: '처음 등에 태워 주었다.', fly: '처음 함께 하늘을 날았다.' };
+const ASK_LINE = { pat: '머리를 쓰다듬어 달라고 슬그머니 다가온다', hug: '안아 달라고 팔을 뻗는다', play: '놀아 달라고 자꾸 잡아당긴다', story: '이야기를 해 달라고 조른다', ride: '등에 태워 달라고 조른다', fly: '함께 날자고 날개를 퍼덕인다' };
+// 반응 문장: [행동][좋음·보통·싫음] (n: 이름, g: 이름+이/가, e: 이름+은/는)
+const TOUCH_LINES = {
+  pat: { like: ['{g} 눈을 가늘게 뜨고 손길에 머리를 비빈다.', '{g} 기분 좋은 듯 가르릉 소리를 낸다.'], ok: ['{g} 가만히 쓰다듬어지다가 씩 웃는다.'], dislike: ['{e} "이제 애 아니거든!" 하고 고개를 홱 돌린다.', '{e} 머리를 피하며 투덜거린다.'] },
+  hug: { like: ['{g} 품에 쏙 안겨 한참을 떨어지지 않는다.', '{g} 꼭 안긴 채 작게 웃음소리를 낸다.'], ok: ['{g} 잠깐 안겨 있다가 꼼지락거리며 내려간다.'], dislike: ['{e} "창피해요!" 하고 품에서 빠져나간다.', '{e} 버둥거리며 몸을 빼낸다.'] },
+  play: { like: ['{g} 신이 나서 둥지 안을 뛰어다닌다.', '{g} 숨이 찰 때까지 깔깔거리며 논다.'], ok: ['{g} 한참 함께 뛰어놀았다.'], dislike: ['{e} 내키지 않는지 금방 시들해진다.'] },
+  story: { like: ['{g} 눈을 반짝이며 다음 이야기를 조른다.', '{g} 이야기 끝까지 숨죽여 듣는다.'], ok: ['{g} 이야기를 듣다가 고개를 끄덕인다.'], dislike: ['{e} 듣는 둥 마는 둥 하품을 한다.'] },
+  ride: { like: ['{g} 등 위에서 두 팔을 활짝 펴고 소리친다.', '{g} 등에 매달려 신나게 웃는다.'], ok: ['{g} 등에 올라 둥지 둘레를 한 바퀴 돌았다.'], dislike: ['{e} 등에 오르기 싫다며 고개를 젓는다.'] },
+  fly: { like: ['{g} 날개를 나란히 펴고 신나게 바람을 가른다.', '{g} 구름 사이를 빙글빙글 돌며 좋아한다.'], ok: ['{g} 뒤따라 둥지 위를 몇 바퀴 날았다.'], dislike: ['{e} 날개를 접고 따라오지 않는다.'] },
+};
+const fillLine = (t, k) => t.replace('{g}', ga(k)).replace('{e}', `${k.name}${josa(k.name, '은', '는')}`).replace('{n}', k.name);
+const pickLine = (arr) => arr[Math.floor(Math.random() * arr.length)];
+function touch(d, kin, id, act, now = Date.now()) {
+  const err = atNest(d);
+  if (err) return { error: err };
+  const k = findKin(kin, id);
+  const A = TC.acts[act];
+  if (!k || k.status !== 'home') return { error: '교감할 수 있는 식구가 아니다.' };
+  if (isRunaway(k)) return { error: `${k.name}${josa(k.name, '은', '는')} 지금 둥지에 없다. 먼저 찾아오자.` };
+  if (k.data.onExp) return { error: `${k.name}${josa(k.name, '은', '는')} 원정에 따라가 있다.` };
+  if (k.type === 'drake' && k.data.errand) return { error: `${k.name}${josa(k.name, '은', '는')} 심부름을 떠나 있다.` };
+  if (!A || (A.for && A.for !== k.type)) return { error: '할 수 없는 교감이다.' };
+  const t = touchOf(k, now);
+  const lines = [];
+  t.n += 1;
+  // 처음 해 준 교감은 함께한 날들에
+  k.data.touchFirst ||= {};
+  if (!k.data.touchFirst[act]) { k.data.touchFirst[act] = now; diary(k, TOUCH_FIRST[act], now); }
+  // 아이가 조르던 것을 해 주면 기다렸다는 듯이
+  const asked = k.data.ask && k.data.ask.act === act && k.data.ask.until >= now;
+  if (t.n > TC.cap) {
+    // 너무 자주: 유대는 그대로, 과보호가 쌓임
+    const key = overdoKey(k);
+    growAdd(k, key, 1);
+    lines.push(key === 'pamper' ? `${ga(k)} 또 매달리며 놓아 주지 않는다. 오늘은 이미 충분히 함께했다. (오늘 ${t.n}번)` : `${k.name}${josa(k.name, '은', '는')} "또요?" 하는 얼굴로 슬그머니 피한다. 오늘은 이미 충분히 함께했다. (오늘 ${t.n}번)`);
+    t.last = now;
+    return { title: k.name, lines };
+  }
+  let pref = prefOf(k, act, now);
+  const mood = moodOf(k, now);
+  let shyNow = hasT(k, 'shy') && k.data.bond < 40;
+  if (shyNow && pref !== 'dislike') pref = 'ok';
+  let gain = TC.bond[pref];
+  if (mood === 'sleepy') { if (act === 'story') gain += 1; else if (act === 'play' || act === 'fly' || act === 'ride') gain = Math.max(0, gain - 1); }
+  if (mood === 'sad' && (act === 'hug' || act === 'pat') && pref !== 'dislike') gain += 1;
+  if (mood === 'bored' && (act === 'play' || act === 'fly') && pref !== 'dislike') gain += 1;
+  if (hasT(k, 'spoiled') || hasT(k, 'babyish')) gain += 1;
+  if (hasT(k, 'aloof') || hasT(k, 'aloofd')) gain = Math.max(0, gain - 1);
+  if (hasT(k, 'crybaby') && act === 'hug' && mood === 'sad') gain += 1;
+  if (asked) { gain += TC.ask.bond; growAdd(k, 'warm', 0.5); k.data.ask = null; }
+  // 반응
+  let line;
+  if (shyNow) line = `${ga(k)} 살짝 몸을 빼다가, 조심스레 다시 다가온다.`;
+  else if (mood === 'sleepy' && (act === 'play' || act === 'fly' || act === 'ride')) line = `${ga(k)} 눈을 비비며 꾸벅꾸벅 존다. 지금은 졸린가 보다.`;
+  else if ((hasT(k, 'sleepy') || hasT(k, 'sleepyhead')) && kstHour(now) >= 6 && kstHour(now) < 10 && act !== 'story') line = `${ga(k)} 이불 속에서 "오 분만…" 하고 웅얼거린다.`;
+  else line = fillLine(pickLine(TOUCH_LINES[act][pref]), k);
+  if (asked) line = `${ga(k)} 기다렸다는 듯이 활짝 웃는다. ${line}`;
+  k.data.bond = clamp(k.data.bond + gain);
+  if (pref === 'like') t.liked = now;
+  t.last = now;
+  lines.push(`${line}${gain ? ` (유대 +${gain})` : ''}`);
+  if (t.n === TC.cap) lines.push(`오늘은 이만하면 충분히 함께했다. 더 하면 ${k.name}${josa(k.name, '이', '가')} 지칠지도 모른다.`);
+  return { title: k.name, lines };
+}
+// tick에서: 아이가 먼저 조르기, 조르기를 놓침, 응석받이가 서운해함
+function touchTick(k, now, out) {
+  if (k.status !== 'home' || k.data.onExp || isRunaway(k) || (k.type === 'drake' && k.data.errand)) return;
+  const A = k.data.ask;
+  if (A && A.until < now) {
+    k.data.ask = null;
+    k.data.askMissed = now;
+    if (!hasT(k, 'aloof') && !hasT(k, 'aloofd')) growAdd(k, 'neglect', 0.5);
+    out.lines.push(`${ga(k)} 한참 기다리다 시무룩하게 돌아섰다.`);
+  }
+  const t = k.data.touch || {};
+  // 응석받이·어리광쟁이: 하루 넘게 교감이 없으면 서운해함 (하루 한 번)
+  if ((hasT(k, 'spoiled') || hasT(k, 'babyish')) && t.last && now - t.last > 24 * 3600000 && k.data.spoiledDay !== kstDay(now)) {
+    k.data.spoiledDay = kstDay(now);
+    k.data.bond = clamp(k.data.bond - TC.spoiledLoss);
+    out.lines.push(`${ga(k)} 하루 종일 보호자만 기다리다 서운해졌다. (유대 −${TC.spoiledLoss})`);
+  }
+  // 아이가 먼저 조름 (밤에는 조르지 않음)
+  if (!k.data.ask && !isNight(now) && (!k.data.askAt || now - k.data.askAt > TC.ask.everyH * 3600000)) {
+    const hrs = Math.min(3, Math.max(0, (now - (k.data.askCheck || now)) / 3600000));
+    k.data.askCheck = now;
+    if (hrs > 0 && Math.random() < 1 - Math.pow(1 - TC.ask.chance, hrs)) {
+      const L = TC.likes[stageOf(k, now).name] || { like: ['hug'] };
+      const acts = (L.like.length ? L.like : ['pat']).filter((a) => !TC.acts[a].for || TC.acts[a].for === k.type);
+      const act = acts[Math.floor(Math.random() * acts.length)] || 'pat';
+      k.data.ask = { act, at: now, until: now + TC.ask.waitMin * 60000 };
+      k.data.askAt = now;
+      out.lines.push(`${ga(k)} ${ASK_LINE[act]}.`);
+    }
+  } else if (!k.data.askCheck) k.data.askCheck = now;
+}
+
 function care(d, kin, id, item, have, now = Date.now(), opt = {}) {
   const err = opt.away ? null : atNest(d);
   if (err) return { error: err };
@@ -1401,6 +1546,7 @@ function growInfo(k) {
 }
 
 module.exports = {
+  touch, // 교감
   playable, playTogether, bestFriends, growInfo,
   expCandidates,
   tick, perksOf, summary, views, homeKin, stageOf,

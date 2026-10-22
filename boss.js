@@ -20,6 +20,34 @@ const rand = (a, b) => a + Math.random() * (b - a);
 module.exports = function setupBoss({ io, db, online, logic, combat, arena, sendMe }) {
   let st = db.worldGet('boss', null);           // 지금 재앙 (없거나 끝났으면 done이 있음)
   let nextAt = db.worldGet('boss_next', null);  // 다음 재앙이 오는 시각
+  // 지난 재앙에서 배운 값: ratio(실제 한 번 피해 ÷ 공식이 가정한 피해), mult(쓰러지는 빠르기에 맞춘 체력 배율), 기록 몇 줄
+  let tune = db.worldGet('boss_tune', null) || { ratio: 1, mult: 1, log: [] };
+  const saveTune = () => db.worldSet('boss_tune', tune);
+  const basePer = (lv) => 80 + lv * 4; // 같은 레벨 드래곤이 한 번 맞설 때 입히는 피해 (처음에 짐작한 공식)
+  // 재앙이 끝나면(쓰러짐·떠남) 이번 기록으로 다음 재앙 체력을 맞춤
+  function learn() {
+    if (st.gm) return; // GM이 체력·레벨을 정해 부른 재앙이나 GM이 떠나보낸 재앙은 배우지 않음
+    const T = BOSS.tune || {};
+    const tries = Object.values(st.tries || {}).reduce((a, b) => a + b, 0);
+    const dmg = Object.values(st.dmg || {}).reduce((a, b) => a + b, 0);
+    const before = { ratio: tune.ratio, mult: tune.mult };
+    if (tries >= (T.minTries ?? 4)) {
+      const r = dmg / tries / basePer(st.lv);
+      tune.ratio = tune.log.length ? tune.ratio * (1 - T.learn) + r * T.learn : r; // 처음엔 그대로, 다음부터는 섞음
+    }
+    const span = BOSS.lastsHours * HOUR;
+    let step = 1;
+    if (st.done === 'win') {
+      const frac = Math.max(0.02, (st.doneAt - st.at) / span); // 머무는 시간 중 얼마 만에 쓰러졌나
+      step = T.targetFrac / frac;                               // 목표보다 빨리 쓰러졌으면 1보다 큼
+    } else {
+      step = 1 - 0.5 * (st.hp / st.hpMax);                       // 남긴 체력만큼 약하게 (반 남겼으면 0.75)
+    }
+    step = Math.min(T.stepMax, Math.max(T.stepMin, step));
+    tune.mult = Math.min(T.multMax, Math.max(T.multMin, tune.mult * step));
+    tune.log = [{ at: st.doneAt, key: st.key, lv: st.lv, done: st.done, hours: Math.round(((st.doneAt - st.at) / HOUR) * 10) / 10, tries, avg: tries ? Math.round(dmg / tries) : 0, ratio: Math.round(tune.ratio * 100) / 100, mult: Math.round(tune.mult * 100) / 100, before }, ...tune.log].slice(0, 10);
+    saveTune();
+  }
   const save = () => { db.worldSet('boss', st); db.worldSet('boss_next', nextAt); };
   const shout = (text) => io.emit('system', { text, at: Date.now() });
   const active = () => !!st && !st.done;
@@ -57,9 +85,10 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
     if (!BOSSES[key]) return { error: '그 지역에는 재앙이 나타나지 않는다.' };
     const avg = list.length ? list.reduce((a, x) => a + x.level, 0) / list.length : 3;
     const lv = Math.max(BOSS.lvMin, Math.min(BOSS.lvMax, opt.lv || Math.round(avg) + BOSS.lvAdd));
-    const per = 80 + lv * 4; // 같은 레벨 드래곤이 한 번 맞설 때 입히는 피해 (대략)
-    const hpMax = opt.hp || Math.round(per * BOSS.triesPerActive * Math.max(BOSS.minActive, list.length));
-    st = { id: (st?.id || 0) + 1, key, region: key, lv, hp: hpMax, hpMax, at: now, until: now + BOSS.lastsHours * HOUR, dmg: {}, names: {}, tries: {}, news: [], last: null, done: null, paid: [] };
+    // 한 번 피해 = 공식 × 지난 재앙에서 잰 실제 배율, 그리고 쓰러지는 빠르기에 맞춘 체력 배율
+    const per = basePer(lv) * (tune.ratio || 1);
+    const hpMax = opt.hp || Math.round(per * BOSS.triesPerActive * Math.max(BOSS.minActive, list.length) * (tune.mult || 1));
+    st = { id: (st?.id || 0) + 1, key, region: key, lv, hp: hpMax, hpMax, at: now, until: now + BOSS.lastsHours * HOUR, dmg: {}, names: {}, tries: {}, news: [], last: null, done: null, paid: [], gm: !!(opt.hp || opt.lv) };
     save();
     const T = BOSSES[key];
     shout(`[대륙의 재앙] ${REGIONS[key].name}에 ${ga(T.name)} 나타났다! ${T.desc} 모든 드래곤이 힘을 모아야 한다. (${BOSS.lastsHours}시간 안에)`);
@@ -107,6 +136,7 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
     const sum = total() || 1;
     const r = ranking();
     save();
+    learn();
     shout(`[대륙의 재앙] ${ga(T.name)} 쓰러졌다! ${r.length}마리의 드래곤이 함께 맞섰다. 마지막 일격: ${st.names[lastId] || ''}${r[0] ? ` · 가장 큰 피해: ${r[0].name}` : ''}`);
     r.forEach((x, i) => { st.paid.push(x.id); payOne(x.id, i + 1, x.dmg / sum, lastId); });
     nextAt = Date.now() + rand(...BOSS.gapHours) * HOUR;
@@ -119,6 +149,7 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
     st.doneAt = Date.now();
     nextAt = Date.now() + rand(...BOSS.gapHours) * HOUR;
     save();
+    learn();
     shout(`[대륙의 재앙] ${ga(T.name)} ${REGIONS[st.region].name}${josa(REGIONS[st.region].name, '을', '를')} 휩쓸고 어디론가 떠났다. 남은 체력 ${Math.round((st.hp / st.hpMax) * 100)}%.`);
     push();
   }
@@ -240,8 +271,22 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
     });
     gm('gm:boss:end', () => {
       if (!active()) return { error: '지금 재앙이 없다.' };
+      st.gm = true; // GM이 떠나보낸 것은 체력 맞춤에 쓰지 않음
       gone();
       return { ok: true, gmlog: '재앙을 떠나보냈다.' };
+    });
+    // 체력 맞춤 보기·고치기: { mult, ratio } 를 주면 그 값으로, reset이면 처음(1, 1)으로
+    gm('gm:boss:tune', (p) => {
+      const T = BOSS.tune || {};
+      if (p.reset) { tune = { ratio: 1, mult: 1, log: tune.log || [] }; saveTune(); return { ok: true, tune, gmlog: '재앙 체력 맞춤을 처음으로 되돌렸다.' }; }
+      const m = Number(p.mult), r = Number(p.ratio);
+      if (!p.mult && !p.ratio) return { ok: true, tune, target: Math.round(BOSS.lastsHours * T.targetFrac * 10) / 10 };
+      if (p.mult && !(m >= T.multMin && m <= T.multMax)) return { error: `체력 배율은 ${T.multMin}~${T.multMax} 사이로 적자.` };
+      if (p.ratio && !(r >= 0.5 && r <= 4)) return { error: '피해 배율은 0.5~4 사이로 적자.' };
+      if (p.mult) tune.mult = m;
+      if (p.ratio) tune.ratio = r;
+      saveTune();
+      return { ok: true, tune, gmlog: `재앙 체력 맞춤을 바꿨다: 피해 배율 ${tune.ratio.toFixed(2)}, 체력 배율 ${tune.mult.toFixed(2)}` };
     });
     gm('gm:boss:next', (p) => {
       const h = Number(p.hours);
