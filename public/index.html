@@ -6548,10 +6548,26 @@
   let NEST_SHOW = null;  // 둥지 창의 탭을 바꾸는 함수 (시설 창에서 '식구 보기'로)
   let FAC_LAST = null;   // 시설 창을 그릴 둥지 정보
   const FAC_MADE = [];   // 시설 창을 열어 둔 동안 부엌에서 만든 것
-  function openFac() { if (!FAC_LAST) return; drawFacPane(); if (!$('fac-dlg').open) $('fac-dlg').showModal(); }
+  // 시설 창: 먼저 띄우고 그린다 (그리다 문제가 생겨도 창은 열리고, 무엇이 잘못됐는지 창 안에 보임)
+  function openFac() {
+    if (!FAC_LAST && NEST_LAST?.nest) FAC_LAST = { n: NEST_LAST.nest, me: S.me };
+    if (!FAC_LAST) { toast('둥지 정보를 불러오는 중이다. 잠시 뒤 다시 눌러 보자.'); openNest(); return; }
+    if (!$('fac-dlg').open) $('fac-dlg').showModal();
+    drawFacPane();
+  }
   function drawFacPane() {
     const pane = $('fac-pane');
-    keepScroll($('fac-dlg'), () => { pane.replaceChildren(); drawFacilities(pane, FAC_LAST.n, FAC_LAST.me); drawFacMade(); });
+    pane.hidden = false; // 탭을 바꿀 때 숨겨졌을 수 있음
+    keepScroll($('fac-dlg'), () => {
+      pane.replaceChildren();
+      try { drawFacilities(pane, FAC_LAST.n, FAC_LAST.me); drawFacMade(); }
+      catch (e) {
+        console.error('시설 창을 그리다 문제가 생겼다', e);
+        const p = document.createElement('p'); p.className = 'note kin-away-note';
+        p.textContent = `시설을 불러오다 문제가 생겼다. GM에게 이 문장을 알려 주자: ${e?.message || e}`;
+        pane.appendChild(p);
+      }
+    });
   }
   // 부엌에서 방금 만든 것: 그 자리에서 식구에게 먹이거나 바로 씀 (둥지 창으로 오가지 않게)
   function drawFacMade() {
@@ -6839,6 +6855,7 @@
           if (!town) row.appendChild(btn(`${S.regions[S.region].name}에 둥지 틀기`, () => nestAct('nest:build'), true, !!me.exp));
         } else {
           st.querySelector('.where').textContent = `${S.regions[n.region].name}의 둥지`;
+          FAC_LAST = { n, me }; // 시설 창이 쓸 둥지 정보 (가장 먼저)
           { const nl = nestLineEl(myNestLine(n)); nl.style.marginTop = '8px'; note.after(nl); } // 둥지 한 줄 요약
           if (n.here) {
             note.textContent = me.restAt ? '지금 둥지에서 쉬고 있다.' : '둥지에서 쉬면 회복이 빨라진다. 쉬는 동안에는 채팅과 제작, 보물더미 정리만 할 수 있다.';
@@ -6926,7 +6943,7 @@
           const show = (key) => {
             NEST_TAB = key;
             for (const b of tabs.children) { const on = b.dataset.nt === key; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); }
-            for (const [k, pane] of Object.entries(P)) pane.hidden = k !== key;
+            for (const [k, pane] of Object.entries(P)) if (k !== 'fac') pane.hidden = k !== key; // 시설 칸은 따로 뜨는 창이라 탭과 상관없음
           };
           tabs.addEventListener('click', (e) => { const b = e.target.closest('[data-nt]'); if (b && !b.classList.contains('on')) show(b.dataset.nt); });
           show(NEST_TAB);
