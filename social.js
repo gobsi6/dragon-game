@@ -326,9 +326,6 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
         row.bond = r.bond || 'comrade';
         row.region = e ? e.dragon.region : r.region;
         row.away = !!e?.dragon.exp_end;
-        // 둥지 한 줄 요약 (동료 목록에는 짧게)
-        const fd = e ? e.dragon : db.getDragon(r.id);
-        if (fd && fd.nest && !fd.dead_at) row.nest = logic.nestLine(fd, (e ? fd.kinSummary : life.summary(db.kinLoad(fd.id), Date.now()))?.home);
         out.friends.push(row);
       } else if (r.kind === 'rival') { row.mutual = db.relGet(r.id, me.id) === 'rival'; out.rivals.push(row); }
       else if (r.kind === 'wary') out.wary.push(row);

@@ -754,7 +754,7 @@
   .kin-card.fold { padding: 0; gap: 0; }
   .kin-top { position: relative; display: flex; align-items: stretch; }
   .kin-sum { flex: 1; min-width: 0; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px 4px 10px 12px; border: 0; background: none; text-align: left; color: inherit; border-radius: 3px 0 0 0; }
-  .kin-sum:hover { background: #F6F7F5; }
+  .kin-sum { cursor: default; }
   .kin-sum .kin-face { margin: 0; align-self: start; } /* 칸이 높아져도 얼굴은 늘 왼쪽 위, 이름 옆에 */
   .kin-id { min-width: 0; }
   .kin-id .nm { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
@@ -1345,6 +1345,7 @@
   .gift-box .gp-sel { flex: 1; min-width: 0; font-size: 13px; color: var(--muted); }
   .gift-box .gp-sel.on { color: var(--ink); font-weight: 600; }
   .gift-box .num:disabled { opacity: .5; }
+  #toast[popover] { inset: auto; top: auto; right: auto; left: 50%; bottom: calc(var(--dock-h, 56px) + 16px); margin: 0; border: 0; height: auto; overflow: hidden; } /* 맨 위 층에 올린 알림: 원래 자리·모양 그대로 */
   /* 성향 설명: 세 칸을 같은 자리에 겹쳐 두고 하나만 보임 (높이가 늘 같아 깜빡이지 않음) */
   #stance-note { display: grid; padding: 8px 10px; border-left: 2px solid transparent; border-radius: 2px; transition: background-color .12s, border-color .12s; }
   #stance-note > .sn { grid-area: 1 / 1; visibility: hidden; }
@@ -3933,7 +3934,7 @@
   <button class="btn primary" type="button" id="update-go">새로고침</button>
   <button class="x" type="button" id="update-later" aria-label="나중에">나중에</button>
 </div>
-<div class="toast" id="toast" hidden><span id="toast-text"></span><button class="btn" id="toast-btn" type="button" hidden></button><button class="btn" id="toast-btn2" type="button" hidden></button><button class="toast-x" id="toast-x" type="button" aria-label="닫기" title="닫기" hidden><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><i class="toast-time" id="toast-time" hidden></i></div>
+<div class="toast" id="toast" popover="manual" hidden><span id="toast-text"></span><button class="btn" id="toast-btn" type="button" hidden></button><button class="btn" id="toast-btn2" type="button" hidden></button><button class="toast-x" id="toast-x" type="button" aria-label="닫기" title="닫기" hidden><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><i class="toast-time" id="toast-time" hidden></i></div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
@@ -4040,6 +4041,12 @@
 
   let toastTimer = null;
   // action: { label, run, alt: { label, run }(두 번째 버튼), ttl(이 시간이 지나면 저절로 사라짐, ms) }
+  // 알림을 맨 위 층(top layer)에 올림: 제작·시설처럼 화면 위에 뜬 창보다 앞에 보이게 (다시 열어 가장 위로)
+  function toastOnTop() {
+    const t = $('toast');
+    if (!t.showPopover) return; // 오래된 브라우저는 예전처럼
+    try { if (t.matches(':popover-open')) t.hidePopover(); t.showPopover(); } catch {}
+  }
   function toast(text, action) {
     clearTimeout(toastTimer);
     $('toast-text').textContent = text;
@@ -4053,6 +4060,7 @@
     tm.hidden = !action?.ttl;
     if (action?.ttl) { tm.style.animation = 'none'; void tm.offsetWidth; tm.style.animation = `toast-time ${action.ttl}ms linear forwards`; }
     $('toast').hidden = false;
+    toastOnTop();
     if (!action) toastTimer = setTimeout(() => ($('toast').hidden = true), 2600);
     else if (action.ttl) toastTimer = setTimeout(() => ($('toast').hidden = true), action.ttl);
   }
@@ -6414,8 +6422,7 @@
   }
   function kinFold(card, v, head, partner, forcePill) {
     const key = `${partner ? `p${partner.id}:` : ''}${v.id}`;
-    if (!KIN_OPEN.has(key)) KIN_OPEN.set(key, !partner && (NEST_LAST?.nest?.kin?.home || []).length === 1); // 식구가 하나뿐이면 처음부터 펼침
-    const open = KIN_OPEN.get(key);
+    const open = true; // 접는 기능은 뺌: 늘 펼친 채로
     card.classList.add('fold');
     card.classList.toggle('open', open);
     // 펼칠 내용: 자리표대로 순서를 맞춤 (유대·배 막대는 요약 줄로)
@@ -6427,11 +6434,9 @@
     const bars = parts.filter((n) => n.classList.contains('bond'));
     const rest = parts.filter((n) => !n.classList.contains('bond'));
     rest.sort((a, b) => KIN_ORDER.indexOf(secOf(a)) - KIN_ORDER.indexOf(secOf(b)));
-    // 요약 줄 (누르면 펼침)
-    const sum = document.createElement('button');
-    sum.type = 'button';
+    // 머리줄 (얼굴·이름·유대·배·지금 상태)
+    const sum = document.createElement('div');
     sum.className = 'kin-sum';
-    sum.setAttribute('aria-expanded', String(open));
     const face = head.querySelector('.kin-face');
     const idb = document.createElement('div');
     idb.className = 'kin-id';
@@ -6453,24 +6458,6 @@
     idb.appendChild(plM);
     right.append(pl);
     sum.append(face || document.createElement('span'), idb, right);
-    // 펼치기 아이콘: 오른쪽 위 ⋯ 옆에 고정 (칸 높이와 상관없이 이름 줄 높이)
-    const chevBtn = document.createElement('button');
-    chevBtn.type = 'button';
-    chevBtn.className = 'kin-chev-btn';
-    chevBtn.setAttribute('aria-label', `${v.name} ${open ? '접기' : '펼치기'}`);
-    chevBtn.setAttribute('aria-expanded', String(open));
-    chevBtn.innerHTML = '<span class="kin-chev" aria-hidden="true"></span>';
-    const toggle = () => { // 그 자리에서 펼치고 접음 (창 전체를 다시 그리지 않음)
-      const o = !card.classList.contains('open');
-      KIN_OPEN.set(key, o);
-      card.classList.toggle('open', o);
-      card.querySelector(':scope > .kin-body').hidden = !o;
-      sum.setAttribute('aria-expanded', String(o));
-      chevBtn.setAttribute('aria-expanded', String(o));
-      chevBtn.setAttribute('aria-label', `${v.name} ${o ? '접기' : '펼치기'}`);
-    };
-    sum.addEventListener('click', toggle);
-    chevBtn.addEventListener('click', toggle);
     // ⋯ 메뉴: 머리줄에 있던 버튼(이름 바꾸기·입양 보내기)을 그대로 옮김
     const btns = [...head.querySelectorAll('.kin-head-btns button')];
     const top = document.createElement('div');
@@ -6478,7 +6465,6 @@
     top.appendChild(sum);
     const corner = document.createElement('div');
     corner.className = 'kin-corner';
-    corner.appendChild(chevBtn);
     if (btns.length) {
       const more = document.createElement('div');
       more.className = 'kin-more';
@@ -6499,11 +6485,10 @@
     top.appendChild(corner);
     const body = document.createElement('div');
     body.className = 'kin-body';
-    body.hidden = !open;
     body.append(...rest);
     card.replaceChildren(top, body);
     // 입양 고르기(adoptPicker)는 카드 끝에 상자를 붙이므로, 붙으면 펼친 내용 안으로 옮김
-    new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) if (n.classList?.contains('kin-adopt')) { body.hidden = false; card.classList.add('open'); body.appendChild(n); } }).observe(card, { childList: true });
+    new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) if (n.classList?.contains('kin-adopt')) body.appendChild(n); }).observe(card, { childList: true });
     return card;
   }
   // ⋯ 메뉴 바깥을 누르면 닫음
@@ -9624,7 +9609,6 @@
         t.innerHTML = '<b></b><small></small>';
         t.querySelector('b').textContent = x.name;
         t.querySelector('small').innerHTML = sub(x);
-        if (x.nest) t.appendChild(nestLineEl(x.nest, { short: true })); // 동료 목록: 둥지 한 줄 요약 (짧게)
         for (const [text, cls, who] of [[x.memo, 'memo', '내 메모'], [x.theirMemo, 'memo theirs', `${x.name}의 메모`]]) {
           if (!text) continue;
           const m = document.createElement('span');
