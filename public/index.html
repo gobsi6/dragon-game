@@ -376,6 +376,9 @@
   .sl-ic.pin.on svg { fill: currentColor; }
   .sl-ic:focus-visible { outline: 2px solid var(--steel); outline-offset: -2px; }
   .sl-c .sl-own { margin: -6px -4px -6px auto; }
+  .sl-name { cursor: pointer; border-radius: 2px; }
+  .sl-name:hover, .sl-name:focus-visible { color: var(--steel-d); text-decoration: underline; text-underline-offset: 2px; }
+  .sl-at { color: #7E97AC; font-weight: 500; } /* @이름: 옅은 강철빛 */
   .sl-c.reply { margin-left: 26px; padding-left: 10px; border-top: 0; border-left: 2px solid var(--line-in); } /* 답글: 답 밑에 들여 씀 */
   .sl-c .sl-cf { grid-column: 2; display: flex; }
   .sl-rb { padding: 2px 0; border: 0; background: none; font: 600 11.5px var(--sans); color: var(--muted); cursor: pointer; }
@@ -11067,7 +11070,28 @@
   }
   const slEl = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const slAgo = (t) => { const m = Math.floor((Date.now() - t) / 60000); if (m < 1) return '방금'; if (m < 60) return `${m}분 전`; if (m < 1440) return `${Math.floor(m / 60)}시간 전`; if (m < 7 * 1440) return `${Math.floor(m / 1440)}일 전`; const d = new Date(t); return `${d.getMonth() + 1}월 ${d.getDate()}일`; };
-  const slWho = (w) => { const x = slEl('span', 'sl-who'); x.append(avaEl({ id: w.id, kind: w.kind, av: w.av }, 20), slEl('b', '', w.name)); return x; };
+  // 이름(과 얼굴)을 누르면 그 드래곤의 프로필 (지워진 드래곤은 그냥 이름만)
+  const slName = (w, tag = 'b') => {
+    const n = slEl(tag, w.id ? 'sl-name' : '', w.name);
+    if (w.id) {
+      n.setAttribute('role', 'button'); n.tabIndex = 0; n.title = `${w.name}의 프로필 보기`;
+      const go = (e) => { e.stopPropagation(); e.preventDefault(); openProfile(w.id); };
+      n.addEventListener('click', go);
+      n.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') go(e); });
+    }
+    return n;
+  };
+  const slWho = (w) => { const x = slEl('span', 'sl-who'); x.append(avaEl({ id: w.id, kind: w.kind, av: w.av }, 20), slName(w)); return x; };
+  // 답 글에서 @이름은 옅은 색으로 (누구에게 하는 말인지 구분)
+  const slText = (tag, text) => {
+    const p = slEl(tag, '');
+    for (const part of String(text).split(/(@[^\s@]+)/)) {
+      if (!part) continue;
+      if (part.startsWith('@') && part.length > 1) p.appendChild(slEl('span', 'sl-at', part));
+      else p.appendChild(document.createTextNode(part));
+    }
+    return p;
+  };
   const slTag = () => slEl('span', 'sl-tag pin', '고정'); // GM이 고정한 글 표시
   const slCm = (n) => { const c = slEl('span', 'sl-cm'); c.innerHTML = SL_CM; c.append(String(n)); c.title = `남긴 답 ${n}`; return c; };
   // 석판 그림 줄이기: 긴 변 1024px, webp 품질 75%(안 되면 jpeg). 300KB가 넘으면 품질·크기를 더 낮춤 → 대개 한 장 70~180KB
@@ -11196,8 +11220,8 @@
       const isReply = !!c.parent && SL.comments.some((x) => x.id === c.parent);
       const r = slEl('div', `sl-c${isReply ? ' reply' : ''}`);
       const av = avaEl({ id: c.who.id, kind: c.who.kind, av: c.who.av }, 20);
-      const h = slEl('div', 'h'); h.append(slEl('b', '', c.who.name), `${slAgo(c.at)}${c.edited ? ' · 고침' : ''}`);
-      const body = slEl('p', '', c.text);
+      const h = slEl('div', 'h'); h.append(slName(c.who), `${slAgo(c.at)}${c.edited ? ' · 고침' : ''}`);
+      const body = slText('p', c.text);
       const ic = slEl('div', 'sl-own');
       if (c.mine) ic.appendChild(slIcon('edit', '답 고치기', () => {
         // 그 자리에서 고침: 글줄을 입력칸으로 바꿈 (Enter 저장, Esc 그만두기)
