@@ -194,6 +194,10 @@ function fillLooks(k) {
   const L = KIN_LOOKS[k.type];
   if (k.type === 'human' && k.data.looks.length === 3) k.data.looks.push(pick(L.build));
   if (k.type === 'drake' && k.data.looks.length === 4) k.data.looks.push(pick(L.tail));
+  // 이름만 바뀐 꼬리는 새 이름으로, 빠진 꼬리 모양('돌돌 말리는 꼬리')은 남은 꼬리 중 하나로 (식구마다 늘 같은 것)
+  const TAIL_RENAME = { '굵고 짧은 꼬리': '두툼한 꼬리' };
+  if (k.type === 'drake' && TAIL_RENAME[k.data.looks[4]]) k.data.looks[4] = TAIL_RENAME[k.data.looks[4]];
+  if (k.type === 'drake' && k.data.looks[4] && !L.tail.includes(k.data.looks[4])) k.data.looks[4] = L.tail[k.id % L.tail.length];
 }
 // "윤기 도는 레드 비늘에 굽은 뿔. 영리하고 응석받이 같다." 같은 소개
 const traitNames = (k) => (k.data.traits || []).map((id) => KIN_TRAITS[id]?.name).filter(Boolean);
