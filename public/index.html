@@ -5066,13 +5066,48 @@
   // 다 큰 식구(어른·젊은 용 이상)는 엄마·아빠 대신 어머니·아버지 (이름으로 부르던 것은 그대로)
   const tripCall = (age) => { const g = S.me?.bio?.gender || ''; const grown = age === 'adult' || age === 'dadult'; return g === '여성' ? (grown ? '어머니' : '엄마') : g === '남성' ? (grown ? '아버지' : '아빠') : (S.me?.name || ''); };
   function tripRand(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+  // ── 멸망한 대륙 원정 길: 따로 쓴 이야기 (본 대륙의 볕·들꽃·마을 이야기가 섞이지 않게) ──
+  const TRIP_RUIN = {
+    start: ['잿빛 바다를 건너 {r}{ro} 날개를 펼쳤다.', '숨을 깊이 들이쉬고, 오염된 하늘 아래 {r}{ro} 날아올랐다.', '등 뒤로 본 대륙의 푸른 빛이 멀어진다. {r}{ro} 향했다.', '잿빛 안개가 바다 위까지 밀려 나와 있었다. 그 너머 {r}{ro} 날았다.', '마지막으로 본 대륙 쪽을 한 번 돌아보고, {r}{ro} 날개를 꺾었다.'],
+    any: ['잿빛 바람에 섞인 낯선 냄새에 숨을 골랐다.', '무너진 마을의 굴뚝에서 아직도 가는 연기가 오르는 것 같았다.', '어디선가 오래된 노랫소리가 들리는 것 같았다. 뒤돌아보지 않았다.', '검게 물든 숲 위를 서둘러 지나갔다.',
+      '해가 떠 있는지 졌는지 모를 흐린 하늘이 이어졌다.', '재가 눈처럼 내려 비늘 위에 소복이 쌓였다. 날갯짓 한 번에 털어 냈다.', '말라붙은 강바닥을 따라 날았다. 물고기 뼈가 하얗게 줄지어 있었다.', '부서진 성벽 위에 누군가 새겨 둔 이름들이 보였다.',
+      '바람이 멎자 소리가 하나도 들리지 않았다. 제 날갯소리만 크게 울렸다.', '검은 덩굴이 감긴 종탑 아래를 지났다. 종은 이제 울리지 않는다.', '멀리 균열 가장자리에서 보랏빛이 일렁였다. 가까이 가지 않았다.', '오염된 웅덩이 위로 제 그림자가 일그러져 비쳤다.',
+      '쓰러진 용 석상의 그림자를 지났다. 얼굴이 이쪽을 보고 있는 것 같았다.', '잿빛 들판 한가운데, 시들지 않은 꽃 한 송이가 피어 있었다.', '비린 쇠 냄새가 바람에 실려 왔다. 옛 전쟁터인 듯했다.', '무너진 다리 위에 작은 신발 한 짝이 놓여 있었다.',
+      '하늘 높이 검은 새 떼가 소리 없이 맴돌았다.', '정신이 흐려지지 않도록 둥지의 따뜻한 냄새를 떠올렸다.', '재 속에 반쯤 묻힌 마차 바퀴가 바람에 삐걱 돌았다.', '먼 곳에서 무언가 무너지는 소리가 낮게 울려 왔다.', '굳게 닫힌 성문에 오래된 손자국이 검게 남아 있었다.', '누군가 길가에 쌓아 둔 작은 돌탑이 바람에 무너져 있었다.', '타다 만 깃발이 부러진 창끝에 걸려 펄럭였다.', '재를 머금은 비가 잠깐 내리다 그쳤다. 비늘에 회색 얼룩이 졌다.', '무너진 우물 안에서 메아리가 늦게 돌아왔다.', '빈 시장 골목에 저울 하나가 아직 기울어진 채 놓여 있었다.', '오래전에 꺼진 등대가 해안 절벽 위에 홀로 서 있었다.', '하늘을 가르는 균열 하나가 낮게 웅웅 울었다. 소리를 피해 멀리 돌아갔다.', '검게 말라 버린 과수원 위를 지났다. 열매 대신 재가 매달려 있었다.', '바람결에 아이 웃음소리 같은 것이 스쳤다. 돌아보니 아무도 없었다.', '반쯤 무너진 탑 꼭대기에 누군가 남긴 불씨 자국이 있었다. 생존자의 것일까.', '잿더미 사이로 아주 작은 새싹 하나가 고개를 내밀고 있었다.', '오염된 늪에서 거품이 뽀글뽀글 올라왔다. 숨을 참고 지나갔다.', '부서진 마차에 실린 책들이 바람에 한 장씩 넘어가고 있었다.', '먼 언덕 위로 희미한 불빛이 깜빡였다가 꺼졌다.', '왕국의 문장이 새겨진 방패가 길 한가운데 반쯤 묻혀 있었다.'],
+    item: { rare: ['잿더미 속에서 아직 빛을 잃지 않은 ', '무너진 신전의 제단 아래에서 귀해 보이는 ', '잿빛 안개 속에서 홀로 빛나던 ', '굳게 잠긴 보물 창고의 무너진 틈 사이로 '], uncommon: ['부서진 집의 서랍 속에서 쓸 만한 ', '재를 헤치자 드물어 보이는 ', '쓰러진 기사의 갑옷 곁에서 ', '반쯤 탄 책장 사이에서 ', '말라붙은 분수대 바닥에서 '], common: ['잿빛 길가에서 ', '무너진 담장 아래에서 ', '재에 반쯤 묻힌 ', '부서진 수레 곁에서 ', '바람에 굴러온 재 덩어리 속에서 '] },
+    scrape: ['오염된 가시덩굴에 비늘이 긁혔다. 상처 자리가 시커멓게 저렸다.', '무너지는 벽을 피하다 날개를 부딪혔다.', '갑자기 솟은 잿빛 돌풍에 휘말려 바위에 처박혔다.', '발밑의 땅이 꺼지며 무너진 지하실로 미끄러졌다.', '오염된 안개를 들이마셔 한동안 기침이 멎지 않았다.'],
+    heal: ['오염이 닿지 않은 동굴을 찾아 잠시 날개를 쉬었다.', '맑은 샘이 남아 있는 곳을 찾아 목을 축이고 쉬어 갔다.', '재가 들이치지 않는 무너진 성당 안에서 숨을 골랐다.', '아직 따뜻함이 남은 화산석 위에 엎드려 상처를 달랬다.'],
+    miss: ['재를 몇 군데나 파헤쳤지만 쓸 만한 것은 없었다.', '무너진 창고를 뒤졌지만 모두 썩어 있었다.', '반짝이던 것을 쫓아가 보니 깨진 유리 조각뿐이었다.', '무너진 서고를 뒤졌지만 글씨가 모두 번져 읽을 수 없었다.'],
+    end: ['잿빛 하늘을 등지고 돌아갈 채비를 했다.', '긴 여정을 마치고, 푸른 바다 너머 본 대륙으로 돌아갈 채비를 했다.', '재를 털어 내고 날개를 고르며, 돌아갈 채비를 했다.'],
+    // 함께 간 식구의 말 (나잇대마다. 몫이 없으면 비슷한 나잇대 → 아이 몫)
+    kinStart: { child: ['{call}, 꼭 잡고 있을게. 놓지 마.', '여기… 진짜 가는 거야?', '{call} 옆에 꼭 붙어 있을게.'], young: ['정신 단단히 차릴게. 걱정 마.', '{call}, 오래 있지 말자.', '여기가 이야기로만 듣던 그 대륙이구나.'], adult: ['조심해서 가자. 여기선 서두르면 안 돼.', '오래 머물지 말고, 볼 것만 보고 돌아가자.'],
+      drake: ['(등 위에서 몸을 잔뜩 웅크렸다)', '(낯선 바다 냄새에 코를 킁킁거렸다)'], dyoung: ['나도 냄새로 길을 찾아볼게!', '{call}, 나 안 무서워. 진짜야.'], dadult: ['내가 뒤를 볼게. 앞만 보고 날아.', '오염된 기운이 짙으면 바로 높이 올라가자.'] },
+    kin: {
+      child: ['{call}, 여기 무서워…', '왜 다 회색이야?', '집에 가고 싶어…', '{call}, 저기 사람 있어? …아니, 그림자였어.', '재가 입에 들어갔어. 퉤퉤.', '여기 꽃은 왜 다 시들었어?', '{call}, 노래 불러 줘. 조용하니까 무서워.', '{call}, 이 집에 살던 애도 나만 했을까?', '저 돌탑 내가 다시 쌓아 주고 싶어.', '{call} 날개 밑에 있으면 하나도 안 무서워.', '새싹이다! {call}, 새싹 봤어?', '여기도 언젠가 꽃 피는 거지?'],
+      young: ['여기선 나도 정신 단단히 차릴게.', '이 땅에도 예전엔 누가 살았겠지.', '{call}, 너무 오래 있지 말자.', '저 성벽, 예전엔 엄청 컸겠다.', '언젠가 이 땅도 다시 푸르러질까?', '숨 쉬는 게 좀 답답해. 그래도 괜찮아.', '이 문장, 책에서 본 적 있어. 카르넴 왕국 거야.', '{call}, 저 불빛… 생존자일까?', '여기서 보니까 우리 둥지가 얼마나 따뜻한 곳인지 알겠어.', '나중에 내가 이 땅을 정화하는 걸 돕고 싶어.'],
+      adult: ['이 정도로 무너졌을 줄은 몰랐어.', '정신이 흐려지면 바로 말해 줘.', '여기 살던 사람들은 어디로 갔을까.', '돌아가면 이 이야기를 아이들에게 해 줘야겠다.', '재 냄새가 옷에 배겠어. 돌아가면 잘 털어야지.', '저 성벽, 한때는 대단했겠어.', '조용한 게 오히려 마음에 걸려.', '아이들은 데려오지 않길 잘했어.'],
+      drake: ['(재 냄새에 코를 찡그리고 재채기를 했다)', '(낯선 기척에 귀를 쫑긋 세웠다)', '(따뜻한 비늘 틈으로 파고들었다)', '(떨어지는 재를 혀로 날름 받아먹으려다 퉤 뱉었다)', '(작은 불씨를 뿜어 앞의 안개를 밀어내려 했다)'],
+      dyoung: ['{call}, 여기 냄새 이상해. 코가 따가워.', '저 검은 숲, 불로 다 태워 버리면 안 돼?', '무서운 거 아니야. 그냥… 조금 추울 뿐이야.', '저 석상, 우리처럼 생겼어. 누구야?', '{call}, 저 균열에서 이상한 소리 나. 가지 말자.', '재 속에 반짝이는 거 있어! 내가 주워 올까?'],
+      dadult: ['오염된 기운이 짙어. 높이 날자.', '균열 쪽은 피해서 가.', '예전엔 이 하늘을 우리 같은 용들이 지켰겠지.', '저 탑 위에서 내려다보면 길이 보일 거야.', '재가 날개에 달라붙어. 잠깐 털고 가자.', '이 땅의 용들은 끝까지 싸웠다고 들었어.'] },
+  };
+  const ruinLines = (obj, age) => (obj && (obj[age] || obj[TRIP_AGE_FB[age]] || obj.child)) || [];
   // 실제로 일어난 일 (서버가 떠날 때 정해 둔 시간표)을 이야기로
   const TRIP_PICK = (r, arr) => arr[Math.floor(r() * arr.length)];
   // 나잇대별 대사 고르기: 새끼 드래곤 몫이 없으면 비슷한 인간 쪽으로 (어린 용 → 청소년, 젊은 용 이상 → 어른)
   const TRIP_AGE_FB = { dyoung: 'young', dadult: 'adult' };
   const tripLines = (obj, age) => (obj && (obj[age] || obj[TRIP_AGE_FB[age]] || obj.child)) || [];
-  function tripReal(x, r) {
+  function tripReal(x, r, ruin = false) {
     const it = x.id && S.items[x.id];
+    if (ruin) { // 멸망한 대륙: 따로 쓴 이야기
+      const R = TRIP_RUIN;
+      if (x.k === 'item') {
+        const g = it?.rarity === 'rare' ? 'rare' : it?.rarity === 'uncommon' ? 'uncommon' : 'common';
+        return { parts: [TRIP_PICK(r, R.item[g]), '무언가', g === 'rare' ? '를 찾아냈다.' : g === 'uncommon' ? '를 찾았다.' : '를 주워 챙겼다.'], kind: g === 'rare' ? 'rare' : 'item' };
+      }
+      if (x.k === 'scrape') return { parts: [`${TRIP_PICK(r, R.scrape)}${x.hp ? ` (체력 −${x.hp})` : ''}`], kind: 'fight' };
+      if (x.k === 'heal') return { parts: [`${TRIP_PICK(r, R.heal)}${x.hp ? ` (체력 +${x.hp})` : ''}`] };
+      if (x.k === 'miss') return { parts: [TRIP_PICK(r, R.miss)] };
+    }
     // 무엇을 주웠는지는 돌아와서 알게 (귀한 정도만 넌지시)
     if (x.k === 'item') {
       if (it?.rarity === 'rare') return { parts: [TRIP_PICK(r, ['드디어! 아주 귀해 보이는 ', '눈이 번쩍 뜨일 만큼 귀한 ']), '무언가', '를 찾아냈다.'], kind: 'rare' };
@@ -5090,16 +5125,19 @@
     const seed = e.start + (S.me?.id || 0) * 7919;
     const r = tripRand(seed);
     const rg = S.regions[e.region];
-    const local = TRIP_REGION[rg?.realm === 'ruin' ? 'ruin' : e.region] || [];
+    const ruin = rg?.realm === 'ruin'; // 멸망한 대륙: TRIP_RUIN의 이야기만 씀
+    const local = TRIP_REGION[ruin ? 'ruin' : e.region] || [];
     // 함께 간 식구 {name, age} (예전 원정은 이름만 있음 → 아이로)
     const kin = (e.went?.length ? e.went : TRIP_WENT).map((k) => (typeof k === 'string' ? { name: k, age: 'child' } : k));
-    const out = [{ at: e.start, parts: [`${rg?.name || '먼 곳'}${ro(rg?.name || '먼 곳')} 날개를 펼쳤다.${kin.length ? ` ${kin.map((k) => k.name).join(', ')}${josa(kin.at(-1).name, '이', '가')} 함께 따라나섰다.` : ''}`] }];
-    if (kin.length) out.push({ at: e.start + 4000, parts: [TRIP_PICK(tripRand(seed + 11), tripLines(TRIP_KIN_START, kin[0].age)).replace('{call}', tripCall(kin[0].age))], who: kin[0].name, age: kin[0].age });
+    const rname = rg?.name || '먼 곳';
+    const startLine = ruin ? TRIP_PICK(tripRand(seed + 3), TRIP_RUIN.start).replace('{r}', rname).replace('{ro}', ro(rname)) : `${rname}${ro(rname)} 날개를 펼쳤다.`;
+    const out = [{ at: e.start, parts: [`${startLine}${kin.length ? ` ${kin.map((k) => k.name).join(', ')}${josa(kin.at(-1).name, '이', '가')} 함께 따라나섰다.` : ''}`] }];
+    if (kin.length) out.push({ at: e.start + 4000, parts: [TRIP_PICK(tripRand(seed + 11), ruin ? ruinLines(TRIP_RUIN.kinStart, kin[0].age) : tripLines(TRIP_KIN_START, kin[0].age)).replace('{call}', tripCall(kin[0].age))], who: kin[0].name, age: kin[0].age });
     const until = Math.min(now, e.end);
     // 실제로 일어난 일
     const real = (e.plan || []).map((x) => ({ at: e.start + x.t, x })).filter((y) => y.at <= until);
     for (const y of real) {
-      const t = tripReal(y.x, tripRand(seed + y.x.t)); // 일마다 제 난수
+      const t = tripReal(y.x, tripRand(seed + y.x.t), ruin); // 일마다 제 난수
       if (!t) continue;
       out.push({ at: y.at, ...t, real: true });
       // 함께 간 식구가 있으면 절반쯤 한마디 (귀한 발견이면 늘)
@@ -5132,8 +5170,8 @@
       let text;
       if (pickKin) { // 아이의 말: 최근에 한 말은 다시 하지 않음
         const k = kin[Math.floor(r() * kin.length)];
-        const kinLocal = TRIP_KIN_REGION[rg?.realm === 'ruin' ? 'ruin' : e.region]?.[k.age]; // 지역 말은 그 나잇대 몫이 있을 때만
-        const pool = kinLocal && r() < 0.35 ? kinLocal : tripLines(TRIP_KIN, k.age);
+        const kinLocal = TRIP_KIN_REGION[e.region]?.[k.age]; // 지역 말은 그 나잇대 몫이 있을 때만
+        const pool = ruin ? ruinLines(TRIP_RUIN.kin, k.age) : kinLocal && r() < 0.35 ? kinLocal : tripLines(TRIP_KIN, k.age); // 멸망한 대륙은 그 땅의 말만
         let q = pool[Math.floor(r() * pool.length)], tries = 0;
         while (recent.includes(q) && tries++ < 10) q = pool[Math.floor(r() * pool.length)];
         recent.push(q); if (recent.length > 10) recent.shift();
@@ -5141,7 +5179,7 @@
         continue;
       }
       else {
-        const pool = local.length && r() < 0.25 ? local : TRIP_ANY;
+        const pool = ruin ? TRIP_RUIN.any : local.length && r() < 0.25 ? local : TRIP_ANY; // 멸망한 대륙은 그 땅의 이야기만
         let i = Math.floor(r() * pool.length), tries = 0;
         while (recent.includes(pool[i]) && tries++ < 12) i = Math.floor(r() * pool.length);
         text = pool[i];
@@ -5150,7 +5188,7 @@
       }
       out.push({ at: t, parts: [text] });
     }
-    if (now >= e.end) out.push({ at: e.end, parts: ['긴 여정을 마치고 돌아갈 채비를 했다.'] });
+    if (now >= e.end) out.push({ at: e.end, parts: [ruin ? TRIP_PICK(tripRand(seed + 5), TRIP_RUIN.end) : '긴 여정을 마치고 돌아갈 채비를 했다.'] });
     out.sort((a, b) => a.at - b.at);
     return { list: out, real };
   }
