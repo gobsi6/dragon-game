@@ -1056,6 +1056,100 @@ const KIN_GROW = {
 // ── 교감: 쓰다듬기·안아 주기 같은, 물건 없이 함께하는 행동 ─────────
 // 자라는 단계마다 좋아하는 것(like)·싫어하는 것(dislike)이 다르고, 하루에 cap번을 넘기면 과보호가 쌓여 성격이 바뀜
 // ── 유대: 꼭대기로 갈수록 덜 오르고, 자라는 고비에 서먹해지며, 높을수록 아이가 달라짐 ──
+// ── 자유 제작 (실험): 재료의 성질로 물건을 빚음 ─────────────────
+// 성질: 바탕(food 먹을거리 · bind 엮음) · 효능(life 생기 · vigor 기운 · clear 맑음 · hard 단단함 · sharp 날카로움 · light 가벼움 · lore 옛 지혜 · shine 빛남) · 기운(fire 불 · frost 얼음 · venom 독 · soul 혼)
+// 세기: 흔함 1 · 드묾 2 · 희귀 3 (멸망한 대륙 재료는 1 더)
+const FREE = {
+  tagNames: { food: '먹을거리', bind: '엮음', life: '생기', vigor: '기운', clear: '맑음', hard: '단단함', sharp: '날카로움', light: '가벼움', lore: '옛 지혜', shine: '빛남', fire: '불', frost: '얼음', venom: '독', soul: '혼' },
+  tagGroup: { food: 'base', bind: 'base', life: 'eff', vigor: 'eff', clear: 'eff', hard: 'eff', sharp: 'eff', light: 'eff', lore: 'eff', shine: 'eff', fire: 'aura', frost: 'aura', venom: 'aura', soul: 'aura' },
+  tags: {
+    grass_seed: {food: 1, life: 1},
+    wild_flower: {food: 1, clear: 1},
+    sea_bindweed: {food: 1},
+    salt_crystal: {food: 1},
+    wild_honey: {food: 2, life: 2, vigor: 2},
+    moss_flower: {food: 2, clear: 2},
+    snow_flower: {food: 2, clear: 2, frost: 2},
+    glow_moss: {food: 2, clear: 2},
+    silver_clover: {food: 3, life: 3},
+    spider_silk: {bind: 1, light: 1},
+    beast_hide: {bind: 1},
+    wolf_pelt: {bind: 1},
+    black_reed: {bind: 1, venom: 1},
+    silk_scrap: {bind: 2, light: 2},
+    silver_chain: {bind: 2, shine: 2},
+    void_silk: {bind: 3, light: 3},
+    living_bark: {bind: 2, life: 2},
+    wyvern_membrane: {bind: 3, light: 3},
+    hydra_blood: {life: 2},
+    heartwood: {life: 3},
+    volcanic_ash: {vigor: 1, fire: 1},
+    salamander_tail: {vigor: 1, fire: 1},
+    sun_stone: {vigor: 3},
+    giant_ember: {vigor: 3, fire: 3},
+    star_shard: {vigor: 3},
+    purify_shard: {clear: 2},
+    star_fragment: {clear: 3},
+    red_clay: {hard: 1},
+    croc_scale: {hard: 1},
+    bison_horn: {hard: 1, sharp: 1},
+    bog_iron: {hard: 2},
+    troll_tusk: {hard: 2},
+    stone_heart: {hard: 2},
+    carnem_steel: {hard: 3, sharp: 3},
+    cursed_steel: {hard: 2},
+    blackened_scale: {hard: 4},
+    frost_heart: {hard: 3, frost: 3},
+    scorpion_stinger: {sharp: 1, venom: 1},
+    sharp_fang: {sharp: 2},
+    obsidian: {sharp: 2},
+    sandworm_tooth: {sharp: 2},
+    sphinx_mane: {sharp: 3, lore: 3},
+    griffin_feather: {light: 3},
+    ice_shard: {light: 1, frost: 1},
+    rune_stone: {lore: 1},
+    old_scroll: {lore: 2},
+    faded_crest: {lore: 3},
+    ancient_relic: {lore: 3},
+    seal_core: {lore: 3},
+    brass_button: {shine: 1},
+    sea_shell: {shine: 1},
+    amber: {shine: 2},
+    gold_ore: {shine: 2},
+    rival_scale: {shine: 2},
+    bog_pearl: {shine: 3},
+    deep_pearl: {shine: 3},
+    lost_seal: {shine: 3},
+    knight_crest: {shine: 3},
+    crown_shard: {shine: 3},
+    fire_crystal: {fire: 3},
+    magma_core: {fire: 3},
+    elder_ember: {fire: 3},
+    frost_lichen: {frost: 2},
+    eternal_ice: {frost: 3},
+    poison_herb: {venom: 1},
+    toad_gland: {venom: 2},
+    shadow_spore: {venom: 3},
+    ashen_dust: {soul: 2},
+    ghost_ash: {soul: 2},
+    corrupt_crystal: {soul: 4},
+    ashen_core: {soul: 4},
+    basilisk_eye: {soul: 3},
+    calamity_core: {soul: 3},
+  },
+  food: { life: 12, vigor: 10, clear: 3 },          // 성질 세기 1당 회복량 (체력·기력·정신)
+  foodCap: { hp: 120, en: 60, mind: 12 },           // 보통일 때 상한
+  foodCapLucky: { hp: 140, en: 70, mind: 15 },      // 좋음·빼어남일 때 상한
+  foodLuck: { good: 1.15, great: 1.3 },             // 운이 좋으면 회복량 배율
+  gearCap: [[5, 2], [10, 3], [15, 5], [999, 6]],    // [지혜 이하, 장신구 능력치 합의 기본 상한] (정식 장신구와 같은 수준)
+  gearRate: 0.7,                                    // 장신구 능력치 점수 = 효능 세기 합 × 이만큼 (올림)
+  luck: { good: 0.24, great: 0.06 },                // 좋음(+1) · 빼어남(+2) 확률
+  en: { food: [4, 2], gear: [8, 2] },               // 기력: 기본 + 재료 하나당
+  valueMul: 1.2,                                    // 값 = 넣은 재료값 합 × 이만큼 (좋음 1.5배 · 빼어남 2배)
+  failBack: 0.3,                                    // 실패하면 재료값의 이만큼을 금화로
+  notes: 40, mine: 12, mineLib: 20,                 // 실험 노트 줄 수 · 내 제작법 (서고가 있으면 20)
+};
+
 const KIN_BOND = {
   curve: [[70, 1], [90, 0.5], [100, 1 / 3]],   // [이 유대까지, 오르는 비율]: 70까지는 그대로, 70~90은 절반, 90~100은 3분의 1
   dip: { stages: ['청소년', '젊은 용'], amount: 15, floor: 40 }, // 이 단계가 되면 유대가 이만큼 내려감 (이 밑으로는 안 내려감)
@@ -2055,6 +2149,6 @@ module.exports = {
   isTestDragon: (d) => !!d && !!KINDS[d.kind]?.test,                // GM 시험용 투명 드래곤인가
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, FESTIVAL, TITLES, TITLE_COUNT_NAMES, ACHIEVEMENTS, YABAWI, KEEPSAKES,
   PURIFY, CRAFT, SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, FISHING, RUIN, FACILITY, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
-  DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, KIN_GROW, KIN_PLAY, KIN_TOUCH, KIN_BOND, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
+  DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, KIN_GROW, KIN_PLAY, KIN_TOUCH, KIN_BOND, FREE, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
   COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, DEPART, BONDS, MARKS, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG,
 };

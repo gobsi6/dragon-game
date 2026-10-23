@@ -1365,6 +1365,16 @@
   .gift-box .gp-sel { flex: 1; min-width: 0; font-size: 13px; color: var(--muted); }
   .gift-box .gp-sel.on { color: var(--ink); font-weight: 600; }
   .gift-box .num:disabled { opacity: .5; }
+  /* 자유 제작 */
+  .xa-mat .xa-tags { display: block; grid-column: 1 / -1; font-size: 10.5px; color: var(--muted); line-height: 1.3; }
+  .xa-sum { margin: 6px 0 0; font-size: 12px; color: var(--ink-2); } .xa-sum b { color: var(--steel-d); margin-right: 4px; }
+  .fx-card { margin: 10px 0; padding: 10px 12px; border: 1px solid #CFE0D4; border-radius: 3px; background: #EEF6F0; display: flex; flex-direction: column; gap: 6px; }
+  .fx-h { display: flex; align-items: center; gap: 6px; } .fx-h b { font: 700 15px var(--serif); }
+  .fx-q { padding: 0 6px; font: 600 11px/18px var(--sans); border-radius: 9px; background: #E3ECF3; color: var(--steel-d); } .fx-q.great { background: #F4E6C2; color: #6E5A2A; }
+  .fx-eff { margin: 0; font-size: 12.5px; color: var(--ink-2); }
+  .fx-name { display: flex; flex-wrap: wrap; gap: 6px; } .fx-name .input { flex: 1 1 140px; min-width: 0; height: 32px; font-size: 13px; }
+  .fx-row { display: flex; align-items: center; gap: 6px; padding: 6px 0; border-top: 1px solid var(--line-in); } .fx-row .fx-t { flex: 1; min-width: 0; display: flex; flex-direction: column; } .fx-row .fx-t small { font-size: 11.5px; color: var(--muted); } .fx-row .btn { min-height: 30px; font-size: 12px; }
+  .fx-notes { list-style: none; margin: 0 0 8px; padding: 0; font-size: 12px; } .fx-notes li { display: flex; flex-wrap: wrap; gap: 2px 8px; padding: 4px 0; border-top: 1px solid var(--line-in); } .fx-notes .m { flex: 1 1 160px; color: var(--ink-2); } .fx-notes .r { color: var(--steel-d); } .fx-notes .r.fail { color: var(--muted); }
   #toast[popover] { inset: auto; top: auto; right: auto; left: 50%; bottom: calc(var(--dock-h, 56px) + 16px); margin: 0; border: 0; height: auto; overflow: hidden; } /* 맨 위 층에 올린 알림: 원래 자리·모양 그대로 */
   /* 성향 설명: 세 칸을 같은 자리에 겹쳐 두고 하나만 보임 (높이가 늘 같아 깜빡이지 않음) */
   #stance-note { display: grid; padding: 8px 10px; border-left: 2px solid transparent; border-radius: 2px; transition: background-color .12s, border-color .12s; }
@@ -5239,7 +5249,8 @@
   function effectText(it) {
     if (it.type === 'use') {
       const u = it.use, out = [];
-      if (u.buff) { const B = S.buffs?.[u.buff]; return B ? `${S.buffs.minutes || 60}분 동안 ${B.name}: ${B.desc} (사냥·강적 전투)` : ''; }
+      if (u.buff && !(u.hp || u.en || u.mind)) { const B = S.buffs?.[u.buff]; return B ? `${S.buffs.minutes || 60}분 동안 ${B.name}: ${B.desc} (사냥·강적 전투)` : ''; }
+      if (u.buff) { const B = S.buffs?.[u.buff]; if (B) out.push(`${S.buffs.minutes || 60}분 동안 ${B.name}`); } // 직접 빚은 독 깃든 먹을거리
       if (u.hp) out.push(`체력 +${u.hp}`);
       if (u.en) out.push(`기력 +${u.en}`);
       if (u.ap) out.push(`행동력 +${u.ap}`);
@@ -5250,6 +5261,7 @@
     if (it.type === 'equip') {
       const out = Object.entries(it.bonus || {}).map(([k, v]) => `${statName(k)} +${v}`);
       if (it.expRare) out.push(`원정 귀한 물건 +${Math.round(it.expRare * 100)}%`);
+      if (it.elem) out.push(`${ELEM_NAME[it.elem] || it.elem} 속성`); // 직접 빚은 장신구의 기운
       if (it.mindWard) out.push(`깎이는 정신 ${it.mindWard > 1 ? '+' : '−'}${Math.round(Math.abs(1 - it.mindWard) * 100)}%`); // 1보다 크면 더 깎임 (심연의 왕관·속삭이는 반지)
       const g = it.gear || {}; // 희귀 장비의 특별한 효과 (사냥·강적에서만)
       if (g.vsCorrupt) out.push(`오염된 적에게 주는 피해 +${Math.round((g.vsCorrupt - 1) * 100)}%`);
@@ -5449,7 +5461,8 @@
   function itemAct(event, payload) {
     socket.emit(event, payload, (res) => {
       if (res.error) { SFX.play('error'); return toast(res.error); }
-      if (event === 'craft') for (const m of res.result?.made || []) if (m.qty > 0 && !CRAFT_MADE.includes(m.id)) CRAFT_MADE.unshift(m.id);
+      if (event === 'craft' || event === 'craft:experiment' || event === 'craft:mine') for (const m of res.result?.made || []) if (m.qty > 0 && !CRAFT_MADE.includes(m.id)) CRAFT_MADE.unshift(m.id);
+      if (event === 'craft:experiment' || event === 'craft:mine') { FREE_LAST = res.result?.free || null; FREE_DATA = null; } // 자유 제작 결과 · 노트 다시 불러오기
       SFX.play({ 'item:drop': 'drop', craft: 'craft' }[event] || 'use');
       if (res.result?.lines) toast(res.result.lines.join(' '));
       // 다시 그려도 보던 자리에 머물게 (쓰고 나서 맨 위로 올라가지 않게)
@@ -5583,6 +5596,7 @@
         row._usesBtn = u2;
       }
       if (gmod?.mw) { const t = document.createElement('span'); t.className = 'gw-mw'; t.textContent = '걸작'; row.querySelector('b').appendChild(t); }
+      if (it.custom) { const t = document.createElement('span'); t.className = it.custom.quality === 'great' || it.custom.mw ? 'gw-mw' : 'gw-el'; t.textContent = `${it.custom.byName}${josa(it.custom.byName, '이', '가')} 빚음${{ good: ' · 좋음', great: ' · 빼어남' }[it.custom.quality] || ''}${it.custom.mw ? ' · 걸작' : ''}`; row.querySelector('b').appendChild(t); } // 직접 빚은 물건
       if (gmod?.elem) { const t = document.createElement('span'); t.className = 'gw-el'; t.textContent = `${ELEM_NAME[gmod.elem]} 각인`; row.querySelector('b').appendChild(t); }
       row.querySelector('small').textContent = it.desc;
       if (it.cat === 'trophy') {
@@ -8056,6 +8070,8 @@
   // ── 제작 ──
   // 제작 창: 만들기 / 실험 / 다듬기(강화·각인)
   let craftMode = 'make', mixPick = [];
+  let FREE_LAST = null, FREE_DATA = null, FREE_LOADING = false; // 자유 제작: 마지막 결과, 노트·내 제작법·도감
+  const freeTagLine = (id) => { const t = S.free?.tags?.[id]; if (!t) return ''; return Object.entries(t).map(([k, n]) => `${S.free.names[k]}${n}`).join(' · '); };
   const ELEM_NAME = { fire: '화염', ice: '얼음', lightning: '번개', earth: '대지', poison: '독', mist: '안개', acid: '산', water: '물', spirit: '정화' };
   // 제작 재료를 누르면, 그 재료를 얻는 곳을 재료 줄 아래에 펼침 (한 번 더 누르면 접힘)
   // anchor를 주면 그 바로 뒤에 펼침 (둥지의 넓히기·화로 재료 칸처럼 줄 중간에 있을 때)
@@ -8304,6 +8320,66 @@
     }
   }
   // 실험: 가진 재료 중 2~3가지를 골라 화로에 넣어 봄. 위는 화로 세 칸(누르면 뺌), 아래는 분류별 재료 칸(누르면 넣음)
+  // 자유 제작: 방금 빚은 것(이름 짓기·남기기), 내 제작법, 실험 노트, 창작 도감
+  function drawFreeParts(box, el) {
+    if (!FREE_DATA && !FREE_LOADING) { FREE_LOADING = true; socket.emit('craft:free:get', {}, (res) => { FREE_LOADING = false; if (!res?.error) { FREE_DATA = res; if ($('craft-dlg').open && craftMode === 'exp') renderCraft(); } }); }
+    const Q = { good: '좋음', great: '빼어남' };
+    // 방금 빚은 것
+    const last = FREE_LAST?.id && S.items[FREE_LAST.id];
+    if (last) {
+      const c = el('div', 'fx-card');
+      const h = el('div', 'fx-h'); h.appendChild(el('b', '', last.name));
+      if (Q[last.custom?.quality]) h.appendChild(el('span', `fx-q ${last.custom.quality}`, Q[last.custom.quality]));
+      if (last.custom?.mw) h.appendChild(el('span', 'fx-q great', '걸작'));
+      c.appendChild(h);
+      c.appendChild(el('p', 'fx-eff', effectText(last) || ''));
+      if (last.custom?.by === S.me?.id) {
+        const row = el('div', 'fx-name');
+        const ni = el('input', 'input'); ni.maxLength = 12; ni.placeholder = '이름 (2~12자)'; ni.value = last.custom?.named ? last.name : ''; ni.setAttribute('aria-label', '빚은 물건의 이름');
+        const di = el('input', 'input'); di.maxLength = 60; di.placeholder = '한 줄 설명 (60자, 비워도 됨)'; di.setAttribute('aria-label', '빚은 물건의 설명');
+        const ok = el('button', 'btn', last.custom?.named ? '이름 바꾸기' : '이름 붙이기'); ok.type = 'button';
+        ok.addEventListener('click', () => socket.emit('craft:name', { id: FREE_LAST.id, name: ni.value, desc: di.value }, (res) => { if (res.error) return toast(res.error); toast(`'${res.item.name}'${josa(res.item.name, '이', '가')} 되었다.`); }));
+        row.append(ni, di, ok); c.appendChild(row);
+      }
+      const keep = el('button', 'btn', '이 조합을 내 제작법으로 남기기'); keep.type = 'button';
+      keep.addEventListener('click', () => socket.emit('craft:keep', { mats: FREE_LAST.mats, id: FREE_LAST.id }, (res) => { if (res.error) return toast(res.error); toast('내 제작법에 남겼다.'); FREE_DATA = { ...(FREE_DATA || {}), mine: res.mine, mineMax: res.mineMax }; renderCraft(); }));
+      c.appendChild(keep);
+      box.appendChild(c);
+    }
+    if (!FREE_DATA) return;
+    const nm = (id) => S.items[id]?.name || id;
+    // 내 제작법
+    const mine = FREE_DATA.mine || [];
+    const mh = el('h3', 'inv-h', '내 제작법'); mh.appendChild(el('span', 'inv-hn', `${mine.length}/${FREE_DATA.mineMax}`)); box.appendChild(mh);
+    if (!mine.length) box.appendChild(el('p', 'note', '마음에 드는 물건을 빚으면 그 조합을 여기에 남겨 두고 다시 빚을 수 있다.'));
+    mine.forEach((m, i) => {
+      const r = el('div', 'fx-row');
+      const t = el('div', 'fx-t'); t.appendChild(el('b', '', m.id && S.items[m.id] ? S.items[m.id].name : '이름 없는 조합')); t.appendChild(el('small', '', m.mats.map((x) => `${nm(x)} ${invCache[x] || 0}`).join(' · ')));
+      const go = el('button', 'btn primary', '다시 빚기'); go.type = 'button'; go.disabled = m.mats.some((x) => !(invCache[x] > 0)) || !!S.me.exp;
+      go.addEventListener('click', () => itemAct('craft:mine', { idx: i }));
+      const del = el('button', 'btn', '지우기'); del.type = 'button';
+      del.addEventListener('click', () => { if (confirm('이 제작법을 지울까?')) socket.emit('craft:forget', { idx: i }, (res) => { if (res.error) return toast(res.error); FREE_DATA = { ...FREE_DATA, mine: res.mine }; renderCraft(); }); });
+      r.append(t, go, del); box.appendChild(r);
+    });
+    // 실험 노트 (최근 8줄)
+    const notes = (FREE_DATA.notes || []).slice(0, 8);
+    if (notes.length) {
+      box.appendChild(el('h3', 'inv-h', '실험 노트'));
+      const ul = el('ul', 'fx-notes');
+      for (const n of notes) {
+        const li = el('li');
+        li.appendChild(el('span', 'm', n.mats.map(nm).join(' + ')));
+        li.appendChild(el('span', n.fail ? 'r fail' : 'r', n.fail ? `실패 · ${n.fail.split('.')[0]}` : `${nm(n.id)}${Q[n.quality] ? ` (${Q[n.quality]})` : ''}`));
+        ul.appendChild(li);
+      }
+      box.appendChild(ul);
+    }
+    // 창작 도감
+    const cr = FREE_DATA.creations || [];
+    const ch = el('h3', 'inv-h', '창작 도감'); ch.appendChild(el('span', 'inv-hn', `${cr.length}가지`)); box.appendChild(ch);
+    if (!cr.length) box.appendChild(el('p', 'note', '아직 아무도 새로운 물건을 빚지 않았다. 처음 빚은 드래곤의 이름이 여기에 영원히 남는다.'));
+    else { const ul = el('ul', 'fx-notes'); for (const x of cr.slice(0, 30)) { const li = el('li'); li.appendChild(el('span', 'm', x.label)); li.appendChild(el('span', 'r', `${x.byName} · '${x.name}' · ${new Date(x.at).toLocaleDateString('ko-KR')}`)); ul.appendChild(li); } box.appendChild(ul); }
+  }
   function renderExperiment(box, ci) {
     const EN = S.craftRules?.experimentEn || 4;
     const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -8313,7 +8389,7 @@
     // ── 화로 ──
     const f = el('div', 'xa-forge');
     const h = el('div', 'h');
-    h.append(el('b', '', '화로'), el('small', '', `재료 2~3가지 · 기력 ${EN}`));
+    h.append(el('b', '', '화로'), el('small', '', '재료 2~3가지 · 기력 4~14'));
     f.appendChild(h);
     const slots = el('div', 'xa-slots');
     for (let i = 0; i < 3; i++) {
@@ -8334,13 +8410,25 @@
       }
     }
     f.appendChild(slots);
-    const go = el('button', 'btn primary xa-go', `섞어 보기 · 기력 ${EN}`);
+    let estEn = EN; // 자유 제작이면 먹는 것 4+2×재료, 장신구 8+2×재료
+    if (mixPick.length) {
+      const sum = {};
+      for (const id of mixPick) for (const [k, n] of Object.entries(S.free?.tags?.[id] || {})) sum[k] = (sum[k] || 0) + n;
+      const order = Object.keys(S.free?.names || {});
+      const txt = order.filter((k) => sum[k]).map((k) => `${S.free.names[k]} ${sum[k]}`).join(' · ');
+      const food = sum.food || 0, bind = sum.bind || 0;
+      const kind = !food && !bind ? '바탕이 없어 어설픈 덩어리가 될 것 같다' : food === bind ? '먹을거리와 엮음이 맞서 어설퍼질 것 같다' : food > bind ? '먹는 것이 될 것 같다' : '장신구가 될 것 같다';
+      const pv = el('p', 'xa-sum'); pv.append(el('b', '', '성질 합'), ` ${txt || '없음'} · ${kind}`); f.appendChild(pv);
+      if (food !== bind) estEn = (food > bind ? 4 : 8) + 2 * mixPick.length;
+    }
+    const go = el('button', 'btn primary xa-go', `섞어 보기 · 기력 ${estEn}`);
     go.type = 'button';
-    go.disabled = mixPick.length < 2 || S.me.en < EN || !!S.me.exp;
+    go.disabled = mixPick.length < 2 || S.me.en < estEn || !!S.me.exp;
     go.addEventListener('click', () => { const ids = mixPick.slice(); mixPick = []; itemAct('craft:experiment', { items: ids }); });
     f.appendChild(go);
-    f.appendChild(el('p', 'xa-note', S.me.en < EN ? `기력이 모자라다. (기력 ${S.me.en} / ${EN})` : '숨겨진 제작법과 맞으면 그 제작법을 알게 된다. 넣은 재료는 하나씩 사라진다.'));
+    f.appendChild(el('p', 'xa-note', S.me.en < EN ? `기력이 모자라다. (기력 ${S.me.en} / ${EN})` : '재료의 성질로 새 물건을 빚는다. 숨겨진 제작법과 맞으면 그 제작법을 알게 된다. 넣은 재료는 하나씩 사라진다.'));
     box.appendChild(f);
+    drawFreeParts(box, el); // 방금 빚은 것 · 내 제작법 · 실험 노트 · 창작 도감
     if (!mats.length) { box.appendChild(el('div', 'empty', '섞어 볼 재료가 없다.')); }
     // ── 재료: 소지품과 같은 분류·순서 ──
     const XCATS = ['treasure', 'use', 'buff', 'meal', 'fish', 'trophy', 'mat'];
@@ -8361,6 +8449,7 @@
       b.type = 'button';
       b.title = it.name;
       b.append(el('b', '', it.name), el('small', '', `×${q}`), el('span', 'ord', on ? String(mixPick.indexOf(id) + 1) : ''));
+      const tl = freeTagLine(id); if (tl) b.appendChild(el('span', 'xa-tags', tl)); // 재료의 성질과 세기
       b.disabled = !on && mixPick.length >= 3;
       b.setAttribute('aria-pressed', String(on));
       b.addEventListener('click', () => toggle(id));
@@ -10479,7 +10568,8 @@
     const anyFresh = (list) => list.some((e) => e.fresh);
     const secFresh = { beasts: anyFresh(X.beasts.flatMap((g) => g.list)), bosses: anyFresh(X.bosses), fish: anyFresh(X.fish), items: anyFresh(X.items.flatMap((c) => c.list)) };
     const tl = (k, label) => [k, `${label} ${P[k][0]}/${P[k][1]}`, secFresh[k]];
-    dexChips($('dex-secs'), [tl('beasts', '사냥감'), tl('bosses', '재앙'), tl('fish', '물고기'), tl('items', '물건')], dexSec, (k) => { dexSec = k; renderDex(); });
+    const cr = X.crafts || [];
+    dexChips($('dex-secs'), [tl('beasts', '사냥감'), tl('bosses', '재앙'), tl('fish', '물고기'), tl('items', '물건'), ['crafts', `빚은 물건 ${cr.length}`, anyFresh(cr)]], dexSec, (k) => { dexSec = k; renderDex(); });
     const cats = $('dex-cats');
     cats.hidden = dexSec !== 'items';
     if (dexSec === 'items') {
@@ -10509,6 +10599,14 @@
       h4.appendChild(c);
       box.appendChild(h4);
     };
+    if (dexSec === 'crafts') {
+      // 직접 빚은 물건: 이름·효과·품질·재료·빚은 날 (다 채우기 셈과는 따로)
+      const h4 = document.createElement('h4'); h4.className = 'dex-h'; h4.textContent = '내가 빚은 물건';
+      const c = document.createElement('span'); c.textContent = `${cr.length}가지${X.craftFirsts ? ` · 창작 도감 ${X.craftFirsts}칸` : ''}`; h4.appendChild(c); box.appendChild(h4);
+      if (!cr.length) { const p = document.createElement('p'); p.className = 'note'; p.textContent = '제작 창의 실험에서 재료를 섞어 직접 물건을 빚으면 여기에 남는다.'; box.appendChild(p); }
+      for (const e of cr) box.appendChild(dexRow(e));
+      return;
+    }
     if (dexSec === 'beasts') for (const g of X.beasts) { head(g.ruin ? `${g.name} (멸망한 대륙)` : g.name, g.list); for (const e of g.list) box.appendChild(dexRow(e)); }
     else if (dexSec === 'bosses') for (const e of X.bosses) box.appendChild(dexRow(e));
     else if (dexSec === 'fish') for (const e of X.fish) box.appendChild(dexRow(e));
@@ -13810,6 +13908,7 @@
       for (const [k, v] of Object.entries(S.items || {})) v.id = k;
       S.recipes = data.recipes;
       S.craftRules = data.craftRules || null;
+      S.free = data.free || null; // 자유 제작: 재료의 성질
       S.mobs = data.mobs || {}; // 지역마다 머무는 모브 드래곤
       S.buffs = data.buffs || {};
       S.expGoals = data.expGoals || {};
@@ -13987,6 +14086,8 @@
     socket.on('trade:closed', (e) => { endTrade(); toast(e.reason); });
     socket.on('trade:done', (r) => { endTrade(); showResult(r); fetchInv(); if ($('ledger-dlg').open) openLedger(); });
     socket.on('system', (m) => addSystem(m.text, m.at, m.news));
+    // 누군가 새 물건을 빚거나 이름을 붙이면: 모두의 물건 목록에 올림
+    socket.on('items:add', (x) => { if (!x?.id || !x.item || !S.items) return; S.items[x.id] = { ...x.item, id: x.id }; if ($('inv-dlg')?.open) renderInv(); if ($('craft-dlg')?.open) renderCraft(); });
       socket.on('yabawi:now', (v) => { if (S.me) { S.me.yabawiNow = v; renderYabaBar(); } }); // 야바위꾼이 나타나거나 떠남
   }
 

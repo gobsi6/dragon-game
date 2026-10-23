@@ -819,6 +819,42 @@ const ruin = (() => {
 logic.hooks.purify = (d, kind) => (logic.isRuin(d.region) ? ruin.add(d, kind) : purify.add(d, kind));
 logic.hooks.companionsHere = (d) => { for (const e of online.values()) if (e.dragon.id !== d.id && e.dragon.region === d.region && !e.dragon.dead_at) return true; return false; };
 logic.hooks.purifyDebug = purify.debugSet; // 시험용: 정화 진행을 바로 정함
+// ── 자유 제작: 직접 빚은 물건 (월드에 저장, 켤 때 ITEMS에 다시 올림) ──
+const free = require('./game-free');
+const FREE_CFG = require('./game-data').FREE;
+{
+  const all = db.worldGet('customItems') || {};
+  for (const [id, def] of Object.entries(all)) ITEMS[id] = def;
+}
+const customSave = (id, def) => { const all = db.worldGet('customItems') || {}; all[id] = def; db.worldSet('customItems', all); ITEMS[id] = def; io.emit('items:add', { id, item: def }); };
+logic.hooks.registerCustom = (d, ids, r) => {
+  const sig = free.signature(d.id, ids, r);
+  const all = db.worldGet('customItems') || {};
+  let id = free.hashId(sig), n = 0;
+  while (all[id] && all[id].custom?.sig !== sig) id = free.hashId(`${sig}#${++n}`);
+  if (all[id]) { ITEMS[id] = all[id]; return { id, isNew: false }; }
+  const mats = ids.map((x) => ITEMS[x].name).join('·');
+  const base = { name: r.name, rarity: r.rarity, value: r.value, desc: `${mats}${josa(mats, '을', '를')} 섞어 빚었다.` };
+  const def = r.kind === 'food'
+    ? { ...base, type: 'use', use: r.use }
+    : { ...base, type: 'equip', slot: r.slot, ...r.def };
+  def.custom = { by: d.id, byName: d.name, sig, mats: ids, kind: r.kind, quality: r.quality, mw: !!r.mw, at: Date.now() };
+  customSave(id, def);
+  return { id, isNew: true };
+};
+logic.hooks.creations = () => db.worldGet('creations') || {}; // 도감의 '빚은 물건'이 처음 오른 것을 표시할 때
+// 창작 도감: 종류 + 부위(먹는 것은 주된 효능) + 기운의 조합을 처음 빚은 드래곤을 영구히 남김
+logic.hooks.creation = (d, r, id) => {
+  const key = free.creationKey(r);
+  const w = db.worldGet('creations') || {};
+  if (w[key]) return [];
+  const label = free.creationLabel(r);
+  w[key] = { key, label, id, name: ITEMS[id].name, by: d.id, byName: d.name, at: Date.now() };
+  db.worldSet('creations', w);
+  io.emit('system', { text: `[창작] ${d.name}${josa(d.name, '이', '가')} 대륙에서 처음으로 ${label}${josa(label, '을', '를')} 빚어냈다!`, at: Date.now() });
+  logic.chron(d, 'mark', `대륙에서 처음으로 ${label}${josa(label, '을', '를')} 빚어냈다. ('${ITEMS[id].name}')`);
+  return [`대륙에서 아무도 빚어 본 적 없는 ${label}${josa(label, '이다', '다')}! 창작 도감에 이름이 남았다.`];
+};
 // 숨겨진 제작법을 대륙에서 처음 찾아낸 드래곤: 전체 공지와 칭호
 logic.hooks.firstRecipe = (d, out) => {
   const w = db.worldGet('firstRecipe') || {};
@@ -1013,6 +1049,7 @@ function onConnect(socket) {
     fameTiers: FAME_TIERS,
     traits: TRAITS, traitEarn: TRAIT_EARN, traitCounts: TRAIT_COUNTS,
     mobs: mobs.listForClient(),
+    free: { tags: FREE_CFG.tags, names: FREE_CFG.tagNames, groups: FREE_CFG.tagGroup, mine: FREE_CFG.mine, mineLib: FREE_CFG.mineLib }, // 자유 제작: 재료의 성질
     craftRules: { enhance: CRAFT.enhance, forgeRate: CRAFT.forgeRate, engrave: CRAFT.engrave, experimentEn: CRAFT.experiment.en, forge: CRAFT.forge, hidden: RECIPES.filter((r) => r.hidden).map((r) => r.out) },
     statPerLevel: require('./game-data').STAT_POINTS.perLevel,
     places: PLACES, regionPlaces: REGION_PLACES, placeRules: PLACE_RULES,
@@ -1165,6 +1202,57 @@ function onConnect(socket) {
     ack({ ok: true });
   });
   // 읽음 표시 저장: { key: 'notes'|'slate', value: 숫자 } 또는 { key: 'risen', value: ['id:at'…] } (브라우저가 아니라 드래곤마다 기억)
+  // ── 자유 제작: 실험 노트 · 내 제작법 · 창작 도감 · 이름 짓기 ──
+  const freeMax = (d) => (d.nest && logic.nestInfo(d).fac?.library ? FREE_CFG.mineLib : FREE_CFG.mine); // 둥지에 서고가 있으면 더
+  socket.on('craft:free:get', (p, ack) => {
+    if (typeof ack !== 'function') return;
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+    const c = logic.combatJson(entry.dragon);
+    const cr = Object.values(db.worldGet('creations') || {}).sort((a, b) => b.at - a.at);
+    ack({ ok: true, notes: c.freeNotes || [], mine: c.myRecipes || [], mineMax: freeMax(entry.dragon), creations: cr });
+  });
+  socket.on('craft:keep', (p, ack) => {
+    if (typeof ack !== 'function') return;
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+    const d = entry.dragon, c = logic.combatJson(d);
+    const mats = [...new Set((Array.isArray(p?.mats) ? p.mats : []).filter((x) => typeof x === 'string' && ITEMS[x]))];
+    if (mats.length < 2 || mats.length > 3) return ack({ error: '재료 2~3가지 조합만 남길 수 있다.' });
+    const l = (c.myRecipes ||= []);
+    const k = mats.slice().sort().join('+');
+    if (l.some((m) => m.mats.slice().sort().join('+') === k)) return ack({ error: '이미 남긴 제작법이다.' });
+    if (l.length >= freeMax(d)) return ack({ error: `내 제작법은 ${freeMax(d)}개까지 남길 수 있다. 안 쓰는 것을 먼저 지우자.${freeMax(d) < FREE_CFG.mineLib ? ' (둥지에 서고가 있으면 더 남길 수 있다)' : ''}` });
+    l.push({ mats, id: str(p?.id) && ITEMS[str(p.id)] ? str(p.id) : null, at: Date.now() });
+    db.saveState(d);
+    ack({ ok: true, mine: l, mineMax: freeMax(d) });
+  });
+  socket.on('craft:forget', (p, ack) => {
+    if (typeof ack !== 'function') return;
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+    const d = entry.dragon, l = logic.combatJson(d).myRecipes || [];
+    const i = Number(p?.idx);
+    if (!(i >= 0 && i < l.length)) return ack({ error: '그런 제작법이 없다.' });
+    l.splice(i, 1);
+    db.saveState(d);
+    ack({ ok: true, mine: l, mineMax: freeMax(d) });
+  });
+  // 빚은 물건의 이름·설명: 빚은 드래곤(또는 GM)만. 모두에게 그대로 보임
+  socket.on('craft:name', (p, ack) => {
+    if (typeof ack !== 'function') return;
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+    const id = str(p?.id), def = ITEMS[id];
+    if (!def?.custom) return ack({ error: '직접 빚은 물건만 이름을 붙일 수 있다.' });
+    if (def.custom.by !== entry.dragon.id && !socket.data.user?.is_gm) return ack({ error: '빚은 드래곤만 이름을 붙일 수 있다.' });
+    const name = str(p?.name).replace(/\s+/g, ' ');
+    if (!free.NAME_RE.test(name)) return ack({ error: '이름은 한글·영문·숫자로 2~12자까지 쓸 수 있다.' });
+    const desc = str(p?.desc).replace(/\s+/g, ' ').replace(/[<>]/g, '').slice(0, 60); // 꺾쇠는 빼 둠 (화면에 그대로 끼어들지 않게)
+    const nd = { ...def, name, desc: desc || def.desc, custom: { ...def.custom, named: true } };
+    customSave(id, nd);
+    ack({ ok: true, item: nd });
+  });
   socket.on('seen:set', (payload, ack) => {
     if (typeof ack !== 'function') ack = () => {};
     const entry = entryOf(socket);
@@ -1487,6 +1575,13 @@ function onConnect(socket) {
   };
   itemAction('craft', (d, p, have) => logic.craft(d, str(p.recipe), have, p.focus));
   itemAction('craft:experiment', (d, p, have) => logic.experiment(d, p.items, have));
+  // 자유 제작: 내 제작법으로 다시 빚기 (저장한 재료 조합으로 실험)
+  itemAction('craft:mine', (d, p, have) => {
+    const l = logic.combatJson(d).myRecipes || [];
+    const m = l[Number(p.idx)];
+    if (!m) return { error: '그런 제작법이 없다.' };
+    return logic.experiment(d, m.mats, have);
+  });
   itemAction('gear:enhance', (d, p, have) => logic.enhanceGear(d, str(p.item), have));
   itemAction('gear:engrave', (d, p, have) => logic.engraveGear(d, str(p.item), str(p.elem), have));
   itemAction('nest:forge', (d, p, have) => logic.buildFacility(d, 'forge', have)); // 예전 화로 짓기 버튼
