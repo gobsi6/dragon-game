@@ -61,11 +61,21 @@ module.exports = function setupNightMarket({ io, db, online, logic, sendMe }) {
     else for (const l of lines) db.noteAdd(id, l);
   }
 
-  // 내 정보에 붙임: 축제 중일 때만 { open, until, next, here }
+  // 이번 축제의 야시장 시간표 [{ start, until }] (축제가 시작한 때부터 30분 간격으로 살펴 모음. 축제마다 한 번만 셈)
+  let timesCache = null;
+  function timesOf(fest) {
+    if (timesCache?.key === fest.key) return timesCache.list;
+    const list = [];
+    for (let t = fest.until - 2 * DAY; t < fest.until; t += 30 * 60000) { const s = sessionAt(t); if (s && !list.some((x) => x.start === s.start)) list.push({ start: s.start, until: s.until }); }
+    timesCache = { key: fest.key, list };
+    return list;
+  }
+  // 내 정보에 붙임: 축제 중일 때만 { open, until, next, here, times }
   function status(d, now = Date.now()) {
-    if (!logic.festivalNow(now)) return null;
+    const fest = logic.festivalNow(now);
+    if (!fest) return null;
     const s = sessionAt(now);
-    return { open: !!s, until: s ? s.until : null, next: s ? null : nextOpen(now), here: isHere(d), mine: !!st.stalls[d.id] };
+    return { open: !!s, until: s ? s.until : null, next: s ? null : nextOpen(now), here: isHere(d), mine: !!st.stalls[d.id], times: s || process.env.FESTIVAL_FORCE === '1' ? null : timesOf(fest) };
   }
 
   // 야시장 창

@@ -2938,6 +2938,11 @@
   .wx.fest .nm-row .nm-t { flex: 1; min-width: 0; margin: 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
   .wx.fest .nm-row .nm-t b { font: 600 13px/1.4 var(--serif); color: #8A3D55; margin-right: 6px; }
   .wx.fest .nm-row .btn { flex: none; min-height: 32px; padding: 0 12px; font-size: 12.5px; }
+  .wx.fest .nm-row { flex-wrap: wrap; }
+  .wx.fest .nm-times { flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 4px 6px; }
+  .wx.fest .nm-times span { font: 500 11.5px/20px var(--sans); padding: 0 8px; border: 1px solid #E2BFCB; border-radius: 10px; color: #8A3D55; background: #FDF8FA; font-variant-numeric: tabular-nums; }
+  .wx.fest .nm-times span.next { border-color: #8A3D55; font-weight: 600; }
+  .wx.fest .nm-times span.past { color: var(--muted); background: none; border-color: var(--line-in); text-decoration: line-through; }
   .nm-banner { background: #3A2C45; }
   .nm-banner .mkb-where { color: #D9C3D3; }
   .nm-banner .mkb-note { color: #D8C9D6; }
@@ -11890,6 +11895,15 @@
     });
   }
   // ── 왕도 야시장: 축제 날 저녁 6시~새벽 5시. 상인 노점 · 노점 거리(드래곤들의 노점) · 내 노점 ──
+  // 시간표 한 칸: '토 0~5시' · '토 18시 ~ 일 5시' · '일 18~24시' (한국 시각)
+  const nmSpan = (a, b) => {
+    const D = ['일', '월', '화', '수', '목', '금', '토'], k = (t) => new Date(t + 9 * 3600000);
+    const A = k(a), B = k(b), ha = A.getUTCHours(), hb = B.getUTCHours();
+    const sameDay = A.toISOString().slice(0, 10) === B.toISOString().slice(0, 10);
+    if (sameDay) return `${D[A.getUTCDay()]} ${ha}~${hb}시`;
+    if (hb === 0 && b - a <= 86400000) return `${D[A.getUTCDay()]} ${ha}~24시`; // 자정에 닫힘
+    return `${D[A.getUTCDay()]} ${ha}시 ~ ${D[B.getUTCDay()]} ${hb}시`;
+  };
   const nmClock = (t) => { const h = new Date(t).getHours(); return h >= 12 ? `저녁 ${h === 12 ? 12 : h - 12}시` : `새벽 ${h}시`; };
   function renderNmRow() {
     const box = $('fest');
@@ -11906,6 +11920,18 @@
       ? `${n.here ? '광장에 등불이 켜지고 노점이 줄지어 섰다.' : `${capital} 광장에 야시장이 열렸다.`} ${untilText(n.until)} 뒤에 노점을 걷는다.${n.mine && !n.here ? ' 내 노점이 펼쳐져 있다.' : ''}`
       : n.next ? `${nmClock(n.next)}면 광장에 야시장이 선다.` : '오늘 밤 야시장은 노점을 걷었다.');
     row.appendChild(t);
+    // 닫혀 있을 때: 이번 축제의 야시장 시간표 (지난 판은 흐리게, 다음 판은 진하게)
+    if (!n.open && n.times?.length) {
+      const tt = document.createElement('div'); tt.className = 'nm-times';
+      const nx = n.times.find((x) => x.until > Date.now());
+      for (const x of n.times) {
+        const c = document.createElement('span');
+        c.className = x.until <= Date.now() ? 'past' : x === nx ? 'next' : '';
+        c.textContent = nmSpan(x.start, x.until);
+        tt.appendChild(c);
+      }
+      row.appendChild(tt);
+    }
     if (n.open && (n.here || n.mine)) {
       const go = document.createElement('button'); go.type = 'button'; go.className = `btn${n.here ? ' primary' : ''}`;
       go.textContent = n.here ? '야시장 둘러보기' : '내 노점 보기';
