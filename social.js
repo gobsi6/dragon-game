@@ -786,7 +786,9 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
           list.push({ id, name: e.dragon.name, kind: e.dragon.kind, level: e.dragon.level, av: e.dragon.has_avatar ? e.dragon.avatar_ver : 0, done: done.includes(id), why: danceWhy(d, e.dragon, fest) });
         }
       }
-      return { ok: true, on: true, here: d.region === FESTIVAL.region, until: fest.until, count: done.length, list, region: FESTIVAL.region };
+      const kin = d.nest ? db.kinLoad(d.id) : [];
+      const kinFest = { left: life.festKids(kin, fest.key).length, done: kin.filter((k) => k.data.festKey === fest.key).length }; // 축제에 데려갈 수 있는 식구 · 이미 다녀온 식구
+      return { ok: true, on: true, here: d.region === FESTIVAL.region, until: fest.until, count: done.length, list, region: FESTIVAL.region, kinFest };
     });
     on('fest:invite', (d, p) => {
       const fest = festivalNow();

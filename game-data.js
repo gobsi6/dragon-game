@@ -401,6 +401,13 @@ const ITEMS = {
   music_box:    { name: '은사슬 오르골',  rarity: 'rare',     type: 'use', use: { keep: 'music_box' },   desc: '은사슬 태엽의 작은 오르골. 보물 상자에 간직하거나 누군가에게 선물할 수 있다.' },
   bouquet_wild: { name: '들꽃 꽃다발',    rarity: 'common',   value: 8,  type: 'use', use: { keep: 'bouquet_wild', mind: 10 }, desc: '평원의 들꽃과 해안의 갯메꽃을 묶은 꽃다발. 향을 맡으면 정신이 맑아진다(+10). 선물로 보내거나, 둥지의 보물 상자에 넣어 간직할 수도 있다.' },
   festival_garland: { name: '축제 꽃장식', rarity: 'uncommon', value: 10, type: 'use', use: { keep: 'festival_garland' }, desc: '왕도 축제에서 처음 춤을 춘 드래곤에게 마을 사람들이 걸어 준 꽃장식. 리본 끝에 작은 방울이 달려 있다. 둥지의 보물 상자에 넣어 간직할 수 있다.' },
+  // ── 왕도 야시장 (축제 날 밤에만, nightmarket.js) ──
+  nm_skewer:    { name: '숯불 꼬치',        rarity: 'common',   value: 5,  type: 'use', use: { hp: 40, en: 15 }, desc: '야시장 숯불 위에서 기름이 지글지글 떨어지던 고기 꼬치. 한입 베어 물면 뜨거운 육즙이 터진다.' },
+  nm_candy_apple:{ name: '설탕 사과',       rarity: 'common',   value: 5,  type: 'use', use: { en: 30, mind: 8 }, desc: '녹인 설탕을 유리처럼 입힌 붉은 사과. 깨물면 바삭 소리가 나고, 단맛에 마음이 풀린다.' },
+  nm_sparkler:  { name: '국화 불꽃 막대',   rarity: 'common',   value: 6,  type: 'use', use: { mind: 20 }, desc: '불을 붙이면 끝에서 국화 모양 불꽃이 타닥타닥 핀다. 다 탈 때까지 바라보고 있으면 머릿속이 고요해진다.' },
+  nm_star_candy:{ name: '별사탕 봉지',      rarity: 'common',   value: 5,  type: 'use', use: { en: 10, mind: 12 }, desc: '알록달록한 별사탕을 종이 봉지에 담았다. 하나씩 굴려 먹다 보면 어느새 봉지가 빈다.' },
+  nm_lantern:   { name: '종이 등불',        rarity: 'uncommon', value: 8,  type: 'use', use: { keep: 'nm_lantern' }, desc: '야시장 등불장이가 한 장씩 붙여 만든 종이 등불. 안에 불을 넣으면 벚꽃 무늬가 벽에 비친다. 둥지의 보물 상자에 넣어 간직할 수 있다.' },
+  nm_mask:      { name: '축제 가면',        rarity: 'uncommon', value: 12, type: 'use', use: { keep: 'nm_mask' }, desc: '여우인지 용인지 모를 얼굴을 칠한 나무 가면. 축제 밤에는 누구나 이것을 쓰고 서로 모르는 척한다. 둥지의 보물 상자에 넣어 간직할 수 있다.' },
   bouquet_four: { name: '네 고장 꽃다발', rarity: 'uncommon', value: 20, type: 'use', use: { keep: 'bouquet_four', mind: 25 }, desc: '평원·숲·해안·설원의 꽃을 하나씩 모아 묶은 꽃다발. 대륙을 한 바퀴 돈 정성이 담겼다. 향을 맡으면 정신이 맑아진다(+25). 선물로 보내거나 보물 상자에 넣어 간직할 수도 있다.' },
   whisper_ring: { name: '속삭이는 반지',   rarity: 'rare',     type: 'equip', slot: 'charm', bonus: { majesty: 3 }, mindWard: 1.3, value: 60, desc: '보물더미 깊은 곳에서 나온 반지. 끼면 위엄이 차오르지만, 밤마다 속삭임이 정신을 갉아먹는다. (깎이는 정신 +30%)' },
   calamity_core:{ name: '재앙의 핵',        rarity: 'rare',     cat: 'trophy', value: 120, desc: '쓰러진 재앙의 가슴에서 꺼낸, 아직 고동치는 검붉은 핵. 대륙에 몇 개 없는 물건이다.' },
@@ -2015,7 +2022,62 @@ const KEEPSAKES = {
   home_pebble:   { name: '고향의 조약돌',     value: 5,  fmt: 'from',   desc: '늙은 식구가 마지막으로 고향에 다녀오며 주워 온 조약돌.' },
   bouquet_wild:  { name: '들꽃 꽃다발',       value: 6,  fmt: 'from', desc: '평원의 들꽃과 해안의 갯메꽃을 묶은 꽃다발. 상자 안에서 곱게 말라 간다.' },
   bouquet_four:  { name: '네 고장 꽃다발',    value: 10, fmt: 'from', desc: '네 고장의 꽃을 하나씩 모은 꽃다발. 상자 안에서 곱게 말라 간다.' },
+  nm_lantern:    { name: '종이 등불',         value: 6,  fmt: 'plain', desc: '축제 밤 야시장에서 산 종이 등불. 불을 넣으면 지금도 벚꽃 무늬가 둥지 벽에 번진다.' },
+  nm_mask:       { name: '축제 가면',         value: 10, fmt: 'plain', desc: '축제 밤 야시장에서 산 나무 가면. 칠이 조금 벗겨졌지만, 쓰면 그날 밤 음악이 들리는 것 같다.' },
+  fest_drawing:  { name: '축제 그림',         value: 8,  fmt: 'of',   say: false, desc: '왕도 축제를 그린 그림. 하늘 가득 국화 불꽃이 터지고, 그 아래 식구들이 손을 잡고 작게 서 있다.' },
   festival_garland: { name: '축제 꽃장식',     value: 8,  fmt: 'plain', desc: '왕도 축제에서 처음 춤춘 날 받은 꽃장식. 꽃은 말랐지만 방울 소리는 그대로다.' },
+};
+
+// ── 왕도 야시장: 축제 날(토·일) 저녁부터 밤까지 왕도에 노점이 섬 (nightmarket.js) ──
+// 일요일 밤은 축제가 끝나는 자정에 함께 걷음. 적대 드래곤도 이용할 수 있음
+// ── 왕도 축제에 식구들 데려가기 (game-life.js festOuting). 축제마다 식구 하나에 한 번 ──
+// {a}: 식구 이름, {o}: 식구가 부르는 이름(엄마·아빠·드래곤 이름). [이/가] 등은 이름 받침에 맞춤
+const KIN_FEST = {
+  bond: 5,            // 오르는 유대
+  drawChance: 0.4,    // 아이(아이·소년)나 어린 용이 함께 가면, 돌아와 축제 그림을 그려 줄 확률
+  drawStages: ['아이', '소년', '어린 용'],
+  open: ['식구들을 데리고 왕도 축제에 갔다. 성문을 지나자 북소리와 사람들 웃음소리가 한꺼번에 밀려왔다.', '식구들과 함께 왕도 광장으로 들어섰다. 깃발이 줄줄이 나부끼고, 어디선가 구운 밤 냄새가 났다.'],
+  openNight: ['해가 지고 등불이 켜질 무렵, 식구들을 데리고 왕도 축제에 갔다. 골목마다 야시장 노점이 줄지어 섰다.'],
+  family: ['식구들이 서로 손과 꼬리를 잡고 광장을 한 바퀴 돌았다. 오늘 밤 둥지는 일찍 조용해지겠다.', '돌아오는 길, 식구들은 서로 본 것을 이야기하느라 쉴 새가 없었다.'],
+  scene: {
+    babyH: ['{a}[을/를] 품에 안고 광장을 걸었다. 북소리가 울릴 때마다 {a}[이/가] 작은 손을 버둥거리며 까르르 웃었다.', '포대기 속 {a}[이/가] 머리 위로 흔들리는 깃발을 눈으로 좇다가 스르르 잠들었다.'],
+    kidH: ['{a}[이/가] 줄타기 광대 앞에서 입을 떡 벌린 채 한참을 서 있었다.', '{a}[이/가] 사람들 틈에 끼어 빙글빙글 춤을 추었다. "{o}, 봤어요? 나 춤 잘 추죠!"', '{a}[이/가] 손을 꼭 잡고 놓지 않았다. 사람이 이렇게 많은 건 처음이라며 눈이 동그래졌다.'],
+    youthH: ['{a}[은/는] 또래들 무리에 섞여 노래를 따라 부르다가, 눈이 마주치자 쑥스러운 듯 손을 흔들었다.', '{a}[이/가] 활쏘기 놀이판에서 과녁 한가운데를 맞히고, 상으로 받은 리본을 슬쩍 보여 주었다.'],
+    adultH: ['{a}[이/가] 오랜만의 축제라며 옛 노래를 흥얼거렸다.', '{a}[이/가] 광장 가장자리 의자에 앉아 춤추는 사람들을 흐뭇하게 바라보았다.'],
+    hatch: ['{a}[이/가] 등 위에 납작 엎드려 흔들리는 깃발을 하나하나 눈으로 좇았다.', '불꽃이 터질 때마다 {a}[이/가] 깜짝 놀라 날개 밑으로 파고들었다가, 다시 고개를 빼꼼 내밀었다.'],
+    littleD: ['{a}[이/가] 꼬마들 사이를 뛰어다니다 꼬리로 깃발 하나를 휘감아 쓰러뜨렸다. 아이들은 오히려 깔깔 웃었다.', '{a}[이/가] "나도 불꽃 만들 수 있어!" 하며 작은 불씨를 퐁 뿜었다. 구경꾼들이 박수를 쳐 주었다.'],
+    olderD: ['{a}[이/가] 성벽 위로 날아올라 광장을 내려다보았다. 불빛 사이로 춤추는 사람들이 작은 꽃처럼 보였다.', '{a}[은/는] 의젓하게 곁을 지키다가, 음악이 바뀌자 슬쩍 박자에 맞춰 꼬리를 흔들었다.'],
+  },
+  // 야시장이 열려 있으면 이쪽이 섞여 나옴
+  night: {
+    any: ['{a}[이/가] 꼬치 굽는 냄새에 이끌려 노점 앞을 떠나지 못했다.', '{a}[이/가] 종이 등불 아래 서서 벚꽃 무늬 그림자를 손끝으로 따라 그렸다.'],
+    kidH: ['가면 노점 앞에서 {a}[이/가] 여우 가면을 써 보고는 "이제 아무도 날 못 알아보겠지?" 하고 속삭였다.'],
+    hatch: ['{a}[이/가] 설탕 사과 냄새를 킁킁 맡으며 노점 쪽으로 고개를 쭉 뺐다.'],
+    littleD: ['{a}[이/가] 국화 불꽃 막대를 입에 물고 타닥타닥 튀는 불꽃을 신기한 듯 바라보았다.'],
+  },
+  // 함께한 날들에 남는 한 줄
+  diary: ['왕도 축제에 함께 가 광장을 구경했다.', '{o}[과/와] 왕도 축제에 다녀왔다.'],
+  diaryNight: ['왕도 축제 밤, 야시장 등불 아래를 함께 걸었다.'],
+  drawLine: '둥지로 돌아오자 {a}[이/가] 축제 그림 한 장을 그려 내밀었다. 보물 상자에 간직했다.',
+  drawNote: '불꽃이 가득한 하늘 아래 {o}[과/와] 내가 손을 잡고 있는 그림.',
+};
+
+const NIGHT_MARKET = {
+  region: 'capital',
+  open: 18,        // 저녁 6시 (한국 시각)
+  close: 5,        // 다음 날 새벽 5시 (축제가 먼저 끝나면 그때)
+  // 상인 노점: 하룻밤에 살 수 있는 개수(limit)가 정해져 있음
+  npc: [
+    { id: 'grill', name: '꼬치 굽는 노점', who: '꼬치집 아주머니', say: '"갓 구운 거요! 식기 전에 하나 들고 가요."',
+      items: [{ id: 'nm_skewer', price: 14, limit: 5 }, { id: 'nm_candy_apple', price: 12, limit: 5 }] },
+    { id: 'lamp', name: '등불 노점', who: '등불장이 노인', say: '"오늘 밤 하늘엔 별 대신 이것이 뜨지."',
+      items: [{ id: 'nm_lantern', price: 30, limit: 1 }, { id: 'nm_sparkler', price: 16, limit: 5 }] },
+    { id: 'mask', name: '가면 노점', who: '가면장수 청년', say: '"하나 써 봐요. 오늘 밤엔 아무도 당신이 누군지 몰라요."',
+      items: [{ id: 'nm_mask', price: 45, limit: 1 }, { id: 'nm_star_candy', price: 12, limit: 5 }] },
+  ],
+  // 플레이어 노점: 하나씩. 올린 물건은 노점에 맡겨 두고, 야시장이 끝나면 팔리지 않은 것은 주인에게 돌아감
+  stall: { lines: 6, priceMax: 99999, qtyMax: 999, signMax: 16 },
+  greet: ['"등불 아래로 오시오. 오늘 밤은 용이든 사람이든 손님이오."', '"골목 끝까지 노점이 줄지어 섰다오. 천천히 둘러보시오."', '"축제 밤이라 성벽 궁수들도 오늘은 활을 내려놓았소."'],
 };
 
 // ── 떠돌이 야바위꾼: 하루 네 번, 한 시간씩 대륙 어딘가에 판을 벌임 (yabawi.js) ──
@@ -2162,7 +2224,7 @@ module.exports = {
   SCENES_HUMAN,
   PLAY_KINDS: Object.keys(KINDS).filter((k) => !KINDS[k].hidden), // 고를 수 있는 종족 (무작위로 뽑을 때도 이것만)
   isTestDragon: (d) => !!d && !!KINDS[d.kind]?.test,                // GM 시험용 투명 드래곤인가
-  KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, FESTIVAL, TITLES, TITLE_COUNT_NAMES, ACHIEVEMENTS, YABAWI, KEEPSAKES,
+  KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, FESTIVAL, NIGHT_MARKET, KIN_FEST, TITLES, TITLE_COUNT_NAMES, ACHIEVEMENTS, YABAWI, KEEPSAKES,
   PURIFY, CRAFT, SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, FISHING, RUIN, FACILITY, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
   DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, KIN_GROW, KIN_PLAY, KIN_TOUCH, KIN_BOND, FREE, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
   COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, DEPART, BONDS, MARKS, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG,

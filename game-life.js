@@ -6,7 +6,7 @@
 // 모든 함수는 식구 목록 kin을 직접 바꿉니다. 새 식구는 id가 null이고, 저장은 server.js가 합니다.
 
 const {
-  ITEMS, KINDS, REGIONS, SHOPS, STATS, REGION_LOOT, PLACES, FACILITY, RECIPES, DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, EVENT_RULES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, KIN_GROW, KIN_PLAY, KIN_TOUCH, KIN_BOND,
+  ITEMS, KINDS, REGIONS, SHOPS, STATS, REGION_LOOT, PLACES, FACILITY, RECIPES, DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, EVENT_RULES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, KIN_GROW, KIN_PLAY, KIN_TOUCH, KIN_BOND, KIN_FEST, FESTIVAL,
 } = require('./game-data');
 const logic = require('./game-logic');
 const EVENTS = require('./game-events');
@@ -653,6 +653,7 @@ function view(k, now, d) {
   // 둥지 이야기: 원정에 따라나선 때, 최근 세 시간 안에 돌아온 때
   if (k.data.onExp && k.data.expAt) v.expAt = k.data.expAt;
   if (k.data.expBack && now - k.data.expBack < 3 * 3600000) v.expBack = k.data.expBack;
+  if (k.data.festAt && now - k.data.festAt < 2 * DAY) v.festAt = k.data.festAt; // 둥지 이야기: 축제에 다녀온 지 이틀 안
   if (!isHome(k)) v.ended = k.data.ended || null;
   // 함께한 날들: 며칠째인지와 함께 (새것이 위로)
   if (k.status === 'home') {
@@ -1608,7 +1609,45 @@ function growInfo(k) {
   };
 }
 
+// ── 왕도 축제에 식구들 데려가기: 축제 중 왕도에 있을 때, 이번 축제에 아직 안 간 식구 모두 ──
+const FEST_GROUP = { '아기': 'babyH', '아이': 'kidH', '소년': 'kidH', '청소년': 'youthH', '어른': 'adultH', '노년': 'adultH', '해츨링': 'hatch', '어린 용': 'littleD', '젊은 용': 'olderD', '다 자란 용': 'olderD' };
+const festKids = (kin, key, now = Date.now()) => kin.filter((k) => k.status === 'home' && !k.data.onExp && !k.data.runaway && !(k.type === 'drake' && k.data.errand) && k.data.festKey !== key);
+function festOuting(d, kin, fest, nightOpen, now = Date.now()) {
+  if (!fest) return { error: '지금은 축제가 열리지 않았다.' };
+  if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
+  if (d.region !== FESTIVAL.region) return { error: `식구들과 축제를 보려면 ${REGIONS[FESTIVAL.region]?.name || '왕도'}에 가야 한다.` };
+  if (!d.nest) return { error: '아직 둥지를 틀지 않아 데려갈 식구가 없다.' };
+  const went = festKids(kin, fest.key, now);
+  if (!went.length) return { error: kin.some((k) => k.data.festKey === fest.key) ? '이번 축제에는 이미 식구들과 함께 다녀왔다.' : '함께 축제에 갈 수 있는 식구가 없다.' };
+  const F = KIN_FEST, call = callName(d);
+  const line = (tpl, k) => fillT(tpl, { a: k ? k.name : '', o: call });
+  const lines = [pick(nightOpen ? F.openNight : F.open)];
+  const used = new Set(); // 한 나들이에서 같은 장면이 겹치지 않게
+  for (const k of went) {
+    const g = FEST_GROUP[stageOf(k, now).name] || 'kidH';
+    const pool = [...(F.scene[g] || F.scene.kidH)];
+    if (nightOpen) pool.push(...(g === 'hatch' ? [] : F.night.any), ...(F.night[g] || [])); // 밤에는 야시장 장면도 (해츨링은 해츨링 장면만)
+    const fresh = pool.filter((t) => !used.has(t));
+    const tpl = pick(fresh.length ? fresh : pool);
+    used.add(tpl);
+    const gain = addBond(k, F.bond);
+    lines.push(`${line(tpl, k)}${gain ? ` (${k.name} 유대 +${gain})` : ''}`);
+    growAdd(k, 'warm', 0.5);
+    k.data.festKey = fest.key; k.data.festAt = now;
+    diary(k, line(pick(nightOpen ? F.diaryNight : F.diary), k), now);
+  }
+  if (went.length > 1) lines.push(pick(F.family));
+  // 아이나 어린 용이 함께 갔으면, 가끔 축제 그림을 그려 줌 (보물 상자)
+  const drawer = went.filter((k) => F.drawStages.includes(stageOf(k, now).name));
+  if (drawer.length && Math.random() < F.drawChance) {
+    const k = pick(drawer);
+    if (logic.chestAdd(d, 'fest_drawing', k.name, line(F.drawNote, k), now)) lines.push(line(F.drawLine, k));
+  }
+  return { title: '왕도 축제', lines, items: [] };
+}
+
 module.exports = {
+  festKids, festOuting, // 왕도 축제에 식구들 데려가기
   touch, // 교감
   playable, playTogether, bestFriends, growInfo,
   expCandidates,

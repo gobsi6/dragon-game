@@ -392,6 +392,7 @@ const meOf = (d) => ({
   achNew: logic.achHasNew(d), // 아직 열어 보지 않은 새 업적
   yabawi: yabawi.here(d),     // 같은 장소에 야바위꾼이 있으면 { until, greet … }
   yabawiNow: yabawi.nowInfo(), // 대륙 어딘가에 야바위꾼이 나와 있으면 { hint, until } (지역 카드의 알림 줄)
+  nightMarket: nightMarket.status(d), // 축제 중이면 { open, until, next, here, mine } (왕도 야시장)
   craftMult: logic.titleMods(d).craftEn || 1,
   mob: mobs.summary(d),                     // 맡은 모브 드래곤 의뢰와 진행도
   craft: logic.craftView(d),                // 찾아낸 제작법, 대성공 확률, 공방, 장신구 강화·각인
@@ -718,6 +719,8 @@ const boss = require('./boss')({ io, db, online, logic, combat, arena, sendMe })
 // 떠돌이 야바위꾼: 하루 네 번 한 시간씩 대륙 어딘가에 판을 벌임 (yabawi.js)
 const slate = require('./slate')({ io, db, entryOf }); // 석판 (게시판)
 const yabawi = require('./yabawi')({ io, db, online, logic, sendMe, isOpen: (r) => ruin.unlocked(r) }); // ruin은 아래에서 만들어지지만, 쓰는 건 게임이 돌아갈 때라 괜찮음
+// 왕도 야시장: 축제 날 저녁 6시~새벽 5시, 상인 노점과 드래곤들의 노점 (nightmarket.js)
+const nightMarket = require('./nightmarket')({ io, db, online, logic, sendMe });
 // ── 정화: 오염된 땅에서 행동할수록 모두의 기여가 쌓이고, 목표에 닿으면 그 땅의 오염이 일찍 걷힘 ──
 // 오염 시계 (GM이 즉시 일으키면 바뀜). logic이 이걸 보고 지금 오염된 곳을 셈
 let corruptClock = db.worldGet('corruptClock') || { off: 0, bump: 0, force: null };
@@ -1742,6 +1745,12 @@ function onConnect(socket) {
   const counted = (key, fn) => (...a) => { const r = fn(...a); if (!r.error) r.lines.push(...logic.traitCount(a[0], key)); return r; };
   itemAction('market:buy', counted('trade', (d, p, have) => logic.buy(d, str(p.item), Number(p.qty), have)));
   itemAction('market:sell', counted('trade', (d, p, have) => logic.sell(d, str(p.item), Number(p.qty), have)));
+  // 왕도 야시장: 상인 노점에서 사기 · 내 노점에 올리기·거두기·간판 · 다른 드래곤 노점에서 사기
+  itemAction('nm:npcBuy', (d, p) => nightMarket.npcBuy(d, str(p.item), p.qty));
+  itemAction('nm:put', (d, p) => nightMarket.put(d, str(p.item), p.qty, p.price, typeof p.sign === 'string' ? p.sign : undefined));
+  itemAction('nm:take', (d, p) => nightMarket.take(d, p.item ? str(p.item) : null));
+  itemAction('nm:sign', (d, p) => nightMarket.setSign(d, typeof p.sign === 'string' ? p.sign : ''));
+  itemAction('nm:buy', (d, p) => nightMarket.buyFrom(d, p.seller, str(p.item), p.qty));
   itemAction('intimidate', counted('intimidate', (d) => logic.intimidate(d)), null, (res) => (res.gold > 0 ? 'intimidate' : null));
   // ── 낚시: 던지면 서버가 입질 시각을 정하고, 당긴 시각으로 결과를 정함 ──
   itemAction('fish:cast', (d, p, have) => {
@@ -1809,6 +1818,7 @@ function onConnect(socket) {
   // ── 둥지 식구 ──
   itemAction('kin:care', (d, p, have, kin) => life.care(d, kin, p.id, str(p.item), have));
   itemAction('kin:touch', (d, p, have, kin) => life.touch(d, kin, Number(p.id), str(p.act))); // 교감: 쓰다듬기·안아 주기 등
+  itemAction('kin:fest', (d, p, have, kin) => life.festOuting(d, kin, logic.festivalNow(), !!nightMarket.sessionAt())); // 왕도 축제에 식구들 데려가기
   // ── 반려의 둥지에서 그 집 식구 돌보기 (인간 아이 돌보기, 새끼 드래곤 가르치기). 유대·능력치는 반려의 식구에게 쌓임 ──
   const partnerHome = (d) => {
     const ph = logic.hooks.partnerNest(d);
@@ -2058,6 +2068,13 @@ function onConnect(socket) {
     ack({ ok: true, weather: cur, log: db.gmLogList(40) });
   });
 
+  socket.on('nm:get', (payload, ack) => {
+    if (typeof ack !== 'function') return;
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+    const res = nightMarket.view(entry.dragon);
+    ack(res.error ? res : { ok: true, nm: res });
+  });
   socket.on('market:get', (payload, ack) => {
     if (typeof ack !== 'function') return;
     const entry = entryOf(socket);

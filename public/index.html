@@ -2194,7 +2194,7 @@
   .lg-day { margin: 10px 2px 2px; font: 700 12.5px/1.3 var(--serif); color: var(--steel-d); display: flex; align-items: center; gap: 8px; }
   .lg-day::after { content: ""; flex: 1; height: 1px; background: var(--line-soft); }
   .lg-row { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px 10px 14px; background: var(--surface-2); border: 1px solid var(--line-in); border-left: 3px solid var(--lg-c, #9A9C98); border-radius: 3px; }
-  .lg-row.gift_in { --lg-c: #3A7A55; } .lg-row.gift_out { --lg-c: #A0574B; } .lg-row.trade { --lg-c: #3C5A73; } .lg-row.gm { --lg-c: #B8913A; }
+  .lg-row.gift_in { --lg-c: #3A7A55; } .lg-row.gift_out { --lg-c: #A0574B; } .lg-row.trade { --lg-c: #3C5A73; } .lg-row.market { --lg-c: #8A3D55; } .lg-row.gm { --lg-c: #B8913A; }
   .lg-top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
   .lg-top .k { font: 600 11.5px/18px var(--sans); padding: 0 7px; border-radius: 9px; color: #fff; background: var(--lg-c, #9A9C98); }
   .lg-top b { font: 700 14px/1.3 var(--serif); color: var(--ink); }
@@ -2930,6 +2930,52 @@
   .wx.fest .fr .nm { flex: 1; min-width: 0; font: 600 13.5px/1.3 var(--serif); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .wx.fest .fr .btn { min-height: 32px; padding: 0 12px; font-size: 12.5px; }
   .wx.fest .fr .done { font-size: 12px; color: #8A3D55; }
+  .wx.fest .fk { display: flex; align-items: center; gap: 10px; min-height: 36px; }
+  .wx.fest .fk .fc { flex: 1; min-width: 0; }
+  .wx.fest .fk .btn { flex: none; min-height: 32px; padding: 0 12px; font-size: 12.5px; }
+  /* 왕도 야시장: 축제 칸 아래 한 줄 + 창 (시장 창과 같은 모양, 밤빛 배너) */
+  .wx.fest .nm-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; border-top: 1px dashed var(--line-in); padding-top: 8px; }
+  .wx.fest .nm-row .nm-t { flex: 1; min-width: 0; margin: 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
+  .wx.fest .nm-row .nm-t b { font: 600 13px/1.4 var(--serif); color: #8A3D55; margin-right: 6px; }
+  .wx.fest .nm-row .btn { flex: none; min-height: 32px; padding: 0 12px; font-size: 12.5px; }
+  .nm-banner { background: #3A2C45; }
+  .nm-banner .mkb-where { color: #D9C3D3; }
+  .nm-banner .mkb-note { color: #D8C9D6; }
+  #nm-tabs button.on { border-bottom-color: #8A3D55; color: #8A3D55; }
+  .nm-shop { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; margin: 6px 2px 0; }
+  .nm-shop:first-child { margin-top: 0; }
+  .nm-shop b { font: 700 14.5px/1.4 var(--serif); color: var(--ink); }
+  .nm-shop small { font-size: 12px; color: var(--muted); }
+  .nm-shop .who { font: 400 12.5px/1.5 var(--serif); color: #8A3D55; }
+  .mine-tag { align-self: center; font: 600 11px/18px var(--sans); padding: 0 7px; color: #8A3D55; background: #FBF1F4; border: 1px solid #E2BFCB; border-radius: 2px; }
+  .nm-stall { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 58px; padding: 10px 14px; border: 1px solid var(--line-in); border-radius: 4px; background: var(--surface-2); text-align: left; color: inherit; }
+  .nm-stall:hover { border-color: #D7B3C1; background: #FDF8FA; }
+  .nm-stall.mine { background: #FDF8FA; border-color: #EBD3DC; }
+  .nm-stall .tx, .nm-st-top .tx { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+  .nm-stall b, .nm-st-top b { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font: 700 15px/1.35 var(--serif); color: var(--ink); }
+  .nm-stall small, .nm-st-top small { font-size: 12px; color: var(--muted); }
+  .nm-stall .chev { width: 16px; height: 16px; flex: none; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .nm-st-top { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; background: #3A2C45; border-radius: 4px; }
+  .nm-st-top b { font-size: 17px; color: #F4F7FA; }
+  .nm-st-top small { color: #D8C9D6; }
+  .nm-st-top .mine-tag { background: rgba(255, 255, 255, .12); border-color: rgba(255, 255, 255, .25); color: #F3D9E3; }
+  .nm-st-top .mkb-gold { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 16px; background: rgba(255, 255, 255, .12); font-size: 13px; color: #E8DCC0; }
+  .nm-st-top .mkb-gold .coin { color: #E8CF8A; }
+  .nm-st-top .mkb-gold b { font: 700 15px/1 var(--sans); color: #F3E2B0; font-variant-numeric: tabular-nums; }
+  .nm-q { margin: 0; }
+  .nm-cats .utabs { margin: 0; }
+  .mk-row.nm-pick[hidden] { display: none; }
+  .mk-row .nm small .left { color: var(--ink-2); }
+  .nm-mine { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--surface-2); border: 1px solid var(--line-in); border-radius: 4px; }
+  .nm-mine .r { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .nm-mine .r .input { flex: 1; min-width: 150px; min-height: 36px; }
+  .nm-mine .r .btn { min-height: 36px; }
+  .nm-mine p { margin: 0; font-size: 12px; line-height: 1.6; color: var(--muted); }
+  .nm-put { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .nm-put label { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
+  .nm-put .input { width: 74px; min-height: 34px; padding: 0 8px; font-variant-numeric: tabular-nums; }
+  .nm-put .btn { min-height: 34px; padding: 0 12px; }
+  @media (max-width: 520px) { .nm-put { flex: 1 1 100%; justify-content: flex-end; } }
 
   /* ── 둥지 이야기: 식구들의 하루를 일기처럼 ── */
   .nest-story { margin-bottom: 18px; }
@@ -3620,6 +3666,32 @@
   </div>
 </dialog>
 
+<dialog class="frame dlg wide" id="nm-dlg" aria-labelledby="nm-dlg-title">
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="nm-dlg-title">야시장</h2></div>
+  <div class="body">
+    <div class="mk-banner nm-banner">
+      <div class="mkb-top">
+        <div class="mkb-who"><span class="mkb-where" id="nm-where"></span><span class="mkb-say" id="nm-say"></span></div>
+        <span class="mkb-gold"><i class="coin" aria-hidden="true"></i><b id="nm-gold"></b></span>
+      </div>
+      <p class="mkb-note" id="nm-note"></p>
+    </div>
+    <div class="mk-tabs" id="nm-tabs" role="tablist" aria-label="야시장"><button type="button" role="tab" data-t="npc" class="on">상인 노점<span class="mk-n" id="nm-n-npc"></span></button><button type="button" role="tab" data-t="street">노점 거리<span class="mk-n" id="nm-n-street"></span></button><button type="button" role="tab" data-t="mine">내 노점<span class="mk-n" id="nm-n-mine"></span></button></div>
+    <div id="nm-body"></div>
+    <div class="row"><button class="btn" type="button" id="nm-close">닫기</button></div>
+  </div>
+</dialog>
+
+<dialog class="frame dlg wide" id="nm-stall-dlg" aria-labelledby="nm-stall-title">
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="nm-stall-title">노점</h2></div>
+  <div class="body">
+    <div class="nm-st-top"><div class="tx"><b id="nm-st-name"></b><small id="nm-st-who"></small></div><span class="mkb-gold"><i class="coin" aria-hidden="true"></i><b id="nm-st-gold"></b></span></div>
+    <div class="mk-list" id="nm-st-list"></div>
+    <div class="row"><button class="btn" type="button" id="nm-st-back">노점 거리로</button></div>
+  </div>
+</dialog>
 <dialog class="frame dlg" id="notes-dlg" aria-labelledby="notes-dlg-title">
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="notes-dlg-title">업데이트 노트</h2></div>
@@ -5830,7 +5902,7 @@
   $('uses-close').addEventListener('click', () => $('uses-dlg').close());
   // ── 주고받은 기록 ──
   let ledgerF = 'all';
-  const LEDGER_KIND = { gift_in: '받은 선물', gift_out: '보낸 선물', trade: '교환', gm: 'GM 지급', bet: '내기' };
+  const LEDGER_KIND = { gift_in: '받은 선물', gift_out: '보낸 선물', trade: '교환', gm: 'GM 지급', bet: '내기', market: '야시장' };
   function ledgerChips(host, gold, items) {
     if (gold) { const c = document.createElement('span'); c.className = 'lg-chip gold'; c.innerHTML = '<i class="coin" aria-hidden="true"></i>'; c.append(`금화 ${gold.toLocaleString()}닢`); host.appendChild(c); }
     for (const x of items || []) {
@@ -9285,6 +9357,11 @@
       '{a}[이/가] 잠든 {b} 위에 담요를 살며시 덮어 주었다.',
     ],
     // 원정
+    festGo: ['{n}[이/가] {o}[과/와] 함께 왕도 축제에 갔다. 둥지가 텅 비었다.', '{n}[이/가] 들뜬 얼굴로 {o}[을/를] 따라 왕도 축제 구경을 나섰다.'],
+    festAfter: ['{a}[이/가] 축제에서 본 줄타기 광대 흉내를 낸다며 통나무 위를 걷다 미끄러졌다.', '{a}[이/가] 축제에서 들은 노래를 흥얼거리며 둥지 바닥을 쓸고 있다.', '{a}[이/가] 축제 이야기를 벌써 다섯 번째 하고 있다. 불꽃이 얼마나 컸는지 두 팔을 활짝 벌린다.', '{a}[이/가] 다음 축제는 언제냐고 손가락을 꼽으며 묻는다.'],
+    festAfterHatch: ['{a}[이/가] 꿈속에서도 불꽃을 보는지 자다가 작게 \"퐁\" 하고 불씨를 뿜었다.', '{a}[이/가] 둥지 입구에 매단 천 조각이 깃발처럼 흔들리자 신이 나서 꼬리를 흔든다.'],
+    festWant: ['{a}[이/가] 왕도 쪽 하늘에 오르는 불꽃을 보며 가 보고 싶다고 조른다.', '{a}[이/가] 바람에 실려 오는 북소리에 귀를 쫑긋 세우고 있다.'],
+    festWantHatch: ['멀리서 불꽃 터지는 소리가 들릴 때마다 {a}[이/가] 고개를 번쩍 들고 그쪽을 바라본다.'],
     depart: [
       '{n}[이/가] {o}[을/를] 따라 원정길에 올랐다. {r}[으로/로] 간다며 들떠 있다.',
       '{n}[이/가] {o}의 뒤를 바짝 따라 원정을 떠났다. 남은 식구들이 입구까지 배웅했다.',
@@ -9318,6 +9395,8 @@
     // 원정에 따라나선 때, 돌아온 때는 그 시간의 이야기로 꼭 남김
     const dep = all.filter((k) => k.expAt >= t0 && k.expAt < t1);
     if (dep.length && !salt) { storyCtx.n = joinNames(dep); return storyText(pickOf(rnd, STORY.depart)); }
+    const fest = all.filter((k) => k.festAt >= t0 && k.festAt < t1);
+    if (fest.length && !salt) { storyCtx.n = joinNames(fest); return storyText(pickOf(rnd, STORY.festGo)); }
     const back = all.filter((k) => k.expBack >= t0 && k.expBack < t1);
     if (back.length && !salt) { storyCtx.n = joinNames(back); return storyText(pickOf(rnd, STORY.back)); }
     const away = all.filter((k) => k.onExp && (!k.expAt || k.expAt < t0));          // 이 시간에 원정길에 있던 식구
@@ -9350,6 +9429,9 @@
     else if (a.satWord === '출출함') add(STORY.peckish);
     else if (a.satWord === '배부름') add(STORY.full);
     if (a.mood === 'happy') add(STORY.happy);
+    // 왕도 축제: 다녀온 지 이틀 안이면 그 이야기, 축제 중인데 아직 못 갔으면 가 보고 싶어 함
+    if (a.festAt && a.festAt < t0) add(a.stage === '해츨링' ? STORY.festAfterHatch : STORY.festAfter, 2);
+    else if (S.me?.nightMarket && !a.festAt) add(a.stage === '해츨링' ? STORY.festWantHatch : STORY.festWant);
     // 유대: 높으면 내 드래곤을 따르고, 낮으면 아직 서먹함
     const bond = a.bond ?? 50;
     if (bond >= 80) add(STORY.bondHigh, 2);
@@ -11739,12 +11821,32 @@
     if (!f.on) return;
     box.style.setProperty('--wc', '#A84F6A');
     box.innerHTML = `<span class="ic">${FEST_SVG}</span><div class="hd"><b>왕도 축제</b><small></small></div><div class="fl"></div>`;
+    renderNmRow();
     const capital = S.regions.capital?.name || '왕도';
     box.querySelector('.hd small').textContent = f.here
       ? `광장에 음악이 울린다. 함께 춤추면 '축제의 흥'이 붙는다. ${untilText(f.until)} 뒤에 끝난다.`
       : `${capital}에서 주말 축제가 열리고 있다. 광장에 가면 다른 드래곤과 춤출 수 있다. ${untilText(f.until)} 뒤에 끝난다.`;
     const fl = box.querySelector('.fl');
     if (!f.here) { fl.remove(); return; }
+    // 식구들 데려가기: 이번 축제에 아직 안 간 식구가 있으면 버튼, 다 다녀왔으면 한 줄
+    const kf = f.kinFest;
+    if (kf && (kf.left || kf.done)) {
+      const r = document.createElement('div'); r.className = 'fk';
+      const t = document.createElement('p'); t.className = 'fc';
+      t.textContent = kf.left ? `둥지 식구 ${kf.left}${kf.done ? '명이 아직 축제를 보지 못했다.' : '명을 데리고 축제를 구경할 수 있다.'}` : '이번 축제에는 식구들과 함께 다녀왔다.';
+      r.appendChild(t);
+      if (kf.left) {
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'btn'; b.textContent = '식구들과 구경하기';
+        b.addEventListener('click', () => socket.emit('kin:fest', {}, (res) => {
+          if (res.error) { SFX.play('error'); return toast(res.error); }
+          SFX.play('notice');
+          addNews(res.result);
+          loadFest();
+        }));
+        r.appendChild(b);
+      }
+      fl.appendChild(r);
+    }
     if (f.count) { const c = document.createElement('p'); c.className = 'fc'; c.textContent = `이번 축제에서 ${f.count}번 춤추었다. 같은 드래곤과는 축제마다 한 번씩 출 수 있다.`; fl.appendChild(c); }
     if (!f.list.length) { const e = document.createElement('p'); e.className = 'fc'; e.textContent = '광장에 다른 드래곤이 없다. 누군가 오기를 기다리자.'; fl.appendChild(e); return; }
     for (const x of f.list) {
@@ -11786,6 +11888,261 @@
       ttl: x.seconds * 1000,
     });
   }
+  // ── 왕도 야시장: 축제 날 저녁 6시~새벽 5시. 상인 노점 · 노점 거리(드래곤들의 노점) · 내 노점 ──
+  const nmClock = (t) => { const h = new Date(t).getHours(); return h >= 12 ? `저녁 ${h === 12 ? 12 : h - 12}시` : `새벽 ${h}시`; };
+  function renderNmRow() {
+    const box = $('fest');
+    if (!box || box.hidden) return;
+    let row = box.querySelector('.nm-row');
+    const n = S.me?.nightMarket;
+    if (!n) { row?.remove(); return; }
+    if (!row) { row = document.createElement('div'); row.className = 'nm-row'; box.appendChild(row); }
+    row.replaceChildren();
+    const t = document.createElement('p'); t.className = 'nm-t';
+    const b = document.createElement('b'); b.textContent = '야시장';
+    const capital = S.regions.capital?.name || '왕도';
+    t.append(b, n.open
+      ? `${n.here ? '광장에 등불이 켜지고 노점이 줄지어 섰다.' : `${capital} 광장에 야시장이 열렸다.`} ${untilText(n.until)} 뒤에 노점을 걷는다.${n.mine && !n.here ? ' 내 노점이 펼쳐져 있다.' : ''}`
+      : n.next ? `${nmClock(n.next)}면 광장에 야시장이 선다.` : '오늘 밤 야시장은 노점을 걷었다.');
+    row.appendChild(t);
+    if (n.open && (n.here || n.mine)) {
+      const go = document.createElement('button'); go.type = 'button'; go.className = `btn${n.here ? ' primary' : ''}`;
+      go.textContent = n.here ? '야시장 둘러보기' : '내 노점 보기';
+      go.addEventListener('click', () => { if (!n.here) nmTab = 'mine'; openNightMarket(); });
+      row.appendChild(go);
+    }
+  }
+  setInterval(() => { if (S.me?.nightMarket) renderNmRow(); }, 60000); // 남은 시간 글씨
+  let nmTab = 'npc', nmGreet = '', nmQ = '', nmCat = 'all';
+  let NM_LAST = null, nmStallKey = null; // 마지막으로 받은 야시장 정보, 열어 둔 노점
+  const nmEmpty = (text) => { const e = document.createElement('div'); e.className = 'mk-empty'; e.textContent = text; return e; };
+  const nmShopHead = (title, sub, who) => {
+    const h = document.createElement('div'); h.className = 'nm-shop';
+    const b = document.createElement('b'); b.textContent = title; h.appendChild(b);
+    if (sub) { const s2 = document.createElement('small'); s2.textContent = sub; h.appendChild(s2); }
+    if (who) { const w = document.createElement('span'); w.className = 'who'; w.textContent = who; h.appendChild(w); }
+    return h;
+  };
+  function nmAct(event, payload, key) {
+    socket.emit(event, payload, (res) => {
+      if (res.error) { SFX.play('error'); toast(res.error); return setTimeout(openNightMarket, 50); }
+      SFX.play('coin');
+      if (key) mkQty.delete(key);
+      toast(res.result.lines.join(' '));
+      setTimeout(openNightMarket, 50);
+    });
+  }
+  function openNightMarket() {
+    socket.emit('nm:get', {}, (res) => {
+      const dlg = $('nm-dlg');
+      if (res.error) { if (dlg.open) dlg.close(); return toast(res.error); }
+      const m = res.nm, scroller = dlg.querySelector('.body');
+      const keep = [dlg.scrollTop, scroller.scrollTop];
+      if (!dlg.open || !nmGreet) nmGreet = m.greet;
+      if (m.away) nmTab = 'mine'; // 광장을 떠나 있으면 내 노점만
+      $('nm-tabs').hidden = !!m.away;
+      $('nm-where').textContent = `${S.regions.capital?.name || '왕도'} · 야시장`;
+      $('nm-say').textContent = nmGreet;
+      $('nm-gold').textContent = `${S.me.gold.toLocaleString()}닢`;
+      $('nm-note').textContent = `${untilText(m.until)} 뒤에 노점을 걷는다. 노점에 올린 물건이 팔리지 않으면 야시장이 끝날 때 주인 소지품으로 돌아간다.`;
+      $('nm-n-npc').textContent = m.npc.reduce((a, x) => a + x.items.length, 0);
+      $('nm-n-street').textContent = m.stalls.length + (m.mine?.items.length ? 1 : 0);
+      $('nm-n-mine').textContent = m.mine ? m.mine.items.length : '';
+      for (const t of $('nm-tabs').children) { const on = t.dataset.t === nmTab; t.classList.toggle('on', on); t.setAttribute('aria-selected', on); }
+      const body = $('nm-body');
+      body.replaceChildren();
+      const list = document.createElement('div'); list.className = 'mk-list';
+      if (nmTab === 'npc') {
+        for (const shop of m.npc) {
+          list.appendChild(nmShopHead(shop.name, shop.who, shop.say));
+          for (const x of shop.items) {
+            const row = marketRow(x.id, x.left ? '' : 'locked');
+            const sm = row.querySelector('small');
+            const u = document.createElement('span'); u.className = 'unit'; u.textContent = `개당 ${x.price}닢`;
+            const q = document.createElement('span'); q.className = `daily${x.left ? '' : ' none'}`; q.textContent = `오늘 밤 ${x.left}/${x.limit}개`;
+            sm.prepend(u, ' · ', q, ' · ');
+            if (!x.left) { const l = document.createElement('span'); l.className = 'lock'; l.textContent = '오늘 밤은 다 샀다'; row.querySelector('.ctl').appendChild(l); }
+            else mkControls(row, `nm:${x.id}`, x.price, x.left, '사기', (n) => nmAct('nm:npcBuy', { item: x.id, qty: n }, `nm:${x.id}`), (t) => S.me.gold >= t);
+            list.appendChild(row);
+          }
+        }
+      } else if (nmTab === 'street') {
+        // 노점마다 제목 카드(간판 · 파는 드래곤)만. 누르면 그 노점 창이 따로 열림. 내 노점은 맨 위
+        const all = nmStalls(m);
+        if (!all.length) list.appendChild(nmEmpty('아직 노점을 편 드래곤이 없다. \'내 노점\'에서 먼저 노점을 펴 보자.'));
+        for (const st of all) {
+          const card = document.createElement('button'); card.type = 'button'; card.className = `nm-stall${st.mine ? ' mine' : ''}`;
+          const tx = document.createElement('span'); tx.className = 'tx';
+          const b = document.createElement('b'); b.textContent = st.sign || `${st.name}의 노점`;
+          if (st.mine) { const t = document.createElement('span'); t.className = 'mine-tag'; t.textContent = '내 노점'; b.appendChild(t); }
+          const who = document.createElement('small'); who.textContent = `${st.name} · 물건 ${st.items.length}가지`;
+          tx.append(b, who);
+          card.innerHTML = '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+          card.prepend(tx);
+          card.addEventListener('click', () => openNmStall(st.key));
+          list.appendChild(card);
+        }
+      } else {
+        // 내 노점: 간판 · 올린 물건(거두기) · 올릴 물건
+        const mine = m.mine;
+        const box = document.createElement('div'); box.className = 'nm-mine';
+        const r = document.createElement('div'); r.className = 'r';
+        const sign = document.createElement('input');
+        sign.className = 'input'; sign.type = 'text'; sign.maxLength = m.rules.signMax; sign.placeholder = `간판 이름 (비우면 '${S.me.name}의 노점')`;
+        sign.value = mine?.sign || '';
+        r.appendChild(sign);
+        if (mine) {
+          const sb = document.createElement('button'); sb.type = 'button'; sb.className = 'btn'; sb.textContent = '간판 걸기';
+          sb.addEventListener('click', () => nmAct('nm:sign', { sign: sign.value }));
+          const cb = document.createElement('button'); cb.type = 'button'; cb.className = 'btn'; cb.textContent = '노점 걷기';
+          cb.addEventListener('click', () => { if (confirm('노점을 걷고 올린 물건을 모두 거둘까?')) nmAct('nm:take', {}); });
+          r.append(sb, cb);
+        }
+        box.appendChild(r);
+        const p = document.createElement('p');
+        p.textContent = mine
+          ? `이번 밤 ${mine.sold}개를 팔아 금화 ${mine.earned.toLocaleString()}닢을 벌었다. 팔린 금화는 바로 들어온다. 광장을 떠나도 노점은 그대로 열려 있다.`
+          : `소지품의 물건을 ${m.rules.lines}가지까지 올려 값을 매길 수 있다. 올린 물건은 노점에 맡겨 두고, 팔리면 금화가 바로 들어온다.`;
+        box.appendChild(p);
+        list.appendChild(box);
+        if (mine?.items.length) {
+          list.appendChild(nmShopHead('올려 둔 물건', `${mine.items.length} / ${m.rules.lines}가지`));
+          for (const x of mine.items) {
+            if (!S.items[x.id]) continue;
+            const row = marketRow(x.id);
+            const sm = row.querySelector('small');
+            const u = document.createElement('span'); u.className = 'unit'; u.textContent = `개당 ${x.price.toLocaleString()}닢`;
+            const q = document.createElement('span'); q.className = 'left'; q.textContent = `${x.qty}개 남음`;
+            sm.prepend(u, ' · ', q, ' · ');
+            const tb = document.createElement('button'); tb.type = 'button'; tb.className = 'btn mk-go'; tb.textContent = '거두기';
+            tb.addEventListener('click', () => nmAct('nm:take', { item: x.id }));
+            row.querySelector('.ctl').appendChild(tb);
+            list.appendChild(row);
+          }
+        }
+        if (m.away) list.appendChild(nmEmpty(`${S.regions.capital?.name || '왕도'} 광장에 가야 물건을 더 올리거나 다른 노점을 둘러볼 수 있다.`));
+        else {
+          list.appendChild(nmShopHead('올릴 물건', '보물과 끼고 있는 장신구는 올릴 수 없다'));
+          if (!m.inv.length) list.appendChild(nmEmpty('노점에 올릴 수 있는 물건이 없다.'));
+          const inv = m.inv.filter((x) => S.items[x.id]);
+          // 분류 탭 (소지품과 같은 밑줄 글자 탭. 가진 물건이 있는 분류만)
+          const NM_CATS = ['equip', 'use', 'buff', 'gift', 'meal', 'fish', 'trophy', 'mat'];
+          const kinds = {};
+          for (const x of inv) { const c = itemCat(S.items[x.id]); kinds[c] = (kinds[c] || 0) + 1; }
+          const favI = FAV.list('items');
+          if (nmCat !== 'all' && nmCat !== 'fav' && !kinds[nmCat]) nmCat = 'all';
+          if (inv.length) {
+            const q = document.createElement('input');
+            q.type = 'search'; q.className = 'input craft-q nm-q'; q.placeholder = '올릴 물건 이름으로 찾기'; q.setAttribute('aria-label', '올릴 물건 찾기'); q.autocomplete = 'off';
+            q.value = nmQ;
+            q.addEventListener('input', () => { nmQ = q.value; nmApplyQ(list); });
+            list.appendChild(q);
+            const tabX = $('nm-body').querySelector('.nm-cats .utabs')?.scrollLeft || 0;
+            const { wrap, tabs } = buildTabs([['all', '전체'], ['fav', '★ 즐겨찾기'], ...NM_CATS.filter((c) => kinds[c]).map((c) => [c, INV_TAB_NAME[c], true, kinds[c]])],
+              nmCat, (k) => { nmCat = k; openNightMarket(); }, '올릴 물건 분류');
+            wrap.classList.add('nm-cats');
+            list.appendChild(wrap);
+            setTimeout(() => showTab(tabs, tabX));
+          }
+          const order = { rare: 0, uncommon: 1, common: 2 };
+          const full = mine && mine.items.length >= m.rules.lines;
+          const shown = inv.filter((x) => nmCat === 'all' || (nmCat === 'fav' ? favI.includes(x.id) : itemCat(S.items[x.id]) === nmCat));
+          if (inv.length && !shown.length) list.appendChild(nmEmpty(nmCat === 'fav' ? '즐겨찾기한 물건 가운데 올릴 수 있는 것이 없다.' : '이 분류에 올릴 물건이 없다.'));
+          for (const x of shown.sort((a, b2) => (order[S.items[a.id].rarity] ?? 3) - (order[S.items[b2.id].rarity] ?? 3) || S.items[a.id].name.localeCompare(S.items[b2.id].name, 'ko'))) {
+            const listed = mine?.items.find((y) => y.id === x.id);
+            const row = marketRow(x.id, `nm-pick${full && !listed ? ' locked' : ''}`);
+            row.dataset.name = S.items[x.id].name;
+            const h = document.createElement('span'); h.className = 'have'; h.textContent = `${x.qty}개 있음`;
+            row.querySelector('b').appendChild(h);
+            const put = document.createElement('div'); put.className = 'nm-put';
+            const mkIn = (label, val, max) => {
+              const l = document.createElement('label'); l.textContent = label;
+              const i = document.createElement('input'); i.className = 'input'; i.type = 'number'; i.min = 1; i.max = max; i.step = 1; i.value = val; i.inputMode = 'numeric';
+              l.appendChild(i); put.appendChild(l); return i;
+            };
+            const qi = mkIn('개수', 1, Math.min(x.qty, m.rules.qtyMax));
+            const pi = mkIn('개당', listed ? listed.price : Math.max(1, x.value || 1), m.rules.priceMax);
+            const go = document.createElement('button'); go.type = 'button'; go.className = 'btn primary'; go.textContent = listed ? '더 올리기' : '올리기';
+            go.disabled = full && !listed;
+            if (go.disabled) go.title = `노점에는 ${m.rules.lines}가지까지 올릴 수 있다.`;
+            go.addEventListener('click', () => nmAct('nm:put', { item: x.id, qty: Number(qi.value), price: Number(pi.value), sign: mine ? undefined : sign.value }));
+            put.appendChild(go);
+            row.querySelector('.ctl').appendChild(put);
+            list.appendChild(row);
+          }
+        }
+      }
+      body.appendChild(list);
+      if (nmTab === 'mine') nmApplyQ(list);
+      NM_LAST = m;
+      if ($('nm-stall-dlg').open) renderNmStall();
+      if (!dlg.open) { dlg.showModal(); dlg.scrollTop = 0; scroller.scrollTop = 0; }
+      else { dlg.scrollTop = keep[0]; scroller.scrollTop = keep[1]; }
+    });
+  }
+  // 올릴 물건 찾기: 이름에 글자가 들어간 줄만 (창을 다시 그리지 않음)
+  function nmApplyQ(list) {
+    const w = nmQ.trim().toLowerCase();
+    let n = 0;
+    const rows = list.querySelectorAll('.mk-row.nm-pick');
+    for (const r of rows) { const on = !w || r.dataset.name.toLowerCase().includes(w); r.hidden = !on; if (on) n++; }
+    let none = list.querySelector('.nm-q-none');
+    if (rows.length && !n) { if (!none) { none = nmEmpty(''); none.classList.add('nm-q-none'); list.appendChild(none); } none.textContent = `'${nmQ.trim()}'${josa(nmQ.trim(), '이', '가')} 들어간 물건이 없다.`; }
+    else none?.remove();
+  }
+  $('nm-tabs').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b || b.dataset.t === nmTab) return;
+    nmTab = b.dataset.t;
+    openNightMarket();
+  });
+  $('nm-close').addEventListener('click', () => $('nm-dlg').close());
+  $('nm-dlg').addEventListener('close', () => { nmGreet = ''; nmQ = ''; if ($('nm-stall-dlg').open) $('nm-stall-dlg').close(); });
+  // 노점 거리의 노점 목록 (내 노점이 맨 위)
+  function nmStalls(m) {
+    const all = [];
+    if (m.mine?.items.length) all.push({ key: 'me', mine: true, name: S.me.name, sign: m.mine.sign, items: m.mine.items });
+    for (const st of m.stalls) all.push({ key: String(st.id), id: st.id, name: st.name, sign: st.sign, items: st.items });
+    return all;
+  }
+  // 노점 하나의 창: 야시장 창 위에 겹쳐 뜸. 사면 목록과 이 창이 함께 새로 그려짐
+  function openNmStall(key) {
+    nmStallKey = key;
+    renderNmStall();
+    const dlg = $('nm-stall-dlg');
+    if (!dlg.open) { dlg.showModal(); dlg.scrollTop = 0; dlg.querySelector('.body').scrollTop = 0; }
+  }
+  function renderNmStall() {
+    const st = NM_LAST && nmStalls(NM_LAST).find((x) => x.key === nmStallKey);
+    $('nm-st-gold').textContent = `${S.me.gold.toLocaleString()}닢`;
+    const list = $('nm-st-list');
+    list.replaceChildren();
+    if (!st) { $('nm-st-who').textContent = ''; list.appendChild(nmEmpty('물건이 모두 팔렸거나 주인이 노점을 걷었다.')); return; }
+    $('nm-stall-title').textContent = st.mine ? '내 노점' : '노점';
+    $('nm-st-name').textContent = st.sign || `${st.name}의 노점`;
+    if (st.mine) { const t = document.createElement('span'); t.className = 'mine-tag'; t.textContent = '내 노점'; $('nm-st-name').appendChild(t); }
+    $('nm-st-who').textContent = `파는 드래곤 ${st.name} · 물건 ${st.items.length}가지`;
+    for (const x of st.items) {
+      if (!S.items[x.id]) continue;
+      const row = marketRow(x.id);
+      const sm = row.querySelector('small');
+      const u = document.createElement('span'); u.className = 'unit'; u.textContent = `개당 ${x.price.toLocaleString()}닢`;
+      const q = document.createElement('span'); q.className = 'left'; q.textContent = `${x.qty}개 남음`;
+      sm.prepend(u, ' · ', q, ' · ');
+      if (st.mine) {
+        const mb = document.createElement('button'); mb.type = 'button'; mb.className = 'btn mk-go'; mb.textContent = '내 노점 관리';
+        mb.addEventListener('click', () => { $('nm-stall-dlg').close(); nmTab = 'mine'; openNightMarket(); });
+        row.querySelector('.ctl').appendChild(mb);
+      } else {
+        const have = invCache[x.id] || 0;
+        if (have) { const h = document.createElement('span'); h.className = 'have'; h.textContent = `${have}개 있음`; row.querySelector('b').appendChild(h); }
+        const key = `nmb:${st.id}:${x.id}`;
+        mkControls(row, key, x.price, x.qty, '사기', (n) => nmAct('nm:buy', { seller: st.id, item: x.id, qty: n }, key), (t) => S.me.gold >= t);
+      }
+      list.appendChild(row);
+    }
+  }
+  $('nm-st-back').addEventListener('click', () => $('nm-stall-dlg').close());
   // 멸망한 대륙: 늘 오염된 땅. 모두의 정화도와 기여 순위, 상륙지에서는 생존자와의 교환
   let ruinTop = null, ruinTopAt = 0;
   function renderRuin(box) {
@@ -14097,7 +14454,7 @@
       }
     });
     socket.on('me', (me) => {
-      setMe(me); renderSayMode(); maybeWelcome(); renderMazeBar(); FAV.migrate(); SEEN.migrate(); renderSlateDot(); renderNotesDot();
+      setMe(me); renderSayMode(); maybeWelcome(); renderMazeBar(); renderNmRow(); if ($('nm-dlg').open && !(me.nightMarket?.open && (me.nightMarket.here || nmTab === 'mine'))) $('nm-dlg').close(); FAV.migrate(); SEEN.migrate(); renderSlateDot(); renderNotesDot();
       if (!S.seenReady) { S.seenReady = true; renderRescues(); } // 서버의 읽음 표시를 받은 뒤 한 번 다시 그림 (먼저 온 '다시 일어선 드래곤' 알림)
       if (!SL.peeked) { SL.peeked = true; socket.emit('slate:peek', {}, (r) => { if (r?.ok) { SL.latest = Math.max(SL.latest, r.latest || 0); SL.replyAt = r.replyAt || 0; renderSlateDot(); } }); } // 내 글에 새 답이 왔는지
     });
@@ -14156,7 +14513,7 @@
     socket.on('notice', (r) => {
       SFX.play('notice');
       // 동료·선물·교환 소식은 바로 알림으로, 둥지 소식은 소식 카드로
-      if (['동료', '동료 요청', '선물', '교환', '결투', '부고', '구조 요청', '칭호', '라이벌'].includes(r.title)) { toast(r.lines.join(' ')); if (r.items?.length) fetchInv(); }
+      if (['동료', '동료 요청', '선물', '교환', '결투', '부고', '구조 요청', '칭호', '라이벌', '야시장'].includes(r.title)) { toast(r.lines.join(' ')); if (r.items?.length) fetchInv(); }
       else addNews(r);
     });
     socket.on('rel:changed', () => { loadRel(); refreshProfile(); });
