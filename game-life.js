@@ -6,7 +6,7 @@
 // 모든 함수는 식구 목록 kin을 직접 바꿉니다. 새 식구는 id가 null이고, 저장은 server.js가 합니다.
 
 const {
-  ITEMS, KINDS, REGIONS, SHOPS, STATS, REGION_LOOT, PLACES, FACILITY, RECIPES, DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, EVENT_RULES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, KIN_GROW, KIN_PLAY, KIN_TOUCH,
+  ITEMS, KINDS, REGIONS, SHOPS, STATS, REGION_LOOT, PLACES, FACILITY, RECIPES, DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, EVENT_RULES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, KIN_GROW, KIN_PLAY, KIN_TOUCH, KIN_BOND,
 } = require('./game-data');
 const logic = require('./game-logic');
 const EVENTS = require('./game-events');
@@ -83,6 +83,24 @@ function diary(k, text, now = Date.now()) {
   if (k.data.diary.length > DIARY_MAX) k.data.diary.splice(1, k.data.diary.length - DIARY_MAX); // 첫 장은 늘 남김
 }
 
+// 유대 올리기: 꼭대기로 갈수록 덜 오름 (KIN_BOND.curve). 내리는 것은 그대로. 실제로 오른 만큼을 돌려줌
+function addBond(k, n) {
+  if (!k) return 0;
+  const before = k.data.bond || 0;
+  if (!(n > 0)) { k.data.bond = clamp(before + (n || 0)); return k.data.bond - before; }
+  let b = before, left = n;
+  for (const [cap, rate] of KIN_BOND.curve) {
+    if (b >= cap) continue;
+    const room = (cap - b) / rate;           // 이 구간을 다 채우는 데 드는 양
+    const use = Math.min(left, room);
+    b += use * rate; left -= use;
+    if (left <= 0) break;
+  }
+  k.data.bond = clamp(Math.round(b * 10) / 10);
+  if (k.data.bond >= 100 && !k.data.bondTop) { k.data.bondTop = Date.now(); diary(k, '보호자를 세상에서 가장 믿게 되었다.'); } // 처음 100에 닿은 날
+  return Math.round((k.data.bond - before) * 10) / 10;
+}
+
 // ── 자라며 생기는 성격 (KIN_GROW) ─────────────────
 const GR = KIN_GROW;
 const clingyish = (k) => hasT(k, 'clingy') || hasT(k, 'dignified'); // 응석받이가 자라 속이 깊어져도 정은 그대로
@@ -148,7 +166,7 @@ function playTogether(a, me, b, other, now = Date.now()) {
     // 친구가 너무 많아지면 가장 덜 만난 친구부터 잊음
     const keys = Object.keys(fr);
     if (keys.length > PL.keepFriends) delete fr[keys.sort((p, q) => fr[p].n - fr[q].n || fr[p].at - fr[q].at)[0]];
-    x.data.bond = clamp(x.data.bond + PL.bond + (hasT(x, 'sociable') || hasT(x, 'packmate') ? PL.sociable : 0)); // 친구가 많은·어울리기 좋아하는
+    addBond(x, PL.bond + (hasT(x, 'sociable') || hasT(x, 'packmate') ? PL.sociable : 0)); // 친구가 많은·어울리기 좋아하는
     growAdd(x, 'friend');
     return f.n;
   };
@@ -227,7 +245,7 @@ function satUpdate(k, now, keeper, R = HG, floor = keeper ? HG.keeperFloor : 0) 
   k.data.fullAcc = (k.data.fullAcc || 0) + fullMs;
   let up = 0;
   while (k.data.fullAcc >= R.fullBondEvery) { k.data.fullAcc -= R.fullBondEvery; up++; }
-  if (up) k.data.bond = clamp(k.data.bond + up);
+  if (up) addBond(k, up);
   k.data.sat = Math.round(s * 10) / 10;
   k.data.satAt = now;
   return up;
@@ -269,7 +287,7 @@ function hatch(k, at) {
     stats: Object.fromEntries(STAT_KEYS.map((s) => [s, Math.round(base[s] / 3)])),
   });
   // 알일 때 받은 정성 (이벤트 '알 속의 두근거림')
-  if (k.data.preBond) k.data.bond = clamp(k.data.bond + k.data.preBond);
+  if (k.data.preBond) addBond(k, k.data.preBond);
   if (k.data.preStat && k.data.stats[k.data.preStat] != null) k.data.stats[k.data.preStat] += 1;
   rollLooks(k);
   diaryStart(k); // '알에서 깨어났다.'
@@ -311,7 +329,7 @@ function tick(d, kin, now = Date.now()) {
     // 모습이 정해지기 전에 들어온 식구 (이 기능이 생기기 전의 식구)
     if (k.status === 'home' && rollLooks(k)) out.lines.push(`${k.name}${josa(k.name, '을', '를')} 다시 찬찬히 들여다보았다. ${introOf(k)}`);
     if (k.status === 'home') { fillLooks(k); diaryStart(k); }
-    if (k.status === 'home') touchTick(k, now, out); // 교감: 아이가 먼저 조르기 · 놓침 · 서운함
+    if (k.status === 'home') { touchTick(k, now, out); bondGift(k, out, now); } // 교감: 아이가 먼저 조르기 · 놓침 · 서운함 · 유대가 깊으면 선물
     if (k.type === 'drake' && k.status === 'home' && k.data.errand && now >= k.data.errand.end) {
       const seek = k.data.errand.seek;
       if (seek) {
@@ -320,8 +338,8 @@ function tick(d, kin, now = Date.now()) {
         const t = findKin(kin, seek);
         if (t && isRunaway(t)) {
           t.data.runaway = null;
-          t.data.bond = clamp(t.data.bond + RW.seekBond);
-          k.data.bond = clamp(k.data.bond + 2);
+          addBond(t, RW.seekBond);
+          addBond(k, 2);
           out.lines.push(`${ga(k)} ${t.name}${josa(t.name, '을', '를')} 데리고 돌아왔다. 둘은 서로 꼭 붙어 있다. (${t.name} 유대 +${RW.seekBond})`);
           const g = runawayGift(d, t, er, out);
           if (g) out.items.push(g);
@@ -336,7 +354,7 @@ function tick(d, kin, now = Date.now()) {
     if (k.status === 'home' && isRunaway(k) && now >= k.data.runaway.until && !k.data.runaway.seeker) {
       const r = k.data.runaway.region;
       k.data.runaway = null;
-      k.data.bond = clamp(k.data.bond + RW.waitBond);
+      addBond(k, RW.waitBond);
       out.lines.push(`${ga(k)} 스스로 둥지로 돌아왔다. ${canTalk(k, now) ? `"…아무도 찾으러 오지 않았어." ` : '고개를 푹 숙이고 구석으로 갔다. '}(유대 ${RW.waitBond})`);
       const g = runawayGift(d, k, r, out);
       if (g) out.items.push(g);
@@ -364,7 +382,7 @@ function tick(d, kin, now = Date.now()) {
       const day = logic.dayIdx(now);
       if (wk && k.data.jobDay !== day) { // 일하는 날마다: 유대 조금, 견습이면 그 시설의 재주 쪽으로
         k.data.jobDay = day;
-        k.data.bond = clamp(k.data.bond + 1 + (hasT(k, 'tidy') ? 1 : 0)); // 깔끔한: 1 더
+        addBond(k, 1 + (hasT(k, 'tidy') ? 1 : 0)); // 깔끔한: 1 더
         const tl = FACILITY.list[k.data.job].talent;
         if (!wk.adult && tl && !k.data.talent && k.data.lean) k.data.lean[tl] = (k.data.lean[tl] || 0) + 2;
       }
@@ -388,7 +406,7 @@ function tick(d, kin, now = Date.now()) {
       const st = stageOf(k, now);
       if (st.i > (k.data.stage || 0)) {
         k.data.stage = st.i;
-        if (a < H.adultDay) { out.lines.push(`${ga(k)} 자라서 '${st.name}'${josa(st.name, '이', '가')} 되었다.`); diary(k, `'${st.name}'${josa(st.name, '이', '가')} 되었다.`, now); }
+        if (a < H.adultDay) { out.lines.push(`${ga(k)} 자라서 '${st.name}'${josa(st.name, '이', '가')} 되었다.`); diary(k, `'${st.name}'${josa(st.name, '이', '가')} 되었다.`, now); bondDip(k, st, out, now); }
         else if (st.name === '노년' && a < H.lifespan) { out.lines.push(`${k.name}의 머리에 흰 서리가 내렸다. 남은 날이 많지 않다.`); diary(k, '머리에 흰 서리가 내렸다.', now); }
         if (st.name !== '노년') growCheck(d, k, out.lines, true); // 자라는 단계마다 성격 하나
       }
@@ -456,6 +474,7 @@ function tick(d, kin, now = Date.now()) {
         k.data.stage = st.i;
         out.lines.push(`${ga(k)} 자라서 '${st.name}'${josa(st.name, '이', '가')} 되었다.`);
         diary(k, `'${st.name}'${josa(st.name, '이', '가')} 되었다.`, now);
+        bondDip(k, st, out, now); // 젊은 용: 조금 서먹해짐
         growCheck(d, k, out.lines, true); // 자라는 단계마다 성격 하나
         if (st.name === '다 자란 용') growUp(d, k, out.lines, 'clingy', 'dignified', `늘 꼬리를 물고 따라다니던 ${ga(k)} 이제는 말없이 곁에 앉아 먼저 마음을 살핀다. 응석받이의 속이 깊어졌다.`);
       }
@@ -509,7 +528,7 @@ function perksOf(kin, now = Date.now()) {
       const A = DH.ally, st = k.data.stats;
       p.ally = {
         id: k.id, name: k.name, kind: k.data.kind,
-        atk: Math.round((A.base + st.claw * A.claw + st.wing * A.wing + (A.stage[stageOf(k, now).name] || 0)) * (hasT(k, 'fierce') ? GR.fierce : 1) * (hasT(k, 'bold') ? GR.bold : 1)), // 사나운·겁 없는
+        atk: Math.round((A.base + st.claw * A.claw + st.wing * A.wing + (A.stage[stageOf(k, now).name] || 0)) * (hasT(k, 'fierce') ? GR.fierce : 1) * (hasT(k, 'bold') ? GR.bold : 1) * (k.data.bond >= KIN_BOND.strong.min ? KIN_BOND.strong.ally : 1)), // 사나운·겁 없는 · 유대가 깊으면 더 세게
         hunter: hasT(k, 'hunter'), clever: hasT(k, 'clever'), guard: hasT(k, 'shieldmate'), // 등을 맡기는
       };
     }
@@ -669,8 +688,8 @@ function feedDrake(d, kin, k, item, have, now) {
   satUpdate(k, now, false, DF, drakeFloor(k, now));
   const hungry = k.data.sat < DF.hungry;
   const fav = (ITEMS[item]?.cooked || item) === DF.kindFav[k.data.kind];
-  const gain = Math.max(1, f.bond + (fav ? DF.favBond : 0) + (clingyish(k) ? 1 : 0) + (hasT(k, 'foodie') ? (fav ? 3 : -1) : 0)); // 입맛 까다로운
-  k.data.bond = clamp(k.data.bond + gain);
+  let gain = Math.max(1, f.bond + (fav ? DF.favBond : 0) + (clingyish(k) ? 1 : 0) + (hasT(k, 'foodie') ? (fav ? 3 : -1) : 0)); // 입맛 까다로운
+  gain = addBond(k, gain); // 실제로 오른 만큼
   k.data.sat = Math.min(100, k.data.sat + f.sat);
   k.data.lastFeed = now;
   const name = ITEMS[item].name;
@@ -785,7 +804,8 @@ function touch(d, kin, id, act, now = Date.now()) {
   else if ((hasT(k, 'sleepy') || hasT(k, 'sleepyhead')) && kstHour(now) >= 6 && kstHour(now) < 10 && act !== 'story') line = `${ga(k)} 이불 속에서 "오 분만…" 하고 웅얼거린다.`;
   else line = fillLine(pickLine(TOUCH_LINES[act][pref]), k);
   if (asked) line = `${ga(k)} 기다렸다는 듯이 활짝 웃는다. ${line}`;
-  k.data.bond = clamp(k.data.bond + gain);
+  if (k.data.bond >= 100 && pref === 'like' && !shyNow) line = `${line} 보호자를 세상에서 가장 믿는 얼굴이다.`; // 유대 100
+  gain = addBond(k, gain);
   if (pref === 'like') t.liked = now;
   t.last = now;
   lines.push(`${line}${gain ? ` (유대 +${gain})` : ''}`);
@@ -793,6 +813,36 @@ function touch(d, kin, id, act, now = Date.now()) {
   return { title: k.name, lines };
 }
 // tick에서: 아이가 먼저 조르기, 조르기를 놓침, 응석받이가 서운해함
+// 자라는 고비 (청소년·젊은 용): 유대가 조금 내려가고 서먹해짐. 이 단계부터 좋아하는 교감도 바뀜
+function bondDip(k, st, out, now) {
+  const B = KIN_BOND.dip;
+  if (!B.stages.includes(st.name)) return;
+  const before = k.data.bond || 0;
+  const after = Math.max(Math.min(before, B.floor), before - B.amount);
+  if (after >= before) return;
+  k.data.bond = after;
+  const line = k.type === 'human'
+    ? `요즘 ${ga(k)} 부쩍 말수가 줄고 혼자 있는 시간이 늘었다. 예전처럼 안기려 하지도 않는다. (유대 −${Math.round(before - after)})`
+    : `요즘 ${ga(k)} 혼자 멀리 날아갔다 돌아오곤 한다. 예전처럼 품으로 파고들지 않는다. (유대 −${Math.round(before - after)})`;
+  out.lines.push(line);
+  diary(k, k.type === 'human' ? '부쩍 말수가 줄었다. 사춘기인가 보다.' : '혼자 멀리 날아갔다 돌아오기 시작했다.', now);
+}
+// 유대가 깊으면 하루 한 번쯤 작은 선물을 물어 옴
+function bondGift(k, out, now) {
+  const G = KIN_BOND.gift;
+  if ((k.data.bond || 0) < G.min || k.status !== 'home' || k.data.onExp || k.data.runaway || (k.type === 'drake' && k.data.errand) || k.type === 'egg') return;
+  const day = new Date(now + 9 * 3600000).toISOString().slice(0, 10);
+  if (k.data.giftDay === day) return;
+  k.data.giftDay = day; // 하루에 한 번만 굴림
+  if (Math.random() >= G.chance) return;
+  const list = (G[k.type] || []).filter((id) => ITEMS[id]);
+  if (!list.length) return;
+  const id = list[Math.floor(Math.random() * list.length)];
+  out.items.push({ id, qty: 1 });
+  out.lines.push(k.type === 'human'
+    ? `${ga(k)} 어디선가 ${ITEMS[id].name}${josa(ITEMS[id].name, '을', '를')} 주워 와 수줍게 내밀었다.`
+    : `${ga(k)} ${ITEMS[id].name}${josa(ITEMS[id].name, '을', '를')} 물어 와 발치에 툭 내려놓았다.`);
+}
 function touchTick(k, now, out) {
   if (k.status !== 'home') return;
   // 원정·심부름·가출로 둥지를 비우면 조르던 것은 없던 일로 (돌아와서 놓친 것으로 치지 않음)
@@ -861,9 +911,9 @@ function care(d, kin, id, item, have, now = Date.now(), opt = {}) {
   if (sulk) mood -= 1;
   let gain = Math.max(1, c.bond + logic.traitMods(d).bond + mood);
   if (hungry && !food) gain = Math.max(1, Math.round(gain * HG.hungryGift)); // 배고프면 장난감에 마음이 덜 감
-  k.data.bond = clamp(k.data.bond + gain);
+  gain = addBond(k, gain); // 실제로 오른 만큼
   if (food) { k.data.sat = Math.min(100, k.data.sat + c.sat * (hasT(k, 'glutton') ? 1.2 : 1)); growAdd(k, 'food'); }
-  if (!k.data.talent && c.talent) k.data.lean[c.talent] += 1;
+  if (!k.data.talent && c.talent) k.data.lean[c.talent] += k.data.bond >= KIN_BOND.strong.min ? KIN_BOND.strong.lean : 1; // 유대가 깊으면 재주가 빨리 자람
   k.data.lastCare = now;
   k.data.decayed = 0;
   const name = ITEMS[item].name;
@@ -1015,7 +1065,7 @@ function searchRunaway(d, kin, id, have, now = Date.now()) {
   if (d.ap < RW.searchAp) return { error: `행동력이 모자란다. (${RW.searchAp} 필요)` };
   logic.spendAp(d, RW.searchAp, now);
   k.data.runaway = null;
-  k.data.bond = clamp(k.data.bond + RW.foundBond);
+  addBond(k, RW.foundBond);
   const call = callName(d);
   const found = pick(k.type === 'human'
     ? [`나무 위에서 울다 잠든 ${k.name}${josa(k.name, '을', '를')} 찾았다.`, `개울가에 쪼그려 앉아 돌을 던지던 ${k.name}${josa(k.name, '을', '를')} 찾았다.`, `덤불 속에 숨어 있던 ${k.name}${josa(k.name, '이', '가')} 먼저 뛰어나왔다.`]
@@ -1126,10 +1176,10 @@ function cook(d, kin, recipe, have, now = Date.now()) {
   // 다정한 아이: 둥지의 다른 아이들과 나눠 먹음
   if (c.gentle) {
     const others = kin.filter((x) => x !== k && x.type === 'human' && x.status === 'home');
-    for (const o of others) { satUpdate(o, now, false); o.data.sat = Math.min(100, o.data.sat + F.share.sat); o.data.bond = clamp(o.data.bond + F.share.bond); }
+    for (const o of others) { satUpdate(o, now, false); o.data.sat = Math.min(100, o.data.sat + F.share.sat); addBond(o, F.share.bond); }
     if (others.length) lines.push(`다정한 ${k.name}${josa(k.name, '은', '는')} 만든 것을 조금씩 덜어 다른 아이들과 나눠 먹었다.`);
   }
-  k.data.bond = clamp(k.data.bond + 1);
+  addBond(k, 1);
   lines.push(`${name}${qty > 1 ? ` ${qty}개` : ''}${josa(qty > 1 ? '개' : name, '을', '를')} 받았다. (오늘 ${cookLeft(d, now)}번 더)`);
   return { title: '부엌', lines, items: [...Object.entries(r.needs).map(([x, q]) => ({ id: x, qty: -q })), { id: out, qty }] };
 }
@@ -1224,13 +1274,13 @@ function train(d, kin, id, stat, now = Date.now(), opt = {}) {
   if (['claw', 'wing', 'wisdom'].includes(stat)) growAdd(k, stat); // 자람 기록: 가르친 쪽
   k.data.trains += 1;
   k.data.lastTrain = now;
-  k.data.bond = clamp(k.data.bond + bondUp);
+  const bondGot = addBond(k, bondUp);
   const name = STATS.find((s) => s.key === stat).name;
   const how = { claw: '바위를 할퀴는 법', scale: '비늘을 단단히 세우는 법', wing: '바람을 타는 법', wisdom: '별을 읽는 법', majesty: '포효하는 법' }[stat];
   const lines = [`${k.name}에게 ${how}을 가르쳤다.`];
   if (up > 1) lines.push(`영리한 ${k.name}${josa(k.name, '은', '는')} 한 번 보고 두 가지를 깨우쳤다.`);
   if (clingyish(k)) lines.push(hasT(k, 'dignified') ? `${ga(k)} 끝나자 가만히 머리를 기대 왔다.` : `${ga(k)} 끝나자마자 품으로 파고든다.`);
-  lines.push(`${name} +${up}, 유대 +${bondUp}`);
+  lines.push(`${name} +${up}${bondGot ? `, 유대 +${bondGot}` : ''}`);
   return { title: k.name, lines };
 }
 
@@ -1303,7 +1353,7 @@ function expFinish(kin, minutes) {
     if (k.status !== 'home') continue;
     k.data.expBack = Date.now(); // 둥지 이야기에 '돌아왔다'를 적을 때
     back.push(k.name);
-    k.data.bond = clamp(k.data.bond + 3 + (hasT(k, 'brave') ? 2 : 0) + (hasT(k, 'chatterbox') ? 1 : 0)); // 씩씩한: 원정이 즐거움, 수다쟁이: 1 더
+    addBond(k, 3 + (hasT(k, 'brave') ? 2 : 0) + (hasT(k, 'chatterbox') ? 1 : 0)); // 씩씩한: 원정이 즐거움, 수다쟁이: 1 더
     if (k.type === 'human') {
       k.data.trips += 1;
       growAdd(k, 'trip');
@@ -1333,7 +1383,7 @@ function restTogether(kin, minutes) {
   for (const k of hs) {
     const dbl = hasT(k, 'sleepy') || hasT(k, 'lonely'); // 잠꾸러기·외로움을 타는: 두 배
     const fullUp = (k.data.sat ?? 0) >= HG.full ? HG.restFull : 1;   // 배부르면 더 푹 쉼
-    k.data.bond = clamp(k.data.bond + Math.round(n * (dbl ? 2 : hasT(k, 'homebody') ? 1.5 : 1) * fullUp) + (hasT(k, 'songbird') ? 1 : 0)); // 둥지를 좋아하는: 1.5배, 노래를 좋아하는: 1 더
+    addBond(k, Math.round(n * (dbl ? 2 : hasT(k, 'homebody') ? 1.5 : 1) * fullUp) + (hasT(k, 'songbird') ? 1 : 0)); // 둥지를 좋아하는: 1.5배, 노래를 좋아하는: 1 더
     growAdd(k, 'rest');
     if (dbl) extra.push(k.name);
   }
@@ -1484,7 +1534,7 @@ function chooseEvent(d, kin, have, idx, now = Date.now()) {
     fame: (n) => { const l = logic.addFame(d, n); if (l) out.lines.push(l); },
     hp: (n) => { d.hp = clamp(d.hp + n, 1, logic.hpCap(d)); },
     en: (n) => { d.en = clamp(d.en + n, 0, logic.enCap(d)); },
-    bond: (k, n) => { if (k) k.data.bond = clamp(k.data.bond + n); },
+    bond: (k, n) => { if (k) addBond(k, n); },
     lean: (k, t, n) => { if (k && !k.data.talent) k.data.lean[t] += n; },
     train: (k, s) => { if (k && k.data.stats) k.data.stats[s] += 1; },
     leave: (k, status) => { k.status = status; k.data.ended = now; },

@@ -1033,6 +1033,14 @@ const KIN_GROW = {
 };
 // ── 교감: 쓰다듬기·안아 주기 같은, 물건 없이 함께하는 행동 ─────────
 // 자라는 단계마다 좋아하는 것(like)·싫어하는 것(dislike)이 다르고, 하루에 cap번을 넘기면 과보호가 쌓여 성격이 바뀜
+// ── 유대: 꼭대기로 갈수록 덜 오르고, 자라는 고비에 서먹해지며, 높을수록 아이가 달라짐 ──
+const KIN_BOND = {
+  curve: [[70, 1], [90, 0.5], [100, 1 / 3]],   // [이 유대까지, 오르는 비율]: 70까지는 그대로, 70~90은 절반, 90~100은 3분의 1
+  dip: { stages: ['청소년', '젊은 용'], amount: 15, floor: 40 }, // 이 단계가 되면 유대가 이만큼 내려감 (이 밑으로는 안 내려감)
+  gift: { min: 60, chance: 0.35, human: ['wild_flower', 'sea_shell', 'grass_seed', 'brass_button'], drake: ['glow_moss', 'sea_shell', 'beast_hide'] }, // 하루 한 번 이 확률로 작은 선물을 물어 옴
+  strong: { min: 80, ally: 1.1, lean: 1.25 },   // 곁에 둔 새끼의 공격 ×1.1, 인간 아이의 재주가 1.25배 빨리 자람
+};
+
 const KIN_TOUCH = {
   cap: 4,                                   // 하루에 알맞은 교감 횟수 (넘기면 유대는 오르지 않고 과보호가 쌓임)
   bond: { like: 3, ok: 2, dislike: 0 },     // 좋아하는 것·보통·싫어하는 것일 때 오르는 유대
@@ -2025,6 +2033,6 @@ module.exports = {
   isTestDragon: (d) => !!d && !!KINDS[d.kind]?.test,                // GM 시험용 투명 드래곤인가
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, FESTIVAL, TITLES, TITLE_COUNT_NAMES, ACHIEVEMENTS, YABAWI, KEEPSAKES,
   PURIFY, CRAFT, SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, FISHING, RUIN, FACILITY, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
-  DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, KIN_GROW, KIN_PLAY, KIN_TOUCH, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
+  DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, KIN_GROW, KIN_PLAY, KIN_TOUCH, KIN_BOND, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
   COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, DEPART, BONDS, MARKS, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG,
 };
