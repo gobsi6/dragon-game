@@ -1343,15 +1343,15 @@ function useItem(d, id, have, opts = {}) {
   const inMaze = !!mzs && typeof mzs === 'object' && mzs.fi != null;
   const heals = u.hp != null || u.en != null || u.ap != null || u.mind != null;
   if (inMaze && heals && !u.crown && !(u.keep && (opts.keep || !u.mind))) return { error: '지하 회랑 안에서는 회복 아이템을 쓸 수 없다. 화톳불 자리에서 상처를 돌보자.' };
-  if (u.keep && (opts.keep || !u.mind)) { // 보물 상자에 넣고 잠금 (꺼낼 수 없음). 꽃다발은 '상자에 넣기'를 고를 때만, 아니면 아래에서 정신 회복
+  if (u.keep && (opts.keep || !u.mind)) { // 보물 상자에 넣음 (둥지에서 다시 꺼낼 수 있음: chestTake). 꽃다발은 '상자에 넣기'를 고를 때만, 아니면 아래에서 정신 회복
     if (!d.nest) return { error: '둥지를 틀어야 보물 상자에 간직할 수 있다.' };
     if (d.region !== d.nest) return { error: '보물 상자는 둥지에 있을 때만 열 수 있다.' };
     const by = it.custom?.byName && it.custom.byName !== opts.from ? it.custom.byName : '';
     const custom = u.keep === 'custom' ? { name: it.name, desc: it.desc, value: it.value, by } : null;
     const label = chestLabel(custom ? { k: 'custom', n: opts.from || '', nm: it.name, by } : { k: u.keep, n: opts.from || '' }) || it.name; // 먼저 이름을 만든 뒤 넣음 (도중에 멈춰 상자에만 들어가는 일이 없게)
     if (chestOf(d).length >= FREE.chestMax) return { error: `보물 상자가 가득 찼다. (${FREE.chestMax}개까지 간직할 수 있다)` };
-    if (!chestAdd(d, u.keep, opts.from || '', opts.msg || '', Date.now(), custom)) return { error: '보물 상자에 넣지 못했다.' };
-    lines.push(`${label}${josa(label, '을', '를')} 보물 상자에 넣고 잠갔다.`);
+    if (!chestAdd(d, u.keep, opts.from || '', opts.msg || '', Date.now(), custom, { id, src: opts.from ? 'got' : opts.made ? 'made' : '' })) return { error: '보물 상자에 넣지 못했다.' };
+    lines.push(`${label}${josa(label, '을', '를')} 보물 상자에 넣어 간직했다.`);
     if (opts.msg) lines.push(`함께 받은 쪽지도 접어 넣었다. "${opts.msg}"`);
     return { title: '보물 상자', lines, items: [{ id, qty: -1 }] };
   }
@@ -2016,10 +2016,13 @@ function chestOf(d) {
   if (!Array.isArray(ni.chest)) ni.chest = [];
   return ni.chest;
 }
-function chestAdd(d, kind, from = '', text = '', now = Date.now(), custom = null) {
+// meta: { id: 넣은 물건 id (다시 꺼낼 때), src: 'got' 받은 선물 · 'made' 직접 만든 것 · '' 그 밖 }
+function chestAdd(d, kind, from = '', text = '', now = Date.now(), custom = null, meta = {}) {
   if ((!KEEPSAKES[kind] && !custom) || !d.nest) return false;
   if (chestOf(d).length >= FREE.chestMax) return false; // 상자가 가득 참 (저장 기록이 끝없이 커지지 않게)
   const e = { k: custom ? 'custom' : kind, n: String(from || '').slice(0, 24), t: String(text || '').slice(0, 400), at: now };
+  if (meta.id) e.id = meta.id;
+  if (meta.src) e.src = meta.src;
   if (custom) Object.assign(e, { nm: custom.name, ds: custom.desc || '', v: custom.value || 0, by: custom.by || '' }); // 직접 빚은 선물
   chestOf(d).push(e);
   return true;
@@ -2033,7 +2036,28 @@ function chestLabel(e) {
   if (!e.n) return K.name;
   return K.fmt === 'from' ? `${e.n}에게 받은 ${K.name}` : `${e.n}의 ${K.name}`;
 }
-const chestView = (d) => (d.nest ? chestOf(d).map((e) => ({ k: e.k, label: chestLabel(e), desc: e.k === 'custom' ? e.ds || '' : KEEPSAKES[e.k]?.desc || '', text: e.t || '', say: e.k === 'custom' ? true : KEEPSAKES[e.k]?.say !== false, at: e.at, value: e.k === 'custom' ? e.v || 0 : KEEPSAKES[e.k]?.value || 0 })).reverse() : []);
+// 어디서 온 것인지: 넣을 때 적어 둔 것, 없으면(예전 기록) 이름으로 짐작 — 아이가 준 것 · 받은 선물 · 내가 빚은 것
+const chestSrc = (d, e) => e.src || (e.n ? (KEEPSAKES[e.k]?.fmt === 'of' ? 'kid' : 'got') : e.k === 'custom' && e.by === d.name ? 'made' : '');
+// 상자에서 다시 꺼낼 때 돌려줄 물건 (아이가 직접 넣어 준 그림·편지처럼 물건이 없는 것은 꺼낼 수 없음)
+function chestItemOf(e) {
+  if (e.id && ITEMS[e.id]) return e.id;
+  if (e.k === 'custom') return Object.keys(ITEMS).find((id) => ITEMS[id].use?.keep === 'custom' && ITEMS[id].name === e.nm && (ITEMS[id].custom?.byName || '') === (e.by || ITEMS[id].custom?.byName || '')) || null;
+  return Object.keys(ITEMS).find((id) => ITEMS[id].use?.keep === e.k && !ITEMS[id].custom) || null;
+}
+const chestView = (d) => (d.nest ? chestOf(d).map((e, i) => ({ i, k: e.k, label: chestLabel(e), desc: e.k === 'custom' ? e.ds || '' : KEEPSAKES[e.k]?.desc || '', text: e.t || '', say: e.k === 'custom' ? true : KEEPSAKES[e.k]?.say !== false, at: e.at, value: e.k === 'custom' ? e.v || 0 : KEEPSAKES[e.k]?.value || 0, src: chestSrc(d, e), take: !!chestItemOf(e) })).reverse() : []);
+// 보물 상자에서 꺼내기: 둥지에 있을 때. 함께 넣은 쪽지와 보낸 이 기록은 남지 않음
+function chestTake(d, i, at) {
+  if (!d.nest) return { error: '둥지를 틀어야 보물 상자를 열 수 있다.' };
+  if (d.region !== d.nest) return { error: '보물 상자는 둥지에 있을 때만 열 수 있다.' };
+  const list = chestOf(d), e = list[Number(i)];
+  if (!e || (at != null && e.at !== at)) return { error: '상자 속 물건이 바뀌었다. 다시 열어 보자.' };
+  const id = chestItemOf(e);
+  if (!id) return { error: '이것은 상자에서 꺼낼 수 없는 추억이다.' };
+  const label = chestLabel(e) || ITEMS[id].name;
+  list.splice(Number(i), 1);
+  if (chestSrc(d, e) === 'made') { const c = combatJson(d); c.madeKeep ||= {}; c.madeKeep[id] = (c.madeKeep[id] || 0) + 1; } // 직접 만든 것은 소지품에서도 '직접 만듦'으로
+  return { title: '보물 상자', lines: [`${label}${josa(label, '을', '를')} 보물 상자에서 꺼내 소지품에 넣었다.`], items: [{ id, qty: 1 }] };
+}
 // 예전에 보물더미에 물건으로 쌓아 둔 추억 물건(먼 둥지의 편지, 고향의 조약돌)을 상자로 옮김. 돌려주는 것: 보물더미에서 뺄 것
 function chestMigrate(d, hoard) {
   if (!d.nest) return [];
@@ -2311,7 +2335,7 @@ module.exports = {
   xpNeed, atMaxLevel,
   dexOf, dexMeet, dexWin, dexItems, dexBackfill, dexView, dexSeen, dexHasNew, // 도감
   checkAch, achView, achSeen, achHasNew, // 업적
-  chestOf, chestAdd, chestValue, chestView, chestMigrate, crownOn, // 보물 상자 · 화관
+  chestOf, chestAdd, chestValue, chestView, chestMigrate, chestTake, crownOn, // 보물 상자 · 화관
   nestLine, // 둥지 한 줄 요약
   gearAt, gearOn, // 강화된 한 개가 어디 있는지
 };

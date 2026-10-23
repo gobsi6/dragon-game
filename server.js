@@ -1625,8 +1625,32 @@ function onConnect(socket) {
     if (typeof ack !== 'function') return;
     const entry = entryOf(socket);
     if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
-    ack({ ok: true, items: db.inventory(entry.dragon.id), equip: logic.equipOf(entry.dragon) });
+    const d = entry.dragon, items = db.inventory(d.id);
+    ack({ ok: true, items, equip: logic.equipOf(d), giftSrc: giftSrcOf(d, items) });
   });
+  // 상자에 간직할 수 있는 선물 물건마다: 받은 것 몇 개 · 직접 만든 것 몇 개 (가진 개수를 넘지 않게. 받은 것을 먼저 셈)
+  function giftSrcOf(d, items) {
+    const c = logic.combatJson(d), mk = c.madeKeep || {}, used = c.keepUsed || {};
+    const keepIds = items.filter((x) => ITEMS[x.item]?.use?.keep && x.qty > 0);
+    if (!keepIds.length) return {};
+    const got = {};
+    for (const e of db.ledgerList(d.id, 200)) {
+      if (e.kind !== 'gift_in') continue;
+      let rem = used[e.id] || 0; // 이 선물에서 이미 상자에 넣은 개수 (선물 하나에 여러 물건이면 앞에서부터 뺌)
+      for (const x of e.itemsIn) {
+        if (!ITEMS[x.id]?.use?.keep) continue;
+        const sub = Math.min(rem, x.qty || 0); rem -= sub;
+        got[x.id] = (got[x.id] || 0) + (x.qty || 0) - sub;
+      }
+    }
+    const out = {};
+    for (const x of keepIds) {
+      const g = Math.max(0, Math.min(x.qty, got[x.item] || 0));
+      const m = Math.max(0, Math.min(x.qty - g, mk[x.item] || 0));
+      if (g || m) out[x.item] = { got: g, made: m };
+    }
+    return out;
+  }
 
   // ── 제작 · 회복약 · 장신구 ──
   // 모두 같은 모양: 규칙 함수를 부르고, 성공하면 저장하고 내 정보를 다시 보냄
@@ -1669,14 +1693,16 @@ function onConnect(socket) {
       ack({ ok: true, result: res });
     });
   };
-  itemAction('craft', (d, p, have) => logic.craft(d, str(p.recipe), have, p.focus));
-  itemAction('craft:experiment', (d, p, have) => logic.experiment(d, p.items, have, { gift: p.gift === true })); // gift: 선물로 빚기
+// 직접 만든 선물(보물 상자에 간직할 수 있는 것) 개수를 셈: 상자에 넣을 때 '직접 만든 것'으로 적고, 소지품에서 받은 선물과 나눠 보여 줌
+  const countMade = (d, res) => { if (res.error) return res; const c = logic.combatJson(d); for (const m of res.made || []) if (m.qty > 0 && ITEMS[m.id]?.use?.keep) { c.madeKeep ||= {}; c.madeKeep[m.id] = (c.madeKeep[m.id] || 0) + m.qty; } return res; };
+  itemAction('craft', (d, p, have) => countMade(d, logic.craft(d, str(p.recipe), have, p.focus)));
+  itemAction('craft:experiment', (d, p, have) => countMade(d, logic.experiment(d, p.items, have, { gift: p.gift === true }))); // gift: 선물로 빚기
   // 자유 제작: 내 제작법으로 다시 빚기 (저장한 재료 조합으로 실험)
   itemAction('craft:mine', (d, p, have) => {
     const l = logic.combatJson(d).myRecipes || [];
     const m = l[Number(p.idx)];
     if (!m) return { error: '그런 제작법이 없다.' };
-    return logic.experiment(d, m.mats, have, { gift: !!m.gift });
+    return countMade(d, logic.experiment(d, m.mats, have, { gift: !!m.gift }));
   });
   itemAction('gear:enhance', (d, p, have) => logic.enhanceGear(d, str(p.item), have));
   itemAction('gear:engrave', (d, p, have) => logic.engraveGear(d, str(p.item), str(p.elem), have));
@@ -1720,10 +1746,14 @@ function onConnect(socket) {
     const U = ITEMS[id]?.use || {};
     const keep = !!U.keep && (!!p.keep || !U.mind); // 상자에 넣는 경우에만 보낸 이를 찾아 붙임
     const sender = U.keep ? giftSender(d, id) : {};  // 받은 꽃다발을 써 버려도 그 선물은 쓴 것으로 셈 (나중에 넣는 다른 꽃다발에 엉뚱한 이름이 붙지 않게)
-    const res = logic.useItem(d, id, have, keep ? { keep: true, ...sender } : {});
+    const mk = logic.combatJson(d).madeKeep || {};
+    const made = keep && !sender.from && mk[id] > 0;
+    const res = logic.useItem(d, id, have, keep ? { keep: true, ...sender, made } : {});
+    if (!res.error && keep && made) mk[id] -= 1;
     if (res.error && U.keep) { const c = logic.combatJson(d); /* 쓰지 못했으면 셈을 되돌림 */ for (const k of Object.keys(c.keepUsed || {})) if (c._lastKeep === k) c.keepUsed[k] -= 1; }
     return res;
   }, (d, res) => { arena.checkMind(d); if (res?.title === ITEMS.flower_crown.name) broadcastPresence(d.region); }); // 광기의 묘약으로 정신이 다 깎일 수 있음 · 화관을 쓰면 같은 지역 목록에 꽃이 바로 보이게
+  itemAction('chest:take', (d, p) => logic.chestTake(d, p.i, p.at == null ? null : Number(p.at))); // 보물 상자에서 꺼내기
   // 소지품 버리기: 버린 물건은 사라짐
   itemAction('item:drop', (d, p, have) => {
     const id = str(p.item);
