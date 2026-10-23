@@ -612,7 +612,7 @@ function view(k, now, d) {
   if (k.data.runaway) v.runaway = { region: k.data.runaway.region, until: k.data.runaway.until, seeker: k.data.runaway.seeker || null };
   if (k.type === 'human' && k.status === 'home') v.canWork = FW.adultStages.includes(stageOf(k, now).name) || FW.apprenticeStages.includes(stageOf(k, now).name);
   // 짝과 자녀 (식구 이벤트로 생김)
-  if (k.data.mate) v.mate = { name: k.data.mate.name, kind: k.data.mate.kind || null };
+  if (k.data.mate) v.mate = { name: k.data.mate.name, kind: k.data.mate.kind || null, home: k.data.mate.home || null }; // home: 다른 둥지 아이와 맺어졌으면 그 둥지 주인
   if (k.data.kids?.length) v.kids = k.data.kids.slice();
   if (k.data.sex) {
     v.sex = k.data.sex;
@@ -1525,7 +1525,7 @@ function chooseEvent(d, kin, have, idx, now = Date.now()) {
   const reason = ch.need ? ch.need(c, vars) : null;
   if (reason) return { error: reason };
 
-  const out = { lines: [], items: [], hoardItems: [], gold: 0, tells: [], sends: [], purify: 0 };
+  const out = { lines: [], items: [], hoardItems: [], gold: 0, tells: [], sends: [], purify: 0, loves: [] };
   const town = SHOPS[c.region] ? c.region : nearestTown(c.region);
   const h = {
     say: (...l) => out.lines.push(...l),
@@ -1561,6 +1561,7 @@ function chooseEvent(d, kin, have, idx, now = Date.now()) {
     },
     nearestTown: () => nearestTown(c.region),
     notify: (id, text, title) => out.tells.push({ id, text, title }), // 다른 드래곤에게 소식 (라이벌 이벤트 등)
+    loveAsk: (k) => { if (k?.data.loveRef) out.loves.push({ id: k.id, name: k.name, ref: k.data.loveRef }); }, // 다른 둥지 첫사랑에게 혼인 청 (kinlove.js)
     // 보물더미에서 꺼내거나 넣음 (꺼낼 때는 지금 있는 만큼만)
     hoardTake: (id, qty = 1) => {
       const have = (c.hoard.find((x) => x.item === id)?.qty || 0) + out.hoardItems.filter((x) => x.id === id).reduce((a, x) => a + x.qty, 0);
@@ -1593,7 +1594,7 @@ function chooseEvent(d, kin, have, idx, now = Date.now()) {
   }
   d.pending_event = null;
   const label = typeof ch.label === 'function' ? ch.label(c, vars) : ch.label;
-  return { title: e.title, lines: out.lines, items: out.items, hoardItems: out.hoardItems, gold: out.gold, choice: label, tells: out.tells, sends: out.sends, purify: out.purify };
+  return { title: e.title, lines: out.lines, items: out.items, hoardItems: out.hoardItems, gold: out.gold, choice: label, tells: out.tells, sends: out.sends, purify: out.purify, loves: out.loves };
 }
 
 // GM 도구: 자람 기록과 가장 가까운 성격, 친구
@@ -1691,6 +1692,6 @@ module.exports = {
   tick, perksOf, summary, views, homeKin, stageOf,
   care, rename, choosePath, incubate, train, release,
   expStart, expFinish, companions, restTogether,
-  rollEvent, getEvent, chooseEvent, forceEvent,
+  rollEvent, getEvent, chooseEvent, forceEvent, diary, addBond, // diary·addBond: 다른 둥지 아이와 맺어질 때 (kinlove.js)
   newHuman, newEgg, setCompanion, sendErrand, setJob, harvest, cook, cookLeft, expWent, searchRunaway, sendSeek, callName, // 시험용
 };

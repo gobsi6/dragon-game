@@ -2358,6 +2358,8 @@
   .hoard-tier .hb { height: 6px; background: #EFE6CC; overflow: hidden; }
   .hoard-tier .hb i { display: block; height: 100%; background: #B8913A; }
   .adopt-card { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; padding: 12px 14px; border: 1px solid #B9C7D3; background: #EEF2F6; }
+  .adopt-card.love-card { border-color: #E2BFCB; background: #FBF1F4; } /* 혼인 청 */
+  .adopt-card.love-card b { color: #8A3D55; }
   .adopt-card b { font: 700 15px/1.45 var(--serif); color: var(--steel-d); }
   .adopt-card p { margin: 0; font-size: 13px; line-height: 1.6; color: #3E5163; }
   .adopt-card .row { justify-content: flex-start; flex-wrap: wrap; margin-top: 2px; }
@@ -6187,7 +6189,9 @@
   // "짝 리라 · 자녀 오웬, 하나" / "짝 이즈(골드 드래곤)"
   function familyText(v) {
     const bits = [];
-    if (v.mate) bits.push(`짝 ${v.mate.name}${v.mate.kind ? `(${kindName(v.mate.kind)})` : ''}`);
+    if (v.mate) bits.push(`짝 ${v.mate.name}${v.mate.kind ? `(${kindName(v.mate.kind)})` : ''}${v.mate.home ? ` · ${v.mate.home}의 둥지` : ''}`);
+    const lo = (NEST_LAST?.nest?.loves?.out || []).find((o) => o.kin === v.id); // 보낸 혼인 청
+    if (lo) bits.push(`${lo.to.ownerName}의 둥지에 ${lo.to.name}${josa(lo.to.name, '과', '와')}의 혼인을 청해 두었다 (${dur(lo.until - Date.now())} 남음)`);
     if (v.kids?.length) bits.push(`자녀 ${v.kids.join(', ')}`);
     return bits.join(' · ');
   }
@@ -7076,6 +7080,18 @@
           );
         }
 
+        // 받은 혼인 청: 다른 둥지의 첫사랑이 내 둥지 아이와 맺어지기를 바람
+        for (const o of n.loves?.in || []) {
+          const oc = add('<div class="adopt-card love-card"><b></b><p></p><div class="row"></div></div>').firstChild;
+          oc.querySelector('b').textContent = `${o.from.ownerName}${josa(o.from.ownerName, '이', '가')} 혼인을 청해 왔다`;
+          oc.querySelector('p').textContent = `${o.from.ownerName}의 둥지 ${o.from.name}${josa(o.from.name, '과', '와')} 내 둥지 ${o.to.name}${josa(o.to.name, '이', '가')} 서로의 첫사랑이다. 허락하면 두 아이가 맺어지고, 각자의 둥지에 살며 서로 오간다. ${dur(o.until - Date.now())} 안에 정하지 않으면 청은 사라진다.`;
+          const ans = (yes) => {
+            if (!yes && !confirm(`${o.from.ownerName}의 혼인 청을 사양할까? ${o.from.name}${josa(o.from.name, '은', '는')} 첫사랑을 마음에 묻게 된다.`)) return;
+            socket.emit('kinlove:answer', { id: o.id, yes }, (res) => { if (res.error) return toast(res.error); toast(res.lines.join(' ')); openNest(); });
+          };
+          oc.querySelector('.row').append(btn('허락한다', () => ans(true), true), btn('정중히 사양한다', () => ans(false)));
+        }
+
         // 둥지에 든 도둑
         if (n.raid) {
           const rc = add('<div class="raid-card"><b></b><p class="what"></p><p class="when"></p><div class="row"></div></div>').firstChild;
@@ -7293,6 +7309,7 @@
                   socket.emit('chest:take', { i: e.i, at: e.at }, (res) => {
                     if (res.error) { SFX.play('error'); return toast(res.error); }
                     toast(res.result.lines.join(' ')); openNest();
+                    if ($('inv-dlg').open) fetchInv(() => keepScroll($('inv-dlg'), renderInv));
                   });
                 });
                 r.appendChild(tb); it.appendChild(r);
@@ -9400,6 +9417,7 @@
     festWant: ['{a}[이/가] 왕도 쪽 하늘에 오르는 불꽃을 보며 가 보고 싶다고 조른다.', '{a}[이/가] 바람에 실려 오는 북소리에 귀를 쫑긋 세우고 있다.'],
     festWantHatch: ['멀리서 불꽃 터지는 소리가 들릴 때마다 {a}[이/가] 고개를 번쩍 들고 그쪽을 바라본다.'],
     festAfterBaby: ['{a}[이/가] 축제에서 얻어 온 방울 소리에 까르르 웃으며 손을 버둥거린다.', '{a}[이/가] 북소리를 흉내 내듯 둥지 바닥을 작은 손으로 탁탁 두드린다.'],
+    mateAway: ['{a}[이/가] 짝 {b}[을/를] 만나러 다녀오더니 내내 싱글벙글한다.', '{a}[이/가] {b}[이/가] 보낸 쪽지를 몇 번이고 다시 읽는다.', '{a}[이/가] {b}에게 가져갈 들꽃을 한 아름 꺾고 있다.', '{b}[이/가] 놀러 와서 {a}[과/와] 둥지 입구에 나란히 앉아 해 지는 것을 바라보았다.'],
     festAfterGrown: ['{a}[이/가] 축제에서 들은 노래를 흥얼거리며 둥지 살림을 정리한다.', '{a}[이/가] 축제 때 어린 식구들이 얼마나 신나 했는지 떠올리며 빙그레 웃는다.', '{a}[이/가] 다음 축제에는 무엇을 보러 갈지 벌써부터 이야기한다.'],
     festWantGrown: ['{a}[이/가] 바람에 실려 오는 북소리에 귀를 기울이며, 왕도는 지금쯤 북적이겠다고 중얼거린다.', '{a}[이/가] 왕도 쪽 하늘에 오르는 불꽃을 한참 바라본다.'],
     festWantBaby: ['멀리서 북소리가 들릴 때마다 {a}[이/가] 버둥거리며 소리 나는 쪽으로 고개를 돌린다.'],
@@ -9483,6 +9501,7 @@
     for (const t of a.traits || []) add(STORY.trait[t.id], 2);
     if (a.job?.working) add(STORY.job[a.job.id], 2);
     if (a.mate) add(STORY.mate);
+    if (a.mate?.home && rnd() < 0.15) return storyText(pickOf(rnd, STORY.mateAway), a.name, a.mate.name); // 다른 둥지에 사는 짝
     for (const f of n.facilities?.built || []) add(STORY.fac[f.id || f]);
     const w = S.wx?.regions?.[n.region]?.id;
     if (w) add(STORY.wx[w]);
@@ -9969,7 +9988,7 @@
       socket.emit('gift:send', { id: p.id, gold, items, msg }, (res) => {
         if (res.error) return toast(res.error);
         toast(res.lines.join(' '));
-        fetchInv(refreshProfile);
+        fetchInv(() => { refreshProfile(); if ($('inv-dlg').open) keepScroll($('inv-dlg'), renderInv); }); // 소지품 창이 열려 있으면 줄어든 개수를 바로 보여 줌
       });
     });
     acts.appendChild(gift);
@@ -11997,6 +12016,7 @@
       if (key) mkQty.delete(key);
       toast(res.result.lines.join(' '));
       setTimeout(openNightMarket, 50);
+      fetchInv(() => { if ($('inv-dlg').open) keepScroll($('inv-dlg'), renderInv); }); // 노점에 올리거나 사면 소지품 개수도 바로
     });
   }
   function openNightMarket() {
@@ -14602,6 +14622,12 @@
       if ($('nest-dlg').open) openNest();
     });
     socket.on('kin:offer:gone', () => { if ($('nest-dlg').open) openNest(); });
+    socket.on('kinlove:got', (o) => { // 다른 둥지에서 혼인 청이 옴
+      SFX.play('notice');
+      toast(`${o.from}${josa(o.from, '이', '가')} ${o.a}${josa(o.a, '과', '와')} ${o.b}의 혼인을 청해 왔다.`, { label: '둥지 보기', run: () => { hideToast(); openNest(); }, ttl: 15000 });
+      if ($('nest-dlg').open) openNest();
+    });
+    socket.on('kinlove:gone', () => { if ($('nest-dlg').open) openNest(); });
     socket.on('weather', onWeather);
     socket.on('grave:list', (l) => { S.graves = l || []; renderGraves(); });
     socket.on('grave', onGrave);

@@ -721,6 +721,11 @@ const slate = require('./slate')({ io, db, entryOf }); // 석판 (게시판)
 const yabawi = require('./yabawi')({ io, db, online, logic, sendMe, isOpen: (r) => ruin.unlocked(r) }); // ruin은 아래에서 만들어지지만, 쓰는 건 게임이 돌아갈 때라 괜찮음
 // 왕도 야시장: 축제 날 저녁 6시~새벽 5시, 상인 노점과 드래곤들의 노점 (nightmarket.js)
 const nightMarket = require('./nightmarket')({ io, db, online, logic, sendMe });
+// 다른 둥지 아이와 맺어지기: 서로의 첫사랑 → 혼인 청 → 두 보호자 허락 (kinlove.js)
+const kinLove = require('./kinlove')({ db, online, sendMe, life, logic,
+  news: (text) => { const at = Date.now(); let id = 0; try { id = db.addChat('!', { dragonId: 0, name: '', kind: '', text, at }); } catch {} io.emit('system', { text, at, news: true, id }); },
+  kinChanged: (id, kin) => { const e = online.get(id); if (e) { refreshKin(e.dragon, kin); sendMe(e.socket, e.dragon); } else db.kinSaveAll(id, kin); } });
+logic.hooks.kinLove = kinLove;
 life.setNightCheck((t) => !!nightMarket.sessionAt(t)); // 식구 나들이: 낮에 한 번 · 야시장 밤에 한 번
 // ── 정화: 오염된 땅에서 행동할수록 모두의 기여가 쌓이고, 목표에 닿으면 그 땅의 오염이 일찍 걷힘 ──
 // 오염 시계 (GM이 즉시 일으키면 바뀜). logic이 이걸 보고 지금 오염된 곳을 셈
@@ -1674,8 +1679,9 @@ function onConnect(socket) {
       // 이벤트가 다른 드래곤에게 남긴 소식 (라이벌 이벤트)
       for (const t of res.tells || []) social.tellRival(t.id, t.text, t.title);
       for (const g of res.sends || []) social.eventGift(d, g.id, g.items, g.msg); // 이벤트로 보낸 선물
+      for (const l of res.loves || []) kinLove.ask(d, l); // 다른 둥지 첫사랑에게 혼인 청
       if (res.purify) res.lines = [...(res.lines || []), ...(logic.isRuin(d.region) ? ruin.add(d, 'event', res.purify) : purify.add(d, 'event', res.purify))]; // 이벤트로 쌓은 정화 기여 (멸망한 대륙이면 그 땅의 정화로)
-      delete res.tells; delete res.sends; delete res.purify;
+      delete res.tells; delete res.sends; delete res.purify; delete res.loves;
       // 지나온 이야기에 남길 선택·사건
       const cr = CHRON_ON[event];
       if (cr) { const [k, t] = cr(d, res, payload || {}) || []; if (t) logic.chron(d, k, t); }
@@ -1935,6 +1941,7 @@ function onConnect(socket) {
           };
         })(),
         offers: social.kinOffers(d),            // 식구 입양 제안 (받은 것·보낸 것)
+        loves: kinLove.view(d),                 // 혼인 청 (받은 것·보낸 것)
         partnerKin: (() => {                     // 반려의 둥지에 와 있으면 그 집 식구 (같이 돌보기)
           const ph = logic.hooks.partnerNest(d);
           if (!ph || ph.region !== d.region || d.exp_end) return null;
@@ -2100,6 +2107,15 @@ function onConnect(socket) {
     ack({ ok: true, weather: cur, log: db.gmLogList(40) });
   });
 
+  // 혼인 청에 답하기 (받은 쪽 보호자)
+  socket.on('kinlove:answer', (payload, ack) => {
+    if (typeof ack !== 'function') return;
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+    const res = kinLove.answer(entry.dragon, payload?.id, !!payload?.yes);
+    if (!res.error) sendMe(socket, entry.dragon);
+    ack(res);
+  });
   socket.on('nm:get', (payload, ack) => {
     if (typeof ack !== 'function') return;
     const entry = entryOf(socket);
