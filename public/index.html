@@ -1366,7 +1366,21 @@
   .gift-box .gp-sel.on { color: var(--ink); font-weight: 600; }
   .gift-box .num:disabled { opacity: .5; }
   /* 자유 제작 */
-  .xa-mat .xa-tags { display: block; grid-column: 1 / -1; font-size: 10.5px; color: var(--muted); line-height: 1.3; }
+  /* 실험 재료 칸: 이름 줄 + 성질 띠 줄 (넓게) */
+  .xa-grid { grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)) !important; gap: 6px !important; }
+  .xa-mat { row-gap: 4px; padding: 6px 8px; min-height: 0; }
+  .xa-mat .xa-tags { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 3px; }
+  .xt { padding: 0 5px; font: 500 10.5px/16px var(--sans); border-radius: 2px; background: #EEF2F6; color: var(--steel-d); white-space: nowrap; }
+  .xt.base { background: #E7F1EA; color: #2B5240; }
+  .xt.aura { background: #F7EEDB; color: #7A5A16; }
+  .xt.hit { box-shadow: inset 0 0 0 1px currentColor; font-weight: 700; }
+  .fx-sep { height: 1px; margin: 18px 0 4px; background: var(--line-soft); }
+  .xa-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 10px 0 2px; }
+  .xa-filter .lab { font: 600 12px var(--sans); color: var(--ink-2); margin-right: 2px; }
+  .xa-f { min-height: 26px; padding: 0 8px; font-size: 12px; border: 1px solid var(--line-in); border-radius: 13px; background: var(--surface-2); color: var(--ink-2); }
+  .xa-f.base { color: #2B5240; } .xa-f.aura { color: #7A5A16; } .xa-f.eff { color: var(--steel-d); }
+  .xa-f.on { background: var(--steel-d); border-color: var(--steel-d); color: #fff; }
+  @media (max-width: 520px) { .xa-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
   .xa-sum { margin: 6px 0 0; font-size: 12px; color: var(--ink-2); } .xa-sum b { color: var(--steel-d); margin-right: 4px; }
   .fx-card { margin: 10px 0; padding: 10px 12px; border: 1px solid #CFE0D4; border-radius: 3px; background: #EEF6F0; display: flex; flex-direction: column; gap: 6px; }
   .fx-h { display: flex; align-items: center; gap: 6px; } .fx-h b { font: 700 15px var(--serif); }
@@ -8070,7 +8084,7 @@
   // ── 제작 ──
   // 제작 창: 만들기 / 실험 / 다듬기(강화·각인)
   let craftMode = 'make', mixPick = [];
-  let FREE_LAST = null, FREE_DATA = null, FREE_LOADING = false; // 자유 제작: 마지막 결과, 노트·내 제작법·도감
+  let FREE_LAST = null, FREE_DATA = null, FREE_LOADING = false, mixTag = ''; // mixTag: 성질로 거르기 // 자유 제작: 마지막 결과, 노트·내 제작법·도감
   const freeTagLine = (id) => { const t = S.free?.tags?.[id]; if (!t) return ''; return Object.entries(t).map(([k, n]) => `${S.free.names[k]}${n}`).join(' · '); };
   const ELEM_NAME = { fire: '화염', ice: '얼음', lightning: '번개', earth: '대지', poison: '독', mist: '안개', acid: '산', water: '물', spirit: '정화' };
   // 제작 재료를 누르면, 그 재료를 얻는 곳을 재료 줄 아래에 펼침 (한 번 더 누르면 접힘)
@@ -8321,11 +8335,11 @@
   }
   // 실험: 가진 재료 중 2~3가지를 골라 화로에 넣어 봄. 위는 화로 세 칸(누르면 뺌), 아래는 분류별 재료 칸(누르면 넣음)
   // 자유 제작: 방금 빚은 것(이름 짓기·남기기), 내 제작법, 실험 노트, 창작 도감
-  function drawFreeParts(box, el) {
+  function drawFreeParts(box, el, part = 'all') { // part: 'top' 방금 빚은 것만 · 'bottom' 내 제작법·노트·도감만
     if (!FREE_DATA && !FREE_LOADING) { FREE_LOADING = true; socket.emit('craft:free:get', {}, (res) => { FREE_LOADING = false; if (!res?.error) { FREE_DATA = res; if ($('craft-dlg').open && craftMode === 'exp') renderCraft(); } }); }
     const Q = { good: '좋음', great: '빼어남' };
     // 방금 빚은 것
-    const last = FREE_LAST?.id && S.items[FREE_LAST.id];
+    const last = part !== 'bottom' && FREE_LAST?.id && S.items[FREE_LAST.id];
     if (last) {
       const c = el('div', 'fx-card');
       const h = el('div', 'fx-h'); h.appendChild(el('b', '', last.name));
@@ -8346,8 +8360,9 @@
       c.appendChild(keep);
       box.appendChild(c);
     }
-    if (!FREE_DATA) return;
+    if (!FREE_DATA || part === 'top') return;
     const nm = (id) => S.items[id]?.name || id;
+    box.appendChild(el('div', 'fx-sep'));
     // 내 제작법
     const mine = FREE_DATA.mine || [];
     const mh = el('h3', 'inv-h', '내 제작법'); mh.appendChild(el('span', 'inv-hn', `${mine.length}/${FREE_DATA.mineMax}`)); box.appendChild(mh);
@@ -8428,15 +8443,29 @@
     f.appendChild(go);
     f.appendChild(el('p', 'xa-note', S.me.en < EN ? `기력이 모자라다. (기력 ${S.me.en} / ${EN})` : '재료의 성질로 새 물건을 빚는다. 숨겨진 제작법과 맞으면 그 제작법을 알게 된다. 넣은 재료는 하나씩 사라진다.'));
     box.appendChild(f);
-    drawFreeParts(box, el); // 방금 빚은 것 · 내 제작법 · 실험 노트 · 창작 도감
+    drawFreeParts(box, el, 'top'); // 방금 빚은 것 (화로 바로 밑)
     if (!mats.length) { box.appendChild(el('div', 'empty', '섞어 볼 재료가 없다.')); }
     // ── 재료: 소지품과 같은 분류·순서 ──
     const XCATS = ['treasure', 'use', 'buff', 'meal', 'fish', 'trophy', 'mat'];
     const XCAT_NAME = { treasure: '보물', use: '회복약', buff: '강화 음식', meal: '식구 요리', fish: '낚시', trophy: '사냥 전리품', mat: '재료' };
     const order = { rare: 0, uncommon: 1, common: 2 };
     mats.sort(([a], [b2]) => XCATS.indexOf(itemCat(S.items[a])) - XCATS.indexOf(itemCat(S.items[b2])) || order[S.items[a].rarity] - order[S.items[b2].rarity] || S.items[a].name.localeCompare(S.items[b2].name, 'ko'));
+    // 성질로 거르기: 고른 성질이 있는 재료만
+    const tagSet = [...new Set(mats.flatMap(([id]) => Object.keys(S.free?.tags?.[id] || {})))];
+    const order2 = Object.keys(S.free?.names || {});
+    tagSet.sort((a, b) => order2.indexOf(a) - order2.indexOf(b));
+    if (tagSet.length) {
+      const tf = el('div', 'xa-filter'); tf.appendChild(el('span', 'lab', '성질'));
+      for (const k of ['', ...tagSet]) {
+        const c = el('button', `xa-f ${k ? S.free.groups?.[k] || 'eff' : ''}${mixTag === k ? ' on' : ''}`, k ? S.free.names[k] : '전체'); c.type = 'button'; c.setAttribute('aria-pressed', String(mixTag === k));
+        c.addEventListener('click', () => { mixTag = k; renderCraft(); });
+        tf.appendChild(c);
+      }
+      box.appendChild(tf);
+    }
+    const shownMats = mixTag ? mats.filter(([id]) => S.free?.tags?.[id]?.[mixTag]) : mats;
     let last = null, grid = null;
-    for (const [id, q] of mats) {
+    for (const [id, q] of shownMats) {
       const it = S.items[id], c = itemCat(it);
       if (c !== last) {
         last = c;
@@ -8449,12 +8478,14 @@
       b.type = 'button';
       b.title = it.name;
       b.append(el('b', '', it.name), el('small', '', `×${q}`), el('span', 'ord', on ? String(mixPick.indexOf(id) + 1) : ''));
-      const tl = freeTagLine(id); if (tl) b.appendChild(el('span', 'xa-tags', tl)); // 재료의 성질과 세기
+      const tg = S.free?.tags?.[id];
+      if (tg) { const w = el('span', 'xa-tags'); for (const [k, n] of Object.entries(tg)) { const t = el('span', `xt ${S.free.groups?.[k] || 'eff'}${mixTag === k ? ' hit' : ''}`, `${S.free.names[k]} ${n}`); w.appendChild(t); } b.appendChild(w); } // 재료의 성질과 세기
       b.disabled = !on && mixPick.length >= 3;
       b.setAttribute('aria-pressed', String(on));
       b.addEventListener('click', () => toggle(id));
       grid.appendChild(b);
     }
+    drawFreeParts(box, el, 'bottom'); // 재료 밑에: 내 제작법 · 실험 노트 · 창작 도감
     if (ci.known.length) {
       const fd = el('p', 'xa-found');
       fd.append(el('b', '', '찾아낸 제작법'), ` · ${ci.known.map((o) => S.items[o]?.name || o).join(', ')}`);
