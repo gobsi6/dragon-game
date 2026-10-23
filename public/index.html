@@ -11736,7 +11736,7 @@
   let festInv = null;
   function onFestInvited(x) {
     festInv = x.id;
-    toast(`${x.from.name}${josa(x.from.name, '이', '가')} 함께 춤추자고 발톱을 내민다.`, {
+    toast(`${x.from.name}${josa(x.from.name, '이', '가')} 함께 춤추자고 손을 내민다.`, {
       label: '함께 춤추기',
       run: () => { hideToast(); festInv = null; socket.emit('fest:answer', { id: x.id, accept: true }, (res) => { if (res.error) toast(res.error); }); },
       alt: { label: '사양하기', run: () => { festInv = null; socket.emit('fest:answer', { id: x.id, accept: false }, () => {}); } },
