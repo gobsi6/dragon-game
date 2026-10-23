@@ -606,8 +606,21 @@ function stageRestore(file) {
 const closeDb = () => { try { db.pragma('wal_checkpoint(TRUNCATE)'); db.close(); } catch {} };
 const dbFileSize = () => { try { return fs.statSync(DB_PATH).size + (fs.existsSync(`${DB_PATH}-wal`) ? fs.statSync(`${DB_PATH}-wal`).size : 0); } catch { return 0; } };
 
+// 빚은 물건(cx_…)이 지금 어딘가에 남아 있는지: 소지품 · 보물더미 · 받은 선물함 · 착용 · 내 제작법
+function customRefs() {
+  const keep = new Set();
+  for (const r of db.prepare("SELECT DISTINCT item FROM inventory WHERE item LIKE 'cx\_%' ESCAPE '\\'").all()) keep.add(r.item);
+  for (const r of db.prepare("SELECT DISTINCT item FROM hoard WHERE item LIKE 'cx\_%' ESCAPE '\\'").all()) keep.add(r.item);
+  for (const r of db.prepare("SELECT items FROM gift_inbox WHERE items LIKE '%cx\_%' ESCAPE '\\'").all()) { try { for (const x of JSON.parse(r.items || '[]')) keep.add(x.id); } catch {} }
+  for (const r of db.prepare("SELECT equip, combat FROM dragons WHERE equip LIKE '%cx\_%' ESCAPE '\\' OR combat LIKE '%cx\_%' ESCAPE '\\'").all()) {
+    try { for (const v of Object.values(JSON.parse(r.equip || '{}'))) keep.add(v); } catch {}
+    try { for (const m of JSON.parse(r.combat || '{}').myRecipes || []) if (m.id) keep.add(m.id); } catch {}
+  }
+  return keep;
+}
+
 module.exports = {
-  DB_PATH, snapshot, checkBackup, stageRestore, closeDb, dbFileSize,
+  DB_PATH, snapshot, customRefs, checkBackup, stageRestore, closeDb, dbFileSize,
   countUsers: () => q.countUsers.get().n,
   getUserByName: (name) => q.userByName.get(name),
   // 비밀번호 바꾸기. keepToken이 있으면 그 접속만 남기고 다른 기기의 로그인은 모두 끊음

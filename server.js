@@ -209,7 +209,7 @@ app.get('/api/version', (req, res) => {
 });
 
 const server = http.createServer(app);
-const io = new Server(server, { maxHttpBufferSize: 1e6 }); // 한 번에 받는 크기 (프로필 그림이 가장 큼)
+const io = new Server(server, { maxHttpBufferSize: 1e6, perMessageDeflate: { threshold: 4096 } }); // 한 번에 받는 크기 (프로필 그림이 가장 큼) · 4KB 넘는 메시지는 압축해서 보냄 (접속할 때 받는 물건 목록 등)
 // 한 연결이 짧은 사이에 너무 많은 요청을 보내면 잠시 무시 (서버를 멈추게 하려는 도배 방지). 보통 놀이는 1초에 몇 번이 고작
 const FLOOD = { perSec: 30, burst: 60 };
 io.use((socket, next) => {
@@ -822,14 +822,13 @@ logic.hooks.purifyDebug = purify.debugSet; // 시험용: 정화 진행을 바로
 // ── 자유 제작: 직접 빚은 물건 (월드에 저장, 켤 때 ITEMS에 다시 올림) ──
 const free = require('./game-free');
 const FREE_CFG = require('./game-data').FREE;
-{
-  const all = db.worldGet('customItems') || {};
-  for (const [id, def] of Object.entries(all)) ITEMS[id] = def;
-}
-const customSave = (id, def) => { const all = db.worldGet('customItems') || {}; all[id] = def; db.worldSet('customItems', all); ITEMS[id] = def; io.emit('items:add', { id, item: def }); };
+// 빚은 물건 목록은 켤 때 한 번 읽어 메모리에 두고, 바뀔 때만 저장 (빚을 때마다 큰 기록을 다시 읽지 않게)
+const CUSTOM = db.worldGet('customItems') || {};
+for (const [id, def] of Object.entries(CUSTOM)) ITEMS[id] = def;
+const customSave = (id, def) => { CUSTOM[id] = def; db.worldSet('customItems', CUSTOM); ITEMS[id] = def; io.emit('items:add', { id, item: def }); };
 logic.hooks.registerCustom = (d, ids, r) => {
   const sig = free.signature(d.id, ids, r);
-  const all = db.worldGet('customItems') || {};
+  const all = CUSTOM;
   let id = free.hashId(sig), n = 0;
   while (all[id] && all[id].custom?.sig !== sig) id = free.hashId(`${sig}#${++n}`);
   if (all[id]) { ITEMS[id] = all[id]; return { id, isNew: false }; }
@@ -842,11 +841,36 @@ logic.hooks.registerCustom = (d, ids, r) => {
   customSave(id, def);
   return { id, isNew: true };
 };
-logic.hooks.creations = () => db.worldGet('creations') || {}; // 도감의 '빚은 물건'이 처음 오른 것을 표시할 때
+const CREATIONS = db.worldGet('creations') || {}; // 창작 도감 (메모리에 두고 바뀔 때만 저장)
+// 아무도 가지고 있지 않은 빚은 물건 정리 (하루 한 번). 이름을 붙였거나, 도감에 올랐거나, 빚은 지 7일이 안 된 것은 남김
+let customGcLast = db.worldGet('customGcLast') || null;
+function customGC() {
+  const keep = db.customRefs();
+  for (const e of online.values()) { // 접속 중인 드래곤: 아직 저장되기 전의 착용·내 제작법까지
+    for (const v of Object.values(logic.equipOf(e.dragon) || {})) keep.add(v);
+    for (const m of logic.combatJson(e.dragon).myRecipes || []) if (m.id) keep.add(m.id);
+  }
+  for (const c of Object.values(CREATIONS)) keep.add(c.id);
+  const now = Date.now();
+  let removed = 0;
+  for (const [id, def] of Object.entries(CUSTOM)) {
+    if (keep.has(id) || def.custom?.named || now - (def.custom?.at || 0) < 7 * 86400000) continue;
+    delete CUSTOM[id]; delete ITEMS[id]; removed++;
+  }
+  if (removed) db.worldSet('customItems', CUSTOM);
+  customGcLast = { at: now, removed, left: Object.keys(CUSTOM).length };
+  db.worldSet('customGcLast', customGcLast);
+  if (removed) console.log(`[빚은 물건 정리] ${removed}개 지움, ${customGcLast.left}개 남음`);
+  return customGcLast;
+}
+setTimeout(() => { try { customGC(); } catch (e) { console.error('[빚은 물건 정리 실패]', e.message); } }, 60 * 1000).unref?.();
+setInterval(() => { try { customGC(); } catch (e) { console.error('[빚은 물건 정리 실패]', e.message); } }, 24 * 3600 * 1000).unref?.();
+const customStats = () => ({ count: Object.keys(CUSTOM).length, named: Object.values(CUSTOM).filter((d) => d.custom?.named).length, kb: Math.round(JSON.stringify(CUSTOM).length / 1024), creations: Object.keys(CREATIONS).length, last: customGcLast });
+logic.hooks.creations = () => CREATIONS; // 도감의 '빚은 물건'이 처음 오른 것을 표시할 때
 // 창작 도감: 종류 + 부위(먹는 것은 주된 효능) + 기운의 조합을 처음 빚은 드래곤을 영구히 남김
 logic.hooks.creation = (d, r, id) => {
   const key = free.creationKey(r);
-  const w = db.worldGet('creations') || {};
+  const w = CREATIONS;
   if (w[key]) return [];
   const label = free.creationLabel(r);
   w[key] = { key, label, id, name: ITEMS[id].name, by: d.id, byName: d.name, at: Date.now() };
@@ -1204,12 +1228,19 @@ function onConnect(socket) {
   // 읽음 표시 저장: { key: 'notes'|'slate', value: 숫자 } 또는 { key: 'risen', value: ['id:at'…] } (브라우저가 아니라 드래곤마다 기억)
   // ── 자유 제작: 실험 노트 · 내 제작법 · 창작 도감 · 이름 짓기 ──
   const freeMax = (d) => (d.nest && logic.nestInfo(d).fac?.library ? FREE_CFG.mineLib : FREE_CFG.mine); // 둥지에 서고가 있으면 더
+  // GM: 빚은 물건 수 보기 · 지금 정리하기
+  socket.on('gm:custom:stats', (p, ack) => {
+    if (typeof ack !== 'function') return;
+    if (!socket.data.user?.is_gm) return ack({ error: 'GM만 쓸 수 있다.' });
+    if (p?.run) customGC();
+    ack({ ok: true, stats: customStats() });
+  });
   socket.on('craft:free:get', (p, ack) => {
     if (typeof ack !== 'function') return;
     const entry = entryOf(socket);
     if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
     const c = logic.combatJson(entry.dragon);
-    const cr = Object.values(db.worldGet('creations') || {}).sort((a, b) => b.at - a.at);
+    const cr = Object.values(CREATIONS).sort((a, b) => b.at - a.at);
     ack({ ok: true, notes: c.freeNotes || [], mine: c.myRecipes || [], mineMax: freeMax(entry.dragon), creations: cr });
   });
   socket.on('craft:keep', (p, ack) => {

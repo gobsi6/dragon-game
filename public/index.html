@@ -13464,12 +13464,22 @@
         $('gm-dlg').close();
       } catch (e) { toast(e.message); }
     });
+    // 빚은 물건: 지금 몇 개인지 · 마지막 정리 (하루 한 번 아무도 안 가진 것을 지움)
+    const cst = gEl('div', 'gm-autobk');
+    const cline = gEl('p', 'note', '빚은 물건 · 불러오는 중…');
+    cst.appendChild(cline);
+    const showC = (st) => { const l = st.last; cline.textContent = `빚은 물건 ${st.count}개 (이름 붙인 것 ${st.named}) · 약 ${st.kb}KB · 창작 도감 ${st.creations}칸${l ? ` · 마지막 정리 ${new Date(l.at).toLocaleString('ko-KR')} (${l.removed}개 지움)` : ''}. 아무도 가지지 않은 것은 하루 한 번 저절로 정리된다.`; };
+    socket.emit('gm:custom:stats', {}, (res) => { if (!res.error) showC(res.stats); });
+    const cb = gEl('button', 'btn', '지금 정리하기'); cb.type = 'button';
+    cb.addEventListener('click', () => socket.emit('gm:custom:stats', { run: true }, (res) => { if (res.error) return toast(res.error); showC(res.stats); toast(`정리했다. ${res.stats.last.removed}개를 지웠다.`); }));
+    cst.appendChild(cb);
     // 자동 백업: 서버가 하루 한 번 볼륨에 만들어 두는 사본 (최근 7일)
     const auto = gEl('div', 'gm-autobk');
     auto.appendChild(gEl('p', 'note', '자동 백업 · 서버가 하루 한 번 저장 파일 사본을 만들어 최근 7일 치를 남겨 둔다. 내려받거나 그날로 바로 되돌릴 수 있다.'));
     const list = gEl('div', 'gm-autobk-list');
     list.appendChild(gEl('p', 'note', '불러오는 중…'));
     auto.appendChild(list);
+    sec.appendChild(cst);
     sec.appendChild(auto);
     const kb = (n) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)}MB` : `${Math.max(1, Math.round(n / 1024))}KB`);
     fetch('/api/gm/autobackups', { headers: { Authorization: `Bearer ${store.get()}` } }).then((r) => r.json()).then((j) => {
@@ -13935,6 +13945,8 @@
       S.huntable = data.huntable;
       S.slots = data.slots;
       for (const [k, v] of Object.entries(S.items || {})) v.id = k;
+      // 정리되어 사라진 빚은 물건(cx_…)을 지난 기록이 가리켜도 화면이 깨지지 않게 (목록을 훑을 때는 나오지 않음)
+      S.items = new Proxy(S.items || {}, { get: (t, k) => (k in t || typeof k !== 'string' || !k.startsWith('cx_') ? t[k] : { id: k, name: '사라진 빚은 물건', type: 'mat', rarity: 'common', desc: '지금은 남아 있지 않은 물건이다.', value: 0, gone: true }) });
       S.recipes = data.recipes;
       S.craftRules = data.craftRules || null;
       S.free = data.free || null; // 자유 제작: 재료의 성질

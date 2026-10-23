@@ -110,8 +110,12 @@ function resolve(ids, wis, greatChance, rnd = Math.random) {
 // 창작 도감의 열쇠: 종류 + (먹는 것: 주된 효능 / 장신구: 부위) + 기운
 const creationKey = (r) => `${r.kind}:${r.kind === 'food' ? r.top : r.slot}:${r.aura || '-'}`;
 const creationLabel = (r) => `${r.aura ? `${T[r.aura]} 깃든 ` : ''}${r.kind === 'food' ? `${T[r.top]}의 먹을거리` : `${({ claw: '발톱', wing: '날개', tail: '꼬리', neck: '목', head: '머리', charm: '부적' })[r.slot]} 장신구`}`;
-// 같은 드래곤이 같은 재료로 같은 품질을 빚으면 같은 물건 (겹쳐 쌓임)
-function signature(dragonId, ids, r) { return `${dragonId}|${ids.slice().sort().join('+')}|${r.quality}|${r.mw ? 1 : 0}`; }
+// 같은 드래곤이 빚은 것 중 효과가 같으면 같은 물건 (재료가 달라도 겹쳐 쌓임 → 빚은 물건이 끝없이 늘지 않게)
+function signature(dragonId, ids, r) {
+  const eff = r.kind === 'food' ? r.use : { slot: r.slot, ...r.def };
+  const key = JSON.stringify(eff, Object.keys(eff).sort()) + JSON.stringify(eff.bonus || {}, Object.keys(eff.bonus || {}).sort());
+  return `v2|${dragonId}|${r.kind}|${key}|${r.quality}|${r.mw ? 1 : 0}`;
+}
 function hashId(s) { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0; return `cx_${h.toString(36)}`; }
 const NAME_RE = /^[가-힣A-Za-z0-9 ·'\-]{2,12}$/;
 
