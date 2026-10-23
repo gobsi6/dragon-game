@@ -31,13 +31,15 @@ const SHORT = { spider_silk: '거미줄', wolf_pelt: '늑대털', beast_hide: '�
 const pickBy = (arr, seed) => arr[seed % arr.length];
 const seedOf = (s) => { let h = 7; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; };
 // 기운 → 꾸밈말 → 주재료 → 형태. 길면(14자 넘으면) 꾸밈말부터 뺌
-function makeName({ ids, aura, second, main, form, quality }) {
+function makeName({ ids, aura, second, main, form, quality, mw = false }) {
   const seed = seedOf(ids.slice().sort().join('+'));
   const q = { normal: 0, good: 1, great: 2 }[quality] || 0;
   const parts = [aura ? pickBy(AURA_WORD[aura], seed) : '', second ? pickBy(EFF_WORD[second], seed >>> 3) : '', SHORT[main] || ITEMS[main]?.name || '', pickBy(form[q], seed >>> 5)];
-  let name = parts.filter(Boolean).join(' ');
-  if (name.length > 14) name = [parts[0], parts[2], parts[3]].filter(Boolean).join(' ');
-  if (name.length > 14) name = [parts[2], parts[3]].filter(Boolean).join(' ');
+  const pre = mw ? '걸작 ' : ''; // 걸작이면 정식 장신구처럼 이름 앞에
+  const max = mw ? 17 : 14;      // '걸작 ' 세 자만큼 더 허락
+  let name = pre + parts.filter(Boolean).join(' ');
+  if (name.length > max) name = pre + [parts[0], parts[2], parts[3]].filter(Boolean).join(' ');
+  if (name.length > max) name = pre + [parts[2], parts[3]].filter(Boolean).join(' ');
   return name;
 }
 const ELEM = { fire: 'fire', frost: 'ice', venom: 'poison' }; // 장신구 각인 속성
@@ -113,7 +115,7 @@ function resolve(ids, wis, greatChance, rnd = Math.random) {
   if (aura && ELEM[aura]) def.elem = ELEM[aura];
   if (aura === 'soul') def.mindWard = 0.85;
   const main = best[top]?.id;
-  const name = makeName({ ids, aura, second, main, form: SLOT_WORD[slot], quality });
+  const name = makeName({ ids, aura, second, main, form: SLOT_WORD[slot], quality, mw });
   return { kind: 'gear', top, aura, quality, mw, slot, def, name, sum, value: Math.round(value * { normal: 1, good: 1.5, great: 2 }[quality] * (mw ? 1.3 : 1)), rarity: pts >= 5 ? 'rare' : pts >= 3 ? 'uncommon' : 'common' };
 }
 // ── 선물로 빚기: 능력치·회복 없이 보물 상자에 간직할 물건. 가장 센 성질이 모양을 정함 ──

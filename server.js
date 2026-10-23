@@ -834,6 +834,14 @@ const free = require('./game-free');
 const FREE_CFG = require('./game-data').FREE;
 // 빚은 물건 목록은 켤 때 한 번 읽어 메모리에 두고, 바뀔 때만 저장 (빚을 때마다 큰 기록을 다시 읽지 않게)
 const CUSTOM = db.worldGet('customItems') || {};
+// 예전에 빚은 걸작: 저절로 붙은 이름이면 앞에 '걸작'을 붙임 (직접 지은 이름은 그대로)
+{
+  let n = 0;
+  for (const def of Object.values(CUSTOM)) {
+    if (def.type === 'equip' && def.custom?.mw && !def.custom.named && !String(def.name).startsWith('걸작')) { def.name = `걸작 ${def.name}`; n++; }
+  }
+  if (n) { db.worldSet('customItems', CUSTOM); console.log(`[빚은 물건] 예전 걸작 ${n}개의 이름 앞에 '걸작'을 붙임`); }
+}
 for (const [id, def] of Object.entries(CUSTOM)) ITEMS[id] = def;
 const customSave = (id, def) => { CUSTOM[id] = def; db.worldSet('customItems', CUSTOM); ITEMS[id] = def; io.emit('items:add', { id, item: def }); };
 logic.hooks.registerCustom = (d, ids, r) => {
@@ -864,6 +872,7 @@ function customEff(it) {
 // 예전에 남은 칸: 효과·성질 합이 없으면 그 물건에서 채움 (물건이 남아 있을 때)
 for (const c of Object.values(CREATIONS)) {
   const it = ITEMS[c.id];
+  if (it && it.custom?.mw && !it.custom.named && c.name !== it.name) c.name = it.name; // 걸작 이름을 붙인 것과 맞춤
   if (!c.eff && it) c.eff = customEff(it);
   if (!c.mats && it?.custom?.mats) c.mats = it.custom.mats.slice();
   if (!c.sum && c.mats) { c.sum = {}; for (const m of c.mats) for (const [k, n] of Object.entries(FREE_CFG.tags[m] || {})) c.sum[k] = (c.sum[k] || 0) + n; }
