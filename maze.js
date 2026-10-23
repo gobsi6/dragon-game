@@ -476,8 +476,9 @@ module.exports = function setupMaze({ io, db, online, logic, sendMe, system, dea
   }
   function conquer(d, fi) {
     const f = W.floors[fi], day = dayIdx();
-    // 개척자 칭호: 봉인이 풀릴 때 쓰러져 있던 수호자와 싸웠거나 기둥을 밝힌 드래곤 (sealBy)
-    // 1·2층은 예전 기준(오늘·어제 길을 뚫음)도 함께 인정 — 그때 규칙을 믿고 진행하던 층이라 누구도 빠지지 않게
+    // 개척자 칭호: 봉인이 풀릴 때 쓰러져 있던 수호자와 싸웠거나 기둥을 밝힌 드래곤 (sealBy) + 계단을 처음 밟은 드래곤
+    // 1·2층은 예전 기준(계단을 처음 밟는 날이나 그 전날 길을 뚫음)도 함께 인정 — 예전 규칙을 믿고 진행하던 층이라 누구도 빠지지 않게
+    // (업데이트 전에 이미 봉인이 풀려 sealBy가 없는 층도 예전 기준으로)
     const ids = [...(f.sealBy || [])];
     if (fi <= 1 || !f.sealBy) for (const [id, dd] of Object.entries(f.contrib)) if (day - dd <= 1 && !ids.includes(Number(id))) ids.push(Number(id));
     if (!ids.includes(d.id)) ids.push(d.id);
