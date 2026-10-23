@@ -1609,18 +1609,38 @@ function growInfo(k) {
   };
 }
 
-// ── 왕도 축제에 식구들 데려가기: 축제 중 왕도에 있을 때, 오늘 아직 안 간 식구 모두 (축제 하루에 한 번씩, 토·일 두 번) ──
+// ── 왕도 축제에 식구들 데려가기: 축제 중 왕도에 있을 때. 축제마다 낮에 한 번, 야시장이 열린 밤에 한 번 (식구마다) ──
 const FEST_GROUP = { '아기': 'babyH', '아이': 'kidH', '소년': 'kidH', '청소년': 'youthH', '어른': 'adultH', '노년': 'adultH', '해츨링': 'hatch', '어린 용': 'littleD', '젊은 용': 'olderD', '다 자란 용': 'olderD' };
-const festDayKey = (fest, now = Date.now()) => (fest ? `${fest.key}:${kstDay(now)}` : null); // 축제 + 그날(한국 날짜)
-const festKids = (kin, key, now = Date.now()) => kin.filter((k) => k.status === 'home' && !k.data.onExp && !k.data.runaway && !(k.type === 'drake' && k.data.errand) && k.data.festKey !== key);
+// 그 시각에 야시장이 열려 있었는지 (server.js가 nightmarket.js의 시간표로 정해 줌)
+let nightAt = () => false;
+const setNightCheck = (fn) => { nightAt = fn; };
+const festSlot = (t) => (nightAt(t) ? 'night' : 'day');
+// 이번 축제에 낮·밤 각각 다녀왔는지. 다녀온 시각으로 판단하므로, 예전 방식으로 남은 기록(festAt 하나)도 그 시각이 낮이었는지 밤이었는지로 인정함
+// 이번 축제에 다녀온 횟수: 함께한 날들에 남은 축제 기록으로 셈 (규칙을 바꾸는 사이에 낮·밤 구분 없이 다녀온 것까지)
+const FEST_DIARY = /왕도 축제/;
+const festCount = (k, fest) => { const from = fest.until - 2 * DAY; return (k.data.diary || []).filter((e) => e.at >= from && e.at < fest.until && FEST_DIARY.test(e.t)).length; };
+function festSlots(k, fest) {
+  const rec = k.data.fest && k.data.fest.key === fest.key ? k.data.fest : {};
+  const out = { day: !!rec.day, night: !!rec.night };
+  const at = k.data.festAt, from = fest.until - 2 * DAY;
+  if (at && at >= from && at < fest.until) out[festSlot(at)] = true;
+  if (festCount(k, fest) >= 2) { out.day = true; out.night = true; out.full = true; } // 이미 두 번 다녀왔으면 더는 못 감 (축제마다 두 번까지)
+  return out;
+}
+const festKids = (kin, fest, slot) => kin.filter((k) => k.status === 'home' && !k.data.onExp && !k.data.runaway && !(k.type === 'drake' && k.data.errand) && !festSlots(k, fest)[slot]);
+const festWent = (kin, fest, slot) => kin.filter((k) => festSlots(k, fest)[slot]);
 function festOuting(d, kin, fest, nightOpen, now = Date.now()) {
   if (!fest) return { error: '지금은 축제가 열리지 않았다.' };
   if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
   if (d.region !== FESTIVAL.region) return { error: `식구들과 축제를 보려면 ${REGIONS[FESTIVAL.region]?.name || '왕도'}에 가야 한다.` };
   if (!d.nest) return { error: '아직 둥지를 틀지 않아 데려갈 식구가 없다.' };
-  const key = festDayKey(fest, now);
-  const went = festKids(kin, key, now);
-  if (!went.length) return { error: kin.some((k) => k.data.festKey === key) ? '오늘은 이미 식구들과 함께 축제에 다녀왔다.' : '함께 축제에 갈 수 있는 식구가 없다.' };
+  const slot = nightOpen ? 'night' : 'day';
+  const went = festKids(kin, fest, slot);
+  if (!went.length) {
+    if (!festWent(kin, fest, slot).length) return { error: '함께 축제에 갈 수 있는 식구가 없다.' };
+    if (kin.filter((k) => k.status === 'home').every((k) => festSlots(k, fest).full)) return { error: '이번 축제에는 이미 식구들과 두 번 다녀왔다.' };
+    return { error: slot === 'night' ? '이번 축제의 야시장 밤에는 이미 식구들과 함께 다녀왔다.' : '이번 축제의 낮 구경은 이미 식구들과 함께 다녀왔다. 야시장이 열리면 한 번 더 갈 수 있다.' };
+  }
   const F = KIN_FEST, call = callName(d);
   const line = (tpl, k) => fillT(tpl, { a: k ? k.name : '', o: call });
   const lines = [pick(nightOpen ? F.openNight : F.open)];
@@ -1628,17 +1648,32 @@ function festOuting(d, kin, fest, nightOpen, now = Date.now()) {
   for (const k of went) {
     const g = FEST_GROUP[stageOf(k, now).name] || 'kidH';
     const pool = [...(F.scene[g] || F.scene.kidH)];
-    if (nightOpen) pool.push(...(g === 'hatch' ? [] : F.night.any), ...(F.night[g] || [])); // 밤에는 야시장 장면도 (해츨링은 해츨링 장면만)
-    const fresh = pool.filter((t) => !used.has(t));
+    if (nightOpen) pool.push(...(g === 'hatch' || g === 'babyH' ? [] : F.night.any), ...(F.night[g] || [])); // 밤에는 야시장 장면도 (아기·해츨링은 제 장면만)
+    // 제 장면을 다 썼으면 꺼내 쓰는 장면에서 (한 나들이에서 같은 문장이 두 번 나오지 않게)
+    let fresh = pool.filter((t) => !used.has(t));
+    if (!fresh.length) fresh = (F.spare[g === 'babyH' || g === 'hatch' ? g : k.type] || []).filter((t) => !used.has(t));
     const tpl = pick(fresh.length ? fresh : pool);
     used.add(tpl);
     const gain = addBond(k, F.bond);
     lines.push(`${line(tpl, k)}${gain ? ` (${k.name} 유대 +${gain})` : ''}`);
     growAdd(k, 'warm', 0.5);
-    k.data.festKey = key; k.data.festAt = now;
+    const rec = k.data.fest && k.data.fest.key === fest.key ? k.data.fest : { key: fest.key };
+    rec[slot] = now; k.data.fest = rec; k.data.festAt = now;
     diary(k, line(pick(nightOpen ? F.diaryNight : F.diary), k), now);
   }
-  if (went.length > 1) lines.push(pick(F.family));
+  if (went.length > 1) {
+    // 둘이 함께한 장면 하나 (아기는 빼고. 사람과 용이면 사람을 앞에)
+    const can = went.filter((k) => stageOf(k, now).name !== '아기');
+    if (can.length > 1) {
+      const x = pick(can), y = pick(can.filter((k) => k !== x));
+      // 사람과 용이면 사람을 앞에, 용 둘이면 나이 많은 쪽을 앞에 (어린 쪽을 날개로 감싸 주는 장면 등)
+      const [a, b] = x.type === 'drake' && y.type === 'human' ? [y, x] : x.type === 'drake' && y.type === 'drake' && (x.data.born || 0) > (y.data.born || 0) ? [y, x] : [x, y];
+      const pool = a.type === 'human' && b.type === 'human' ? F.pair.hh : a.type === 'drake' && b.type === 'drake' ? F.pair.dd : F.pair.hd;
+      lines.push(fillT(pick(pool), { a: a.name, b: b.name, o: call }));
+    }
+    const hs = went.some((k) => k.type === 'human'), ds = went.some((k) => k.type === 'drake');
+    lines.push(pick(F.family[hs && ds ? 'mixed' : ds ? 'drake' : 'human']));
+  }
   // 아이나 어린 용이 함께 갔으면, 가끔 축제 그림을 그려 줌 (보물 상자)
   const drawer = went.filter((k) => F.drawStages.includes(stageOf(k, now).name));
   if (drawer.length && Math.random() < F.drawChance) {
@@ -1649,7 +1684,7 @@ function festOuting(d, kin, fest, nightOpen, now = Date.now()) {
 }
 
 module.exports = {
-  festKids, festOuting, festDayKey, // 왕도 축제에 식구들 데려가기
+  festKids, festWent, festOuting, setNightCheck, // 왕도 축제에 식구들 데려가기 (낮 한 번 · 야시장 밤 한 번)
   touch, // 교감
   playable, playTogether, bestFriends, growInfo,
   expCandidates,

@@ -677,7 +677,7 @@ function entryOf(socket) {
 }
 
 // 동료: 프로필, 관계, 선물, 교환 (social.js)
-const social = require('./social')({ db, online, entryOf, sendMe, logic, life, inBattle: (id) => !!arena && arena.inBattle(id) });
+const social = require('./social')({ db, online, entryOf, sendMe, logic, life, inBattle: (id) => !!arena && arena.inBattle(id), nightOpen: () => !!nightMarket.sessionAt() }); // nightMarket은 아래에서 만들어지지만, 쓰는 건 게임이 돌아갈 때라 괜찮음
 
 // 강적·결투장·전투 설정·광폭화 (arena.js)
 let arena = null;
@@ -721,6 +721,7 @@ const slate = require('./slate')({ io, db, entryOf }); // 석판 (게시판)
 const yabawi = require('./yabawi')({ io, db, online, logic, sendMe, isOpen: (r) => ruin.unlocked(r) }); // ruin은 아래에서 만들어지지만, 쓰는 건 게임이 돌아갈 때라 괜찮음
 // 왕도 야시장: 축제 날 저녁 6시~새벽 5시, 상인 노점과 드래곤들의 노점 (nightmarket.js)
 const nightMarket = require('./nightmarket')({ io, db, online, logic, sendMe });
+life.setNightCheck((t) => !!nightMarket.sessionAt(t)); // 식구 나들이: 낮에 한 번 · 야시장 밤에 한 번
 // ── 정화: 오염된 땅에서 행동할수록 모두의 기여가 쌓이고, 목표에 닿으면 그 땅의 오염이 일찍 걷힘 ──
 // 오염 시계 (GM이 즉시 일으키면 바뀜). logic이 이걸 보고 지금 오염된 곳을 셈
 let corruptClock = db.worldGet('corruptClock') || { off: 0, bump: 0, force: null };

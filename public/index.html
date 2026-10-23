@@ -9368,6 +9368,11 @@
     festAfterHatch: ['{a}[이/가] 꿈속에서도 불꽃을 보는지 자다가 작게 \"퐁\" 하고 불씨를 뿜었다.', '{a}[이/가] 둥지 입구에 매단 천 조각이 깃발처럼 흔들리자 신이 나서 꼬리를 흔든다.'],
     festWant: ['{a}[이/가] 왕도 쪽 하늘에 오르는 불꽃을 보며 가 보고 싶다고 조른다.', '{a}[이/가] 바람에 실려 오는 북소리에 귀를 쫑긋 세우고 있다.'],
     festWantHatch: ['멀리서 불꽃 터지는 소리가 들릴 때마다 {a}[이/가] 고개를 번쩍 들고 그쪽을 바라본다.'],
+    festAfterBaby: ['{a}[이/가] 축제에서 얻어 온 방울 소리에 까르르 웃으며 손을 버둥거린다.', '{a}[이/가] 북소리를 흉내 내듯 둥지 바닥을 작은 손으로 탁탁 두드린다.'],
+    festAfterGrown: ['{a}[이/가] 축제에서 들은 노래를 흥얼거리며 둥지 살림을 정리한다.', '{a}[이/가] 축제 때 어린 식구들이 얼마나 신나 했는지 떠올리며 빙그레 웃는다.', '{a}[이/가] 다음 축제에는 무엇을 보러 갈지 벌써부터 이야기한다.'],
+    festWantGrown: ['{a}[이/가] 바람에 실려 오는 북소리에 귀를 기울이며, 왕도는 지금쯤 북적이겠다고 중얼거린다.', '{a}[이/가] 왕도 쪽 하늘에 오르는 불꽃을 한참 바라본다.'],
+    festWantBaby: ['멀리서 북소리가 들릴 때마다 {a}[이/가] 버둥거리며 소리 나는 쪽으로 고개를 돌린다.'],
+    festAfterD: ['{a}[이/가] 축제에서 본 불꽃을 흉내 내 하늘에 대고 불씨를 퐁퐁 뿜어 본다.', '{a}[이/가] 날개에 묶어 온 축제 리본을 풀지 않겠다고 고집을 부린다.'],
     depart: [
       '{n}[이/가] {o}[을/를] 따라 원정길에 올랐다. {r}[으로/로] 간다며 들떠 있다.',
       '{n}[이/가] {o}의 뒤를 바짝 따라 원정을 떠났다. 남은 식구들이 입구까지 배웅했다.',
@@ -9436,8 +9441,10 @@
     else if (a.satWord === '배부름') add(STORY.full);
     if (a.mood === 'happy') add(STORY.happy);
     // 왕도 축제: 다녀온 지 이틀 안이면 그 이야기, 축제 중인데 아직 못 갔으면 가 보고 싶어 함
-    if (a.festAt && a.festAt < t0) add(a.stage === '해츨링' ? STORY.festAfterHatch : STORY.festAfter, 2);
-    else if (S.me?.nightMarket && !a.festAt) add(a.stage === '해츨링' ? STORY.festWantHatch : STORY.festWant);
+    // 말을 못 하는 아기·해츨링, 다 큰 식구(어른·노년·젊은 용·다 자란 용)는 따로. 어린 용은 용다운 장면도 섞음
+    const fk = a.stage === '해츨링' ? 'Hatch' : a.stage === '아기' ? 'Baby' : ['어른', '노년', '젊은 용', '다 자란 용'].includes(a.stage) ? 'Grown' : '';
+    if (a.festAt && a.festAt < t0) { add(STORY[`festAfter${fk}`], 2); if (a.stage === '어린 용') add(STORY.festAfterD, 2); }
+    else if (S.me?.nightMarket && !a.festAt) add(STORY[`festWant${fk}`]);
     // 유대: 높으면 내 드래곤을 따르고, 낮으면 아직 서먹함
     const bond = a.bond ?? 50;
     if (bond >= 80) add(STORY.bondHigh, 2);
@@ -11834,12 +11841,14 @@
       : `${capital}에서 주말 축제가 열리고 있다. 광장에 가면 다른 드래곤과 춤출 수 있다. ${untilText(f.until)} 뒤에 끝난다.`;
     const fl = box.querySelector('.fl');
     if (!f.here) { fl.remove(); return; }
-    // 식구들 데려가기: 축제 하루에 한 번씩. 오늘 아직 안 간 식구가 있으면 버튼, 다 다녀왔으면 한 줄
+    // 식구들 데려가기: 축제마다 낮에 한 번, 야시장 밤에 한 번. 지금 갈 수 있는 식구가 있으면 버튼, 다 다녀왔으면 한 줄
     const kf = f.kinFest;
     if (kf && (kf.left || kf.done)) {
       const r = document.createElement('div'); r.className = 'fk';
       const t = document.createElement('p'); t.className = 'fc';
-      t.textContent = kf.left ? `둥지 식구 ${kf.left}${kf.done ? '명이 오늘 아직 축제를 보지 못했다.' : '명을 데리고 축제를 구경할 수 있다. (하루 한 번)'}` : `오늘은 식구들과 함께 축제에 다녀왔다.${new Date(Date.now() + 9 * 3600000).getUTCDay() === 6 ? ' 내일 또 갈 수 있다.' : ''}`;
+      const when = kf.slot === 'night' ? '야시장 밤' : '낮';
+      t.textContent = kf.left ? `둥지 식구 ${kf.left}${kf.done ? `명이 아직 ${when} 축제를 보지 못했다.` : '명을 데리고 축제를 구경할 수 있다. (낮에 한 번, 야시장 밤에 한 번)'}`
+        : `${when} 축제는 식구들과 함께 다녀왔다.${kf.otherLeft ? (kf.slot === 'night' ? ' 낮에도 한 번 더 갈 수 있다.' : ' 야시장이 열리면 한 번 더 갈 수 있다.') : ''}`;
       r.appendChild(t);
       if (kf.left) {
         const b = document.createElement('button'); b.type = 'button'; b.className = 'btn'; b.textContent = '식구들과 구경하기';

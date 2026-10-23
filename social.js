@@ -32,7 +32,7 @@ const MEMO_MAX = 200;     // 관계 메모 (글자 수, 상대도 볼 수 있음
 const itemText = (items) => items.map(({ id, qty }) => `${ITEMS[id].name}${qty > 1 ? ` ${qty}개` : ''}`).join(', ');
 const giveText = (gold, items) => [gold ? `금화 ${gold}닢` : '', itemText(items)].filter(Boolean).join(', ');
 
-module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life, inBattle = () => false }) {
+module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life, inBattle = () => false, nightOpen = () => false }) {
   const trades = new Map();   // 교환 창: id → { id, a, b, side: { [드래곤 id]: { gold, items, ready } } }
   const invites = new Map();  // 교환 요청: id → { from, to, at }
   const teachAt = new Map();  // 가르치기: '스승 id:제자 id' → 마지막으로 가르친 시각
@@ -787,8 +787,9 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
         }
       }
       const kin = d.nest ? db.kinLoad(d.id) : [];
-      const fk = life.festDayKey(fest);
-      const kinFest = { left: life.festKids(kin, fk).length, done: kin.filter((k) => k.data.festKey === fk).length }; // 오늘 축제에 데려갈 수 있는 식구 · 오늘 이미 다녀온 식구
+      const slot = nightOpen() ? 'night' : 'day', other = slot === 'night' ? 'day' : 'night';
+      // 지금(낮 또는 야시장 밤) 데려갈 수 있는 식구 · 이미 다녀온 식구 · 다른 때(밤 또는 낮)에 아직 갈 수 있는 식구
+      const kinFest = { slot, left: life.festKids(kin, fest, slot).length, done: life.festWent(kin, fest, slot).length, otherLeft: life.festKids(kin, fest, other).length };
       return { ok: true, on: true, here: d.region === FESTIVAL.region, until: fest.until, count: done.length, list, region: FESTIVAL.region, kinFest };
     });
     on('fest:invite', (d, p) => {
