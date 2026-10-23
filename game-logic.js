@@ -1117,7 +1117,7 @@ function freeCraft(d, ids, have) {
   return { title: r.quality === 'great' ? '실험 · 빼어난 물건' : r.quality === 'good' ? '실험 · 좋은 물건' : '실험', lines, items, made: [{ id: made.id, qty: 1 }], free: { id: made.id, isNew: made.isNew, mats: ids } };
 }
 // 바랜 제작서: 아직 모르는 숨겨진 제작법 하나를 알게 됨
-// 바랜 제작서: 한 번 읽으면 재료의 성질 실마리, 두 번째에 재료 하나의 이름, 세 번째에 제작법 전체
+// 바랜 제작서: 한 번 읽으면 재료의 성질 실마리, 두 번째에 제작법 전체
 function readRecipeScroll(d) {
   const left = RECIPES.filter((r) => r.hidden && !knownRecipes(d).includes(r.out));
   if (!left.length) return { error: '이미 모든 숨겨진 제작법을 알고 있다.' };
@@ -1126,16 +1126,13 @@ function readRecipeScroll(d) {
   const r = left.find((x) => H[x.out]) || left[Math.floor(Math.random() * left.length)]; // 읽던 것이 있으면 그것부터
   const lv = (H[r.out] || 0) + 1;
   const ids = Object.keys(r.needs);
-  if (lv < 3) {
+  if (lv < 2) {
     H[r.out] = lv;
-    if (lv === 1) {
-      const T = FREE.tagNames;
-      const tagWord = (id) => { const t = Object.entries(FREE.tags[id] || {}).sort((a, b) => b[1] - a[1])[0]; return t ? T[t[0]] : '알 수 없는'; };
-      const hint = ids.map((id) => `${tagWord(id)}의 성질을 띤 것`).join(', ');
-      return { lines: [`바랜 글씨를 더듬어 읽었다. 어떤 물건을 만드는 법인 듯하다.`, `"…${hint}을 함께 화로에 넣으면…" 뒷부분은 지워져 있다.`, '같은 제작서를 더 찾아 읽으면 더 알 수 있을 것 같다.'] };
-    }
-    const one = ITEMS[ids[0]].name;
-    return { lines: [`지난번 그 제작법의 뒷부분을 찾았다. ${one}${josa(one, '이', '가')} 들어간다고 적혀 있다.`, '한 장만 더 찾으면 다 읽을 수 있을 것 같다.'] };
+    const T = FREE.tagNames;
+    const tagWord = (id) => { const t = Object.entries(FREE.tags[id] || {}).sort((a, b) => b[1] - a[1])[0]; return t ? T[t[0]] : '알 수 없는'; };
+    const cnt = {}; for (const id of ids) { const w = tagWord(id); cnt[w] = (cnt[w] || 0) + 1; } // 같은 성질이 둘이면 '두 가지'로
+    const hint = Object.entries(cnt).map(([w, n]) => `${w}의 성질을 띤 것${n > 1 ? ' 두 가지' : ''}`).join(', ');
+    return { lines: ['바랜 글씨를 더듬어 읽었다. 어떤 물건을 만드는 법인 듯하다.', `"…${hint}을 함께 화로에 넣으면…" 뒷부분은 지워져 있다.`, '한 장만 더 찾으면 다 읽을 수 있을 것 같다. 실마리로 직접 섞어 봐도 된다.'] };
   }
   delete H[r.out];
   knownRecipes(d).push(r.out);
