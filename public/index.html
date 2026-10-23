@@ -1384,6 +1384,7 @@
   .cm-nm { flex: 1 1 140px; font: 600 14px/1.3 var(--serif); }
   .cm-nm small { margin-left: 6px; font: 500 12px var(--sans); color: var(--muted); }
   .cm-row .btn { min-height: 32px; font-size: 12.5px; }
+  .craft-q { width: 100%; min-height: 0; height: 30px; padding: 0 10px; margin: 2px 0 6px; font-size: 13px; } /* 제작법 찾기: 얇게 */
   .cm-row .cm-who { min-height: 32px; width: auto; max-width: 9em; font-size: 12.5px; }
   .cm-wait { font-size: 12px; color: var(--muted); }
   /* 둥지 창: 탭 아래 시설 창 열기 */
@@ -8137,6 +8138,22 @@
       box.appendChild(r);
     }
   }
+  let CRAFT_Q = ''; // 제작법 찾기 칸에 적은 것 (창을 닫았다 열어도 남음)
+  // 찾기: 이름이 맞지 않는 제작법은 숨기고, 다 숨은 묶음은 제목도 숨김
+  function applyCraftQ(box) {
+    const q = CRAFT_Q.trim().toLowerCase();
+    let any = 0;
+    for (const row of box.querySelectorAll('.recipe[data-q]')) { const on = !q || row.dataset.q.toLowerCase().includes(q); row.hidden = !on; if (on) any++; }
+    for (const h of box.querySelectorAll('h3[data-grp]')) {
+      const grp = h.nextElementSibling;
+      const vis = grp ? [...grp.querySelectorAll('.recipe[data-q]')].filter((r) => !r.hidden).length : 0;
+      h.hidden = !!q && !vis; if (grp) grp.hidden = !!q && !vis;
+      const hn = h.querySelector('.inv-hn'); if (hn) { hn.dataset.all ||= hn.textContent; hn.textContent = q ? `${vis}개` : hn.dataset.all; }
+    }
+    let none = box.querySelector('.craft-q-none');
+    if (q && !any) { if (!none) { none = document.createElement('p'); none.className = 'note craft-q-none'; box.querySelector('.craft-bar')?.after(none); } none.textContent = `'${CRAFT_Q.trim()}'${josa(CRAFT_Q.trim(), '이', '가')} 들어간 제작법이 이 분류에 없다.`; none.hidden = false; }
+    else if (none) none.hidden = true;
+  }
   function drawCraft() {
     const me = S.me;
     const ci = me.craft || { known: [], needs: {}, hiddenLeft: 0, great: 0, gear: {} };
@@ -8161,6 +8178,13 @@
     box.appendChild(modes);
     if (craftMode === 'exp') return renderExperiment(box, ci);
     if (craftMode === 'gear') return renderGearWork(box, ci);
+    // 제작법 이름으로 찾기 (얇게)
+    const q = document.createElement('input');
+    q.type = 'search'; q.className = 'input craft-q'; q.id = 'craft-q';
+    q.placeholder = '제작법 이름으로 찾기'; q.setAttribute('aria-label', '제작법 찾기'); q.autocomplete = 'off';
+    q.value = CRAFT_Q;
+    q.addEventListener('input', () => { CRAFT_Q = q.value; applyCraftQ(box); });
+    box.appendChild(q);
     // 고르기: 종류별로 나눠 보기(밑줄 글자 탭), 재료가 다 있는 것만 보기
     const bar = document.createElement('div');
     bar.className = 'craft-bar';
@@ -8221,6 +8245,7 @@
       if (!rs.length) continue;
       shown += rs.length;
       const h = document.createElement('h3');
+      h.dataset.grp = title;
       h.className = 'inv-h';
       h.textContent = title;
       const hn = document.createElement('span');
@@ -8235,6 +8260,7 @@
         const it = S.items[r.out];
         const row = document.createElement('div');
         row.className = `recipe ${it.rarity}`;
+    row.dataset.q = it.name; // 찾기 칸이 이름으로 거름
         row.dataset.out = r.out; // 쓰임새 창의 '만들러 가기'가 찾아옴
         row.innerHTML = '<div class="nm"><b></b><span class="eff"></span></div><button type="button" class="btn primary">만들기</button><div class="needs"></div>';
         row.querySelector('b').textContent = it.name;
@@ -8269,6 +8295,7 @@
         : craftCan ? '지금 가진 재료로 만들 수 있는 것이 없다. 사냥 전리품을 모아 보자.' : '이 종류의 제작법이 없다.';
       box.appendChild(p);
     }
+    applyCraftQ(box); // 만든 뒤 다시 그려도 찾던 것을 그대로
     if (ci.hiddenLeft) {
       const p = document.createElement('p');
       p.className = 'note craft-hint';
