@@ -580,6 +580,7 @@
   .inv .it b { font: 700 14.5px/1.3 var(--serif); display: flex; flex-wrap: wrap; align-items: center; gap: 2px 7px; }
   .inv .it b::before { content: ""; width: 7px; height: 7px; transform: rotate(45deg); background: var(--r); flex: none; }
   .inv .it.common { --r: #9A9C98; } .inv .it.uncommon { --r: #3C5A73; } .inv .it.rare { --r: #B8913A; }
+  .inv .it.zero > :not(.fav-star) { opacity: .55; } /* 다 쓴 즐겨찾기 (별은 그대로 진하게) */
   .inv .it .q { font: 600 11px/18px var(--sans); padding: 0 7px; border-radius: 9px; background: #EEF0EE; color: var(--ink-2); font-variant-numeric: tabular-nums; }
   .inv .it small { font-size: 12px; line-height: 1.55; color: var(--muted); }
   .inv .it .eff { font-size: 11.5px; line-height: 1.55; color: var(--steel-d); }
@@ -5642,7 +5643,9 @@
     const all = Object.entries(invCache).filter(([id, q]) => S.items[id] && q > 0);
     const groupOf = (id) => (invTab === 'all' && isFav(id) ? 'fav' : itemCat(S.items[id]));
     const GORDER = ['fav', ...CATS];
-    const list = all
+    // 즐겨찾기한 물건은 다 써서 없어도 '다 씀'으로 남겨 보여 줌 (별이 풀린 것처럼 보이지 않게, 다시 모을 때 찾기 쉽게)
+    const zeros = favI.filter((id) => S.items[id] && !(invCache[id] > 0)).map((id) => [id, 0]);
+    const list = [...all, ...zeros]
       .filter(([id]) => invTab === 'all' || (invTab === 'fav' ? isFav(id) : itemCat(S.items[id]) === invTab))
       .sort(([a], [b]) => GORDER.indexOf(groupOf(a)) - GORDER.indexOf(groupOf(b))
         || isFav(b) - isFav(a)
@@ -5790,6 +5793,7 @@
         mk('취소', '', normal);
       };
       normal();
+      if (!qty) { acts.replaceChildren(); row.classList.add('zero'); row.querySelector('.q').textContent = '다 씀'; } // 다 쓴 즐겨찾기: 쓰기·버리기 버튼 없이
       row.appendChild(acts);
       group.appendChild(row);
     }

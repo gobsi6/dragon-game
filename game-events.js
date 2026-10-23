@@ -40,9 +40,23 @@ const canMate = (c, x) => !x.data.mate && c.now - (x.data.mateNo || 0) >= 3 * DA
 const loveOf = (c, x) => { const kl = require('./game-logic').hooks.kinLove; return kl && (x.data.loveRef || kl.refOf(x, c.d.id)) ? kl.status(c.d.id, x) : null; };
 // 서로의 첫사랑이 아직 어른이 되지 않았거나 혼인 청을 기다리는 중이면: 다른 사람과 짝을 맺지 않고 기다림
 // 다른 둥지 아이와 맺어진 짝이면 그 둥지에도 아이 소식
-const babyTell = (h, c, k, baby) => { const r = k.data.mate?.ref; if (r) h.notify(r.owner, `${c.me}의 둥지에서 ${k.name}${c.josa(k.name, '과', '와')} 당신의 둥지 ${k.data.mate.name} 사이에 아이가 태어났다. 이름은 ${baby}.`, '둥지 소식'); };
+const babyTell = (h, c, k, baby, found = false) => {
+  const r = k.data.mate?.ref; if (!r) return;
+  const m = k.data.mate.name;
+  h.notify(r.owner, found
+    ? `${c.me}의 둥지 ${k.name}${c.josa(k.name, '과', '와')} 당신의 둥지 ${m}${c.josa(m, '이', '가')} 길 잃은 아이를 함께 데려왔다. 이름은 ${baby}. 아이는 ${c.me}의 둥지에서 자란다.`
+    : `${c.me}의 둥지에서 ${k.name}${c.josa(k.name, '과', '와')} 당신의 둥지 ${m} 사이에 아이가 태어났다. 이름은 ${baby}. 아이는 ${c.me}의 둥지에서 자란다.`, '둥지 소식');
+  const kl = require('./game-logic').hooks.kinLove;
+  if (kl) kl.babyShared(r, baby, c.now, found ? `짝 ${k.name}${c.josa(k.name, '과', '와')} 함께 길 잃은 아이 ${baby}${c.josa(baby, '을', '를')} 데려왔다. 아이는 짝의 둥지에서 자란다.` : null);
+}; // 짝 쪽 기록에도 자녀를 남겨 두 둥지에서 겹쳐 생기지 않게
 const loveWaits = (c, x) => { const s = loveOf(c, x); return !!s && !s.gone && s.mutual && s.free && (!s.adult || s.pending); };
-const wantsBaby = (c, x) => x.data.mate && c.stage(x) === '어른' && (x.data.kids || []).length < 3
+// 다른 둥지 아이와 맺어진 짝: 성별이 같으면 아이 이벤트 없음, 아이 수·마지막 아이는 두 둥지가 함께 셈 (kinlove.js)
+const sameSexMate = (x) => !!x.data.mate?.ref && (!x.data.mate.sex || x.data.mate.sex === x.data.sex);
+const kidsRoom = (c, x) => x.data.mate && c.stage(x) === '어른' && (x.data.kids || []).length < 3
+  && c.now - x.data.mate.at >= 2 * DAYMS && c.now - (x.data.lastBaby || 0) >= 3 * DAYMS;
+// 성별이 같은 짝: 아이가 태어나는 대신 길 잃은 아이를 함께 데려옴 (kin_foundling)
+const wantsFoundling = (c, x) => sameSexMate(x) && kidsRoom(c, x);
+const wantsBaby = (c, x) => x.data.mate && c.stage(x) === '어른' && (x.data.kids || []).length < 3 && !sameSexMate(x)
   && c.now - x.data.mate.at >= 2 * DAYMS && c.now - (x.data.lastBaby || 0) >= 3 * DAYMS;
 const bringsEgg = (c, x) => x.data.mate && !x.data.eggBrought
   && (x.status === 'independent' ? c.now - (x.data.ended || 0) >= 2 * DAYMS : c.stage(x) === '다 자란 용' && c.now - x.data.mate.at >= 3 * DAYMS);
@@ -1519,6 +1533,38 @@ module.exports = [
         const k = c.k(v.id); (k.data.kids ||= []).push(v.baby); k.data.lastBaby = c.now; babyTell(h, c, k, v.baby);
         h.bond(k, 3);
         h.say(`둥지 끝에서 조용히 지켜보았다. ${h.name(k)} 아이에게 '${v.baby}'${h.josa(v.baby, '이라는', '라는')} 이름을 붙였다. (유대 +3)`);
+      } },
+    ],
+  },
+  {
+    id: 'kin_foundling',
+    title: '함께 데려온 아이',
+    when: ['wake'],
+    weight: 4,
+    cond: (c) => c.humans.some((x) => wantsFoundling(c, x)),
+    setup: (c) => {
+      const k = c.pick(c.humans.filter((x) => wantsFoundling(c, x)));
+      return { id: k.id, baby: freshKid(k), where: c.pick(['장터 뒷골목', '무너진 방앗간', '숲 가장자리 오두막', '비 오는 성문 아래', '강가 나룻배']) };
+    },
+    text: (c, v) => {
+      const k = c.k(v.id); const m = k.data.mate.name;
+      return [`${k.name}${c.josa(k.name, '과', '와')} ${m}${c.josa(m, '이', '가')} 작은 아이 하나를 사이에 두고 둥지 앞에 섰다. ${v.where}에서 홀로 울고 있던 아이라고 한다.`, `"둘이서 키우고 싶어요. 이 아이에게도 돌아갈 곳이 있었으면 해서요."`];
+    },
+    choices: [
+      { label: '이름을 지어 준다', run: (h, c, v) => {
+        const k = c.k(v.id); (k.data.kids ||= []).push(v.baby); k.data.lastBaby = c.now; babyTell(h, c, k, v.baby, true);
+        h.bond(k, 8); h.fame(1);
+        h.say(`'${v.baby}'${h.josa(v.baby, '이라고', '라고')} 불러 주었다. 아이는 처음엔 머뭇거리다가, ${h.name(k)} 내민 손을 꼭 잡았다. (유대 +8, 명성 +1)`);
+      } },
+      { label: '날개로 감싸 따뜻하게 해 준다', run: (h, c, v) => {
+        const k = c.k(v.id); (k.data.kids ||= []).push(v.baby); k.data.lastBaby = c.now; babyTell(h, c, k, v.baby, true);
+        h.bond(k, 12); h.mind(5);
+        h.say(`날개를 펼쳐 세 사람을 감쌌다. 떨던 아이가 비늘에 기대어 스르르 잠들었다. 두 사람은 아이를 ${v.baby}${h.josa(v.baby, '이라고', '라고')} 부르기로 했다. (유대 +12, 정신 +5)`);
+      } },
+      { label: '두 사람에게 맡긴다', run: (h, c, v) => {
+        const k = c.k(v.id); (k.data.kids ||= []).push(v.baby); k.data.lastBaby = c.now; babyTell(h, c, k, v.baby, true);
+        h.bond(k, 3);
+        h.say(`멀리서 조용히 지켜보았다. 두 사람은 아이에게 '${v.baby}'${h.josa(v.baby, '이라는', '라는')} 이름을 붙여 주었다. (유대 +3)`);
       } },
     ],
   },

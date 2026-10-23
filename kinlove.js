@@ -113,8 +113,8 @@ module.exports = function setupKinLove({ db, online, sendMe, life, logic, news, 
     if (!adult(a, now) || !adult(b, now)) return { error: '두 아이가 모두 어른이 되어야 맺어질 수 있다.' };
     drop();
     const F = o.from.ownerName, T = d.name;
-    a.data.mate = { name: b.name, at: now, home: T, ref: { owner: d.id, id: b.id } };
-    b.data.mate = { name: a.name, at: now, home: F, ref: { owner: o.from.owner, id: a.id } };
+    a.data.mate = { name: b.name, at: now, home: T, sex: b.data.sex || null, ref: { owner: d.id, id: b.id } }; // sex: 같은 성별이면 아이 이벤트가 없음
+    b.data.mate = { name: a.name, at: now, home: F, sex: a.data.sex || null, ref: { owner: o.from.owner, id: a.id } };
     life.addBond(a, 10); life.addBond(b, 10);
     life.diary(a, `${T}의 둥지에 사는 첫사랑 ${b.name}${josa(b.name, '과', '와')} 맺어졌다. 두 둥지가 함께 축복했다.`, now);
     life.diary(b, `${F}의 둥지에 사는 첫사랑 ${a.name}${josa(a.name, '과', '와')} 맺어졌다. 두 둥지가 함께 축복했다.`, now);
@@ -129,5 +129,13 @@ module.exports = function setupKinLove({ db, online, sendMe, life, logic, news, 
     return { ok: true, lines: [`혼인을 허락했다. ${b.name}${josa(b.name, '과', '와')} ${a.name}${josa(a.name, '이', '가')} 맺어졌다. 두 아이는 각자의 둥지에 살며 서로 오간다. (${b.name} 유대 +10)`] };
   }
 
-  return { status, lovesBack, ask, view, answer, refOf };
+  // 한쪽 둥지에서 아이가 태어나면 짝 쪽 기록에도 자녀를 적음 (아이 수·마지막 아이를 두 둥지가 함께 세서 겹쳐 태어나지 않게)
+  function babyShared(ref, baby, now = Date.now(), line = null) {
+    const { kin, k } = homeKid(ref.owner, ref.id);
+    if (!k) return;
+    (k.data.kids ||= []).push(baby); k.data.lastBaby = now;
+    life.diary(k, line || `짝과의 사이에 아이 ${baby}${josa(baby, '이', '가')} 태어났다. 아이는 짝의 둥지에서 자란다.`, now);
+    kinChanged(ref.owner, kin);
+  }
+  return { status, lovesBack, ask, view, answer, refOf, babyShared };
 };
