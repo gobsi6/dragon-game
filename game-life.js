@@ -1609,16 +1609,18 @@ function growInfo(k) {
   };
 }
 
-// ── 왕도 축제에 식구들 데려가기: 축제 중 왕도에 있을 때, 이번 축제에 아직 안 간 식구 모두 ──
+// ── 왕도 축제에 식구들 데려가기: 축제 중 왕도에 있을 때, 오늘 아직 안 간 식구 모두 (축제 하루에 한 번씩, 토·일 두 번) ──
 const FEST_GROUP = { '아기': 'babyH', '아이': 'kidH', '소년': 'kidH', '청소년': 'youthH', '어른': 'adultH', '노년': 'adultH', '해츨링': 'hatch', '어린 용': 'littleD', '젊은 용': 'olderD', '다 자란 용': 'olderD' };
+const festDayKey = (fest, now = Date.now()) => (fest ? `${fest.key}:${kstDay(now)}` : null); // 축제 + 그날(한국 날짜)
 const festKids = (kin, key, now = Date.now()) => kin.filter((k) => k.status === 'home' && !k.data.onExp && !k.data.runaway && !(k.type === 'drake' && k.data.errand) && k.data.festKey !== key);
 function festOuting(d, kin, fest, nightOpen, now = Date.now()) {
   if (!fest) return { error: '지금은 축제가 열리지 않았다.' };
   if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
   if (d.region !== FESTIVAL.region) return { error: `식구들과 축제를 보려면 ${REGIONS[FESTIVAL.region]?.name || '왕도'}에 가야 한다.` };
   if (!d.nest) return { error: '아직 둥지를 틀지 않아 데려갈 식구가 없다.' };
-  const went = festKids(kin, fest.key, now);
-  if (!went.length) return { error: kin.some((k) => k.data.festKey === fest.key) ? '이번 축제에는 이미 식구들과 함께 다녀왔다.' : '함께 축제에 갈 수 있는 식구가 없다.' };
+  const key = festDayKey(fest, now);
+  const went = festKids(kin, key, now);
+  if (!went.length) return { error: kin.some((k) => k.data.festKey === key) ? '오늘은 이미 식구들과 함께 축제에 다녀왔다.' : '함께 축제에 갈 수 있는 식구가 없다.' };
   const F = KIN_FEST, call = callName(d);
   const line = (tpl, k) => fillT(tpl, { a: k ? k.name : '', o: call });
   const lines = [pick(nightOpen ? F.openNight : F.open)];
@@ -1633,7 +1635,7 @@ function festOuting(d, kin, fest, nightOpen, now = Date.now()) {
     const gain = addBond(k, F.bond);
     lines.push(`${line(tpl, k)}${gain ? ` (${k.name} 유대 +${gain})` : ''}`);
     growAdd(k, 'warm', 0.5);
-    k.data.festKey = fest.key; k.data.festAt = now;
+    k.data.festKey = key; k.data.festAt = now;
     diary(k, line(pick(nightOpen ? F.diaryNight : F.diary), k), now);
   }
   if (went.length > 1) lines.push(pick(F.family));
@@ -1647,7 +1649,7 @@ function festOuting(d, kin, fest, nightOpen, now = Date.now()) {
 }
 
 module.exports = {
-  festKids, festOuting, // 왕도 축제에 식구들 데려가기
+  festKids, festOuting, festDayKey, // 왕도 축제에 식구들 데려가기
   touch, // 교감
   playable, playTogether, bestFriends, growInfo,
   expCandidates,

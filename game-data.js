@@ -406,6 +406,12 @@ const ITEMS = {
   nm_candy_apple:{ name: '설탕 사과',       rarity: 'common',   value: 5,  type: 'use', use: { en: 30, mind: 8 }, desc: '녹인 설탕을 유리처럼 입힌 붉은 사과. 깨물면 바삭 소리가 나고, 단맛에 마음이 풀린다.' },
   nm_sparkler:  { name: '국화 불꽃 막대',   rarity: 'common',   value: 6,  type: 'use', use: { mind: 20 }, desc: '불을 붙이면 끝에서 국화 모양 불꽃이 타닥타닥 핀다. 다 탈 때까지 바라보고 있으면 머릿속이 고요해진다.' },
   nm_star_candy:{ name: '별사탕 봉지',      rarity: 'common',   value: 5,  type: 'use', use: { en: 10, mind: 12 }, desc: '알록달록한 별사탕을 종이 봉지에 담았다. 하나씩 굴려 먹다 보면 어느새 봉지가 빈다.' },
+  nm_corn:      { name: '버터 구운 옥수수', rarity: 'common',   value: 5,  type: 'use', use: { hp: 25, en: 25 }, desc: '숯불에 굴려 구운 옥수수에 버터를 듬뿍 발랐다. 알갱이마다 고소한 김이 오른다.' },
+  nm_noodle:    { name: '장터 국수',        rarity: 'common',   value: 7,  type: 'use', use: { hp: 60, en: 20 }, desc: '멸치 국물에 고명을 얹은 뜨끈한 국수. 한 그릇 비우고 나면 축제 구경을 한 바퀴 더 돌 힘이 난다.' },
+  nm_hotteok:   { name: '꿀호떡',           rarity: 'common',   value: 5,  type: 'use', use: { en: 25, mind: 6 }, desc: '기름에 지글지글 부친 호떡. 베어 물면 뜨거운 꿀이 흘러나오니 조심해야 한다.' },
+  nm_chestnut:  { name: '군밤 봉지',        rarity: 'common',   value: 4,  type: 'use', use: { hp: 15, en: 20 }, desc: '껍질이 탁탁 갈라진 군밤을 종이 봉지에 담았다. 손을 녹이며 하나씩 까 먹는 맛이 있다.' },
+  nm_sikhye:    { name: '축제 단술',        rarity: 'common',   value: 5,  type: 'use', use: { en: 35, mind: 4 }, desc: '밥알이 동동 뜬 달큰한 단술. 축제 밤 목을 축이기에 딱 좋다.' },
+  nm_ember_candy:{ name: '불씨 사탕',       rarity: 'uncommon', value: 15, type: 'use', use: { ap: 2 }, desc: '떠돌이 약장수가 불의 결정 가루를 녹여 굳혔다는 붉은 사탕. 입에 넣으면 혀끝이 화끈하고 날개가 들썩인다.' },
   nm_lantern:   { name: '종이 등불',        rarity: 'uncommon', value: 8,  type: 'use', use: { keep: 'nm_lantern' }, desc: '야시장 등불장이가 한 장씩 붙여 만든 종이 등불. 안에 불을 넣으면 벚꽃 무늬가 벽에 비친다. 둥지의 보물 상자에 넣어 간직할 수 있다.' },
   nm_mask:      { name: '축제 가면',        rarity: 'uncommon', value: 12, type: 'use', use: { keep: 'nm_mask' }, desc: '여우인지 용인지 모를 얼굴을 칠한 나무 가면. 축제 밤에는 누구나 이것을 쓰고 서로 모르는 척한다. 둥지의 보물 상자에 넣어 간직할 수 있다.' },
   bouquet_four: { name: '네 고장 꽃다발', rarity: 'uncommon', value: 20, type: 'use', use: { keep: 'bouquet_four', mind: 25 }, desc: '평원·숲·해안·설원의 꽃을 하나씩 모아 묶은 꽃다발. 대륙을 한 바퀴 돈 정성이 담겼다. 향을 맡으면 정신이 맑아진다(+25). 선물로 보내거나 보물 상자에 넣어 간직할 수도 있다.' },
@@ -2037,7 +2043,7 @@ const KIN_FEST = {
   drawChance: 0.4,    // 아이(아이·소년)나 어린 용이 함께 가면, 돌아와 축제 그림을 그려 줄 확률
   drawStages: ['아이', '소년', '어린 용'],
   open: ['식구들을 데리고 왕도 축제에 갔다. 성문을 지나자 북소리와 사람들 웃음소리가 한꺼번에 밀려왔다.', '식구들과 함께 왕도 광장으로 들어섰다. 깃발이 줄줄이 나부끼고, 어디선가 구운 밤 냄새가 났다.'],
-  openNight: ['해가 지고 등불이 켜질 무렵, 식구들을 데리고 왕도 축제에 갔다. 골목마다 야시장 노점이 줄지어 섰다.'],
+  openNight: ['등불이 환히 켜진 밤, 식구들을 데리고 왕도 축제에 갔다. 골목마다 야시장 노점이 줄지어 섰다.'],
   family: ['식구들이 서로 손과 꼬리를 잡고 광장을 한 바퀴 돌았다. 오늘 밤 둥지는 일찍 조용해지겠다.', '돌아오는 길, 식구들은 서로 본 것을 이야기하느라 쉴 새가 없었다.'],
   scene: {
     babyH: ['{a}[을/를] 품에 안고 광장을 걸었다. 북소리가 울릴 때마다 {a}[이/가] 작은 손을 버둥거리며 까르르 웃었다.', '포대기 속 {a}[이/가] 머리 위로 흔들리는 깃발을 눈으로 좇다가 스르르 잠들었다.'],
@@ -2065,15 +2071,21 @@ const KIN_FEST = {
 const NIGHT_MARKET = {
   region: 'capital',
   open: 18,        // 저녁 6시 (한국 시각)
-  close: 5,        // 다음 날 새벽 5시 (축제가 먼저 끝나면 그때)
+  close: 5,        // 다음 날 새벽 5시 (축제가 먼저 끝나면 그때). 축제 첫날 0~5시에도 열림
   // 상인 노점: 하룻밤에 살 수 있는 개수(limit)가 정해져 있음
   npc: [
     { id: 'grill', name: '꼬치 굽는 노점', who: '꼬치집 아주머니', say: '"갓 구운 거요! 식기 전에 하나 들고 가요."',
-      items: [{ id: 'nm_skewer', price: 14, limit: 5 }, { id: 'nm_candy_apple', price: 12, limit: 5 }] },
+      items: [{ id: 'nm_skewer', price: 14, limit: 5 }, { id: 'nm_corn', price: 12, limit: 5 }, { id: 'nm_candy_apple', price: 12, limit: 5 }] },
+    { id: 'noodle', name: '국수 노점', who: '국숫집 할아버지', say: '"축제엔 국수지. 앉아서 한 그릇 하고 가게."',
+      items: [{ id: 'nm_noodle', price: 20, limit: 3 }, { id: 'nm_hotteok', price: 10, limit: 5 }] },
+    { id: 'chestnut', name: '군밤 수레', who: '군밤장수 소년', say: '"군밤이요, 군밤! 단술도 있어요!"',
+      items: [{ id: 'nm_chestnut', price: 8, limit: 5 }, { id: 'nm_sikhye', price: 10, limit: 5 }] },
     { id: 'lamp', name: '등불 노점', who: '등불장이 노인', say: '"오늘 밤 하늘엔 별 대신 이것이 뜨지."',
       items: [{ id: 'nm_lantern', price: 30, limit: 1 }, { id: 'nm_sparkler', price: 16, limit: 5 }] },
     { id: 'mask', name: '가면 노점', who: '가면장수 청년', say: '"하나 써 봐요. 오늘 밤엔 아무도 당신이 누군지 몰라요."',
       items: [{ id: 'nm_mask', price: 45, limit: 1 }, { id: 'nm_star_candy', price: 12, limit: 5 }] },
+    { id: 'potion', name: '떠돌이 약장수', who: '수염 난 약장수', say: '"쉿, 축제 밤에만 꺼내는 물건이오. 날개가 무거운 용에게 딱이지."',
+      items: [{ id: 'sun_breath', price: 150, limit: 2 }, { id: 'nm_ember_candy', price: 60, limit: 4 }] },
   ],
   // 플레이어 노점: 하나씩. 올린 물건은 노점에 맡겨 두고, 야시장이 끝나면 팔리지 않은 것은 주인에게 돌아감
   stall: { lines: 6, priceMax: 99999, qtyMax: 999, signMax: 16 },

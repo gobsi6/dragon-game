@@ -896,6 +896,7 @@ function customGC() {
     for (const m of logic.combatJson(e.dragon).myRecipes || []) if (m.id) keep.add(m.id);
   }
   for (const c of Object.values(CREATIONS)) keep.add(c.id);
+  for (const id of nightMarket.heldItems()) keep.add(id); // 야시장 노점에 맡겨 둔 빚은 물건
   const now = Date.now(), DAY = 86400000;
   let removed = 0, touched = false;
   for (const [id, def] of Object.entries(CUSTOM)) {

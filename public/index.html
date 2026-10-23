@@ -7460,6 +7460,7 @@
     const b = row.querySelector('b');
     b.textContent = it.name;
     b.append(itemTags(it));
+    if (it.custom) { const t = document.createElement('span'); t.className = it.custom.quality === 'great' || it.custom.mw ? 'gw-mw' : 'gw-el'; t.textContent = `${it.custom.byName}${josa(it.custom.byName, '이', '가')} 빚음${{ good: ' · 좋음', great: ' · 빼어남' }[it.custom.quality] || ''}${it.custom.mw ? ' · 걸작' : ''}`; b.appendChild(t); } // 직접 빚은 물건
     if (it.type) { const e = document.createElement('span'); e.className = 'eff'; e.textContent = effectText(it); b.appendChild(e); }
     row.querySelector('small').textContent = it.desc;
     return row;
@@ -11828,12 +11829,12 @@
       : `${capital}에서 주말 축제가 열리고 있다. 광장에 가면 다른 드래곤과 춤출 수 있다. ${untilText(f.until)} 뒤에 끝난다.`;
     const fl = box.querySelector('.fl');
     if (!f.here) { fl.remove(); return; }
-    // 식구들 데려가기: 이번 축제에 아직 안 간 식구가 있으면 버튼, 다 다녀왔으면 한 줄
+    // 식구들 데려가기: 축제 하루에 한 번씩. 오늘 아직 안 간 식구가 있으면 버튼, 다 다녀왔으면 한 줄
     const kf = f.kinFest;
     if (kf && (kf.left || kf.done)) {
       const r = document.createElement('div'); r.className = 'fk';
       const t = document.createElement('p'); t.className = 'fc';
-      t.textContent = kf.left ? `둥지 식구 ${kf.left}${kf.done ? '명이 아직 축제를 보지 못했다.' : '명을 데리고 축제를 구경할 수 있다.'}` : '이번 축제에는 식구들과 함께 다녀왔다.';
+      t.textContent = kf.left ? `둥지 식구 ${kf.left}${kf.done ? '명이 오늘 아직 축제를 보지 못했다.' : '명을 데리고 축제를 구경할 수 있다. (하루 한 번)'}` : `오늘은 식구들과 함께 축제에 다녀왔다.${new Date(Date.now() + 9 * 3600000).getUTCDay() === 6 ? ' 내일 또 갈 수 있다.' : ''}`;
       r.appendChild(t);
       if (kf.left) {
         const b = document.createElement('button'); b.type = 'button'; b.className = 'btn'; b.textContent = '식구들과 구경하기';
@@ -12022,7 +12023,7 @@
         }
         if (m.away) list.appendChild(nmEmpty(`${S.regions.capital?.name || '왕도'} 광장에 가야 물건을 더 올리거나 다른 노점을 둘러볼 수 있다.`));
         else {
-          list.appendChild(nmShopHead('올릴 물건', '보물과 끼고 있는 장신구는 올릴 수 없다'));
+          list.appendChild(nmShopHead('올릴 물건', '보물, 끼고 있거나 강화·각인한 장신구는 올릴 수 없다'));
           if (!m.inv.length) list.appendChild(nmEmpty('노점에 올릴 수 있는 물건이 없다.'));
           const inv = m.inv.filter((x) => S.items[x.id]);
           // 분류 탭 (소지품과 같은 밑줄 글자 탭. 가진 물건이 있는 분류만)

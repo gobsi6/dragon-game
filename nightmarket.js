@@ -1,5 +1,5 @@
 // 왕도 야시장: 축제 날(토·일) 저녁 6시부터 새벽 5시까지 왕도에 노점이 섬 (숫자·물건은 game-data.js의 NIGHT_MARKET)
-// 일요일 밤은 축제가 끝나는 자정에 함께 걷음. 적대 드래곤도 이용할 수 있음
+// 축제가 토요일 0시에 시작하므로 토 0~5시 · 토 18시~일 5시 · 일 18~24시(축제가 끝나는 자정에 함께 걷음) 세 번 열림. 적대 드래곤도 이용할 수 있음
 // - 상인 노점: 축제 한정 물건. 하룻밤에 살 수 있는 개수가 정해져 있음
 // - 플레이어 노점: 드래곤마다 하나. 올린 물건은 노점에 맡겨 두고(소지품에서 빠짐), 팔리면 금화가 바로 주인에게 감
 //   야시장이 끝나면 팔리지 않은 물건은 주인 소지품으로 돌아감 (접속하지 않았어도)
@@ -22,8 +22,9 @@ module.exports = function setupNightMarket({ io, db, online, logic, sendMe }) {
     const kst = now + KST, day = Math.floor(kst / DAY), min = (kst - day * DAY) / 60000;
     const startDay = min >= NM.open * 60 ? day : min < NM.close * 60 ? day - 1 : null;
     if (startDay == null) return null;
-    const start = startDay * DAY - KST + NM.open * H;
-    if (!logic.festivalNow(start)) return null; // 저녁 6시가 축제 날이어야 함
+    // 저녁 6시에 서는 판. 축제 전날 저녁에 선 판이면 축제가 시작하는 자정부터 (토요일 0시~5시)
+    const start = Math.max(startDay * DAY - KST + NM.open * H, fest.until - 2 * DAY);
+    if (!logic.festivalNow(start)) return null;
     const until = Math.min((startDay + 1) * DAY - KST + NM.close * H, fest.until);
     return now < until ? { key: `nm-${startDay}`, start, until } : null;
   }
@@ -48,7 +49,8 @@ module.exports = function setupNightMarket({ io, db, online, logic, sendMe }) {
     const it = ITEMS[id];
     if (!it || it.cat === 'treasure') return 0;
     const worn = Object.values(logic.equipOf(d)).includes(id) ? 1 : 0;
-    return Math.max(0, db.itemCount(d.id, id) - worn);
+    const enh = !worn && logic.gearOf(d)[id] ? 1 : 0; // 강화·각인한 장신구는 그 한 개를 남김 (기록이 사라지지 않게)
+    return Math.max(0, db.itemCount(d.id, id) - worn - enh);
   }
   const itemText = (id, qty) => `${ITEMS[id].name}${qty > 1 ? ` ${qty}개` : ''}`;
   const live = (id) => online.get(id) || null;
@@ -121,7 +123,7 @@ module.exports = function setupNightMarket({ io, db, online, logic, sendMe }) {
     if (!Number.isFinite(qty) || qty < 1 || qty > R.qtyMax) return { error: '개수를 다시 정해야 한다.' };
     if (!Number.isFinite(price) || price < 1 || price > R.priceMax) return { error: `값은 1닢부터 ${R.priceMax.toLocaleString()}닢까지 정할 수 있다.` };
     const nm = ITEMS[id].name;
-    if (spare(d, id) < qty) return { error: `${nm}${josa(nm, '이', '가')} 그만큼 없다.${Object.values(logic.equipOf(d)).includes(id) ? ' (끼고 있는 것은 올릴 수 없다)' : ''}` };
+    if (spare(d, id) < qty) return { error: `${nm}${josa(nm, '이', '가')} 그만큼 없다.${Object.values(logic.equipOf(d)).includes(id) ? ' (끼고 있는 것은 올릴 수 없다)' : logic.gearOf(d)[id] ? ' (강화·각인한 것은 올릴 수 없다)' : ''}` };
     const m = st.stalls[d.id] || { name: d.name, kind: d.kind, sign: '', items: [], at: now, sold: 0, earned: 0 };
     const line = m.items.find((x) => x.id === id);
     if (!line && m.items.length >= R.lines) return { error: `노점에는 물건을 ${R.lines}가지까지 올릴 수 있다.` };
@@ -226,5 +228,7 @@ module.exports = function setupNightMarket({ io, db, online, logic, sendMe }) {
   timer.unref?.();
   setImmediate(() => { try { tick(); } catch (e) { console.error('[야시장]', e); } });
 
-  return { status, view, npcBuy, put, take, setSign, buyFrom, sessionAt, tick };
+  // 노점에 맡겨 둔 물건 id (빚은 물건 정리에서 '누군가 가지고 있음'으로 셈)
+  const heldItems = () => new Set(Object.values(st.stalls).flatMap((m) => m.items.map((x) => x.id)));
+  return { status, view, npcBuy, put, take, setSign, buyFrom, sessionAt, tick, heldItems };
 };

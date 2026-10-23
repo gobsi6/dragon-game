@@ -787,7 +787,8 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
         }
       }
       const kin = d.nest ? db.kinLoad(d.id) : [];
-      const kinFest = { left: life.festKids(kin, fest.key).length, done: kin.filter((k) => k.data.festKey === fest.key).length }; // 축제에 데려갈 수 있는 식구 · 이미 다녀온 식구
+      const fk = life.festDayKey(fest);
+      const kinFest = { left: life.festKids(kin, fk).length, done: kin.filter((k) => k.data.festKey === fk).length }; // 오늘 축제에 데려갈 수 있는 식구 · 오늘 이미 다녀온 식구
       return { ok: true, on: true, here: d.region === FESTIVAL.region, until: fest.until, count: done.length, list, region: FESTIVAL.region, kinFest };
     });
     on('fest:invite', (d, p) => {
