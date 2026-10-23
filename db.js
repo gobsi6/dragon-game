@@ -619,8 +619,35 @@ function customRefs() {
   return keep;
 }
 
+// 목록에 없는 빚은 물건(cx_…)이 어딘가에 남아 있으면 치움: 소지품 · 보물더미 · 받은 선물함 · 착용
+// (백업을 되돌리거나 무언가 잘못되어 정의가 사라진 경우. 남겨 두면 버리지도 쓰지도 못하는 물건이 됨)
+function customOrphans(isKnown) {
+  let n = 0;
+  const tx = db.transaction(() => {
+    for (const t of ['inventory', 'hoard']) {
+      for (const r of db.prepare(`SELECT dragon_id, item FROM ${t} WHERE item LIKE 'cx\\_%' ESCAPE '\\'`).all()) {
+        if (isKnown(r.item)) continue;
+        db.prepare(`DELETE FROM ${t} WHERE dragon_id = ? AND item = ?`).run(r.dragon_id, r.item); n++;
+      }
+    }
+    for (const r of db.prepare("SELECT id, items FROM gift_inbox WHERE items LIKE '%cx\\_%' ESCAPE '\\'").all()) {
+      let l; try { l = JSON.parse(r.items || '[]'); } catch { continue; }
+      const k = l.filter((x) => !String(x.id).startsWith('cx_') || isKnown(x.id));
+      if (k.length !== l.length) { db.prepare('UPDATE gift_inbox SET items = ? WHERE id = ?').run(JSON.stringify(k), r.id); n += l.length - k.length; }
+    }
+    for (const r of db.prepare("SELECT id, equip FROM dragons WHERE equip LIKE '%cx\\_%' ESCAPE '\\'").all()) {
+      let e; try { e = JSON.parse(r.equip || '{}'); } catch { continue; }
+      let ch = false;
+      for (const [slot, id] of Object.entries(e)) if (String(id).startsWith('cx_') && !isKnown(id)) { delete e[slot]; ch = true; n++; }
+      if (ch) db.prepare('UPDATE dragons SET equip = ? WHERE id = ?').run(JSON.stringify(e), r.id);
+    }
+  });
+  tx();
+  return n;
+}
+
 module.exports = {
-  DB_PATH, snapshot, customRefs, checkBackup, stageRestore, closeDb, dbFileSize,
+  DB_PATH, snapshot, customRefs, customOrphans, checkBackup, stageRestore, closeDb, dbFileSize,
   countUsers: () => q.countUsers.get().n,
   getUserByName: (name) => q.userByName.get(name),
   // 비밀번호 바꾸기. keepToken이 있으면 그 접속만 남기고 다른 기기의 로그인은 모두 끊음

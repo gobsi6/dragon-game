@@ -845,6 +845,11 @@ const CREATIONS = db.worldGet('creations') || {}; // 창작 도감 (메모리에
 // 아무도 가지고 있지 않은 빚은 물건 정리 (하루 한 번). 이름을 붙였거나, 도감에 올랐거나, 빚은 지 7일이 안 된 것은 남김
 let customGcLast = db.worldGet('customGcLast') || null;
 function customGC() {
+  // 먼저: 목록에 없는 빚은 물건이 소지품·착용 등에 남아 있으면 치움 (접속 중인 드래곤의 착용도)
+  const known = (id) => !!CUSTOM[id];
+  for (const e of online.values()) { const eq = logic.equipOf(e.dragon); for (const [slot, id] of Object.entries(eq || {})) if (String(id).startsWith('cx_') && !known(id)) delete eq[slot]; }
+  const orphans = db.customOrphans(known);
+  if (orphans) console.log(`[빚은 물건 정리] 목록에 없는 물건 ${orphans}개를 소지품·착용 등에서 치움`);
   const keep = db.customRefs();
   for (const e of online.values()) { // 접속 중인 드래곤: 아직 저장되기 전의 착용·내 제작법까지
     for (const v of Object.values(logic.equipOf(e.dragon) || {})) keep.add(v);
@@ -858,7 +863,7 @@ function customGC() {
     delete CUSTOM[id]; delete ITEMS[id]; removed++;
   }
   if (removed) db.worldSet('customItems', CUSTOM);
-  customGcLast = { at: now, removed, left: Object.keys(CUSTOM).length };
+  customGcLast = { at: now, removed, orphans, left: Object.keys(CUSTOM).length };
   db.worldSet('customGcLast', customGcLast);
   if (removed) console.log(`[빚은 물건 정리] ${removed}개 지움, ${customGcLast.left}개 남음`);
   return customGcLast;
@@ -1663,6 +1668,7 @@ function onConnect(socket) {
   itemAction('item:drop', (d, p, have) => {
     const id = str(p.item);
     const it = require('./game-data').ITEMS[id];
+    if (!it && id.startsWith('cx_') && have(id) > 0) { const n = have(id); return { title: '소지품', lines: ['사라진 빚은 물건을 버렸다.'], items: [{ id, qty: -n }] }; } // 목록에서 사라진 빚은 물건
     if (!it) return { error: '알 수 없는 물건이다.' };
     const n = have(id);
     if (n < 1) return { error: '가지고 있지 않다.' };

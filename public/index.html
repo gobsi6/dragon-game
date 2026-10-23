@@ -8140,7 +8140,22 @@
     els.forEach((e, i) => { e.scrollTop = tops[i]; });
     requestAnimationFrame(() => els.forEach((e, i) => { if (Math.abs(e.scrollTop - tops[i]) > 1) e.scrollTop = tops[i]; }));
   }
-  function renderCraft() { keepScroll($('craft-dlg'), drawCraft); }
+  // 제작 창을 다시 그려도 적던 글이 지워지지 않게: 입력칸(data-keep)의 글과 커서를 그대로 옮기고,
+  // 한글을 조합하는 도중에는 다시 그리지 않고 조합이 끝난 뒤에 그림 (기력이 차는 등 'me'가 올 때마다 다시 그려지기 때문)
+  let CRAFT_COMPOSING = false, CRAFT_PENDING = false;
+  function renderCraft() {
+    const dlg = $('craft-dlg');
+    if (CRAFT_COMPOSING) { CRAFT_PENDING = true; return; }
+    const ae = document.activeElement;
+    const focus = ae && dlg.contains(ae) && ae.dataset?.keep ? { k: ae.dataset.keep, s: ae.selectionStart, e: ae.selectionEnd } : null;
+    const drafts = {};
+    for (const el of dlg.querySelectorAll('[data-keep]')) drafts[el.dataset.keep] = el.value;
+    keepScroll(dlg, drawCraft);
+    for (const [k, v] of Object.entries(drafts)) { const el = dlg.querySelector(`[data-keep="${k}"]`); if (el && el.value !== v) el.value = v; }
+    if (focus) { const el = dlg.querySelector(`[data-keep="${focus.k}"]`); if (el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(focus.s, focus.e); } catch {} } }
+  }
+  $('craft-dlg').addEventListener('compositionstart', () => { CRAFT_COMPOSING = true; });
+  $('craft-dlg').addEventListener('compositionend', () => { CRAFT_COMPOSING = false; if (CRAFT_PENDING) { CRAFT_PENDING = false; setTimeout(renderCraft, 0); } });
   // '방금 만든 것': 제작 창 위쪽에 쌓이고, 그 자리에서 바로 쓰거나 참 (소지품으로 오가지 않게)
   function drawCraftMade() {
     const box = $('craft-made');
@@ -8210,7 +8225,7 @@
     if (craftMode === 'gear') return renderGearWork(box, ci);
     // 제작법 이름으로 찾기 (얇게)
     const q = document.createElement('input');
-    q.type = 'search'; q.className = 'input craft-q'; q.id = 'craft-q';
+    q.type = 'search'; q.className = 'input craft-q'; q.id = 'craft-q'; q.dataset.keep = 'craft-q';
     q.placeholder = '제작법 이름으로 찾기'; q.setAttribute('aria-label', '제작법 찾기'); q.autocomplete = 'off';
     q.value = CRAFT_Q;
     q.addEventListener('input', () => { CRAFT_Q = q.value; applyCraftQ(box); });
@@ -8349,8 +8364,8 @@
       c.appendChild(el('p', 'fx-eff', effectText(last) || ''));
       if (last.custom?.by === S.me?.id) {
         const row = el('div', 'fx-name');
-        const ni = el('input', 'input'); ni.maxLength = 12; ni.placeholder = '이름 (2~12자)'; ni.value = last.custom?.named ? last.name : ''; ni.setAttribute('aria-label', '빚은 물건의 이름');
-        const di = el('input', 'input'); di.maxLength = 60; di.placeholder = '한 줄 설명 (60자, 비워도 됨)'; di.setAttribute('aria-label', '빚은 물건의 설명');
+        const ni = el('input', 'input'); ni.maxLength = 12; ni.placeholder = '이름 (2~12자)'; ni.value = last.custom?.named ? last.name : ''; ni.setAttribute('aria-label', '빚은 물건의 이름'); ni.dataset.keep = `fx-name-${FREE_LAST.id}`;
+        const di = el('input', 'input'); di.maxLength = 60; di.placeholder = '한 줄 설명 (60자, 비워도 됨)'; di.setAttribute('aria-label', '빚은 물건의 설명'); di.dataset.keep = `fx-desc-${FREE_LAST.id}`;
         const ok = el('button', 'btn', last.custom?.named ? '이름 바꾸기' : '이름 붙이기'); ok.type = 'button';
         ok.addEventListener('click', () => socket.emit('craft:name', { id: FREE_LAST.id, name: ni.value, desc: di.value }, (res) => { if (res.error) return toast(res.error); toast(`'${res.item.name}'${josa(res.item.name, '이', '가')} 되었다.`); }));
         row.append(ni, di, ok); c.appendChild(row);
