@@ -3376,7 +3376,6 @@
 <dialog class="frame dlg wide" id="craft-dlg" aria-labelledby="craft-dlg-title">
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="craft-dlg-title">제작</h2></div>
-  <button type="button" class="dlg-x" id="craft-x" aria-label="제작 창 닫기">×</button>
   <div class="body">
     <p class="note" id="craft-status"></p>
     <div class="craft-made" id="craft-made" hidden></div>
@@ -3388,7 +3387,6 @@
 <dialog class="frame dlg wide" id="fac-dlg" aria-labelledby="fac-dlg-title">
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="fac-dlg-title">둥지 시설</h2></div>
-  <button type="button" class="dlg-x" id="fac-x" aria-label="시설 창 닫기">×</button>
   <div class="body">
     <div class="craft-made" id="fac-made" hidden></div>
     <div id="fac-pane"></div>
@@ -8648,8 +8646,6 @@
     if (!dlg.open) dlg.showModal();
   }
   $('craft-close').addEventListener('click', () => $('craft-dlg').close());
-  $('craft-x').addEventListener('click', () => $('craft-dlg').close());
-  $('fac-x').addEventListener('click', () => $('fac-dlg').close());
   $('fac-close').addEventListener('click', () => $('fac-dlg').close());
   $('fac-dlg').addEventListener('close', () => { FAC_MADE.length = 0; $('fac-made').hidden = true; });
   $('nest-dlg').addEventListener('close', () => { if ($('fac-dlg').open) $('fac-dlg').close(); });
@@ -8970,7 +8966,7 @@
     peckish: [
       '{a}[이/가] 입이 심심한지 풀줄기를 하나 뽑아 질겅질겅 씹는다.',
       '{a}[이/가] 부엌 쪽에서 나는 냄새에 코를 킁킁거린다.',
-      '{a}[이/가] 다음 끼니가 언제인지 손가락을 꼽아 본다.',
+      '{a}[이/가] 다음 끼니가 언제인지 해를 올려다보며 가늠한다.',
       '{a}[이/가] 놀다가도 자꾸 먹을 것 쪽으로 눈길이 간다.',
     ],
     starving: [
@@ -8987,7 +8983,7 @@
       '{a}[이/가] {o}의 발톱 자국이 난 바위를 제 자리로 정했다.',
     ],
     bondLow: [
-      '{a}[이/가] 둥지 한쪽 구석에 혼자 앉아 무릎을 끌어안고 있다.',
+      '{a}[이/가] 둥지 한쪽 구석에 혼자 몸을 동그랗게 웅크리고 있다.',
       '{a}[은/는] 아직 둥지가 낯선지 자꾸 바깥쪽을 힐끔거린다.',
       '{a}[이/가] 누가 다가오면 슬그머니 자리를 옮긴다.',
       '{a}[이/가] {o}의 이름을 불러 보려다 말고 입을 다물었다.',
@@ -9152,8 +9148,8 @@
       library: ['{a}[이/가] 서고에서 그림책을 펼쳐 놓고 그림만 한참 들여다본다.', '{a}[이/가] 서고 구석에서 글자를 하나씩 따라 쓰고 있다.'],
       herb: ['{a}[이/가] 약초밭에 쪼그려 앉아 새싹이 몇 개 났는지 세고 있다.', '{a}[이/가] 약초밭에 물을 주다가 신발까지 흠뻑 적셨다.'],
       kitchen: ['{a}[이/가] 부엌 근처를 맴돌며 냄새를 킁킁 맡는다.', '{a}[이/가] 부엌에서 몰래 집어 온 빵 조각을 반으로 나눴다.'],
-      tower: ['{a}[이/가] 망루 계단을 몇 칸까지 올라갈 수 있나 시험해 보고 있다.', '{a}[이/가] 망루 꼭대기에서 손을 흔들며 소리를 질렀다. 메아리가 돌아왔다.'],
-      forge: ['{a}[이/가] 공방에서 반짝이는 쇳조각을 하나 주워 와 자랑했다.', '{a}[이/가] 공방 화로 앞에서 손을 녹이며 불꽃 튀는 걸 구경한다.'],
+      tower: ['{a}[이/가] 망루 계단을 몇 칸까지 올라갈 수 있나 시험해 보고 있다.', '{a}[이/가] 망루 꼭대기에 올라 크게 소리를 질렀다. 메아리가 돌아왔다.'],
+      forge: ['{a}[이/가] 공방에서 반짝이는 쇳조각을 하나 주워 와 자랑했다.', '{a}[이/가] 공방 화로 앞에 앉아 불꽃 튀는 걸 구경한다.'],
     },
     wx: {
       clear: ['맑은 날이라 {a}[이/가] 둥지 밖 풀밭에 나가 한참을 뒹굴었다.', '{a}[이/가] 햇볕에 데워진 바위 위에 배를 깔고 누웠다.'],
@@ -9170,7 +9166,7 @@
       spring: ['{a}[이/가] 둥지 앞에 처음 핀 꽃을 찾아내고 모두를 불러 모았다.', '{a}[이/가] 봄볕에 졸려서 하품을 하다가 나비를 놓쳤다.'],
       summer: ['{a}[이/가] 개울에서 잡은 송사리를 그릇에 담아 와 자랑한다.', '{a}[이/가] 매미 소리를 흉내 내다 목이 쉬었다.'],
       autumn: ['{a}[이/가] 낙엽을 한가득 모아 그 위로 풀썩 뛰어들었다.', '{a}[이/가] 도토리를 주워 둥지 구석에 몰래 쌓아 두고 있다.'],
-      winter: ['{a}[이/가] 입김을 후후 불며 누가 더 멀리 가나 혼자 겨룬다.', '{a}[이/가] 불가에 바짝 붙어 앉아 꼬리 끝을 녹이고 있다.'],
+      winter: ['{a}[이/가] 입김을 후후 불며 누가 더 멀리 가나 혼자 겨룬다.', '{a}[이/가] 불가에 바짝 붙어 앉아 언 몸을 녹이고 있다.'],
     },
     mate: ['{a}[이/가] 짝과 함께 둥지 입구에서 해 지는 걸 바라보았다.', '{a}[이/가] 짝에게 줄 선물을 고르느라 보물더미를 뒤적인다.'],
     friend: [

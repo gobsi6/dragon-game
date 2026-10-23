@@ -343,7 +343,8 @@ const q = {
   userByName:   db.prepare('SELECT * FROM users WHERE username = ?'),
   createUser:   db.prepare('INSERT INTO users (username, pw_hash, is_gm, created_at, link_account) VALUES (?, ?, ?, ?, ?)'),
   createSess:   db.prepare('INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)'),
-  sessUser:     db.prepare('SELECT u.id, u.username, u.is_gm FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?'),
+  // 로그인 토큰은 90일이 지나면 쓸 수 없음 (오래전에 남긴 토큰이 새어 나가도 계속 쓰이지 않게)
+  sessUser:     db.prepare('SELECT u.id, u.username, u.is_gm FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ? AND s.created_at > ?'),
   deleteSess:   db.prepare('DELETE FROM sessions WHERE token = ?'),
   setPw:        db.prepare('UPDATE users SET pw_hash = ? WHERE id = ?'),
   delSessOf:    db.prepare('DELETE FROM sessions WHERE user_id = ?'),
@@ -618,7 +619,7 @@ module.exports = {
   },
   createUser: (name, hash, isGm, link = null) => q.createUser.run(name, hash, isGm ? 1 : 0, Date.now(), link || null).lastInsertRowid,
   createSession: (token, userId) => q.createSess.run(token, userId, Date.now()),
-  getSessionUser: (token) => q.sessUser.get(token),
+  getSessionUser: (token) => q.sessUser.get(token, Date.now() - 90 * 86400000),
   deleteSession: (token) => q.deleteSess.run(token),
   getDragonByUser: (userId) => q.dragonByUser.get(userId),
   dragonNameTaken: (name) => !!q.dragonByName.get(name),
