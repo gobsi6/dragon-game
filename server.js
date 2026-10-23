@@ -620,14 +620,24 @@ function sendRegionState(socket, dragon) {
     // 이 지역의 대화에 지난 용언을 시각 순서대로 섞어 보여 줌
     more: true, // 위로 올리면 더 불러올 수 있음 (불러와 보고 없으면 버튼을 숨김)
     // 지역 대화·용언·대륙 소식을 따로 가져와 섞음 (용언·소식이 활발한 지역 대화에 밀려 잘리지 않게)
-    history: withTitles([
-      ...db.recentChat(dragon.region, HISTORY),
-      ...db.recentChat(SHOUT_REGION, SHOUT_HISTORY).map((m) => ({ ...m, shout: true })),
-      ...db.recentChat(NEWS_REGION, NEWS_HISTORY).map((m) => ({ ...m, news: true })),
-    ].sort((a, b) => a.at - b.at || a.id - b.id)),
+    history: withTitles(chatPage(dragon.region, Infinity)),
   });
 }
 
+// 이야기 한 쪽: 지역의 말 N개, 그리고 같은 기간의 용언·대륙 소식을 모두 (기간이 어긋나 중간이 빠지지 않게)
+// 지역의 말이 N개보다 적으면(이야기의 처음까지 왔으면) 용언·소식은 각자 정한 개수만큼 더 앞까지
+const BIG_ID = Number.MAX_SAFE_INTEGER;
+function chatPage(region, before) {
+  const b = Number.isFinite(before) ? before : BIG_ID;
+  const here = Number.isFinite(before) ? db.olderChat(region, b, HISTORY) : db.recentChat(region, HISTORY);
+  const since = here.length >= HISTORY ? Math.min(...here.map((m) => m.at)) : null; // 이 쪽이 덮는 기간의 시작
+  const side = (rg, n) => (since != null ? db.chatSince(rg, b, since, 200) : db.olderChat(rg, b, n));
+  return [
+    ...here,
+    ...side(SHOUT_REGION, SHOUT_HISTORY).map((m) => ({ ...m, shout: true })),
+    ...side(NEWS_REGION, NEWS_HISTORY).map((m) => ({ ...m, news: true })),
+  ].sort((a, c) => a.at - c.at || a.id - c.id);
+}
 function enterWorld(socket, dragon) {
   const prev = online.get(dragon.id);
   if (prev && prev.socket.id !== socket.id) {
@@ -2013,13 +2023,8 @@ function onConnect(socket) {
     if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
     const before = Math.floor(Number(p?.before));
     if (!(before > 0)) return ack({ error: '불러올 곳을 모르겠다.' });
-    const N = HISTORY;
-    const list = [
-      ...db.olderChat(entry.dragon.region, before, N),
-      ...db.olderChat(SHOUT_REGION, before, N).map((m) => ({ ...m, shout: true })),
-      ...db.olderChat(NEWS_REGION, before, N).map((m) => ({ ...m, news: true })),
-    ].sort((a, b) => a.id - b.id).slice(-N * 2);
-    ack({ ok: true, history: withTitles(list), more: list.length >= N });
+    const list = chatPage(entry.dragon.region, before);
+    ack({ ok: true, history: withTitles(list), more: list.length > 0 });
   });
 
   socket.on('weather:get', (p, ack) => { if (typeof ack === 'function') ack({ ok: true, weather: weatherAll() }); });

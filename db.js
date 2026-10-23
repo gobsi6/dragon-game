@@ -381,6 +381,7 @@ const q = {
   addChat:      db.prepare('INSERT INTO chat (region, dragon_id, name, kind, text, at) VALUES (?, ?, ?, ?, ?, ?)'),
   recentChat:   db.prepare('SELECT id, dragon_id AS dragonId, name, kind, text, at FROM chat WHERE region = ? ORDER BY id DESC LIMIT ?'),
   olderChat:    db.prepare('SELECT id, dragon_id AS dragonId, name, kind, text, at FROM chat WHERE region = ? AND id < ? ORDER BY id DESC LIMIT ?'),
+  chatSince:    db.prepare('SELECT id, dragon_id AS dragonId, name, kind, text, at FROM chat WHERE region = ? AND id < ? AND at >= ? ORDER BY id DESC LIMIT ?'),
   chatGet:      db.prepare('SELECT id, region, dragon_id AS dragonId FROM chat WHERE id = ?'),
   chatDel:      db.prepare('DELETE FROM chat WHERE id = ?'),
   kinList:      db.prepare('SELECT id, type, status, name, data FROM kin WHERE dragon_id = ? ORDER BY id'),
@@ -858,6 +859,7 @@ module.exports = {
   },
   recentChat: (region, limit) => q.recentChat.all(region, limit).reverse(),
   olderChat: (region, before, limit) => q.olderChat.all(region, before, limit).reverse(), // before(id)보다 앞의 말
+  chatSince: (region, before, since, limit) => q.chatSince.all(region, before, since, limit).reverse(), // before(id)보다 앞이면서 since(시각) 뒤의 말
   chatGet: (id) => q.chatGet.get(id),
   chatDel: (id) => q.chatDel.run(id),
   // 둥지 식구: 불러오기와, 바뀐 것만 저장하기 (새 식구는 id가 없음)
