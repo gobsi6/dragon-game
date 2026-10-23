@@ -79,6 +79,30 @@
     100% { transform: translate3d(32vw, 112vh, 0); opacity: 0; }
   }
   @media (prefers-reduced-motion: reduce) { .ash-fx { display: none; } }
+  /* 왕도 축제 중 왕도에 있으면: 바탕이 연분홍으로 물들고, 흐린 꽃잎이 천천히 흔들리며 날아감 (정신이 낮으면 아래 mind-low가 덮음) */
+  body.realm-fest {
+    background-color: #EBDADD;
+    background-image:
+      radial-gradient(ellipse 110% 60% at 50% 0%, rgba(253, 244, 246, .95) 0%, rgba(253, 244, 246, 0) 65%),
+      radial-gradient(ellipse 70% 50% at 100% 100%, rgba(214, 150, 170, .26) 0%, rgba(214, 150, 170, 0) 70%),
+      radial-gradient(ellipse 60% 45% at 0% 100%, rgba(232, 176, 190, .18) 0%, rgba(232, 176, 190, 0) 70%),
+      linear-gradient(180deg, #F6ECEE 0%, #EEDDE1 50%, #E4CDD3 100%);
+  }
+  .petal-fx { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; opacity: 0; transition: opacity 1.2s ease; }
+  body.realm-fest .petal-fx { opacity: 1; }
+  .petal-fx i { position: absolute; top: -8vh; left: var(--x); width: var(--s); height: var(--s); border-radius: 50%;
+    background: radial-gradient(circle, rgba(232, 140, 166, var(--o)) 0%, rgba(240, 168, 188, calc(var(--o) * .5)) 38%, rgba(240, 168, 188, 0) 70%); /* 흐린 분홍 점 */
+    animation: petal-drift var(--d) ease-in-out var(--w) infinite; will-change: transform, opacity; }
+  @keyframes petal-drift {
+    0% { transform: translate3d(0, 0, 0); opacity: 0; }
+    10% { opacity: 1; }
+    25% { transform: translate3d(9vw, 26vh, 0); }
+    50% { transform: translate3d(4vw, 54vh, 0); }
+    75% { transform: translate3d(15vw, 82vh, 0); }
+    90% { opacity: .85; }
+    100% { transform: translate3d(11vw, 114vh, 0); opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) { .petal-fx { display: none; } }
   /* 내용(틀)은 재 위에 */
   body > #game, body > .wrap, body > main { position: relative; z-index: 1; }
   body.mind-low {
@@ -10909,8 +10933,26 @@
       document.body.prepend(box);
     }
   }
+  // 왕도 축제 바탕: 축제 중이고 지금 왕도에 있으면 연분홍 + 흩날리는 꽃잎 (꽃잎 층은 처음 한 번 만듦)
+  function renderFestBg() {
+    const f = festLast;
+    const on = !!(f?.on && f.region === S.region && Date.now() < f.until);
+    document.body.classList.toggle('realm-fest', on);
+    if (on && !document.querySelector('.petal-fx')) {
+      const box = document.createElement('div'); box.className = 'petal-fx'; box.setAttribute('aria-hidden', 'true');
+      const n = window.innerWidth < 640 ? 12 : 22; // 휴대폰은 조금 적게
+      for (let i = 0; i < n; i++) {
+        const a = document.createElement('i');
+        const s = 8 + Math.random() * 16;
+        a.style.cssText = `--x:${(Math.random() * 115 - 20).toFixed(1)}vw;--s:${s.toFixed(1)}px;--o:${(0.35 + Math.random() * 0.35).toFixed(2)};--d:${(20 + Math.random() * 14).toFixed(1)}s;--w:${(-Math.random() * 30).toFixed(1)}s`;
+        box.appendChild(a);
+      }
+      document.body.prepend(box);
+    }
+  }
   function renderPlaces() {
     renderRealmBg();
+    renderFestBg();
     const ids = S.regionPlaces?.[S.region];
     $('places').hidden = !ids;
     const cur = ids && ids.includes(S.me?.place) ? S.places[S.me.place] : null;
@@ -11691,6 +11733,7 @@
   }
   function renderFest(f) {
     festLast = f;
+    renderFestBg();
     const box = $('fest');
     box.hidden = !f.on;
     if (!f.on) return;

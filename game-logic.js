@@ -6,7 +6,7 @@
 const {
   REGIONS, ITEMS, REGION_LOOT, CREATURES, SCENES, SCENES_HUMAN, RULES, RECIPES, SLOTS, STANCES, SHOPS, REP_TIERS, repTier, TRADE, NEST, hoardTier, RAID, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, ELEMENTS,
   HOARD_TIERS, CRAFT, SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, SKILLS, FISHING, RUIN, FACILITY, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG, BOSSES, ACHIEVEMENTS, KEEPSAKES,
-  FREE,
+  FREE, FESTIVAL, DAY,
 } = require('./game-data');
 
 const SR = STANCE_RULES;
@@ -570,9 +570,23 @@ function ambush(d, chance) {
   };
 }
 
-// 적대 드래곤이 인간 마을에 날아들면 성벽 궁수가 쏨
+// ── 왕도 축제 ─────────────────────────────────────
+// 한국 시각으로 토·일이면 축제. key는 그 주말 토요일 날짜 (같은 축제인지 가리는 데 씀)
+const KST = 9 * 3600 * 1000;
+function festivalNow(now = Date.now()) {
+  if (process.env.FESTIVAL_FORCE === '1') return { key: 'test', until: now + DAY }; // 시험용: 평일에도 축제
+  const k = new Date(now + KST);
+  const day = k.getUTCDay();
+  if (!FESTIVAL.days.includes(day)) return null;
+  const sat = new Date(Date.UTC(k.getUTCFullYear(), k.getUTCMonth(), k.getUTCDate() - (day === 0 ? 1 : 0)));
+  const until = sat.getTime() + 2 * DAY - KST; // 일요일이 끝나는 때 (실제 시각)
+  return { key: sat.toISOString().slice(0, 10), until };
+}
+
+// 적대 드래곤이 인간 마을에 날아들면 성벽 궁수가 쏨 (축제 중인 왕도는 쏘지 않음)
 function townArrows(d) {
   if (d.stance !== 'hostile' || !isTown(d.region)) return null;
+  if (d.region === FESTIVAL.region && festivalNow()) return null;
   const [a, b] = SR.hostile.arrows;
   const dmg = Math.max(3, Math.round(randInt(a, b) - statsOf(d).scale * 0.2));
   d.hp = Math.max(1, d.hp - dmg);
@@ -2287,7 +2301,7 @@ module.exports = {
   useItem, equip, unequip, statsOf, bonusOf, hpCap, enCap, apCap, equipOf, buffOf, giveBuff,
   repOf, setStance, marketInfo, buy, sell, intimidate,
   buildNest, flyHome, startRest, stopRest, hoardMove, hoardValue,
-  actionCost, townArrows, hasBounty, addRep, addFame, craftEn, gainXp, spendStats,
+  actionCost, townArrows, festivalNow, hasBounty, addRep, addFame, craftEn, gainXp, spendStats,
   traitsOf, traitMods, hasTrait, chooseTraits, traitCount,
   check, spendAp, rollItem, bundle, itemLabel, xpOf, isTown, lowHp, // 전투(game-combat.js)가 씀
   corruptedRegion, corruptUntil, corruptPeriod, isCorrupted, isRuin, berserkOf, loseMind, nearestTown,

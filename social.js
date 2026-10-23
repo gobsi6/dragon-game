@@ -150,17 +150,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
   }
 
   // ── 왕도 축제 ─────────────────────────────────────
-  // 한국 시각으로 토·일이면 축제. key는 그 주말 토요일 날짜 (같은 축제인지 가리는 데 씀)
-  const KST = 9 * 3600 * 1000;
-  function festivalNow(now = Date.now()) {
-    if (process.env.FESTIVAL_FORCE === '1') return { key: 'test', until: now + DAY }; // 시험용: 평일에도 축제
-    const k = new Date(now + KST);
-    const day = k.getUTCDay();
-    if (!FESTIVAL.days.includes(day)) return null;
-    const sat = new Date(Date.UTC(k.getUTCFullYear(), k.getUTCMonth(), k.getUTCDate() - (day === 0 ? 1 : 0)));
-    const until = sat.getTime() + 2 * DAY - KST; // 일요일이 끝나는 때 (실제 시각)
-    return { key: sat.toISOString().slice(0, 10), until };
-  }
+  const festivalNow = logic.festivalNow; // 한국 시각 토·일 (game-logic.js)
   // 이번 축제에서 함께 춘 드래곤 (드래곤마다 저장, 축제가 바뀌면 새로)
   function dancedWith(d, key) {
     const c = logic.combatJson(d);
