@@ -1397,7 +1397,8 @@
   .fx-q { padding: 0 6px; font: 600 11px/18px var(--sans); border-radius: 9px; background: #E3ECF3; color: var(--steel-d); } .fx-q.great { background: #F4E6C2; color: #6E5A2A; }
   .fx-eff { margin: 0; font-size: 12.5px; color: var(--ink-2); }
   .fx-name { display: flex; flex-wrap: wrap; gap: 6px; } .fx-name .input { flex: 1 1 140px; min-width: 0; height: 32px; font-size: 13px; }
-  .fx-row { display: flex; align-items: center; gap: 6px; padding: 6px 0; border-top: 1px solid var(--line-in); } .fx-row .fx-t { flex: 1; min-width: 0; display: flex; flex-direction: column; } .fx-row .fx-t small { font-size: 11.5px; color: var(--muted); } .fx-row .btn { min-height: 30px; font-size: 12px; }
+  .fx-row .fx-t .fx-ef { font-size: 12px; color: var(--steel-d); }
+  .fx-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; margin-bottom: 6px; border: 1px solid #CFDDE8; border-radius: 3px; background: #EEF4F9; } /* 내 제작법: 칸마다 옅은 하늘빛 상자 */ .fx-row .fx-t { flex: 1; min-width: 0; display: flex; flex-direction: column; } .fx-row .fx-t small { font-size: 11.5px; color: var(--muted); } .fx-row .btn { min-height: 30px; font-size: 12px; }
   .fx-notes { list-style: none; margin: 0 0 8px; padding: 0; font-size: 12px; } .fx-notes li { display: flex; flex-wrap: wrap; gap: 2px 8px; padding: 4px 0; border-top: 1px solid var(--line-in); } .fx-notes .m { flex: 1 1 160px; color: var(--ink-2); } .fx-notes .r { color: var(--steel-d); } .fx-notes .r.fail { color: var(--muted); }
   #toast[popover] { inset: auto; top: auto; right: auto; left: 50%; bottom: calc(var(--dock-h, 56px) + 16px); margin: 0; border: 0; height: auto; overflow: hidden; } /* 맨 위 층에 올린 알림: 원래 자리·모양 그대로 */
   /* 성향 설명: 세 칸을 같은 자리에 겹쳐 두고 하나만 보임 (높이가 늘 같아 깜빡이지 않음) */
@@ -8394,7 +8395,9 @@
     if (!mine.length) box.appendChild(el('p', 'note', '마음에 드는 물건을 빚으면 그 조합을 여기에 남겨 두고 다시 빚을 수 있다.'));
     mine.forEach((m, i) => {
       const r = el('div', 'fx-row');
-      const t = el('div', 'fx-t'); t.appendChild(el('b', '', `${m.id && S.items[m.id] ? S.items[m.id].name : '이름 없는 조합'}${m.gift ? ' (선물)' : ''}`)); t.appendChild(el('small', '', m.mats.map((x) => `${nm(x)} ${invCache[x] || 0}`).join(' · ')));
+      const t = el('div', 'fx-t'); t.appendChild(el('b', '', `${m.id && S.items[m.id] ? S.items[m.id].name : '이름 없는 조합'}${m.gift ? ' (선물)' : ''}`));
+      const mi = m.id && S.items[m.id] && !S.items[m.id].gone ? S.items[m.id] : null; // 남길 때 빚은 물건의 효과 (다시 빚으면 운에 따라 조금 달라질 수 있음)
+      if (mi) { const ef = effectText(mi); if (ef) t.appendChild(el('span', 'fx-ef', ef)); } t.appendChild(el('small', '', m.mats.map((x) => `${nm(x)} ${invCache[x] || 0}`).join(' · ')));
       const go = el('button', 'btn primary', '다시 빚기'); go.type = 'button'; go.disabled = m.mats.some((x) => !(invCache[x] > 0)) || !!S.me.exp;
       go.addEventListener('click', () => itemAct('craft:mine', { idx: i }));
       const del = el('button', 'btn', '지우기'); del.type = 'button';

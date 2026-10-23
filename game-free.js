@@ -95,7 +95,7 @@ function resolve(ids, wis, greatChance, rnd = Math.random) {
   const top = effs[0], second = effs[1] || null;
   const slot = top === 'sharp' ? 'claw' : top === 'light' ? 'wing' : top === 'hard' ? (bind > sum.hard ? 'neck' : 'tail') : top === 'lore' ? (bind > sum.lore ? 'charm' : 'head') : (bind > sum.shine ? 'head' : 'neck');
   const base = wisCap(wis);
-  let pts = Math.min(base, Math.ceil(effs.reduce((a, k) => a + sum[k], 0) * FREE.gearRate)); // 효능 세기 합 × 0.7 (올림)에서 지혜 상한으로 자름
+  let pts = Math.min(base, Math.ceil(effs.reduce((a, k) => a + sum[k], 0) * FREE.gearRate)); // 효능 세기 합 × 0.65 (올림)에서 지혜 상한으로 자름
   const extra = { normal: 0, good: 1, great: 2 }[quality];
   const mw = rnd() < greatChance; // 대성공: 걸작
   pts += Math.min(2, extra + (mw ? 1 : 0)); // 기본 상한 위로는 +2까지
