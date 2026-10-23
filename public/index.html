@@ -805,6 +805,8 @@
   .kin-touch .kt-ask { margin: 0; padding: 6px 10px; font-size: 12.5px; color: #6E4A12; background: #FBF2DE; border-left: 2px solid #C9922F; border-radius: 2px; }
   .kin-touch .kt-row { display: flex; flex-wrap: wrap; gap: 6px; }
   .kin-touch .kt-btn { min-height: 32px; padding: 0 10px; font-size: 12.5px; }
+  .kin-touch .kt-over { color: #8A5F17 !important; }
+  .kin-touch .kt-btn.over { opacity: .62; }
   .kin-touch .kt-btn.asked { border-color: #C9922F; background: #FBF2DE; color: #6E4A12; font-weight: 600; box-shadow: inset 0 0 0 1px #C9922F; }
   .kin-body > .kin-acts { padding: 8px 0; border-top: 1px dashed var(--line-in); border-bottom: 1px dashed var(--line-in); }
   .kin-body > .kin-acts .lbl { margin-top: 4px; font-weight: 600; color: var(--ink-2); } /* 건네기·먹이·가르치기 같은 칸 제목 */
@@ -6509,7 +6511,7 @@
       h.className = 'kt-h';
       h.innerHTML = '<b>교감</b>';
       const cnt = document.createElement('small');
-      cnt.textContent = `오늘 ${v.touch.n}/${v.touch.cap}${v.touch.n >= v.touch.cap ? ' · 오늘은 충분히 함께했다' : ''}`;
+      cnt.textContent = v.touch.n ? `오늘 ${v.touch.n}번` : ''; // 알맞은 횟수는 알려 주지 않음 (아이의 반응을 보며 알아 감)
       h.appendChild(cnt);
       tb.appendChild(h);
       if (v.ask) {

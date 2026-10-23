@@ -781,7 +781,7 @@ function touch(d, kin, id, act, now = Date.now()) {
     // 너무 자주: 유대는 그대로, 과보호가 쌓임
     const key = overdoKey(k);
     growAdd(k, key, 1);
-    lines.push(key === 'pamper' ? `${ga(k)} 또 매달리며 놓아 주지 않는다. 오늘은 이미 충분히 함께했다. (오늘 ${t.n}번)` : `${k.name}${josa(k.name, '은', '는')} "또요?" 하는 얼굴로 슬그머니 피한다. 오늘은 이미 충분히 함께했다. (오늘 ${t.n}번)`);
+    lines.push(key === 'pamper' ? `${ga(k)} 또 매달리며 놓아 주지 않는다.` : `${k.name}${josa(k.name, '은', '는')} "또요?" 하는 얼굴로 슬그머니 피한다.`); // 안내 없이 반응으로만 (알아 가는 재미)
     t.last = now;
     return { title: k.name, lines };
   }
@@ -809,7 +809,7 @@ function touch(d, kin, id, act, now = Date.now()) {
   if (pref === 'like') t.liked = now;
   t.last = now;
   lines.push(`${line}${gain ? ` (유대 +${gain})` : ''}`);
-  if (counted && t.n === TC.cap) lines.push(`오늘은 이만하면 충분히 함께했다. 더 하면 ${k.name}${josa(k.name, '이', '가')} 지칠지도 모른다.`);
+  if (counted && t.n === TC.cap && k.data.ask) k.data.ask = null; // 충분히 함께했으니 조르던 것도 그만둠 (놓친 것으로 치지 않음)
   return { title: k.name, lines };
 }
 // tick에서: 아이가 먼저 조르기, 조르기를 놓침, 응석받이가 서운해함
@@ -861,8 +861,9 @@ function touchTick(k, now, out) {
     k.data.bond = clamp(k.data.bond - TC.spoiledLoss);
     out.lines.push(`${ga(k)} 하루 종일 보호자만 기다리다 서운해졌다. (유대 −${TC.spoiledLoss})`);
   }
-  // 아이가 먼저 조름 (밤에는 조르지 않음)
-  if (!k.data.ask && !isNight(now) && (!k.data.askAt || now - k.data.askAt > TC.ask.everyH * 3600000)) {
+  // 아이가 먼저 조름 (밤에는 조르지 않음 · 오늘 알맞은 만큼 함께했으면 조르지 않음)
+  const enough = t.day === kstDay(now) && (t.n || 0) >= TC.cap;
+  if (!k.data.ask && !enough && !isNight(now) && (!k.data.askAt || now - k.data.askAt > TC.ask.everyH * 3600000)) {
     const hrs = Math.min(3, Math.max(0, (now - (k.data.askCheck || now)) / 3600000));
     k.data.askCheck = now;
     if (hrs > 0 && Math.random() < 1 - Math.pow(1 - TC.ask.chance, hrs)) {
