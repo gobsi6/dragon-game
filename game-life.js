@@ -640,7 +640,8 @@ function view(k, now, d) {
     const md = moodOf(k, now), t = k.data.touch || {};
     v.mood = md ? { key: md, name: MOODS[md] } : null;
     v.touch = { n: t.day === kstDay(now) ? t.n : 0, cap: TC.cap };
-    v.touchActs = Object.entries(TC.acts).filter(([, a]) => !a.for || a.for === k.type).map(([id, a]) => ({ id, name: a.name }));
+    const away = k.data.onExp || k.data.runaway || (k.type === 'drake' && k.data.errand); // 가출·심부름·원정 중에는 교감할 수 없음
+    v.touchActs = away ? [] : Object.entries(TC.acts).filter(([, a]) => !a.for || a.for === k.type).map(([id, a]) => ({ id, name: a.name }));
     if (k.data.ask && k.data.ask.until > now) v.ask = { act: k.data.ask.act, name: TC.acts[k.data.ask.act].name, line: ASK_LINE[k.data.ask.act], left: k.data.ask.until - now };
   }
   diaryStart(k);
@@ -702,6 +703,7 @@ function prefOf(k, act, now) {
 const MOODS = { pout: '뾰로통', ask: '조르는 중', sleepy: '졸림', sad: '서운함', bored: '심심함', happy: '신남', calm: '평온' };
 function moodOf(k, now) {
   if (k.status !== 'home' || k.type === 'egg') return null;
+  if (k.data.onExp || k.data.runaway || (k.type === 'drake' && k.data.errand)) return null; // 둥지를 비운 동안은 기분 표시 없음
   const t = k.data.touch || {};
   const today = t.day === kstDay(now);
   if (today && t.n > TC.cap) return 'pout';
@@ -747,13 +749,16 @@ function touch(d, kin, id, act, now = Date.now()) {
   if (!A || (A.for && A.for !== k.type)) return { error: '할 수 없는 교감이다.' };
   const t = touchOf(k, now);
   const lines = [];
-  t.n += 1;
+  // 아이가 조르던 것을 해 주는 건 오늘 횟수가 다 찼어도 받아 줌 (과보호로 치지 않음)
+  const askedNow = k.data.ask && k.data.ask.act === act && k.data.ask.until >= now;
+  const counted = !askedNow || t.n < TC.cap;
+  if (counted) t.n += 1;
   // 처음 해 준 교감은 함께한 날들에
   k.data.touchFirst ||= {};
   if (!k.data.touchFirst[act]) { k.data.touchFirst[act] = now; diary(k, TOUCH_FIRST[act], now); }
   // 아이가 조르던 것을 해 주면 기다렸다는 듯이
   const asked = k.data.ask && k.data.ask.act === act && k.data.ask.until >= now;
-  if (t.n > TC.cap) {
+  if (t.n > TC.cap && !askedNow) {
     // 너무 자주: 유대는 그대로, 과보호가 쌓임
     const key = overdoKey(k);
     growAdd(k, key, 1);
@@ -784,12 +789,14 @@ function touch(d, kin, id, act, now = Date.now()) {
   if (pref === 'like') t.liked = now;
   t.last = now;
   lines.push(`${line}${gain ? ` (유대 +${gain})` : ''}`);
-  if (t.n === TC.cap) lines.push(`오늘은 이만하면 충분히 함께했다. 더 하면 ${k.name}${josa(k.name, '이', '가')} 지칠지도 모른다.`);
+  if (counted && t.n === TC.cap) lines.push(`오늘은 이만하면 충분히 함께했다. 더 하면 ${k.name}${josa(k.name, '이', '가')} 지칠지도 모른다.`);
   return { title: k.name, lines };
 }
 // tick에서: 아이가 먼저 조르기, 조르기를 놓침, 응석받이가 서운해함
 function touchTick(k, now, out) {
-  if (k.status !== 'home' || k.data.onExp || isRunaway(k) || (k.type === 'drake' && k.data.errand)) return;
+  if (k.status !== 'home') return;
+  // 원정·심부름·가출로 둥지를 비우면 조르던 것은 없던 일로 (돌아와서 놓친 것으로 치지 않음)
+  if (k.data.onExp || isRunaway(k) || (k.type === 'drake' && k.data.errand)) { if (k.data.ask) k.data.ask = null; return; }
   const A = k.data.ask;
   if (A && A.until < now) {
     k.data.ask = null;
@@ -1148,6 +1155,7 @@ function sendErrand(kin, id, region, minutes, allowRuin, now = Date.now()) {
   const m = Number(minutes);
   if (!EH.minutes.includes(m)) return { error: '심부름 시간을 골라야 한다.' };
   k.data.errand = { region, start: now, end: now + m * 60000 * (hasT(k, 'windrider') ? GR.windrider : 1), minutes: m }; // 바람을 타는: 빨리 다녀옴
+  k.data.ask = null; // 조르던 것은 없던 일로
   return { title: k.name, lines: [`${k.name}에게 ${r.name}${josa(r.name, '으로', '로')} 심부름을 보냈다. (${m >= 60 ? `${m / 60}시간` : `${m}분`})`, `${ga(k)} 고개를 끄덕이고 힘차게 날아올랐다.`] };
 }
 // 돌아온 심부름: 그 지역의 재료를 줍고, 배가 줄어듦
@@ -1273,7 +1281,7 @@ function expStart(kin, now = Date.now(), stay = []) {
   const went = [];
   for (const k of kin) {
     if (!canFollow(k, now) || keep.has(k.id)) continue;
-    k.data.onExp = true; k.data.expAt = now; went.push(k.name); // expAt: 둥지 이야기에 '따라나섰다'를 적을 때
+    k.data.onExp = true; k.data.expAt = now; k.data.ask = null; went.push(k.name); // expAt: 둥지 이야기에 '따라나섰다'를 적을 때
   }
   return went;
 }
