@@ -5063,7 +5063,8 @@
   };
   // 원정마다 같은 이야기가 나오도록, 출발 시각으로 정해지는 난수
   // 아이가 보호자를 부르는 말: 성별 칸이 여성이면 엄마, 남성이면 아빠, 그 밖에는 이름
-  const tripCall = () => { const g = S.me?.bio?.gender || ''; return g === '여성' ? '엄마' : g === '남성' ? '아빠' : (S.me?.name || ''); };
+  // 다 큰 식구(어른·젊은 용 이상)는 엄마·아빠 대신 어머니·아버지 (이름으로 부르던 것은 그대로)
+  const tripCall = (age) => { const g = S.me?.bio?.gender || ''; const grown = age === 'adult' || age === 'dadult'; return g === '여성' ? (grown ? '어머니' : '엄마') : g === '남성' ? (grown ? '아버지' : '아빠') : (S.me?.name || ''); };
   function tripRand(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
   // 실제로 일어난 일 (서버가 떠날 때 정해 둔 시간표)을 이야기로
   const TRIP_PICK = (r, arr) => arr[Math.floor(r() * arr.length)];
@@ -5093,7 +5094,7 @@
     // 함께 간 식구 {name, age} (예전 원정은 이름만 있음 → 아이로)
     const kin = (e.went?.length ? e.went : TRIP_WENT).map((k) => (typeof k === 'string' ? { name: k, age: 'child' } : k));
     const out = [{ at: e.start, parts: [`${rg?.name || '먼 곳'}${ro(rg?.name || '먼 곳')} 날개를 펼쳤다.${kin.length ? ` ${kin.map((k) => k.name).join(', ')}${josa(kin.at(-1).name, '이', '가')} 함께 따라나섰다.` : ''}`] }];
-    if (kin.length) out.push({ at: e.start + 4000, parts: [TRIP_PICK(tripRand(seed + 11), tripLines(TRIP_KIN_START, kin[0].age)).replace('{call}', tripCall())], who: kin[0].name, age: kin[0].age });
+    if (kin.length) out.push({ at: e.start + 4000, parts: [TRIP_PICK(tripRand(seed + 11), tripLines(TRIP_KIN_START, kin[0].age)).replace('{call}', tripCall(kin[0].age))], who: kin[0].name, age: kin[0].age });
     const until = Math.min(now, e.end);
     // 실제로 일어난 일
     const real = (e.plan || []).map((x) => ({ at: e.start + x.t, x })).filter((y) => y.at <= until);
@@ -5107,7 +5108,7 @@
       const rr = tripRand(seed + y.x.t + 7);
       if (R && kin.length && (key === 'rare' || rr() < 0.5)) {
         const k = kin[Math.floor(rr() * kin.length)];
-        out.push({ at: y.at + 5000, parts: [TRIP_PICK(rr, tripLines(R, k.age)).replace('{call}', tripCall())], who: k.name, age: k.age });
+        out.push({ at: y.at + 5000, parts: [TRIP_PICK(rr, tripLines(R, k.age)).replace('{call}', tripCall(k.age))], who: k.name, age: k.age });
       }
     }
     // 갈림길
@@ -5116,7 +5117,7 @@
       out.push({ at: f.at, parts: [`갈림길에 닿았다. ${f.text}`], real: true });
       if (f.picked) {
         out.push({ at: f.at + 1000, parts: [`— ${f.picked}. ${f.outcome || ''}`], real: true });
-        if (kin.length) { const rr = tripRand(seed + f.at), k = kin[Math.floor(rr() * kin.length)]; out.push({ at: f.at + 6000, parts: [TRIP_PICK(rr, tripLines(TRIP_KIN_REACT.fork, k.age)).replace('{call}', tripCall())], who: k.name, age: k.age }); }
+        if (kin.length) { const rr = tripRand(seed + f.at), k = kin[Math.floor(rr() * kin.length)]; out.push({ at: f.at + 6000, parts: [TRIP_PICK(rr, tripLines(TRIP_KIN_REACT.fork, k.age)).replace('{call}', tripCall(k.age))], who: k.name, age: k.age }); }
       }
     }
     // 사이사이 꾸밈 이야기 (실제 일과 너무 붙지 않게)
@@ -5136,7 +5137,7 @@
         let q = pool[Math.floor(r() * pool.length)], tries = 0;
         while (recent.includes(q) && tries++ < 10) q = pool[Math.floor(r() * pool.length)];
         recent.push(q); if (recent.length > 10) recent.shift();
-        out.push({ at: t, parts: [q.replace('{call}', tripCall())], who: k.name, age: k.age });
+        out.push({ at: t, parts: [q.replace('{call}', tripCall(k.age))], who: k.name, age: k.age });
         continue;
       }
       else {

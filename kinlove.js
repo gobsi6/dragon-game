@@ -43,7 +43,7 @@ module.exports = function setupKinLove({ db, online, sendMe, life, logic, news, 
     return cands.length === 1 ? cands[0] : null; // 같은 이름이 여럿인데 서로 좋아하는 아이를 하나로 고를 수 없으면 잇지 않음
   }
   // k(둥지 주인 kOwner)의 첫사랑이 (owner, id) 아이인지
-  const points = (k, kOwner, owner, id) => { const r = refOf(k, kOwner); return !!r && !r.declined && r.owner === owner && r.id === id; };
+  const points = (k, kOwner, owner, id) => { const r = refOf(k, kOwner); return !!r && !r.declined && !r.ended && r.owner === owner && r.id === id; };
 
   // 지난 제안 치우기 (답이 없이 기한이 지나면 사양한 것처럼: 보낸 쪽 아이는 사흘 뒤에 다시 짝을 찾을 수 있음)
   function sweep(now = Date.now()) {
@@ -63,11 +63,16 @@ module.exports = function setupKinLove({ db, online, sendMe, life, logic, news, 
   function status(owner, k) {
     if (!k.data.loveRef) { const d = refOf(k, owner); if (d) k.data.loveRef = d; } // 예전 기록이면 이 자리에서 새 기록으로 옮겨 적음 (이벤트가 끝나면 저장됨)
     const r = k.data.loveRef;
-    if (!r || r.declined) return null;
+    if (!r || r.declined || r.ended) return null;
     sweep();
     const { k: o } = homeKid(r.owner, r.id);
-    if (!o) return { gone: true };
-    return { name: o.name, ownerName: ownerName(r.owner) || r.ownerName || '', mutual: points(o, r.owner, owner, k.id), adult: adult(o), free: !o.data.mate, pending: !!pendingOf(k.id) || !!pendingOf(o.id) };
+    if (!o) return { gone: true, name: r.name, ownerName: r.ownerName || '' };
+    const mutual = points(o, r.owner, owner, k.id);
+    // otherLove: 상대 아이의 첫사랑 — 'us' 이 아이 · 'else' 다른 사람 · 'none' 아직 정하지 않음
+    const ol = refOf(o, r.owner);
+    const otherLove = mutual ? 'us' : (ol || (o.data.firstLove && o.data.firstLove !== '-')) ? 'else' : 'none'; // '-'(보호자가 막음)는 아직 정하지 않은 것으로
+    const mateUs = !!o.data.mate?.ref && o.data.mate.ref.owner === owner && o.data.mate.ref.id === k.id;
+    return { name: o.name, ownerName: ownerName(r.owner) || r.ownerName || '', mutual, otherLove, mateUs, adult: adult(o), free: !o.data.mate, pending: !!pendingOf(k.id) || !!pendingOf(o.id) };
   }
   // 첫사랑을 정할 때: 상대 아이도 이미 이 아이를 좋아하는지
   function lovesBack(owner, kinId, ref) { const { k: o } = homeKid(ref.owner, ref.id); return points(o, ref.owner, owner, kinId); }
@@ -104,7 +109,7 @@ module.exports = function setupKinLove({ db, online, sendMe, life, logic, news, 
     if (!yes) {
       drop();
       a.data.mateNo = now; a.data.loveRef.declined = now;
-      life.diary(a, '첫사랑을 마음에 묻었다.', now);
+      a.data.heartbreak = { why: 'declined', name: b.name, home: d.name, at: now }; // 실연 이벤트 ('첫사랑의 끝')가 뜸
       kinChanged(o.from.owner, A.kin);
       tell(o.from.owner, [`${d.name}${josa(d.name, '이', '가')} 혼인 청을 정중히 사양했다. ${a.name}${josa(a.name, '은', '는')} 한동안 말이 없더니, 첫사랑을 마음에 묻었다.`], 'kinlove:gone');
       return { ok: true, lines: [`${o.from.ownerName}의 혼인 청을 정중히 사양했다.`] };

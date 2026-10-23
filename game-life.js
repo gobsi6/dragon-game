@@ -1013,6 +1013,14 @@ function incubate(d, kin, id, have, now = Date.now()) {
 // ── 가출 ──────────────────────────────────────────
 const RW = KIN.runaway;
 // 아이가 보호자를 부르는 말: 성별 칸이 여성이면 엄마, 남성이면 아빠, 그 밖에는 이름
+// 다 큰 식구(인간 어른·노년, 젊은 용·다 자란 용)는 엄마·아빠 대신 어머니·아버지라고 부름. 이름으로 부르던 것은 그대로
+const GROWN_CALL = ['어른', '노년', '젊은 용', '다 자란 용'];
+function callFor(d, k, now = Date.now()) {
+  const c = callName(d);
+  if (!k || !GROWN_CALL.includes(stageOf(k, now).name)) return c;
+  return c === '엄마' ? '어머니' : c === '아빠' ? '아버지' : c;
+}
+const isParentCall = (c) => ['엄마', '아빠', '어머니', '아버지'].includes(c);
 function callName(d) {
   let b = d.bio;
   if (typeof b === 'string') { try { b = JSON.parse(b || '{}'); } catch { b = {}; } }
@@ -1048,8 +1056,8 @@ function runawayGift(d, k, region, out) {
   const pool = REGION_LOOT[region]?.common || [];
   if (!pool.length) return null;
   const id = pick(pool);
-  const call = callName(d);
-  const parent = call === '엄마' || call === '아빠';
+  const call = callFor(d, k);
+  const parent = isParentCall(call);
   const nm = ITEMS[id].name;
   const say = canTalk(k, Date.now())
     ? `"${parent ? call : `${call}에게`} 주려고 주웠어." ${ga(k)} ${nm}${josa(nm, '을', '를')} 내밀었다.`
@@ -1068,7 +1076,7 @@ function searchRunaway(d, kin, id, have, now = Date.now()) {
   logic.spendAp(d, RW.searchAp, now);
   k.data.runaway = null;
   addBond(k, RW.foundBond);
-  const call = callName(d);
+  const call = callFor(d, k, now);
   const found = pick(k.type === 'human'
     ? [`나무 위에서 울다 잠든 ${k.name}${josa(k.name, '을', '를')} 찾았다.`, `개울가에 쪼그려 앉아 돌을 던지던 ${k.name}${josa(k.name, '을', '를')} 찾았다.`, `덤불 속에 숨어 있던 ${k.name}${josa(k.name, '이', '가')} 먼저 뛰어나왔다.`]
     : [`바위틈에 몸을 말고 있던 ${k.name}${josa(k.name, '을', '를')} 찾았다.`, `높은 가지에 매달려 내려오지 못하던 ${k.name}${josa(k.name, '을', '를')} 찾았다.`, `작은 불씨를 피워 놓고 웅크린 ${k.name}${josa(k.name, '을', '를')} 찾았다.`]);
@@ -1415,6 +1423,7 @@ function ctxOf(d, kin, have, trigger, now, region = d.region) {
     have, perks: d.perks || {}, stats: logic.statsOf(d), josa,
     rivals: d.rivalsCache || [], me: d.name, regionName: REGIONS[region]?.name || '', // 라이벌 이벤트
     call: callName(d), // 아이가 나를 부르는 말 (엄마·아빠·이름)
+    callOf: (k) => callFor(d, k, now), // 그 식구가 부르는 말 (다 크면 어머니·아버지)
     chest: d.nest ? logic.chestOf(d) : [], // 보물 상자 (아이의 선물에서 이미 받은 것을 확인)
     // 날씨·계절·장소·보물더미·재앙의 흔적 (날씨·둥지 이벤트)
     weather: logic.weatherIdAt(region, now), season: logic.seasonAt(now).id, level: d.level,
@@ -1561,6 +1570,7 @@ function chooseEvent(d, kin, have, idx, now = Date.now()) {
     },
     nearestTown: () => nearestTown(c.region),
     notify: (id, text, title) => out.tells.push({ id, text, title }), // 다른 드래곤에게 소식 (라이벌 이벤트 등)
+    diary: (k, t) => { if (k) diary(k, t, now); }, // 함께한 날들에 한 줄
     loveAsk: (k) => { if (k?.data.loveRef) out.loves.push({ id: k.id, name: k.name, ref: k.data.loveRef }); }, // 다른 둥지 첫사랑에게 혼인 청 (kinlove.js)
     // 보물더미에서 꺼내거나 넣음 (꺼낼 때는 지금 있는 만큼만)
     hoardTake: (id, qty = 1) => {
@@ -1642,8 +1652,8 @@ function festOuting(d, kin, fest, nightOpen, now = Date.now()) {
     if (kin.filter((k) => k.status === 'home').every((k) => festSlots(k, fest).full)) return { error: '이번 축제에는 이미 식구들과 두 번 다녀왔다.' };
     return { error: slot === 'night' ? '이번 축제의 야시장 밤에는 이미 식구들과 함께 다녀왔다.' : '이번 축제의 낮 구경은 이미 식구들과 함께 다녀왔다. 야시장이 열리면 한 번 더 갈 수 있다.' };
   }
-  const F = KIN_FEST, call = callName(d);
-  const line = (tpl, k) => fillT(tpl, { a: k ? k.name : '', o: call });
+  const F = KIN_FEST;
+  const line = (tpl, k) => fillT(tpl, { a: k ? k.name : '', o: callFor(d, k, now) }); // 다 큰 식구는 어머니·아버지
   const lines = [pick(nightOpen ? F.openNight : F.open)];
   const used = new Set(); // 한 나들이에서 같은 장면이 겹치지 않게
   for (const k of went) {
@@ -1670,7 +1680,7 @@ function festOuting(d, kin, fest, nightOpen, now = Date.now()) {
       // 사람과 용이면 사람을 앞에, 용 둘이면 나이 많은 쪽을 앞에 (어린 쪽을 날개로 감싸 주는 장면 등)
       const [a, b] = x.type === 'drake' && y.type === 'human' ? [y, x] : x.type === 'drake' && y.type === 'drake' && (x.data.born || 0) > (y.data.born || 0) ? [y, x] : [x, y];
       const pool = a.type === 'human' && b.type === 'human' ? F.pair.hh : a.type === 'drake' && b.type === 'drake' ? F.pair.dd : F.pair.hd;
-      lines.push(fillT(pick(pool), { a: a.name, b: b.name, o: call }));
+      lines.push(fillT(pick(pool), { a: a.name, b: b.name, o: callFor(d, a, now) }));
     }
     const hs = went.some((k) => k.type === 'human'), ds = went.some((k) => k.type === 'drake');
     lines.push(pick(F.family[hs && ds ? 'mixed' : ds ? 'drake' : 'human']));

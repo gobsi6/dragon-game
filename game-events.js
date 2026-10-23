@@ -39,6 +39,20 @@ const canMate = (c, x) => !x.data.mate && c.now - (x.data.mateNo || 0) >= 3 * DA
 // 다른 둥지 첫사랑의 지금 모습 (kinlove.js). 없으면 null
 const loveOf = (c, x) => { const kl = require('./game-logic').hooks.kinLove; return kl && (x.data.loveRef || kl.refOf(x, c.d.id)) ? kl.status(c.d.id, x) : null; };
 // 서로의 첫사랑이 아직 어른이 되지 않았거나 혼인 청을 기다리는 중이면: 다른 사람과 짝을 맺지 않고 기다림
+// 첫사랑의 끝 (실연): 혼인 청을 사양당했거나, 짝사랑이 끝났을 때 (상대가 다른 사람과 맺어짐 · 다른 사람을 좋아함 · 떠남). 아이마다 한 번
+// 실연을 겪은 뒤: 다시 뜨지 않게 하고, 그 첫사랑은 끝난 것으로 (새로 만난 사람과 짝을 맺을 수 있음)
+const heartEnd = (k, c) => { k.data.heartDone = c.now; k.data.heartbreak = null; if (k.data.loveRef) k.data.loveRef.ended = c.now; k.data.mateNo = Math.max(k.data.mateNo || 0, c.now - 2 * DAYMS); };
+const heartDiary = (h, k, t) => { if (h.diary) h.diary(k, t); };
+const heartOf = (c, x) => {
+  if (x.type !== 'human' || x.data.heartDone || !['청소년', '어른', '노년'].includes(c.stage(x))) return null;
+  if (x.data.heartbreak) return x.data.heartbreak;
+  const s = loveOf(c, x);
+  if (!s || s.mateUs) return null;
+  if (s.gone) return { why: 'gone', name: s.name, home: s.ownerName };
+  if (!s.free) return { why: 'mated', name: s.name, home: s.ownerName };
+  if (!s.mutual && s.otherLove === 'else') return { why: 'else', name: s.name, home: s.ownerName };
+  return null;
+};
 // 다른 둥지 아이와 맺어진 짝이면 그 둥지에도 아이 소식
 const babyTell = (h, c, k, baby, found = false) => {
   const r = k.data.mate?.ref; if (!r) return;
@@ -122,7 +136,7 @@ module.exports = [
     setup: (c) => {
       const k = c.pick(giftKids(c));
       const st = c.stage(k);
-      const call = c.call;
+      const call = c.callOf(k);
       const ga = (w) => `${w}${c.josa(w, '이', '가')}`;
       const kind = pickGift(c, k, st);
       const hatch = k.type === 'drake' && st === '해츨링'; // 해츨링은 아직 말을 못 하고 용의 모습 그대로 (어린 용부터 폴리모프)
@@ -171,7 +185,7 @@ module.exports = [
       const nm = `${k.name}${c.josa(k.name, '이', '가')}`;
       const T = {
         kid_letter: [`눈을 뜨니 ${nm} 접은 종이 한 장을 등 뒤에 숨긴 채 서 있다.`, `"이거… 읽어 봐요." 꾹꾹 눌러 쓴 편지다.`],
-        kid_drawing: [`눈을 뜨니 ${nm} 그림 한 장을 들고 기다리고 있었다.`, `"내가 그렸어요! 이게 ${c.call}고, 이게 나예요!"`],
+        kid_drawing: [`눈을 뜨니 ${nm} 그림 한 장을 들고 기다리고 있었다.`, `"내가 그렸어요! 이게 ${c.callOf(k)}고, 이게 나예요!"`],
         pressed_flower: [`${nm} 두 손을 오므린 채 다가왔다.`, `손바닥 위에는 곱게 눌러 말린 꽃 한 송이가 놓여 있다.`],
         flower_ring: [`${nm} 풀줄기로 엮은 작은 반지를 내밀었다.`, `"선물이에요!" 반지는 발톱 끝에도 들어가지 않을 만큼 작다.`],
         wood_dragon: [`${nm} 나뭇조각으로 깎은 작은 인형을 내밀었다.`, `날개를 편 용이다. 며칠 동안 몰래 깎았다고 한다.`],
@@ -183,12 +197,12 @@ module.exports = [
         clay_dragon: [`${nm} 진흙 묻은 손으로 작은 인형을 내밀었다.`, `흙으로 빚어 말린 용이다. 날개 한쪽이 조금 더 크다.`],
         wish_note: [`${nm} 작게 접은 쪽지를 내밀고는 얼굴이 빨개졌다.`, `"소원 적은 거예요. 지금 펴 보면 안 돼요!"`],
         woven_band: [`${nm} 실로 땋은 팔찌를 들고 왔다.`, `"발목에라도 감아요!" 팔찌는 발톱 하나에 겨우 걸린다.`],
-        wood_sword: [`${nm} 나무 검을 허리에 차고 씩씩하게 걸어왔다.`, `"이건 ${c.call} 거예요. 내 건 또 깎으면 돼요." 손잡이에 이름이 새겨져 있다.`],
+        wood_sword: [`${nm} 나무 검을 허리에 차고 씩씩하게 걸어왔다.`, `"이건 ${c.callOf(k)} 거예요. 내 건 또 깎으면 돼요." 손잡이에 이름이 새겨져 있다.`],
         wood_flute: [`어디선가 서툰 피리 소리가 들려왔다. ${nm} 나무 피리를 들고 서 있다.`, `"직접 만들었어요. 가져요." 피리는 아직 따뜻하다.`],
         knit_scarf: [`${nm} 둘둘 만 털실 뭉치 같은 것을 안고 왔다.`, `펼쳐 보니 목도리다. 겨울 내내 몰래 떴다고 한다.`],
         star_map: [`${nm} 둘둘 만 종이를 조심스럽게 펼쳐 보였다.`, `밤하늘의 별을 하나하나 이어 그린 그림이다.`],
         bird_feather: v.hatch ? [`${nm} 커다란 깃털을 입에 물고 자랑스럽게 걸어왔다.`, `빛을 받을 때마다 색이 바뀌는 깃털이다.`]
-          : [`${nm} 사람 모습을 하고, 머리에 깃털 하나를 꽂은 채 나타났다.`, `"하나는 내 거, 이건 ${c.call} 거." 빛을 받을 때마다 색이 바뀌는 깃털이다.`],
+          : [`${nm} 사람 모습을 하고, 머리에 깃털 하나를 꽂은 채 나타났다.`, `"하나는 내 거, 이건 ${c.callOf(k)} 거." 빛을 받을 때마다 색이 바뀌는 깃털이다.`],
         conch_shell: v.hatch ? [`${nm} 바닷바람 냄새를 풍기며 돌아왔다.`, `발치에 작은 소라 껍데기 하나를 굴려 놓았다.`]
           : [v.human ? `${nm} 모래 묻은 발로 뛰어 들어왔다.` : `바닷바람 냄새와 함께 둥지에 내려앉은 ${k.name}${c.josa(k.name, '이', '가')} 사람 모습으로 바뀌어 다가왔다.`, `두 손에 작은 소라 껍데기 하나를 받쳐 들고 있다.`],
         warm_stone: [`${nm} 사람 모습으로 두 손을 모은 채 종종걸음으로 다가왔다.`, `건네받은 둥근 돌이 따뜻하다. 한낮 내내 햇볕에 데운 모양이다.`],
@@ -196,7 +210,7 @@ module.exports = [
         hunt_fang: [`${nm} 의기양양하게 날아 돌아와 사람 모습으로 내려섰다.`, `내민 손에 짐승의 송곳니 하나. 혼자 사냥해서 얻은 것이라고 한다.`],
         paper_bird: [`${nm} ${v.human ? '' : '사람 모습으로 '}손바닥에 무언가를 올려놓고 조심조심 걸어왔다.`, `종이로 접은 작은 새다. 날개 끝을 당기니 파닥파닥 움직인다.`],
         paper_kite: [`${nm} 자기 키만 한 연을 끌고 둥지로 올라왔다.`, `나뭇살에 종이를 붙인 연이다. 한가운데 서툴게 그린 용 한 마리가 있다.`],
-        portrait: [`${nm} 둘둘 만 종이를 등 뒤에 숨긴 채 헛기침을 했다.`, `펼쳐 보니 숯으로 그린 초상화다. 그려진 것은 다름 아닌 ${c.call}${c.josa(c.call, '이다', '다')}.`],
+        portrait: [`${nm} 둘둘 만 종이를 등 뒤에 숨긴 채 헛기침을 했다.`, `펼쳐 보니 숯으로 그린 초상화다. 그려진 것은 다름 아닌 ${c.callOf(k)}${c.josa(c.callOf(k), '이다', '다')}.`],
         herb_sachet: [`${nm} 작은 천 주머니를 내밀었다. 은은한 풀 냄새가 퍼진다.`, `안에는 직접 말린 약초가 가득 들어 있다.`],
         acorns: v.hatch ? [`${nm} 볼이 불룩해진 채 뒤뚱뒤뚱 다가왔다.`, `발치에 도토리를 하나, 둘, 셋… 우르르 쏟아 놓았다.`]
           : [`${nm} 사람 모습으로 두 손 가득 무언가를 받쳐 들고 왔다.`, `반질반질한 도토리 한 줌이다.`],
@@ -447,7 +461,7 @@ module.exports = [
     weight: 2,
     cond: (c) => c.humans.some((x) => ['아이', '소년', '청소년'].includes(c.stage(x))),
     setup: (c) => ({ id: c.pick(c.humans.filter((x) => ['아이', '소년', '청소년'].includes(c.stage(x)))).id }),
-    text: (c, v) => { const k = c.k(v.id); return [`${k.name}${c.josa(k.name, '이', '가')} 꼬리에 기대앉아 묻는다.`, '"나는 왜 사람이고, 너는 왜 용이야?"']; },
+    text: (c, v) => { const k = c.k(v.id); return [`${k.name}${c.josa(k.name, '이', '가')} 꼬리에 기대앉아 묻는다.`, `"나는 왜 사람이고, ${c.callOf(k)}${c.josa(c.callOf(k), '은', '는')} 왜 용이야?"`]; },
     choices: [
       { label: '사람의 마을 이야기를 들려준다', run: (h, c, v) => { const k = c.k(v.id); h.bond(k, 5); h.lean(k, 'herbalist', 2); h.say('약초 냄새 가득한 시장 이야기에 아이의 눈이 반짝였다.'); } },
       { label: '용의 옛이야기를 들려준다', run: (h, c, v) => { const k = c.k(v.id); h.bond(k, 5); h.lean(k, 'guard', 2); h.say('하늘을 지키던 옛 용들의 이야기에 아이가 주먹을 꼭 쥐었다.'); } },
@@ -460,8 +474,9 @@ module.exports = [
     title: '기사단의 구출',
     when: ['wake', 'explore'],
     weight: (c) => (c.perks.guard ? 2 : 4),
-    cond: (c) => c.stance === 'hostile' && c.humans.some((x) => x.data.path !== 'knight'),
-    setup: (c) => ({ id: c.pick(c.humans.filter((x) => x.data.path !== 'knight')).id }),
+    // 되찾으러 오는 것은 아직 어린 아이만 (어른·노년이 된 식구는 빼고)
+    cond: (c) => c.stance === 'hostile' && c.humans.some((x) => x.data.path !== 'knight' && !adultHuman(c, x)),
+    setup: (c) => ({ id: c.pick(c.humans.filter((x) => x.data.path !== 'knight' && !adultHuman(c, x))).id }),
     text: (c, v) => { const k = c.k(v.id); return [
       '둥지 아래 계곡에 기사단이 진을 쳤다.',
       `"${k.name}${c.josa(k.name, '을', '를')} 돌려받으러 왔다! 괴물아, 나와라!"`,
@@ -1422,6 +1437,42 @@ module.exports = [
       { label: '만나지 말라고 한다', tone: 'strict', run: (h, c, v) => {
         const k = c.k(v.id); k.data.firstLove = '-'; h.bond(k, -8);
         h.say(`${h.name(k)} 아무 말 없이 등을 돌렸다. 며칠 동안 눈을 마주치지 않을 것 같다. (유대 −8)`);
+      } },
+    ],
+  },
+  {
+    id: 'kin_heartbreak',
+    title: '첫사랑의 끝',
+    when: ['wake', 'explore'],
+    weight: 6,
+    cond: (c) => c.humans.some((x) => !x.data.onExp && heartOf(c, x)),
+    setup: (c) => { const k = c.pick(c.humans.filter((x) => !x.data.onExp && heartOf(c, x))); return { id: k.id, ...heartOf(c, k) }; },
+    text: (c, v) => {
+      const k = c.k(v.id), n = v.name || '그 아이';
+      const why = {
+        declined: `${v.home ? `${v.home}의 둥지에서` : '상대 둥지에서'} 혼인을 사양한다는 답이 온 날이다.`,
+        mated: `${n}${c.josa(n, '이', '가')} 다른 사람과 맺어졌다는 소식을 들은 모양이다.`,
+        else: `${n}에게는 따로 마음에 둔 사람이 있다는 걸 알게 된 모양이다.`,
+        gone: `${n}${c.josa(n, '이', '가')} 먼 곳으로 떠나 다시는 만날 수 없게 되었다고 한다.`,
+      }[v.why] || '';
+      const grown = c.stage(k) !== '청소년';
+      return [`${k.name}${c.josa(k.name, '이', '가')} 둥지 구석에 웅크린 채 저녁도 먹지 않았다. ${why}`, grown ? '아무렇지 않은 척 웃어 보이지만, 손끝이 떨리고 있다.' : '눈가가 붉게 부어 있다. 말을 걸어도 고개만 저을 뿐이다.'];
+    },
+    choices: [
+      { label: '곁에 앉아 이야기를 들어 준다', tone: 'warm', run: (h, c, v) => {
+        const k = c.k(v.id); heartEnd(k, c); h.bond(k, 8);
+        h.say(`말없이 곁에 앉아 날개를 내려 주었다. 한참 뒤에야 ${h.name(k)} ${v.name || '그 아이'} 이야기를 띄엄띄엄 꺼냈다. 다 털어놓고 나서야 조금 웃었다. (유대 +8)`);
+        heartDiary(h, k, `첫사랑과 이어지지 못한 날, ${c.callOf(k)}${c.josa(c.callOf(k), '이', '가')} 곁에서 밤새 이야기를 들어 주었다.`);
+      } },
+      { label: '바람을 쐬러 함께 날아간다', tone: 'trust', run: (h, c, v) => {
+        const k = c.k(v.id); heartEnd(k, c); h.bond(k, 6); h.mind(5);
+        h.say(`${k.name}${h.josa(k.name, '을', '를')} 등에 태우고 구름 위까지 날아올랐다. 차가운 바람에 눈물이 다 말랐는지, 내려올 즈음엔 "다음엔 더 멋진 사람을 만날 거예요" 하고 큰 소리로 외쳤다. (유대 +6, 정신 +5)`);
+        heartDiary(h, k, `첫사랑과 이어지지 못한 날, ${c.callOf(k)}${c.josa(c.callOf(k), '과', '와')} 구름 위까지 날아올라 소리쳐 울었다.`);
+      } },
+      { label: '혼자 있게 둔다', tone: 'free', run: (h, c, v) => {
+        const k = c.k(v.id); heartEnd(k, c); h.bond(k, 2);
+        h.say(`조용히 자리를 비켜 주었다. 다음 날 아침, ${h.name(k)} 먼저 다가와 작게 "고마워요" 하고는 평소처럼 아침을 먹었다. (유대 +2)`);
+        heartDiary(h, k, '첫사랑을 마음에 묻었다. 하룻밤 혼자 울고 나니 조금 어른이 된 것 같다.');
       } },
     ],
   },
