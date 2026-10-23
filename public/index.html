@@ -3127,6 +3127,8 @@
   .rm-pin.fire { width: 18px; height: 18px; }
   .rm-pin.pil-seen { width: 22px; height: 22px; border-radius: 5px; background: #fff; color: #5B6066; border: 2px solid #7E8389; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,.2); padding: 0; font: 700 11px/1 var(--sans); }
   .rm-pin.pil-seen.on { outline: 2px solid var(--steel); outline-offset: 2px; }
+  .rm-pin.pil-seen { z-index: 2; }
+  .rm-pin.flag.on-pil { opacity: .5; pointer-events: none; z-index: 3; transform: translate(-50%, -50%) translate(10px, -10px) scale(.7); } /* 기둥 위 표식: 흐리게 모서리에 작게, 누르면 밑의 기둥이 눌리게 */
   .rm-pil-hint { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
   .rm-pil-info { margin-top: 8px; padding: 10px 12px; background: var(--surface-2); border: 1px solid var(--line-in); border-radius: 4px; font-size: 12.5px; }
   .rm-pil-info > b { font: 700 14px/1.3 var(--serif); }
@@ -14983,7 +14985,8 @@
       `<button type="button" class="rm-pin pil-seen${q.guard ? ' guarded' : q.lit ? ' burning' : ''}${MZ.pil === q.pi ? ' on' : ''}" style="left:${X(q.pos[1])};top:${Y(q.pos[0])}" data-pil="${q.pi}" aria-pressed="${MZ.pil === q.pi}" aria-label="${q.pi + 1}번 기둥 상태 보기">${q.pi + 1}</button>`
     ).join('') + Object.entries(v.flags || {}).map(([k, who]) => { // 다른 드래곤이 남긴 표식: 시작할 수는 없고 보기만
       const [fr, fc] = k.split(',').map(Number);
-      return rev[fr * N + fc] ? `<span class="rm-pin flag" style="left:${X(fc)};top:${Y(fr)}" title="${who}의 표식" aria-label="${who}의 표식"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21V4h11l-3 4 3 4H6"/></svg></span>` : '';
+      const onPil = (v.pillars || []).some((q) => q.pos[0] === fr && q.pos[1] === fc); // 기둥 위에 꽂힌 표식은 흐리게, 기둥 밑으로 (기둥을 누를 수 있게)
+      return rev[fr * N + fc] ? `<span class="rm-pin flag${onPil ? ' on-pil' : ''}" style="left:${X(fc)};top:${Y(fr)}" title="${who}의 표식" aria-label="${who}의 표식"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21V4h11l-3 4 3 4H6"/></svg></span>` : '';
     }).join('');
     const pk = v.points.find((p) => p.key === MZ.pick) || v.points[0];
     const canGo = v.open && !v.city && fl.opened && v.me.fi == null && v.me.used < v.me.max;
