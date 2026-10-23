@@ -1376,6 +1376,11 @@
   .xt.base { background: #E7F1EA; color: #2B5240; }
   .xt.aura { background: #F7EEDB; color: #7A5A16; }
   .xt.hit { box-shadow: inset 0 0 0 1px currentColor; font-weight: 700; }
+  .fx-cr { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  .fx-cr-row { padding: 8px 10px; border: 1px solid var(--line-in); border-radius: 3px; background: var(--surface-2); display: flex; flex-direction: column; gap: 3px; }
+  .fx-cr-row .h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; } .fx-cr-row .h b { font: 600 13px var(--sans); } .fx-cr-row .h small { font-size: 11.5px; color: var(--muted); }
+  .fx-cr-row .e { margin: 0; font-size: 12px; color: var(--ink-2); } .fx-cr-row .s { margin: 0; font-size: 11.5px; color: var(--muted); } .fx-cr-row .k { font-weight: 600; color: var(--steel-d); margin-right: 2px; }
+  .fx-cr-row .btn { align-self: flex-start; min-height: 26px; font-size: 11.5px; padding: 0 8px; margin-top: 2px; }
   .fx-sep { height: 1px; margin: 18px 0 4px; background: var(--line-soft); }
   .xa-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 10px 0 2px; }
   .xa-filter .lab { font: 600 12px var(--sans); color: var(--ink-2); margin-right: 2px; }
@@ -5301,7 +5306,7 @@
     if (!S.places) return '';
     return Object.values(S.places).filter((p) => p.drop === id).map((p) => `${p.name}(${S.regions[p.region]?.name || ''})`).join(', ');
   }
-  const itemCat = (it) => (it.type === 'equip' ? 'equip' : it.type === 'use' ? (it.use?.buff ? 'buff' : 'use') : it.cat === 'meal' ? 'meal' : it.cat === 'bait' || it.cat === 'fish' ? 'fish' : it.cat === 'treasure' ? 'treasure' : it.cat === 'trophy' ? 'trophy' : 'mat');
+  const itemCat = (it) => (it.type === 'equip' ? 'equip' : it.type === 'use' ? (it.use?.keep ? 'gift' : it.use?.buff ? 'buff' : 'use') : it.cat === 'meal' ? 'meal' : it.cat === 'bait' || it.cat === 'fish' ? 'fish' : it.cat === 'treasure' ? 'treasure' : it.cat === 'trophy' ? 'trophy' : 'mat');
 
   // 프로필 카드의 장신구 자리
   // ── 즐겨찾기 (칭호·제작법): 이 기기에 드래곤마다 따로 저장 ──
@@ -5513,8 +5518,8 @@
     }
 
     const order = { rare: 0, uncommon: 1, common: 2 };
-    const CATS = ['treasure', 'equip', 'use', 'buff', 'meal', 'fish', 'trophy', 'mat'];
-    const CAT_NAME = { treasure: '보물 (둥지 전용)', equip: '장신구', use: '회복약', buff: '강화 음식', meal: '식구 요리', fish: '낚시', trophy: '사냥 전리품', mat: '재료' };
+    const CATS = ['treasure', 'equip', 'use', 'buff', 'gift', 'meal', 'fish', 'trophy', 'mat'];
+    const CAT_NAME = { treasure: '보물 (둥지 전용)', equip: '장신구', use: '회복약', buff: '강화 음식', gift: '선물·추억 (보물 상자에 간직)', meal: '식구 요리', fish: '낚시', trophy: '사냥 전리품', mat: '재료' };
     // 즐겨찾기: '전체'에서는 맨 위에 따로 모으고 아래 묶음에서는 빼며, 분류 탭에서는 그 묶음 맨 위로 (제작 창과 같음)
     const favI = FAV.list('items');
     const isFav = (id) => favI.includes(id);
@@ -5737,7 +5742,7 @@
     return { wrap, tabs };
   }
   let invTab = 'all'; // 소지품 분류 탭
-  const INV_TAB_NAME = { treasure: '보물', equip: '장신구', use: '회복약', buff: '강화 음식', meal: '식구 요리', fish: '낚시', trophy: '전리품', mat: '재료' };
+  const INV_TAB_NAME = { treasure: '보물', equip: '장신구', use: '회복약', buff: '강화 음식', gift: '선물·추억', meal: '식구 요리', fish: '낚시', trophy: '전리품', mat: '재료' };
   function openInv() { fetchInv(() => { renderInv(); openPanel('inv-dlg'); }); }
   // ── 쓰임새: 이 재료로 만들 수 있는 것 (숨겨진 제작법은 찾아낸 것만) ──
   function usesOf(id) {
@@ -8237,7 +8242,7 @@
     // 고르기: 종류별로 나눠 보기(밑줄 글자 탭), 재료가 다 있는 것만 보기
     const bar = document.createElement('div');
     bar.className = 'craft-bar';
-    const TABS = [['all', '전체'], ['fav', '★ 즐겨찾기'], ['use', '회복약', true], ['buff', '강화 음식', true], ['meal', '식구 요리', true], ['fish', '낚시', true], ['equip', '장신구', true]];
+    const TABS = [['all', '전체'], ['fav', '★ 즐겨찾기'], ['use', '회복약', true], ['buff', '강화 음식', true], ['gift', '선물', true], ['meal', '식구 요리', true], ['fish', '낚시', true], ['equip', '장신구', true]];
     const { wrap: tabWrap, tabs } = buildTabs(TABS, craftTab, (k) => { craftTab = k; renderCraft(); }, '제작법 분류');
     bar.appendChild(tabWrap);
     const lab = document.createElement('label');
@@ -8272,6 +8277,7 @@
     const groups = [
       ['회복약', (it) => itemCat(it) === 'use', 'use'],
       ['강화 음식', (it) => itemCat(it) === 'buff', 'buff'],
+      ['선물 · 보물 상자에 간직', (it) => itemCat(it) === 'gift', 'gift'],
       ['식구 요리', (it) => itemCat(it) === 'meal', 'meal'],
       ['낚시 미끼', (it) => itemCat(it) === 'fish', 'fish'],
       ...S.slots.filter((sl) => craftTab !== 'equip' || craftSlot === 'all' || craftSlot === sl.key).map((sl) => [`장신구 · ${sl.name}`, (it) => it.type === 'equip' && it.slot === sl.key, 'equip']),
@@ -8412,7 +8418,27 @@
     const cr = FREE_DATA.creations || [];
     const ch = el('h3', 'inv-h', '창작 도감'); ch.appendChild(el('span', 'inv-hn', `${cr.length}가지`)); box.appendChild(ch);
     if (!cr.length) box.appendChild(el('p', 'note', '아직 아무도 새로운 물건을 빚지 않았다. 처음 빚은 드래곤의 이름이 여기에 영원히 남는다.'));
-    else { const ul = el('ul', 'fx-notes'); for (const x of cr.slice(0, 30)) { const li = el('li'); li.appendChild(el('span', 'm', x.label)); li.appendChild(el('span', 'r', `${x.byName} · '${x.name}' · ${new Date(x.at).toLocaleDateString('ko-KR')}`)); ul.appendChild(li); } box.appendChild(ul); }
+    else {
+      // 칸마다: 무엇 · 누가 언제 · 효과 · 성질 합 · (공개했으면) 넣은 재료
+      const order = Object.keys(S.free?.names || {});
+      const sumTxt = (sm) => order.filter((k) => sm?.[k]).map((k) => `${S.free.names[k]} ${sm[k]}`).join(' · ');
+      const list = el('div', 'fx-cr');
+      for (const x of cr.slice(0, 40)) {
+        const c = el('div', 'fx-cr-row');
+        const h = el('div', 'h'); h.append(el('b', '', x.label), el('small', '', `${x.byName} · '${x.name}' · ${new Date(x.at).toLocaleDateString('ko-KR')}`));
+        c.appendChild(h);
+        if (x.eff) c.appendChild(el('p', 'e', x.eff));
+        if (x.sum && Object.keys(x.sum).length) { const p2 = el('p', 's'); p2.append(el('span', 'k', '성질 합'), ` ${sumTxt(x.sum)}`); c.appendChild(p2); }
+        if (x.mats) { const p3 = el('p', 's'); p3.append(el('span', 'k', x.open ? '재료' : '재료 (나만 보임)'), ` ${x.mats.map(nm).join(' + ')}`); c.appendChild(p3); }
+        if (x.mine) {
+          const t = el('button', 'btn', x.open ? '재료 숨기기' : '재료 공개하기'); t.type = 'button';
+          t.addEventListener('click', () => socket.emit('craft:creation:open', { key: x.key, open: !x.open }, (res) => { if (res.error) return toast(res.error); x.open = res.open; toast(res.open ? '넣은 재료를 모두에게 공개했다.' : '넣은 재료를 다시 숨겼다.'); renderCraft(); }));
+          c.appendChild(t);
+        }
+        list.appendChild(c);
+      }
+      box.appendChild(list);
+    }
   }
   function renderExperiment(box, ci) {
     const EN = S.craftRules?.experimentEn || 4;
@@ -8471,8 +8497,8 @@
     drawFreeParts(box, el, 'top'); // 방금 빚은 것 (화로 바로 밑)
     if (!mats.length) { box.appendChild(el('div', 'empty', '섞어 볼 재료가 없다.')); }
     // ── 재료: 소지품과 같은 분류·순서 ──
-    const XCATS = ['treasure', 'use', 'buff', 'meal', 'fish', 'trophy', 'mat'];
-    const XCAT_NAME = { treasure: '보물', use: '회복약', buff: '강화 음식', meal: '식구 요리', fish: '낚시', trophy: '사냥 전리품', mat: '재료' };
+    const XCATS = ['treasure', 'use', 'buff', 'gift', 'meal', 'fish', 'trophy', 'mat'];
+    const XCAT_NAME = { treasure: '보물', use: '회복약', buff: '강화 음식', gift: '선물·추억', meal: '식구 요리', fish: '낚시', trophy: '사냥 전리품', mat: '재료' };
     const order = { rare: 0, uncommon: 1, common: 2 };
     mats.sort(([a], [b2]) => XCATS.indexOf(itemCat(S.items[a])) - XCATS.indexOf(itemCat(S.items[b2])) || order[S.items[a].rarity] - order[S.items[b2].rarity] || S.items[a].name.localeCompare(S.items[b2].name, 'ko'));
     // 성질로 거르기: 고른 성질이 있는 재료만

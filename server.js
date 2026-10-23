@@ -842,6 +842,23 @@ logic.hooks.registerCustom = (d, ids, r) => {
   return { id, isNew: true };
 };
 const CREATIONS = db.worldGet('creations') || {}; // 창작 도감 (메모리에 두고 바뀔 때만 저장)
+// 빚은 물건의 효과를 한 줄로 (창작 도감에 남김)
+const SLOT_NAMES = Object.fromEntries((require('./game-data').SLOTS || []).map((s) => [s.key, s.name]));
+function customEff(it) {
+  if (!it) return '';
+  const u = it.use || {};
+  if (it.type === 'equip') return [`${SLOT_NAMES[it.slot] || ''} 장신구`, ...Object.entries(it.bonus || {}).map(([k, v]) => `${STATS.find((s) => s.key === k)?.name || k} +${v}`), it.elem ? `${ELEMENTS[it.elem] || it.elem} 속성` : '', it.mindWard ? '정신을 지킴' : ''].filter(Boolean).join(' · ');
+  if (u.keep) return `보물 상자에 간직할 선물 · 가치 ${it.value}`;
+  return [u.hp ? `체력 +${u.hp}` : '', u.en ? `기력 +${u.en}` : '', u.mind ? `정신 +${u.mind}` : '', u.buff ? '사나움' : ''].filter(Boolean).join(' · ');
+}
+// 예전에 남은 칸: 효과·성질 합이 없으면 그 물건에서 채움 (물건이 남아 있을 때)
+for (const c of Object.values(CREATIONS)) {
+  const it = ITEMS[c.id];
+  if (!c.eff && it) c.eff = customEff(it);
+  if (!c.mats && it?.custom?.mats) c.mats = it.custom.mats.slice();
+  if (!c.sum && c.mats) { c.sum = {}; for (const m of c.mats) for (const [k, n] of Object.entries(FREE_CFG.tags[m] || {})) c.sum[k] = (c.sum[k] || 0) + n; }
+  if (c.open == null) c.open = false;
+}
 // 아무도 가지고 있지 않은 빚은 물건 정리 (하루 한 번)
 // 마지막으로 누군가 가지고 있던 때(heldAt)부터: 이름 없는 것은 7일, 이름 붙인 것은 30일이 지나면 지움. 창작 도감에 오른 것은 늘 남김
 let customGcLast = db.worldGet('customGcLast') || null;
@@ -882,7 +899,8 @@ logic.hooks.creation = (d, r, id) => {
   const w = CREATIONS;
   if (w[key]) return [];
   const label = free.creationLabel(r);
-  w[key] = { key, label, id, name: ITEMS[id].name, by: d.id, byName: d.name, at: Date.now() };
+  // 효과와 성질 합은 함께 남기고, 넣은 재료는 처음 빚은 드래곤이 공개할 때만 보임
+  w[key] = { key, label, id, name: ITEMS[id].name, by: d.id, byName: d.name, at: Date.now(), eff: customEff(ITEMS[id]), sum: r.sum, mats: (ITEMS[id].custom?.mats || []).slice(), open: false };
   db.worldSet('creations', w);
   io.emit('system', { text: `[창작] ${d.name}${josa(d.name, '이', '가')} 대륙에서 처음으로 ${label}${josa(label, '을', '를')} 빚어냈다!`, at: Date.now() });
   logic.chron(d, 'mark', `대륙에서 처음으로 ${label}${josa(label, '을', '를')} 빚어냈다. ('${ITEMS[id].name}')`);
@@ -1249,8 +1267,22 @@ function onConnect(socket) {
     const entry = entryOf(socket);
     if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
     const c = logic.combatJson(entry.dragon);
-    const cr = Object.values(CREATIONS).sort((a, b) => b.at - a.at);
+    const me = entry.dragon.id;
+    // 재료는 공개한 칸이나 내가 처음 빚은 칸에만 보냄
+    const cr = Object.values(CREATIONS).sort((a, b) => b.at - a.at).map((c) => ({ ...c, mats: c.open || c.by === me ? c.mats || [] : null, mine: c.by === me }));
     ack({ ok: true, notes: c.freeNotes || [], mine: c.myRecipes || [], mineMax: freeMax(entry.dragon), creations: cr });
+  });
+  // 창작 도감: 처음 빚은 드래곤이 넣은 재료를 공개하거나 다시 숨김
+  socket.on('craft:creation:open', (p, ack) => {
+    if (typeof ack !== 'function') return;
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+    const c = CREATIONS[str(p?.key)];
+    if (!c) return ack({ error: '그런 칸이 없다.' });
+    if (c.by !== entry.dragon.id) return ack({ error: '처음 빚은 드래곤만 정할 수 있다.' });
+    c.open = p?.open === true;
+    db.worldSet('creations', CREATIONS);
+    ack({ ok: true, open: c.open });
   });
   socket.on('craft:keep', (p, ack) => {
     if (typeof ack !== 'function') return;

@@ -100,9 +100,13 @@ function resolve(ids, wis, greatChance, rnd = Math.random) {
   const mw = rnd() < greatChance; // 대성공: 걸작
   pts += Math.min(2, extra + (mw ? 1 : 0)); // 기본 상한 위로는 +2까지
   if (aura) pts = Math.max(1, pts - 1); // 기운에 점수 1을 씀
+  // 나누기: 가장 센 효능에 6할, 나머지는 두 번째 효능에. 한 능력치는 상한(보통 5 · 운이 좋으면 6)을 넘지 못함
+  const cap = quality !== 'normal' || mw ? FREE.statCapLucky : FREE.statCap;
   const bonus = {};
-  if (second && pts > 1) { const a = Math.ceil(pts * 0.6); bonus[GEAR_STAT[top]] = a; if (pts - a > 0) bonus[GEAR_STAT[second]] = pts - a; }
-  else bonus[GEAR_STAT[top]] = pts;
+  let a = second && pts > 1 ? Math.ceil(pts * 0.6) : pts;
+  a = Math.min(cap, a);
+  bonus[GEAR_STAT[top]] = a;
+  if (second) { const b = Math.min(cap, pts - a); if (b > 0) bonus[GEAR_STAT[second]] = b; }
   const def = { bonus };
   if (aura && ELEM[aura]) def.elem = ELEM[aura];
   if (aura === 'soul') def.mindWard = 0.85;

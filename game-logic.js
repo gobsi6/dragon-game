@@ -1528,7 +1528,15 @@ function marketCheck(d) {
   if (d.stance === 'friendly' && rep < TRADE.refuseBelow) return { error: '상인들이 아직 지난 일을 잊지 않았다. 거래를 거절한다.' };
   return null;
 }
-const sellPrice = (d, id) => Math.max(1, Math.floor(ITEMS[id].value * priceRates(d, d.region).sell * traitMods(d).sell));
+// 상점에서 금화로 살 수 있는 물건: 되팔 때는 가장 싸게 살 수 있는 값(우호·신뢰)보다 늘 싸게 (사서 바로 되팔아 금화를 불리지 못하게)
+const SHOP_BUYABLE = new Set([...Object.values(SHOPS).flat(), ...Object.values(SHOPS_SPECIAL || {}).flat()]);
+const RESALE = 0.8; // 가장 싼 사는 값의 이만큼까지만
+const sellPrice = (d, id) => {
+  const base = Math.max(1, Math.floor(ITEMS[id].value * priceRates(d, d.region).sell * traitMods(d).sell));
+  if (!SHOP_BUYABLE.has(id)) return base;
+  const cheapest = ITEMS[id].value * (1 - SR.friendly.buyDiscount) * Math.min(1, ...Object.values(TRAITS).map((t) => t.mods?.buy || 1)); // 어떤 특성·평판으로도 이보다 싸게는 못 삼
+  return Math.max(1, Math.min(base, Math.floor(cheapest * RESALE)));
+};
 const buyPrice = (d, id) => Math.ceil(ITEMS[id].value * priceRates(d, d.region).buy * traitMods(d).buy);
 
 // 시장 정보: 파는 물건과 값, 내 물건을 팔 때 값
