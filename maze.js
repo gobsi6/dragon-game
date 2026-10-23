@@ -162,6 +162,13 @@ module.exports = function setupMaze({ io, db, online, logic, sendMe, system, dea
     if (!g || (g.hp <= 0 && now - (g.deadAt || 0) >= R.guardRespawnMs)) { g = { hp: R.guardHits, hpMax: R.guardHits, deadAt: 0, f: [] }; f.guard[pi] = g; }
     return g;
   }
+  // 기둥 하나의 자세한 상태 (지도에서 기둥을 누르면 보임): 수호자 체력 · 다시 깨어나는 때 · 함께 싸운 드래곤 · 불을 밝힌 드래곤과 남은 시간
+  function pillarInfo(fi, pi, p) {
+    const g = guard(fi, pi), f = W.floors[fi], left = litLeft(fi, pi);
+    return { pi, pos: p, guard: g.hp > 0, lit: left > 0, hp: Math.max(0, g.hp), hpMax: g.hpMax,
+      reviveAt: g.hp <= 0 && g.deadAt ? g.deadAt + R.guardRespawnMs : null, fighters: g.f.map((x) => x.name),
+      litBy: left > 0 ? f.litBy?.[pi]?.name || null : null, litLeft: left };
+  }
   const guardsDown = (fi) => GEO[fi].pillars.filter((p, pi) => guard(fi, pi).hp <= 0).length;
   const litLeft = (fi, pi) => Math.max(0, W.floors[fi].lit[pi] - Date.now());
   const sweep = (fi) => { const cut = Date.now() - R.mobIdleMs; for (const [k, m] of Object.entries(live[fi].mobs)) if (m.at < cut) delete live[fi].mobs[k]; };
@@ -246,7 +253,7 @@ module.exports = function setupMaze({ io, db, online, logic, sendMe, system, dea
       me: { fi: m.fi ?? null, used: m.used || 0, max: R.entries, torch: m.torch || 0 },
       points: points(fi), best: bestPoint(fi), rev: enc(FL[fi].rev), rows: GEO[fi].rows, flags: W.floors[fi].flags,
       // 찾아 둔 기둥(밝혀진 곳에 있는 기둥) 모두: 수호자가 남았는지, 지금 불이 타는지 (기둥에서 시작할 수는 없음)
-      pillars: GEO[fi].pillars.map((p, pi) => (FL[fi].rev[idx(fi, p[0], p[1])] ? { pi, pos: p, guard: guard(fi, pi).hp > 0, lit: litLeft(fi, pi) > 0, } : null)).filter(Boolean), lockedText: '회랑 입구는 오르딘이 지키고 있다. 먼저 그에게 말을 걸어야 한다.',
+      pillars: GEO[fi].pillars.map((p, pi) => (FL[fi].rev[idx(fi, p[0], p[1])] ? pillarInfo(fi, pi, p) : null)).filter(Boolean), lockedText: '회랑 입구는 오르딘이 지키고 있다. 먼저 그에게 말을 걸어야 한다.',
       here: hereOn(fi).length,
     };
   }
@@ -445,6 +452,7 @@ module.exports = function setupMaze({ io, db, online, logic, sendMe, system, dea
     if (litLeft(fi, pi) > 0) return err('이미 타오르고 있다.');
     if (m.torch < R.lightCost) return err('횃불이 모자란다.');
     m.torch -= R.lightCost; begin(d, m); f.lit[pi] = Date.now() + R.pillarMs; f.contrib[d.id] = dayIdx();
+    (f.litBy ||= [])[pi] = { id: d.id, name: d.name }; // 누가 밝혔는지 (기둥 정보 · 개척자 칭호)
     const litN = f.lit.filter((t) => t > Date.now()).length;
     const lines = [`${pi + 1}번 기둥의 불을 밝혔다. ${Math.round(R.pillarMs / 60000)}분 동안 타오른다. (밝힌 기둥 ${litN}/4)`];
     // 고대 유적 '이곳' 채팅에 알림: 누가 몇 번 기둥을 밝혔는지
@@ -459,12 +467,19 @@ module.exports = function setupMaze({ io, db, online, logic, sendMe, system, dea
     if (f.unsealed) return [];
     if (!f.reached || guardsDown(fi) < 4 || f.lit.some((t) => t <= Date.now())) return [];
     f.unsealed = true;
+    // 개척자: 봉인이 풀리는 순간 쓰러져 있던 네 수호자와 싸운 드래곤 + 지금 타오르는 네 기둥을 밝힌 드래곤 (이 명단을 계단을 밟을 때 씀)
+    const by = new Set();
+    GEO[fi].pillars.forEach((p, pi) => { for (const x of guard(fi, pi).f) by.add(x.id); const l = f.litBy?.[pi]; if (l) by.add(l.id); });
+    f.sealBy = [...by];
     news(`지하 회랑 제 ${fi + 1}층 계단의 봉인이 풀렸다. 계단을 밟으면 다음 층이 열린다.`);
     return ['네 기둥이 한꺼번에 타오르자 계단의 룬 사슬이 끊어졌다. 봉인이 풀렸다.'];
   }
   function conquer(d, fi) {
     const f = W.floors[fi], day = dayIdx();
-    const ids = Object.entries(f.contrib).filter(([, dd]) => day - dd <= 1).map(([id]) => Number(id));
+    // 개척자 칭호: 봉인이 풀릴 때 쓰러져 있던 수호자와 싸웠거나 기둥을 밝힌 드래곤 (sealBy)
+    // 1·2층은 예전 기준(오늘·어제 길을 뚫음)도 함께 인정 — 그때 규칙을 믿고 진행하던 층이라 누구도 빠지지 않게
+    const ids = [...(f.sealBy || [])];
+    if (fi <= 1 || !f.sealBy) for (const [id, dd] of Object.entries(f.contrib)) if (day - dd <= 1 && !ids.includes(Number(id))) ids.push(Number(id));
     if (!ids.includes(d.id)) ids.push(d.id);
     f.conquered = true; f.pioneers = [];
     for (const id of ids) {
