@@ -1057,16 +1057,19 @@ function craft(d, outId, have, focus = null) {
   return { title: great ? '제작 · 대성공' : '제작', lines, items, made: [{ id: madeId, qty }], gold: 0, xp, levelUp, great };
 }
 // 실험: 재료 2~3가지를 하나씩 넣어 섞어 봄. 숨겨진 제작법과 재료가 같으면 알게 됨
-function experiment(d, ids, have) {
+function experiment(d, ids, have, opts = {}) {
   if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
   ids = [...new Set((Array.isArray(ids) ? ids : []).filter((x) => typeof x === 'string' && ITEMS[x]))];
   if (ids.length < 2 || ids.length > 3) return { error: '재료를 2~3가지 골라야 한다.' };
   for (const id of ids) if (have(id) < 1) return { error: `${ITEMS[id].name}${josa(ITEMS[id].name, '이', '가')} 없다.` };
+  // 직접 빚은 물건은 다시 화로에 넣을 수 없음 (값이 거듭 불어나지 않게)
+  const re = ids.find((id) => ITEMS[id].custom);
+  if (re) return { error: `${ITEMS[re].name}${josa(ITEMS[re].name, '은', '는')} 직접 빚은 물건이라 다시 화로에 넣을 수 없다.` };
   const key = (r) => Object.keys(r.needs).sort().join('|');
   const mine = ids.slice().sort().join('|');
   const hit = RECIPES.find((r) => key(r) === mine);
-  // 숨은 제작법과 맞지 않으면: 재료의 성질로 직접 빚음 (자유 제작)
-  if (!hit) return freeCraft(d, ids, have);
+  // 숨은 제작법과 맞지 않으면(또는 선물로 빚기면): 재료의 성질로 직접 빚음 (자유 제작)
+  if (!hit || opts.gift) return freeCraft(d, ids, have, opts);
   const en = CRAFT.experiment.en;
   if (d.en < en) return { error: `기력이 모자란다. (${en} 필요)` };
   if (d.en >= enCap(d)) d.en_at = Date.now();
@@ -1088,8 +1091,11 @@ function experiment(d, ids, have) {
 // ── 자유 제작: 성질의 조합으로 직접 빚은 물건 (game-free.js · 설계서 '자유 제작') ──
 const FREE_R = require('./game-free');
 function freeNote(d, n) { const c = combatJson(d); c.freeNotes = [n, ...(c.freeNotes || [])].slice(0, FREE.notes); }
-function freeCraft(d, ids, have) {
-  const r = FREE_R.resolve(ids, statsOf(d).wisdom, greatChance(d, null));
+function freeCraft(d, ids, have, opts = {}) {
+  // 성질이 없는 물건(회복약·요리·물고기 등)은 섞어 빚을 수 없음 (숨은 제작법에 맞을 때만 쓰임)
+  const plain = ids.find((id) => !FREE.tags[id]);
+  if (plain) return { error: `${ITEMS[plain].name}에는 성질이 없어 섞어 빚을 수 없다.` };
+  const r = opts.gift ? FREE_R.resolveGift(ids) : FREE_R.resolve(ids, statsOf(d).wisdom, greatChance(d, null));
   const [b0, per] = FREE.en[r.kind || 'food'];
   const en = r.kind ? b0 + per * ids.length : CRAFT.experiment.en;
   if (d.en < en) return { error: `기력이 모자란다. (${en} 필요)` };
@@ -1113,8 +1119,9 @@ function freeCraft(d, ids, have) {
   lines.push(`재료가 녹아 하나로 엉기더니 '${it.name}'${josa(it.name, '이', '가')} 되었다.${qWord}`);
   if (r.mw) lines.push('불길까지 완벽하게 맞아 걸작이 되었다.');
   lines.push(...(hooks.creation ? hooks.creation(d, r, made.id) : []));
-  freeNote(d, { at: Date.now(), mats: ids, id: made.id, kind: r.kind, slot: r.slot || null, top: r.top, aura: r.aura, quality: r.quality, mw: !!r.mw });
-  return { title: r.quality === 'great' ? '실험 · 빼어난 물건' : r.quality === 'good' ? '실험 · 좋은 물건' : '실험', lines, items, made: [{ id: made.id, qty: 1 }], free: { id: made.id, isNew: made.isNew, mats: ids } };
+  if (r.kind === 'gift') lines.push('보물 상자에 간직하거나, 누군가에게 선물할 수 있다.');
+  freeNote(d, { at: Date.now(), mats: ids, id: made.id, kind: r.kind, slot: r.slot || null, top: r.top, aura: r.aura, quality: r.quality, mw: !!r.mw, gift: r.kind === 'gift' });
+  return { title: r.quality === 'great' ? '실험 · 빼어난 물건' : r.quality === 'good' ? '실험 · 좋은 물건' : '실험', lines, items, made: [{ id: made.id, qty: 1 }], free: { id: made.id, isNew: made.isNew, mats: ids, gift: r.kind === 'gift' } };
 }
 // 바랜 제작서: 아직 모르는 숨겨진 제작법 하나를 알게 됨
 // 바랜 제작서: 한 번 읽으면 재료의 성질 실마리, 두 번째에 제작법 전체
@@ -1325,8 +1332,11 @@ function useItem(d, id, have, opts = {}) {
   if (u.keep && (opts.keep || !u.mind)) { // 보물 상자에 넣고 잠금 (꺼낼 수 없음). 꽃다발은 '상자에 넣기'를 고를 때만, 아니면 아래에서 정신 회복
     if (!d.nest) return { error: '둥지를 틀어야 보물 상자에 간직할 수 있다.' };
     if (d.region !== d.nest) return { error: '보물 상자는 둥지에 있을 때만 열 수 있다.' };
-    chestAdd(d, u.keep, opts.from || '', opts.msg || '');
-    const label = chestLabel({ k: u.keep, n: opts.from || '' });
+    const by = it.custom?.byName && it.custom.byName !== opts.from ? it.custom.byName : '';
+    const custom = u.keep === 'custom' ? { name: it.name, desc: it.desc, value: it.value, by } : null;
+    const label = chestLabel(custom ? { k: 'custom', n: opts.from || '', nm: it.name, by } : { k: u.keep, n: opts.from || '' }) || it.name; // 먼저 이름을 만든 뒤 넣음 (도중에 멈춰 상자에만 들어가는 일이 없게)
+    if (chestOf(d).length >= FREE.chestMax) return { error: `보물 상자가 가득 찼다. (${FREE.chestMax}개까지 간직할 수 있다)` };
+    if (!chestAdd(d, u.keep, opts.from || '', opts.msg || '', Date.now(), custom)) return { error: '보물 상자에 넣지 못했다.' };
     lines.push(`${label}${josa(label, '을', '를')} 보물 상자에 넣고 잠갔다.`);
     if (opts.msg) lines.push(`함께 받은 쪽지도 접어 넣었다. "${opts.msg}"`);
     return { title: '보물 상자', lines, items: [{ id, qty: -1 }] };
@@ -1984,20 +1994,24 @@ function chestOf(d) {
   if (!Array.isArray(ni.chest)) ni.chest = [];
   return ni.chest;
 }
-function chestAdd(d, kind, from = '', text = '', now = Date.now()) {
-  if (!KEEPSAKES[kind] || !d.nest) return false;
-  chestOf(d).push({ k: kind, n: String(from || '').slice(0, 24), t: String(text || '').slice(0, 400), at: now });
+function chestAdd(d, kind, from = '', text = '', now = Date.now(), custom = null) {
+  if ((!KEEPSAKES[kind] && !custom) || !d.nest) return false;
+  if (chestOf(d).length >= FREE.chestMax) return false; // 상자가 가득 참 (저장 기록이 끝없이 커지지 않게)
+  const e = { k: custom ? 'custom' : kind, n: String(from || '').slice(0, 24), t: String(text || '').slice(0, 400), at: now };
+  if (custom) Object.assign(e, { nm: custom.name, ds: custom.desc || '', v: custom.value || 0, by: custom.by || '' }); // 직접 빚은 선물
+  chestOf(d).push(e);
   return true;
 }
-const chestValue = (d) => (d.nest ? chestOf(d).reduce((a, e) => a + (KEEPSAKES[e.k]?.value || 0), 0) : 0);
+const chestValue = (d) => (d.nest ? chestOf(d).reduce((a, e) => a + (e.k === 'custom' ? e.v || 0 : KEEPSAKES[e.k]?.value || 0), 0) : 0);
 // 보이는 이름: '루비의 그림' · '하늘에게 받은 들꽃 꽃다발' · 준 이가 없으면 이름만
 function chestLabel(e) {
+  if (e.k === 'custom') return e.n ? `${e.n}에게 받은 ${e.nm}` : e.by ? `${e.by}${josa(e.by, '이', '가')} 빚은 ${e.nm}` : e.nm;
   const K = KEEPSAKES[e.k];
   if (!K) return '';
   if (!e.n) return K.name;
   return K.fmt === 'from' ? `${e.n}에게 받은 ${K.name}` : `${e.n}의 ${K.name}`;
 }
-const chestView = (d) => (d.nest ? chestOf(d).map((e) => ({ k: e.k, label: chestLabel(e), desc: KEEPSAKES[e.k]?.desc || '', text: e.t || '', say: KEEPSAKES[e.k]?.say !== false, at: e.at, value: KEEPSAKES[e.k]?.value || 0 })).reverse() : []);
+const chestView = (d) => (d.nest ? chestOf(d).map((e) => ({ k: e.k, label: chestLabel(e), desc: e.k === 'custom' ? e.ds || '' : KEEPSAKES[e.k]?.desc || '', text: e.t || '', say: e.k === 'custom' ? true : KEEPSAKES[e.k]?.say !== false, at: e.at, value: e.k === 'custom' ? e.v || 0 : KEEPSAKES[e.k]?.value || 0 })).reverse() : []);
 // 예전에 보물더미에 물건으로 쌓아 둔 추억 물건(먼 둥지의 편지, 고향의 조약돌)을 상자로 옮김. 돌려주는 것: 보물더미에서 뺄 것
 function chestMigrate(d, hoard) {
   if (!d.nest) return [];

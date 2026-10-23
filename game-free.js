@@ -1,6 +1,9 @@
 // ── 자유 제작: 재료의 성질로 물건을 빚음 (실험) ─────────────────────
 // 설계서: 바탕(먹을거리·엮음)이 종류를, 효능이 효과를, 기운(불·얼음·독·혼)이 덧입힘을 정함
-const { ITEMS, FREE } = require('./game-data');
+const { ITEMS, FREE, SHOPS, SHOPS_SPECIAL } = require('./game-data');
+// 상점에서 금화로 살 수 있는 재료 (값을 낮춰 셈)
+const SHOP_MATS = new Set([...Object.values(SHOPS || {}).flat(), ...Object.values(SHOPS_SPECIAL || {}).flat()].map((x) => (typeof x === 'string' ? x : x?.id)).filter(Boolean));
+const matValue = (id) => (ITEMS[id]?.value || 1) * (SHOP_MATS.has(id) ? FREE.shopMatValue : 1);
 
 const T = FREE.tagNames;
 const tagsOf = (id) => FREE.tags[id] || {};
@@ -64,7 +67,7 @@ function resolve(ids, wis, greatChance, rnd = Math.random) {
   const { sum, first, best } = sumTags(ids);
   const food = sum.food || 0, bind = sum.bind || 0;
   const aura = pickTop(AURA, sum, first)[0] || null;
-  const value = Math.max(1, Math.round(ids.reduce((a, id) => a + (ITEMS[id]?.value || 1), 0) * FREE.valueMul));
+  const value = Math.max(1, Math.round(ids.reduce((a, id) => a + matValue(id), 0) * FREE.valueMul));
   if (!food && !bind) return { fail: '바탕이 없었다. 먹을거리나 엮음이 되는 재료가 하나는 있어야 한다.', sum, value };
   if (food === bind) return { fail: '먹을거리와 엮음이 팽팽하게 맞서 어느 쪽도 되지 못했다.', sum, value };
   const quality = rollQuality(rnd);
@@ -107,11 +110,36 @@ function resolve(ids, wis, greatChance, rnd = Math.random) {
   const name = makeName({ ids, aura, second, main, form: SLOT_WORD[slot], quality });
   return { kind: 'gear', top, aura, quality, mw, slot, def, name, sum, value: Math.round(value * { normal: 1, good: 1.5, great: 2 }[quality] * (mw ? 1.3 : 1)), rarity: pts >= 5 ? 'rare' : pts >= 3 ? 'uncommon' : 'common' };
 }
+// ── 선물로 빚기: 능력치·회복 없이 보물 상자에 간직할 물건. 가장 센 성질이 모양을 정함 ──
+const GIFT_FORM = {
+  shine: [['장식', '보석 장식'], ['보석함'], ['왕관 장식']], clear: [['방울', '풍경'], ['수정 방울'], ['별 방울']],
+  light: [['깃털 장식', '바람개비'], ['날개 장식'], ['구름 장식']], hard: [['조각상', '돌 조각'], ['석상'], ['수호상']],
+  sharp: [['칼 장식'], ['은장도'], ['보검 장식']], lore: [['두루마리', '책갈피'], ['비망록'], ['고서']],
+  life: [['화분', '씨앗 주머니'], ['작은 정원'], ['꽃 정원']], vigor: [['등잔'], ['등불'], ['횃불 장식']],
+  food: [['꽃묶음', '꽃다발'], ['꽃바구니'], ['꽃 화환']], bind: [['매듭 장식', '엮은 장식'], ['자수 걸개'], ['태피스트리']],
+  fire: [['등불'], ['화로 장식'], ['불꽃 등']], frost: [['얼음꽃', '눈송이 장식'], ['서리 장식'], ['서리 왕관']],
+  venom: [['보랏빛 병'], ['독병 장식'], ['검은 성배']], soul: [['수정 구슬', '넋 구슬'], ['혼 등불'], ['혼의 수정']],
+};
+function resolveGift(ids, rnd = Math.random) {
+  const { sum, first } = sumTags(ids);
+  const all = Object.keys(sum).filter((k) => sum[k] > 0).sort((a, b) => sum[b] - sum[a] || first[a] - first[b]);
+  const quality = rollQuality(rnd);
+  const value0 = Math.max(1, Math.round(ids.reduce((a, id) => a + matValue(id), 0) * FREE.valueMul));
+  const top = all[0] || 'bind';
+  const aura = AURA.includes(top) ? null : pickTop(AURA, sum, first)[0] || null;
+  // 주재료: 성질 세기 합이 가장 큰 재료 (비기면 앞선 것)
+  const power = (id) => Object.values(tagsOf(id)).reduce((a, n) => a + n, 0);
+  const main = ids.slice().sort((a, b) => power(b) - power(a) || ids.indexOf(a) - ids.indexOf(b))[0];
+  const name = makeName({ ids, aura, second: null, main, form: GIFT_FORM[top] || GIFT_FORM.bind, quality });
+  const value = Math.round(value0 * { normal: 1, good: 1.5, great: 2 }[quality]);
+  return { kind: 'gift', top, aura, quality, name, sum, value, rarity: value >= 120 ? 'rare' : value >= 40 ? 'uncommon' : 'common', use: { keep: 'custom' } };
+}
 // 창작 도감의 열쇠: 종류 + (먹는 것: 주된 효능 / 장신구: 부위) + 기운
-const creationKey = (r) => `${r.kind}:${r.kind === 'food' ? r.top : r.slot}:${r.aura || '-'}`;
-const creationLabel = (r) => `${r.aura ? `${T[r.aura]} 깃든 ` : ''}${r.kind === 'food' ? `${T[r.top]}의 먹을거리` : `${({ claw: '발톱', wing: '날개', tail: '꼬리', neck: '목', head: '머리', charm: '부적' })[r.slot]} 장신구`}`;
+const creationKey = (r) => `${r.kind}:${r.kind === 'gear' ? r.slot : r.top}:${r.aura || '-'}`;
+const creationLabel = (r) => `${r.aura ? `${T[r.aura]} 깃든 ` : ''}${r.kind === 'food' ? `${T[r.top]}의 먹을거리` : r.kind === 'gift' ? `${T[r.top]}의 선물` : `${({ claw: '발톱', wing: '날개', tail: '꼬리', neck: '목', head: '머리', charm: '부적' })[r.slot]} 장신구`}`;
 // 같은 드래곤이 빚은 것 중 효과가 같으면 같은 물건 (재료가 달라도 겹쳐 쌓임 → 빚은 물건이 끝없이 늘지 않게)
 function signature(dragonId, ids, r) {
+  if (r.kind === 'gift') return `v2|${dragonId}|gift|${r.name}|${r.value}|${r.quality}`; // 선물: 이름과 가치가 같으면 같은 것
   const eff = r.kind === 'food' ? r.use : { slot: r.slot, ...r.def };
   const key = JSON.stringify(eff, Object.keys(eff).sort()) + JSON.stringify(eff.bonus || {}, Object.keys(eff.bonus || {}).sort());
   return `v2|${dragonId}|${r.kind}|${key}|${r.quality}|${r.mw ? 1 : 0}`;
@@ -119,4 +147,4 @@ function signature(dragonId, ids, r) {
 function hashId(s) { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0; return `cx_${h.toString(36)}`; }
 const NAME_RE = /^[가-힣A-Za-z0-9 ·'\-]{2,12}$/;
 
-module.exports = { tagsOf, sumTags, resolve, creationKey, creationLabel, signature, hashId, NAME_RE };
+module.exports = { tagsOf, sumTags, resolve, resolveGift, creationKey, creationLabel, signature, hashId, NAME_RE };

@@ -834,15 +834,16 @@ logic.hooks.registerCustom = (d, ids, r) => {
   if (all[id]) { ITEMS[id] = all[id]; return { id, isNew: false }; }
   const mats = ids.map((x) => ITEMS[x].name).join('·');
   const base = { name: r.name, rarity: r.rarity, value: r.value, desc: `${mats}${josa(mats, '을', '를')} 섞어 빚었다.` };
-  const def = r.kind === 'food'
-    ? { ...base, type: 'use', use: r.use }
-    : { ...base, type: 'equip', slot: r.slot, ...r.def };
+  const def = r.kind === 'gear'
+    ? { ...base, type: 'equip', slot: r.slot, ...r.def }
+    : { ...base, type: 'use', use: r.use }; // 먹는 것 · 선물(보물 상자에 간직)
   def.custom = { by: d.id, byName: d.name, sig, mats: ids, kind: r.kind, quality: r.quality, mw: !!r.mw, at: Date.now() };
   customSave(id, def);
   return { id, isNew: true };
 };
 const CREATIONS = db.worldGet('creations') || {}; // 창작 도감 (메모리에 두고 바뀔 때만 저장)
-// 아무도 가지고 있지 않은 빚은 물건 정리 (하루 한 번). 이름을 붙였거나, 도감에 올랐거나, 빚은 지 7일이 안 된 것은 남김
+// 아무도 가지고 있지 않은 빚은 물건 정리 (하루 한 번)
+// 마지막으로 누군가 가지고 있던 때(heldAt)부터: 이름 없는 것은 7일, 이름 붙인 것은 30일이 지나면 지움. 창작 도감에 오른 것은 늘 남김
 let customGcLast = db.worldGet('customGcLast') || null;
 function customGC() {
   // 먼저: 목록에 없는 빚은 물건이 소지품·착용 등에 남아 있으면 치움 (접속 중인 드래곤의 착용도)
@@ -856,13 +857,16 @@ function customGC() {
     for (const m of logic.combatJson(e.dragon).myRecipes || []) if (m.id) keep.add(m.id);
   }
   for (const c of Object.values(CREATIONS)) keep.add(c.id);
-  const now = Date.now();
-  let removed = 0;
+  const now = Date.now(), DAY = 86400000;
+  let removed = 0, touched = false;
   for (const [id, def] of Object.entries(CUSTOM)) {
-    if (keep.has(id) || def.custom?.named || now - (def.custom?.at || 0) < 7 * 86400000) continue;
+    const c = def.custom || (def.custom = {});
+    if (keep.has(id)) { if (!c.heldAt || now - c.heldAt > DAY / 2) { c.heldAt = now; touched = true; } continue; } // 누군가 가지고 있음: 그때를 적어 둠
+    const last = Math.max(c.heldAt || 0, c.at || 0);
+    if (now - last < (c.named ? 30 : 7) * DAY) continue;
     delete CUSTOM[id]; delete ITEMS[id]; removed++;
   }
-  if (removed) db.worldSet('customItems', CUSTOM);
+  if (removed || touched) db.worldSet('customItems', CUSTOM);
   customGcLast = { at: now, removed, orphans, left: Object.keys(CUSTOM).length };
   db.worldSet('customGcLast', customGcLast);
   if (removed) console.log(`[빚은 물건 정리] ${removed}개 지움, ${customGcLast.left}개 남음`);
@@ -1257,9 +1261,9 @@ function onConnect(socket) {
     if (mats.length < 2 || mats.length > 3) return ack({ error: '재료 2~3가지 조합만 남길 수 있다.' });
     const l = (c.myRecipes ||= []);
     const k = mats.slice().sort().join('+');
-    if (l.some((m) => m.mats.slice().sort().join('+') === k)) return ack({ error: '이미 남긴 제작법이다.' });
+    if (l.some((m) => m.mats.slice().sort().join('+') === k && !!m.gift === (p?.gift === true))) return ack({ error: '이미 남긴 제작법이다.' });
     if (l.length >= freeMax(d)) return ack({ error: `내 제작법은 ${freeMax(d)}개까지 남길 수 있다. 안 쓰는 것을 먼저 지우자.${freeMax(d) < FREE_CFG.mineLib ? ' (둥지에 서고가 있으면 더 남길 수 있다)' : ''}` });
-    l.push({ mats, id: str(p?.id) && ITEMS[str(p.id)] ? str(p.id) : null, at: Date.now() });
+    l.push({ mats, id: str(p?.id) && ITEMS[str(p.id)] ? str(p.id) : null, gift: p?.gift === true, at: Date.now() });
     db.saveState(d);
     ack({ ok: true, mine: l, mineMax: freeMax(d) });
   });
@@ -1610,13 +1614,13 @@ function onConnect(socket) {
     });
   };
   itemAction('craft', (d, p, have) => logic.craft(d, str(p.recipe), have, p.focus));
-  itemAction('craft:experiment', (d, p, have) => logic.experiment(d, p.items, have));
+  itemAction('craft:experiment', (d, p, have) => logic.experiment(d, p.items, have, { gift: p.gift === true })); // gift: 선물로 빚기
   // 자유 제작: 내 제작법으로 다시 빚기 (저장한 재료 조합으로 실험)
   itemAction('craft:mine', (d, p, have) => {
     const l = logic.combatJson(d).myRecipes || [];
     const m = l[Number(p.idx)];
     if (!m) return { error: '그런 제작법이 없다.' };
-    return logic.experiment(d, m.mats, have);
+    return logic.experiment(d, m.mats, have, { gift: !!m.gift });
   });
   itemAction('gear:enhance', (d, p, have) => logic.enhanceGear(d, str(p.item), have));
   itemAction('gear:engrave', (d, p, have) => logic.engraveGear(d, str(p.item), str(p.elem), have));

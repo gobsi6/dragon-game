@@ -396,6 +396,9 @@ const ITEMS = {
   snow_flower:  { name: '눈꽃',           rarity: 'uncommon', value: 4,  desc: '설원의 눈 속에서 피어나는 하얀 꽃. 손에 쥐어도 녹지 않는다.' },
   // 선물용: 꽃다발은 쓰면 정신 회복, 또는 보물 상자에 넣어 간직 (받은 것이면 보낸 이와 쪽지도 함께). 화관은 쓰면 정신 조금 + 하루 동안 이름 옆에 꽃
   flower_crown: { name: '들꽃 화관',      rarity: 'common',   value: 8,  type: 'use', use: { crown: 1440, mind: 5 }, desc: '들꽃을 엮어 만든 화관. 머리에 얹으면 꽃향기에 정신이 조금 맑아지고(+5), 하루 동안 이름 옆에 작은 꽃이 핀다. 누군가에게 선물해도 좋다.' },
+  shell_chime:  { name: '조개 풍경',      rarity: 'common',   type: 'use', use: { keep: 'shell_chime' }, desc: '조개껍데기를 꿰어 단 풍경. 보물 상자에 간직하거나 누군가에게 선물할 수 있다.' },
+  amber_star:   { name: '호박 별 장식',   rarity: 'uncommon', type: 'use', use: { keep: 'amber_star' },  desc: '호박을 별 모양으로 깎아 금실로 감쌌다. 보물 상자에 간직하거나 누군가에게 선물할 수 있다.' },
+  music_box:    { name: '은사슬 오르골',  rarity: 'rare',     type: 'use', use: { keep: 'music_box' },   desc: '은사슬 태엽의 작은 오르골. 보물 상자에 간직하거나 누군가에게 선물할 수 있다.' },
   bouquet_wild: { name: '들꽃 꽃다발',    rarity: 'common',   value: 8,  type: 'use', use: { keep: 'bouquet_wild', mind: 10 }, desc: '평원의 들꽃과 해안의 갯메꽃을 묶은 꽃다발. 향을 맡으면 정신이 맑아진다(+10). 선물로 보내거나, 둥지의 보물 상자에 넣어 간직할 수도 있다.' },
   festival_garland: { name: '축제 꽃장식', rarity: 'uncommon', value: 10, type: 'use', use: { keep: 'festival_garland' }, desc: '왕도 축제에서 처음 춤을 춘 드래곤에게 마을 사람들이 걸어 준 꽃장식. 리본 끝에 작은 방울이 달려 있다. 둥지의 보물 상자에 넣어 간직할 수 있다.' },
   bouquet_four: { name: '네 고장 꽃다발', rarity: 'uncommon', value: 20, type: 'use', use: { keep: 'bouquet_four', mind: 25 }, desc: '평원·숲·해안·설원의 꽃을 하나씩 모아 묶은 꽃다발. 대륙을 한 바퀴 돈 정성이 담겼다. 향을 맡으면 정신이 맑아진다(+25). 선물로 보내거나 보물 상자에 넣어 간직할 수도 있다.' },
@@ -480,6 +483,9 @@ const RECIPES = [
   { out: 'roast_meat',    needs: { bait_meat: 2, red_clay: 1 },                          en: 3,  wis: 0 },
   // 선물용 꽃 (들꽃은 평원, 이끼꽃은 숲, 갯메꽃은 해안, 눈꽃은 설원에서)
   { out: 'flower_crown', needs: { wild_flower: 3, grass_seed: 1 }, en: 2, wis: 0 },
+  { out: 'shell_chime', needs: { sea_shell: 3, spider_silk: 1 }, en: 3, wis: 2 },               // 선물: 보물 상자에 간직
+  { out: 'amber_star',  needs: { amber: 1, gold_ore: 1, silk_scrap: 1 }, en: 5, wis: 7 },
+  { out: 'music_box',   needs: { silver_chain: 2, deep_pearl: 1, brass_button: 2 }, en: 8, wis: 12 },
   { out: 'bouquet_wild', needs: { wild_flower: 2, sea_bindweed: 1 }, en: 2, wis: 0 },
   { out: 'bouquet_four', needs: { wild_flower: 1, moss_flower: 1, sea_bindweed: 1, snow_flower: 1 }, en: 3, wis: 1 },
   { out: 'ember_snack',   needs: { bait_meat: 1, volcanic_ash: 1 },                      en: 3,  wis: 0 },
@@ -1144,8 +1150,10 @@ const FREE = {
   gearCap: [[5, 2], [10, 3], [15, 5], [999, 6]],    // [지혜 이하, 장신구 능력치 합의 기본 상한] (정식 장신구와 같은 수준)
   gearRate: 0.7,                                    // 장신구 능력치 점수 = 효능 세기 합 × 이만큼 (올림)
   luck: { good: 0.24, great: 0.06 },                // 좋음(+1) · 빼어남(+2) 확률
-  en: { food: [4, 2], gear: [8, 2] },               // 기력: 기본 + 재료 하나당
+  en: { food: [4, 2], gear: [8, 2], gift: [4, 2] },  // 선물로 빚기도 먹는 것과 같음               // 기력: 기본 + 재료 하나당
   valueMul: 1.2,                                    // 값 = 넣은 재료값 합 × 이만큼 (좋음 1.5배 · 빼어남 2배)
+  shopMatValue: 0.5,                                // 상점에서 살 수 있는 재료는 값을 이만큼만 셈 (사서 빚어 되팔아 돈을 불리지 못하게)
+  chestMax: 300,                                    // 보물 상자에 간직할 수 있는 수
   failBack: 0.3,                                    // 실패하면 재료값의 이만큼을 금화로
   notes: 40, mine: 12, mineLib: 20,                 // 실험 노트 줄 수 · 내 제작법 (서고가 있으면 20)
 };
@@ -1965,6 +1973,10 @@ for (const [id, it] of Object.entries(ITEMS)) {
 // 한번 넣으면 꺼내거나 팔 수 없고, 보물 도둑도 손대지 못함. 하나마다 value만큼 보물더미 가치에 더해짐
 // fmt — of: '루비의 그림' / from: '하늘에게 받은 들꽃 꽃다발' / plain: 이름만 · say: false면 함께 남은 글이 말이 아니라 설명 (따옴표 없이)
 const KEEPSAKES = {
+  // 제작으로 만드는 선물 (보물 상자에 간직. 받은 것이면 '○○에게 받은')
+  shell_chime:   { name: '조개 풍경',         value: 12, fmt: 'from', desc: '조개껍데기를 거미줄 실에 꿰어 단 풍경. 바람이 불면 자그락자그락 바다 소리가 난다.' },
+  amber_star:    { name: '호박 별 장식',      value: 30, fmt: 'from', desc: '호박을 별 모양으로 깎아 금실로 감쌌다. 안에 갇힌 작은 벌레가 별빛처럼 보인다.' },
+  music_box:     { name: '은사슬 오르골',     value: 60, fmt: 'from', desc: '은사슬을 감아 태엽 삼은 작은 오르골. 뚜껑을 열면 진주가 돌며 낯익은 노래가 흐른다.' },
   kid_drawing:   { name: '그림',              value: 8,  fmt: 'of',   say: false, desc: '삐뚤빼뚤한 선으로 그린 그림. 크레용 자국이 손끝에 묻어난다.' },
   kid_letter:    { name: '편지',              value: 8,  fmt: 'of',   desc: '또박또박 눌러 쓴 편지. 군데군데 지우고 다시 쓴 자국이 있다.' },
   pressed_flower:{ name: '눌러 말린 꽃',      value: 6,  fmt: 'of',   desc: '책갈피 사이에 며칠을 눌러 둔 꽃. 색은 바랬지만 모양은 그대로다.' },
