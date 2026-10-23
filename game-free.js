@@ -99,6 +99,8 @@ function resolve(ids, wis, greatChance, rnd = Math.random) {
   const extra = { normal: 0, good: 1, great: 2 }[quality];
   const mw = rnd() < greatChance; // 대성공: 걸작
   pts += Math.min(2, extra + (mw ? 1 : 0)); // 기본 상한 위로는 +2까지
+  // 능력치 합의 끝: 8점은 멸망한 대륙 재료가 하나라도 있어야 (정식 장신구도 8점부터는 그 땅의 재료가 듦)
+  pts = Math.min(pts, ids.some((id) => FREE.ruinMats.includes(id)) ? FREE.topSum : FREE.plainTopSum);
   if (aura) pts = Math.max(1, pts - 1); // 기운에 점수 1을 씀
   // 나누기: 가장 센 효능에 6할, 나머지는 두 번째 효능에. 한 능력치는 상한(보통 5 · 운이 좋으면 6)을 넘지 못함
   const cap = quality !== 'normal' || mw ? FREE.statCapLucky : FREE.statCap;
