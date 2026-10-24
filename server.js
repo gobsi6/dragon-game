@@ -1370,7 +1370,11 @@ function onConnect(socket) {
       if (v <= (seen[key] || 0)) return ack({ ok: true }); // 뒤로 돌아가지 않음
       seen[key] = v;
     } else if (key === 'risen') {
-      seen.risen = [...new Set((Array.isArray(payload?.value) ? payload.value : []).map((x) => str(x)).filter((x) => x && x.length <= 40))].slice(-30);
+      // 받은 목록으로 덮어쓰지 않고 이미 있던 것과 합침 (다른 기기에서 확인한 것이 지워지지 않게).
+      // 지금 떠 있는 '다시 일어선 드래곤' 카드의 것만 남겨, 지난 표시가 쌓여 새 표시를 밀어내지 않게 함
+      const live = new Set(death.risenList().map((x) => `${x.id}:${x.at}`));
+      const got = (Array.isArray(payload?.value) ? payload.value : []).map((x) => str(x)).filter((x) => x && x.length <= 40);
+      seen.risen = [...new Set([...(Array.isArray(seen.risen) ? seen.risen : []), ...got])].filter((x) => live.has(x)).slice(-30);
     } else return ack({ error: '알 수 없는 읽음 표시다.' });
     c.seen = seen;
     db.saveState(entry.dragon);

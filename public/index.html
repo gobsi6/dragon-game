@@ -1996,6 +1996,25 @@
   .utabs .chipbtn:focus-visible { outline: 2px solid var(--steel); outline-offset: -2px; }
   .utabs .chipbtn:last-child { margin-right: 24px; }
   .inv-bar { margin-bottom: 18px; }
+  /* 정렬: 탭 아래 오른쪽 '정렬 기본순 ▾' 글자 단추 + 펼침 메뉴 (분류 ▾ 상자와 같은 모양) */
+  .inv-sort { position: relative; display: flex; justify-content: flex-end; margin: -12px 0 4px; }
+  .inv-sort-btn { display: inline-flex; align-items: center; gap: 5px; min-height: 30px; padding: 0 4px 0 8px; border: 0; border-radius: 3px; background: none; font: 500 12.5px/1 var(--sans); color: var(--ink-2); cursor: pointer; }
+  .inv-sort-btn:hover { background: #EEF2F6; color: var(--steel-d); }
+  .inv-sort-btn .k { color: var(--muted); }
+  .inv-sort-btn b { font-weight: 700; color: var(--steel-d); }
+  .inv-sort-btn svg { width: 12px; height: 12px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s; }
+  .inv-sort-btn[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .inv-sort-btn:focus-visible { outline: 2px solid var(--steel); outline-offset: -2px; }
+  .inv-sort-menu { position: absolute; z-index: 5; top: calc(100% + 4px); right: 0; width: min(260px, 100%); display: grid; gap: 2px; padding: 6px; background: #FCFCFB; border: 1px solid #C9CCC8; border-radius: 4px; box-shadow: 0 8px 22px rgba(31, 35, 38, .16); }
+  .inv-sort-menu[hidden] { display: none; }
+  .inv-sort-menu button { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 40px; padding: 6px 12px; border: 0; border-radius: 3px; background: none; text-align: left; font: 500 13.5px/1.3 var(--serif); color: var(--ink-2); cursor: pointer; }
+  .inv-sort-menu button .mk { display: grid; gap: 2px; }
+  .inv-sort-menu button small { font: 400 11px/1.35 var(--sans); color: var(--muted); }
+  .inv-sort-menu button:hover { background: #F2F5F8; }
+  .inv-sort-menu button.on { background: #EEF2F6; color: var(--steel-d); font-weight: 700; }
+  .inv-sort-menu button.on::after { content: "✓"; font: 700 12px/1 var(--sans); color: var(--steel-d); }
+  .inv-sort-menu button:focus-visible { outline: 2px solid var(--steel); outline-offset: -2px; }
+  .dlg .inv-sort + h3.inv-h, .dlg .inv-sort + .buff-now { margin-top: 6px; }
   .inv-bar > .utabs { margin-top: 0; margin-bottom: 0; } /* 왼쪽은 폰에서 제목 글자에 맞추는 값을 그대로 */
   /* 폰에서만 보이는 '분류 ▾' 탭과 그 아래 펼침 상자 */
   .utabs-wrap { position: relative; }
@@ -2490,6 +2509,12 @@
   .portrait .hint { font-size: 13px; }
   .portrait .over { position: absolute; left: 50%; bottom: 46px; transform: translateX(-50%); padding: 4px 12px; background: rgba(31, 35, 38, .7); color: #F4F7FA; font-size: 12px; border-radius: 2px; opacity: 0; transition: opacity .15s; white-space: nowrap; }
   .portrait:hover .over, .portrait:focus-visible .over { opacity: 1; }
+  /* 지금 상태 꼬리표: 그림 위쪽 가운데에 짧은 글자띠 (원정 중 · 쉬는 중 · 회랑 탐사 · 광폭화 · 쓰러짐) */
+  .st-tag { position: absolute; z-index: 2; left: 50%; top: 22px; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px 3px 8px; background: rgba(31, 35, 38, .66); color: #F4F7FA; font: 600 11.5px/1.35 var(--sans); border-radius: 2px; white-space: nowrap; pointer-events: none; }
+  .st-tag[hidden] { display: none; }
+  .st-tag svg { width: 13px; height: 13px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .st-tag.warn { background: rgba(122, 46, 53, .84); }
+  .portrait.faded img, .portrait.faded #portrait-ph { filter: grayscale(.7) brightness(1.04); } /* 쓰러졌을 때 그림이 살짝 바램 */
   .nameplate {
     margin: -34px 14px 0; padding: 10px 14px 11px; position: relative;
     background: var(--surface); border: 1px solid var(--orn);
@@ -2529,6 +2554,10 @@
     .portrait #portrait-ph svg { width: 64px; height: 64px; }
     .portrait .hint { display: none; }
     .portrait .over { bottom: 50%; transform: translate(-50%, 50%); font-size: 11px; padding: 3px 8px; }
+    .portrait:has(.st-tag:not([hidden])) { overflow: visible; } /* 꼬리표가 동그라미 아래 테두리에 걸치도록 */
+    .st-tag { top: auto; bottom: -7px; padding: 1px 7px 1px 6px; font-size: 10.5px; background: var(--steel-d); box-shadow: 0 0 0 2px var(--surface); }
+    .st-tag.warn { background: #7A2E35; }
+    .st-tag svg { width: 11px; height: 11px; }
     .portrait.empty::after { content: "+"; position: absolute; right: 9px; bottom: 9px; width: 22px; height: 22px; border-radius: 50%; background: var(--steel); color: #fff; font: 700 16px/22px var(--sans); text-align: center; box-shadow: 0 0 0 2px var(--surface); }
     .pmenu { top: 130px; left: 14px; transform: none; }
     .nameplate { grid-column: 2; grid-row: 2; margin: 0; padding: 0; background: none; border: 0; box-shadow: none; align-items: flex-start; text-align: left; gap: 2px; min-width: 0; }
@@ -3259,6 +3288,7 @@
           <span id="portrait-ph"></span>
           <span class="hint">눌러서 그림 올리기</span>
           <span class="over">그림 바꾸기</span>
+          <span class="st-tag" id="st-tag" hidden><svg viewBox="0 0 24 24" aria-hidden="true"></svg><span></span></span>
         </button>
         <input type="file" id="avatar-file" accept="image/*" hidden>
         <div class="menu frame pmenu" id="pmenu" hidden>
@@ -4472,6 +4502,7 @@
     renderRescues();
     if (S.region) { renderCorrupt(); renderPlaces(); renderWeather(); }
     checkFallen();
+    renderStatusTag();
     for (const k of ['claw', 'scale', 'wing', 'wisdom', 'majesty']) { const on = (me.scars || []).includes(k); const p2 = $(`st-${k}`).parentElement; p2.classList.toggle('scar', on); if (on) p2.title = '상흔이 남았다 (영구 −1)'; }
     renderBuff();
     $('pts-row').hidden = !me.statPts;
@@ -5280,7 +5311,34 @@
   $('trip-close').addEventListener('click', () => $('trip-dlg').close());
   $('trip-recall').addEventListener('click', () => { $('trip-dlg').close(); $('exp-recall').click(); });
   $('exp-trip').addEventListener('click', openTrip);
+  // ── 드래곤 기록 그림 위 '지금 상태' 꼬리표: 짧은 말 하나만 ──
+  const ST_ICON = {
+    exp: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/><path d="M9 2h6"/>',
+    rest: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+    maze: '<path d="M12 3c2.2 2.4 3 4.2 3 6a3 3 0 0 1-6 0c0-1 .4-1.8 1-2.5.2 1 .8 1.6 1.5 1.8-.3-1.8.1-3.6.5-5.3z"/><path d="M10 13h4l-1 8h-2z"/>',
+    fall: '<path d="M4 12h4l2-5 4 10 2-5h4"/>',
+  };
+  const inMazeNow = () => { try { return mzInside(); } catch { return false; } }; // (회랑 코드는 파일 아래쪽에서 정해짐)
+  function renderStatusTag() {
+    const me = S.me, tag = $('st-tag');
+    if (!me || !tag) return;
+    // 겹치면 더 급한 것 하나만: 쓰러짐 > 광폭화 > 원정 > 회랑 > 쉼
+    const st = me.fallen ? ['fall', '쓰러짐', true]
+      : me.berserkInfo ? ['fall', '광폭화', true]
+      : me.exp ? ['exp', Date.now() >= me.exp.end ? '원정 끝' : '원정 중']
+      : inMazeNow() ? ['maze', '회랑 탐사']
+      : me.restAt ? ['rest', '쉬는 중']
+      : null;
+    tag.hidden = !st;
+    $('portrait').classList.toggle('faded', !!me.fallen);
+    if (!st) return;
+    tag.classList.toggle('warn', !!st[2]);
+    tag.querySelector('svg').innerHTML = ST_ICON[st[0]];
+    tag.querySelector('span').textContent = st[1];
+  }
+  setInterval(renderStatusTag, 30000); // '원정 중' → '원정 끝'처럼 시간이 지나 바뀌는 것
   function renderExpedition() {
+    renderStatusTag();
     const e = S.me?.exp;
     $('expcard').hidden = !e;
     if (!e) return;
@@ -5479,6 +5537,7 @@
   // 프로필 카드의 장신구 자리
   // ── 즐겨찾기 (칭호·제작법): 이 기기에 드래곤마다 따로 저장 ──
   // 즐겨찾기: 서버에 드래곤마다 저장 (S.me.favs). 예전에 이 기기에만 저장해 두던 것은 처음 한 번 서버로 옮김
+  const risenKeys = () => new Set((S.risen || []).map((x) => `${x.id}:${x.at}`)); // 지금 떠 있는 '다시 일어선 드래곤' 카드
   const risenLocal = () => { try { const v = JSON.parse(localStorage.getItem('dragon-risen-hide') || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
   // ── 읽음 표시: 서버에 드래곤마다 저장 (S.me.seen). 다른 브라우저로 들어와도 같은 알림이 다시 뜨지 않게. 예전에 이 기기에만 기억하던 것은 처음 한 번 서버로 옮김 ──
   const SEEN = {
@@ -5495,7 +5554,7 @@
       if (ln > this.num('notes')) this.set('notes', ln);
       const ls = (() => { try { return Number(localStorage.getItem(slKey())) || 0; } catch { return 0; } })();
       if (ls > this.num('slate')) this.set('slate', ls);
-      const lr = risenLocal();
+      const lr = risenLocal().filter((x) => !S.risen || risenKeys().has(x)); // 지난 카드 표시는 옮기지 않음
       if (lr.some((x) => !this.list('risen').includes(x))) this.set('risen', [...new Set([...this.list('risen'), ...lr])].slice(-30));
     },
   };
@@ -5697,10 +5756,13 @@
     const GORDER = ['fav', ...CATS];
     // 즐겨찾기한 물건은 다 써서 없어도 '다 씀'으로 남겨 보여 줌 (별이 풀린 것처럼 보이지 않게, 다시 모을 때 찾기 쉽게)
     const zeros = favI.filter((id) => S.items[id] && !(invCache[id] > 0)).map((id) => [id, 0]);
+    // 정렬: 기본(등급·이름) · 성능순(높은 것부터) · 값순. 묶음(분류)은 그대로 두고 묶음 안에서만
+    const pw = invSort === 'power' ? invPower : invSort === 'value' ? (id) => S.items[id]?.value || 0 : null;
     const list = [...all, ...zeros]
       .filter(([id]) => invTab === 'all' || (invTab === 'fav' ? isFav(id) : itemCat(S.items[id]) === invTab))
       .sort(([a], [b]) => GORDER.indexOf(groupOf(a)) - GORDER.indexOf(groupOf(b))
         || isFav(b) - isFav(a)
+        || (pw ? pw(b) - pw(a) : 0)
         || order[S.items[a].rarity] - order[S.items[b].rarity]
         || S.items[a].name.localeCompare(S.items[b].name, 'ko'));
     const box = $('inv-list');
@@ -5717,6 +5779,42 @@
     bar.classList.add('inv-bar');
     box.appendChild(bar);
     showTab(tabs, tabX);
+    // 정렬 고르기: 오른쪽 '정렬 기본순 ▾' → 펼침 메뉴
+    const SORTS = [['default', '기본순', '등급 · 이름'], ['power', '성능순', '장신구는 능력치 합, 회복약은 회복량, 재료는 성질 세기'], ['value', '값순', '물건의 값어치']];
+    if (!SORTS.some(([k]) => k === invSort)) invSort = 'default';
+    const sb = document.createElement('div'); sb.className = 'inv-sort';
+    const sbtn = document.createElement('button');
+    sbtn.type = 'button'; sbtn.className = 'inv-sort-btn';
+    sbtn.setAttribute('aria-haspopup', 'menu'); sbtn.setAttribute('aria-expanded', 'false');
+    sbtn.innerHTML = '<span class="k">정렬</span><b></b><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+    sbtn.querySelector('b').textContent = SORTS.find(([k]) => k === invSort)[1];
+    const smenu = document.createElement('div');
+    smenu.className = 'inv-sort-menu'; smenu.setAttribute('role', 'menu'); smenu.hidden = true;
+    for (const [k, label, tip] of SORTS) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = invSort === k ? 'on' : '';
+      b.setAttribute('role', 'menuitemradio'); b.setAttribute('aria-checked', String(invSort === k));
+      b.innerHTML = '<span class="mk"><span></span><small></small></span>';
+      b.querySelector('span span').textContent = label;
+      b.querySelector('small').textContent = tip;
+      b.addEventListener('click', () => {
+        closeSort();
+        if (invSort === k) return;
+        invSort = k; try { localStorage.setItem('dragon-inv-sort', k); } catch {}
+        keepScroll($('inv-dlg'), renderInv);
+      });
+      smenu.appendChild(b);
+    }
+    const onSortDoc = (e) => { if (!sb.contains(e.target)) closeSort(); };
+    function closeSort() { smenu.hidden = true; sbtn.setAttribute('aria-expanded', 'false'); document.removeEventListener('click', onSortDoc, true); }
+    sbtn.addEventListener('click', () => {
+      if (!smenu.hidden) return closeSort();
+      smenu.hidden = false; sbtn.setAttribute('aria-expanded', 'true');
+      document.addEventListener('click', onSortDoc, true);
+    });
+    sb.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !smenu.hidden) { e.stopPropagation(); closeSort(); sbtn.focus(); } });
+    sb.append(sbtn, smenu);
+    box.appendChild(sb);
     const buf = S.me.buff && S.me.buff.until > Date.now() ? S.buffs?.[S.me.buff.id] : null;
     if (buf) {
       const n = document.createElement('div');
@@ -5917,6 +6015,22 @@
     return { wrap, tabs };
   }
   let invTab = 'all'; // 소지품 분류 탭
+  let invSort = (() => { try { return localStorage.getItem('dragon-inv-sort') || 'default'; } catch { return 'default'; } })(); // 소지품 정렬 (이 기기에 기억)
+  // 성능 점수: 장신구는 능력치 합(강화·걸작 포함), 회복약·요리는 회복량, 재료는 실험 성질의 세기 합, 그 밖은 값어치
+  function invPower(id) {
+    const it = S.items[id];
+    if (!it) return 0;
+    if (it.type === 'equip') {
+      const g = S.me?.craft?.gear?.[id];
+      const enh = g && g.at === 'inv' ? (g.plus || 0) + (g.mw ? 1 : 0) : 0; // 소지품에 있는 강화된 한 개
+      return Object.values(it.bonus || {}).reduce((a, v) => a + v, 0) + enh + (it.mindWard ? 0.5 : 0) + (it.elem ? 0.5 : 0);
+    }
+    const u = it.use;
+    if (u && (u.hp || u.en || u.mind || u.ap)) return (u.hp || 0) + (u.en || 0) * 1.2 + (u.mind || 0) * 2 + (u.ap || 0) * 15;
+    const tg = S.free?.tags?.[id];
+    if (tg) return Object.values(tg).reduce((a, v) => a + v, 0);
+    return it.value || 0;
+  }
   const INV_TAB_NAME = { treasure: '보물', equip: '장신구', use: '회복약', buff: '강화 음식', gift: '선물·추억', meal: '식구 요리', fish: '낚시', trophy: '전리품', mat: '재료' };
   function openInv() { fetchInv(() => { renderInv(); openPanel('inv-dlg'); }); }
   // ── 쓰임새: 이 재료로 만들 수 있는 것 (숨겨진 제작법은 찾아낸 것만) ──
@@ -6056,6 +6170,7 @@
   function renderRest() {
     const me = S.me;
     const on = !!me?.restAt;
+    renderStatusTag();
     $('restcard').hidden = !on;
     if (!on) return;
     const r = me.stance === 'hermit' ? S.stanceRules.hermit.rest : S.nestRules.rest;
@@ -11490,7 +11605,14 @@
       t.querySelector('small').textContent = `${x.where} · ${x.how === 'rescued' ? `${x.by}의 도움으로` : '상흔을 입고 스스로'} · ${ago >= 60 ? `${Math.floor(ago / 60)}시간` : `${ago}분`} 전`;
       const cb = document.createElement('button');
       cb.type = 'button'; cb.className = 'btn'; cb.textContent = '확인';
-      cb.addEventListener('click', () => { const l = [...hidden, `${x.id}:${x.at}`].slice(-30); try { localStorage.setItem('dragon-risen-hide', JSON.stringify(l)); } catch {} SEEN.set('risen', l); renderRescues(); });
+      cb.addEventListener('click', () => {
+        // 지금 떠 있는 카드의 표시만 남김: 지난 표시가 쌓여 앞쪽(다른 기기에서 확인한 것)이 잘려 나가지 않게
+        const live = risenKeys();
+        const l = [...new Set([...SEEN.list('risen'), ...risenLocal(), `${x.id}:${x.at}`])].filter((k) => live.has(k));
+        try { localStorage.setItem('dragon-risen-hide', JSON.stringify(l)); } catch {}
+        SEEN.set('risen', l);
+        renderRescues();
+      });
       row.append(t, cb);
       box.appendChild(row);
     }
@@ -15071,6 +15193,7 @@
     const inside = mzInside() && !me.fallen;
     document.querySelector('.center').classList.toggle('in-maze', inside);
     $('maze-card').hidden = !inside;
+    renderStatusTag();
     if (inside && (!MZ.floor || MZ.floor.fi !== mz.fi || !MZ.rows)) fetchMaze(mz.fi);
     if (!inside) { MZ.floor = null; MZ.rows = null; }
   }
