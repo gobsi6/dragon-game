@@ -986,6 +986,7 @@
   <button class="btn primary" type="button" id="update-go">새로고침</button>
   <button class="x" type="button" id="update-later" aria-label="나중에">나중에</button>
 </div>
+<div class="gain-pop" id="gain-pop" role="status" aria-live="polite" hidden></div>
 <div class="toast" id="toast" popover="manual" hidden><span id="toast-text"></span><button class="btn" id="toast-btn" type="button" hidden></button><button class="btn" id="toast-btn2" type="button" hidden></button><button class="toast-x" id="toast-x" type="button" aria-label="닫기" title="닫기" hidden><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><i class="toast-time" id="toast-time" hidden></i></div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -1739,8 +1740,27 @@
         // 사냥은 직접 싸우는 전투 (결과는 싸움이 끝나고 창을 닫을 때 카드로)
         if (res.result.hunt && res.result.battle) return openBattle(res.result.battle, { title: res.result.battle.foes ? `사냥 · 무리 ${res.result.battle.foes.length}마리` : '사냥', lines: res.result.lines });
         showResult(res.result);
+        if (b.dataset.act === 'explore' || b.dataset.act === 'gather') showGainPop(res.result);
       });
     });
+  }
+  // 탐사·채집으로 얻은 것: 아래쪽에 잠깐 떴다가 사라짐 (결과 칸이 화면 밖에 있어도 바로 알 수 있게)
+  let gainTimer = 0;
+  function showGainPop(r) {
+    const items = (r?.items || []).filter((it) => it.qty > 0 && S.items[it.id]);
+    if (!items.length && !(r?.gold > 0)) return;
+    const box = $('gain-pop');
+    // 글씨로만: '올빼미 깃털 ×1, 태양석 ×1을 얻었다.' (조사는 마지막 숫자를 읽는 소리에 맞춤: 2·4·5·9는 '를')
+    const parts = items.slice(0, 4).map((it) => `${S.items[it.id].name} ×${it.qty}`);
+    if (items.length > 4) parts.push(`외 ${items.length - 4}가지`);
+    if (r.gold > 0) parts.push(`금화 ${r.gold}닢`);
+    const last = parts[parts.length - 1];
+    const ro = /[2459]$/.test(last) ? '를' : /[0-9]$/.test(last) ? '을' : josa(last, '을', '를');
+    box.textContent = `${parts.join(', ')}${ro} 얻었다.`;
+    clearTimeout(gainTimer);
+    box.hidden = false;
+    box.classList.remove('out', 'in'); void box.offsetWidth; box.classList.add('in');
+    gainTimer = setTimeout(() => { box.classList.add('out'); gainTimer = setTimeout(() => { box.hidden = true; box.classList.remove('in', 'out'); }, 320); }, 3200);
   }
 
   // ── 원정 ──
@@ -2549,10 +2569,22 @@
   }
   // 제작 창을 열어 둔 동안 만든 것 (위쪽 '방금 만든 것' 줄)
   const CRAFT_MADE = [];
+  // '방금 만든 것'은 마지막으로 만든 뒤 잠시 지나면 저절로 걷힘 (아래 가는 막대로 남은 시간). 그 사이 또 만들면 처음부터
+  const MADE_TTL = 10000, madeTimers = {};
+  function madeExpire(boxId, list, redraw) {
+    const box = $(boxId);
+    clearTimeout(madeTimers[boxId]);
+    box.style.setProperty('--made-ttl', `${MADE_TTL}ms`);
+    box.classList.remove('timed'); void box.offsetWidth; box.classList.add('timed');
+    madeTimers[boxId] = setTimeout(() => { list.length = 0; box.classList.remove('timed'); redraw(); }, MADE_TTL);
+  }
   function itemAct(event, payload) {
     socket.emit(event, payload, (res) => {
       if (res.error) { SFX.play('error'); return toast(res.error); }
-      if (event === 'craft' || event === 'craft:experiment' || event === 'craft:mine') for (const m of res.result?.made || []) if (m.qty > 0 && !CRAFT_MADE.includes(m.id)) CRAFT_MADE.unshift(m.id);
+      if (event === 'craft' || event === 'craft:experiment' || event === 'craft:mine') {
+        for (const m of res.result?.made || []) if (m.qty > 0 && !CRAFT_MADE.includes(m.id)) CRAFT_MADE.unshift(m.id);
+        if ((res.result?.made || []).some((m) => m.qty > 0)) madeExpire('craft-made', CRAFT_MADE, drawCraftMade);
+      }
       if (event === 'craft:experiment' || event === 'craft:mine') { FREE_LAST = res.result?.free || null; FREE_STALE = true; } // 자유 제작 결과 · 노트 다시 불러오기 (새것이 올 때까지 지난 것을 그대로 보여 줌: 목록이 잠깐 사라져 화면이 위로 튀지 않게)
       SFX.play({ 'item:drop': 'drop', craft: 'craft' }[event] || 'use');
       if (res.result?.lines) toast(res.result.lines.join(' '));
@@ -3116,7 +3148,10 @@
     socket.emit(event, payload, (res) => {
       if (res.error) { SFX.play('error'); return toast(res.error); }
       if (/^hoard:/.test(event)) SFX.play('coin');
-      if (event === 'nest:cook') for (const m of res.result?.items || []) if (m.qty > 0 && !FAC_MADE.includes(m.id)) FAC_MADE.unshift(m.id);
+      if (event === 'nest:cook') {
+        for (const m of res.result?.items || []) if (m.qty > 0 && !FAC_MADE.includes(m.id)) FAC_MADE.unshift(m.id);
+        if ((res.result?.items || []).some((m) => m.qty > 0)) madeExpire('fac-made', FAC_MADE, drawFacMade);
+      }
       if (big) { $('fac-dlg').close(); $('nest-dlg').close(); showResult(res.result); return; }
       toast(res.result.lines.join(' '));
       if ($('nest-dlg').open) openNest();
@@ -11921,13 +11956,18 @@
   const checkPfStuck = () => {
     pfStuckRaf = 0;
     if (!narrowMqTop.matches) { pfPanel.classList.remove('stuck'); return; }
-    const top = parseFloat(getComputedStyle(pfPanel).top) || 0;
-    pfPanel.classList.toggle('stuck', window.scrollY > 4 && pfPanel.getBoundingClientRect().top <= top + 1);
+    // 붙었는지는 움직이는 중의 위치가 아니라 원래 자리가 머리줄 높이만큼 올라갔는지로 판단.
+    // 머리줄이 접혔다 펼쳐질 때(기록 칸이 그 높이만큼 오르내림) 붙음·떨어짐이 번갈아 바뀌어 칸이 튀지 않게
+    const stickAt = head.offsetHeight;
+    const main = pfPanel.parentElement;
+    const natural = main.getBoundingClientRect().top + (parseFloat(getComputedStyle(main).paddingTop) || 0); // 원래 자리의 화면 위 위치
+    pfPanel.classList.toggle('stuck', window.scrollY > 4 && natural <= stickAt + 0.5);
   };
   const narrowMqTop = window.matchMedia('(max-width: 860px)');
   window.addEventListener('scroll', () => { if (!pfStuckRaf) pfStuckRaf = requestAnimationFrame(checkPfStuck); }, { passive: true });
   window.addEventListener('resize', checkPfStuck);
   pfPanel.addEventListener('transitionend', checkPfStuck);
+  if ('MutationObserver' in window) new MutationObserver(checkPfStuck).observe(head, { attributes: true, attributeFilter: ['class'] });
   // 넓은 화면: 드래곤 기록 · 이곳의 이야기 칸을 화면에 고정 (sticky는 화면 배율이 125%·150%일 때 스크롤하면 1픽셀씩 위아래로 흔들림)
   // 머리말이 늘 위에 붙어 있고 본문이 바로 아래서 시작하므로, 고정한 자리는 원래 자리와 같다. 원래 자리에는 같은 폭의 빈칸을 남김
   const pinMain = document.querySelector('main.main');
