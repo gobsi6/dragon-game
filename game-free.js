@@ -96,13 +96,14 @@ function resolve(ids, wis, greatChance, rnd = Math.random) {
   if (!effs.length) return { fail: '모양은 잡혔지만 힘이 깃들지 않았다. 단단함·날카로움·가벼움·옛 지혜·빛남이 필요하다.', sum, value };
   const top = effs[0], second = effs[1] || null;
   const slot = top === 'sharp' ? 'claw' : top === 'light' ? 'wing' : top === 'hard' ? (bind > sum.hard ? 'neck' : 'tail') : top === 'lore' ? (bind > sum.lore ? 'charm' : 'head') : (bind > sum.shine ? 'head' : 'neck');
-  const base = wisCap(wis);
+  const ruin = ids.some((id) => FREE.ruinMats.includes(id)); // 멸망한 대륙 재료: 기본 상한 +1, 끝 8
+  const base = wisCap(wis) + (ruin ? FREE.ruinBase : 0);
   let pts = Math.min(base, Math.ceil(effs.reduce((a, k) => a + sum[k], 0) * FREE.gearRate)); // 효능 세기 합 × 0.65 (올림)에서 지혜 상한으로 자름
   const extra = { normal: 0, good: 1, great: 2 }[quality];
   const mw = rnd() < greatChance; // 대성공: 걸작
   pts += Math.min(2, extra + (mw ? 1 : 0)); // 기본 상한 위로는 +2까지
-  // 능력치 합의 끝: 8점은 멸망한 대륙 재료가 하나라도 있어야 (정식 장신구도 8점부터는 그 땅의 재료가 듦)
-  pts = Math.min(pts, ids.some((id) => FREE.ruinMats.includes(id)) ? FREE.topSum : FREE.plainTopSum);
+  // 능력치 합의 끝: 8점은 멸망한 대륙 재료가 있어야 (정식 장신구도 8점부터는 그 땅의 재료가 듦)
+  pts = Math.min(pts, ruin ? FREE.topSum : FREE.plainTopSum);
   if (aura) pts = Math.max(1, pts - 1); // 기운에 점수 1을 씀
   // 나누기: 가장 센 효능에 6할, 나머지는 두 번째 효능에. 한 능력치는 상한(보통 5 · 운이 좋으면 6)을 넘지 못함
   const cap = quality !== 'normal' || mw ? FREE.statCapLucky : FREE.statCap;

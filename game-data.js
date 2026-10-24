@@ -1160,11 +1160,12 @@ const FREE = {
   foodCap: { hp: 120, en: 60, mind: 12 },           // 보통일 때 상한
   foodCapLucky: { hp: 140, en: 70, mind: 15 },      // 좋음·빼어남일 때 상한
   foodLuck: { good: 1.15, great: 1.3 },             // 운이 좋으면 회복량 배율
-  gearCap: [[5, 2], [10, 3], [15, 5], [999, 6]],    // [지혜 이하, 장신구 능력치 합의 기본 상한] (정식 장신구와 같은 수준)
-  gearRate: 0.65, // 장신구 능력치 점수 = 효능 세기 합 × 이만큼 (올림). 드문 재료만으로는 4점까지, 5점 이상은 희귀 재료가 있어야
-  statCap: 5, statCapLucky: 6,
-  topSum: 8, plainTopSum: 7,                        // 장신구 능력치 합의 끝: 멸망한 대륙 재료가 하나라도 들어가면 8, 아니면 7
-  ruinMats: ['carnem_steel', 'void_silk', 'blackened_scale', 'faded_crest', 'ashen_core', 'corrupt_crystal', 'ashen_dust', 'purify_shard', 'star_fragment'],                      // 장신구 한 능력치의 상한 (보통 · 좋음·빼어남·걸작일 때). 넘는 점수는 두 번째 효능으로, 없으면 버려짐                                    // 장신구 능력치 점수 = 효능 세기 합 × 이만큼 (올림)
+  gearCap: [[5, 1], [10, 2], [15, 4], [999, 5]],    // [지혜 이하, 장신구 능력치 합의 기본 상한] (운이 없을 때는 정식 장신구보다 1점 낮음. 운이 좋아야 따라잡음)
+  gearRate: 0.65,                                   // 장신구 능력치 점수 = 효능 세기 합 × 이만큼 (올림)
+  statCap: 5, statCapLucky: 6,                      // 장신구 한 능력치의 상한 (보통 · 좋음·빼어남·걸작일 때). 넘는 점수는 두 번째 효능으로, 없으면 버려짐
+  topSum: 8, plainTopSum: 7,                        // 장신구 능력치 합의 끝: 아래 멸망한 대륙 재료가 들어가면 8, 아니면 7
+  ruinMats: ['carnem_steel', 'void_silk', 'faded_crest', 'blackened_scale', 'ashen_core', 'corrupt_crystal'], // 멸망한 대륙 재료 중 장신구 효능을 내는 것과 희귀한 기운 재료. 들어가면 기본 상한 +1, 끝 8 (잿빛 먼지·정화의 결정·별똥별 조각처럼 끼워 넣기만 하는 것은 뺌)
+  ruinBase: 1,                                      // 위 재료가 들어갔을 때 기본 상한에 더하는 값
   luck: { good: 0.24, great: 0.06 },                // 좋음(+1) · 빼어남(+2) 확률
   en: { food: [4, 2], gear: [8, 2], gift: [4, 2] },  // 선물로 빚기도 먹는 것과 같음               // 기력: 기본 + 재료 하나당
   valueMul: 1.2,                                    // 값 = 넣은 재료값 합 × 이만큼 (좋음 1.5배 · 빼어남 2배)
