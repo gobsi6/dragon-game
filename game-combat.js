@@ -762,6 +762,7 @@ function huntReward(d, b, c) {
     const extra = f.minion;
     ids.push('beast_hide');
     if (!extra && Math.random() < 0.3 + c.level * 0.05 + (hostile ? STANCE_RULES.hostile.huntFang : 0)) ids.push('sharp_fang');
+    if (!extra && Math.random() < (PLACE_RULES.sinewChance || 0)) ids.push('tough_sinew'); // 실험 재료: 질긴 힘줄 (어디서든)
     // 장소마다 다른 사냥 전리품 (강화 음식 '행운'이면 더 잘 나옴)
     if (drop && Math.random() < (PLACE_RULES.dropChance[ITEMS[drop].rarity] + (logic.buffOf(d)?.drop || 0) + (ti.drop || 0) + wx.drop) * (extra ? G.dropChance : 1)) ids.push(drop);
     gold += randInt(0, 3) * c.level * (hostile ? STANCE_RULES.hostile.huntGold : 1) * (ti.huntGold || 1) * wx.huntGold * (extra ? G.gold : 1);

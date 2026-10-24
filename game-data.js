@@ -225,6 +225,22 @@ const ITEMS = {
   carnem_claw:    { name: '카르넴 강철 발톱', rarity: 'rare', type: 'equip', slot: 'claw', bonus: { claw: 7, scale: 2 }, value: 100, desc: '왕국의 강철로 다시 벼린 발톱.' },
   void_cloak:     { name: '공허의 날개덮개', rarity: 'rare', type: 'equip', slot: 'wing', bonus: { wing: 6, wisdom: 2 }, mindWard: 0.85, value: 100, desc: '공허의 실로 짠 얇은 덮개. 깎이는 정신 −15%.' },
   star_charm:     { name: '별빛 부적', rarity: 'rare', type: 'equip', slot: 'charm', bonus: { wisdom: 4 }, expRare: 0.03, value: 100, desc: '별똥별 조각을 엮은 부적. 원정에서 귀한 것이 더 잘 나온다.' },
+  // ── 실험 재료 (자유 제작에서 비어 있던 성질 조합을 채움. 정식 제작법에는 쓰이지 않음) ──
+  tough_sinew:     { name: '질긴 힘줄',          rarity: 'uncommon', value: 12, desc: '사냥감의 다리에서 뽑아낸 힘줄. 말리면 어떤 끈보다 질기다.' },
+  dry_vine:        { name: '마른 덩굴 줄기',     rarity: 'common',   value: 3,  desc: '숲 바닥을 기던 덩굴을 말린 것. 엮기 좋게 잘 휜다.' },
+  owl_quill:       { name: '올빼미 깃펜',        rarity: 'uncommon', value: 12, desc: '유적에 깃든 올빼미의 깃을 다듬은 펜. 끝에 오래된 먹이 말라붙어 있다.' },
+  rune_shell:      { name: '글자 새긴 거북 등딱지', rarity: 'rare',  value: 40, desc: '바닷가에 떠밀려 온 커다란 등딱지. 누군가 옛 글자를 빼곡히 새겨 두었다.' },
+  frost_thorn:     { name: '서리 수정 가시',     rarity: 'uncommon', value: 12, desc: '얼음 바위틈에서 자란 투명한 가시. 햇빛을 받으면 무지갯빛으로 반짝인다.' },
+  rainbow_feather: { name: '무지개새 깃털',      rarity: 'rare',     value: 40, desc: '협곡 위를 나는 무지개새가 떨군 깃털. 보는 각도마다 빛깔이 바뀐다.' },
+  wind_stone:      { name: '바람 구멍 돌',       rarity: 'uncommon', value: 10, desc: '바람에 깎여 구멍이 숭숭 난 가벼운 돌. 쥐고 있으면 손이 붕 뜨는 것 같다.' },
+  forest_mushroom: { name: '숲 버섯',            rarity: 'common',   value: 3,  desc: '고목 아래 무리 지어 자란 통통한 버섯. 구우면 고소하다.' },
+  lotus_root:      { name: '늪 연근',            rarity: 'common',   value: 3,  desc: '늪 바닥 진흙에서 캔 연근. 씹을수록 단맛이 난다.' },
+  // 실험 재료로 만드는 숨겨진 제작법 (실험에서 그 조합을 맞히거나 바랜 제작서로 알게 됨)
+  owl_charm:       { name: '올빼미 깃 부적',     rarity: 'rare',     type: 'equip', slot: 'charm', bonus: { wing: 2, wisdom: 2 }, value: 70, desc: '올빼미 깃펜 두 자루를 바람 구멍 돌에 꽂아 덩굴로 묶었다. 쥐면 밤바람 소리가 들린다.' },
+  shell_gorget:    { name: '거북 등딱지 목가리개', rarity: 'rare',   type: 'equip', slot: 'neck',  bonus: { scale: 3, wisdom: 2 }, value: 110, desc: '옛 글자가 새겨진 등딱지를 늪철 테두리에 박고 질긴 힘줄로 동였다. 목을 감싸면 글자들이 낮게 웅얼거린다.' },
+  rainbow_circlet: { name: '무지개 깃 머리장식', rarity: 'rare',     type: 'equip', slot: 'head',  bonus: { majesty: 3, wing: 2 }, value: 120, desc: '무지개새 깃털을 서리 수정 가시와 금으로 엮었다. 날개를 펼칠 때마다 머리 위로 빛이 흩어진다.' },
+  forest_stew:     { name: '버섯 연근 찜',       rarity: 'uncommon', type: 'use', use: { hp: 60, en: 30 }, value: 24, desc: '숲 버섯과 늪 연근을 소금 간해 푹 찐 요리. 먹고 나면 속이 든든하고 힘이 돈다.' },
+  sulfur:          { name: '유황 덩이',          rarity: 'common',   value: 3,  desc: '화산 틈에서 굳은 노란 덩어리. 매캐한 냄새가 코를 찌른다.' },
   // ── 멸망한 대륙 ──
   purify_shard: { name: '정화의 결정',  rarity: 'uncommon', value: 1, desc: '멸망한 대륙의 오염을 걷어 낼 때 맺히는 맑은 결정. 잿빛 상륙지의 생존자에게 귀한 것과 바꿀 수 있다.' },
   ashen_dust:   { name: '잿빛 먼지',    rarity: 'common',   value: 3, desc: '멸망한 대륙을 덮은 고운 먼지. 손에 묻으면 잘 지워지지 않는다.' },
@@ -562,6 +578,11 @@ const RECIPES = [
   { out: 'troll_gorget',  needs: { troll_tusk: 2, bog_iron: 1 },                      en: 12, wis: 10, hidden: true },
   { out: 'moon_circlet',  needs: { silver_clover: 1, deep_pearl: 1, silk_scrap: 1 },  en: 14, wis: 12, hidden: true },
   { out: 'star_crown',    needs: { star_shard: 2, gold_ore: 1 },                      en: 15, wis: 13, hidden: true },
+  // 실험 재료로 만드는 것 (재료 종류가 셋 이하라 실험에서 그 조합을 맞히면 알게 됨)
+  { out: 'forest_stew',     needs: { forest_mushroom: 2, lotus_root: 1, salt_crystal: 1 }, en: 5,  wis: 6,  hidden: true },
+  { out: 'owl_charm',       needs: { owl_quill: 2, wind_stone: 1, dry_vine: 1 },          en: 12, wis: 11, hidden: true },
+  { out: 'shell_gorget',    needs: { rune_shell: 1, tough_sinew: 2, bog_iron: 1 },        en: 14, wis: 14, hidden: true },
+  { out: 'rainbow_circlet', needs: { rainbow_feather: 1, frost_thorn: 2, gold_ore: 1 },   en: 15, wis: 15, hidden: true },
   { out: 'frenzy_draught', needs: { corrupt_crystal: 1, poison_herb: 2 },               en: 6,  wis: 9 },
   { out: 'purify_incense', needs: { corrupt_crystal: 1, glow_moss: 2, wild_honey: 1 },  en: 8,  wis: 10 },
   { out: 'abyss_pendant',  needs: { corrupt_crystal: 2, blackened_scale: 2, silver_chain: 1 }, en: 14, wis: 12 },
@@ -767,10 +788,11 @@ const RUIN = {
   pts: { explore: 3, gather: 2, hunt: 6, elite: 25 }, // 행동마다 쌓이는 기여
   shard: { explore: [0.5, 1], gather: [0.4, 1], hunt: [1, 2], elite: [6, 9] }, // [나올 확률, 개수] / 사냥은 [최소, 최대]
   // 잿빛 상륙지의 생존자 '오르샤'와 바꾸기 (정화의 결정 몇 개)
+  // 값 매기는 원칙: 큰 것은 작은 것 여러 개를 합친 것보다 비싸지 않게 (같은 값이면 큰 것 하나가 늘 낫거나 같음)
   exchange: [
-    { id: 'purify_incense', cost: 6 },
-    { id: 'holy_water',     cost: 2 },
-    { id: 'herbal_ointment', cost: 1 }, { id: 'moss_salve', cost: 2 }, { id: 'hydra_salve', cost: 4 }, // 체력 회복 (50 · 70 · 120)
+    { id: 'purify_incense', cost: 3 },             // 정신 60 (성수 2개보다 조금 쌈)
+    { id: 'holy_water',     cost: 2 },             // 정신 30
+    { id: 'herbal_ointment', cost: 2 }, { id: 'moss_salve', cost: 3 }, { id: 'hydra_salve', cost: 4 }, // 체력 회복 (50 · 70 · 120)
     { id: 'ember_tea', cost: 1 }, { id: 'ember_tonic', cost: 2 }, { id: 'ember_elixir', cost: 6 }, // 기력 회복 (25 · 40+체력 25 · 60+행동력 2)
     { id: 'recipe_scroll',  cost: 12 },
     { id: 'ghost_lantern',  cost: 30 },
@@ -779,7 +801,7 @@ const RUIN = {
     { id: 'heartwood',      cost: 15 }, { id: 'bog_pearl', cost: 15 }, { id: 'deep_pearl', cost: 15 }, { id: 'ancient_relic', cost: 15 },
     { id: 'ashen_core',     cost: 40 },
     { id: 'scar_tonic',     cost: 400 }, // 상흔을 하나 씻어 냄 (30일에 한 번 쓸 수 있음)
-    { id: 'tr_map_piece',   cost: 60 }, { id: 'tr_star_orb', cost: 80 }, { id: 'tr_dragon_idol', cost: 120 },
+    { id: 'tr_map_piece',   cost: 60 }, { id: 'tr_star_orb', cost: 80 }, { id: 'tr_dragon_idol', cost: 105 }, // 보물 (가치 250 · 320 · 450)
   ],
   // 강적·사냥에서 나오는 것 (멸망한 대륙)
   coreDrop: { elite: 0.3, hunt: 0.03 },          // 잿빛 심장
@@ -1102,6 +1124,23 @@ const FREE = {
     silver_chain: {bind: 2, shine: 2},
     void_silk: {bind: 3, light: 3},
     king_scale: {hard: 3, shine: 3},
+    // 실험 재료: 순수한 엮음(목·부적 장신구), 두 효능 조합(날개+지혜, 비늘+지혜, 발톱+위엄, 날개+위엄), 먹을거리, 불 기운
+    tough_sinew: {bind: 3},
+    dry_vine: {bind: 2},
+    owl_quill: {light: 2, lore: 2},
+    rune_shell: {hard: 3, lore: 2},
+    frost_thorn: {sharp: 2, shine: 2},
+    rainbow_feather: {light: 2, shine: 2},
+    wind_stone: {light: 3},
+    forest_mushroom: {food: 2, vigor: 1},
+    lotus_root: {food: 2, life: 2},
+    sulfur: {fire: 2, venom: 1},
+    // 낚시로 얻는 물고기
+    fish_mackerel: {food: 1, life: 1},
+    fish_flounder: {food: 1, clear: 1},
+    fish_salmon: {food: 2, life: 2},
+    fish_eel: {food: 2, vigor: 2},
+    fish_marlin: {food: 3, vigor: 3},
     living_bark: {bind: 2, life: 2},
     wyvern_membrane: {bind: 3, light: 3},
     hydra_blood: {life: 2},
@@ -1286,13 +1325,13 @@ const REGION_LOOT = {
   ruin_rift:    { common: ['ashen_dust'], uncommon: ['void_silk', 'blackened_scale'], rare: ['corrupt_crystal'] },
   plains:  { common: ['grass_seed', 'wild_flower'], uncommon: ['wild_honey'],   rare: ['silver_clover'] },
   capital: { common: ['brass_button'], uncommon: ['silk_scrap'],   rare: ['lost_seal'] },
-  snow:    { common: ['ice_shard'],    uncommon: ['frost_lichen', 'snow_flower'], rare: ['eternal_ice'] },
-  ruins:   { common: ['rune_stone'],   uncommon: ['old_scroll'],   rare: ['ancient_relic'] },
-  forest:  { common: ['poison_herb'],  uncommon: ['glow_moss', 'moss_flower'],    rare: ['heartwood'] },
-  swamp:   { common: ['black_reed'],   uncommon: ['bog_iron'],     rare: ['bog_pearl'] },
-  coast:   { common: ['sea_shell', 'sea_bindweed'], uncommon: ['amber'],        rare: ['deep_pearl'] },
-  canyon:  { common: ['red_clay'],     uncommon: ['gold_ore'],     rare: ['sun_stone'] },
-  volcano: { common: ['volcanic_ash'], uncommon: ['obsidian'],     rare: ['fire_crystal'] },
+  snow:    { common: ['ice_shard'],    uncommon: ['frost_lichen', 'snow_flower', 'frost_thorn'], rare: ['eternal_ice'] },
+  ruins:   { common: ['rune_stone'],   uncommon: ['old_scroll', 'owl_quill'], rare: ['ancient_relic'] },
+  forest:  { common: ['poison_herb', 'forest_mushroom', 'dry_vine'], uncommon: ['glow_moss', 'moss_flower'], rare: ['heartwood'] },
+  swamp:   { common: ['black_reed', 'lotus_root'], uncommon: ['bog_iron'], rare: ['bog_pearl'] },
+  coast:   { common: ['sea_shell', 'sea_bindweed'], uncommon: ['amber'],        rare: ['deep_pearl', 'rune_shell'] },
+  canyon:  { common: ['red_clay'],     uncommon: ['gold_ore', 'wind_stone'], rare: ['sun_stone', 'rainbow_feather'] },
+  volcano: { common: ['volcanic_ash', 'sulfur'], uncommon: ['obsidian'], rare: ['fire_crystal'] },
 };
 
 // 지역별 사냥감. 인간 왕국에는 없음. level이 높을수록 어렵고 보상이 큼
@@ -1611,6 +1650,7 @@ const PLACE_RULES = {
   tooHard: 3,          // 내 레벨 + 이만큼보다 어려운 장소에는 들어갈 수 없음
   moveCooldown: 1200,  // 장소를 옮기는 간격 (ms)
   lootPerLevel: { uncommon: 0.012, rare: 0.005 }, // 깊은 장소일수록 귀한 재료가 잘 나옴 (사냥터 Lv.1당)
+  sinewChance: 0.08,   // 사냥감을 쓰러뜨릴 때마다 질긴 힘줄이 나올 확률 (어디서든, 무리에 섞인 어린 것은 빼고)
   dropChance: { common: 0.6, uncommon: 0.45, rare: 0.3 }, // 사냥에 이기면 그 장소의 전리품이 나올 확률 (강적은 2개 확정)
 };
 
@@ -2115,7 +2155,7 @@ const NIGHT_MARKET = {
     { id: 'mask', name: '가면 노점', who: '가면장수 청년', say: '"하나 써 봐요. 오늘 밤엔 아무도 당신이 누군지 몰라요."',
       items: [{ id: 'nm_mask', price: 45, limit: 1 }, { id: 'nm_star_candy', price: 12, limit: 5 }] },
     { id: 'potion', name: '떠돌이 약장수', who: '수염 난 약장수', say: '"쉿, 축제 밤에만 꺼내는 물건이오. 날개가 무거운 용에게 딱이지."',
-      items: [{ id: 'sun_breath', price: 150, limit: 2 }, { id: 'nm_ember_candy', price: 60, limit: 4 }] },
+      items: [{ id: 'sun_breath', price: 110, limit: 2 }, { id: 'nm_ember_candy', price: 60, limit: 4 }] }, // 태양의 숨결(행동력 4)은 불씨 사탕(2) 두 개보다 조금 싸게
   ],
   // 플레이어 노점: 하나씩. 올린 물건은 노점에 맡겨 두고, 야시장이 끝나면 팔리지 않은 것은 주인에게 돌아감
   stall: { lines: 6, priceMax: 99999, qtyMax: 999, signMax: 16 },

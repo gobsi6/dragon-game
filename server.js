@@ -28,7 +28,7 @@ const ITEM_SOURCES = (() => {
   const TIER = { common: '', uncommon: ' (가끔)', rare: ' (드물게)' };
   for (const [r, loot] of Object.entries(REGION_LOOT)) for (const [tier, ids] of Object.entries(loot)) for (const id of ids || []) add(id, `${rn(r)} 탐사·채집${TIER[tier] || ''}`);
   for (const p of Object.values(PLACES)) if (p.drop) add(p.drop, `${rn(p.region)} ${p.name} 사냥 (${p.creature})`);
-  add('beast_hide', '어디서든 사냥'); add('sharp_fang', '어디서든 사냥 (가끔)'); add('recipe_scroll', '강적을 쓰러뜨리면 가끔');
+  add('beast_hide', '어디서든 사냥'); add('sharp_fang', '어디서든 사냥 (가끔)'); add('tough_sinew', '어디서든 사냥 (가끔)'); add('recipe_scroll', '강적을 쓰러뜨리면 가끔');
   add('calamity_core', '대륙의 재앙을 쓰러뜨리면 (함께 싸운 드래곤 모두)');
   add('blackened_scale', '오염된 사냥감·강적을 쓰러뜨리면'); add('blackened_scale', '오염된 곳에서 탐사·채집 (가끔)');
   add('corrupt_crystal', '오염된 사냥감·강적을 쓰러뜨리면 (가끔)'); add('corrupt_crystal', '오염된 곳에서 탐사·채집 (드물게)');
