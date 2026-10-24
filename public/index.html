@@ -1301,6 +1301,7 @@
     $('xp-t').textContent = me.levelMax ? '최대 레벨' : `${me.xp.toLocaleString()} / ${me.xpMax.toLocaleString()}`;
     $('hp-t').innerHTML = `<b>${me.hp}</b><span> / ${me.hpMax}</span>`;
     $('hp-bar').style.width = pct(me.hp, me.hpMax);
+    $('pf-panel').classList.toggle('hp-low', me.hp <= me.hpMax * 0.1); // 체력 10% 이하: 기록 액자에 붉은빛
     $('en-t').innerHTML = `<b>${me.en}</b><span> / ${me.enMax}</span>`;
     $('en-bar').style.width = pct(me.en, me.enMax);
     for (const k of ['claw', 'scale', 'wing', 'wisdom', 'majesty']) {

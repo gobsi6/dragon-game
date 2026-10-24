@@ -1675,6 +1675,12 @@ button.trait.bad.on { background: #FBF1F2; box-shadow: inset 0 0 0 1px #A63E4B; 
 .vital.mind.low .v b { color: #A63E4B; }
 .vital.mind.zero .bar { box-shadow: 0 0 0 2px #E6C3C7; }
 @keyframes mind-pulse { 50% { opacity: .45; } }
+/* 체력이 최대의 10% 이하: 드래곤 기록 액자가 붉어지고 숨 쉬듯 천천히 붉은빛이 돎 (폰에서 띄운 창은 바깥이 잘려 안쪽 빛만 보임) */
+.profile.hp-low { border-color: #A63E4B; box-shadow: inset 0 0 0 4px var(--surface), inset 0 0 0 5px #E3B5BB; }
+.profile.hp-low > .c { background: #A63E4B; z-index: 2; } /* 아래 붉은빛 층보다 위에 */
+.profile.hp-low::after { content: ""; position: absolute; inset: -1px; z-index: 1; pointer-events: none; border: 1px solid #A63E4B; box-shadow: inset 0 0 18px rgba(166, 62, 75, .22), 0 0 22px 3px rgba(166, 62, 75, .38); animation: hp-glow 2.4s ease-in-out infinite; }
+@keyframes hp-glow { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .profile.hp-low::after { animation: none; opacity: .8; } }
 /* 대륙의 재앙 */
 .boss-card { display: flex; flex-direction: column; gap: 8px; padding: 13px 14px 12px; background: #2E2023; border: 1px solid #5A1A20; color: #EADBD6; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .04); }
 .boss-card .h { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; }
