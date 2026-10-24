@@ -2145,15 +2145,15 @@
     fall: '<path d="M4 12h4l2-5 4 10 2-5h4"/>',
   };
   const inMazeNow = () => { try { return mzInside(); } catch { return false; } }; // (회랑 코드는 파일 아래쪽에서 정해짐)
-  // 짧은 시간 글씨 — 원정(남은 시간): 1:12 · 0:38 (분은 올려 셈, 끝나기 전에 0:00이 되지 않게) / 쉼(쉰 시간): 38분 · 1시간 12분
-  const stClock = (ms) => { const m = Math.max(1, Math.ceil(ms / 60000)); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; };
+  // 시간 글씨 — 원정(남은 시간): 시:분:초 (0:01:12 · 1:12:30, 초는 올려 셈) / 쉼(쉰 시간): 38분 · 1시간 12분
+  const stClock = (ms) => { const t = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(t / 3600)}:${String(Math.floor((t % 3600) / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`; };
   const stTime = (ms) => { const m = Math.max(1, Math.floor(ms / 60000)); return m < 60 ? `${m}분` : `${Math.floor(m / 60)}시간${m % 60 ? ` ${m % 60}분` : ''}`; };
   function renderStatusTag() {
     const me = S.me, tag = $('st-tag');
     if (!me || !tag) return;
     const now = Date.now();
     // 겹치면 더 급한 것 하나만: 쓰러짐 > 광폭화 > 원정 > 회랑 > 쉼
-    // 원정은 남은 시간(1:12), 쉼은 쉰 시간(38분). 원정이 끝났으면 시간 없이 '원정 끝'
+    // 원정은 남은 시간(0:01:12), 쉼은 쉰 시간(38분). 원정이 끝났으면 시간 없이 '원정 끝'
     const st = me.fallen ? ['fall', '쓰러짐', '', true]
       : me.berserkInfo ? ['fall', '광폭화', '', true]
       : me.exp ? (now >= me.exp.end ? ['exp', '원정 끝', ''] : ['exp', '원정 중', stClock(me.exp.end - now)])
@@ -2169,7 +2169,9 @@
     tag.querySelector('.w').textContent = st[1];
     tag.querySelector('.tm').textContent = st[2];
   }
-  setInterval(renderStatusTag, 30000); // '원정 중' → '원정 끝'처럼 시간이 지나 바뀌는 것
+  // 원정 중에는 남은 시간이 초 단위라 1초마다, 그 밖에는 30초마다 ('쉬는 중' 분 글씨 등)
+  let stTick = 0;
+  setInterval(() => { stTick = (stTick + 1) % 30; if ((S.me?.exp && !$('st-tag').hidden) || !stTick) renderStatusTag(); }, 1000);
   function renderExpedition() {
     renderStatusTag();
     const e = S.me?.exp;

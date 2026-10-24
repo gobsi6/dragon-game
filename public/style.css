@@ -2503,7 +2503,6 @@ html { scrollbar-gutter: stable; }
 .st-tag.warn { background: rgba(122, 46, 53, .84); }
 .st-tag .tm { font-weight: 400; font-size: 11px; opacity: .85; font-variant-numeric: tabular-nums; }
 .st-tag .tm:empty { display: none; }
-.st-tag.has-tm .w::after { content: " ·"; opacity: .7; } /* 원정 중 · 1시간 12분 남음 */
 .portrait.faded img, .portrait.faded #portrait-ph { filter: grayscale(.7) brightness(1.04); } /* 쓰러졌을 때 그림이 살짝 바램 */
 .nameplate {
   margin: -34px 14px 0; padding: 10px 14px 11px; position: relative;
