@@ -105,14 +105,19 @@ app.use(compression()); // 화면 파일을 압축해서 보냄 (index.html 480K
 app.use(express.json({ limit: '10kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 화면 파일(public/index.html)의 버전: 내용이 바뀌면 값이 바뀜. 열려 있는 창은 이 값으로 새 버전을 알아챔
-const INDEX_FILE = path.join(__dirname, 'public', 'index.html');
-let verCache = { mtime: -1, v: '' };
+// 화면 파일(public/index.html · public/style.css)의 버전: 둘 중 하나라도 내용이 바뀌면 값이 바뀜. 열려 있는 창은 이 값으로 새 버전을 알아챔
+const CLIENT_FILES = ['index.html', 'style.css'].map((f) => path.join(__dirname, 'public', f));
+let verCache = { key: '', v: '' };
 function clientVersion() {
   try {
-    const st = require('fs').statSync(INDEX_FILE);
-    if (st.mtimeMs !== verCache.mtime) verCache = { mtime: st.mtimeMs, v: crypto.createHash('sha1').update(require('fs').readFileSync(INDEX_FILE)).digest('hex').slice(0, 12) };
-  } catch { /* 파일이 없으면 그대로 */ }
+    const fs = require('fs');
+    const key = CLIENT_FILES.map((f) => { try { return fs.statSync(f).mtimeMs; } catch { return 0; } }).join('|');
+    if (key !== verCache.key) {
+      const h = crypto.createHash('sha1');
+      for (const f of CLIENT_FILES) { try { h.update(fs.readFileSync(f)); } catch { /* 없으면 건너뜀 */ } }
+      verCache = { key, v: h.digest('hex').slice(0, 12) };
+    }
+  } catch { /* 그대로 */ }
   return verCache.v;
 }
 // ── GM 백업: 저장 파일 내려받기 · 되돌리기 (요청 머리의 Authorization: Bearer <로그인 토큰>, GM만) ──
