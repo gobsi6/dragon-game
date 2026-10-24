@@ -2,6 +2,7 @@
 // 축제가 토요일 0시에 시작하므로 토 0~5시 · 토 18시~일 5시 · 일 18~24시(축제가 끝나는 자정에 함께 걷음) 세 번 열림. 적대 드래곤도 이용할 수 있음
 // - 상인 노점: 축제 한정 물건. 하룻밤에 살 수 있는 개수가 정해져 있음
 // - 플레이어 노점: 드래곤마다 하나. 올린 물건은 노점에 맡겨 두고(소지품에서 빠짐), 팔리면 금화가 바로 주인에게 감
+//   다 팔린 물건은 '품절'로 노점에 남고, 주인이 원할 때 내림 (노점도 저절로 걷히지 않음)
 //   야시장이 끝나면 팔리지 않은 물건은 주인 소지품으로 돌아감 (접속하지 않았어도)
 const { REGIONS, ITEMS, NIGHT_MARKET: NM } = require('./game-data');
 
@@ -152,8 +153,12 @@ module.exports = function setupNightMarket({ io, db, online, logic, sendMe }) {
     const back = id ? m.items.filter((x) => x.id === id) : m.items.slice();
     if (id && !back.length) return { error: '노점에 그런 물건이 없다.' };
     m.items = m.items.filter((x) => !back.includes(x));
-    const items = back.filter((x) => ITEMS[x.id]).map((x) => ({ id: x.id, qty: x.qty }));
-    const lines = [items.length ? `노점에서 ${items.map((x) => itemText(x.id, x.qty)).join(', ')}${josa(items.length > 1 || items[0].qty > 1 ? '개' : ITEMS[items[0].id].name, '을', '를')} 거두었다.` : '노점을 걷었다.'];
+    const items = back.filter((x) => ITEMS[x.id] && x.qty > 0).map((x) => ({ id: x.id, qty: x.qty }));
+    const gone = back.filter((x) => ITEMS[x.id] && !(x.qty > 0)); // 품절: 돌려받을 것 없이 내리기만
+    const lines = [];
+    if (items.length) lines.push(`노점에서 ${items.map((x) => itemText(x.id, x.qty)).join(', ')}${josa(items.length > 1 || items[0].qty > 1 ? '개' : ITEMS[items[0].id].name, '을', '를')} 거두었다.`);
+    if (gone.length) lines.push(`다 팔린 ${gone.map((x) => ITEMS[x.id].name).join(', ')}의 자리를 치웠다.`);
+    if (!lines.length) lines.push('노점을 걷었다.');
     if (!m.items.length) { delete st.stalls[d.id]; if (id) lines.push('노점이 비어 자리를 걷었다.'); }
     save();
     return { title: '야시장', lines, items };
@@ -177,23 +182,22 @@ module.exports = function setupNightMarket({ io, db, online, logic, sendMe }) {
     const m = st.stalls[sellerId];
     const line = m?.items.find((x) => x.id === id);
     if (!line || !ITEMS[id]) return { error: '그 물건은 이미 팔렸거나 노점에서 내려갔다.' };
+    if (!(line.qty > 0)) return { error: `${ITEMS[id].name}${josa(ITEMS[id].name, '은', '는')} 이미 다 팔렸다. (품절)` };
     qty = Math.max(1, Math.floor(Number(qty)) || 1);
     if (qty > line.qty) return { error: `노점에 ${line.qty}개밖에 남지 않았다.` };
     const cost = line.price * qty;
     if ((d.gold || 0) < cost) return { error: `금화가 모자란다. (${cost}닢 필요)` };
     d.gold -= cost;
-    line.qty -= qty;
-    if (!line.qty) m.items = m.items.filter((x) => x !== line);
+    line.qty -= qty; // 0이 되어도 줄은 남김 (품절 표시, 주인이 내릴 때까지)
     m.sold = (m.sold || 0) + qty; m.earned = (m.earned || 0) + cost;
-    const emptied = !m.items.length;
-    if (emptied) delete st.stalls[sellerId];
+    const emptied = !m.items.some((x) => x.qty > 0);
     save();
     // 금화를 주인에게
     const e = live(sellerId);
     if (e) { e.dragon.gold += cost; db.saveState(e.dragon); sendMe(e.socket, e.dragon); }
     else db.giftOffline(sellerId, cost, []);
     const w = itemText(id, qty), nm = ITEMS[id].name, o = josa(qty > 1 ? '개' : nm, '을', '를');
-    tell(sellerId, [`야시장 노점에서 ${d.name}${josa(d.name, '이', '가')} ${w}${o} 사 갔다. 금화 ${cost}닢을 받았다.${emptied ? ' 노점의 물건이 모두 팔려 자리를 걷었다.' : ''}`]);
+    tell(sellerId, [`야시장 노점에서 ${d.name}${josa(d.name, '이', '가')} ${w}${o} 사 갔다. 금화 ${cost}닢을 받았다.${!line.qty ? ` ${nm}${josa(nm, '은', '는')} 품절이 되었다.` : ''}${emptied ? ' 노점의 물건이 모두 팔렸다. 원할 때 노점을 걷자.' : ''}`]);
     db.ledgerAdd(d.id, { kind: 'market', other: { id: sellerId, name: m.name, kind: m.kind }, goldOut: cost, itemsIn: [{ id, qty }], note: '야시장 노점에서 삼' });
     db.ledgerAdd(sellerId, { kind: 'market', other: { id: d.id, name: d.name, kind: d.kind }, goldIn: cost, itemsOut: [{ id, qty }], note: '야시장 노점에서 팖' });
     return { title: '야시장', lines: [`${m.sign ? `'${m.sign}' 노점` : `${m.name}의 노점`}에서 금화 ${cost}닢을 내고 ${w}${o} 샀다.`], items: [{ id, qty }] };

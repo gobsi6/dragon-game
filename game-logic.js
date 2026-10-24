@@ -1854,7 +1854,7 @@ function nestLine(d, home) {
     region: d.nest, tier: ni.tier,
     hoard: ht ? HOARD_TIERS.indexOf(ht) + 1 : 0,
     facs: Object.keys(FACILITY.list).filter((id) => fac[id]),
-    kin: (home || []).map((k) => ({ name: k.name, type: k.type, egg: k.status === 'egg', away: k.away || null })),
+    kin: (home || []).map((k) => ({ name: k.name, type: k.type, stage: k.stage || null, egg: k.status === 'egg', away: k.away || null })), // type·stage: 프로필에서 인간인지 드래곤인지, 몇 살쯤인지 보여 줌
   };
 }
 // ── 둥지 시설 ─────────────────────────────────────

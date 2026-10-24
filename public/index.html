@@ -649,6 +649,8 @@
   .mk-row { display: flex; align-items: center; gap: 12px; padding: 11px 12px 11px 14px; background: var(--surface-2); border: 1px solid var(--line-in); border-radius: 4px; }
   .mk-row.on { background: #F4F7FA; border-color: #9DB3C6; }
   .mk-row.locked { opacity: .6; }
+  .mk-row.soldout .nm, .mk-row.soldout .face { opacity: .6; } /* 야시장 노점: 다 팔린 물건 */
+  .sold-tag { padding: 0 6px; font: 600 11px/18px var(--sans); color: #8A3D2A; background: #F6E8E3; border: 1px solid #DDB9AD; border-radius: 2px; }
   .mk-row .nm { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
   .mk-row .nm b { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font: 700 14.5px/1.35 var(--serif); color: var(--ink); }
   .mk-row .nm b::before { content: ""; width: 7px; height: 7px; transform: rotate(45deg); background: var(--r); flex: none; }
@@ -6553,7 +6555,10 @@
         const nm = document.createElement('span'); nm.className = 'names';
         n.kin.forEach((x, i) => {
           if (i) nm.append(' · ');
-          const e = document.createElement('span'); e.textContent = x.away ? `${x.name}(${NL_AWAY[x.away] || '나가 있음'})` : x.name;
+          // 인간인지 드래곤인지와 성장 단계를 이름 뒤에 (알이면 '알'). 나가 있으면 그것도 함께
+          const what = x.egg ? '알' : x.type ? [x.type === 'drake' ? '드래곤' : '인간', x.stage].filter(Boolean).join('·') : '';
+          const tag = [what, x.away ? NL_AWAY[x.away] || '나가 있음' : ''].filter(Boolean).join(', ');
+          const e = document.createElement('span'); e.textContent = tag ? `${x.name}(${tag})` : x.name;
           if (x.away) e.className = 'off';
           nm.appendChild(e);
         });
@@ -6573,7 +6578,7 @@
     return {
       region: n.region, tier: n.tier || 0, hoard,
       facs: order.filter((id) => built.has(id)),
-      kin: (n.kin?.home || []).map((v) => ({ name: v.name, away: v.onExp ? 'exp' : v.errand ? 'errand' : v.runaway ? 'runaway' : null })),
+      kin: (n.kin?.home || []).map((v) => ({ name: v.name, type: v.type, stage: v.stage, egg: v.status === 'egg', away: v.onExp ? 'exp' : v.errand ? 'errand' : v.runaway ? 'runaway' : null })),
     };
   }
 
@@ -9800,7 +9805,7 @@
     row('용족 명성', p.fame);
     if (!p.nestLine) { // 둥지가 없으면 예전처럼 글로
       if (p.nest) row('둥지', S.regions[p.nest]?.name || p.nest);
-      row('둥지 식구', p.kin.length ? p.kin.map((k) => `${k.name}(${k.stage})`).join(', ') : '없음');
+      row('둥지 식구', p.kin.length ? p.kin.map((k) => `${k.name}(${k.type === 'drake' ? '드래곤' : '인간'}·${k.stage})`).join(', ') : '없음');
     }
     if (p.lineage) row('계보', `${p.lineage}마리 독립`);
     if (p.heir) row('이어받은 의지', `${p.heir.name} (레벨 ${p.heir.level} ${p.heir.kindName})`);
@@ -12191,7 +12196,8 @@
           const tx = document.createElement('span'); tx.className = 'tx';
           const b = document.createElement('b'); b.textContent = st.sign || `${st.name}의 노점`;
           if (st.mine) { const t = document.createElement('span'); t.className = 'mine-tag'; t.textContent = '내 노점'; b.appendChild(t); }
-          const who = document.createElement('small'); who.textContent = `${st.name} · 물건 ${st.items.length}가지`;
+          const outN = st.items.filter((x) => !(x.qty > 0)).length;
+          const who = document.createElement('small'); who.textContent = `${st.name} · ${outN === st.items.length ? '모두 품절' : `물건 ${st.items.length}가지${outN ? ` (품절 ${outN})` : ''}`}`;
           tx.append(b, who);
           card.innerHTML = '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
           card.prepend(tx);
@@ -12228,9 +12234,11 @@
             const row = marketRow(x.id);
             const sm = row.querySelector('small');
             const u = document.createElement('span'); u.className = 'unit'; u.textContent = `개당 ${x.price.toLocaleString()}닢`;
-            const q = document.createElement('span'); q.className = 'left'; q.textContent = `${x.qty}개 남음`;
+            const out = !(x.qty > 0); // 다 팔림: 품절 표시만 남기고, 내리기는 주인이 원할 때
+            const q = document.createElement('span'); q.className = 'left'; q.textContent = out ? '모두 팔림' : `${x.qty}개 남음`;
             sm.prepend(u, ' · ', q, ' · ');
-            const tb = document.createElement('button'); tb.type = 'button'; tb.className = 'btn mk-go'; tb.textContent = '거두기';
+            if (out) { row.classList.add('soldout'); const t = document.createElement('span'); t.className = 'sold-tag'; t.textContent = '품절'; row.querySelector('b').appendChild(t); }
+            const tb = document.createElement('button'); tb.type = 'button'; tb.className = 'btn mk-go'; tb.textContent = out ? '내리기' : '거두기';
             tb.addEventListener('click', () => nmAct('nm:take', { item: x.id }));
             row.querySelector('.ctl').appendChild(tb);
             list.appendChild(row);
@@ -12337,14 +12345,16 @@
     $('nm-stall-title').textContent = st.mine ? '내 노점' : '노점';
     $('nm-st-name').textContent = st.sign || `${st.name}의 노점`;
     if (st.mine) { const t = document.createElement('span'); t.className = 'mine-tag'; t.textContent = '내 노점'; $('nm-st-name').appendChild(t); }
-    $('nm-st-who').textContent = `파는 드래곤 ${st.name} · 물건 ${st.items.length}가지`;
+    { const outN = st.items.filter((x) => !(x.qty > 0)).length; $('nm-st-who').textContent = `파는 드래곤 ${st.name} · 물건 ${st.items.length}가지${outN ? ` (품절 ${outN})` : ''}`; }
     for (const x of st.items) {
       if (!S.items[x.id]) continue;
       const row = marketRow(x.id);
       const sm = row.querySelector('small');
       const u = document.createElement('span'); u.className = 'unit'; u.textContent = `개당 ${x.price.toLocaleString()}닢`;
-      const q = document.createElement('span'); q.className = 'left'; q.textContent = `${x.qty}개 남음`;
+      const out = !(x.qty > 0);
+      const q = document.createElement('span'); q.className = 'left'; q.textContent = out ? '모두 팔림' : `${x.qty}개 남음`;
       sm.prepend(u, ' · ', q, ' · ');
+      if (out) { row.classList.add('soldout'); const t = document.createElement('span'); t.className = 'sold-tag'; t.textContent = '품절'; row.querySelector('b').appendChild(t); }
       if (st.mine) {
         const mb = document.createElement('button'); mb.type = 'button'; mb.className = 'btn mk-go'; mb.textContent = '내 노점 관리';
         mb.addEventListener('click', () => { $('nm-stall-dlg').close(); nmTab = 'mine'; openNightMarket(); });
@@ -12353,6 +12363,7 @@
         const have = invCache[x.id] || 0;
         if (have) { const h = document.createElement('span'); h.className = 'have'; h.textContent = `${have}개 있음`; row.querySelector('b').appendChild(h); }
         const key = `nmb:${st.id}:${x.id}`;
+        if (out) { list.appendChild(row); continue; } // 품절: 살 수 없음
         mkControls(row, key, x.price, x.qty, '사기', (n) => nmAct('nm:buy', { seller: st.id, item: x.id, qty: n }, key), (t) => S.me.gold >= t);
       }
       list.appendChild(row);
