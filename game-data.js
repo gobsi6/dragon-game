@@ -224,6 +224,9 @@ const ITEMS = {
   purified_crown: { name: '정화된 왕관', rarity: 'rare', type: 'equip', slot: 'head', bonus: { majesty: 5, wisdom: 3 }, mindWard: 0.75, value: 100, desc: '잿빛 심장을 정화해 박아 넣은 왕관. 깎이는 정신 −25%.' },
   carnem_claw:    { name: '카르넴 강철 발톱', rarity: 'rare', type: 'equip', slot: 'claw', bonus: { claw: 7, scale: 2 }, value: 100, desc: '왕국의 강철로 다시 벼린 발톱.' },
   void_cloak:     { name: '공허의 날개덮개', rarity: 'rare', type: 'equip', slot: 'wing', bonus: { wing: 6, wisdom: 2 }, mindWard: 0.85, value: 100, desc: '공허의 실로 짠 얇은 덮개. 깎이는 정신 −15%.' },
+  // 목·꼬리에도 멸망한 대륙 단계(능력치 합 8, 걸작 9)를 두어 부위마다 천장을 맞춤
+  purified_pendant: { name: '정화된 심장 목걸이', rarity: 'rare', type: 'equip', slot: 'neck', bonus: { wisdom: 5, scale: 3 }, value: 100, desc: '정화한 잿빛 심장 한 조각을 왕국 문장 테두리에 박았다. 가슴께에서 희미한 온기가 번진다.' },
+  king_tail:        { name: '왕룡의 비늘 꼬리갑', rarity: 'rare', type: 'equip', slot: 'tail', bonus: { scale: 5, claw: 3 }, value: 120, desc: '왕룡의 금빛 비늘을 카르넴 강철 위에 겹겹이 덧댔다. 꼬리를 휘두르면 금빛 잔상이 남는다.' },
   star_charm:     { name: '별빛 부적', rarity: 'rare', type: 'equip', slot: 'charm', bonus: { wisdom: 4 }, expRare: 0.03, value: 100, desc: '별똥별 조각을 엮은 부적. 원정에서 귀한 것이 더 잘 나온다.' },
   // ── 실험 재료 (자유 제작에서 비어 있던 성질 조합을 채움. 정식 제작법에는 쓰이지 않음) ──
   tough_sinew:     { name: '질긴 힘줄',          rarity: 'uncommon', value: 12, desc: '사냥감의 다리에서 뽑아낸 힘줄. 말리면 어떤 끈보다 질기다.' },
@@ -245,6 +248,13 @@ const ITEMS = {
   purify_shard: { name: '정화의 결정',  rarity: 'uncommon', value: 1, desc: '멸망한 대륙의 오염을 걷어 낼 때 맺히는 맑은 결정. 잿빛 상륙지의 생존자에게 귀한 것과 바꿀 수 있다.' },
   ashen_dust:   { name: '잿빛 먼지',    rarity: 'common',   value: 3, desc: '멸망한 대륙을 덮은 고운 먼지. 손에 묻으면 잘 지워지지 않는다.' },
   faded_crest:  { name: '바랜 왕국 문장', rarity: 'uncommon', value: 18, desc: '카르넴 왕국의 문장이 새겨진 금속 조각. 용과 인간이 함께 그려져 있다.' },
+  // 자유 제작용 상급 재료: 옛 지혜·날카로움 쪽 (빛남·가벼움으로 쏠린 것을 덜려고). 정화도 단계마다 하나씩 지혜·발톱이 섞이게 둠
+  ashen_tablet:    { name: '잿빛 예언 석판',       rarity: 'uncommon', value: 20, desc: '재를 털어 내자 빼곡한 예언이 드러난 돌판. 마지막 줄은 누군가 손톱으로 긁어 지워 놓았다.' },
+  anchor_chain:    { name: '가시 돋친 닻 사슬',    rarity: 'uncommon', value: 22, desc: '부서진 부두에 걸려 있던 닻 사슬. 고리마다 녹슨 가시가 돋아 있어 감으면 단단히 물고 놓지 않는다.' },
+  archivist_cord:  { name: '기록관의 비단 끈',     rarity: 'uncommon', value: 25, desc: '왕국의 기록을 묶던 비단 끈. 매듭마다 작은 글자가 수놓여 있어, 풀면 무엇을 묶었는지 알 수 있다.' },
+  knight_blade:    { name: '기사단장의 부러진 검날', rarity: 'uncommon', value: 25, desc: '시든 밀밭에 꽂혀 있던 검의 윗동. 반으로 부러졌어도 날은 아직 서 있고, 손잡이 쪽에 기사단의 맹세가 새겨져 있다.' },
+  royal_chronicle: { name: '카르넴 왕실 연대기',   rarity: 'rare',     value: 55, desc: '무너진 왕도의 서고에서 건진 두꺼운 기록. 왕국이 무너지던 마지막 날까지 같은 필체로 적혀 있다.' },
+  abyss_fang:      { name: '심연의 송곳니',        rarity: 'rare',     value: 55, desc: '균열 아래에서 올라온 무언가가 남기고 간 이빨. 검게 빛나는 끝은 쇠를 긁어도 무뎌지지 않는다.' },
   corrupt_crystal:{ name: '오염 결정',      rarity: 'rare', value: 55, desc: '오염된 땅에서만 맺히는 검붉은 결정. 오래 쥐고 있으면 머릿속이 웅웅거린다.' },
   recipe_scroll:  { name: '바랜 제작서',   rarity: 'rare',     type: 'use', use: { recipe: true }, value: 40, desc: '누군가 남긴 제작법이 적힌 낡은 양피지. 읽으면 아직 모르는 제작법 하나를 알게 된다.' },
   ember_tonic:    { name: '불씨 강장제',   rarity: 'uncommon', type: 'use', use: { hp: 25, en: 40 }, desc: '불도마뱀 꼬리를 꿀에 재운 강장제. 목구멍이 화끈거린다.' },
@@ -525,6 +535,8 @@ const RECIPES = [
   { out: 'purified_crown', needs: { ashen_core: 2, faded_crest: 4, purify_shard: 20 },  en: 20, wis: 18 },
   { out: 'carnem_claw',    needs: { carnem_steel: 4, ashen_core: 1, sharp_fang: 5 },     en: 20, wis: 18 },
   { out: 'void_cloak',     needs: { void_silk: 4, star_fragment: 2, ashen_core: 1 },     en: 20, wis: 18 },
+  { out: 'purified_pendant', needs: { ashen_core: 1, faded_crest: 3, purify_shard: 15 }, en: 20, wis: 18 },
+  { out: 'king_tail',      needs: { king_scale: 1, carnem_steel: 3, ashen_core: 1 },     en: 20, wis: 18 },
   { out: 'star_charm',     needs: { star_fragment: 3, purify_shard: 15, faded_crest: 2 }, en: 16, wis: 18 },
   // 낚시
   { out: 'salted_fish',   needs: { fish_mackerel: 3, salt_crystal: 1 },                 en: 4,  wis: 0 },
@@ -1172,6 +1184,12 @@ const FREE = {
     rune_stone: {lore: 1},
     old_scroll: {lore: 2},
     faded_crest: {lore: 3},
+    ashen_tablet: {lore: 3, hard: 1},
+    anchor_chain: {bind: 3, sharp: 2},
+    archivist_cord: {bind: 4, lore: 3},
+    knight_blade: {sharp: 3, lore: 1},
+    royal_chronicle: {lore: 4},
+    abyss_fang: {sharp: 4},
     ancient_relic: {lore: 3},
     seal_core: {lore: 3},
     brass_button: {shine: 1},
@@ -1207,7 +1225,7 @@ const FREE = {
   gearRate: 0.65,                                   // 장신구 능력치 점수 = 효능 세기 합 × 이만큼 (올림)
   statCap: 5, statCapLucky: [6, 6, 7],              // 장신구 한 능력치의 상한 (보통 · 좋음·빼어남·걸작일 때는 재료 단계 0·1·2마다). 7은 공허의 실에서만. 넘는 점수는 두 번째 효능으로, 없으면 버려짐
   plainTopSum: 8,                                   // 장신구 능력치 합의 끝 (아래 재료가 없을 때). 재료가 있으면 그 단계만큼 더해짐 (8 · 9 · 10)
-  ruinMats: { faded_crest: 1, carnem_steel: 1, ashen_core: 1, void_silk: 1, king_scale: 2 }, // 멸망한 대륙에 들어가야만 얻는 재료: 기본 상한과 끝에 이만큼 더함 (여럿이면 가장 큰 것)
+  ruinMats: { faded_crest: 1, carnem_steel: 1, ashen_core: 1, void_silk: 1, king_scale: 2, ashen_tablet: 1, anchor_chain: 1, archivist_cord: 1, knight_blade: 1, royal_chronicle: 1, abyss_fang: 1 }, // 멸망한 대륙에 들어가야만 얻는 재료: 기본 상한과 끝에 이만큼 더함 (여럿이면 가장 큰 것)
                                                     // 1단계 → 끝 9 · 2단계 → 끝 10, 한 능력치 7 (왕룡의 금빛 비늘: 멸망한 대륙 강적만 아주 드물게). 본토 오염된 땅에서도 나오는 검게 물든 비늘·오염 결정과 끼워 넣기만 하는 재료는 뺌
   luck: { good: 0.24, great: 0.06 },                // 먹을거리·선물의 좋음 · 빼어남 확률
   gearLuck: { good: 0.2, great: 0.05 },             // 장신구의 좋음(+1) · 빼어남(+2) 확률. 걸작(+1)까지 겹치면 +3
@@ -1319,10 +1337,11 @@ const fameTier = (v) => FAME_TIERS.find((t) => v >= t.min);
 
 // 지역별 채집 재료
 const REGION_LOOT = {
-  ruin_shore:   { common: ['ashen_dust', 'sea_shell'], uncommon: ['faded_crest'], rare: ['corrupt_crystal'] },
-  ruin_plain:   { common: ['ashen_dust'], uncommon: ['faded_crest', 'carnem_steel'], rare: ['corrupt_crystal'] },
-  ruin_capital: { common: ['ashen_dust'], uncommon: ['faded_crest', 'carnem_steel'], rare: ['corrupt_crystal'] },
-  ruin_rift:    { common: ['ashen_dust'], uncommon: ['void_silk', 'blackened_scale'], rare: ['corrupt_crystal'] },
+  // (같은 이름을 두 번 적은 것은 원래 재료가 나오는 몫을 지키려는 것: 목록에서 고르게 하나를 뽑음)
+  ruin_shore:   { common: ['ashen_dust', 'sea_shell'], uncommon: ['faded_crest', 'faded_crest', 'ashen_tablet', 'anchor_chain'], rare: ['corrupt_crystal'] },
+  ruin_plain:   { common: ['ashen_dust'], uncommon: ['faded_crest', 'faded_crest', 'carnem_steel', 'carnem_steel', 'archivist_cord', 'knight_blade'], rare: ['corrupt_crystal'] },
+  ruin_capital: { common: ['ashen_dust'], uncommon: ['faded_crest', 'carnem_steel'], rare: ['corrupt_crystal', 'corrupt_crystal', 'royal_chronicle'] },
+  ruin_rift:    { common: ['ashen_dust'], uncommon: ['void_silk', 'blackened_scale'], rare: ['corrupt_crystal', 'corrupt_crystal', 'abyss_fang'] },
   plains:  { common: ['grass_seed', 'wild_flower'], uncommon: ['wild_honey'],   rare: ['silver_clover'] },
   capital: { common: ['brass_button'], uncommon: ['silk_scrap'],   rare: ['lost_seal'] },
   snow:    { common: ['ice_shard'],    uncommon: ['frost_lichen', 'snow_flower', 'frost_thorn'], rare: ['eternal_ice'] },
