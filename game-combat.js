@@ -110,8 +110,15 @@ function creatureBase(lv) {
 // minion: 무리에 함께 나온 사냥감이면 이름 앞에 붙일 말 ('어린' 등). 체력·공격이 조금 낮음
 // 멸망한 대륙에서 이겼을 때 드물게 나오는 것: 잿빛 심장, 보물, 희귀 장비
 // (숨은 천장: 희귀 장비를 아직 하나도 얻지 못했는데 강적을 pity번 만났으면, 그다음 승리에서 반드시. 첫 장비 하나만 지켜 주고 그 뒤는 운)
-function ruinFinds(d, kind, lines) {
+function ruinFinds(d, kind, lines, place = null) {
   const out = [];
+  const KS = RUIN.kingScale; // 왕룡의 금빛 비늘: 강적만 아주 드물게 (왕좌의 회랑에서는 사냥감도)
+  const ksP = place === KS.place ? (kind === 'elite' ? KS.placeElite : KS.placeHunt) : (kind === 'elite' ? KS.elite : 0);
+  if (ksP && Math.random() < ksP) {
+    out.push(KS.id);
+    lines.push(`검은 비늘 사이에서 단 한 장, 금빛을 잃지 않은 비늘이 떨어졌다… ${ITEMS[KS.id].name}!`);
+    logic.chron(d, 'mark', `멸망한 대륙에서 ${ITEMS[KS.id].name}${josa(ITEMS[KS.id].name, '을', '를')} 얻었다.`);
+  }
   if (Math.random() < RUIN.coreDrop[kind]) { out.push('ashen_core'); lines.push('식지 않은 잿빛 심장 하나가 재 속에서 뛰고 있었다.'); }
   if (Math.random() < RUIN.treasure[kind]) {
     const t = pick(RUIN.treasure.pool);
@@ -809,7 +816,7 @@ function huntReward(d, b, c) {
     if (win && logic.hooks.purify) lines.push(...logic.hooks.purify(d, 'hunt'));
     if (win && logic.isRuin(d.region)) { // 멸망한 대륙: 정화의 결정과 귀한 것들
       const n = randInt(...RUIN.shard.hunt) + logic.gearMods(d).shard;
-      const extra = [...Array(n).fill('purify_shard'), ...ruinFinds(d, 'hunt', lines)];
+      const extra = [...Array(n).fill('purify_shard'), ...ruinFinds(d, 'hunt', lines, b.place)];
       items = logic.bundle([...items.flatMap((x) => Array(x.qty).fill(x.id)), ...extra]);
       lines.push(`쓰러진 자리에서 정화의 결정 ${n}개가 맑게 떠올랐다.`);
     }
@@ -884,7 +891,7 @@ function eliteReward(d, b) {
       if (logic.hooks.purify) lines.push(...logic.hooks.purify(d, 'elite'));
       if (logic.isRuin(d.region)) {
         const n = randInt(...RUIN.shard.elite) + logic.gearMods(d).shard;
-        const extra = [...Array(n).fill('purify_shard'), ...ruinFinds(d, 'elite', lines)];
+        const extra = [...Array(n).fill('purify_shard'), ...ruinFinds(d, 'elite', lines, b.place)];
         items = logic.bundle([...items.flatMap((x) => Array(x.qty).fill(x.id)), ...extra]);
         lines.push(`검은 기운이 걷히며 정화의 결정 ${n}개가 남았다.`);
       }

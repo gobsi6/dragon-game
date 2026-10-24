@@ -40,6 +40,7 @@ const ITEM_SOURCES = (() => {
   for (const m of Object.values(mobs.MOBS)) for (const t of m.trades || []) for (const id of Object.keys(t.get || {})) add(id, `${m.name}(${rn(m.region)})와 교환`);
   for (const x of RUIN.exchange) add(x.id, `${rn(RUIN.gateTo)}의 생존자와 교환 (정화의 결정 ${x.cost})`);
   add('purify_shard', `${RUIN.name}에서 사냥·강적·탐사·채집`);
+  add(RUIN.kingScale.id, `${RUIN.name}의 강적 (아주 드물게)`); add(RUIN.kingScale.id, `${rn(PLACES[RUIN.kingScale.place]?.region)} ${PLACES[RUIN.kingScale.place]?.name || ''} 강적·사냥 (드물게)`);
   add('ashen_core', `${RUIN.name}의 강적 (가끔)`); add('ashen_core', `${RUIN.name}에서 2시간 이상 원정 (가끔)`);
   add('star_fragment', '어디서든 2시간 이상 원정을 끝까지 다녀오면 (3시간이면 더 잘)');
   for (const t of RUIN.treasure.pool) add(t, `${RUIN.name}의 강적·사냥 (드물게)`);

@@ -220,7 +220,7 @@ function bonusOf(d) {
     if (!it) continue;
     for (const [k, v] of Object.entries(it.bonus || {})) b[k] += v;
     expRare += it.expRare || 0;
-    // 강화(+1~+3)와 걸작: 그 장신구의 주 능력치에 더함
+    // 강화(+1~+2, CRAFT.enhance 단계 수)와 걸작: 그 장신구의 주 능력치에 더함
     const g = gearOn(d, id);
     if (g) { const main = mainStat(it); if (main) b[main] += (g.plus || 0) + (g.mw ? 1 : 0); } // 걸작은 이제 따로 된 물건(id__mw)이라 g.mw는 옛 기록에만
   }

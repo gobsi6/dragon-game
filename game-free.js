@@ -27,7 +27,7 @@ const AURA_WORD = { fire: ['불꽃', '타오르는', '불씨 품은'], frost: ['
 // 두 번째로 센 성질: 그 앞에 붙는 꾸밈말
 const EFF_WORD = { hard: ['단단한', '굳센'], sharp: ['날 선', '서슬 퍼런'], light: ['가벼운', '바람결'], lore: ['오래된', '옛'], shine: ['빛나는', '찬란한'], life: ['든든한', '푸릇한'], vigor: ['뜨끈한', '힘찬'], clear: ['맑은', '고요한'] };
 // 재료 이름을 짧게 (이름이 길어지지 않게)
-const SHORT = { spider_silk: '거미줄', wolf_pelt: '늑대털', beast_hide: '가죽', black_reed: '검은 갈대', silk_scrap: '비단', silver_chain: '은사슬', void_silk: '공허실', living_bark: '나무껍질', wyvern_membrane: '와이번', hydra_blood: '히드라', heartwood: '고목', volcanic_ash: '화산재', salamander_tail: '불도마뱀', sun_stone: '태양석', giant_ember: '거인불씨', star_shard: '별조각', purify_shard: '정화', star_fragment: '별똥별', red_clay: '점토', croc_scale: '악어비늘', bison_horn: '들소뿔', bog_iron: '늪철', troll_tusk: '트롤엄니', stone_heart: '돌심장', carnem_steel: '카르넴', cursed_steel: '저주강철', blackened_scale: '검은 비늘', frost_heart: '서리심장', scorpion_stinger: '전갈침', sharp_fang: '송곳니', obsidian: '흑요석', sandworm_tooth: '모래이빨', sphinx_mane: '스핑크스', griffin_feather: '그리핀', ice_shard: '얼음', rune_stone: '룬', old_scroll: '두루마리', faded_crest: '왕국 문장', ancient_relic: '고대', seal_core: '봉인', brass_button: '놋쇠', sea_shell: '조개', amber: '호박', gold_ore: '금', rival_scale: '라이벌', bog_pearl: '늪진주', deep_pearl: '심해진주', lost_seal: '인장', knight_crest: '기사단', crown_shard: '왕관', fire_crystal: '불결정', magma_core: '용암', elder_ember: '고룡불씨', frost_lichen: '서리이끼', eternal_ice: '만년빙', poison_herb: '독초', toad_gland: '두꺼비', shadow_spore: '그늘포자', ashen_dust: '잿먼지', ghost_ash: '망령', corrupt_crystal: '오염', ashen_core: '잿빛 심장', basilisk_eye: '바실리스크', calamity_core: '재앙', grass_seed: '들풀', wild_flower: '들꽃', sea_bindweed: '갯메꽃', salt_crystal: '소금', wild_honey: '꿀', moss_flower: '이끼꽃', snow_flower: '눈꽃', glow_moss: '빛이끼', silver_clover: '은토끼풀' };
+const SHORT = { spider_silk: '거미줄', wolf_pelt: '늑대털', beast_hide: '가죽', black_reed: '검은 갈대', silk_scrap: '비단', silver_chain: '은사슬', void_silk: '공허실', king_scale: '금빛 비늘', living_bark: '나무껍질', wyvern_membrane: '와이번', hydra_blood: '히드라', heartwood: '고목', volcanic_ash: '화산재', salamander_tail: '불도마뱀', sun_stone: '태양석', giant_ember: '거인불씨', star_shard: '별조각', purify_shard: '정화', star_fragment: '별똥별', red_clay: '점토', croc_scale: '악어비늘', bison_horn: '들소뿔', bog_iron: '늪철', troll_tusk: '트롤엄니', stone_heart: '돌심장', carnem_steel: '카르넴', cursed_steel: '저주강철', blackened_scale: '검은 비늘', frost_heart: '서리심장', scorpion_stinger: '전갈침', sharp_fang: '송곳니', obsidian: '흑요석', sandworm_tooth: '모래이빨', sphinx_mane: '스핑크스', griffin_feather: '그리핀', ice_shard: '얼음', rune_stone: '룬', old_scroll: '두루마리', faded_crest: '왕국 문장', ancient_relic: '고대', seal_core: '봉인', brass_button: '놋쇠', sea_shell: '조개', amber: '호박', gold_ore: '금', rival_scale: '라이벌', bog_pearl: '늪진주', deep_pearl: '심해진주', lost_seal: '인장', knight_crest: '기사단', crown_shard: '왕관', fire_crystal: '불결정', magma_core: '용암', elder_ember: '고룡불씨', frost_lichen: '서리이끼', eternal_ice: '만년빙', poison_herb: '독초', toad_gland: '두꺼비', shadow_spore: '그늘포자', ashen_dust: '잿먼지', ghost_ash: '망령', corrupt_crystal: '오염', ashen_core: '잿빛 심장', basilisk_eye: '바실리스크', calamity_core: '재앙', grass_seed: '들풀', wild_flower: '들꽃', sea_bindweed: '갯메꽃', salt_crystal: '소금', wild_honey: '꿀', moss_flower: '이끼꽃', snow_flower: '눈꽃', glow_moss: '빛이끼', silver_clover: '은토끼풀' };
 const pickBy = (arr, seed) => arr[seed % arr.length];
 const seedOf = (s) => { let h = 7; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; };
 // 기운 → 꾸밈말 → 주재료 → 형태. 길면(14자 넘으면) 꾸밈말부터 뺌
@@ -58,9 +58,9 @@ function sumTags(ids) {
 }
 const pickTop = (keys, sum, first) => keys.filter((k) => sum[k] > 0).sort((a, b) => sum[b] - sum[a] || first[a] - first[b]);
 // 운: 보통 · 좋음 · 빼어남
-function rollQuality(rnd = Math.random) {
+function rollQuality(rnd = Math.random, L = FREE.luck) {
   const r = rnd();
-  return r < FREE.luck.great ? 'great' : r < FREE.luck.great + FREE.luck.good ? 'good' : 'normal';
+  return r < L.great ? 'great' : r < L.great + L.good ? 'good' : 'normal';
 }
 const wisCap = (wis) => { for (const [w, cap] of FREE.gearCap) if (wis <= w) return cap; return FREE.gearCap.at(-1)[1]; };
 
@@ -72,7 +72,7 @@ function resolve(ids, wis, greatChance, rnd = Math.random) {
   const value = Math.max(1, Math.round(ids.reduce((a, id) => a + matValue(id), 0) * FREE.valueMul));
   if (!food && !bind) return { fail: '바탕이 없었다. 먹을거리나 엮음이 되는 재료가 하나는 있어야 한다.', sum, value };
   if (food === bind) return { fail: '먹을거리와 엮음이 팽팽하게 맞서 어느 쪽도 되지 못했다.', sum, value };
-  const quality = rollQuality(rnd);
+  const quality = rollQuality(rnd, food > bind ? FREE.luck : FREE.gearLuck); // 장신구는 따로 된 확률
   const qmul = { normal: 1, good: FREE.foodLuck.good, great: FREE.foodLuck.great }[quality];
   if (food > bind) {
     const effs = pickTop(FOOD_EFF, sum, first);
@@ -96,16 +96,16 @@ function resolve(ids, wis, greatChance, rnd = Math.random) {
   if (!effs.length) return { fail: '모양은 잡혔지만 힘이 깃들지 않았다. 단단함·날카로움·가벼움·옛 지혜·빛남이 필요하다.', sum, value };
   const top = effs[0], second = effs[1] || null;
   const slot = top === 'sharp' ? 'claw' : top === 'light' ? 'wing' : top === 'hard' ? (bind > sum.hard ? 'neck' : 'tail') : top === 'lore' ? (bind > sum.lore ? 'charm' : 'head') : (bind > sum.shine ? 'head' : 'neck');
-  const ruin = Math.max(0, ...ids.map((id) => FREE.ruinMats[id] || 0)); // 멸망한 대륙 재료의 단계: 기본 상한과 끝에 더함 (공허의 실 2, 나머지 1)
+  const ruin = Math.max(0, ...ids.map((id) => FREE.ruinMats[id] || 0)); // 멸망한 대륙 재료의 단계: 기본 상한과 끝에 더함 (지금은 모두 1, 2단계는 나중 몫)
   const base = wisCap(wis) + ruin;
   let pts = Math.min(base, Math.ceil(effs.reduce((a, k) => a + sum[k], 0) * FREE.gearRate)); // 효능 세기 합 × 0.65 (올림)에서 지혜 상한으로 자름
   const extra = { normal: 0, good: 1, great: 2 }[quality];
   const mw = rnd() < greatChance; // 대성공: 걸작
-  pts += Math.min(2, extra + (mw ? 1 : 0)); // 기본 상한 위로는 +2까지
-  // 능력치 합의 끝: 보통 7, 멸망한 대륙 재료가 있으면 8, 공허의 실이면 9 (정식 장신구도 8점부터는 그 땅의 재료가 듦)
+  pts += Math.min(FREE.luckMax, extra + (mw ? 1 : 0)); // 기본 상한 위로는 +3까지 (빼어남 + 걸작)
+  // 능력치 합의 끝: 보통 8, 멸망한 대륙 재료가 있으면 9 (2단계 재료면 10) (정식 장신구도 8점부터는 그 땅의 재료가 듦)
   pts = Math.min(pts, FREE.plainTopSum + ruin);
   if (aura) pts = Math.max(1, pts - 1); // 기운에 점수 1을 씀
-  // 나누기: 가장 센 효능에 6할, 나머지는 두 번째 효능에. 한 능력치는 상한(보통 5 · 운이 좋으면 6, 공허의 실이면 7)을 넘지 못함
+  // 나누기: 가장 센 효능에 6할, 나머지는 두 번째 효능에. 한 능력치는 상한(보통 5 · 운이 좋으면 6, 2단계 재료면 7)을 넘지 못함
   const cap = quality !== 'normal' || mw ? FREE.statCapLucky[Math.min(ruin, FREE.statCapLucky.length - 1)] : FREE.statCap;
   const bonus = {};
   let a = second && pts > 1 ? Math.ceil(pts * 0.6) : pts;

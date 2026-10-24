@@ -197,6 +197,7 @@ const ITEMS = {
   ashen_core:    { name: '잿빛 심장',     rarity: 'rare',     value: 60, desc: '오염된 강적의 가슴에서 식지 않고 뛰던 잿빛 덩어리. 정화하면 단단한 힘이 된다.' },
   carnem_steel:  { name: '카르넴 강철',   rarity: 'uncommon', value: 30, desc: '용의 불로 벼린 왕국의 강철. 녹이 슬어도 날은 무뎌지지 않았다.' },
   void_silk:     { name: '공허의 실',     rarity: 'uncommon', value: 30, desc: '균열 가장자리에서 뽑아낸 검은 실. 빛을 먹어 거의 보이지 않는다.' },
+  king_scale:    { name: '왕룡의 금빛 비늘', rarity: 'rare',   value: 150, desc: '카르넴의 왕룡이 검게 물들어 가면서도 끝까지 지켜 낸 비늘. 왕좌의 회랑 어둠 속에서도 홀로 금빛을 잃지 않았다.' },
   // 2시간 이상 원정에서만 (어느 지역이든)
   star_fragment: { name: '별똥별 조각',     rarity: 'rare',     value: 50, desc: '먼 길 끝에서만 주울 수 있는, 밤하늘에서 떨어진 빛나는 돌. 두 시간 넘게 원정을 다녀와야 손에 넣을 수 있다.' },
   // ── 멸망한 대륙: 보물 (cat: treasure. 둥지의 보물더미에만 쌓을 수 있고, 팔 수 없고, 보물 도둑도 가져가지 못함) ──
@@ -782,6 +783,8 @@ const RUIN = {
   ],
   // 강적·사냥에서 나오는 것 (멸망한 대륙)
   coreDrop: { elite: 0.3, hunt: 0.03 },          // 잿빛 심장
+  // 왕룡의 금빛 비늘 (자유 제작 2단계 재료): 멸망한 대륙의 강적만 아주 드물게, 왕좌의 회랑에서는 조금 더. 왕좌의 회랑에서는 사냥감도 아주 가끔
+  kingScale: { id: 'king_scale', elite: 0.005, place: 'ruin_throne', placeElite: 0.03, placeHunt: 0.003 },
   treasure: { elite: 0.05, hunt: 0.006, pool: ['tr_map_piece', 'tr_star_orb', 'tr_dragon_idol', 'tr_ash_mirror', 'tr_broken_crown', 'tr_last_claw'] },
   // 희귀 장비: 강적을 이기면 아주 드물게. 숨은 천장: 아직 하나도 못 얻었는데 강적을 pity번 만났으면 그다음 승리(사냥이든 강적이든)에서 반드시 (첫 장비만, 화면에는 알리지 않음)
   gear: { elite: 0.015, hunt: 0.001, pity: 40, pool: ['erebus_eye', 'knight_gauntlet', 'void_ring', 'abyss_membrane'] },
@@ -1098,6 +1101,7 @@ const FREE = {
     silk_scrap: {bind: 2, light: 2},
     silver_chain: {bind: 2, shine: 2},
     void_silk: {bind: 3, light: 3},
+    king_scale: {hard: 3, shine: 3},
     living_bark: {bind: 2, life: 2},
     wyvern_membrane: {bind: 3, light: 3},
     hydra_blood: {life: 2},
@@ -1163,10 +1167,12 @@ const FREE = {
   gearCap: [[5, 1], [10, 2], [15, 4], [999, 5]],    // [지혜 이하, 장신구 능력치 합의 기본 상한] (운이 없을 때는 정식 장신구보다 1점 낮음. 운이 좋아야 따라잡음)
   gearRate: 0.65,                                   // 장신구 능력치 점수 = 효능 세기 합 × 이만큼 (올림)
   statCap: 5, statCapLucky: [6, 6, 7],              // 장신구 한 능력치의 상한 (보통 · 좋음·빼어남·걸작일 때는 재료 단계 0·1·2마다). 7은 공허의 실에서만. 넘는 점수는 두 번째 효능으로, 없으면 버려짐
-  plainTopSum: 7,                                   // 장신구 능력치 합의 끝 (아래 재료가 없을 때). 재료가 있으면 그 단계만큼 더해짐
-  ruinMats: { faded_crest: 1, carnem_steel: 1, ashen_core: 1, void_silk: 2 }, // 멸망한 대륙에 들어가야만 얻는 재료: 기본 상한과 끝에 이만큼 더함 (여럿이면 가장 큰 것)
-                                                    // 1단계 → 끝 8 · 공허의 실(심연의 균열에서만) 2단계 → 끝 9. 본토 오염된 땅에서도 나오는 검게 물든 비늘·오염 결정과 끼워 넣기만 하는 재료는 뺌
-  luck: { good: 0.24, great: 0.06 },                // 좋음(+1) · 빼어남(+2) 확률
+  plainTopSum: 8,                                   // 장신구 능력치 합의 끝 (아래 재료가 없을 때). 재료가 있으면 그 단계만큼 더해짐 (8 · 9 · 10)
+  ruinMats: { faded_crest: 1, carnem_steel: 1, ashen_core: 1, void_silk: 1, king_scale: 2 }, // 멸망한 대륙에 들어가야만 얻는 재료: 기본 상한과 끝에 이만큼 더함 (여럿이면 가장 큰 것)
+                                                    // 1단계 → 끝 9 · 2단계 → 끝 10, 한 능력치 7 (왕룡의 금빛 비늘: 멸망한 대륙 강적만 아주 드물게). 본토 오염된 땅에서도 나오는 검게 물든 비늘·오염 결정과 끼워 넣기만 하는 재료는 뺌
+  luck: { good: 0.24, great: 0.06 },                // 먹을거리·선물의 좋음 · 빼어남 확률
+  gearLuck: { good: 0.2, great: 0.05 },             // 장신구의 좋음(+1) · 빼어남(+2) 확률. 걸작(+1)까지 겹치면 +3
+  luckMax: 3,                                       // 장신구 기본 상한 위로 운이 더할 수 있는 끝 (빼어남 2 + 걸작 1)
   en: { food: [4, 2], gear: [8, 2], gift: [4, 2] },  // 선물로 빚기도 먹는 것과 같음               // 기력: 기본 + 재료 하나당
   valueMul: 1.2,                                    // 값 = 넣은 재료값 합 × 이만큼 (좋음 1.5배 · 빼어남 2배)
   shopMatValue: 0.5,                                // 상점에서 살 수 있는 재료는 값을 이만큼만 셈 (사서 빚어 되팔아 돈을 불리지 못하게)
