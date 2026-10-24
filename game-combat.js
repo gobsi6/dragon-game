@@ -323,10 +323,20 @@ function resisted(def, lines, k) {
   lines.push(`${ga(def)} 기세로 버텨 내 ${STATUS[k]}에 빠지지 않았다.`);
   return true;
 }
+// 위압 (드래곤끼리): 위엄이 상대보다 높으면 그만큼 상대가 거는 상태 이상을 떨쳐 냄 (떨쳐 냈으면 true)
+function pressed(att, def, lines, k) {
+  const P = COMBAT.majPress;
+  if (!P || !att || att.creature || def.creature) return false;
+  const p = Math.min(P.max, Math.max(0, ((def.maj || 0) - (att.maj || 0)) * P.per));
+  if (!(p > 0) || Math.random() >= p) return false;
+  lines.push(`${ga(def)} 위엄으로 ${att.name}${josa(att.name, '을', '를')} 눌러 ${STATUS[k]}에 빠지지 않았다.`);
+  return true;
+}
 function applyDebuff(att, def, debuff, chance, element, lines) {
   if (!debuff) return;
   if (element && def.resist.includes(element)) return;
   if (chance != null && Math.random() >= chance) return;
+  if (pressed(att, def, lines, Object.keys(debuff)[0])) return; // 위압: 위엄이 높은 쪽은 상태 이상을 떨쳐 냄
   // 위엄: 드래곤은 기세로 얼어붙음·마비를 떨쳐 내고, 지속 피해를 한 턴 짧게 버팀
   const MR = COMBAT.majResist;
   const resist = !def.creature && MR ? Math.min(MR.max, (def.maj || 0) * MR.per) : 0;
@@ -457,7 +467,7 @@ function perform(b, f, foe, act, lines) {
 function comboAfter(f, foe, cb, lines) {
   if (cb.key === 'shatter') { foe.st.freeze = 0; foe.st.brittle = 0; lines.push(`${foe.name}의 몸을 덮은 얼음이 산산조각 났다!`); }
   if (cb.key === 'vital') { foe.st.dazed = 0; }
-  if (cb.key === 'surge' && foe.hp > 0 && resisted(foe, lines, 'stun')) { foe.st.soak = 0; }
+  if (cb.key === 'surge' && foe.hp > 0 && (resisted(foe, lines, 'stun') || pressed(f, foe, lines, 'stun'))) { foe.st.soak = 0; }
   else if (cb.key === 'surge' && foe.hp > 0) { foe.st.stun = Math.max(foe.st.stun || 0, foe.acted === f.turnNow ? 2 : 1); foe.st.soak = 0; lines.push(`${ga(foe)} 젖은 몸으로 미끄러져 넘어졌다! (한 턴 마비)`); }
   if (cb.key === 'wildfire' && foe.hp > 0) {
     const n = foe.st.burnDmg || 3;
@@ -521,7 +531,7 @@ function round(b, actA, actB) {
   // 방어·비늘 세우기처럼 몸을 지키는 행동은 먼저 (예고를 보고 막을 수 있게). 나머지는 빠른 쪽이 먼저
   const guardish = (f, act) => !!act && (act.type === 'guard' || (act.type === 'skill' && !blocked(f, act) && (() => { const sk = skillOf(f, act.id); return sk && sk.self && !sk.power && !sk.heal; })()));
   const actors = [{ f: b.a, act: actA, side: 'a' }, ...foes.filter(alive).map((f) => ({ f, act: f.creature ? (f.next || { type: 'attack' }) : actB, side: 'b' }))];
-  for (const x of actors) { x.pri = guardish(x.f, x.act) ? 1 : 0; x.sp = spdOf(x.f) + rand(0, 3); }
+  for (const x of actors) { x.pri = guardish(x.f, x.act) ? 1 : 0; x.sp = spdOf(x.f) + rand(0, COMBAT.initSwing ?? 3); }
   actors.sort((p, q) => q.pri - p.pri || q.sp - p.sp);
   for (const x of actors) {
     const f = x.f;

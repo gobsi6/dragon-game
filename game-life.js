@@ -110,6 +110,7 @@ function growAdd(k, key, n = 1) {
   const g = (k.data.grow ||= {});
   g[key] = (g[key] || 0) + n;
 }
+const isGrown = (k) => ['어른', '노년', '젊은 용', '다 자란 용'].includes(stageOf(k, Date.now()).name); // 다 큰 식구 (힌트·성격 문장을 나이에 맞게)
 const grownCount = (k) => (k.data.traits || []).filter((id) => KIN_TRAITS[id]?.grown).length;
 // 아직 붙지 않은 성격 가운데 자람 기록 점수가 가장 큰 것
 function growBest(k) {
@@ -129,11 +130,12 @@ function growCheck(d, k, lines, stageUp) {
   if (!b || b.v < (stageUp ? 1 : GR.special)) return;
   (k.data.traits ||= []).push(b.trait);
   const name = KIN_TRAITS[b.trait].name;
+  const why = (isGrown(k) && b.whyGrown) || b.why; // 다 큰 식구에게는 '아이를·새끼를' 같은 말 대신
   lines.push(stageUp
-    ? `${b.why} ${k.name}에게 '${name}' 성격이 생겼다.`
-    : `어느 날 문득 알게 되었다. ${b.why} ${k.name}에게 '${name}' 성격이 생겼다.`);
+    ? `${why} ${k.name}에게 '${name}' 성격이 생겼다.`
+    : `어느 날 문득 알게 되었다. ${why} ${k.name}에게 '${name}' 성격이 생겼다.`);
   logic.chron(d, 'mark', `${k.name}에게 '${name}' 성격이 생겼다.`);
-  diary(k, `'${name}' 성격이 생겼다. ${b.why}`);
+  diary(k, `'${name}' 성격이 생겼다. ${why}`);
 }
 // 성격이 자람: 수줍은 → 마음을 연 (유대가 높아지면), 응석받이 → 속 깊은 (다 자란 용이 되면)
 function growUp(d, k, lines, from, to, line) {
@@ -147,7 +149,7 @@ function growUp(d, k, lines, from, to, line) {
 function growHint(k) {
   if (k.status !== 'home' || grownCount(k) >= GR.max) return null;
   const b = growBest(k);
-  return b && b.v >= GR.hint ? b.hint : null;
+  return b && b.v >= GR.hint ? (isGrown(k) && b.hintGrown) || b.hint : null; // 다 큰 식구는 그 나이에 맞는 말로
 }
 // ── 소꿉친구 (KIN_PLAY): 다른 둥지의 아이와 놀기. server.js가 가까운 둥지를 찾아 부름 ──
 const PL = KIN_PLAY;

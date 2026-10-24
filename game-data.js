@@ -1061,7 +1061,7 @@ const KIN_PLAY = {
 // 점수 = 기록 합 ÷ unit. 자라는 단계가 바뀔 때 점수가 1 이상인 것 중 가장 큰 쪽이 붙고,
 // 단계와 상관없이 점수가 special 이상이 되면 그 순간에도 붙는다 ('특별한 순간'). 자라며 붙는 성격은 max개까지
 const KIN_GROW = {
-  max: 3, special: 3, hint: 0.5,                   // hint: 이 점수가 넘으면 식구 카드에 '요즘 ~한 것 같다' 힌트
+  max: 3, special: 3, hint: 0.5,                   // hint: 이 점수가 넘으면 식구 카드에 '요즘 ~한 것 같다' 힌트 (다 큰 식구는 hintGrown·whyGrown이 있으면 그것으로)
   openedBond: 80,                                  // 수줍은 아이가 이 유대를 넘으면 '마음을 연'으로
   sturdySat: 0.8, greedySat: 1.2,                  // 배가 꺼지는 빠르기 배율
   capable: 1.25, tough: 0.75, fierce: 1.2, shieldmate: 0.95, windrider: 0.75, stargazer: 0.03,
@@ -1071,14 +1071,14 @@ const KIN_GROW = {
     human: [
       { trait: 'homebody',   keys: ['rest'],             unit: 4, hint: '요즘 둥지에서 뒹구는 시간을 제일 좋아하는 것 같다.',  why: '둥지에서 함께 뒹굴던 날들이 몸에 배었다.' },
       { trait: 'adventurer', keys: ['trip'],             unit: 4, hint: '요즘 바깥 이야기만 나오면 눈이 반짝이는 것 같다.',   why: '함께 다녀온 먼 길들이 마음에 남았다.' },
-      { trait: 'sturdy',     keys: ['food'],             unit: 6, hint: '요즘 밥을 먹고 나면 볼이 통통하게 차오르는 것 같다.', why: '잘 먹고 자란 몸이 단단해졌다.' },
+      { trait: 'sturdy',     keys: ['food'],             unit: 6, hint: '요즘 밥을 먹고 나면 볼이 통통하게 차오르는 것 같다.', hintGrown: '요즘 밥을 든든히 먹고 나면 힘쓰는 일을 도맡는 것 같다.', why: '잘 먹고 자란 몸이 단단해졌다.' },
       { trait: 'warm',       keys: ['warm'],             unit: 2, hint: '요즘 부쩍 살갑게 구는 것 같다.',                     why: '받은 다정함을 그대로 닮아 간다.' },
-      { trait: 'capable',    keys: ['trust', 'strict'],  unit: 2, hint: '요즘 제 일은 제가 하려고 드는 것 같다.',             why: '스스로 해내던 날들이 아이를 야무지게 했다.' },
+      { trait: 'capable',    keys: ['trust', 'strict'],  unit: 2, hint: '요즘 제 일은 제가 하려고 드는 것 같다.',             why: '스스로 해내던 날들이 아이를 야무지게 했다.', whyGrown: '스스로 해내던 날들이 몸에 배어 야무져졌다.' },
       { trait: 'tough',      keys: ['neglect'],          unit: 2, hint: '요즘 혼자 있는 데 익숙해진 것 같다.',                why: '혼자 기다리던 날들을 씩씩하게 견뎌 냈다.' },
-      { trait: 'fussy',      keys: ['hungry'],           unit: 3, hint: '요즘 배가 고프면 금방 입이 삐죽 나오는 것 같다.',    why: '배고픈 날이 잦았던 탓인지 투정이 늘었다.' },
+      { trait: 'fussy',      keys: ['hungry'],           unit: 3, hint: '요즘 배가 고프면 금방 입이 삐죽 나오는 것 같다.', hintGrown: '요즘 배가 고프면 금방 말수가 줄고 예민해지는 것 같다.',    why: '배고픈 날이 잦았던 탓인지 투정이 늘었다.' },
       { trait: 'willful',    keys: ['free'],             unit: 2, hint: '요즘 하고 싶은 대로만 하려는 것 같다.',              why: '하고 싶은 대로 두었더니 고집이 자랐다.' },
-      { trait: 'sociable',   keys: ['friend'],           unit: 3, hint: '요즘 옆 둥지 친구 이야기를 자주 하는 것 같다.',      why: '다른 둥지 아이들과 어울리던 날들이 아이를 밝게 했다.' },
-      { trait: 'spoiled',    keys: ['pamper'],           unit: 4, hint: '요즘 보호자 곁에서 떨어지려 하지 않는 것 같다.',     why: '너무 자주 안기고 쓰다듬어진 탓에 응석이 늘었다.' },
+      { trait: 'sociable',   keys: ['friend'],           unit: 3, hint: '요즘 옆 둥지 친구 이야기를 자주 하는 것 같다.',      why: '다른 둥지 아이들과 어울리던 날들이 아이를 밝게 했다.', whyGrown: '다른 둥지 식구들과 어울리던 날들이 마음을 밝게 했다.' },
+      { trait: 'spoiled',    keys: ['pamper'],           unit: 4, hint: '요즘 보호자 곁에서 떨어지려 하지 않는 것 같다.',     why: '너무 자주 안기고 쓰다듬어진 탓에 응석이 늘었다.', hintGrown: '요즘 다 큰 몸으로 자꾸 보호자에게 기대려는 것 같다.', whyGrown: '너무 자주 챙겨 준 탓인지 다 커서도 기대는 버릇이 생겼다.' },
       { trait: 'aloof',      keys: ['smother'],          unit: 4, hint: '요즘 보호자가 다가가면 슬쩍 피하는 것 같다.',         why: '너무 자주 챙겨 주는 손길이 조금 귀찮아졌다.' },
     ],
     drake: [
@@ -1087,12 +1087,12 @@ const KIN_GROW = {
       { trait: 'stargazer',  keys: ['wisdom'],           unit: 3, hint: '요즘 밤하늘을 오래 올려다보는 것 같다.',             why: '별을 읽는 밤이 쌓여 눈이 깊어졌다.' },
       { trait: 'shieldmate', keys: ['fight'],            unit: 15, hint: '요즘 싸움터에서 등 뒤를 곧잘 지키는 것 같다.',       why: '함께 싸운 날들이 서로의 등을 맡기게 했다.' },
       { trait: 'pathfinder', keys: ['errand'],           unit: 3, hint: '요즘 먼 길을 다녀오는 게 즐거운 것 같다.',           why: '혼자 다녀온 심부름 길이 눈에 익었다.' },
-      { trait: 'affable',    keys: ['warm'],             unit: 2, hint: '요즘 부쩍 품을 파고드는 것 같다.',                   why: '받은 다정함을 그대로 닮아 간다.' },
-      { trait: 'steadfast',  keys: ['trust', 'strict'],  unit: 2, hint: '요즘 꼬리를 곧게 세우고 의젓하게 구는 것 같다.',     why: '스스로 견뎌 낸 날들이 새끼를 듬직하게 했다.' },
+      { trait: 'affable',    keys: ['warm'],             unit: 2, hint: '요즘 부쩍 품을 파고드는 것 같다.', hintGrown: '요즘 부쩍 곁에 와서 몸을 기대는 것 같다.',                   why: '받은 다정함을 그대로 닮아 간다.' },
+      { trait: 'steadfast',  keys: ['trust', 'strict'],  unit: 2, hint: '요즘 꼬리를 곧게 세우고 의젓하게 구는 것 같다.',     why: '스스로 견뎌 낸 날들이 새끼를 듬직하게 했다.', whyGrown: '스스로 견뎌 낸 날들이 더욱 듬직하게 했다.' },
       { trait: 'greedy',     keys: ['hungry'],           unit: 3, hint: '요즘 먹을 것만 보면 눈빛이 달라지는 것 같다.',       why: '배고픈 날이 잦았던 탓인지 먹성이 좋아졌다.' },
-      { trait: 'wild',       keys: ['free'],             unit: 2, hint: '요즘 둥지 안을 마구 뛰어다니는 것 같다.',            why: '하고 싶은 대로 두었더니 천방지축이 되었다.' },
+      { trait: 'wild',       keys: ['free'],             unit: 2, hint: '요즘 둥지 안을 마구 뛰어다니는 것 같다.',            why: '하고 싶은 대로 두었더니 천방지축이 되었다.', hintGrown: '요즘 둥지 밖을 제멋대로 쏘다니는 것 같다.', whyGrown: '하고 싶은 대로 두었더니 다 커서도 거침이 없어졌다.' },
       { trait: 'packmate',   keys: ['friend'],           unit: 3, hint: '요즘 다른 둥지 쪽 하늘을 자주 바라보는 것 같다.',    why: '다른 둥지 새끼들과 어울리던 날들이 마음을 열게 했다.' },
-      { trait: 'babyish',    keys: ['pamper'],           unit: 4, hint: '요즘 날개 밑으로 자꾸 파고드는 것 같다.',             why: '너무 자주 안기고 쓰다듬어진 탓에 어리광이 늘었다.' },
+      { trait: 'babyish',    keys: ['pamper'],           unit: 4, hint: '요즘 날개 밑으로 자꾸 파고드는 것 같다.',             why: '너무 자주 안기고 쓰다듬어진 탓에 어리광이 늘었다.', hintGrown: '요즘 다 큰 몸으로 자꾸 날개 밑을 비집고 드는 것 같다.', whyGrown: '너무 자주 챙겨 준 탓인지 다 커서도 어리광이 남았다.' },
       { trait: 'aloofd',     keys: ['smother'],          unit: 4, hint: '요즘 다가가면 고개를 홱 돌리는 것 같다.',             why: '너무 자주 챙겨 주는 손길이 조금 귀찮아졌다.' },
     ],
   },
@@ -1758,13 +1758,17 @@ const COMBAT = {
   // 사냥감이 거는 화상·중독의 세기 기울기 (1이면 예전과 같음). 레벨이 오를수록 커지는데 비늘로 막히지 않아 높은 사냥터만 튀던 것을 누름
   creatureDot: 0.5,
   // 지혜: 스킬 효과 배율 = 1 + 지혜 × wisSkill (포식·자수정 숨결의 흡수, 숨 고르기의 기력, 스킬이 상태 이상을 걸 확률). 피해·지속 피해에는 붙지 않음
-  wisSkill: 0.01,
+  wisSkill: 0.015,
   // 스킬을 한 번도 고르지 않은 드래곤이 들고 가는 스킬 (배운 것만, 이 순서로). 모자라면 배운 순서대로 채움
   defaultSkills: ['tail', 'mend', 'roar'],
   // 위엄: 사냥감·도둑의 위엄 = base + 레벨 × per (포효가 통할 확률을 정함. 대륙의 재앙은 따로)
   creatureMaj: { base: 4, per: 0.5 },
   // 위엄: 드래곤이 얼어붙음·마비를 떨쳐 낼 확률, 화상·중독·출혈이 한 턴 짧아질 확률 = 위엄 × per (최대 max)
   majResist: { per: 0.012, max: 0.35 },
+  // 위압 (결투): 위엄이 상대보다 높으면 상대가 거는 상태 이상을 떨쳐 냄. 확률 = (내 위엄 − 상대 위엄) × per (최대 max). 결투 보정으로 줄어든 뒤의 차이로 셈
+  majPress: { per: 0.05, max: 0.25 },
+  // 행동 순서: 날개(속도) + 0~initSwing 사이 무작위. 넓을수록 날개가 조금 높다고 늘 먼저 움직이지는 않음 (예전 3)
+  initSwing: 10,
   // 무리 조우: 사냥하다 여러 마리를 한꺼번에 만남. 함께 나온 사냥감은 조금 약하고(체력·공격 배율), 쓰러뜨린 만큼 전리품이 더 나옴
   group: {
     from: 2,             // 사냥터 Lv. 이만큼부터 무리가 나옴

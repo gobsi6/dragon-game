@@ -758,6 +758,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       if (m) {
         m.data.adoptedFrom = f.name;
         m.data.adoptedFromId = f.id;
+        m.data.adoptedAt = now; // 먼 둥지에서 온 안부: 입양 뒤 며칠 동안만 (game-events.js LETTER_DAYS)
         if (m.status === 'egg') { m.data.incubateAt = null; m.data.found = now; }
         else { m.data.bond = Math.max(KIN.human.startBond, Math.round((m.data.bond || 0) * 0.5)); m.data.lastCare = now - KIN.human.careCooldown; m.data.onExp = false; }
       }

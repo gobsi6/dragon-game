@@ -79,6 +79,20 @@ const parentWord = (k) => (k.data.sex === 'f' ? '어머니' : '아버지');
 const elderWord = (k) => (k.data.sex === 'f' ? '할머니' : '할아버지');
 const freshKid = (k) => { const used = new Set([k.name, ...(k.data.kids || [])]); return pick(HUMAN_NAMES.filter((n) => !used.has(n))) || pick(HUMAN_NAMES); };
 
+// 먼 둥지에서 온 안부: 입양 보낸 뒤 LETTER_DAYS일 동안만 (예전에 보내 입양 날짜가 없으면 아직 어릴 때만)
+const LETTER_DAYS = 7;
+const LETTER_YOUNG = new Set(['아기', '아이', '소년', '청소년', '해츨링', '어린 용']);
+const letterOk = (c, x) => x.status === 'home' && (x.data.adoptedAt ? c.now - x.data.adoptedAt < LETTER_DAYS * DAYMS : LETTER_YOUNG.has(c.stage(x)));
+const LETTER_D_SMALL = new Set(['해츨링', '어린 용']);
+// 인간 아이의 편지: 나이에 맞는 글씨와 말 (아기는 새 보호자가 대신 씀)
+const LETTER_H = {
+  '아기': { head: (v) => `${v.owner}의 둥지에서 ${v.name}의 소식을 적은 편지가 왔다.`, hand: '새 보호자가 대신 적어 준 편지다.', say: '요즘 잘 웃고, 밤에도 푹 자요.' },
+  '아이': { head: (v) => `${v.owner}의 둥지로 보낸 ${v.name}에게서 편지가 왔다.`, hand: '삐뚤빼뚤한 글씨로', say: '잘 먹고 잘 자요. 가끔 보고 싶어요.' },
+  '소년': { head: (v) => `${v.owner}의 둥지로 보낸 ${v.name}에게서 편지가 왔다.`, hand: '커다랗고 힘찬 글씨로', say: '여기서 매일 뛰어놀아요. 나중에 꼭 자랑하러 갈게요.' },
+  '청소년': { head: (v) => `${v.owner}의 둥지로 보낸 ${v.name}에게서 편지가 왔다.`, hand: '또박또박 눌러 쓴 글씨로', say: '잘 지내고 있어요. 가끔 그쪽 하늘을 올려다봐요.' },
+  '어른': { head: (v) => `${v.owner}의 둥지로 보낸 ${v.name}에게서 편지가 왔다.`, hand: '단정한 글씨로', say: '덕분에 잘 자랐습니다. 언제 한번 인사드리러 갈게요.' },
+  '노년': { head: (v) => `${v.owner}의 둥지로 보낸 ${v.name}에게서 편지가 왔다.`, hand: '조금 떨리지만 정성스러운 글씨로', say: '돌아보니 좋은 날들이었습니다. 처음 저를 품어 주신 일을 잊지 않았어요.' },
+};
 const missable = (c, x) => !!(x.data.adoptedFrom && x.data.adoptedFromId) && c.now - (x.data.missedAt || 0) >= MISS_GAP;
 const randInt = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 const statName = (k) => STATS.find((x) => x.key === k)?.name || k;
@@ -1144,11 +1158,22 @@ module.exports = [
     title: '먼 둥지에서 온 안부',
     when: ['wake', 'explore'],
     weight: 4,
-    cond: (c) => c.ties.adoptedOut.some((x) => x.status === 'home'),
-    setup: (c) => { const k = c.pick(c.ties.adoptedOut.filter((x) => x.status === 'home')); return { name: k.name, type: k.type, owner: k.owner, ownerId: k.owner_id, stage: c.stage(k) }; },
-    text: (c, v) => v.type === 'human'
-      ? [`${v.owner}의 둥지로 보낸 ${v.name}에게서 편지가 왔다.`, `삐뚤빼뚤한 글씨로 "잘 먹고 잘 자요. 가끔 보고 싶어요." 라고 적혀 있다. 어느새 '${v.stage}'${c.josa(v.stage, '이', '가')} 되었다고 한다.`]
-      : [`${v.owner}의 둥지로 보낸 ${v.name}${c.josa(v.name, '이', '가')} 반짝이는 비늘 한 조각을 바람에 실어 보냈다.`, `벌써 '${v.stage}'${c.josa(v.stage, '이', '가')} 되었다고 한다. 비늘에서 익숙한 온기가 느껴진다.`],
+    cond: (c) => c.ties.adoptedOut.some((x) => letterOk(c, x)),
+    setup: (c) => {
+      const k = c.pick(c.ties.adoptedOut.filter((x) => letterOk(c, x)));
+      const stage = c.stage(k);
+      return { name: k.name, type: k.type, owner: k.owner, ownerId: k.owner_id, stage, letter: k.type === 'human' ? (LETTER_H[stage] || LETTER_H['아이']) : null };
+    },
+    text: (c, v) => {
+      const grown = ['아기', '해츨링'].includes(v.stage) ? `아직 '${v.stage}'${c.josa(v.stage, '이지만', '지만')} 하루가 다르게 자란다고 한다.` : `어느새 '${v.stage}'${c.josa(v.stage, '이', '가')} 되었다고 한다.`;
+      if (v.type !== 'human') {
+        return LETTER_D_SMALL.has(v.stage)
+          ? [`${v.owner}의 둥지로 보낸 ${v.name}${c.josa(v.name, '이', '가')} 반짝이는 비늘 한 조각을 바람에 실어 보냈다.`, `${grown} 비늘에서 익숙한 온기가 느껴진다.`]
+          : [`${v.owner}의 둥지로 보낸 ${v.name}${c.josa(v.name, '이', '가')} 둥지 위를 크게 한 바퀴 돌고, 손바닥만 한 비늘 한 장을 떨구고 갔다.`, `${grown} 날갯짓 소리가 제법 묵직해졌다.`];
+      }
+      const l = v.letter || LETTER_H['아이'];
+      return [l.head(v), `${l.hand} "${l.say}" 라고 적혀 있다. ${grown}`];
+    },
     choices: [
       { label: '답장을 보낸다', run: (h, c, v) => {
         h.mind(10);
@@ -1157,7 +1182,7 @@ module.exports = [
       } },
       { label: '소중히 간직한다', run: (h, c, v) => {
         h.mind(5);
-        if (c.nest) h.keep('far_letter', v.name, v.type === 'human' ? '잘 먹고 잘 자요. 가끔 보고 싶어요.' : ''); else h.give('kin_letter');
+        if (c.nest) h.keep('far_letter', v.name, v.type === 'human' ? (v.letter?.say || '잘 먹고 잘 자요. 가끔 보고 싶어요.') : ''); else h.give('kin_letter');
         h.say(`${v.type === 'human' ? '편지를' : '비늘을'} ${c.nest ? '보물 상자에 넣고 잠갔다' : '품속 깊이 넣어 두었다'}. (정신 +5, 먼 둥지의 편지)`);
       } },
     ],
