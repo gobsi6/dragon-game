@@ -50,7 +50,7 @@ module.exports = function setupNightMarket({ io, db, online, logic, sendMe }) {
     const it = ITEMS[id];
     if (!it || it.cat === 'treasure') return 0;
     const worn = Object.values(logic.equipOf(d)).includes(id) ? 1 : 0;
-    const enh = !worn && logic.gearOf(d)[id] ? 1 : 0; // 강화·각인한 장신구는 그 한 개를 남김 (기록이 사라지지 않게)
+    const enh = !worn && logic.gearOf(d)[id] && logic.gearAt(d, id) === 'inv' ? 1 : 0; // 강화·각인한 장신구는 그 한 개를 남김 (기록이 사라지지 않게)
     return Math.max(0, db.itemCount(d.id, id) - worn - enh);
   }
   const itemText = (id, qty) => `${ITEMS[id].name}${qty > 1 ? ` ${qty}개` : ''}`;
@@ -134,7 +134,7 @@ module.exports = function setupNightMarket({ io, db, online, logic, sendMe }) {
     if (!Number.isFinite(qty) || qty < 1 || qty > R.qtyMax) return { error: '개수를 다시 정해야 한다.' };
     if (!Number.isFinite(price) || price < 1 || price > R.priceMax) return { error: `값은 1닢부터 ${R.priceMax.toLocaleString()}닢까지 정할 수 있다.` };
     const nm = ITEMS[id].name;
-    if (spare(d, id) < qty) return { error: `${nm}${josa(nm, '이', '가')} 그만큼 없다.${Object.values(logic.equipOf(d)).includes(id) ? ' (끼고 있는 것은 올릴 수 없다)' : logic.gearOf(d)[id] ? ' (강화·각인한 것은 올릴 수 없다)' : ''}` };
+    if (spare(d, id) < qty) return { error: `${nm}${josa(nm, '이', '가')} 그만큼 없다.${Object.values(logic.equipOf(d)).includes(id) ? ' (끼고 있는 것은 올릴 수 없다)' : logic.gearOf(d)[id] && logic.gearAt(d, id) === 'inv' ? ' (강화·각인한 것은 올릴 수 없다)' : ''}` };
     const m = st.stalls[d.id] || { name: d.name, kind: d.kind, sign: '', items: [], at: now, sold: 0, earned: 0 };
     const line = m.items.find((x) => x.id === id);
     if (!line && m.items.length >= R.lines) return { error: `노점에는 물건을 ${R.lines}가지까지 올릴 수 있다.` };

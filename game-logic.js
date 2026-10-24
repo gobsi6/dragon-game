@@ -1002,7 +1002,7 @@ const gearOf = (d) => {
   for (const g of Object.values(c.gear)) if (g && g.plus > CRAFT.enhance.length) g.plus = CRAFT.enhance.length; // 최대 강화가 줄었을 때 예전 기록을 맞춤
   return c.gear;
 };
-// 강화·각인은 같은 장신구 여러 개 가운데 '한 개'에만 붙음. at: 그 한 개가 어디 있는지 ('eq' 착용 중 / 'inv' 소지품)
+// 강화·각인은 같은 장신구 여러 개 가운데 '한 개'에만 붙음. at: 그 한 개가 어디 있는지 ('eq' 착용 중 / 'inv' 소지품 / 'hoard' 보물더미)
 // (예전 기록에는 at이 없음: 그 장신구를 차고 있으면 착용 중인 것으로 봄)
 const gearAt = (d, id) => gearOf(d)[id]?.at || (Object.values(equipOf(d)).includes(id) ? 'eq' : 'inv');
 const gearOn = (d, id) => { const g = gearOf(d)[id]; return g && gearAt(d, id) === 'eq' ? g : null; }; // 차고 있는 그 한 개가 강화된 것일 때만
@@ -1157,6 +1157,7 @@ function enhanceGear(d, id, have) {
   const it = ITEMS[id];
   if (!it || it.type !== 'equip') return { error: '장신구만 강화할 수 있다.' };
   if (!ownsGear(d, id, have)) return { error: '가지고 있지 않은 장신구다.' };
+  if (gearAt(d, id) === 'hoard') return { error: `강화·각인한 ${it.name}${josa(it.name, '은', '는')} 보물더미에 있다. 꺼내 온 뒤에 하자.` };
   const g = gearOf(d);
   const lv = g[id]?.plus || 0;
   const step = CRAFT.enhance[lv];
@@ -1182,6 +1183,7 @@ function engraveGear(d, id, elem, have) {
   const it = ITEMS[id];
   if (!it || it.type !== 'equip') return { error: '장신구에만 새길 수 있다.' };
   if (!ownsGear(d, id, have)) return { error: '가지고 있지 않은 장신구다.' };
+  if (gearAt(d, id) === 'hoard') return { error: `강화·각인한 ${it.name}${josa(it.name, '은', '는')} 보물더미에 있다. 꺼내 온 뒤에 하자.` };
   const need = CRAFT.engrave.items[elem];
   if (!need) return { error: '그런 속성은 없다.' };
   const g = gearOf(d);
@@ -1204,6 +1206,11 @@ function tidyGear(d, have) {
     else if (at === 'inv' && have(id) < 1) delete g[id];
     else if (!g[id].at) g[id].at = at;
   }
+}
+// 보물더미에 둔 강화된 한 개가 보물더미에서 사라졌으면(도둑 등) 기록도 지움. hoardHave(id): 보물더미에 남은 개수
+function tidyHoardGear(d, hoardHave) {
+  const g = gearOf(d);
+  for (const id of Object.keys(g)) if (g[id]?.at === 'hoard' && hoardHave(id) < 1) delete g[id];
 }
 // ── 마을 제작 의뢰: 마을마다 하루 3개 (날마다 바뀜, 모두에게 같음) ──
 const dayIdx = (now = Date.now()) => Math.floor((now + 9 * 3600000) / 86400000); // 한국 날짜
@@ -1398,31 +1405,28 @@ function useItem(d, id, have, opts = {}) {
     if (u.mindCost) lines.push(...loseMind(d, u.mindCost)); // 광기의 묘약: 정신이 깎임
     return { title: it.name, lines, items: [{ id, qty: -1 }] };
   }
-  // 여러 효과가 있는 물건은 하나라도 쓸모가 있으면 씀
-  const full = (u.hp == null || d.hp >= hpCap(d)) && (u.en == null || d.en >= enCap(d)) && (u.ap == null || d.ap >= apCap(d));
-  const multi = ['hp', 'en', 'ap'].filter((k) => u[k]).length > 1;
-  if (multi && full) return { error: '이미 기운이 넘친다.' };
-  if (u.hp && !(multi && d.hp >= hpCap(d))) {
-    if (d.hp >= hpCap(d)) return { error: '체력이 이미 가득 차 있다.' };
-    const before = d.hp;
-    d.hp = Math.min(hpCap(d), d.hp + u.hp);
-    lines.push(`체력이 ${d.hp - before} 회복되었다.`);
+  // 여러 효과가 있는 물건(체력·기력·행동력·정신)은 하나라도 쓸모가 있으면 씀. 이미 가득 찬 효과는 건너뜀
+  // (먼저 모두 살펴본 뒤에 바꿈: 중간에 막혀 물건은 그대로인데 회복만 되는 일이 없게)
+  const mindNow = d.mind ?? MIND.max;
+  const can = {
+    hp: !!u.hp && d.hp < hpCap(d),
+    en: !!u.en && d.en < enCap(d),
+    ap: !!u.ap && d.ap < apCap(d),
+    mind: !!u.mind && !berserkOf(d) && mindNow < MIND.max,
+  };
+  if (!Object.values(can).some(Boolean)) {
+    const kinds = ['hp', 'en', 'ap', 'mind'].filter((k) => u[k]);
+    if (kinds.length > 1) return { error: '이미 기운이 넘친다.' };
+    if (u.hp) return { error: '체력이 이미 가득 차 있다.' };
+    if (u.en) return { error: '기력이 이미 가득 차 있다.' };
+    if (u.ap) return { error: '행동력이 이미 가득 차 있다.' };
+    if (u.mind) return { error: berserkOf(d) ? '광폭화한 몸은 무엇도 받아들이지 않는다.' : '정신이 이미 맑다.' };
+    return { error: '지금은 쓸 데가 없다.' };
   }
-  if (u.en && !(multi && d.en >= enCap(d))) {
-    if (d.en >= enCap(d)) return { error: '기력이 이미 가득 차 있다.' };
-    const before = d.en;
-    d.en = Math.min(enCap(d), d.en + u.en);
-    lines.push(`기력이 ${d.en - before} 회복되었다.`);
-  }
-  if (u.mind) {
-    if (berserkOf(d)) return { error: '광폭화한 몸은 무엇도 받아들이지 않는다.' };
-    if ((d.mind ?? MIND.max) >= MIND.max) return { error: '정신이 이미 맑다.' };
-    const before = d.mind;
-    d.mind = Math.min(MIND.max, d.mind + u.mind);
-    lines.push(`정신이 ${d.mind - before} 맑아졌다.`);
-  }
-  if (u.ap && !(multi && d.ap >= apCap(d))) {
-    if (d.ap >= apCap(d)) return { error: '행동력이 이미 가득 차 있다.' };
+  if (can.hp) { const before = d.hp; d.hp = Math.min(hpCap(d), d.hp + u.hp); lines.push(`체력이 ${d.hp - before} 회복되었다.`); }
+  if (can.en) { const before = d.en; d.en = Math.min(enCap(d), d.en + u.en); lines.push(`기력이 ${d.en - before} 회복되었다.`); }
+  if (can.mind) { d.mind = Math.min(MIND.max, mindNow + u.mind); lines.push(`정신이 ${d.mind - mindNow} 맑아졌다.`); }
+  if (can.ap) {
     const before = d.ap;
     d.ap = Math.min(apCap(d), d.ap + u.ap);
     if (d.ap >= apCap(d)) d.ap_at = Date.now();
@@ -1819,12 +1823,19 @@ function hoardMove(d, dir, what, qty, have, hoardHave) {
   const it = ITEMS[what];
   if (!it) return { error: '알 수 없는 물건이다.' };
   const label = `${it.name}${qty > 1 ? ` ${qty}개` : ''}`;
+  // 강화·각인한 한 개: 소지품의 마지막 하나까지 쌓으면 그 한 개도 보물더미로 (보통 것부터 들어감). 꺼낼 때는 그 한 개가 먼저 나옴
+  const g = it.type === 'equip' ? gearOf(d)[what] : null;
+  const gTag = g ? ` (${[g.plus ? `+${g.plus}` : '', g.elem ? `${ELEMENTS[g.elem] || g.elem} 각인` : ''].filter(Boolean).join(' · ') || '강화'})` : '';
   if (dir === 'put') {
     if (have(what) < qty) return { error: '그만큼 가지고 있지 않다.' };
-    return { lines: [`${label}${josa(label, '을', '를')} 보물더미에 쌓았다.`], items: [{ id: what, qty: -qty }], hoardItems: [{ id: what, qty }] };
+    const lines = [`${label}${josa(label, '을', '를')} 보물더미에 쌓았다.`];
+    if (g && gearAt(d, what) === 'inv' && have(what) - qty < 1) { g.at = 'hoard'; lines.push(`강화한 ${it.name}${gTag}도 함께 쌓았다. 꺼내면 그대로다.`); }
+    return { lines, items: [{ id: what, qty: -qty }], hoardItems: [{ id: what, qty }] };
   }
   if (hoardHave(what) < qty) return { error: '보물더미에 그만큼 없다.' };
-  return { lines: [`보물더미에서 ${label}${josa(label, '을', '를')} 꺼냈다.`], items: [{ id: what, qty }], hoardItems: [{ id: what, qty: -qty }] };
+  const lines = [`보물더미에서 ${label}${josa(label, '을', '를')} 꺼냈다.`];
+  if (g && gearAt(d, what) === 'hoard') { g.at = 'inv'; lines.push(`강화한 ${it.name}${gTag}도 그대로 돌아왔다.`); }
+  return { lines, items: [{ id: what, qty }], hoardItems: [{ id: what, qty: -qty }] };
 }
 
 // 보물더미 가치: 금화 + 물건 기준 값
@@ -2310,7 +2321,7 @@ module.exports = {
   seasonAt, weatherOf, weatherIdAt, weatherFx, fxText, fxProse, weatherDebug, SLOT_MS,
   nestInfo, nestTier, maxKinOf, expandNest, checkRaid, raidView, chaseCheck,
   regen, gather, explore, fishCast, fishReel, startExpedition, finishExpedition, chooseFork, forkView, expInfo,
-  craft, experiment, freeCraft, enhanceGear, engraveGear, tidyGear, engraveOf, gearOf, greatChance, craftView, ordersView, fillOrder, buildForge, atForge,
+  craft, experiment, freeCraft, enhanceGear, engraveGear, tidyGear, tidyHoardGear, engraveOf, gearOf, greatChance, craftView, ordersView, fillOrder, buildForge, atForge,
   useItem, equip, unequip, statsOf, bonusOf, hpCap, enCap, apCap, equipOf, buffOf, giveBuff,
   repOf, setStance, marketInfo, buy, sell, intimidate,
   buildNest, flyHome, startRest, stopRest, hoardMove, hoardValue,

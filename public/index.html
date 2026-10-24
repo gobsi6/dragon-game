@@ -7462,6 +7462,8 @@
               r2.querySelector('.nm').append(itemTags(it));
               r2.querySelector('.q').textContent = `×${x.qty}`;
               r2.querySelector('small').textContent = `개당 가치 ${it.value}`;
+              const hg = S.me?.craft?.gear?.[x.item]; // 강화·각인한 한 개가 보물더미에 있음 (꺼내면 그것이 먼저 나옴)
+              if (hg?.at === 'hoard') r2.querySelector('small').append(` · 그중 하나는 ${[hg.plus ? `+${hg.plus} 강화` : '', hg.elem ? `${ELEM_NAME[hg.elem] || hg.elem} 각인` : ''].filter(Boolean).join(' · ') || '강화'}`);
               r2.querySelector('.acts').append(btn('1개 꺼내기', () => nestAct('hoard:take', { what: x.item, qty: 1 })));
               if (x.qty > 1) r2.querySelector('.acts').append(btn('모두 꺼내기', () => nestAct('hoard:take', { what: x.item, qty: x.qty })));
               list.appendChild(r2);

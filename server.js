@@ -484,6 +484,7 @@ function syncKin(socket, d, now = Date.now()) {
   t.lines.push(...playdate(d, kin, now));
   refreshKin(d, kin);
   db.saveState(d, t.items, t.hoardItems);
+  if ((t.hoardItems || []).some((x) => x.qty < 0)) logic.tidyHoardGear(d, (id) => db.hoardCount(d.id, id)); // 식구 일로 보물더미에서 나간 것
   if (t.lines.length && socket) {
     socket.emit('notice', { title: '둥지 소식', lines: t.lines, items: [...t.items, ...t.hoardItems], gold: t.gold });
   }
@@ -509,6 +510,7 @@ function nestSync(socket, d, now = Date.now()) {
   delete d._forceRaid;
   if (!r) return;
   db.saveState(d, [], r.hoardItems || []);
+  logic.tidyHoardGear(d, (id) => db.hoardCount(d.id, id)); // 도둑이 강화한 장신구를 가져갔으면 그 기록도 지움
   hoard = db.hoard(d.id);
   ni.value = logic.hoardValue(d.hoard_gold || 0, hoard) + logic.chestValue(d);
   if (socket) socket.emit('notice', { title: r.kind === 'blocked' ? '둥지를 지켜 냈다' : '보물 도둑', lines: r.lines, raid: r.kind === 'raid' });
