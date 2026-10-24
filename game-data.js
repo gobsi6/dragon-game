@@ -2155,7 +2155,7 @@ const NIGHT_MARKET = {
     { id: 'mask', name: '가면 노점', who: '가면장수 청년', say: '"하나 써 봐요. 오늘 밤엔 아무도 당신이 누군지 몰라요."',
       items: [{ id: 'nm_mask', price: 45, limit: 1 }, { id: 'nm_star_candy', price: 12, limit: 5 }] },
     { id: 'potion', name: '떠돌이 약장수', who: '수염 난 약장수', say: '"쉿, 축제 밤에만 꺼내는 물건이오. 날개가 무거운 용에게 딱이지."',
-      items: [{ id: 'sun_breath', price: 110, limit: 2 }, { id: 'nm_ember_candy', price: 60, limit: 4 }] }, // 태양의 숨결(행동력 4)은 불씨 사탕(2) 두 개보다 조금 싸게
+      items: [{ id: 'sun_breath', price: 150, limit: 2 }, { id: 'nm_ember_candy', price: 60, limit: 4 }] },
   ],
   // 플레이어 노점: 하나씩. 올린 물건은 노점에 맡겨 두고, 야시장이 끝나면 팔리지 않은 것은 주인에게 돌아감
   stall: { lines: 6, priceMax: 99999, qtyMax: 999, signMax: 16 },
