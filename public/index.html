@@ -5654,7 +5654,7 @@
     socket.emit(event, payload, (res) => {
       if (res.error) { SFX.play('error'); return toast(res.error); }
       if (event === 'craft' || event === 'craft:experiment' || event === 'craft:mine') for (const m of res.result?.made || []) if (m.qty > 0 && !CRAFT_MADE.includes(m.id)) CRAFT_MADE.unshift(m.id);
-      if (event === 'craft:experiment' || event === 'craft:mine') { FREE_LAST = res.result?.free || null; FREE_DATA = null; } // 자유 제작 결과 · 노트 다시 불러오기
+      if (event === 'craft:experiment' || event === 'craft:mine') { FREE_LAST = res.result?.free || null; FREE_STALE = true; } // 자유 제작 결과 · 노트 다시 불러오기 (새것이 올 때까지 지난 것을 그대로 보여 줌: 목록이 잠깐 사라져 화면이 위로 튀지 않게)
       SFX.play({ 'item:drop': 'drop', craft: 'craft' }[event] || 'use');
       if (res.result?.lines) toast(res.result.lines.join(' '));
       // 다시 그려도 보던 자리에 머물게 (쓰고 나서 맨 위로 올라가지 않게)
@@ -8305,7 +8305,7 @@
   // ── 제작 ──
   // 제작 창: 만들기 / 실험 / 다듬기(강화·각인)
   let craftMode = 'make', mixPick = [];
-  let FREE_LAST = null, FREE_DATA = null, FREE_LOADING = false, mixTag = '', mixGift = false; // mixTag: 성질로 거르기 · mixGift: 선물로 빚기 // 자유 제작: 마지막 결과, 노트·내 제작법·도감
+  let FREE_LAST = null, FREE_DATA = null, FREE_STALE = false, FREE_LOADING = false, mixTag = '', mixGift = false; // mixTag: 성질로 거르기 · mixGift: 선물로 빚기 // 자유 제작: 마지막 결과, 노트·내 제작법·도감
   const freeTagLine = (id) => { const t = S.free?.tags?.[id]; if (!t) return ''; return Object.entries(t).map(([k, n]) => `${S.free.names[k]}${n}`).join(' · '); };
   const ELEM_NAME = { fire: '화염', ice: '얼음', lightning: '번개', earth: '대지', poison: '독', mist: '안개', acid: '산', water: '물', spirit: '정화' };
   // 제작 재료를 누르면, 그 재료를 얻는 곳을 재료 줄 아래에 펼침 (한 번 더 누르면 접힘)
@@ -8364,6 +8364,7 @@
   // 제작 창을 다시 그려도 적던 글이 지워지지 않게: 입력칸(data-keep)의 글과 커서를 그대로 옮기고,
   // 한글을 조합하는 도중에는 다시 그리지 않고 조합이 끝난 뒤에 그림 (기력이 차는 등 'me'가 올 때마다 다시 그려지기 때문)
   let CRAFT_COMPOSING = false, CRAFT_PENDING = false;
+  let CRAFT_ANCHOR = null; // { key, top, at }: 방금 누른 줄 (다시 그린 뒤에도 그 줄이 화면에서 같은 자리에 있게)
   function renderCraft() {
     const dlg = $('craft-dlg');
     if (CRAFT_COMPOSING) { CRAFT_PENDING = true; return; }
@@ -8371,7 +8372,14 @@
     const focus = ae && dlg.contains(ae) && ae.dataset?.keep ? { k: ae.dataset.keep, s: ae.selectionStart, e: ae.selectionEnd } : null;
     const drafts = {};
     for (const el of dlg.querySelectorAll('[data-keep]')) drafts[el.dataset.keep] = el.value;
+    const anc = CRAFT_ANCHOR && Date.now() - CRAFT_ANCHOR.at < 3000 ? CRAFT_ANCHOR : null;
+    const ancTop = anc ? dlg.querySelector(`[data-anchor="${anc.key}"]`)?.getBoundingClientRect().top ?? anc.top : null;
     keepScroll(dlg, drawCraft);
+    if (anc && ancTop != null) { // 누른 줄이 화면에서 같은 자리에 머물게 (위에 '방금 빚은 것'이 생겨도)
+      const now = dlg.querySelector(`[data-anchor="${anc.key}"]`);
+      const sc = [dlg.querySelector('.body'), dlg, document.scrollingElement].find((e) => e && e.scrollHeight > e.clientHeight + 1);
+      if (now && sc) sc.scrollTop += now.getBoundingClientRect().top - ancTop;
+    }
     for (const [k, v] of Object.entries(drafts)) { const el = dlg.querySelector(`[data-keep="${k}"]`); if (el && el.value !== v) el.value = v; }
     if (focus) { const el = dlg.querySelector(`[data-keep="${focus.k}"]`); if (el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(focus.s, focus.e); } catch {} } }
   }
@@ -8573,7 +8581,7 @@
   // 실험: 가진 재료 중 2~3가지를 골라 화로에 넣어 봄. 위는 화로 세 칸(누르면 뺌), 아래는 분류별 재료 칸(누르면 넣음)
   // 자유 제작: 방금 빚은 것(이름 짓기·남기기), 내 제작법, 실험 노트, 창작 도감
   function drawFreeParts(box, el, part = 'all') { // part: 'top' 방금 빚은 것만 · 'bottom' 내 제작법·노트·도감만
-    if (!FREE_DATA && !FREE_LOADING) { FREE_LOADING = true; socket.emit('craft:free:get', {}, (res) => { FREE_LOADING = false; if (!res?.error) { FREE_DATA = res; if ($('craft-dlg').open && craftMode === 'exp') renderCraft(); } }); }
+    if ((!FREE_DATA || FREE_STALE) && !FREE_LOADING) { FREE_LOADING = true; FREE_STALE = false; socket.emit('craft:free:get', {}, (res) => { FREE_LOADING = false; if (!res?.error) { FREE_DATA = res; if ($('craft-dlg').open && craftMode === 'exp') renderCraft(); } }); }
     const Q = { good: '좋음', great: '빼어남' };
     // 방금 빚은 것
     const last = part !== 'bottom' && FREE_LAST?.id && S.items[FREE_LAST.id];
@@ -8605,12 +8613,12 @@
     const mh = el('h3', 'inv-h', '내 제작법'); mh.appendChild(el('span', 'inv-hn', `${mine.length}/${FREE_DATA.mineMax}`)); box.appendChild(mh);
     if (!mine.length) box.appendChild(el('p', 'note', '마음에 드는 물건을 빚으면 그 조합을 여기에 남겨 두고 다시 빚을 수 있다.'));
     mine.forEach((m, i) => {
-      const r = el('div', 'fx-row');
+      const r = el('div', 'fx-row'); r.dataset.anchor = `mine-${i}`;
       const t = el('div', 'fx-t'); t.appendChild(el('b', '', `${m.id && S.items[m.id] ? S.items[m.id].name : '이름 없는 조합'}${m.gift ? ' (선물)' : ''}`));
       const mi = m.id && S.items[m.id] && !S.items[m.id].gone ? S.items[m.id] : null; // 남길 때 빚은 물건의 효과 (다시 빚으면 운에 따라 조금 달라질 수 있음)
       if (mi) { const ef = effectText(mi); if (ef) t.appendChild(el('span', 'fx-ef', ef)); } t.appendChild(el('small', '', m.mats.map((x) => `${nm(x)} ${invCache[x] || 0}`).join(' · ')));
       const go = el('button', 'btn primary', '다시 빚기'); go.type = 'button'; go.disabled = m.mats.some((x) => !(invCache[x] > 0)) || !!S.me.exp;
-      go.addEventListener('click', () => itemAct('craft:mine', { idx: i }));
+      go.addEventListener('click', () => { CRAFT_ANCHOR = { key: `mine-${i}`, top: r.getBoundingClientRect().top, at: Date.now() }; itemAct('craft:mine', { idx: i }); });
       const del = el('button', 'btn', '지우기'); del.type = 'button';
       del.addEventListener('click', () => { if (confirm('이 제작법을 지울까?')) socket.emit('craft:forget', { idx: i }, (res) => { if (res.error) return toast(res.error); FREE_DATA = { ...FREE_DATA, mine: res.mine }; renderCraft(); }); });
       r.append(t, go, del); box.appendChild(r);
