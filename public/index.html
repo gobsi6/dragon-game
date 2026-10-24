@@ -11704,9 +11704,45 @@
     socket.emit('slate:get', { id: SL.cur }, (res) => {
       if (res.error) { toast(res.error); SL.page = 'list'; return loadSlate(); }
       SL.post = res.post; SL.comments = res.comments; SL.gm = !!res.gm;
+      if (SL.composing) { SL.pending = true; return; } // 한글을 조합하는 도중이면 조합이 끝난 뒤에 다시 그림
+      const keep = slCapture();
       drawSlate();
+      slRestore(keep);
     });
   }
+  // 글 보기에서 다시 그려도 적던 답이 지워지지 않게: 답·답글·고치던 답의 글, 커서, 보던 자리를 옮김
+  function slCapture() {
+    const box = $('slate-body');
+    if (SL.page !== 'post' || !box) return null;
+    const st = { post: SL.cur };
+    const main = box.querySelector('.sl-cin:not(.sl-rin) input');
+    if (main) st.main = main.value;
+    const rin = box.querySelector('.sl-rin');
+    if (rin) st.reply = { for: rin.dataset.for, v: rin.querySelector('input')?.value || '' };
+    const ed = box.querySelector('.sl-cedit');
+    if (ed) st.edit = { cid: ed.dataset.cid, v: ed.querySelector('input')?.value || '' };
+    const ae = document.activeElement;
+    if (ae && box.contains(ae) && ae.tagName === 'INPUT') st.focus = { where: ae.closest('.sl-rin') ? 'reply' : ae.closest('.sl-cedit') ? 'edit' : 'main', s: ae.selectionStart, e: ae.selectionEnd };
+    const dlg = $('slate-dlg');
+    st.scrolls = [dlg, dlg.querySelector('.body'), box].filter(Boolean).map((e) => [e, e.scrollTop]);
+    return st;
+  }
+  function slRestore(st) {
+    const box = $('slate-body');
+    if (!st || st.post !== SL.cur || SL.page !== 'post' || !box) return;
+    const main = box.querySelector('.sl-cin:not(.sl-rin) input');
+    if (main && st.main) main.value = st.main;
+    if (st.edit) { box.querySelector(`.sl-c[data-cid="${st.edit.cid}"] .sl-ic.edit`)?.click(); const i = box.querySelector('.sl-cedit input'); if (i) i.value = st.edit.v; }
+    if (st.reply) { box.querySelector(`.sl-c[data-cid="${st.reply.for}"] .sl-ic.reply`)?.click(); const i = box.querySelector('.sl-rin input'); if (i) i.value = st.reply.v; }
+    for (const [e, t] of st.scrolls || []) e.scrollTop = t;
+    const f = st.focus;
+    const el = f && (f.where === 'reply' ? box.querySelector('.sl-rin input') : f.where === 'edit' ? box.querySelector('.sl-cedit input') : box.querySelector('.sl-cin:not(.sl-rin) input'));
+    if (el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(f.s, f.e); } catch {} }
+    else if (document.activeElement && box.contains(document.activeElement)) document.activeElement.blur(); // 입력칸을 다시 열면서 옮겨 간 초점은 돌려놓음
+    for (const [e, t] of st.scrolls || []) e.scrollTop = t;
+  }
+  $('slate-dlg').addEventListener('compositionstart', () => { SL.composing = true; });
+  $('slate-dlg').addEventListener('compositionend', () => { SL.composing = false; if (SL.pending && SL.page === 'post') { SL.pending = false; setTimeout(() => { const keep = slCapture(); drawSlate(); slRestore(keep); }, 0); } });
   function slAct(event, payload, then) {
     socket.emit(event, payload, (res) => {
       if (res.error) { SFX.play('error'); return toast(res.error); }
@@ -11782,11 +11818,11 @@
       const ic = slEl('div', 'sl-own');
       if (c.mine) ic.appendChild(slIcon('edit', '답 고치기', () => {
         // 그 자리에서 고침: 글줄을 입력칸으로 바꿈 (Enter 저장, Esc 그만두기)
-        const f = slEl('div', 'sl-cedit');
+        const f = slEl('div', 'sl-cedit'); f.dataset.cid = String(c.id);
         const i = slEl('input', 'input'); i.maxLength = SL.rules.comment; i.value = c.text;
         const ok = slEl('button', 'btn primary', '저장'); ok.type = 'button';
         const no = slEl('button', 'btn', '취소'); no.type = 'button';
-        const save = () => { const v = i.value.trim(); if (!v) return toast('남길 말을 적자.'); ok.disabled = true; slAct('slate:recomment', { id: c.id, text: v }, () => loadSlatePost()); setTimeout(() => { ok.disabled = false; }, 800); };
+        const save = () => { const v = i.value.trim(); if (!v) return toast('남길 말을 적자.'); ok.disabled = true; slAct('slate:recomment', { id: c.id, text: v }, () => { f.remove(); loadSlatePost(); }); setTimeout(() => { ok.disabled = false; }, 800); };
         ok.addEventListener('click', save);
         no.addEventListener('click', () => f.replaceWith(body));
         i.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) save(); if (e.key === 'Escape') { e.stopPropagation(); f.replaceWith(body); } });
@@ -11804,7 +11840,7 @@
         if (isReply) i2.value = `@${c.who.name} `;
         const ok = slEl('button', 'btn primary', '남기기'); ok.type = 'button';
         const no = slEl('button', 'btn', '취소'); no.type = 'button';
-        const send2 = () => { const v = i2.value.trim(); if (!v || v === `@${c.who.name}`) return toast('남길 말을 적자.'); ok.disabled = true; slAct('slate:comment', { id: p.id, text: v, parent: c.id }, () => loadSlatePost()); setTimeout(() => { ok.disabled = false; }, 800); };
+        const send2 = () => { const v = i2.value.trim(); if (!v || v === `@${c.who.name}`) return toast('남길 말을 적자.'); ok.disabled = true; slAct('slate:comment', { id: p.id, text: v, parent: c.id }, () => { f2.remove(); loadSlatePost(); }); setTimeout(() => { ok.disabled = false; }, 800); };
         ok.addEventListener('click', send2);
         no.addEventListener('click', () => f2.remove());
         i2.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) send2(); if (e.key === 'Escape') { e.stopPropagation(); f2.remove(); } });
@@ -11817,7 +11853,7 @@
       });
       ic.prepend(rb);
       if (!h.contains(ic)) h.appendChild(ic);
-      r.dataset.top = String(isReply ? c.parent : c.id);
+      r.dataset.top = String(isReply ? c.parent : c.id); r.dataset.cid = String(c.id);
       r.append(av, h, body);
       cs.appendChild(r);
     }
@@ -11825,7 +11861,7 @@
     const f = slEl('div', 'sl-cin');
     const i = slEl('input', 'input'); i.maxLength = SL.rules.comment; i.placeholder = `짧은 답 남기기 (${SL.rules.comment}자)`;
     const go = slEl('button', 'btn primary', '남기기'); go.type = 'button';
-    const send = () => { const v = i.value.trim(); if (!v) return; go.disabled = true; slAct('slate:comment', { id: p.id, text: v }, () => loadSlatePost()); setTimeout(() => { go.disabled = false; }, 800); };
+    const send = () => { const v = i.value.trim(); if (!v) return; go.disabled = true; slAct('slate:comment', { id: p.id, text: v }, () => { i.value = ''; loadSlatePost(); }); setTimeout(() => { go.disabled = false; }, 800); };
     go.addEventListener('click', send);
     i.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) send(); });
     f.append(i, go);
