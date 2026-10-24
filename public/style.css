@@ -3183,3 +3183,96 @@ button.rm-step { cursor: pointer; }
 .rm-pl { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11.5px; color: var(--muted); margin-top: 6px; }
 .rm-pl span { display: inline-flex; align-items: center; gap: 5px; }
 .rm-pl i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid #fff; box-shadow: 0 0 0 1px var(--line-soft); }
+
+/* ══ 폰 화면 개선 ══════════════════════════════════════════ */
+/* 1. 행동 단추: 대륙 화면에서는 아래 탭 줄 바로 위에 늘 붙어 있음 (다른 탭을 열면 원래 자리로) */
+.gear-sum, .wx .fold-t { display: none; }
+@media (max-width: 860px) {
+  .center:not(.paneled) > .region-card:not([hidden]) #actions {
+    position: fixed; z-index: 14; left: 0; right: 0; bottom: var(--dock-h, 56px);
+    display: flex; flex-wrap: nowrap; gap: 4px; padding: 6px 8px; overflow-x: auto; scrollbar-width: none;
+    align-items: stretch; background: rgba(250, 250, 249, .97); border-top: 1px solid var(--line-in); box-shadow: 0 -4px 14px rgba(31, 35, 38, .08);
+  }
+  .center:not(.paneled) > .region-card:not([hidden]) #actions::-webkit-scrollbar { display: none; }
+  .center:not(.paneled) > .region-card { animation: none; } /* 돌아올 때의 움직임(transform)이 남아 있으면 고정 줄이 화면이 아니라 이 칸에 붙음 */
+  /* 단추가 몇 개든(해안·왕도처럼 시장·위협·낚시가 붙어도) 한 줄에 다 들어가게: 아이콘 / 이름 / 드는 것 세 줄로 좁게 */
+  .center:not(.paneled) > .region-card:not([hidden]) #actions .btn {
+    flex: 1 1 0; min-width: 0; min-height: 56px; padding: 6px 1px 5px; display: flex; flex-wrap: wrap; justify-content: center; align-content: center; align-items: baseline; gap: 4px 2px;
+    font-size: 12.5px; line-height: 16px; white-space: nowrap;
+  } /* 둘째 줄에 이름과 드는 행동력을 나란히: 모든 단추가 아이콘·이름 두 줄이라 가운데가 맞음 */
+  .center:not(.paneled) > .region-card:not([hidden]) #actions .btn[hidden] { display: none; }
+  .center:not(.paneled) > .region-card:not([hidden]) #actions .btn svg { flex: 0 0 100%; width: 100%; height: 17px; }
+  .center:not(.paneled) > .region-card:not([hidden]) #actions .btn .cost { margin: 0; padding: 0 2px; font-size: 10.5px; line-height: 15px; border-radius: 2px; }
+  .center:not(.paneled) > .region-card:not([hidden]) #fish-open .cost { display: none; } /* '미끼'까지는 폭이 모자람 */
+  .center:not(.paneled) > .region-card:not([hidden]) #actions .btn .w2 { display: none; } /* '위협하기'→'위협', '원정 보내기'→'원정' */
+  .center:not(.paneled) > .region-card:not([hidden]) #actions .note { display: none; }
+  body:has(.center:not(.paneled) > .region-card:not([hidden]) #actions) .chat-fab { bottom: calc(var(--dock-h, 56px) + 69px + 14px); } /* 행동 줄(69px) 위로 띄워서, 테두리가 줄에 닿지 않게 */
+  body:has(.center:not(.paneled) > .region-card:not([hidden]) #actions) .main { padding-bottom: 140px; }
+  /* 4. 아래 탭으로 연 화면: '닫기'와 아래쪽 '이곳의 이야기'는 대륙 화면에만 (이야기 창 버튼은 그대로) */
+  .dlg.as-panel .row:has(> .btn[id$="-close"]:only-child) { display: none; }
+  .main:has(.center.paneled) .side { padding: 0; border: 0; box-shadow: none; background: none; min-height: 0; }
+  .main:has(.center.paneled) .side > .orn-h, .main:has(.center.paneled) .side > .here, .main:has(.center.paneled) .side > .c { display: none; }
+  /* 폰에서는 이야기 창이 이 칸 아래에 붙지 않으니, 그 사이를 가르던 아래 여백과 선을 뺌 */
+  .side .here { padding-bottom: 8px; border-bottom: 0; }
+  /* 7. 이야기 창 버튼: 조금 작게 */
+  .chat-fab { width: 44px; height: 44px; }
+}
+/* 2. 머리줄 한 줄: 행동력·금화를 첫 줄로 (내려 보면 접히는 것은 그대로) */
+@media (max-width: 520px) {
+  header.top .in { display: flex; flex-wrap: nowrap; align-items: center; gap: 4px; padding: 6px 8px; }
+  .top .brand { flex: none; gap: 0; }
+  .top .brand > div { display: none; }
+  .top .chip { flex: none; min-height: 32px; padding: 0 7px 0 6px; gap: 4px; font-size: 13.5px; }
+  .top .chip svg { width: 15px; height: 15px; }
+  .top .chip .next { display: none; }
+  .top .pf-open { margin-left: auto; padding: 0 6px; gap: 5px; }
+  .top .pf-mini { width: 30px; }
+  .top .iconbtn { width: 34px; height: 36px; flex: none; }
+}
+@media (max-width: 370px) { .top .brand { display: none; } .top .pf-open { margin-left: auto; } }
+/* 3. 날씨·축제 카드: 폰에서는 한 줄로 접어 두고 누르면 펼침 */
+@media (max-width: 520px) {
+  .wx.foldable { cursor: pointer; position: relative; padding-right: 34px; }
+  .wx .fold-t { display: grid; place-items: center; position: absolute; top: 6px; right: 4px; width: 28px; height: 28px; padding: 0; border: 0; background: none; color: var(--muted); }
+  .wx .fold-t svg { width: 14px; height: 14px; transition: transform .2s; }
+  .wx .fold-t[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .wx.folded { display: flex; align-items: center; gap: 8px; padding-top: 8px; padding-bottom: 8px; }
+  .wx.folded .ic, .wx.folded .nx, .wx.folded .fl, .wx.folded .nm-row { display: none; }
+  .wx.folded .hd { flex: none; }
+  .wx.folded .hd b { font-size: 14px; white-space: nowrap; }
+  .wx.folded .hd small { display: none; }
+  .wx.folded .fx { flex: 1; min-width: 0; flex-wrap: nowrap; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
+  .wx.fest.folded .hd { flex: 1; min-width: 0; }
+  .wx.fest.folded .hd small { display: block; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wx.fest.folded .hd { flex-wrap: nowrap; }
+  .wx.folded .fold-t { top: 50%; transform: translateY(-50%); }
+}
+/* 5. 소지품: 착용 장신구 여섯 칸을 한 덩어리 요약으로 (누르면 칸이 펼쳐짐) */
+@media (max-width: 520px) {
+  #inv-dlg .body > h3:first-child { display: none; }
+  .gear-sum { display: block; width: 100%; margin: 0 0 6px; padding: 9px 11px; text-align: left; border: 1px solid var(--line-in); border-radius: 3px; background: var(--surface-2); font: inherit; color: var(--ink); cursor: pointer; }
+  .gear-sum .h { display: flex; align-items: center; gap: 6px; font: 700 14px/1.4 var(--serif); }
+  .gear-sum .h small { font: 600 12px var(--sans); color: var(--muted); }
+  .gear-sum .h svg { margin-left: auto; width: 14px; height: 14px; color: var(--muted); transition: transform .2s; }
+  .gear-sum[aria-expanded="true"] .h svg { transform: rotate(180deg); }
+  .gear-sum .g { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-top: 3px; font-size: 12.5px; line-height: 1.55; color: var(--ink-2); }
+  .gear-sum .g em { font-style: normal; color: var(--muted); margin-right: 4px; }
+  .inv-gear.folded { display: none; }
+}
+/* 6. 작은 글씨: 이곳의 장소 지도 이름표와 사냥감 꼬리표를 조금 크게. 대륙 지도는 옆으로 밀어 볼 수 있게 크게 */
+@media (max-width: 520px) {
+  .pn .lb b { font-size: 12.5px; }
+  .pn .lb small { font-size: 11px; }
+  .pl-map.small .pn .lb b { font-size: 12px; }
+  .pl-map.small .pn .lb small { font-size: 10.5px; }
+  .pl-mon .ch { font-size: 12px; line-height: 20px; }
+  .map-scroll { overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
+  .map-scroll::-webkit-scrollbar { display: none; }
+  .map-scroll > #map-svg { width: 135%; max-width: none; }
+  .map .routes .hint::after { content: ' 지도는 옆으로 밀어 볼 수 있다.'; }
+}
+@media (max-width: 380px) { /* 아주 좁은 폰: 이름과 행동력이 한 줄에 들어가게 조금 작게 */
+  .center:not(.paneled) > .region-card:not([hidden]) #actions { gap: 3px; padding-left: 6px; padding-right: 6px; }
+  .center:not(.paneled) > .region-card:not([hidden]) #actions .btn { font-size: 12px; column-gap: 1px; padding-left: 0; padding-right: 0; }
+  .center:not(.paneled) > .region-card:not([hidden]) #actions .btn .cost { font-size: 10px; padding: 0 1px; }
+}

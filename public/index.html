@@ -213,10 +213,10 @@
           <button class="btn" type="button" data-act="gather"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3A6B50" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19c0-8 6-13 14-14-1 8-6 14-14 14z"/><path d="M5 19l7-7"/></svg>채집<span class="cost">−1</span></button>
           <button class="btn" type="button" data-act="hunt"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3C5A73" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19L19 5"/><path d="M14 5h5v5"/><path d="M4 15l5 5"/></svg>사냥<span class="cost">−2</span></button>
           <button class="btn" type="button" id="market-open" hidden><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7A5A16" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l2-5h14l2 5"/><path d="M4 9v11h16V9"/><path d="M3 9h18"/><path d="M10 20v-6h4v6"/></svg>시장</button>
-          <button class="btn" type="button" id="intimidate" hidden><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#A63E4B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17l-1-10 5 4 4-6 4 6 5-4-1 10z"/><path d="M8 21l4-3 4 3"/></svg>위협하기<span class="cost">−2</span></button>
+          <button class="btn" type="button" id="intimidate" hidden><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#A63E4B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17l-1-10 5 4 4-6 4 6 5-4-1 10z"/><path d="M8 21l4-3 4 3"/></svg>위협<span class="w2">하기</span><span class="cost">−2</span></button>
           <button class="btn" type="button" id="fish-open" hidden><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2F6F86" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12c3-4 8-5 12-3l4-3v12l-4-3c-4 2-9 1-12-3z"/><circle cx="14.5" cy="11" r=".6" fill="#2F6F86"/></svg>낚시<span class="cost">미끼</span></button>
           <button class="btn" type="button" id="nest-open"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7E8389" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-6 8 6"/><path d="M6 10v9h12v-9"/></svg>둥지</button>
-          <button class="btn" type="button" id="exp-open"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2A4256" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/><path d="M9 2h6"/></svg>원정 보내기</button>
+          <button class="btn" type="button" id="exp-open"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2A4256" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/><path d="M9 2h6"/></svg>원정<span class="w2"> 보내기</span></button>
           <span class="note">숫자는 소모하는 행동력이다.</span>
         </div>
       </section>
@@ -2556,6 +2556,24 @@
       fetchInv(() => { if ($('inv-dlg').open) keepScroll($('inv-dlg'), renderInv); if ($('craft-dlg').open) keepScroll($('craft-dlg'), renderCraft); });
     });
   }
+  let gearSumOpen = false;
+  function renderGearSum() {
+    const gs = $('gear-sum'), g = $('inv-gear');
+    if (!gs || !S.me) return;
+    const worn = S.slots.filter((sl) => S.me.equip?.[sl.key] && S.items[S.me.equip[sl.key]]);
+    gs.innerHTML = `<span class="h">착용 중인 장신구 <small></small><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span><span class="g"></span>`;
+    gs.querySelector('small').textContent = `${worn.length}/${S.slots.length}`;
+    const gl = gs.querySelector('.g');
+    for (const sl of S.slots) {
+      const id = S.me.equip?.[sl.key];
+      const sp = document.createElement('span'); const em = document.createElement('em');
+      em.textContent = sl.name; sp.append(em, id && S.items[id] ? S.items[id].name : '―');
+      gl.appendChild(sp);
+    }
+    gs.setAttribute('aria-expanded', String(gearSumOpen));
+    gs.setAttribute('aria-label', `착용 중인 장신구 ${worn.length}개. ${gearSumOpen ? '접기' : '눌러서 칸 펼치기'}`);
+    g.classList.toggle('folded', !gearSumOpen);
+  }
   function renderInv() {
     const g = $('inv-gear');
     g.replaceChildren();
@@ -2580,6 +2598,14 @@
       }
       g.appendChild(d);
     }
+    // 폰: 여섯 칸 대신 한 덩어리 요약 (누르면 칸이 펼쳐짐)
+    let gs = $('gear-sum');
+    if (!gs) {
+      gs = document.createElement('button'); gs.type = 'button'; gs.id = 'gear-sum'; gs.className = 'gear-sum';
+      gs.addEventListener('click', () => { gearSumOpen = !gearSumOpen; renderGearSum(); });
+      g.before(gs);
+    }
+    renderGearSum();
 
     const order = { rare: 0, uncommon: 1, common: 2 };
     const CATS = ['treasure', 'equip', 'use', 'buff', 'gift', 'meal', 'fish', 'trophy', 'mat'];
@@ -5930,6 +5956,19 @@
     if (text != null) e.textContent = text;
     return e;
   }
+  // 폰: 대륙 지도를 크게 그리고 옆으로 밀어 보게 함. 지역이 바뀌면 내가 있는 곳이 가운데 오게
+  const mapSvg = $('map-svg');
+  if (mapSvg && !mapSvg.parentElement.classList.contains('map-scroll')) {
+    const wrap = document.createElement('div'); wrap.className = 'map-scroll';
+    mapSvg.before(wrap); wrap.appendChild(mapSvg);
+  }
+  let mapCentered = null;
+  function mapToHere(r) {
+    const wrap = mapSvg?.parentElement;
+    if (!wrap || !r || wrap.scrollWidth <= wrap.clientWidth + 2 || mapCentered === r.id) return;
+    mapCentered = r.id;
+    requestAnimationFrame(() => { const x = (r.gate && realmOf(r.id) !== realmOf(S.region) ? r.gate.x : r.x) / 1000 * wrap.scrollWidth; wrap.scrollLeft = Math.max(0, x - wrap.clientWidth / 2); });
+  }
   function renderOverlay() {
     const g = $('overlay');
     g.replaceChildren();
@@ -6047,6 +6086,7 @@
       }
       g.appendChild(node);
     }
+    mapToHere(here);
   }
   $('overlay').addEventListener('click', (e) => {
     const n = e.target.closest('.node.open');
@@ -8999,6 +9039,28 @@
     nx.append(b(`${se.name}`), ` · ${SE?.prose ? `${SE.prose} ` : ''}${untilText(se.until)} 뒤 ${nn}${josa(nn, '이', '가')} 온다.`);
     nx.appendChild(document.createElement('br'));
     nx.append(`${untilText(w.until)} 뒤 `, b(S.weathers[w.next]?.name || ''), `${ro(S.weathers[w.next]?.name || '')} 바뀔 것 같다.`);
+    applyWxFold(box);
+  }
+  // 폰: 날씨·축제 카드는 한 줄로 접어 두고 누르면 펼침 (축제에서 춤추기·야시장처럼 누를 것이 있으면 늘 펼침)
+  const wxOpen = {};
+  const phoneMq = window.matchMedia('(max-width: 520px)');
+  function applyWxFold(box) {
+    if (!box || box.hidden) return;
+    const can = !box.querySelector('.fl, .fk, .nm-row .btn');
+    box.classList.toggle('foldable', can);
+    box.classList.toggle('folded', can && !wxOpen[box.id]);
+    let t = box.querySelector(':scope > .fold-t');
+    if (can && !t) { t = document.createElement('button'); t.type = 'button'; t.className = 'fold-t'; t.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>'; box.appendChild(t); }
+    if (!can) t?.remove();
+    if (t) { t.setAttribute('aria-expanded', String(!!wxOpen[box.id])); t.setAttribute('aria-label', wxOpen[box.id] ? '접기' : '자세히 보기'); }
+  }
+  for (const id of ['wx', 'fest']) {
+    $(id).addEventListener('click', (e) => {
+      const box = $(id);
+      if (!phoneMq.matches || !box.classList.contains('foldable') || (e.target.closest('button, a') && !e.target.closest('.fold-t'))) return;
+      wxOpen[id] = !wxOpen[id];
+      applyWxFold(box);
+    });
   }
   function onWeather(v) {
     S.wx = v;
@@ -9137,6 +9199,11 @@
     }
   }
   setInterval(() => { if (S.me?.nightMarket) renderNmRow(); }, 60000); // 남은 시간 글씨
+  { // 축제 카드도 다시 그릴 때마다 폰 접기 상태를 맞춤
+    const rf = renderFest, rn = renderNmRow;
+    renderFest = (f) => { rf(f); applyWxFold($('fest')); };
+    renderNmRow = () => { rn(); applyWxFold($('fest')); };
+  }
   let nmTab = 'npc', nmGreet = '', nmQ = '', nmCat = 'all';
   let NM_LAST = null, nmStallKey = null; // 마지막으로 받은 야시장 정보, 열어 둔 노점
   const nmEmpty = (text) => { const e = document.createElement('div'); e.className = 'mk-empty'; e.textContent = text; return e; };
