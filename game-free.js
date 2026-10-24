@@ -105,8 +105,8 @@ function resolve(ids, wis, greatChance, rnd = Math.random) {
   // 능력치 합의 끝: 보통 7, 멸망한 대륙 재료가 있으면 8, 공허의 실이면 9 (정식 장신구도 8점부터는 그 땅의 재료가 듦)
   pts = Math.min(pts, FREE.plainTopSum + ruin);
   if (aura) pts = Math.max(1, pts - 1); // 기운에 점수 1을 씀
-  // 나누기: 가장 센 효능에 6할, 나머지는 두 번째 효능에. 한 능력치는 상한(보통 5 · 운이 좋으면 6)을 넘지 못함
-  const cap = quality !== 'normal' || mw ? FREE.statCapLucky : FREE.statCap;
+  // 나누기: 가장 센 효능에 6할, 나머지는 두 번째 효능에. 한 능력치는 상한(보통 5 · 운이 좋으면 6, 공허의 실이면 7)을 넘지 못함
+  const cap = quality !== 'normal' || mw ? FREE.statCapLucky[Math.min(ruin, FREE.statCapLucky.length - 1)] : FREE.statCap;
   const bonus = {};
   let a = second && pts > 1 ? Math.ceil(pts * 0.6) : pts;
   a = Math.min(cap, a);
