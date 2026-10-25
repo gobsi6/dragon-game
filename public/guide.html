@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>길잡이 · 용의 대륙</title>
+<!-- 처음 온 드래곤을 위한 안내. 게임 화면(index.html)과 따로 떨어진 페이지라 서버를 다시 켜지 않아도 고쳐 올리면 바로 바뀐다.
+     숫자는 game-data.js를 바탕으로 적었다. 규칙 숫자를 바꾸면 여기 적힌 숫자도 함께 맞출 것 -->
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700;900&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<style>
+:root {
+  --surface: #F7F7F5; --surface-2: #FCFCFB;
+  --ink: #1F2326; --ink-2: #4E5358; --muted: #5B6066;
+  --line: #9A9C98; --line-soft: #C4C6C2; --line-in: #DDDFDB; --orn: #7E8389;
+  --steel: #3C5A73; --steel-d: #2A4256; --steel-l: #9DB3C6; --forest: #3A6B50; --rose: #A63E4B;
+  --hp: linear-gradient(90deg, #8E3340, #CB5A66);
+  --en: linear-gradient(90deg, #2F6248, #5E9C7B);
+  --mind: linear-gradient(90deg, #4A3F78, #8E7FC4);
+  --serif: 'Noto Serif KR', 'AppleMyungjo', 'Batang', serif;
+  --sans: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: calc(env(safe-area-inset-top, 0px) + 16px); }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0; min-height: 100vh; color: var(--ink);
+  font: 15px/1.75 var(--sans); word-break: keep-all;
+  background-color: #DDE1E3;
+  background-image:
+    radial-gradient(ellipse 110% 60% at 50% 0%, #F7F8F8 0%, rgba(247, 248, 248, 0) 65%),
+    radial-gradient(ellipse 70% 50% at 100% 100%, rgba(148, 166, 184, .28) 0%, rgba(148, 166, 184, 0) 70%),
+    linear-gradient(180deg, #ECEEEE 0%, #E1E4E5 50%, #D2D8DC 100%);
+  background-attachment: fixed;
+  padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+}
+a { color: var(--steel); text-underline-offset: 3px; }
+a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--steel); outline-offset: 2px; }
+b, strong { font-weight: 600; }
+
+/* 장식 액자: 게임 화면과 같은 모양 */
+.frame { position: relative; background: var(--surface); border: 1px solid var(--line); box-shadow: inset 0 0 0 4px var(--surface), inset 0 0 0 5px var(--line-in); }
+.frame > .c { position: absolute; width: 8px; height: 8px; background: var(--orn); border: 1px solid var(--surface); transform: rotate(45deg); }
+.frame > .tl { top: -5px; left: -5px; } .frame > .tr { top: -5px; right: -5px; }
+.frame > .bl { bottom: -5px; left: -5px; } .frame > .br { bottom: -5px; right: -5px; }
+.orn-h { display: flex; align-items: center; gap: 10px; }
+.orn-h::before, .orn-h::after { content: ""; flex: 1; height: 1px; background: var(--line-soft); }
+.orn-h > * { margin: 0; font: 700 14px/1.4 var(--serif); color: var(--steel-d); display: flex; align-items: center; gap: 10px; }
+.orn-h > *::before, .orn-h > *::after { content: ""; width: 5px; height: 5px; background: var(--orn); transform: rotate(45deg); }
+
+/* ── 머리 ── */
+.top { max-width: 1120px; margin: 0 auto; padding: 22px 24px 0; display: flex; align-items: center; gap: 12px; }
+.top .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); }
+.top .brand span { font: 700 17px/1 var(--serif); letter-spacing: .02em; }
+.top .back { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border: 1px solid var(--line-soft); border-radius: 3px; background: var(--surface); color: var(--ink-2); font-size: 13px; text-decoration: none; }
+.top .back:hover { border-color: var(--steel); color: var(--steel-d); }
+
+.hero { max-width: 1120px; margin: 0 auto; padding: 40px 24px 34px; }
+.hero h1 { margin: 0; font: 900 clamp(34px, 6vw, 54px)/1.15 var(--serif); color: var(--steel-d); letter-spacing: -.01em; }
+.hero p { margin: 14px 0 0; max-width: 34em; font: 500 16.5px/1.85 var(--serif); color: var(--ink-2); }
+
+/* ── 몸통: 왼쪽 차례 + 오른쪽 글 ── */
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px 80px; display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 36px; align-items: start; }
+.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); padding: 18px 16px 16px; }
+.toc ol { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; }
+.toc a { display: flex; gap: 10px; padding: 6px 8px; border-radius: 2px; color: var(--ink-2); text-decoration: none; font-size: 14px; line-height: 1.45; }
+.toc a span { flex: none; width: 16px; color: var(--orn); font: 600 12px/1.7 var(--sans); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: #ECEEEC; color: var(--ink); }
+.toc a.on { background: #E6ECF1; color: var(--steel-d); font-weight: 600; }
+.toc a.on span { color: var(--steel); }
+.toc-m { display: none; }
+
+.doc { min-width: 0; padding: 34px clamp(20px, 4vw, 48px) 44px; }
+.doc > section { padding-top: 8px; }
+.doc > section + section { margin-top: 52px; padding-top: 44px; border-top: 3px double var(--line-soft); }
+.doc h2 { margin: 0 0 6px; font: 700 25px/1.35 var(--serif); color: var(--ink); }
+.doc h2 small { display: block; margin-bottom: 4px; font: 600 12.5px/1.4 var(--sans); color: var(--orn); letter-spacing: .04em; }
+.doc h3 { margin: 30px 0 8px; font: 700 17px/1.45 var(--serif); color: var(--steel-d); }
+.doc p { margin: 10px 0 0; max-width: 40em; }
+.doc .lead { color: var(--ink-2); }
+.note { font-size: 13.5px; color: var(--muted); }
+.key { display: inline-block; padding: 0 6px; border: 1px solid var(--line-soft); border-radius: 2px; background: var(--surface-2); font-size: 13px; line-height: 20px; color: var(--ink-2); white-space: nowrap; }
+
+/* 첫날 순서 */
+.steps { list-style: none; margin: 20px 0 0; padding: 0; counter-reset: s; max-width: 42em; }
+.steps li { counter-increment: s; position: relative; padding: 0 0 20px 50px; }
+.steps li::before { content: counter(s); position: absolute; left: 0; top: 1px; width: 30px; height: 30px; display: grid; place-items: center; background: var(--steel); color: #F4F7FA; font: 700 14px/1 var(--serif); border-radius: 2px; box-shadow: inset 0 0 0 1px var(--steel-l); }
+.steps li::after { content: ""; position: absolute; left: 14.5px; top: 37px; bottom: 6px; width: 1px; background: var(--line-soft); }
+.steps li:last-child { padding-bottom: 0; }
+.steps li:last-child::after { display: none; }
+.steps b { display: block; font: 700 16px/1.5 var(--serif); }
+.steps p { margin: 3px 0 0; color: var(--ink-2); font-size: 14.5px; }
+
+/* 드래곤 기록 풀이: 본뜬 액자 + 번호 풀이 */
+.anat { margin-top: 22px; display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 32px; align-items: start; }
+.mock { padding: 18px 18px 20px 34px; user-select: none; }
+.mock .orn-h { margin-left: -16px; }
+.mock .orn-h { margin-bottom: 14px; }
+/* 실제 그림 칸(가로 264 × 세로 300, 위쪽 둥글기 140)과 같은 비율 */
+.m-por { position: relative; aspect-ratio: 264 / 300; border: 1px solid var(--orn); border-radius: 53% 53% 2px 2px / 46.7% 46.7% 2px 2px; box-shadow: inset 0 0 0 4px var(--surface), inset 0 0 0 5px #CDCFCB; background: radial-gradient(circle at 50% 42%, #FFFFFF 0%, #ECEDEA 55%, #DFE1DE 100%); display: grid; place-items: center; }
+.m-por svg { width: 74px; height: 74px; opacity: .55; }
+.m-tag { position: absolute; left: 50%; top: 20px; transform: translateX(-50%); padding: 2px 9px; background: rgba(31, 35, 38, .66); color: #F4F7FA; font: 600 11px/1.4 var(--sans); border-radius: 2px; white-space: nowrap; }
+.m-np { position: relative; margin: -30px 12px 0; padding: 8px 12px 9px; background: var(--surface); border: 1px solid var(--orn); box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px var(--line-in); text-align: center; }
+.m-np .n { font: 700 19px/1.25 var(--serif); }
+.m-np .s { display: flex; justify-content: center; align-items: center; gap: 7px; font-size: 12px; color: var(--ink-2); }
+.m-np .lv { padding: 0 6px; background: var(--steel); color: #F4F7FA; font-weight: 600; font-size: 11px; line-height: 18px; border-radius: 2px; }
+.m-np .ttl { display: block; font-size: 11px; color: var(--steel); }
+.m-xp { margin-top: 6px; }
+.m-xp i { display: block; height: 3px; border-radius: 2px; background: #E1E3E0; }
+.m-xp i b { display: block; width: 62%; height: 100%; border-radius: 2px; background: var(--orn); }
+.m-xp div { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.m-vit { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+.m-v div { display: flex; font-size: 12.5px; color: var(--ink-2); }
+.m-v div span { margin-left: auto; color: var(--ink); font-variant-numeric: tabular-nums; }
+.m-v div span em { font-style: normal; color: #6A7076; }
+.m-v i { display: block; margin-top: 4px; height: 6px; border-radius: 3px; background: #E1E3E0; box-shadow: inset 0 1px 1px rgba(31, 35, 38, .14); }
+.m-v i b { display: block; height: 100%; border-radius: 3px; }
+.m-at { margin-top: 14px; display: grid; grid-template-columns: repeat(5, 1fr); border-top: 3px double var(--line-soft); border-bottom: 3px double var(--line-soft); padding: 9px 0 7px; }
+.m-at div { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.m-at div + div { border-left: 1px solid var(--line-in); }
+.m-at b { font: 700 16px/1.2 var(--serif); }
+.m-at span { font-size: 11px; color: var(--muted); }
+.m-pts { margin-top: 10px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-2); }
+.m-pts span:last-child { margin-left: auto; padding: 3px 10px; background: var(--steel); color: #F4F7FA; border-radius: 2px; font-weight: 600; font-size: 11.5px; }
+/* 번호 표 (본뜬 액자 위) */
+.zone { position: relative; border-radius: 3px; transition: box-shadow .15s, background-color .15s; }
+.zone.lit { box-shadow: 0 0 0 2px var(--steel), 0 0 0 5px rgba(60, 90, 115, .16); background-color: rgba(230, 236, 241, .55); }
+.pin { position: absolute; z-index: 3; width: 20px; height: 20px; display: grid; place-items: center; background: var(--steel-d); color: #F4F7FA; font: 700 11px/1 var(--sans); border-radius: 50%; box-shadow: 0 0 0 2px var(--surface); pointer-events: none; }
+.zone.lit .pin { background: var(--steel); }
+/* 풀이 목록 */
+.legend { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.legend li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 2px 12px; padding: 11px 12px; border-radius: 3px; cursor: default; transition: background-color .15s; }
+.legend li + li { border-top: 1px solid var(--line-in); }
+.legend li.lit { background: #E6ECF1; }
+.legend .no { width: 22px; height: 22px; margin-top: 2px; display: grid; place-items: center; background: var(--steel-d); color: #F4F7FA; font: 700 12px/1 var(--sans); border-radius: 50%; }
+.legend b { font: 700 15px/1.6 var(--serif); }
+.legend p { grid-column: 2; margin: 0; font-size: 14px; line-height: 1.7; color: var(--ink-2); }
+
+/* 네 가지 기운 */
+.vit4 { margin-top: 20px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.vcard { padding: 16px 18px 15px; border: 1px solid var(--line-soft); border-radius: 3px; background: var(--surface-2); }
+.vcard h3 { margin: 0; display: flex; align-items: center; gap: 10px; font: 700 17px/1.4 var(--serif); color: var(--ink); }
+.vcard h3 i { flex: none; width: 34px; height: 6px; border-radius: 3px; }
+.vcard h3 i.ap { background: repeating-linear-gradient(90deg, var(--steel) 0 5px, transparent 5px 7px); height: 7px; }
+.vcard dl { margin: 10px 0 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 5px 12px; font-size: 14px; line-height: 1.65; }
+.vcard dt { color: var(--muted); font-size: 13px; padding-top: 1px; white-space: nowrap; }
+.vcard dd { margin: 0; color: var(--ink); }
+
+/* 다섯 능력치 */
+.stats5 { margin-top: 22px; display: flex; flex-direction: column; gap: 12px; }
+.st { display: grid; grid-template-columns: 112px minmax(0, 1fr); border: 1px solid var(--line-soft); border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.st .nm { padding: 16px 14px; background: #ECEFF1; border-right: 1px solid var(--line-in); display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+.st .nm b { font: 900 22px/1.2 var(--serif); color: var(--steel-d); }
+.st .nm small { font-size: 12px; color: var(--muted); line-height: 1.45; }
+.st .bd { padding: 13px 18px 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 22px; }
+.st .bd h4 { margin: 0; font: 600 12.5px/1.6 var(--sans); color: var(--orn); }
+.st .bd p { margin: 2px 0 0; font-size: 14px; line-height: 1.7; color: var(--ink); max-width: none; }
+.st .bd .one { grid-column: 1 / -1; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line-in); font-size: 13px; color: var(--muted); }
+
+.box { margin-top: 22px; padding: 16px 20px; border-left: 3px solid var(--steel-l); background: #EEF2F5; }
+.box p { margin: 0; max-width: none; font-size: 14.5px; }
+.box p + p { margin-top: 6px; }
+
+/* 종류별 타고난 능력치 */
+.tbl-wrap { margin-top: 16px; overflow-x: auto; border: 1px solid var(--line-soft); border-radius: 3px; background: var(--surface-2); }
+table.kinds { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 14px; }
+.kinds th, .kinds td { padding: 9px 10px; text-align: center; border-bottom: 1px solid var(--line-in); }
+.kinds thead th { font: 600 12.5px/1.4 var(--sans); color: var(--muted); background: #F0F2F1; border-bottom: 1px solid var(--line-soft); }
+.kinds tbody tr:last-child th, .kinds tbody tr:last-child td { border-bottom: 0; }
+.kinds tbody th { text-align: left; font-weight: 600; white-space: nowrap; }
+.kinds tbody th i { display: inline-block; width: 9px; height: 9px; margin-right: 8px; transform: rotate(45deg); vertical-align: 1px; }
+.kinds td.v { font: 500 15px/1 var(--serif); font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.kinds td.hi { color: var(--steel-d); font-weight: 900; background: #E6ECF1; }
+.kinds td.lo { color: #9A9C98; }
+.kinds td.br, .kinds td.home { text-align: left; font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+
+/* 성향 세 갈래 */
+.stance3 { margin-top: 20px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.sc { padding: 15px 16px; border: 1px solid var(--line-soft); border-top: 3px solid var(--c); border-radius: 3px; background: var(--surface-2); }
+.sc h3 { margin: 0; font: 700 18px/1.4 var(--serif); color: var(--c); }
+.sc p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+.sc ul { margin: 10px 0 0; padding: 0; list-style: none; font-size: 13.5px; line-height: 1.65; }
+.sc li { position: relative; padding-left: 16px; }
+.sc li + li { margin-top: 4px; }
+.sc li::before { position: absolute; left: 0; font-size: 11px; top: 2px; }
+.sc li.up::before { content: "▲"; color: var(--forest); }
+.sc li.dn::before { content: "▼"; color: var(--rose); }
+
+/* 쓰러졌을 때 세 갈래 */
+.fall3 { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; max-width: 42em; }
+.fall3 div { padding: 12px 16px; border: 1px solid var(--line-soft); border-radius: 3px; background: var(--surface-2); }
+.fall3 b { font: 700 15px/1.6 var(--serif); }
+.fall3 p { margin: 3px 0 0; font-size: 14px; color: var(--ink-2); }
+
+/* 메뉴 지도 */
+.menus { margin-top: 18px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; }
+.menus h3 { grid-column: 1 / -1; }
+.menus dl { margin: 0; display: contents; }
+.mi { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 0 12px; padding: 11px 0; border-bottom: 1px solid var(--line-in); }
+.mi svg { width: 22px; height: 22px; margin-top: 3px; color: var(--ink-2); }
+.mi dt { font: 700 15px/1.6 var(--serif); }
+.mi dd { grid-column: 2; margin: 0; font-size: 14px; color: var(--ink-2); line-height: 1.65; }
+
+/* 자주 묻는 것 */
+.faq { margin-top: 16px; max-width: 44em; }
+.faq details { border-bottom: 1px solid var(--line-in); }
+.faq details:first-child { border-top: 1px solid var(--line-in); }
+.faq summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 13px 4px; font: 700 15.5px/1.5 var(--serif); }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: ""; margin-left: auto; flex: none; width: 8px; height: 8px; border-right: 1.6px solid var(--orn); border-bottom: 1.6px solid var(--orn); transform: rotate(45deg) translate(-2px, -2px); transition: transform .15s; }
+.faq details[open] summary::after { transform: rotate(225deg) translate(-2px, -2px); }
+.faq details > div { padding: 0 4px 16px; }
+.faq details > div p { margin: 0; font-size: 14.5px; color: var(--ink-2); }
+.faq details > div p + p { margin-top: 6px; }
+
+.foot { margin-top: 56px; padding-top: 22px; border-top: 1px solid var(--line-in); display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; font-size: 13.5px; color: var(--muted); }
+.foot a.back2 { margin-left: auto; display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; background: var(--steel); color: #F4F7FA; border: 1px solid var(--steel-d); box-shadow: inset 0 0 0 1px var(--steel-l); border-radius: 3px; font-weight: 600; text-decoration: none; }
+
+/* ── 좁은 화면 ── */
+@media (max-width: 880px) {
+  .wrap { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .toc { display: none; }
+  .toc-m { display: block; padding: 0; }
+  .toc-m summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 18px; font: 700 15px/1 var(--serif); color: var(--steel-d); }
+  .toc-m summary::-webkit-details-marker { display: none; }
+  .toc-m summary::after { content: ""; margin-left: auto; width: 8px; height: 8px; border-right: 1.6px solid var(--orn); border-bottom: 1.6px solid var(--orn); transform: rotate(45deg) translate(-2px, -2px); }
+  .toc-m[open] summary::after { transform: rotate(225deg) translate(-2px, -2px); }
+  .toc-m ol { list-style: none; margin: 0; padding: 0 10px 12px; }
+  .toc-m a { display: flex; gap: 10px; padding: 8px; color: var(--ink-2); text-decoration: none; font-size: 14.5px; }
+  .toc-m a span { width: 16px; color: var(--orn); font-weight: 600; font-size: 12.5px; }
+  .anat { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .mock { max-width: 320px; width: 100%; margin: 0 auto; }
+  .stance3 { grid-template-columns: minmax(0, 1fr); }
+  .menus { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 600px) {
+  .top { padding: 16px 16px 0; }
+  .top .back { padding: 0 10px; }
+  .hero { padding: 28px 18px 24px; }
+  .hero p { font-size: 15.5px; }
+  .wrap { padding: 0 12px 56px; }
+  .doc { padding: 26px 16px 34px; }
+  .doc h2 { font-size: 22px; }
+  .vit4 { grid-template-columns: minmax(0, 1fr); }
+  .st { grid-template-columns: minmax(0, 1fr); }
+  .st .nm { flex-direction: row; align-items: baseline; gap: 10px; padding: 10px 16px; border-right: 0; border-bottom: 1px solid var(--line-in); }
+  .st .nm b { font-size: 19px; }
+  .st .bd { grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 12px 16px 14px; }
+  .foot a.back2 { margin-left: 0; width: 100%; justify-content: center; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a class="brand" href="/" aria-label="용의 대륙으로 돌아가기">
+    <svg width="28" height="31" viewBox="0 0 34 38" fill="none" aria-hidden="true"><path d="M17 2l14 5v11c0 9-6 15-14 18C9 33 3 27 3 18V7z" fill="#F7F7F5" stroke="#3C5A73" stroke-width="1.6" stroke-linejoin="round"/><path d="M17 6l10 3.6V18c0 6.8-4.4 11.4-10 13.8C11.4 29.4 7 24.8 7 18V9.6z" stroke="#9DB3C6"/><path d="M11 19.5c3-1 4-4 6-7 2 3 3 6 6 7-2 0-4 1-6 4-2-3-4-4-6-4z" fill="#3C5A73"/></svg>
+    <span>용의 대륙</span>
+  </a>
+  <a class="back" href="/">대륙으로 돌아가기</a>
+</header>
+
+<div class="hero">
+  <h1>길잡이</h1>
+  <p>처음 대륙에 내려앉은 드래곤을 위한 안내입니다. 무엇부터 하면 좋을지, 막대와 숫자가 무엇을 뜻하는지 여기에 모아 두었습니다. 헷갈릴 때마다 다시 펼쳐 보세요.</p>
+</div>
+
+<div class="wrap">
+  <nav class="frame toc" aria-label="차례">
+    <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+    <div class="orn-h"><p>차례</p></div>
+    <ol id="toc-list">
+      <li><a href="#first"><span>1</span>첫날 해 볼 일</a></li>
+      <li><a href="#record"><span>2</span>드래곤 기록 읽기</a></li>
+      <li><a href="#vitals"><span>3</span>네 가지 기운</a></li>
+      <li><a href="#stats"><span>4</span>다섯 능력치</a></li>
+      <li><a href="#grow"><span>5</span>레벨과 성장</a></li>
+      <li><a href="#stance"><span>6</span>인간을 대하는 방식</a></li>
+      <li><a href="#danger"><span>7</span>위험할 때</a></li>
+      <li><a href="#menus"><span>8</span>메뉴 한눈에</a></li>
+      <li><a href="#faq"><span>9</span>자주 묻는 것</a></li>
+    </ol>
+  </nav>
+
+  <main class="frame doc">
+    <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+
+    <details class="frame toc-m">
+      <summary>차례</summary>
+      <ol>
+        <li><a href="#first"><span>1</span>첫날 해 볼 일</a></li>
+        <li><a href="#record"><span>2</span>드래곤 기록 읽기</a></li>
+        <li><a href="#vitals"><span>3</span>네 가지 기운</a></li>
+        <li><a href="#stats"><span>4</span>다섯 능력치</a></li>
+        <li><a href="#grow"><span>5</span>레벨과 성장</a></li>
+        <li><a href="#stance"><span>6</span>인간을 대하는 방식</a></li>
+        <li><a href="#danger"><span>7</span>위험할 때</a></li>
+        <li><a href="#menus"><span>8</span>메뉴 한눈에</a></li>
+        <li><a href="#faq"><span>9</span>자주 묻는 것</a></li>
+      </ol>
+    </details>
+
+    <!-- 1 -->
+    <section id="first">
+      <h2><small>1</small>첫날 해 볼 일</h2>
+      <p class="lead">서두르지 않아도 됩니다. 아래 순서대로 한 번씩 해 보면 대륙에서 사는 법이 대강 손에 익습니다.</p>
+      <ol class="steps">
+        <li><b>그림을 올리고 내 기록을 살펴봅니다</b><p>왼쪽 '드래곤 기록'의 그림 칸을 누르면 그림을 올릴 수 있습니다. 그 아래 막대와 숫자가 무엇인지는 <a href="#record">다음 장</a>에 풀어 두었습니다.</p></li>
+        <li><b>탐사와 채집을 해 봅니다</b><p>가운데 지역 카드에서 고릅니다. 행동력을 1씩 쓰고 재료와 금화를 얻습니다. 가끔 '일이 생겼다'며 고를 것이 나타나는데, 바로 고르지 않아도 남아 있습니다.</p></li>
+        <li><b>가까운 사냥터에서 사냥합니다</b><p>행동력 2를 쓰고, 체력이 15 이상이어야 나설 수 있습니다. 장소 단추에 붙은 <span class="key">쉬움</span> <span class="key">알맞음</span> <span class="key">어려움</span>을 보고 고르세요. 싸움은 매 턴 할퀴기·스킬·방어·물러나기 중 하나를 고르고, 번거로우면 '나머지는 자동으로'를 누르면 됩니다.</p></li>
+        <li><b>레벨이 오르면 포인트를 나눕니다</b><p>레벨마다 능력치 포인트 1점이 생기고, 드래곤 기록에 '나누기' 단추가 뜹니다. 무엇에 줄지는 <a href="#stats">다섯 능력치</a>를 보고 정하세요. 한번 나누면 되돌릴 수 없습니다.</p></li>
+        <li><b>야생에 둥지를 틉니다</b><p>처음 한 번은 공짜입니다. 둥지에서 쉬면 체력·기력이 4배, 행동력이 2배 빨리 차고, 보물을 쌓고 식구를 들일 수 있습니다. 어디서든 둥지로는 곧장 날아갈 수 있습니다.</p></li>
+        <li><b>행동력이 떨어지면 원정을 보냅니다</b><p>30분·1시간·2시간·3시간 중에 골라 떠납니다. 원정에는 행동력이 들지 않고, 다녀오는 동안에는 이야기만 나눌 수 있습니다. 돌아오면 그사이 찬 행동력으로 다시 움직이면 됩니다.</p></li>
+        <li><b>그 땅의 드래곤에게 말을 겁니다</b><p>야생 지역 일곱 곳에는 드래곤이 한 마리씩 머뭅니다. 지역 카드의 '말 걸기'로 만나 하루 두 개씩 바뀌는 의뢰를 맡거나, 옛이야기를 듣거나, 물건을 바꿀 수 있습니다.</p></li>
+      </ol>
+    </section>
+
+    <!-- 2 -->
+    <section id="record">
+      <h2><small>2</small>드래곤 기록 읽기</h2>
+      <p class="lead">넓은 화면에서는 왼쪽, 폰에서는 맨 위에 붙어 있는 칸입니다. 풀이 줄에 마우스를 올리거나 눌러 보면 어디를 말하는지 표시됩니다.</p>
+      <div class="anat">
+        <div class="frame mock" aria-hidden="true">
+          <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+          <div class="orn-h"><p>드래곤 기록</p></div>
+          <div class="zone" data-z="1">
+            <span class="pin" style="top: 8px; left: 8px">1</span>
+            <div class="m-por">
+              <span class="m-tag">쉬는 중 38분</span>
+              <svg viewBox="0 0 34 38" fill="none"><path d="M17 2l14 5v11c0 9-6 15-14 18C9 33 3 27 3 18V7z" stroke="#7E8389" stroke-width="1.4" stroke-linejoin="round"/><path d="M11 19.5c3-1 4-4 6-7 2 3 3 6 6 7-2 0-4 1-6 4-2-3-4-4-6-4z" fill="#7E8389"/></svg>
+            </div>
+          </div>
+          <div class="zone m-np" data-z="2">
+            <span class="pin" style="top: -10px; right: -10px">2</span>
+            <span class="ttl">새 길을 연 발톱</span>
+            <div class="n">하엘</div>
+            <div class="s"><span class="lv">Lv 7</span><span>실버 드래곤</span></div>
+            <div class="zone m-xp" data-z="3">
+              <span class="pin" style="top: -4px; left: -24px">3</span>
+              <i><b></b></i>
+              <div><span>경험</span><span>434 / 700</span></div>
+            </div>
+          </div>
+          <div class="m-vit">
+            <div class="zone m-v" data-z="4"><span class="pin" style="top: -2px; left: -26px">4</span><div>체력<span>82 <em>/ 105</em></span></div><i><b style="width: 78%; background: var(--hp)"></b></i></div>
+            <div class="zone m-v" data-z="5"><span class="pin" style="top: -2px; left: -26px">5</span><div>기력<span>41 <em>/ 54</em></span></div><i><b style="width: 76%; background: var(--en)"></b></i></div>
+            <div class="zone m-v" data-z="6"><span class="pin" style="top: -2px; left: -26px">6</span><div>정신<span>100 <em>/ 100</em></span></div><i><b style="width: 100%; background: var(--mind)"></b></i></div>
+          </div>
+          <div class="zone m-at" data-z="7">
+            <span class="pin" style="top: -11px; right: -10px">7</span>
+            <div><b>9</b><span>발톱</span></div><div><b>11</b><span>비늘</span></div><div><b>8</b><span>날개</span></div><div><b>12</b><span>지혜</span></div><div><b>13</b><span>위엄</span></div>
+          </div>
+          <div class="zone m-pts" data-z="8"><span class="pin" style="top: -1px; left: -26px">8</span>나눌 능력치 포인트 <b>1</b><span>나누기</span></div>
+        </div>
+
+        <ol class="legend" id="legend">
+          <li data-z="1"><span class="no">1</span><b>그림 칸</b><p>누르면 그림을 올리거나 다시 자를 수 있습니다. 그림이 없으면 종류의 문양이 보입니다. 원정 중·쉬는 중이면 위에 꼬리표와 남은 시간이 붙습니다.</p></li>
+          <li data-z="2"><span class="no">2</span><b>이름표</b><p>단 칭호, 이름, 레벨, 드래곤 종류입니다. 칭호는 '상태 → 칭호'에서 고릅니다.</p></li>
+          <li data-z="3"><span class="no">3</span><b>경험</b><p>지금 레벨에서 모은 경험치입니다. 끝까지 차면 레벨이 오릅니다. 레벨 상한은 25입니다.</p></li>
+          <li data-z="4"><span class="no">4</span><b>체력</b><p>싸우면 깎입니다. 최대의 10% 아래로 떨어지면 액자 테두리가 붉게 숨 쉬듯 빛납니다. 그때는 싸움을 멈추고 쉬세요.</p></li>
+          <li data-z="5"><span class="no">5</span><b>기력</b><p>스킬과 제작에 씁니다. 숨결도 스킬이라 기력이 있어야 뿜을 수 있습니다.</p></li>
+          <li data-z="6"><span class="no">6</span><b>정신</b><p>오염된 땅에 가지 않으면 거의 줄지 않습니다. 낮아지면 막대가 깜빡이고 화면 바탕이 어두워집니다.</p></li>
+          <li data-z="7"><span class="no">7</span><b>능력치</b><p>장신구와 용족 명성까지 모두 더한 값입니다. 마우스를 올리면 타고난 값과 더해진 몫이 따로 보입니다. 상흔이 남은 능력치는 붉게 표시됩니다.</p></li>
+          <li data-z="8"><span class="no">8</span><b>나눌 포인트</b><p>아직 나누지 않은 포인트가 있을 때만 보입니다.</p></li>
+        </ol>
+      </div>
+      <p class="note">행동력과 금화는 드래곤 기록이 아니라 맨 위 줄에 있습니다. 행동력 옆의 작은 글씨는 다음 1이 차기까지 남은 시간입니다.</p>
+    </section>
+
+    <!-- 3 -->
+    <section id="vitals">
+      <h2><small>3</small>네 가지 기운</h2>
+      <p class="lead">모두 시간이 지나면 저절로 찹니다. 접속하지 않은 동안에도 계산되니, 바닥났다면 잠깐 쉬다 오시면 됩니다.</p>
+      <div class="vit4">
+        <div class="vcard">
+          <h3><i class="ap"></i>행동력</h3>
+          <dl>
+            <dt>쓰는 곳</dt><dd>탐사 1 · 채집 1 · 사냥 2 · 재앙에 맞서기 3 · 쓰러진 이 일으키기 2</dd>
+            <dt>차는 빠르기</dt><dd>10분에 1. 둥지에서 쉬면 2배</dd>
+            <dt>최대</dt><dd>15에서 시작해 레벨 5마다 1씩 늘어납니다</dd>
+            <dt>바닥나면</dt><dd>행동을 할 수 없습니다. 원정을 보내거나 둥지에서 쉬세요</dd>
+          </dl>
+        </div>
+        <div class="vcard">
+          <h3><i style="background: var(--hp)"></i>체력</h3>
+          <dl>
+            <dt>쓰는 곳</dt><dd>싸움에서 맞을 때 깎입니다</dd>
+            <dt>차는 빠르기</dt><dd>90초에 1. 둥지에서 쉬면 4배. 회복약으로도 찹니다</dd>
+            <dt>최대</dt><dd>50 + 비늘 × 5</dd>
+            <dt>바닥나면</dt><dd>15 아래면 사냥에 나설 수 없고, 0이 되면 쓰러집니다</dd>
+          </dl>
+        </div>
+        <div class="vcard">
+          <h3><i style="background: var(--en)"></i>기력</h3>
+          <dl>
+            <dt>쓰는 곳</dt><dd>숨결과 스킬, 제작, 남을 치유해 주기</dd>
+            <dt>차는 빠르기</dt><dd>2분에 1. 둥지에서 쉬면 4배. 싸우는 중에는 턴마다 2</dd>
+            <dt>최대</dt><dd>30 + 지혜 × 2</dd>
+            <dt>바닥나면</dt><dd>할퀴기와 방어만 쓸 수 있습니다</dd>
+          </dl>
+        </div>
+        <div class="vcard">
+          <h3><i style="background: var(--mind)"></i>정신</h3>
+          <dl>
+            <dt>쓰는 곳</dt><dd>오염된 땅과 바다 건너 멸망한 대륙에서 행동하거나, 오염된 사냥감에게 맞으면 깎입니다</dd>
+            <dt>차는 빠르기</dt><dd>3분에 1. 둥지에서 쉬면 3배. 진정의 향·정화의 향·성수로도 찹니다</dd>
+            <dt>최대</dt><dd>100</dd>
+            <dt>바닥나면</dt><dd>10 아래면 경고, 0이 되면 광폭화합니다 (<a href="#danger">위험할 때</a>)</dd>
+          </dl>
+        </div>
+      </div>
+      <p class="note">날씨와 계절도 차는 빠르기를 조금씩 바꿉니다. 지역 카드의 날씨 칸에 ▲ 좋은 점과 ▼ 나쁜 점이 적혀 있습니다.</p>
+    </section>
+
+    <!-- 4 -->
+    <section id="stats">
+      <h2><small>4</small>다섯 능력치</h2>
+      <p class="lead">어느 하나가 정답은 아닙니다. 싸움을 즐길지, 재료를 모을지, 사람들 사이에서 살아갈지에 따라 고르시면 됩니다.</p>
+      <div class="stats5">
+        <div class="st">
+          <div class="nm"><b>발톱</b><small>때리는 힘</small></div>
+          <div class="bd">
+            <div><h4>싸울 때</h4><p>할퀴기와 공격 스킬의 피해가 커집니다. 레벨도 공격력에 더해집니다.</p></div>
+            <div><h4>그 밖에</h4><p>싸움 밖에서는 거의 쓰이지 않습니다. 사냥을 많이 할수록 값어치가 커집니다.</p></div>
+          </div>
+        </div>
+        <div class="st">
+          <div class="nm"><b>비늘</b><small>버티는 힘</small></div>
+          <div class="bd">
+            <div><h4>싸울 때</h4><p>받는 피해가 줄어듭니다. 숨결처럼 비늘을 덜 타는 공격에는 덜 줄어듭니다.</p></div>
+            <div><h4>그 밖에</h4><p>1점마다 최대 체력 +5. 마을을 위협하다 맞는 피해도 줄어듭니다.</p></div>
+          </div>
+        </div>
+        <div class="st">
+          <div class="nm"><b>날개</b><small>빠르기</small></div>
+          <div class="bd">
+            <div><h4>싸울 때</h4><p>상대보다 빠를수록 먼저 움직이고, 공격을 잘 피하고, 급소를 잘 찌릅니다. 방어와 비늘 세우기는 빠르기와 상관없이 늘 먼저입니다.</p></div>
+            <div><h4>그 밖에</h4><p>싸움 밖에서는 거의 쓰이지 않습니다. 사냥과 결투를 즐긴다면 든든한 능력치입니다.</p></div>
+          </div>
+        </div>
+        <div class="st">
+          <div class="nm"><b>지혜</b><small>깊이와 솜씨</small></div>
+          <div class="bd">
+            <div><h4>싸울 때</h4><p>숨결의 피해, 치유로 되찾는 체력, 화상·중독 같은 지속 피해가 커집니다. 스킬이 상태 이상을 걸 확률과 포식·자수정 숨결로 빨아들이는 양도 늘어납니다.</p></div>
+            <div><h4>그 밖에</h4><p>1점마다 최대 기력 +2. 채집·탐사·원정에서 귀한 물건이 잘 나오고, 제작 대성공이 잘 뜹니다. 고급 제작법은 지혜가 모자라면 만들 수 없습니다.</p></div>
+          </div>
+        </div>
+        <div class="st">
+          <div class="nm"><b>위엄</b><small>기세</small></div>
+          <div class="bd">
+            <div><h4>싸울 때</h4><p>얼어붙음·마비를 떨쳐 내고, 화상·중독·출혈을 한 턴 짧게 버팁니다. 포효가 잘 통합니다. 드래곤끼리 싸울 때는 위엄이 높은 쪽이 상대가 거는 상태 이상을 눌러 버리기도 합니다.</p></div>
+            <div><h4>그 밖에</h4><p>인간 마을을 위협할 때 성공률과 공물이 오르고, 탐사·원정에서 줍는 금화가 늘어납니다.</p></div>
+            <p class="one">위엄은 내 행동으로도 흔들립니다. 용족 명성이 높거나 보물더미가 크면 오르고, 명성이 바닥이면 깎입니다.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="box">
+        <p><b>처음 만들 때</b>는 종류마다 타고난 능력치에 10점을 더 나눕니다. 한 능력치에 5점까지 넣을 수 있습니다.</p>
+        <p><b>레벨이 오를 때마다</b> 1점씩 생깁니다. 서두르지 않아도 되지만, 한번 나누면 되돌릴 수 없습니다.</p>
+        <p><b>다른 드래곤에게는</b> 숫자 대신 서툼·보통·능숙·뛰어남·압도적의 다섯 단계로만 보입니다. 그 레벨의 드래곤에게 흔한 값과 견준 단계입니다.</p>
+      </div>
+
+      <h3>종류별 타고난 능력치</h3>
+      <p class="note" style="margin-top: 0">모두 합이 45입니다. 파랗게 칠한 칸이 그 종류가 가장 잘하는 능력치입니다. 처음 눈뜨는 땅도 종류마다 다릅니다.</p>
+      <div class="tbl-wrap">
+        <table class="kinds" id="kinds">
+          <thead><tr><th scope="col" style="text-align: left">종류</th><th scope="col">발톱</th><th scope="col">비늘</th><th scope="col">날개</th><th scope="col">지혜</th><th scope="col">위엄</th><th scope="col" style="text-align: left">숨결</th><th scope="col" style="text-align: left">처음 눈뜨는 땅</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 5 -->
+    <section id="grow">
+      <h2><small>5</small>레벨과 성장</h2>
+      <p class="lead">경험치는 사냥과 강적, 의뢰, 원정, 이벤트에서 얻습니다. 레벨이 오르면 아래가 함께 바뀝니다.</p>
+      <h3>레벨이 오르면</h3>
+      <p>능력치 포인트 1점이 생기고, 레벨 5·10·15·20·25에 최대 행동력이 1씩 늘어납니다. 정해진 레벨에 새 스킬을 배웁니다(꼬리치기 Lv1, 비늘 세우기 Lv2, 포효 Lv3, 치유 Lv4 …). 배운 스킬 가운데 셋을 골라 싸움에 들고 가는데, '상태 → 스킬'에서 바꿀 수 있습니다.</p>
+      <h3>갈 수 있는 사냥터</h3>
+      <p>야생 지역마다 장소가 넷씩 있고, 입구는 쉽고 안쪽일수록 어렵습니다. 내 레벨보다 3을 넘게 높은 곳은 들어갈 수 없습니다. 넷째 장소는 Lv13부터의 고레벨 구역이고, 바다 건너 멸망한 대륙은 Lv20부터 건널 수 있습니다.</p>
+      <h3>필요한 경험치</h3>
+      <p>다음 레벨까지 '레벨 × 100'이 듭니다. Lv12를 넘으면 훨씬 가팔라져서, 뒤로 갈수록 한 레벨이 오래 걸립니다. 느긋하게 가셔도 괜찮습니다.</p>
+      <h3>특성과 칭호</h3>
+      <p>특성은 같은 일을 거듭하면 새로 생기거나 사라집니다. '상태 → 기본'의 '앞으로 생길 수 있는 변화'에서 무엇이 가까운지 볼 수 있습니다. 칭호는 업적을 이루면 저절로 얻고, 하나를 골라 답니다. 칭호마다 작은 효과가 붙습니다.</p>
+    </section>
+
+    <!-- 6 -->
+    <section id="stance">
+      <h2><small>6</small>인간을 대하는 방식</h2>
+      <p class="lead">드래곤마다 인간과 맺는 거리가 다릅니다. '상태 → 기본'에서 고르고, 바꾼 뒤 12시간 동안은 다시 바꿀 수 없습니다.</p>
+      <div class="stance3">
+        <div class="sc" style="--c: #3A6B50">
+          <h3>우호</h3><p>사람들과 어울려 삽니다</p>
+          <ul>
+            <li class="up">시장에서 평판이 높을수록 싸게 사고 비싸게 팝니다. 평판 '호의'부터 전용 상품이 열립니다</li>
+            <li class="up">인간 마을에 있으면 체력이 2배 빨리 차고, 탐사하다 선물을 받기도 합니다</li>
+            <li class="dn">거래할 때마다 용족 명성이 조금 깎입니다</li>
+            <li class="dn">적대로 돌아서면 사이좋던 마을이 모두 원수가 됩니다</li>
+          </ul>
+        </div>
+        <div class="sc" style="--c: #3C5A73">
+          <h3>은둔</h3><p>홀로 조용히 삽니다</p>
+          <ul>
+            <li class="up">둥지에서 쉴 때 회복이 훨씬 빠르고, 정신도 빨리 찹니다</li>
+            <li class="up">원정에서 드물고 귀한 물건이 잘 나오고, 탐사 때 지혜 +2로 계산합니다</li>
+            <li class="up">평판도 명성도 흔들리지 않습니다</li>
+            <li class="dn">시장에서 싸게 팔고 비싸게 삽니다. 인간 마을에서는 행동력이 1 더 듭니다</li>
+          </ul>
+        </div>
+        <div class="sc" style="--c: #8A2E27">
+          <h3>적대</h3><p>인간 위에 군림합니다</p>
+          <ul>
+            <li class="up">마을을 위협해 공물을 받고, 위협할수록 용족 명성이 오릅니다</li>
+            <li class="up">사냥할 때 발톱 +2, 송곳니와 금화도 더 나옵니다</li>
+            <li class="dn">시장을 쓸 수 없습니다. 대신 야생 드래곤들의 교환소를 씁니다</li>
+            <li class="dn">마을에 날아들면 화살을 맞고, 원수가 된 마을이 있으면 기사단이 습격해 옵니다</li>
+          </ul>
+        </div>
+      </div>
+      <p class="note">용족 명성은 드래곤들 사이의 체면입니다. 높으면 위엄이 오르고, 바닥이면 위엄이 깎이고 사냥도 잘 풀리지 않습니다.</p>
+    </section>
+
+    <!-- 7 -->
+    <section id="danger">
+      <h2><small>7</small>위험할 때</h2>
+      <h3>쓰러졌을 때</h3>
+      <p>사냥이나 강적과 싸우다 물러나지 않고 지면 체력이 0이 되어 쓰러집니다. 결투장과 재앙에 맞서기로는 쓰러지지 않습니다. 쓰러지면 셋 중 하나를 골라야 합니다.</p>
+      <div class="fall3">
+        <div><b>도움을 기다립니다</b><p>가장 먼저 해 볼 방법입니다. 3시간 동안 모든 지역에 구조 요청이 뜨고, 누군가 와서 일으켜 주면 상흔 없이 일어섭니다. 기다리는 동안에도 이야기와 텔레파시로 도움을 청할 수 있습니다.</p></div>
+        <div><b>상흔을 입고 일어섭니다</b><p>혼자 바로 일어서는 대신, 능력치 하나가 영구히 1 줄어듭니다. 상흔은 드래곤 기록에 붉게 남습니다.</p></div>
+        <div><b>긴 잠에 듭니다</b><p>이 드래곤의 이야기가 끝납니다. 기록은 남고, 같은 계정으로 새 드래곤을 만들 수 있습니다.</p></div>
+      </div>
+      <p class="note">체력이 낮을 때는 '물러나기'로 싸움을 끝내면 쓰러지지 않습니다. 자동 사냥도 체력이 20% 아래로 떨어지면 알아서 물러납니다.</p>
+      <h3>정신이 바닥났을 때</h3>
+      <p>정신이 0이 되면 광폭화해 아무것도 할 수 없습니다. 모든 지역에 알림이 가고, 정해진 시간 안에 다른 드래곤이 찾아와 '진정시키기'로 싸워 이겨야 풀립니다. 아무도 오지 않으면 체력이 절반으로 줄고 가까운 마을 평판과 용족 명성이 깎입니다. 오염된 땅에 갈 때는 정신을 채워 줄 향을 챙기세요.</p>
+      <h3>다른 드래곤이 위험할 때</h3>
+      <p>쓰러졌거나 광폭화한 드래곤이 있으면 이야기 창에 소식이 뜹니다. 그 지역에 날아가 지역 카드에서 '일으켜 세우기'나 '진정시키기'를 누르면 됩니다. 도운 쪽은 경험치와 명성을 받습니다.</p>
+    </section>
+
+    <!-- 8 -->
+    <section id="menus">
+      <h2><small>8</small>메뉴 한눈에</h2>
+      <div class="menus">
+        <h3>아래 메뉴</h3>
+        <dl>
+          <div class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg><dt>대륙</dt><dd>대륙 지도와 지금 머무는 지역 카드로 돌아옵니다. 탐사·채집·사냥·원정은 여기서 합니다.</dd></div>
+          <div class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h11l3 3v15H5z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg><dt>상태</dt><dd>기본(특성·장신구·성향), 칭호, 스킬, 기록(발자취·업적·도감)이 있습니다.</dd></div>
+          <div class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M3 20c0-6 4-11 9-11s9 5 9 11z"/><path d="M9 20c0-3 1.4-5 3-5s3 2 3 5"/></svg><dt>둥지</dt><dd>쉬기, 보물더미, 둥지 넓히기, 식구 돌보기를 합니다.</dd></div>
+          <div class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg><dt>소지품</dt><dd>가진 물건과 장신구입니다. 재료를 누르면 그걸로 만들 수 있는 것이 보이고, 제작도 여기서 엽니다.</dd></div>
+          <div class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M5 19L19 5M14 5h5v5M19 19L5 5M10 5H5v5"/></svg><dt>결투장</dt><dd>다른 드래곤과 겨룹니다. 결투로는 다치지 않습니다.</dd></div>
+          <div class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 19.5c.6-3.4 3-5.3 6-5.3s5.4 1.9 6 5.3"/><circle cx="17" cy="9" r="2.6"/><path d="M15.6 14.4c2.6-.2 4.8 1.3 5.4 4.6"/></svg><dt>동료</dt><dd>관계를 맺은 드래곤, 받은 요청, 라이벌, 관계도를 봅니다.</dd></div>
+        </dl>
+        <h3>맨 위 줄</h3>
+        <dl>
+          <div class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 4.5h13v15h-13z"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4.5"/></svg><dt>석판</dt><dd>모두가 글을 남기는 게시판입니다. 내 글에 답이 달리면 알려 줍니다.</dd></div>
+          <div class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="2.2"/><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7"/><path d="M5.5 5.5a9.2 9.2 0 0 0 0 13M18.5 5.5a9.2 9.2 0 0 1 0 13"/></svg><dt>텔레파시</dt><dd>거리와 상관없이 한 드래곤에게만 건네는 말입니다. 접속하지 않은 드래곤에게도 남겨 둘 수 있습니다.</dd></div>
+          <div class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><dt>메뉴</dt><dd>설정, 업데이트 노트, 이 길잡이, 로그아웃이 있습니다.</dd></div>
+          <div class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg><dt>이야기 창</dt><dd>같은 지역 드래곤과 나누는 말입니다. '용언'으로 바꾸면 모든 드래곤에게 닿습니다. 이름표를 누르면 그 드래곤의 기록이 열립니다.</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <!-- 9 -->
+    <section id="faq">
+      <h2><small>9</small>자주 묻는 것</h2>
+      <div class="faq">
+        <details><summary>행동력을 다 썼어요. 이제 뭘 하나요?</summary><div><p>원정을 보내 두고 다른 일을 하다 오세요. 원정에는 행동력이 들지 않습니다. 둥지에서 쉬면 행동력이 2배 빨리 차고, 쉬는 동안에도 제작과 보물더미 정리는 할 수 있습니다.</p></div></details>
+        <details><summary>사냥 단추가 눌리지 않아요</summary><div><p>체력이 15 아래인지 먼저 보세요. 인간 마을(왕도, 해안 절벽 어촌)에서는 사냥할 수 없고, 원정 중이거나 둥지에서 쉬는 중에도 나설 수 없습니다.</p></div></details>
+        <details><summary>다른 지역에는 어떻게 가나요?</summary><div><p>대륙 지도에서 지금 지역과 길로 이어진 곳을 누르면 날아갑니다. 행동력은 들지 않습니다. 둥지로는 어디서든 곧장 날아갈 수 있습니다. 지역 안의 장소끼리는 지역 카드의 작은 지도에서 핀을 눌러 옮깁니다.</p></div></details>
+        <details><summary>능력치를 잘못 나눴어요</summary><div><p>나눈 포인트는 되돌릴 수 없습니다. 장신구로 모자란 능력치를 메울 수 있으니 소지품에서 장신구를 만들거나 바꿔 차 보세요.</p></div></details>
+        <details><summary>무엇을 만들 수 있는지 모르겠어요</summary><div><p>소지품에서 재료를 누르면 그 재료로 만들 수 있는 것이 뜨고, 그 줄을 누르면 바로 제작 창으로 갑니다. 제작 목록에 없는 숨은 제작법도 있으니 '실험'으로 재료를 섞어 보는 것도 재미있습니다.</p></div></details>
+        <details><summary>적대라서 시장을 못 써요</summary><div><p>야생 지역에 머무는 드래곤들의 교환소를 쓰세요. 성향과 상관없이 재료를 바꾸거나 금화로 회복약을 살 수 있습니다.</p><p>둥지에서 키운 인간 아이가 있다면 길이 하나 더 있습니다. 아이가 어른이 되어 '둥지에 남기'를 고르고 유대가 50 이상이면, 그 아이가 대신 시장에 가서 흥정해 줍니다. 아이가 둥지에 머무는 동안에는 적대여도 시장을 쓸 수 있습니다.</p></div></details>
+        <details><summary>정신이 계속 줄어들어요</summary><div><p>오염된 땅(지도에 보랏빛으로 표시)에 있거나 그곳 사냥감과 싸웠기 때문입니다. 깨끗한 지역으로 옮기거나 둥지에서 쉬면 다시 찹니다. 오염된 땅은 매일 다른 곳으로 옮겨 갑니다.</p></div></details>
+        <details><summary>막히는 게 있으면 누구에게 묻나요?</summary><div><p>이야기 창에서 '용언'으로 물으면 모두에게 닿습니다. 먼저 와 있는 드래곤들이 기꺼이 알려 줄 거예요. 바뀐 점은 메뉴의 '업데이트 노트'에 쌓입니다.</p></div></details>
+      </div>
+    </section>
+
+    <div class="foot">
+      <span>다 읽으셨다면 이제 날아오를 차례입니다.</span>
+      <a class="back2" href="/">대륙으로 돌아가기</a>
+    </div>
+  </main>
+</div>
+
+<script>
+// 종류별 타고난 능력치 (game-data.js의 KINDS와 같게 맞출 것)
+const KINDS = [
+  ['레드 드래곤', '#B5473F', [11, 9, 8, 6, 11], '화염 · 화상', '잿빛 화산'],
+  ['블랙 드래곤', '#6E5E92', [12, 9, 8, 7, 9], '산 · 비늘을 녹임', '검은 늪'],
+  ['화이트 드래곤', '#6F9BBC', [9, 11, 10, 7, 8], '눈보라 · 얼림', '북부 설원'],
+  ['골드 드래곤', '#B8913A', [8, 9, 7, 11, 10], '번개 · 큰 피해와 마비', '태양 협곡'],
+  ['그린 드래곤', '#5E8A55', [7, 8, 10, 11, 9], '독 · 중독', '독안개 숲'],
+  ['실버 드래곤', '#8C9AA6', [7, 9, 8, 10, 11], '안개 · 잘 피함', '왕도 아르덴'],
+  ['블루 드래곤', '#3F72A8', [9, 10, 10, 8, 8], '해일 · 흠뻑 젖게 함', '남쪽 해안 절벽'],
+  ['퍼플 드래곤', '#9459AE', [7, 9, 8, 12, 9], '자수정 · 피해만큼 회복', '고대 유적'],
+  ['브론즈 드래곤', '#A3723F', [10, 12, 6, 8, 9], '모래 폭풍 · 받는 피해 줄임', '중앙 평원'],
+];
+(function () {
+  const tb = document.querySelector('#kinds tbody');
+  for (const [name, color, st, breath, home] of KINDS) {
+    const hi = Math.max(...st), lo = Math.min(...st);
+    const tr = document.createElement('tr');
+    const th = document.createElement('th'); th.scope = 'row';
+    const dot = document.createElement('i'); dot.style.background = color;
+    th.append(dot, name); tr.append(th);
+    for (const v of st) {
+      const td = document.createElement('td');
+      td.className = 'v' + (v === hi ? ' hi' : v === lo ? ' lo' : '');
+      td.textContent = v; tr.append(td);
+    }
+    const b = document.createElement('td'); b.className = 'br'; b.textContent = breath;
+    const h = document.createElement('td'); h.className = 'home'; h.textContent = home;
+    tr.append(b, h); tb.append(tr);
+  }
+})();
+
+// 드래곤 기록 풀이: 풀이 줄에 마우스를 올리거나 누르면 본뜬 액자의 그 부분이 빛남
+(function () {
+  const items = document.querySelectorAll('#legend li');
+  const zones = document.querySelectorAll('.mock .zone');
+  let pinned = null;
+  const lit = (z) => {
+    zones.forEach((el) => el.classList.toggle('lit', el.dataset.z === z));
+    items.forEach((el) => el.classList.toggle('lit', el.dataset.z === z));
+  };
+  items.forEach((li) => {
+    li.tabIndex = 0;
+    li.addEventListener('mouseenter', () => lit(li.dataset.z));
+    li.addEventListener('mouseleave', () => lit(pinned));
+    li.addEventListener('focus', () => lit(li.dataset.z));
+    li.addEventListener('blur', () => lit(pinned));
+    li.addEventListener('click', () => { pinned = pinned === li.dataset.z ? null : li.dataset.z; lit(pinned); });
+  });
+})();
+
+// 차례: 지금 읽는 장을 표시
+(function () {
+  const links = [...document.querySelectorAll('#toc-list a')];
+  const secs = links.map((a) => document.querySelector(a.getAttribute('href')));
+  const mark = () => {
+    const y = window.innerHeight * 0.3;
+    let cur = 0;
+    secs.forEach((s, i) => { if (s.getBoundingClientRect().top <= y) cur = i; });
+    links.forEach((a, i) => a.classList.toggle('on', i === cur));
+  };
+  addEventListener('scroll', mark, { passive: true });
+  mark();
+  // 폰 차례: 고르면 접힘
+  document.querySelectorAll('.toc-m a').forEach((a) => a.addEventListener('click', () => { a.closest('details').open = false; }));
+})();
+</script>
+</body>
+</html>

@@ -53,6 +53,7 @@
       </div>
       <div id="alloc-rows"></div>
       <div class="derived"><span>최대 체력 <b id="d-hp"></b></span><span>최대 기력 <b id="d-en"></b></span></div>
+      <p class="note" style="margin: 8px 0 0; text-align: right">능력치마다 하는 일은 <a href="/guide.html#stats" target="_blank" rel="noopener">길잡이</a>에서 볼 수 있다.</p>
     </section>
     <section class="frame alloc" aria-label="특성 고르기">
       <div class="alloc-h"><h2>타고난 기질</h2><span class="left">긍정 하나, 부정 하나</span></div>
@@ -95,6 +96,7 @@
           <div class="menu frame" id="menu" hidden>
             <button type="button" id="settings-open">설정</button>
             <button type="button" id="notes-open">업데이트 노트<span class="menu-dot" id="notes-dot" hidden></span></button>
+            <button type="button" id="guide-open">길잡이</button>
             <button type="button" id="gm-open" hidden>GM 도구</button>
             <button type="button" id="logout">로그아웃</button>
           </div>
@@ -609,7 +611,7 @@
   <div class="orn-h"><h2 id="welcome-dlg-title">용의 대륙</h2></div>
   <div class="body">
     <div class="wl-text" id="welcome-text"></div>
-    <div class="row"><button class="btn primary" type="button" id="welcome-ok">확인</button></div>
+    <div class="row"><button class="btn" type="button" id="welcome-guide">길잡이 펼쳐 보기</button><button class="btn primary" type="button" id="welcome-ok">확인</button></div>
   </div>
 </dialog>
 
@@ -4919,6 +4921,10 @@
     });
   }
   $('notes-open').addEventListener('click', openNotes);
+  // 길잡이: 처음 온 드래곤을 위한 안내 페이지 (guide.html, 새 탭)
+  const openGuide = () => { $('menu').hidden = true; $('menu-btn').setAttribute('aria-expanded', 'false'); window.open('/guide.html', '_blank', 'noopener'); };
+  $('guide-open').addEventListener('click', openGuide);
+  $('welcome-guide').addEventListener('click', openGuide);
   $('notes-close').addEventListener('click', () => $('notes-dlg').close());
   $('notes-welcome').addEventListener('click', () => openWelcome(false));
 
