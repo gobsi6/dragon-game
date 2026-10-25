@@ -3186,7 +3186,7 @@ button.rm-step { cursor: pointer; }
 
 /* ══ 폰 화면 개선 ══════════════════════════════════════════ */
 /* 1. 행동 단추: 대륙 화면에서는 아래 탭 줄 바로 위에 늘 붙어 있음 (다른 탭을 열면 원래 자리로) */
-.gear-sum, .wx .fold-t { display: none; }
+.wx .fold-t { display: none; }
 @media (max-width: 860px) {
   .center:not(.paneled) > .region-card:not([hidden]) #actions[hidden] { display: none; } /* 원정 중에는 행동 줄이 없음: 이야기 창 단추와 아래 여백도 원래대로 */
   .center:not(.paneled) > .region-card:not([hidden]) #actions {
@@ -3247,18 +3247,6 @@ button.rm-step { cursor: pointer; }
   .wx.fest.folded .hd small { display: block; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .wx.fest.folded .hd { flex-wrap: nowrap; }
   .wx.folded .fold-t { top: 50%; transform: translateY(-50%); }
-}
-/* 5. 소지품: 착용 장신구 여섯 칸을 한 덩어리 요약으로 (누르면 칸이 펼쳐짐) */
-@media (max-width: 520px) {
-  #inv-dlg .body > h3:first-child { display: none; }
-  .gear-sum { display: block; width: 100%; margin: 0 0 6px; padding: 9px 11px; text-align: left; border: 1px solid var(--line-in); border-radius: 3px; background: var(--surface-2); font: inherit; color: var(--ink); cursor: pointer; }
-  .gear-sum .h { display: flex; align-items: center; gap: 6px; font: 700 14px/1.4 var(--serif); }
-  .gear-sum .h small { font: 600 12px var(--sans); color: var(--muted); }
-  .gear-sum .h svg { margin-left: auto; width: 14px; height: 14px; color: var(--muted); transition: transform .2s; }
-  .gear-sum[aria-expanded="true"] .h svg { transform: rotate(180deg); }
-  .gear-sum .g { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-top: 3px; font-size: 12.5px; line-height: 1.55; color: var(--ink-2); }
-  .gear-sum .g em { font-style: normal; color: var(--muted); margin-right: 4px; }
-  .inv-gear.folded { display: none; }
 }
 /* 6. 작은 글씨: 이곳의 장소 지도 이름표와 사냥감 꼬리표를 조금 크게. 대륙 지도는 옆으로 밀어 볼 수 있게 크게 */
 @media (max-width: 520px) {
@@ -3372,8 +3360,8 @@ button.rm-step { cursor: pointer; }
   body:has(.center:not(.paneled) > .region-card:not([hidden]) #actions:not([hidden])) #toast[popover] { bottom: calc(var(--dock-h, 56px) + 51px + 12px); }
 }
 /* ── 제작·부엌의 '방금 만든 것': 남은 시간을 아래 가는 막대로, 시간이 지나면 걷힘 ── */
-.craft-made.timed { position: sticky; overflow: hidden; }
-.craft-made.timed::after { content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: 100%; background: #6FA486; transform-origin: left; animation: made-time var(--made-ttl, 10000ms) linear forwards; }
+.craft-made { flex: none; } /* 창 안 세로 줄에서 눌려 줄어들지 않게 (전에 overflow: hidden을 주자 높이가 눌려 잘렸음) */
+.craft-made.timed::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; border-radius: 0 0 3px 3px; background: #6FA486; transform-origin: left; animation: made-time var(--made-ttl, 10000ms) linear forwards; }
 @keyframes made-time { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 @media (prefers-reduced-motion: reduce) { .craft-made.timed::after { animation: none; display: none; } }
 
