@@ -1532,8 +1532,8 @@ const TITLES = [
   { id: 'elite2',    name: '전설을 쓰러뜨린 자', cond: { count: 'elite', at: 30 },   mod: { eliteAtk: 1.1, drop: 0.05 }, eff: '강적과 싸울 때 공격 +10%, 전리품 +5%' },
   // 모으기·떠돌기
   { id: 'gatherer',  name: '약초를 아는 발톱', cond: { count: 'gather', at: 60 },   mod: { heal: 1.15 },     eff: '치유 +15%' },
-  { id: 'gatherer2', name: '바구니를 채우는 발톱', cond: { count: 'gather', at: 200 }, mod: { gatherExtra: 0.1 }, eff: '채집에서 물건을 하나 더 찾을 확률 +10%' },
-  { id: 'gatherer3', name: '땅의 숨결을 읽는 자', cond: { count: 'gather', at: 500 }, mod: { gatherExtra: 0.1, gatherRare: 0.02 }, eff: '채집에서 물건을 하나 더 찾을 확률 +10%, 귀한 물건 +2%' },
+  { id: 'gatherer2', name: '부지런한 발톱', cond: { count: 'gather', at: 200 }, mod: { gatherExtra: 0.1 }, eff: '채집에서 물건을 하나 더 찾을 확률 +10%' },
+  { id: 'gatherer3', name: '땅을 읽는 자', cond: { count: 'gather', at: 500 }, mod: { gatherExtra: 0.1, gatherRare: 0.02 }, eff: '채집에서 물건을 하나 더 찾을 확률 +10%, 귀한 물건 +2%' },
   { id: 'explorer',  name: '길 찾는 자',       cond: { count: 'explore', at: 60 },  mod: { drop: 0.05 },     eff: '사냥 전리품 +5%' },
   { id: 'wanderer',  name: '먼 길의 나그네',   cond: { count: 'expedition', at: 20 }, mod: { expRare: 0.03 }, eff: '원정 귀한 물건 +3%' },
   { id: 'trader',    name: '흥정꾼',           cond: { count: 'trade', at: 30 },    mod: { huntGold: 1.15 }, eff: '사냥 금화 +15%' },
