@@ -93,7 +93,16 @@ const LETTER_H = {
   '어른': { head: (v) => `${v.owner}의 둥지로 보낸 ${v.name}에게서 편지가 왔다.`, hand: '단정한 글씨로', say: '덕분에 잘 자랐습니다. 언제 한번 인사드리러 갈게요.' },
   '노년': { head: (v) => `${v.owner}의 둥지로 보낸 ${v.name}에게서 편지가 왔다.`, hand: '조금 떨리지만 정성스러운 글씨로', say: '돌아보니 좋은 날들이었습니다. 처음 저를 품어 주신 일을 잊지 않았어요.' },
 };
-const missable = (c, x) => !!(x.data.adoptedFrom && x.data.adoptedFromId) && c.now - (x.data.missedAt || 0) >= MISS_GAP;
+// 옛 둥지를 그리워하는 것은 청소년까지 (어른·노년이 되면 더 그리워하지 않음)
+// 그리워하는 모습과 옛 부모에게 닿는 말 (나이에 따라). look: 모습, say: 혼잣말(없으면 after나 말없이), msg: 옛 부모에게 가는 말(없으면 heard: 전해 들은 모습)
+const MISS_LINES = {
+  '아기': { look: (n) => `${n} 둥지 가장자리에서 먼 하늘 쪽으로 작은 손을 뻗으며 칭얼거린다.`, say: null, heard: '가끔 먼 하늘 쪽으로 작은 손을 뻗는다고 한다.' },
+  '아이': { look: (n) => `${n} 둥지 가장자리에 앉아 먼 하늘을 바라보고 있다.`, say: (f) => `"${f}… 보고 싶어."`, msg: '보고 싶어요.' },
+  '소년': { look: (n) => `${n} 둥지 가장자리에 걸터앉아 발을 흔들며 먼 하늘을 보고 있다.`, say: (f) => `"${f}도 나 생각할까?"`, msg: '저 많이 컸어요. 나중에 보러 갈게요.' },
+  '청소년': { look: (n) => `${n} 말없이 둥지 가장자리에 서서 오래도록 먼 하늘을 바라보고 있다.`, say: null, after: '무엇을 떠올리는지는 묻지 않아도 알 것 같다.', msg: '잘 지내고 있어요. 가끔 그쪽 하늘이 생각나요.' },
+};
+const missLine = (v) => MISS_LINES[v.stage] || MISS_LINES['아이']; // 예전에 정해 둔 이벤트(나이 없음)는 아이 문장으로
+const missable = (c, x) => !!(x.data.adoptedFrom && x.data.adoptedFromId) && !adultHuman(c, x) && c.now - (x.data.missedAt || 0) >= MISS_GAP;
 const randInt = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 const statName = (k) => STATS.find((x) => x.key === k)?.name || k;
 const bestStat = (kind) => Object.entries(KINDS[kind].stats).sort((a, b) => b[1] - a[1])[0][0]; // 그 종류가 가장 강한 능력치
@@ -1036,19 +1045,20 @@ module.exports = [
     weight: 2,
     // 한 아이가 한 번 그리워하면 MISS_GAP 동안은 다시 그리워하지 않음
     cond: (c) => c.humans.some((x) => missable(c, x)),
-    setup: (c) => { const k = c.pick(c.humans.filter((x) => missable(c, x))); return { id: k.id, from: k.data.adoptedFrom, fromId: k.data.adoptedFromId }; },
-    text: (c, v) => { const k = c.k(v.id); return [`${k.name}${c.josa(k.name, '이', '가')} 둥지 가장자리에 앉아 먼 하늘을 바라보고 있다.`, `"${v.from}… 잘 지낼까?"`]; },
+    setup: (c) => { const k = c.pick(c.humans.filter((x) => missable(c, x))); return { id: k.id, from: k.data.adoptedFrom, fromId: k.data.adoptedFromId, stage: c.stage(k) }; },
+    text: (c, v) => { const k = c.k(v.id); const L = missLine(v); return [L.look(`${k.name}${c.josa(k.name, '이', '가')}`), L.say ? L.say(v.from) : L.after].filter(Boolean); },
     choices: [
       { label: '텔레파시로 소식을 전해 준다', run: (h, c, v) => {
         const k = c.k(v.id); h.bond(k, 8); k.data.missedAt = Date.now();
-        h.notify(v.fromId, `${c.me}의 둥지에서 지내는 ${k.name}${c.josa(k.name, '이', '가')} 잘 지낸다는 소식이 마음에 닿았다. "보고 싶어요."`, '옛 식구의 소식');
-        h.say(`${v.from}에게 ${k.name}의 소식을 전했다. ${h.name(k)} 환하게 웃었다. (유대 +8)`);
+        const L = missLine(v);
+        h.notify(v.fromId, `${c.me}의 둥지에서 지내는 ${k.name}${c.josa(k.name, '이', '가')} 잘 지낸다는 소식이 마음에 닿았다. ${L.msg ? `"${L.msg}"` : L.heard}`, '옛 식구의 소식');
+        h.say(`${v.from}에게 ${k.name}의 소식을 전했다. ${h.name(k)} ${v.stage === '청소년' ? '쑥스러운 듯 고개를 돌렸지만 입가가 풀려 있었다' : '환하게 웃었다'}. (유대 +8)`);
       } },
       { label: '새 둥지에 마음을 붙이게 한다', run: (h, c, v) => {
         const k = c.k(v.id); h.bond(k, 4); k.data.missedAt = Date.now();
         h.say(`날개로 감싸 안고 새 둥지의 별자리를 하나하나 알려 주었다. (유대 +4)`);
       } },
-      { label: '모른 척한다', run: (h, c, v) => { const k = c.k(v.id); h.bond(k, -2); k.data.missedAt = Date.now(); h.say('아이는 한참을 혼자 앉아 있었다. (유대 −2)'); } },
+      { label: '모른 척한다', run: (h, c, v) => { const k = c.k(v.id); h.bond(k, -2); k.data.missedAt = Date.now(); h.say(`${h.name(k)} 한참을 그쪽 하늘만 바라보았다. (유대 −2)`); } },
     ],
   },
   // ── 동료와의 관계 ──
