@@ -424,6 +424,17 @@ dialog.frame:not(.as-panel) > .bl { bottom: 2px; left: 2px; } dialog.frame:not(.
 .sl-cimg { flex: 0 0 100%; display: flex; }
 .sl-cimg[hidden] { display: none; }
 .sl-cimg .sl-thumb { width: 56px; height: 56px; }
+/* 선물 그림: '함께 보낼 말' 칸 안 오른쪽 아래의 작은 단추 · 받은 창/기록/보물 상자에 작게 */
+.gift-mwrap { position: relative; flex: 1; min-width: 0; display: flex; }
+.gift-mwrap > textarea.input { flex: 1; min-width: 0; padding-right: 36px; }
+.gift-mwrap > .gift-img-b { position: absolute; right: 5px; bottom: 6px; }
+.gift-mwrap > .gift-img-b.on { color: var(--steel-d); }
+.gift-prev { margin: 2px 0 6px; }
+.gift-img { display: block; width: fit-content; max-width: 100%; border: 1px solid #DAD8D0; border-radius: 3px; overflow: hidden; background: #F3F2EE; }
+.gift-img img { display: block; max-width: 100%; height: auto; object-fit: contain; }
+.gift-dlg-img img { max-height: 280px; }
+.lg-img, .chest-img { margin-top: 6px; max-width: min(100%, 220px); }
+.lg-img img, .chest-img img { max-height: 150px; }
 /* 답에 붙은 그림: 작게, 누르면 원래 크기로 */
 .sl-cmimg { grid-column: 2; display: block; width: fit-content; max-width: min(100%, 240px); margin-top: 4px; border: 1px solid #DAD8D0; border-radius: 3px; overflow: hidden; background: #F3F2EE; }
 .sl-cmimg img { display: block; max-width: 100%; height: auto; max-height: 160px; object-fit: contain; }

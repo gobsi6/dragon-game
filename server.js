@@ -318,6 +318,60 @@ app.use((err, req, res, next) => { // 받는 크기를 넘으면 (express.raw의
   if (err && err.type === 'entity.too.large') return res.status(413).json({ error: '그림이 너무 크다.' });
   next(err);
 });
+// 선물에 끼울 그림 올리기 (석판 그림과 같은 방식). 돌려줌: { id, key } → 보낼 때 img로
+const GIFT_IMG = { max: 320 * 1024, gap: 1500, pending: 3, perDay: 10 }; // 한 장 최대 크기 · 올리는 간격 · 올려 두기 · 하루에 보낼 수 있는 그림
+const giftImgAt = new Map();
+app.post('/api/gift-img', express.raw({ type: ['image/webp', 'image/jpeg', 'image/png'], limit: '330kb' }), (req, res) => {
+  const token = str((req.get('authorization') || '').replace(/^Bearer\s+/i, ''));
+  const user = token ? db.getSessionUser(token) : null;
+  if (!user) return res.status(401).json({ error: '다시 로그인해야 한다.' });
+  const d = db.getDragonByUser(user.id);
+  if (!d) return res.status(400).json({ error: '먼저 드래곤을 만들어야 한다.' });
+  const type = String(req.get('content-type') || '').split(';')[0].trim();
+  if (!['image/webp', 'image/jpeg', 'image/png'].includes(type) || !Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: '그림 파일을 읽지 못했다. 다른 그림으로 해 보자.' });
+  if (req.body.length > GIFT_IMG.max) return res.status(400).json({ error: '그림이 너무 크다.' });
+  const now = Date.now();
+  if (now - (giftImgAt.get(d.id) || 0) < GIFT_IMG.gap) return res.status(400).json({ error: '조금 천천히 올리자.' });
+  if (db.giftImg.pending(d.id) >= GIFT_IMG.pending) return res.status(400).json({ error: '올려 두고 보내지 않은 그림이 많다. 먼저 선물을 보내자.' });
+  if (db.giftImg.sentSince(d.id, now - 86400000) >= GIFT_IMG.perDay) return res.status(400).json({ error: `그림은 하루에 ${GIFT_IMG.perDay}장까지 보낼 수 있다.` });
+  giftImgAt.set(d.id, now);
+  const clamp = (v) => Math.max(0, Math.min(4096, Math.floor(Number(v) || 0)));
+  const r = db.giftImg.add(d.id, type, req.body, clamp(req.query.w), clamp(req.query.h));
+  res.json({ ok: true, id: r.id, key: r.key });
+});
+// 선물 그림: 주소에 비밀 글자(key)가 맞아야 보임 (주고받은 둘만 주소를 앎)
+app.get('/gift-img/:id/:key', (req, res) => {
+  const row = db.giftImg.get(Number(req.params.id));
+  if (!row || row.key !== String(req.params.key)) return res.status(404).end();
+  res.set('Content-Type', row.type);
+  res.set('Cache-Control', 'private, max-age=31536000, immutable');
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.send(row.data);
+});
+// ── 그림 정리: 서버를 켤 때와 그 뒤 여섯 시간마다 ──
+// 1) 올려 두고 선물에 붙이지 않은 그림: 하루 뒤  2) 보냈지만 보물 상자에 간직하지 않은 그림: 90일 뒤 (주고받은 기록과 같음)
+// 3) 간직한 그림이라도 받은 드래곤의 보물 상자에 더는 없으면 (긴 잠·먼 여행·탈퇴 등)  4) 석판에서 글에 붙지 않은 그림: 하루 뒤
+// 백업은 VACUUM INTO라 지운 만큼 바로 작아진다. 정리할 때 그림이 차지하는 양을 서버 기록에 한 줄 남김
+function imgSweep() {
+  try {
+    const now = Date.now();
+    const up = db.giftImg.pruneUp(now - 86400000);
+    const old = db.giftImg.pruneSent(now - 90 * 86400000);
+    const sl = db.slate.imgPrune(now - 86400000);
+    let lost = 0;
+    const keptBy = new Map();
+    for (const r of db.giftImg.kept()) { if (!keptBy.has(r.to_id)) keptBy.set(r.to_id, []); keptBy.get(r.to_id).push(r.id); }
+    for (const [to, ids] of keptBy) {
+      const e = online.get(to); const d = e ? e.dragon : db.getDragon(to);
+      const have = new Set(d && !d.dead_at ? logic.chestOf(d).filter((x) => x.img).map((x) => x.img.id) : []);
+      for (const id of ids) if (!have.has(id)) { db.giftImg.del(id); lost++; }
+    }
+    const b = db.imgBytes(), mb = (n) => (n / 1048576).toFixed(1);
+    console.log(`[그림 정리] 지움: 안 보낸 선물 그림 ${up} · 오래된 선물 그림 ${old} · 상자에서 사라진 그림 ${lost} · 석판 ${sl} / 남은 그림: 석판 ${b.sn}장 ${mb(b.sb)}MB · 선물 ${b.gn}장 ${mb(b.gb)}MB`);
+  } catch (e) { console.error('[그림 정리 실패]', e.message); }
+}
+setTimeout(imgSweep, 60 * 1000);
+setInterval(imgSweep, 6 * 60 * 60 * 1000);
 // 석판 그림 (번호마다 내용이 바뀌지 않으니 오래 저장해 둬도 됨)
 app.get('/slate-img/:id', (req, res) => {
   const row = db.slate.imgGet(Number(req.params.id));

@@ -2029,6 +2029,7 @@ function chestAdd(d, kind, from = '', text = '', now = Date.now(), custom = null
   const e = { k: custom ? 'custom' : kind, n: String(from || '').slice(0, 24), t: String(text || '').slice(0, 400), at: now };
   if (meta.id) e.id = meta.id;
   if (meta.src) e.src = meta.src;
+  if (meta.img) e.img = { id: meta.img.id, key: meta.img.key, w: meta.img.w || null, h: meta.img.h || null }; // 선물로 받은 그림
   if (custom) Object.assign(e, { nm: custom.name, ds: custom.desc || '', v: custom.value || 0, by: custom.by || '' }); // 직접 빚은 선물
   chestOf(d).push(e);
   return true;
@@ -2050,7 +2051,7 @@ function chestItemOf(e) {
   if (e.k === 'custom') return Object.keys(ITEMS).find((id) => ITEMS[id].use?.keep === 'custom' && ITEMS[id].name === e.nm && (ITEMS[id].custom?.byName || '') === (e.by || ITEMS[id].custom?.byName || '')) || null;
   return Object.keys(ITEMS).find((id) => ITEMS[id].use?.keep === e.k && !ITEMS[id].custom) || null;
 }
-const chestView = (d) => (d.nest ? chestOf(d).map((e, i) => ({ i, k: e.k, label: chestLabel(e), desc: e.k === 'custom' ? e.ds || '' : KEEPSAKES[e.k]?.desc || '', text: e.t || '', say: e.k === 'custom' ? true : KEEPSAKES[e.k]?.say !== false, at: e.at, value: e.k === 'custom' ? e.v || 0 : KEEPSAKES[e.k]?.value || 0, src: chestSrc(d, e), take: !!chestItemOf(e) })).reverse() : []);
+const chestView = (d) => (d.nest ? chestOf(d).map((e, i) => ({ i, k: e.k, label: chestLabel(e), desc: e.k === 'custom' ? e.ds || '' : KEEPSAKES[e.k]?.desc || '', text: e.t || '', say: e.k === 'custom' ? true : KEEPSAKES[e.k]?.say !== false, at: e.at, value: e.k === 'custom' ? e.v || 0 : KEEPSAKES[e.k]?.value || 0, src: chestSrc(d, e), take: !!chestItemOf(e), img: e.img || null })).reverse() : []);
 // 보물 상자에서 꺼내기: 둥지에 있을 때. 함께 넣은 쪽지와 보낸 이 기록은 남지 않음
 function chestTake(d, i, at) {
   if (!d.nest) return { error: '둥지를 틀어야 보물 상자를 열 수 있다.' };

@@ -233,6 +233,25 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS ledger_dragon ON ledger(dragon_id, id);
 `);
 const LEDGER = { keep: 300, days: 90 };
+// 선물에 끼운 그림: 먼저 올려 두고(sent_at 없음) 선물을 보낼 때 붙임. key는 주소에 넣는 비밀 글자 (선물 그림은 주고받은 둘만 보도록)
+// 정리 (giftImgSweep): 안 보낸 그림 하루 · 보냈지만 보물 상자에 간직하지 않은 그림 90일(주고받은 기록과 같음) · 간직한 그림은 상자에서 사라지면
+db.exec(`
+  CREATE TABLE IF NOT EXISTS gift_images (
+    id        INTEGER PRIMARY KEY,
+    dragon_id INTEGER NOT NULL,                -- 올린(보낸) 드래곤
+    to_id     INTEGER,                         -- 받은 드래곤 (보낸 뒤)
+    key       TEXT NOT NULL,
+    type      TEXT NOT NULL,
+    data      BLOB NOT NULL,
+    w         INTEGER, h INTEGER,
+    at        INTEGER NOT NULL,                -- 올린 때
+    sent_at   INTEGER,                         -- 선물에 붙여 보낸 때
+    kept      INTEGER NOT NULL DEFAULT 0       -- 받은 쪽이 보물 상자에 간직함
+  );
+  CREATE INDEX IF NOT EXISTS gift_images_from ON gift_images(dragon_id, sent_at);
+`);
+if (!db.prepare('PRAGMA table_info(gift_inbox)').all().some((c) => c.name === 'img')) db.exec("ALTER TABLE gift_inbox ADD COLUMN img TEXT NOT NULL DEFAULT ''"); // 함께 온 그림 {id,key,w,h}
+if (!db.prepare('PRAGMA table_info(ledger)').all().some((c) => c.name === 'img')) db.exec("ALTER TABLE ledger ADD COLUMN img TEXT NOT NULL DEFAULT ''");
 
 // 관계 이름: 서로 맺은 관계(kind = friend)가 어떤 사이인지 (비어 있으면 동료). 요청에도 청한 관계를 적음
 if (!db.prepare('PRAGMA table_info(relations)').all().some((c) => c.name === 'bond')) db.exec('ALTER TABLE relations ADD COLUMN bond TEXT');
@@ -460,13 +479,28 @@ const q = {
                             AND id <= (SELECT id FROM telepathy WHERE (from_id = @a AND to_id = @b) OR (from_id = @b AND to_id = @a)
                                        ORDER BY id DESC LIMIT 1 OFFSET 200)`),
   noteAdd:      db.prepare('INSERT INTO notes (dragon_id, text, at) VALUES (?, ?, ?)'),
-  ledgerAdd:    db.prepare(`INSERT INTO ledger (dragon_id, at, kind, other_id, other_name, other_kind, gold_in, gold_out, items_in, items_out, msg, note)
-                            VALUES (@dragon_id, @at, @kind, @other_id, @other_name, @other_kind, @gold_in, @gold_out, @items_in, @items_out, @msg, @note)`),
+  ledgerAdd:    db.prepare(`INSERT INTO ledger (dragon_id, at, kind, other_id, other_name, other_kind, gold_in, gold_out, items_in, items_out, msg, note, img)
+                            VALUES (@dragon_id, @at, @kind, @other_id, @other_name, @other_kind, @gold_in, @gold_out, @items_in, @items_out, @msg, @note, @img)`),
+  giftImgAdd:   db.prepare('INSERT INTO gift_images (dragon_id, key, type, data, w, h, at) VALUES (?, ?, ?, ?, ?, ?, ?)'),
+  giftImgGet:   db.prepare('SELECT id, key, type, data FROM gift_images WHERE id = ?'),
+  giftImgMeta:  db.prepare('SELECT id, dragon_id, to_id, key, w, h, sent_at, kept FROM gift_images WHERE id = ?'),
+  giftImgSend:  db.prepare('UPDATE gift_images SET to_id = ?, sent_at = ? WHERE id = ? AND sent_at IS NULL'),
+  giftImgKeep:  db.prepare('UPDATE gift_images SET kept = 1 WHERE id = ? AND to_id = ?'),
+  giftImgPend:  db.prepare('SELECT COUNT(*) AS n FROM gift_images WHERE dragon_id = ? AND sent_at IS NULL'),
+  giftImgDay:   db.prepare('SELECT COUNT(*) AS n FROM gift_images WHERE dragon_id = ? AND sent_at >= ?'),
+  giftImgOldUp: db.prepare('DELETE FROM gift_images WHERE sent_at IS NULL AND at < ?'),
+  giftImgOldSent: db.prepare('DELETE FROM gift_images WHERE kept = 0 AND sent_at IS NOT NULL AND sent_at < ?'),
+  giftImgKept:  db.prepare('SELECT id, to_id FROM gift_images WHERE kept = 1'),
+  giftImgDel:   db.prepare('DELETE FROM gift_images WHERE id = ?'),
+  imgBytes:     db.prepare(`SELECT (SELECT COUNT(*) FROM slate_images) AS sn, (SELECT IFNULL(SUM(LENGTH(data)), 0) FROM slate_images) AS sb,
+                            (SELECT COUNT(*) FROM gift_images) AS gn, (SELECT IFNULL(SUM(LENGTH(data)), 0) FROM gift_images) AS gb`),
   ledgerList:   db.prepare('SELECT * FROM ledger WHERE dragon_id = ? ORDER BY id DESC LIMIT ?'),
   ledgerPrune:  db.prepare(`DELETE FROM ledger WHERE dragon_id = @d AND (at < @old OR id <= (SELECT id FROM ledger WHERE dragon_id = @d ORDER BY id DESC LIMIT 1 OFFSET @keep))`),
   giftIn:       db.prepare('INSERT INTO gift_inbox (to_id, from_id, from_name, from_kind, gold, items, msg, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'),
   giftList:     db.prepare('SELECT * FROM gift_inbox WHERE to_id = ? ORDER BY id'),
   giftSeen:     db.prepare('DELETE FROM gift_inbox WHERE id = ? AND to_id = ?'),
+  giftOne:      db.prepare('SELECT * FROM gift_inbox WHERE id = ? AND to_id = ?'),
+  giftImgSet:   db.prepare('UPDATE gift_inbox SET img = ? WHERE id = ?'),
   noteList:     db.prepare('SELECT text FROM notes WHERE dragon_id = ? ORDER BY id'),
   noteClear:    db.prepare('DELETE FROM notes WHERE dragon_id = ?'),
   // GM
@@ -761,6 +795,7 @@ module.exports = {
       other_id: e.other?.id ?? null, other_name: e.other?.name || '', other_kind: e.other?.kind || null,
       gold_in: Math.max(0, e.goldIn || 0), gold_out: Math.max(0, e.goldOut || 0),
       items_in: clean(e.itemsIn), items_out: clean(e.itemsOut), msg: e.msg || '', note: e.note || '',
+      img: e.img ? JSON.stringify({ id: e.img.id, key: e.img.key, w: e.img.w || null, h: e.img.h || null }) : '',
     });
     q.ledgerPrune.run({ d: dragonId, old: Date.now() - LEDGER.days * 86400000, keep: LEDGER.keep });
   },
@@ -770,11 +805,28 @@ module.exports = {
       id: r.id, at: r.at, kind: r.kind, note: r.note, msg: r.msg,
       other: r.other_id || r.other_name ? { id: r.other_id, name: r.other_name, kind: r.other_kind } : null,
       goldIn: r.gold_in, goldOut: r.gold_out, itemsIn: parse(r.items_in), itemsOut: parse(r.items_out),
+      img: r.img ? (() => { try { return JSON.parse(r.img); } catch { return null; } })() : null,
     };
   }),
   // 받은 선물 상자 (확인할 때까지 남는 알림)
-  giftIn: (to, from, gold, items, msg) => Number(q.giftIn.run(to, from.id, from.name, from.kind, gold, JSON.stringify(items), msg, Date.now()).lastInsertRowid),
-  giftList: (to) => q.giftList.all(to).map((r) => ({ id: r.id, from: { id: r.from_id, name: r.from_name, kind: r.from_kind }, gold: r.gold, items: JSON.parse(r.items || '[]'), msg: r.msg, at: r.at })),
+  giftIn: (to, from, gold, items, msg, img = null) => { const id = Number(q.giftIn.run(to, from.id, from.name, from.kind, gold, JSON.stringify(items), msg, Date.now()).lastInsertRowid); if (img) q.giftImgSet.run(JSON.stringify(img), id); return id; },
+  giftList: (to) => q.giftList.all(to).map((r) => ({ id: r.id, from: { id: r.from_id, name: r.from_name, kind: r.from_kind }, gold: r.gold, items: JSON.parse(r.items || '[]'), msg: r.msg, at: r.at, img: r.img ? (() => { try { return JSON.parse(r.img); } catch { return null; } })() : null })),
+  giftGet: (id, to) => { const r = q.giftOne.get(id, to); if (!r) return null; let img = null; try { img = r.img ? JSON.parse(r.img) : null; } catch {} return { id: r.id, fromName: r.from_name, msg: r.msg, img }; },
+  // 선물 그림
+  giftImg: {
+    add: (dragonId, type, buf, w, h) => { const key = require('crypto').randomBytes(12).toString('hex'); return { id: Number(q.giftImgAdd.run(dragonId, key, type, buf, w || null, h || null, Date.now()).lastInsertRowid), key }; },
+    get: (id) => q.giftImgGet.get(id) || null,
+    meta: (id) => q.giftImgMeta.get(id) || null,
+    send: (id, to) => q.giftImgSend.run(to, Date.now(), id).changes > 0,
+    keep: (id, to) => q.giftImgKeep.run(id, to).changes > 0,
+    pending: (dragonId) => q.giftImgPend.get(dragonId).n,
+    sentSince: (dragonId, since) => q.giftImgDay.get(dragonId, since).n,
+    pruneUp: (before) => q.giftImgOldUp.run(before).changes,
+    pruneSent: (before) => q.giftImgOldSent.run(before).changes,
+    kept: () => q.giftImgKept.all(),
+    del: (id) => q.giftImgDel.run(id),
+  },
+  imgBytes: () => q.imgBytes.get(),
   giftSeen: (id, to) => q.giftSeen.run(id, to).changes > 0,
   notesTake: db.transaction((id) => { const l = q.noteList.all(id).map((r) => r.text); q.noteClear.run(id); return l; }),
   // GM

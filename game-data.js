@@ -2099,6 +2099,7 @@ const KEEPSAKES = {
   old_coin:      { name: '녹슨 옛 동전',      value: 8,  fmt: 'of',   desc: '어느 옛 왕국의 것인지 모를 녹슨 동전. 벌써 반짝이는 것을 알아보는 용의 눈이 생긴 모양이다.' },
   sky_sketch:    { name: '하늘에서 본 둥지',  value: 9,  fmt: 'of',   say: false, desc: '높이 날며 내려다본 둥지와 그 둘레를 그린 그림. 길과 숲이 지도처럼 그려져 있다.' },
   far_letter:    { name: '먼 둥지의 편지',    value: 5,  fmt: 'from', desc: '입양 보낸 식구가 보내온 안부.' },
+  gift_pic:      { name: '그림',              value: 3,  fmt: 'from',   desc: '선물에 끼워 보내온 그림. 둥지 벽에 걸어 두고 가끔 들여다본다.' }, // 선물 그림 (img: { id, key })
   court_gift:    { name: '구애의 선물',       value: 10, fmt: 'from',   desc: '낯선 용이 둥지 가장자리에 놓고 간 반짝이는 돌. 드래곤은 마음에 둔 상대에게 가장 아끼는 보물을 건넨다고 한다.' },
   mourn_scale:   { name: '무덤가의 비늘',     value: 4,  fmt: 'of',     desc: '먼저 떠난 식구의 무덤가에 새끼 드래곤이 두고 온 비늘과 똑같이 생긴 한 조각. 둘이 함께 자란 날들을 기억한다.' },
   home_pebble:   { name: '고향의 조약돌',     value: 5,  fmt: 'from',   desc: '늙은 식구가 마지막으로 고향에 다녀오며 주워 온 조약돌.' },

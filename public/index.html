@@ -812,7 +812,7 @@
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="gift-title">선물이 도착했다</h2></div>
   <div class="body" id="gift-body"></div>
-  <div class="row"><button class="btn" type="button" id="gift-thanks">답장 보내기</button><button class="btn primary" type="button" id="gift-ok">확인</button></div>
+  <div class="row"><button class="btn" type="button" id="gift-thanks">답장 보내기</button><button class="btn" type="button" id="gift-keep" hidden>간직하기</button><button class="btn primary" type="button" id="gift-ok">확인</button></div>
 </dialog>
 
 <dialog class="frame dlg" id="rip-dlg" aria-labelledby="rip-title">
@@ -3039,11 +3039,52 @@
       host.appendChild(c);
     }
   }
+  // 선물 그림: 작게, 누르면 원래 크기로 새 창에. 정리되어 사라졌으면 칸째 숨김
+  function giftImgEl(im, cls) {
+    const l = document.createElement('a'); l.className = `gift-img ${cls || ''}`; l.href = `/gift-img/${im.id}/${im.key}`; l.target = '_blank'; l.rel = 'noopener';
+    const img = document.createElement('img'); img.src = l.href; img.alt = '함께 보낸 그림'; img.loading = 'lazy'; img.decoding = 'async';
+    if (im.w && im.h) { img.width = im.w; img.height = im.h; }
+    img.addEventListener('error', () => { l.replaceWith(Object.assign(document.createElement('p'), { className: 'note', textContent: '그림은 오래되어 사라졌다.' })); });
+    l.appendChild(img);
+    return l;
+  }
+  // 선물에 그림 한 장 끼우기: '함께 보낼 말' 칸 안 오른쪽 아래의 작은 그림 단추. 붙이면 칸 위에 작은 미리보기
+  async function giftUpload(sm) {
+    const r = await fetch(`/api/gift-img?w=${sm.w}&h=${sm.h}`, { method: 'POST', headers: { 'Content-Type': sm.blob.type, Authorization: `Bearer ${store.get() || ''}` }, body: sm.blob });
+    let res = {}; try { res = await r.json(); } catch {}
+    if (!r.ok || res.error) throw new Error(res.error || '그림을 올리지 못했다.');
+    return res;
+  }
+  function giftImgPick(row, ta) {
+    const st = { id: 0, busy: false };
+    const wrap = document.createElement('div'); wrap.className = 'gift-mwrap'; ta.replaceWith(wrap); wrap.appendChild(ta);
+    const file = document.createElement('input'); file.type = 'file'; file.accept = 'image/*'; file.hidden = true;
+    const pick = slIcon('img', '그림 끼우기', () => file.click(), 'gift-img-b');
+    wrap.append(pick, file);
+    const prev = document.createElement('div'); prev.className = 'sl-cimg gift-prev'; prev.hidden = true;
+    row.before(prev);
+    const draw = (url) => {
+      prev.replaceChildren(); prev.hidden = !url; pick.classList.toggle('on', !!url);
+      if (!url) return;
+      const t = document.createElement('div'); t.className = `sl-thumb${st.busy ? ' busy' : ''}`;
+      const img = document.createElement('img'); img.src = url; img.alt = '끼운 그림'; t.appendChild(img);
+      if (!st.busy) { const x = document.createElement('button'); x.className = 'sl-thumb-x'; x.type = 'button'; x.textContent = '×'; x.title = '그림 빼기'; x.setAttribute('aria-label', '끼운 그림 빼기'); x.addEventListener('click', () => { st.id = 0; draw(''); }); t.appendChild(x); }
+      prev.appendChild(t);
+    };
+    file.addEventListener('change', async () => {
+      const fl = file.files[0]; file.value = '';
+      if (!fl || st.busy) return;
+      st.busy = true; st.id = 0;
+      try { const sm = await slShrink(fl); draw(sm.url); const res = await giftUpload(sm); st.id = res.id; st.busy = false; draw(sm.url); }
+      catch (e) { st.busy = false; st.id = 0; draw(''); toast(e.message || '그림을 올리지 못했다.'); }
+    });
+    return { id: () => st.id, busy: () => st.busy, clear: () => { st.id = 0; draw(''); } };
+  }
   function renderLedger(list) {
     const box = $('ledger-list');
     box.replaceChildren();
     for (const t of $('ledger-filter').children) { const on = t.dataset.f === ledgerF; t.classList.toggle('on', on); t.setAttribute('aria-selected', String(on)); }
-    const hasIn = (e) => e.goldIn > 0 || e.itemsIn.length > 0, hasOut = (e) => e.goldOut > 0 || e.itemsOut.length > 0;
+    const hasIn = (e) => e.goldIn > 0 || e.itemsIn.length > 0 || (e.img && e.kind === 'gift_in'), hasOut = (e) => e.goldOut > 0 || e.itemsOut.length > 0 || (e.img && e.kind === 'gift_out');
     const rows = list.filter((e) => ledgerF === 'all' || (ledgerF === 'trade' ? e.kind === 'trade' : ledgerF === 'in' ? hasIn(e) && e.kind !== 'trade' : hasOut(e) && e.kind !== 'trade'));
     if (!rows.length) {
       const e = document.createElement('div'); e.className = 'mk-empty';
@@ -3084,6 +3125,7 @@
       line('out', e.kind === 'gm' ? '회수' : tr ? '건넨 것' : '보낸 것', e.goldOut, e.itemsOut, tr);
       r.appendChild(flow);
       if (e.msg) { const m = document.createElement('p'); m.className = 'lg-msg'; m.textContent = `"${e.msg}"`; r.appendChild(m); }
+      if (e.img) r.appendChild(giftImgEl(e.img, 'lg-img')); // 함께 보낸 그림 (간직하지 않았으면 90일 뒤 사라짐)
       box.appendChild(r);
     }
   }
@@ -4454,6 +4496,7 @@
               it.appendChild(sm);
               const ds = document.createElement('p'); ds.className = 'chest-desc'; ds.textContent = e.desc;
               it.appendChild(ds);
+              if (e.img) it.appendChild(giftImgEl(e.img, 'chest-img')); // 선물로 받아 간직한 그림
               if (e.text) { const q = document.createElement('p'); q.className = 'chest-text'; q.textContent = e.say ? `"${e.text}"` : e.text; it.appendChild(q); }
               // 물건으로 넣은 것은 다시 꺼낼 수 있음 (아이가 직접 넣어 준 그림처럼 물건이 없는 추억은 빼고)
               if (e.take) {
@@ -7238,15 +7281,18 @@
     };
     gift.querySelector('.gp-q').addEventListener('input', (e) => { gp.q = e.target.value; drawList(); });
     drawTags(); drawList(); drawPick();
+    const gImg = giftImgPick(gift.querySelector('.msg').closest('.r'), gift.querySelector('.msg')); // 그림 한 장 (그림만 보내도 됨)
     gift.querySelector('.btn').addEventListener('click', () => {
       const id = gp.id;
       const qty = Number(gift.querySelector('.num').value) || 0;
       const gold = Number(gift.querySelector('.gold').value) || 0;
       const items = id && qty > 0 ? [{ id, qty }] : [];
       const msg = gift.querySelector('.msg').value.trim();
-      socket.emit('gift:send', { id: p.id, gold, items, msg }, (res) => {
+      if (gImg.busy()) return toast('그림을 올리는 중이다. 잠깐 기다리자.');
+      socket.emit('gift:send', { id: p.id, gold, items, msg, img: gImg.id() }, (res) => {
         if (res.error) return toast(res.error);
         toast(res.lines.join(' '));
+        gImg.clear(); gift.querySelector('.msg').value = '';
         fetchInv(() => { refreshProfile(); if ($('inv-dlg').open) keepScroll($('inv-dlg'), renderInv); }); // 소지품 창이 열려 있으면 줄어든 개수를 바로 보여 줌
       });
     });
@@ -7278,12 +7324,14 @@
     for (const it of g.items) { const c = document.createElement('span'); c.className = `gain ${S.items[it.id]?.rarity || 'common'}`; c.textContent = `${S.items[it.id]?.name || it.id} ×${it.qty}`; chips.appendChild(c); }
     if (g.gold) { const c = document.createElement('span'); c.className = 'gain common'; c.textContent = `금화 ${g.gold}닢`; chips.appendChild(c); }
     body.appendChild(chips);
+    chips.hidden = !chips.children.length; // 그림만 온 선물
+    if (g.img) body.appendChild(giftImgEl(g.img, 'gift-dlg-img'));
     if (g.msg) {
       const m = document.createElement('blockquote');
       m.className = 'gift-msg';
       m.textContent = g.msg;
       body.appendChild(m);
-    } else {
+    } else if (!g.img) {
       const n = document.createElement('p');
       n.className = 'note';
       n.textContent = '함께 적은 말은 없다.';
@@ -7291,8 +7339,9 @@
     }
     const n2 = document.createElement('p');
     n2.className = 'note';
-    n2.textContent = '받은 것은 이미 소지품과 금화에 들어 있다.';
+    n2.textContent = [g.gold || g.items.length ? '받은 것은 이미 소지품과 금화에 들어 있다.' : '', g.img ? "그림은 '간직하기'를 누르면 보물 상자에 오래 남는다. 간직하지 않으면 주고받은 기록에서 90일 동안 볼 수 있다." : ''].filter(Boolean).join(' ');
     body.appendChild(n2);
+    $('gift-keep').hidden = !g.img;
     $('gift-thanks').hidden = !g.from.id || g.from.id === S.me?.id;
     if (!$('gift-dlg').open) $('gift-dlg').showModal();
   }
@@ -7303,6 +7352,15 @@
     if (then && g) then(g);
   }
   $('gift-ok').addEventListener('click', () => seeGift());
+  // 그림을 보물 상자에 간직하고 확인
+  $('gift-keep').addEventListener('click', () => {
+    const g = giftQ[0]; if (!g) return;
+    socket.emit('gift:seen', { id: g.id, keep: true }, (res) => {
+      if (res?.error) { SFX.play('error'); return toast(res.error); }
+      giftQ.shift(); toast('그림을 보물 상자에 간직했다.'); showGift();
+      if ($('nest-dlg').open) openNest();
+    });
+  });
   $('gift-thanks').addEventListener('click', () => seeGift((g) => { if ($('gift-dlg').open) $('gift-dlg').close(); openTp(g.from.id); }));
   $('gift-dlg').addEventListener('cancel', (e) => e.preventDefault()); // Esc로 닫지 않음 (확인을 눌러야 사라짐)
 

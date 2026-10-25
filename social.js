@@ -843,12 +843,17 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       const gold = Math.floor(Number(p.gold) || 0);
       const items = cleanItems(p.items);
       const msg = (typeof p.msg === 'string' ? p.msg : '').replace(/\s+/g, ' ').trim().slice(0, GIFT_MSG_MAX); // 함께 보내는 말
-      if (!gold && !items.length) return { error: '보낼 것을 골라야 한다.' };
+      // 함께 끼운 그림 한 장: 내가 올려 두고 아직 보내지 않은 것만. 그림만 보내도 됨
+      const gi = Number(p.img) || 0, gm = gi ? db.giftImg.meta(gi) : null;
+      if (gi && (!gm || gm.dragon_id !== d.id || gm.sent_at != null)) return { error: '끼울 그림을 찾지 못했다. 다시 넣어 보자.' };
+      const img = gm ? { id: gm.id, key: gm.key, w: gm.w, h: gm.h } : null;
+      if (!gold && !items.length && !img) return { error: '보낼 것을 골라야 한다.' };
       const bad = checkOffer(d, gold, items);
       if (bad) return { error: bad };
       const t = live(id);
       const name = t ? t.dragon.name : db.getDragon(id).name;
-      const what = giveText(gold, items);
+      const what = gold || items.length ? `${giveText(gold, items)}${img ? '과 그림' : ''}` : '그림 한 장';
+      if (img) db.giftImg.send(img.id, id);
       d.gold -= gold;
       if (t) {
         t.dragon.gold += gold;
@@ -858,13 +863,13 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
         db.giftOffline(id, gold, items);
       }
       // 받은 선물 상자에 넣음: 받은 쪽이 '확인'을 누를 때까지 남는 알림 (접속하지 않았으면 다음 접속 때)
-      const gid = db.giftIn(id, d, gold, items, msg);
+      const gid = db.giftIn(id, d, gold, items, msg, img);
       // 주고받은 기록 (선물)
       const to = t ? t.dragon : db.getDragon(id);
-      db.ledgerAdd(d.id, { kind: 'gift_out', other: { id, name, kind: to?.kind }, goldOut: gold, itemsOut: items, msg });
-      db.ledgerAdd(id, { kind: 'gift_in', other: { id: d.id, name: d.name, kind: d.kind }, goldIn: gold, itemsIn: items, msg });
+      db.ledgerAdd(d.id, { kind: 'gift_out', other: { id, name, kind: to?.kind }, goldOut: gold, itemsOut: items, msg, img });
+      db.ledgerAdd(id, { kind: 'gift_in', other: { id: d.id, name: d.name, kind: d.kind }, goldIn: gold, itemsIn: items, msg, img });
       if (t) {
-        t.socket.emit('gift:got', { id: gid, from: { id: d.id, name: d.name, kind: d.kind, av: avOf(d.id) }, gold, items, msg, at: Date.now() });
+        t.socket.emit('gift:got', { id: gid, from: { id: d.id, name: d.name, kind: d.kind, av: avOf(d.id) }, gold, items, msg, img, at: Date.now() });
         sendMe(t.socket, t.dragon);
       }
       sendMe(socket, d);
@@ -872,7 +877,18 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     });
 
     // 받은 선물 확인 (상자에서 지움)
-    on('gift:seen', (d, p) => ({ ok: db.giftSeen(Number(p.id), d.id) }));
+    // keep: 함께 온 그림을 보물 상자에 간직 (둥지가 있어야 함. 간직하지 않은 그림은 주고받은 기록에서 90일 동안 보임)
+    on('gift:seen', (d, p) => {
+      const g = p.keep ? db.giftGet(Number(p.id), d.id) : null;
+      let kept = false;
+      if (g?.img) {
+        if (!d.nest) return { error: '그림을 간직하려면 먼저 둥지를 틀어야 한다.' };
+        kept = logic.chestAdd(d, 'gift_pic', g.fromName, g.msg || '', Date.now(), null, { img: g.img, src: 'got' });
+        if (!kept) return { error: '보물 상자가 가득 찼다.' };
+        db.giftImg.keep(g.img.id, d.id); db.saveState(d);
+      }
+      return { ok: db.giftSeen(Number(p.id), d.id), kept };
+    });
     on('gift:inbox', (d) => ({ ok: true, list: db.giftList(d.id).map((g) => ({ ...g, from: { ...g.from, av: avOf(g.from.id) } })) }));
     // 주고받은 기록: 선물·교환·이벤트 선물·GM 지급 (최근 것부터)
     on('ledger:list', (d) => ({ ok: true, list: db.ledgerList(d.id, 150) }));
