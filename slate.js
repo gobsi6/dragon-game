@@ -5,6 +5,7 @@ const HEADS = ['story', 'tip', 'party', 'free'];      // 말머리 (지금 화�
 const RULES = {
   title: 40, body: 1000, comment: 100,                // 글자 수
   imgs: 3, imgMax: 320 * 1024, imgGap: 1500,          // 글 하나에 그림 몇 장, 한 장 최대 크기(바이트), 올리는 간격
+  imgDay: 20,                                         // 한 드래곤이 하루(24시간)에 올릴 수 있는 석판 그림 (글·답 합쳐서)
   postGap: 30 * 1000, perDay: 20,                     // 글 간격, 하루에 새길 수 있는 글 수
   commentGap: 3 * 1000,
   list: 200,                                          // 목록에 보여 줄 글 수
@@ -155,6 +156,7 @@ module.exports = function setupSlate({ io, db, entryOf }) {
     const now = Date.now();
     if (now - (imgAt.get(d.id) || 0) < RULES.imgGap) return { error: '조금 천천히 올리자.' };
     if (db.slate.imgPending(d.id) >= RULES.imgs * 3) return { error: '올려 두고 쓰지 않은 그림이 많다. 먼저 글을 새기자.' };
+    if (db.slate.imgSince(d.id, now - DAY) >= RULES.imgDay) return { error: `석판에는 하루에 그림을 ${RULES.imgDay}장까지 올릴 수 있다.` };
     imgAt.set(d.id, now);
     const clamp = (v) => Math.max(0, Math.min(4096, Math.floor(Number(v) || 0)));
     return { ok: true, id: db.slate.imgAdd(d.id, type, buf, clamp(w), clamp(h)) };

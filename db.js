@@ -557,6 +557,7 @@ const q = {
   slateImgSet:  db.prepare('UPDATE slate_images SET post_id = ?, ord = ? WHERE id = ?'),
   slateImgDel:  db.prepare('DELETE FROM slate_images WHERE id = ?'),
   slateImgPend: db.prepare('SELECT COUNT(*) AS n FROM slate_images WHERE dragon_id = ? AND post_id IS NULL'),
+  slateImgDay:  db.prepare('SELECT COUNT(*) AS n FROM slate_images WHERE dragon_id = ? AND at >= ?'), // 하루 동안 올린 석판 그림 (글·답 모두)
   slateImgOld:  db.prepare('DELETE FROM slate_images WHERE post_id IS NULL AND at < ?'),
   slateDayN:    db.prepare('SELECT COUNT(*) AS n FROM slate_posts WHERE dragon_id = ? AND at >= ?'),
   worldGet:     db.prepare('SELECT v FROM world WHERE k = ?'),
@@ -871,6 +872,7 @@ module.exports = {
     imgSet: (id, postId, ord) => q.slateImgSet.run(postId, ord, id),
     imgDel: (id) => q.slateImgDel.run(id),
     imgPending: (dragonId) => q.slateImgPend.get(dragonId).n,
+    imgSince: (dragonId, since) => q.slateImgDay.get(dragonId, since).n,
     imgPrune: (before) => q.slateImgOld.run(before).changes, // 글에 붙지 않고 남은 그림 정리
     countSince: (dragonId, since) => q.slateDayN.get(dragonId, since).n,
   },
