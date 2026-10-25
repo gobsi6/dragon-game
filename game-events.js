@@ -43,6 +43,8 @@ const loveOf = (c, x) => { const kl = require('./game-logic').hooks.kinLove; ret
 // 실연을 겪은 뒤: 다시 뜨지 않게 하고, 그 첫사랑은 끝난 것으로 (새로 만난 사람과 짝을 맺을 수 있음)
 const heartEnd = (k, c) => { k.data.heartDone = c.now; k.data.heartbreak = null; if (k.data.loveRef) k.data.loveRef.ended = c.now; k.data.mateNo = Math.max(k.data.mateNo || 0, c.now - 2 * DAYMS); };
 const heartDiary = (h, k, t) => { if (h.diary) h.diary(k, t); };
+// 첫사랑: 함께한 날들에 상대 이름을 남김 (owner가 있으면 다른 둥지의 아이, 없으면 마을 아이). loveDiary: 이미 남겼다는 표시 (예전 기록 채우기와 겹치지 않게)
+const loveDiary = (h, k, name, owner) => { heartDiary(h, k, owner ? `${owner}의 둥지에 사는 ${name}${h.josa(name, '을', '를')} 좋아하게 되었다.` : `마을에 사는 ${name}${h.josa(name, '을', '를')} 좋아하게 되었다.`); k.data.loveDiary = true; };
 const heartOf = (c, x) => {
   if (x.type !== 'human' || x.data.heartDone || !['청소년', '어른', '노년'].includes(c.stage(x))) return null;
   if (x.data.heartbreak) return x.data.heartbreak;
@@ -1443,6 +1445,7 @@ module.exports = [
     choices: [
       { label: '만나러 가도 된다고 한다', tone: 'trust', run: (h, c, v) => {
         const k = c.k(v.id); k.data.firstLove = v.other;
+        loveDiary(h, k, v.other, v.oid ? v.owner : null);
         if (v.oid) { // 다른 둥지의 단짝: 그 아이의 보호자에게도 소식
           if (v.ref) k.data.loveRef = v.ref;
           h.bond(k, 8);
@@ -1457,6 +1460,7 @@ module.exports = [
       } },
       { label: '직접 만나 보겠다고 한다', tone: 'warm', run: (h, c, v) => {
         const k = c.k(v.id); k.data.firstLove = v.other;
+        loveDiary(h, k, v.other, v.oid ? v.owner : null);
         if (v.oid) {
           if (v.ref) k.data.loveRef = v.ref;
           h.bond(k, 3); h.fame(1);

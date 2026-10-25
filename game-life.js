@@ -75,6 +75,27 @@ function diaryStart(k) {
   if (k.data.diary || k.status === 'egg' || k.status === 'cold') return;
   k.data.diary = [{ at: k.data.born || Date.now(), t: k.type === 'drake' ? '알에서 깨어났다.' : (ORIGIN_LINE[k.data.origin] || '둥지 식구가 되었다.') }];
 }
+// 예전 첫사랑 기록 채우기: 이름이 들어간 줄이 생기기 전에 첫사랑이 정해진 아이에게 한 번만 (서버를 켤 때)
+// 날짜는 예전에 남은 "'아이의 첫사랑' — …" 줄과 같게, 그 줄이 없으면 청소년이 된 날. 바뀌었으면 true
+function loveDiaryFix(k) {
+  const d = k?.data, nm = d?.firstLove;
+  if (k?.type !== 'human' || !nm || nm === '-' || d.loveDiary || !Array.isArray(d.diary)) return false;
+  let owner = d.loveRef?.ownerName || null;
+  if (!owner) { const c = Object.values(d.friends || {}).filter((x) => x.type === 'human' && x.name === nm); if (c.length === 1) owner = c[0].owner || null; } // 예전 기록: 같은 이름의 단짝이 하나면 그 아이
+  const text = owner ? `${owner}의 둥지에 사는 ${nm}${josa(nm, '을', '를')} 좋아하게 되었다.`
+    : d.loveRef ? `${nm}${josa(nm, '을', '를')} 좋아하게 되었다.` : `마을에 사는 ${nm}${josa(nm, '을', '를')} 좋아하게 되었다.`;
+  const i = d.diary.findIndex((x) => typeof x.t === 'string' && x.t.startsWith("'아이의 첫사랑'"));
+  if (i >= 0) d.diary.splice(i, 0, { at: d.diary[i].at, t: text }); // 이벤트 줄 바로 앞 (같은 날짜)
+  else {
+    const teen = (KIN.human.stages.find((s) => s.name === '청소년') || { from: 4 }).from;
+    const at = d.born != null ? d.born + teen * DAY : Date.now();
+    let j = d.diary.findIndex((x, n) => n > 0 && x.at > at); if (j < 0) j = d.diary.length; // 날짜 순서에 맞는 자리 (첫 장은 맨 앞 그대로)
+    d.diary.splice(j, 0, { at, t: text });
+  }
+  if (d.diary.length > DIARY_MAX) d.diary.splice(1, d.diary.length - DIARY_MAX);
+  d.loveDiary = true;
+  return true;
+}
 function diary(k, text, now = Date.now()) {
   if (!k || !k.data) return;
   diaryStart(k);
@@ -1697,6 +1718,7 @@ function festOuting(d, kin, fest, nightOpen, now = Date.now()) {
 }
 
 module.exports = {
+  loveDiaryFix, // 예전 첫사랑 기록 채우기 (서버를 켤 때 한 번)
   festKids, festWent, festOuting, setNightCheck, // 왕도 축제에 식구들 데려가기 (낮 한 번 · 야시장 밤 한 번)
   touch, // 교감
   playable, playTogether, bestFriends, growInfo,

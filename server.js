@@ -18,6 +18,8 @@ const {
 const logic = require('./game-logic');
 const mobs = require('./game-mobs'); // 모브 드래곤: 의뢰·이야기·교환
 const life = require('./game-life');
+// 예전 첫사랑 기록 채우기: 함께한 날들에 상대 이름이 들어간 줄 (한 번만, 이미 채운 아이는 건너뜀)
+{ const n = db.kinFixAll(life.loveDiaryFix); if (n) console.log(`첫사랑 기록 ${n}명 채움`); }
 const { REGION_LOOT, SHOPS_SPECIAL, RUIN, FACILITY, KIN_TRAITS, KIN_PLAY } = require('./game-data');
 
 // ── 물건을 얻는 곳: 제작 화면에서 재료를 누르면 보여 줌. 서버를 켤 때 한 번 정리해 둠 ──
