@@ -4,11 +4,13 @@
 // - 혼인 청: 한쪽 보호자가 축복하면 상대 보호자에게 허락을 물음 (world 'kinLove'.offers, DAYS일 안에)
 // - 맺어지면 두 아이 모두 data.mate = { name, at, home: 상대 둥지 주인 이름, ref: { owner, id } }. 각자 자기 둥지에 산다
 const DAY = 86400000, DAYS = 2;
+const { REGIONS } = require('./game-data');
 const josa = (w, a, b) => { const c = String(w).charCodeAt(String(w).length - 1) - 0xAC00; return c >= 0 && c <= 11171 && c % 28 ? a : b; };
 
 module.exports = function setupKinLove({ db, online, sendMe, life, logic, news, kinChanged }) {
   const st = db.worldGet('kinLove') || {};
   if (!Array.isArray(st.offers)) st.offers = [];
+  if (!Array.isArray(st.babies)) st.babies = []; // 짝 사이의 아이를 두고 둥지끼리 의논하는 청 (raise: 짝의 둥지에서 키우기 · village: 마을에 가정을 꾸리기)
   const save = () => db.worldSet('kinLove', st);
   const live = (id) => online.get(id) || null;
   const tell = (id, lines, ev, data) => {
@@ -88,12 +90,90 @@ module.exports = function setupKinLove({ db, online, sendMe, life, logic, news, 
     tell(r.owner, [`${d.name}${josa(d.name, '이', '가')} 혼인을 청해 왔다. ${info.name}${josa(info.name, '과', '와')} 당신의 둥지 ${r.name}${josa(r.name, '이', '가')} 함께하기를 바란다. 둥지에서 허락할지 정할 수 있다. (${DAYS}일 안에)`], 'kinlove:got', { from: d.name, a: info.name, b: r.name });
   }
 
-  // 둥지 창에 보일 것: 받은 혼인 청 · 보낸 혼인 청
+  // ── 짝 사이의 아이: 어디에서 키울지 두 둥지가 의논 ──
+  const dragonOf = (id) => { const e = live(id); return e ? e.dragon : db.getDragon(id); };
+  const kidWord = (o) => (o.found ? '데려온 아이' : '태어난 아이');
+  // 청을 보냄 (아이가 생긴 쪽 보호자가 이벤트에서 고름)
+  function babyAsk(d, info, now = Date.now()) {
+    const r = info.ref;
+    if (!r || !['raise', 'village'].includes(info.kind)) return;
+    const o = { id: now + Math.floor(Math.random() * 1000), at: now, until: now + DAYS * DAY, kind: info.kind, baby: info.baby, found: !!info.found, town: info.town,
+      from: { owner: d.id, ownerName: d.name, kin: info.id, name: info.name },
+      to: { owner: r.owner, ownerName: ownerName(r.owner) || '', kin: r.id, name: info.mate } };
+    st.babies.push(o); save();
+    // 짝 쪽 기록에도 자녀를 적어 둠 (두 둥지가 아이 수를 함께 세서, 답을 기다리는 사이 겹쳐 태어나지 않게)
+    babyShared(r, info.baby, now, o.found ? `짝 ${info.name}${josa(info.name, '과', '와')} 함께 길 잃은 아이 ${info.baby}${josa(info.baby, '을', '를')} 데려왔다.` : `짝 ${info.name}${josa(info.name, '과', '와')}의 사이에 아이 ${info.baby}${josa(info.baby, '이', '가')} 태어났다.`);
+    const what = o.kind === 'raise' ? `${info.baby}${josa(info.baby, '을', '를')} 당신의 둥지에서 키워 주기를 바란다` : `두 사람이 ${info.baby}${josa(info.baby, '과', '와')} 함께 마을로 내려가 가정을 꾸리기를 바란다`;
+    { const e = live(r.owner); if (e) sendMe(e.socket, e.dragon); } // 받은 쪽 '둥지' 메뉴에 붉은 점
+    tell(r.owner, [`${d.name}의 둥지 ${info.name}${josa(info.name, '과', '와')} 당신의 둥지 ${info.mate} 사이에 ${kidWord(o)} ${info.baby}의 일로 ${d.name}${josa(d.name, '이', '가')} 청을 보냈다. ${what}. 둥지에서 정할 수 있다. (${DAYS}일 안에)`], 'kinbaby:got', { from: d.name, baby: info.baby, kind: o.kind });
+  }
+  // 사양하거나 답이 없을 때: 아이는 청을 보낸 둥지에서 자람 (자리가 없으면 마을 이웃에게 맡겨짐)
+  function babyFallback(o, why, now = Date.now()) {
+    const A = homeKid(o.from.owner, o.from.kin), p = dragonOf(o.from.owner);
+    const head = why === 'no' ? `${o.to.ownerName}${josa(o.to.ownerName, '이', '가')} 청을 정중히 사양했다.` : `${o.to.ownerName}에게서 ${o.baby}의 일에 답이 오지 않았다.`;
+    const kid = A.k && p && life.bornKid(A.kin, p, [o.from.name, o.to.name], o.baby, o.found, o.town, now);
+    if (kid) {
+      if (A.k) life.diary(A.k, `${o.baby}${josa(o.baby, '은', '는')} 이 둥지에서 자라게 되었다.`, now);
+      kinChanged(o.from.owner, A.kin);
+      tell(o.from.owner, [head, `${o.baby}${josa(o.baby, '은', '는')} 이 둥지에서 아기 식구로 자란다.`], 'kinlove:gone');
+    } else {
+      if (A.k) { life.diary(A.k, `${o.baby}${josa(o.baby, '은', '는')} 마을의 이웃 손에 맡겨졌다.`, now); kinChanged(o.from.owner, A.kin); }
+      tell(o.from.owner, [head, `둥지에 빈자리가 없어 ${o.baby}${josa(o.baby, '은', '는')} 마을의 이웃 손에 맡겨졌다.`], 'kinlove:gone');
+    }
+  }
+  function babySweep(now = Date.now()) {
+    const left = st.babies.filter((o) => now >= o.until);
+    if (!left.length) return;
+    st.babies = st.babies.filter((o) => now < o.until); save();
+    for (const o of left) babyFallback(o, 'late', now);
+  }
+  // 받은 쪽 보호자의 답
+  function babyAnswer(d, id, yes, now = Date.now()) {
+    babySweep(now);
+    const o = st.babies.find((x) => x.id === Number(id) && x.to.owner === d.id);
+    if (!o) return { error: '그 청은 이미 지나갔다.' };
+    const drop = () => { st.babies = st.babies.filter((x) => x !== o); save(); };
+    if (!yes) { drop(); babyFallback(o, 'no', now); return { ok: true, lines: [`${o.from.ownerName}의 청을 정중히 사양했다. ${o.baby}${josa(o.baby, '은', '는')} ${o.from.ownerName}의 둥지에서 자란다.`] }; }
+    const A = homeKid(o.from.owner, o.from.kin), B = homeKid(d.id, o.to.kin);
+    if (o.kind === 'raise') {
+      const kid = life.bornKid(B.kin, d, [o.to.name, o.from.name], o.baby, o.found, o.town, now);
+      if (!kid) return { error: '둥지에 빈자리가 없다. 자리를 만든 뒤에 받아들이거나, 사양할 수 있다.' };
+      drop();
+      if (B.k) life.diary(B.k, `짝과의 아이 ${o.baby}${josa(o.baby, '을', '를')} 이 둥지에서 키우게 되었다.`, now);
+      if (A.k) { life.diary(A.k, `${o.baby}${josa(o.baby, '은', '는')} ${d.name}의 둥지에서 자라게 되었다.`, now); kinChanged(o.from.owner, A.kin); }
+      kinChanged(d.id, B.kin);
+      tell(o.from.owner, [`${d.name}${josa(d.name, '이', '가')} ${o.baby}${josa(o.baby, '을', '를')} 맡아 키우기로 했다. 아이는 ${d.name}의 둥지에서 자란다.`], 'kinlove:gone');
+      return { ok: true, lines: [`${o.baby}${josa(o.baby, '이', '가')} 둥지의 아기 식구가 되었다.`] };
+    }
+    // village: 두 사람이 아이와 함께 마을로 내려가 가정을 꾸림 (두 둥지 모두 식구를 떠나보냄)
+    if (!A.k || !B.k) { drop(); babyFallback(o, 'no', now); return { error: '두 사람 가운데 한 사람이 이제 둥지에 없다. 아이는 청을 보낸 둥지에서 자란다.' }; }
+    drop();
+    const town = REGIONS[o.town] ? o.town : 'capital', tn = REGIONS[town].name;
+    for (const [ow, mine, other, kinList] of [[o.from.owner, A.k, B.k, A.kin], [d.id, B.k, A.k, B.kin]]) {
+      life.diary(mine, `${other.name}, ${o.baby}${josa(o.baby, '과', '와')} 함께 ${tn}에서 새 가정을 꾸렸다.`, now);
+      mine.status = 'returned'; mine.data.ended = now; mine.data.family = town; // 지난 식구 목록: '○○에 가정을 꾸렸다'
+      kinChanged(ow, kinList);
+      const e = live(ow); const p = e ? e.dragon : db.getDragon(ow);
+      if (p) {
+        logic.addRep(p, town, 15); logic.addFame(p, 2); logic.traitCount(p, 'sendoff');
+        logic.chron(p, 'mark', `${mine.name}${josa(mine.name, '이', '가')} ${other.name}, ${o.baby}${josa(o.baby, '과', '와')} 함께 ${tn}에 새 가정을 꾸렸다.`, now);
+        db.saveState(p); if (e) sendMe(e.socket, p);
+      }
+    }
+    news(`${o.from.ownerName}의 둥지 ${A.k.name}${josa(A.k.name, '과', '와')} ${d.name}의 둥지 ${B.k.name}${josa(B.k.name, '이', '가')} 아이 ${o.baby}${josa(o.baby, '과', '와')} 함께 ${tn}에 새 가정을 꾸렸다.`);
+    tell(o.from.owner, [`${d.name}${josa(d.name, '이', '가')} 청을 받아들였다. ${A.k.name}${josa(A.k.name, '과', '와')} ${B.k.name}${josa(B.k.name, '이', '가')} ${o.baby}${josa(o.baby, '과', '와')} 함께 ${tn}${josa(tn, '으로', '로')} 내려갔다. (${tn} 평판 +15, 용족 명성 +2)`], 'kinlove:gone');
+    return { ok: true, lines: [`청을 받아들였다. ${B.k.name}${josa(B.k.name, '과', '와')} ${A.k.name}${josa(A.k.name, '이', '가')} ${o.baby}${josa(o.baby, '과', '와')} 함께 ${tn}${josa(tn, '으로', '로')} 내려갔다. (${tn} 평판 +15, 용족 명성 +2)`] };
+  }
+
+  // 둥지 창에 보일 것: 받은 혼인 청 · 보낸 혼인 청 · 아이를 두고 받은 청 · 보낸 청
   function view(d, now = Date.now()) {
-    sweep(now);
+    sweep(now); babySweep(now);
+    const bv = (o) => ({ id: o.id, until: o.until, kind: o.kind, baby: o.baby, found: o.found, from: o.from, to: o.to });
     return {
       in: st.offers.filter((o) => o.to.owner === d.id).map((o) => ({ id: o.id, until: o.until, from: o.from, to: o.to })),
       out: st.offers.filter((o) => o.from.owner === d.id).map((o) => ({ id: o.id, until: o.until, kin: o.from.kin, to: o.to })),
+      babyIn: st.babies.filter((o) => o.to.owner === d.id).map(bv),
+      babyOut: st.babies.filter((o) => o.from.owner === d.id).map(bv),
     };
   }
 
@@ -142,5 +222,7 @@ module.exports = function setupKinLove({ db, online, sendMe, life, logic, news, 
     life.diary(k, line || `짝과의 사이에 아이 ${baby}${josa(baby, '이', '가')} 태어났다. 아이는 짝의 둥지에서 자란다.`, now);
     kinChanged(ref.owner, kin);
   }
-  return { status, lovesBack, ask, view, answer, refOf, babyShared };
+  // 받은 청 수 (혼인 청 + 아이를 두고 받은 청): 아래 '둥지' 메뉴의 붉은 점에 씀
+  const inCount = (id, now = Date.now()) => st.offers.filter((o) => o.to.owner === id && now < o.until).length + st.babies.filter((o) => o.to.owner === id && now < o.until).length;
+  return { status, lovesBack, ask, view, answer, refOf, babyShared, babyAsk, babyAnswer, babySweep, inCount };
 };

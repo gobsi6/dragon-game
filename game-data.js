@@ -2066,6 +2066,7 @@ const KEEPSAKES = {
   shell_chime:   { name: '조개 풍경',         value: 12, fmt: 'from', desc: '조개껍데기를 거미줄 실에 꿰어 단 풍경. 바람이 불면 자그락자그락 바다 소리가 난다.' },
   amber_star:    { name: '호박 별 장식',      value: 30, fmt: 'from', desc: '호박을 별 모양으로 깎아 금실로 감쌌다. 안에 갇힌 작은 벌레가 별빛처럼 보인다.' },
   music_box:     { name: '은사슬 오르골',     value: 60, fmt: 'from', desc: '은사슬을 감아 태엽 삼은 작은 오르골. 뚜껑을 열면 진주가 돌며 낯익은 노래가 흐른다.' },
+  town_drawing:  { name: '마을 집 그림',      value: 6,  fmt: 'of',   say: false, desc: '마을 집 창가에서 건네받은 그림. 지붕 위에 커다란 드래곤 한 마리가 앉아 있고, 그 아래 사람들이 손을 흔든다.' }, // 마을에서 다시 만난 식구 (kin_in_town)
   kid_drawing:   { name: '그림',              value: 8,  fmt: 'of',   say: false, desc: '삐뚤빼뚤한 선으로 그린 그림. 크레용 자국이 손끝에 묻어난다.' },
   kid_letter:    { name: '편지',              value: 8,  fmt: 'of',   desc: '또박또박 눌러 쓴 편지. 군데군데 지우고 다시 쓴 자국이 있다.' },
   pressed_flower:{ name: '눌러 말린 꽃',      value: 6,  fmt: 'of',   desc: '책갈피 사이에 며칠을 눌러 둔 꽃. 색은 바랬지만 모양은 그대로다.' },
@@ -2098,6 +2099,8 @@ const KEEPSAKES = {
   old_coin:      { name: '녹슨 옛 동전',      value: 8,  fmt: 'of',   desc: '어느 옛 왕국의 것인지 모를 녹슨 동전. 벌써 반짝이는 것을 알아보는 용의 눈이 생긴 모양이다.' },
   sky_sketch:    { name: '하늘에서 본 둥지',  value: 9,  fmt: 'of',   say: false, desc: '높이 날며 내려다본 둥지와 그 둘레를 그린 그림. 길과 숲이 지도처럼 그려져 있다.' },
   far_letter:    { name: '먼 둥지의 편지',    value: 5,  fmt: 'from', desc: '입양 보낸 식구가 보내온 안부.' },
+  court_gift:    { name: '구애의 선물',       value: 10, fmt: 'from',   desc: '낯선 용이 둥지 가장자리에 놓고 간 반짝이는 돌. 드래곤은 마음에 둔 상대에게 가장 아끼는 보물을 건넨다고 한다.' },
+  mourn_scale:   { name: '무덤가의 비늘',     value: 4,  fmt: 'of',     desc: '먼저 떠난 식구의 무덤가에 새끼 드래곤이 두고 온 비늘과 똑같이 생긴 한 조각. 둘이 함께 자란 날들을 기억한다.' },
   home_pebble:   { name: '고향의 조약돌',     value: 5,  fmt: 'from',   desc: '늙은 식구가 마지막으로 고향에 다녀오며 주워 온 조약돌.' },
   bouquet_wild:  { name: '들꽃 꽃다발',       value: 6,  fmt: 'from', desc: '평원의 들꽃과 해안의 갯메꽃을 묶은 꽃다발. 상자 안에서 곱게 말라 간다.' },
   bouquet_four:  { name: '네 고장 꽃다발',    value: 10, fmt: 'from', desc: '네 고장의 꽃을 하나씩 모은 꽃다발. 상자 안에서 곱게 말라 간다.' },

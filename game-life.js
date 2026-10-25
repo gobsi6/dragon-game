@@ -299,6 +299,20 @@ function newHuman(origin, now, town) {
   rollLooks(k);
   return k;
 }
+// 짝 사이에서 태어난(또는 함께 데려온) 아이를 아기 식구로 들임. 둥지에 빈자리가 없으면 null
+// parents: 두 부모 이름, town: 부모가 온 마을 (평판·돌려보낼 곳에 씀), d: 이 둥지의 주인 드래곤
+function bornKid(kin, d, parents, name, found, town, now = Date.now()) {
+  if (homeKin(kin, logic.maxKinOf(d)).full) return null;
+  const k = newHuman(found ? 'found' : 'born', now, town || null);
+  k.name = name;
+  k.data.parents = parents.filter(Boolean);
+  const [p1, p2] = k.data.parents;
+  k.data.diary = [{ at: now, t: found
+    ? `${p1}${josa(p1, '과', '와')} ${p2}${josa(p2, '이', '가')} 데려와 둥지 식구가 되었다.`
+    : `${p1}${josa(p1, '과', '와')} ${p2} 사이에서 태어났다.` }];
+  kin.push(k);
+  return k;
+}
 function newEgg(kind, now) {
   return { id: null, type: 'drake', status: 'egg', name: pick(DRAKE_NAMES), data: { kind, found: now, incubateAt: null } };
 }
@@ -637,6 +651,7 @@ function view(k, now, d) {
   // 짝과 자녀 (식구 이벤트로 생김)
   if (k.data.mate) v.mate = { name: k.data.mate.name, kind: k.data.mate.kind || null, home: k.data.mate.home || null }; // home: 다른 둥지 아이와 맺어졌으면 그 둥지 주인
   if (k.data.kids?.length) v.kids = k.data.kids.slice();
+  if (k.data.family) v.family = REGIONS[k.data.family]?.name || ''; // 마을에 가정을 꾸려 떠남 (그 마을 이름)
   if (k.data.sex) {
     v.sex = k.data.sex;
     v.sexName = KIN_LOOKS.sex[k.type][k.data.sex];
@@ -650,6 +665,7 @@ function view(k, now, d) {
   if (isHome(k)) v.nextIn = st.next != null ? (st.next - a) * DAY : null;
   if (k.type === 'human') {
     v.origin = k.data.origin;
+    if (k.data.parents) v.parents = k.data.parents; // 짝 사이에서 태어났거나 함께 데려온 아이: 두 부모 이름
     v.talent = k.data.talent || null;
     v.lean = k.data.talent ? null : (Object.values(k.data.lean).some((x) => x > 0) ? topLean(k) : null);
     v.path = k.data.path || null;
@@ -1006,6 +1022,7 @@ function choosePath(d, kin, id, path, town, now = Date.now()) {
     r[town] = clamp(Math.max(before, -20) + H.returnRep, -100, 100);
     diary(k, `${REGIONS[town].name}${josa(REGIONS[town].name, '으로', '로')} 돌아갔다.`, now);
     k.status = 'returned';
+    k.data.liveIn = town; // 사는 마을 (마을에서 다시 만나는 이벤트)
     k.data.path = 'return';
     k.data.ended = now;
     return { title: k.name, lines: [
@@ -1437,6 +1454,7 @@ function ctxOf(d, kin, have, trigger, now, region = d.region) {
     grown: [...hk.humans, ...hk.drakes],          // 알을 뺀 식구
     gone: kin.filter((x) => x.type === 'drake' && x.status === 'independent'), // 독립한 새끼
     past: kin.filter((x) => x.type === 'human' && x.status === 'dead'),     // 긴 잠에 든 인간 식구
+    away: kin.filter((x) => x.type === 'human' && x.status === 'returned'), // 마을로 떠난 인간 식구 (마을에서 다시 만남)
     k: (id) => hk.home.find((x) => x.id === id) || null, // 이벤트가 고른 식구 (떠났으면 null)
     kAny: (id) => kin.find((x) => x.id === id) || null, // 떠난 식구까지 (독립한 새끼, 긴 잠에 든 식구)
     age: (x) => (x && x.data.born ? (now - x.data.born) / DAY : -1),
@@ -1557,7 +1575,7 @@ function chooseEvent(d, kin, have, idx, now = Date.now()) {
   const reason = ch.need ? ch.need(c, vars) : null;
   if (reason) return { error: reason };
 
-  const out = { lines: [], items: [], hoardItems: [], gold: 0, tells: [], sends: [], purify: 0, loves: [] };
+  const out = { lines: [], items: [], hoardItems: [], gold: 0, tells: [], sends: [], purify: 0, loves: [], babies: [] };
   const town = SHOPS[c.region] ? c.region : nearestTown(c.region);
   const h = {
     say: (...l) => out.lines.push(...l),
@@ -1594,6 +1612,10 @@ function chooseEvent(d, kin, have, idx, now = Date.now()) {
     nearestTown: () => nearestTown(c.region),
     notify: (id, text, title) => out.tells.push({ id, text, title }), // 다른 드래곤에게 소식 (라이벌 이벤트 등)
     diary: (k, t) => { if (k) diary(k, t, now); }, // 함께한 날들에 한 줄
+    // 짝 사이의 아이를 이 둥지의 아기 식구로 (자리가 없으면 그 뜻만 알림)
+    born: (k, name, found) => { if (!bornKid(kin, d, [k.name, k.data.mate?.name], name, found, k.data.town || nearestTown(c.region), now)) out.lines.push('둥지에 빈자리가 없어 아이를 들이지 못했다.'); },
+    // 다른 둥지의 짝: 아이를 그 둥지에서 키우게 하거나(raise), 마을에 가정을 꾸리게 하자는(village) 청 (kinlove.js)
+    babyAsk: (k, kind, baby, found) => { if (k?.data.mate?.ref) out.babies.push({ kind, id: k.id, name: k.name, mate: k.data.mate.name, ref: k.data.mate.ref, baby, found: !!found, town: k.data.town || nearestTown(c.region) }); },
     loveAsk: (k) => { if (k?.data.loveRef) out.loves.push({ id: k.id, name: k.name, ref: k.data.loveRef }); }, // 다른 둥지 첫사랑에게 혼인 청 (kinlove.js)
     // 보물더미에서 꺼내거나 넣음 (꺼낼 때는 지금 있는 만큼만)
     hoardTake: (id, qty = 1) => {
@@ -1627,7 +1649,7 @@ function chooseEvent(d, kin, have, idx, now = Date.now()) {
   }
   d.pending_event = null;
   const label = typeof ch.label === 'function' ? ch.label(c, vars) : ch.label;
-  return { title: e.title, lines: out.lines, items: out.items, hoardItems: out.hoardItems, gold: out.gold, choice: label, tells: out.tells, sends: out.sends, purify: out.purify, loves: out.loves };
+  return { title: e.title, lines: out.lines, items: out.items, hoardItems: out.hoardItems, gold: out.gold, choice: label, tells: out.tells, sends: out.sends, purify: out.purify, loves: out.loves, babies: out.babies };
 }
 
 // GM 도구: 자람 기록과 가장 가까운 성격, 친구
@@ -1718,6 +1740,7 @@ function festOuting(d, kin, fest, nightOpen, now = Date.now()) {
 }
 
 module.exports = {
+  bornKid, // 짝 사이의 아이를 아기 식구로 (kinlove.js에서도 씀)
   loveDiaryFix, // 예전 첫사랑 기록 채우기 (서버를 켤 때 한 번)
   festKids, festWent, festOuting, setNightCheck, // 왕도 축제에 식구들 데려가기 (낮 한 번 · 야시장 밤 한 번)
   touch, // 교감

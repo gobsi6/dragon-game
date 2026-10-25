@@ -337,6 +337,8 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS slate_images_post ON slate_images(post_id, ord);
 `);
+// 답에 붙은 그림: post_id(그 글)와 함께 comment_id(그 답)를 적어 둠. 글이 지워지면 글과 함께, 답이 지워지면 따로 지움
+if (!db.prepare('PRAGMA table_info(slate_images)').all().some((c) => c.name === 'comment_id')) db.exec('ALTER TABLE slate_images ADD COLUMN comment_id INTEGER');
 
 const q = {
   countUsers:   db.prepare('SELECT COUNT(*) AS n FROM users'),
@@ -514,7 +516,10 @@ const q = {
   slateImgAdd:  db.prepare('INSERT INTO slate_images (dragon_id, type, data, w, h, at) VALUES (?, ?, ?, ?, ?, ?)'),
   slateImgGet:  db.prepare('SELECT id, post_id, dragon_id, type, data FROM slate_images WHERE id = ?'),
   slateImgMeta: db.prepare('SELECT id, post_id, dragon_id FROM slate_images WHERE id = ?'),
-  slateImgsOf:  db.prepare('SELECT id, w, h FROM slate_images WHERE post_id = ? ORDER BY ord, id'),
+  slateImgsOf:  db.prepare('SELECT id, w, h FROM slate_images WHERE post_id = ? AND comment_id IS NULL ORDER BY ord, id'), // 글의 그림 (답의 그림은 빼고)
+  slateCmImgs:  db.prepare('SELECT id, comment_id, w, h FROM slate_images WHERE post_id = ? AND comment_id IS NOT NULL'),
+  slateCmImgSet: db.prepare('UPDATE slate_images SET post_id = ?, comment_id = ?, ord = 0 WHERE id = ?'),
+  slateCmImgDel: db.prepare('DELETE FROM slate_images WHERE comment_id = ? OR comment_id IN (SELECT id FROM slate_comments WHERE parent_id = ?)'),
   slateImgSet:  db.prepare('UPDATE slate_images SET post_id = ?, ord = ? WHERE id = ?'),
   slateImgDel:  db.prepare('DELETE FROM slate_images WHERE id = ?'),
   slateImgPend: db.prepare('SELECT COUNT(*) AS n FROM slate_images WHERE dragon_id = ? AND post_id IS NULL'),
@@ -798,7 +803,7 @@ module.exports = {
     edit: (id, head, title, body) => q.slateEdit.run(head, title, body, Date.now(), id),
     del: (id) => q.slateDel.run(id).changes > 0,
     pin: (id, on) => q.slatePin.run(on ? 1 : 0, id),
-    comment: (postId, d, text, parentId = null) => q.slateCmAdd.run(postId, d.id, d.name, d.kind, text, Date.now(), parentId).lastInsertRowid,
+    comment: (postId, d, text, parentId = null) => Number(q.slateCmAdd.run(postId, d.id, d.name, d.kind, text, Date.now(), parentId).lastInsertRowid),
     commentGet: (id) => q.slateCmGet.get(id) || null,
     uncomment: (id) => q.slateCmDel.run(id, id).changes > 0,
     recomment: (id, text) => q.slateCmEdit.run(text, Date.now(), id),
@@ -808,6 +813,9 @@ module.exports = {
     imgGet: (id) => q.slateImgGet.get(id) || null,
     imgMeta: (id) => q.slateImgMeta.get(id) || null,
     imgsOf: (postId) => q.slateImgsOf.all(postId),
+    cmImgs: (postId) => q.slateCmImgs.all(postId),                     // 이 글의 답들에 붙은 그림
+    cmImgSet: (id, postId, commentId) => q.slateCmImgSet.run(postId, commentId, id),
+    cmImgDel: (commentId) => q.slateCmImgDel.run(commentId, commentId), // 답(과 그 밑 답글)에 붙은 그림
     imgSet: (id, postId, ord) => q.slateImgSet.run(postId, ord, id),
     imgDel: (id) => q.slateImgDel.run(id),
     imgPending: (dragonId) => q.slateImgPend.get(dragonId).n,

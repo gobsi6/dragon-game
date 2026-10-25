@@ -415,6 +415,18 @@ dialog.frame:not(.as-panel) > .bl { bottom: 2px; left: 2px; } dialog.frame:not(.
 .sl-cin { display: flex; gap: 6px; margin-top: 10px; }
 .sl-cin input { flex: 1; min-width: 0; }
 .sl-cin .btn { flex: none; min-height: 40px; padding: 0 14px; font-size: 13px; }
+/* 답에 그림 한 장: 입력칸 안 오른쪽 끝의 작은 그림 단추 (따로 자리를 차지하지 않음) */
+.sl-cwrap { position: relative; flex: 1; min-width: 0; display: flex; }
+.sl-cwrap > input.input { flex: 1; min-width: 0; padding-right: 36px; }
+.sl-cwrap > .sl-cimg-b { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); }
+.sl-cwrap > .sl-cimg-b.on { color: var(--steel-d); }
+.sl-cin { flex-wrap: wrap; }
+.sl-cimg { flex: 0 0 100%; display: flex; }
+.sl-cimg[hidden] { display: none; }
+.sl-cimg .sl-thumb { width: 56px; height: 56px; }
+/* 답에 붙은 그림: 작게, 누르면 원래 크기로 */
+.sl-cmimg { grid-column: 2; display: block; width: fit-content; max-width: min(100%, 240px); margin-top: 4px; border: 1px solid #DAD8D0; border-radius: 3px; overflow: hidden; background: #F3F2EE; }
+.sl-cmimg img { display: block; max-width: 100%; height: auto; max-height: 160px; object-fit: contain; }
 /* 새기기 · 고치기 */
 .sl-form { display: flex; flex-direction: column; gap: 12px; margin-top: 2px; }
 .sl-form label { display: block; }
@@ -2494,7 +2506,7 @@ html { scrollbar-gutter: stable; }
 }
 /* 오른쪽 이야기 칸은 화면 높이에 맞춰 고정하고, 길어진 가운데 칸을 따라 늘어나지 않게 한다 (스크롤해도 따라옴) */
 /* 양옆 칸이 붙는 위치 = 처음 놓인 위치 (상단바 + 본문 위 여백 22px). 그래서 스크롤해도 조금도 움직이지 않는다 */
-.side { will-change: transform; flex: 1 1 250px; max-width: 290px; align-self: flex-start; position: sticky; top: calc(var(--head-h, 0px) + 22px); height: min(780px, calc(100vh - var(--head-h, 0px) - var(--dock-h, 56px) - 44px)); display: flex; flex-direction: column; padding: 18px 8px 8px; }
+.side { will-change: transform; flex: 1 1 250px; max-width: 290px; align-self: flex-start; position: sticky; top: calc(var(--head-h, 0px) + 22px); height: calc(100vh - var(--head-h, 0px) - var(--dock-h, 56px) - 44px); /* 이곳의 이야기: 화면 높이에 맞춰 늘어남 (예전엔 780px에서 멈춤) */ display: flex; flex-direction: column; padding: 18px 8px 8px; }
 
 .portrait {
   position: relative; height: 300px; width: 100%; padding: 0; overflow: hidden;

@@ -423,7 +423,7 @@ const meOf = (d) => ({
   nestTier: d.nest ? logic.nestInfo(d).tier : 0,
   maxKin: logic.maxKinOf(d),
   raid: logic.raidView(d),                 // 보물 도둑 (쫓을 수 있는 동안)
-  kinOffersIn: db.offersToCount(d.id),     // 받은 식구 입양 제안 수
+  kinOffersIn: db.offersToCount(d.id) + kinLove.inCount(d.id), // 받은 식구 입양 제안 수 + 혼인 청·아이를 두고 받은 청
   heir: (() => { try { return d.heir ? JSON.parse(d.heir) : null; } catch { return null; } })(), // 이어받은 의지
   love: (() => { const id = heartId(d.id); if (!id) return null; const o = online.get(id)?.dragon || db.getDragon(id); return o ? { id, name: o.name, bond: db.relBond(d.id, id), together: !!logic.hooks.together(d) } : null; })(),
   partnerNest: logic.hooks.partnerNest(d),
@@ -1708,8 +1708,9 @@ function onConnect(socket) {
       for (const t of res.tells || []) social.tellRival(t.id, t.text, t.title);
       for (const g of res.sends || []) social.eventGift(d, g.id, g.items, g.msg); // 이벤트로 보낸 선물
       for (const l of res.loves || []) kinLove.ask(d, l); // 다른 둥지 첫사랑에게 혼인 청
+      for (const b of res.babies || []) kinLove.babyAsk(d, b); // 짝 사이의 아이를 두고 상대 둥지에 청
       if (res.purify) res.lines = [...(res.lines || []), ...(logic.isRuin(d.region) ? ruin.add(d, 'event', res.purify) : purify.add(d, 'event', res.purify))]; // 이벤트로 쌓은 정화 기여 (멸망한 대륙이면 그 땅의 정화로)
-      delete res.tells; delete res.sends; delete res.purify; delete res.loves;
+      delete res.tells; delete res.sends; delete res.purify; delete res.loves; delete res.babies;
       // 지나온 이야기에 남길 선택·사건
       const cr = CHRON_ON[event];
       if (cr) { const [k, t] = cr(d, res, payload || {}) || []; if (t) logic.chron(d, k, t); }
@@ -2135,6 +2136,15 @@ function onConnect(socket) {
     ack({ ok: true, weather: cur, log: db.gmLogList(40) });
   });
 
+  // 짝 사이의 아이를 두고 받은 청에 답하기 (받은 쪽 보호자)
+  socket.on('kinbaby:answer', (payload, ack) => {
+    if (typeof ack !== 'function') return;
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+    const res = kinLove.babyAnswer(entry.dragon, payload?.id, !!payload?.yes);
+    if (!res.error) { syncKin(socket, entry.dragon); sendMe(socket, entry.dragon); }
+    ack(res);
+  });
   // 혼인 청에 답하기 (받은 쪽 보호자)
   socket.on('kinlove:answer', (payload, ack) => {
     if (typeof ack !== 'function') return;

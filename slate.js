@@ -53,7 +53,8 @@ module.exports = function setupSlate({ io, db, entryOf }) {
       return {
         ok: true, gm: isGm(),
         post: { id: r.id, head: r.head, title: r.title, body: r.body, at: r.at, edited: r.edited_at || 0, pinned: !!r.pinned, who: who(r, 'cur_name', 'cur_kind'), mine: r.dragon_id === d.id, imgs: db.slate.imgsOf(r.id) },
-        comments: db.slate.comments(r.id).map((c) => ({ id: c.id, text: c.text, at: c.at, edited: !!c.edited_at, who: who(c), mine: c.dragon_id === d.id, parent: c.parent_id || null })),
+        comments: (() => { const ci = new Map(db.slate.cmImgs(r.id).map((x) => [x.comment_id, { id: x.id, w: x.w, h: x.h }]));
+          return db.slate.comments(r.id).map((c) => ({ id: c.id, text: c.text, at: c.at, edited: !!c.edited_at, who: who(c), mine: c.dragon_id === d.id, parent: c.parent_id || null, img: ci.get(c.id) || null })); })(),
       };
     });
     on('slate:post', (d, p) => {
@@ -102,7 +103,10 @@ module.exports = function setupSlate({ io, db, entryOf }) {
       const r = db.slate.get(Number(p.id));
       if (!r) return { error: '이미 지워진 글이다.' };
       const text = oneLine(p.text, RULES.comment);
-      if (!text) return { error: '남길 말을 적자.' };
+      // 답에 붙일 그림 한 장: 내가 올려 두고 아직 아무 데도 붙이지 않은 것만
+      const imgId = Number(p.img) || 0, im = imgId ? db.slate.imgMeta(imgId) : null;
+      if (imgId && (!im || im.dragon_id !== d.id || im.post_id != null)) return { error: '붙일 그림을 찾지 못했다. 다시 넣어 보자.' };
+      if (!text && !im) return { error: '남길 말을 적자.' };
       const now = Date.now();
       if (now - (socket.data.slateCmAt || 0) < RULES.commentGap) return { error: '숨을 고르는 중이다.' };
       // 대댓글: parent가 있으면 그 답 밑에 (답글에 다시 답하면 맨 위 답 밑으로 모아 한 단계만)
@@ -113,7 +117,8 @@ module.exports = function setupSlate({ io, db, entryOf }) {
         if (parent.parent_id) parent = db.slate.commentGet(parent.parent_id) || parent;
       }
       socket.data.slateCmAt = now;
-      db.slate.comment(r.id, d, text, parent ? parent.id : null);
+      const cid = db.slate.comment(r.id, d, text, parent ? parent.id : null);
+      if (im) db.slate.cmImgSet(im.id, r.id, cid);
       // 글쓴이에게: 누가 내 글에 답을 남겼는지 · 답의 주인에게: 내 답에 답글이 달렸는지 (모두에게 가는 알림에 실어 보내고, 화면이 그 드래곤일 때만 알림)
       const replyTo = p.parent ? db.slate.commentGet(Number(p.parent)) : null;
       changed({ id: r.id, comment: true, by: d.id, owner: r.dragon_id || null, byName: d.name, title: r.title, replyTo: replyTo?.dragon_id || null });
@@ -124,7 +129,7 @@ module.exports = function setupSlate({ io, db, entryOf }) {
       if (!c) return { error: '이미 지워진 답이다.' };
       if (c.dragon_id !== d.id) return { error: '내가 남긴 답만 고칠 수 있다.' };
       const text = oneLine(p.text, RULES.comment);
-      if (!text) return { error: '남길 말을 적자.' };
+      if (!text && !db.slate.cmImgs(c.post_id).some((x) => x.comment_id === c.id)) return { error: '남길 말을 적자.' }; // 그림이 붙은 답은 글을 비워도 됨
       db.slate.recomment(c.id, text);
       changed({ id: c.post_id, comment: true, by: d.id });
       return { ok: true };
@@ -133,6 +138,7 @@ module.exports = function setupSlate({ io, db, entryOf }) {
       const c = db.slate.commentGet(Number(p.id));
       if (!c) return { error: '이미 지워진 답이다.' };
       if (!mine(c, d)) return { error: '내가 남긴 답만 지울 수 있다.' };
+      db.slate.cmImgDel(c.id); // 답과 그 밑 답글에 붙은 그림도 함께
       db.slate.uncomment(c.id);
       changed({ id: c.post_id, comment: true });
       return { ok: true };
