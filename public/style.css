@@ -3376,3 +3376,24 @@ button.rm-step { cursor: pointer; }
 .craft-made.timed::after { content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: 100%; background: #6FA486; transform-origin: left; animation: made-time var(--made-ttl, 10000ms) linear forwards; }
 @keyframes made-time { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 @media (prefers-reduced-motion: reduce) { .craft-made.timed::after { animation: none; display: none; } }
+
+/* ══ 폰: 이곳의 드래곤을 이야기 창 맨 위에 (한 줄로 접어 두고 누르면 펼침). 머리줄의 사람 단추는 뺌 ══ */
+.here-tog { display: none; }
+@media (max-width: 860px) {
+  .top .here-open { display: none !important; }
+  .chat .here.in-chat { display: flex; flex-direction: column; gap: 4px; flex: none; padding: 6px 0 6px; border-bottom: 1px solid var(--line-in); }
+  .chat .here.in-chat .cnt { display: none; }
+  .here-tog { display: flex; align-items: center; gap: 6px; width: 100%; min-height: 36px; padding: 4px 6px; border: 0; border-radius: 3px; background: none; text-align: left; font: 600 13px/1.3 var(--sans); color: var(--ink-2); cursor: pointer; }
+  .here-tog:active { background: rgba(60, 90, 115, .08); }
+  .here-tog .t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .here-tog svg { flex: none; color: var(--muted); transition: transform .2s; }
+  .here-tog[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .chat .here.folded .here-list { display: none; }
+  .chat .here.in-chat .here-list { max-height: min(180px, 38svh); margin: 0 -4px; }
+}
+@media (max-width: 520px) { .top .chip + .chip { margin-right: auto; } } /* 사람 단추가 빠진 자리: 금화 다음부터 오른쪽으로 */
+/* 폰 이야기 창을 더 크게: 화면 폭 거의 가득, 높이는 위쪽 머리줄 높이 정도만 남기고 (최대 680px) */
+@media (max-width: 860px) {
+  .chat { right: 8px; width: min(520px, calc(100vw - 16px)); height: min(680px, calc(100vh - var(--dock-h, 56px) - 84px)); height: min(680px, calc(100svh - var(--dock-h, 56px) - 84px)); }
+  .chat .here.in-chat .here-list { max-height: min(220px, 32svh); }
+}
