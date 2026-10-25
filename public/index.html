@@ -3926,6 +3926,18 @@
   const facIcon = (id, size = 17) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${FAC_UI[id]?.d || ''}</svg>`;
   let FAC_SEL = null;      // 고른 식구 id
   let FAC_BUILD = false;   // 짓기 목록을 펼쳤는지
+  // 둥지 시설에서 지금 바로 할 수 있는 일의 수 (둥지에 있을 때만): 약초밭 거두기 · 재료가 있는 요리 맡기기
+  // 시설 창의 '오늘 할 일'에 단추가 뜨는 조건과 같게 맞춤. 둥지 창의 '둥지 시설' 단추에 붉은 점으로 알림
+  function facActN(n) {
+    if (!n?.here) return 0;
+    const built = n.facilities?.built || [];
+    let k = 0;
+    const herb = built.find((b) => b.id === 'herb');
+    if (herb && !herb.herbDone) k++;
+    const kit = built.find((b) => b.id === 'kitchen');
+    if (kit?.worker?.working && kit.cookLeft > 0 && (S.facility?.cookable || []).some((id) => { const r = S.recipes.find((x) => x.out === id); return r && Object.entries(r.needs).every(([x, q]) => (invCache[x] || 0) >= q); })) k++;
+    return k;
+  }
   function facFits(F, v) { return (F.talent && v.talent === F.talent) || (v.traits || []).some((t) => F.traits.includes(t.id)); }
   function drawFacilities(pane, n, me) {
     if (!pane || !S.facility) return;
@@ -4262,9 +4274,13 @@
           const fb = document.createElement('button');
           fb.type = 'button'; fb.className = 'btn fac-open';
           const built = n.facilities?.built || [];
-          fb.innerHTML = '<span class="fo-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11.2 12 4.6l8.5 6.6"/><path d="M5.6 9.6V19.4h12.8V9.6"/><path d="M10 19.4v-4.6h4v4.6"/><path d="M16.2 7.4V4.2h1.8v4.6"/></svg></span><span class="fo-tx"><span class="fo-t">둥지 시설</span><small></small></span><i aria-hidden="true"></i>';
+          fb.innerHTML = '<span class="fo-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11.2 12 4.6l8.5 6.6"/><path d="M5.6 9.6V19.4h12.8V9.6"/><path d="M10 19.4v-4.6h4v4.6"/><path d="M16.2 7.4V4.2h1.8v4.6"/></svg><span class="fo-dot" hidden></span></span><span class="fo-tx"><span class="fo-t">둥지 시설</span><small></small></span><i aria-hidden="true"></i>';
           fb.classList.add('fo-fac');
           fb.querySelector('small').textContent = built.length ? `${built.map((f) => S.facility?.list?.[f.id]?.name || f.id).join(' · ')} · ${built.length}/${n.facilities?.slots || 2}칸` : `아직 지은 시설이 없다 · ${n.facilities?.slots || 2}칸`;
+          // 지금 할 수 있는 일(약초 거두기·요리 맡기기)이 있으면 붉은 점
+          const facN = facActN(n);
+          fb.querySelector('.fo-dot').hidden = !facN;
+          if (facN) fb.setAttribute('aria-label', `둥지 시설 · 지금 할 수 있는 일 ${facN}개`);
           fb.addEventListener('click', () => openFac());
           tabs.after(fb);
           P.fac = $('fac-pane');
