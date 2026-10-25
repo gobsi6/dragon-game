@@ -1133,6 +1133,23 @@
   }
   setInterval(pollVersion, 3 * 60 * 1000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pollVersion(); });
+  // 폰: 다른 앱에 갔다가 돌아오면 연결이 살아 있는지 바로 확인하고, 죽어 있으면 곧장 새로 이음
+  // (그냥 두면 죽은 연결을 알아채는 데 최대 십몇 초가 걸려, 그동안 누른 것이 반응하지 않음)
+  let hbBusy = false, hiddenAt = 0;
+  const wakeCheck = () => {
+    if (!socket || socket.data_kicked || hbBusy || !store.get()) return;
+    if (!socket.connected) { socket.connect(); return; }
+    hbBusy = true;
+    let answered = false;
+    const t = setTimeout(() => { hbBusy = false; if (!answered) { toast('연결이 끊겼다. 다시 잇는 중이다.'); socket.disconnect(); socket.connect(); } }, 3000);
+    socket.emit('hb', () => { answered = true; hbBusy = false; clearTimeout(t); });
+  };
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
+    if (Date.now() - hiddenAt > 2000) wakeCheck(); // 잠깐 가렸다 돌아온 것은 그냥 둠
+  });
+  window.addEventListener('pageshow', (e) => { if (e.persisted) wakeCheck(); }); // 뒤로 가기로 돌아온 경우
+  window.addEventListener('online', wakeCheck); // 데이터·와이파이가 다시 잡혔을 때
   $('update-go').addEventListener('click', () => location.reload());
   $('update-later').addEventListener('click', () => { $('update-bar').hidden = true; updateLater = Date.now() + 10 * 60 * 1000; }); // 10분 뒤에 다시 알림
 
@@ -2595,6 +2612,35 @@
       fetchInv(() => { if ($('inv-dlg').open) keepScroll($('inv-dlg'), renderInv); if ($('craft-dlg').open) keepScroll($('craft-dlg'), renderCraft); });
     });
   }
+  let gearSumOpen = false;
+  function renderGearSum() {
+    const gs = $('gear-sum'), g = $('inv-gear');
+    if (!gs || !S.me) return;
+    const worn = S.slots.filter((sl) => S.me.equip?.[sl.key] && S.items[S.me.equip[sl.key]]);
+    gs.replaceChildren();
+    const h = document.createElement('span'); h.className = 'h';
+    h.innerHTML = '<b>착용 중인 장신구</b><small></small><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+    h.querySelector('small').textContent = `${worn.length}/${S.slots.length}`;
+    gs.appendChild(h);
+    const grid = document.createElement('span'); grid.className = 'gs-grid';
+    for (const sl of S.slots) {
+      const id = S.me.equip?.[sl.key], it = id && S.items[id];
+      const c = document.createElement('span');
+      c.className = `gs-c ${it ? (it.rarity || 'common') : 'empty'}`;
+      c.appendChild(slotIcon(sl.key));
+      const tx = document.createElement('span'); tx.className = 'gs-t';
+      c.title = sl.name; // 부위 이름은 글씨로 쓰지 않고 그림으로 (길게 누르면 이름이 보임)
+      const nm = document.createElement('b');
+      const plus = it && S.me?.craft?.gear?.[id]?.plus;
+      nm.textContent = it ? `${it.name}${plus ? ` +${plus}` : ''}` : '비어 있음';
+      tx.append(nm); c.appendChild(tx); grid.appendChild(c);
+    }
+    gs.appendChild(grid);
+    gs.setAttribute('aria-expanded', String(gearSumOpen));
+    gs.setAttribute('aria-label', `착용 중인 장신구 ${worn.length}개. ${gearSumOpen ? '접기' : '눌러서 칸 펼치기'}`);
+    g.classList.toggle('folded', !gearSumOpen);
+    gs.classList.toggle('open', gearSumOpen);
+  }
   function renderInv() {
     const g = $('inv-gear');
     g.replaceChildren();
@@ -2620,6 +2666,14 @@
       }
       g.appendChild(d);
     }
+    // 폰: 여섯 칸을 한 덩어리 요약으로 접어 둠 (누르면 칸이 펼쳐짐). 부위마다 그림과 이름표를 달아 한눈에 구분
+    let gs = $('gear-sum');
+    if (!gs) {
+      gs = document.createElement('button'); gs.type = 'button'; gs.id = 'gear-sum'; gs.className = 'gear-sum';
+      gs.addEventListener('click', () => { gearSumOpen = !gearSumOpen; renderGearSum(); });
+      g.before(gs);
+    }
+    renderGearSum();
 
     const order = { rare: 0, uncommon: 1, common: 2 };
     const CATS = ['treasure', 'equip', 'use', 'buff', 'gift', 'meal', 'fish', 'trophy', 'mat'];
@@ -11719,7 +11773,7 @@
     if (socket) socket.disconnect();
     socket = io({ auth: { token: store.get() } });
 
-    socket.on('connect', hideToast);
+    socket.on('connect', () => { socket.data_kicked = false; hideToast(); });
     socket.on('connect_error', (err) => {
       if (err.message === 'auth') {
         store.clear();
@@ -11733,6 +11787,7 @@
       if (reason === 'io client disconnect' || reason === 'io server disconnect') return;
       toast('연결이 끊겼다. 다시 잇는 중이다.');
     });
+    socket.on('kicked', () => { socket.data_kicked = true; });
     socket.on('kicked', () => {
       toast('다른 창에서 같은 드래곤으로 접속했다.', {
         label: '이 창에서 다시 접속',

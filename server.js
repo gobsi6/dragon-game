@@ -215,7 +215,7 @@ app.get('/api/version', (req, res) => {
 });
 
 const server = http.createServer(app);
-const io = new Server(server, { maxHttpBufferSize: 1e6, perMessageDeflate: { threshold: 4096 } }); // 한 번에 받는 크기 (프로필 그림이 가장 큼) · 4KB 넘는 메시지는 압축해서 보냄 (접속할 때 받는 물건 목록 등)
+const io = new Server(server, { maxHttpBufferSize: 1e6, perMessageDeflate: { threshold: 4096 }, pingInterval: 10000, pingTimeout: 8000 }); // 끊긴 연결을 18초 안에 알아챔 (기본은 25초+20초) // 한 번에 받는 크기 (프로필 그림이 가장 큼) · 4KB 넘는 메시지는 압축해서 보냄 (접속할 때 받는 물건 목록 등)
 // 한 연결이 짧은 사이에 너무 많은 요청을 보내면 잠시 무시 (서버를 멈추게 하려는 도배 방지). 보통 놀이는 1초에 몇 번이 고작
 const FLOOD = { perSec: 30, burst: 60 };
 io.use((socket, next) => {
@@ -1091,6 +1091,7 @@ process.on('uncaughtException', (e) => console.error('[놓친 오류]', e && e.s
 process.on('unhandledRejection', (e) => console.error('[놓친 오류(비동기)]', e && e.stack ? e.stack : e));
 
 io.on('connection', (socket) => {
+  socket.on('hb', (ack) => { if (typeof ack === 'function') ack(1); }); // 폰에서 돌아왔을 때 연결이 살아 있는지 확인하는 짧은 신호
   guardSocket(socket);
   try { onConnect(socket); } catch (e) { softFail('접속', e); }
 });
