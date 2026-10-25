@@ -3040,14 +3040,17 @@
     }
   }
   // 선물 그림: 작게, 누르면 원래 크기로 새 창에. 정리되어 사라졌으면 칸째 숨김
-  function giftImgEl(im, cls) {
-    const l = document.createElement('a'); l.className = `gift-img ${cls || ''}`; l.href = `/gift-img/${im.id}/${im.key}`; l.target = '_blank'; l.rel = 'noopener';
-    const img = document.createElement('img'); img.src = l.href; img.alt = '함께 보낸 그림'; img.loading = 'lazy'; img.decoding = 'async';
+  // 이미지로 보낸 창작 선물: 테두리·바탕 없이 (투명한 바탕은 뒤가 그대로 비침). 이름은 아이템 이름처럼 따로 (눌러도 새 창이 뜨지 않음)
+  // 이미지를 누르면 원래 크기로 새 창에. noName: 이름을 따로 보이지 않음 (보물 상자처럼 이미 제목에 있을 때)
+  function giftImgEl(im, cls, noName = false) {
+    const box = document.createElement('div'); box.className = `gift-art ${cls || ''}`;
+    const l = document.createElement('a'); l.className = 'gift-img'; l.href = `/gift-img/${im.id}/${im.key}`; l.target = '_blank'; l.rel = 'noopener';
+    const img = document.createElement('img'); img.src = l.href; img.alt = im.t || '손수 마련한 선물'; img.loading = 'lazy'; img.decoding = 'async';
     if (im.w && im.h) { img.width = im.w; img.height = im.h; }
-    img.addEventListener('error', () => { l.replaceWith(Object.assign(document.createElement('p'), { className: 'note', textContent: '그림은 오래되어 사라졌다.' })); });
-    l.appendChild(img);
-    if (im.t && cls !== 'chest-img') { const c = document.createElement('span'); c.className = 'gift-imgcap'; c.textContent = im.t; l.appendChild(c); } // 보낸 이가 붙인 이름 (보물 상자에서는 이미 제목으로 보임)
-    return l;
+    img.addEventListener('error', () => { l.replaceWith(Object.assign(document.createElement('p'), { className: 'note', textContent: '오래되어 모습이 사라졌다.' })); });
+    l.appendChild(img); box.appendChild(l);
+    if (!noName) { const c = document.createElement('span'); c.className = 'gain rare gift-name'; c.textContent = im.t || '손수 마련한 선물'; box.appendChild(c); }
+    return box;
   }
   // 선물에 그림 한 장 끼우기: '함께 보낼 말' 칸 안 오른쪽 아래의 작은 그림 단추. 붙이면 칸 위에 작은 미리보기
   async function giftUpload(sm) {
@@ -3060,18 +3063,18 @@
     const st = { id: 0, busy: false };
     const wrap = document.createElement('div'); wrap.className = 'gift-mwrap'; ta.replaceWith(wrap); wrap.appendChild(ta);
     const file = document.createElement('input'); file.type = 'file'; file.accept = 'image/*'; file.hidden = true;
-    const pick = slIcon('img', '그림 끼우기', () => file.click(), 'gift-img-b');
+    const pick = slIcon('img', '이미지 붙이기', () => file.click(), 'gift-img-b');
     wrap.append(pick, file);
     const prev = document.createElement('div'); prev.className = 'sl-cimg gift-prev'; prev.hidden = true;
     row.before(prev);
-    // 그림 이름: 그림을 끼웠을 때만 미리보기 옆에 보임 (보물 상자에 간직하면 이 이름으로)
-    const title = document.createElement('input'); title.className = 'input gift-imgt'; title.maxLength = 20; title.placeholder = '그림 이름 (적지 않아도 된다, 20자)'; title.setAttribute('aria-label', '그림 이름');
+    // 물건 이름: 이미지를 붙였을 때만 미리보기 옆에 보임 (받은 쪽 화면과 보물 상자에 이 이름으로)
+    const title = document.createElement('input'); title.className = 'input gift-imgt'; title.maxLength = 20; title.placeholder = '물건 이름 (예: 손뜨개 인형, 20자)'; title.setAttribute('aria-label', '물건 이름');
     const draw = (url) => {
       prev.replaceChildren(); prev.hidden = !url; pick.classList.toggle('on', !!url);
       if (!url) { title.value = ''; return; }
       const t = document.createElement('div'); t.className = `sl-thumb${st.busy ? ' busy' : ''}`;
-      const img = document.createElement('img'); img.src = url; img.alt = '끼운 그림'; t.appendChild(img);
-      if (!st.busy) { const x = document.createElement('button'); x.className = 'sl-thumb-x'; x.type = 'button'; x.textContent = '×'; x.title = '그림 빼기'; x.setAttribute('aria-label', '끼운 그림 빼기'); x.addEventListener('click', () => { st.id = 0; draw(''); }); t.appendChild(x); }
+      const img = document.createElement('img'); img.src = url; img.alt = '붙인 이미지'; t.appendChild(img);
+      if (!st.busy) { const x = document.createElement('button'); x.className = 'sl-thumb-x'; x.type = 'button'; x.textContent = '×'; x.title = '이미지 빼기'; x.setAttribute('aria-label', '붙인 이미지 빼기'); x.addEventListener('click', () => { st.id = 0; draw(''); }); t.appendChild(x); }
       prev.append(t, title);
     };
     file.addEventListener('change', async () => {
@@ -3128,7 +3131,7 @@
       line('out', e.kind === 'gm' ? '회수' : tr ? '건넨 것' : '보낸 것', e.goldOut, e.itemsOut, tr);
       r.appendChild(flow);
       if (e.msg) { const m = document.createElement('p'); m.className = 'lg-msg'; m.textContent = `"${e.msg}"`; r.appendChild(m); }
-      if (e.img) r.appendChild(giftImgEl(e.img, 'lg-img')); // 함께 보낸 그림 (간직하지 않았으면 90일 뒤 사라짐)
+      if (e.img) r.appendChild(giftImgEl(e.img, 'lg-img')); // 이미지로 보낸 창작 선물 (간직하지 않았으면 90일 뒤 사라짐)
       box.appendChild(r);
     }
   }
@@ -4499,7 +4502,7 @@
               it.appendChild(sm);
               const ds = document.createElement('p'); ds.className = 'chest-desc'; ds.textContent = e.desc;
               it.appendChild(ds);
-              if (e.img) it.appendChild(giftImgEl(e.img, 'chest-img')); // 선물로 받아 간직한 그림
+              if (e.img) it.appendChild(giftImgEl(e.img, 'chest-img', true)); // 이미지로 받아 간직한 창작 선물 (이름은 이미 제목에)
               if (e.text) { const q = document.createElement('p'); q.className = 'chest-text'; q.textContent = e.say ? `"${e.text}"` : e.text; it.appendChild(q); }
               // 물건으로 넣은 것은 다시 꺼낼 수 있음 (아이가 직접 넣어 준 그림처럼 물건이 없는 추억은 빼고)
               if (e.take) {
@@ -7327,8 +7330,8 @@
     for (const it of g.items) { const c = document.createElement('span'); c.className = `gain ${S.items[it.id]?.rarity || 'common'}`; c.textContent = `${S.items[it.id]?.name || it.id} ×${it.qty}`; chips.appendChild(c); }
     if (g.gold) { const c = document.createElement('span'); c.className = 'gain common'; c.textContent = `금화 ${g.gold}닢`; chips.appendChild(c); }
     body.appendChild(chips);
-    chips.hidden = !chips.children.length; // 그림만 온 선물
-    if (g.img) body.appendChild(giftImgEl(g.img, 'gift-dlg-img'));
+    if (g.img) { const c = document.createElement('span'); c.className = 'gain rare'; c.textContent = g.img.t || '손수 마련한 선물'; chips.appendChild(c); } // 창작 선물도 받은 물건처럼
+    if (g.img) body.appendChild(giftImgEl(g.img, 'gift-dlg-img', true));
     if (g.msg) {
       const m = document.createElement('blockquote');
       m.className = 'gift-msg';
@@ -7342,7 +7345,7 @@
     }
     const n2 = document.createElement('p');
     n2.className = 'note';
-    n2.textContent = [g.gold || g.items.length ? '받은 것은 이미 소지품과 금화에 들어 있다.' : '', g.img ? "그림은 '간직하기'를 누르면 보물 상자에 오래 남는다. 간직하지 않으면 주고받은 기록에서 90일 동안 볼 수 있다." : ''].filter(Boolean).join(' ');
+    n2.textContent = [g.gold || g.items.length ? '받은 것은 이미 소지품과 금화에 들어 있다.' : '', g.img ? `${g.img.t || '손수 마련한 선물'}${josa(g.img.t || '선물', '은', '는')} 세상에 하나뿐인 물건이라 소지품에는 들어가지 않는다. '간직하기'를 누르면 보물 상자에 오래 남고, 간직하지 않으면 주고받은 기록에서 90일 동안 볼 수 있다.` : ''].filter(Boolean).join(' ');
     body.appendChild(n2);
     $('gift-keep').hidden = !g.img;
     $('gift-thanks').hidden = !g.from.id || g.from.id === S.me?.id;
@@ -7355,12 +7358,13 @@
     if (then && g) then(g);
   }
   $('gift-ok').addEventListener('click', () => seeGift());
-  // 그림을 보물 상자에 간직하고 확인
+  // 창작 선물을 보물 상자에 간직하고 확인
   $('gift-keep').addEventListener('click', () => {
     const g = giftQ[0]; if (!g) return;
     socket.emit('gift:seen', { id: g.id, keep: true }, (res) => {
       if (res?.error) { SFX.play('error'); return toast(res.error); }
-      giftQ.shift(); toast('그림을 보물 상자에 간직했다.'); showGift();
+      const nm = g.img?.t || '손수 마련한 선물';
+      giftQ.shift(); toast(`${nm}${josa(nm, '을', '를')} 보물 상자에 간직했다.`); showGift();
       if ($('nest-dlg').open) openNest();
     });
   });

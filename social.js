@@ -845,7 +845,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       const msg = (typeof p.msg === 'string' ? p.msg : '').replace(/\s+/g, ' ').trim().slice(0, GIFT_MSG_MAX); // 함께 보내는 말
       // 함께 끼운 그림 한 장: 내가 올려 두고 아직 보내지 않은 것만. 그림만 보내도 됨
       const gi = Number(p.img) || 0, gm = gi ? db.giftImg.meta(gi) : null;
-      if (gi && (!gm || gm.dragon_id !== d.id || gm.sent_at != null)) return { error: '끼울 그림을 찾지 못했다. 다시 넣어 보자.' };
+      if (gi && (!gm || gm.dragon_id !== d.id || gm.sent_at != null)) return { error: '붙인 이미지를 찾지 못했다. 다시 붙여 보자.' };
       const imgT = (typeof p.imgTitle === 'string' ? p.imgTitle : '').replace(/\s+/g, ' ').trim().slice(0, 20); // 그림 이름 (보물 상자에 간직하면 이 이름으로)
       const img = gm ? { id: gm.id, key: gm.key, w: gm.w, h: gm.h, ...(imgT ? { t: imgT } : {}) } : null;
       if (!gold && !items.length && !img) return { error: '보낼 것을 골라야 한다.' };
@@ -853,7 +853,8 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       if (bad) return { error: bad };
       const t = live(id);
       const name = t ? t.dragon.name : db.getDragon(id).name;
-      const what = gold || items.length ? `${giveText(gold, items)}${img ? '과 그림' : ''}` : '그림 한 장';
+      const mine = img ? img.t || '손수 마련한 선물' : ''; // 이미지로 보낸 창작 선물의 이름
+      const what = gold || items.length ? `${giveText(gold, items)}${img ? `, ${mine}` : ''}` : mine;
       if (img) db.giftImg.send(img.id, id);
       d.gold -= gold;
       if (t) {
@@ -883,7 +884,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       const g = p.keep ? db.giftGet(Number(p.id), d.id) : null;
       let kept = false;
       if (g?.img) {
-        if (!d.nest) return { error: '그림을 간직하려면 먼저 둥지를 틀어야 한다.' };
+        if (!d.nest) return { error: '보물 상자에 간직하려면 먼저 둥지를 틀어야 한다.' };
         kept = logic.chestAdd(d, 'gift_pic', g.fromName, g.msg || '', Date.now(), null, { img: g.img, src: 'got' });
         if (!kept) return { error: '보물 상자가 가득 찼다.' };
         db.giftImg.keep(g.img.id, d.id); db.saveState(d);
