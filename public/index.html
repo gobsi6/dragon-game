@@ -1363,7 +1363,7 @@
     if (S.region) { renderCorrupt(); renderPlaces(); renderWeather(); }
     checkFallen();
     renderStatusTag();
-    for (const k of ['claw', 'scale', 'wing', 'wisdom', 'majesty']) { const on = (me.scars || []).includes(k); const p2 = $(`st-${k}`).parentElement; p2.classList.toggle('scar', on); if (on) p2.title = '상흔이 남았다 (영구 −1)'; }
+    for (const k of ['claw', 'scale', 'wing', 'wisdom', 'majesty']) { const on = (me.scars || []).includes(k); const p2 = $(`st-${k}`).parentElement; p2.classList.toggle('scar', on); if (on) p2.title = p2.title ? `${p2.title} · 상흔 (영구 −1)` : '상흔이 남았다 (영구 −1)'; } // 상흔: 타고난 값·장신구 몫 안내 뒤에 덧붙임 (예전엔 덮어써서 안 보였음)
     renderBuff();
     $('pts-row').hidden = !me.statPts;
     $('pts-n').textContent = me.statPts || 0;
@@ -3051,13 +3051,62 @@
     if (!a || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
     e.preventDefault();
     const img = $('img-view-img');
-    img.src = a.href; img.alt = a.querySelector('img')?.alt || '그림';
-    $('img-view-in').scrollTo(0, 0);
+    IV.reset(); img.src = a.href; img.alt = a.querySelector('img')?.alt || '그림';
     if (!$('img-view').open) $('img-view').showModal();
   });
+  // 확대·축소: 처음엔 화면에 맞는 크기 (작은 그림은 원래 크기 그대로).
+  // 폰: 두 손가락으로 벌리고 오므리기, 두 번 톡 치면 원래 크기 ↔ 화면에 맞춤, 확대한 채로 끌면 이동
+  // 컴퓨터: 그림을 누르면 원래 크기 ↔ 화면에 맞춤, 휠로 확대·축소, 끌어서 이동
+  const IV = (() => {
+    const box = $('img-view-in'), img = $('img-view-img');
+    let s = 1, x = 0, y = 0, pts = new Map(), pinch = null, drag = null, lastTap = 0, gestureAt = 0, downAt = 0, downXY = null, onImg = false;
+    const ratio = () => (img.clientWidth ? Math.max(1, img.naturalWidth / img.clientWidth) : 1); // 원래 크기가 지금보다 몇 배인지
+    const maxS = () => Math.min(8, Math.max(2, ratio() * 2));
+    const clampXY = () => {
+      const w = img.clientWidth * s, h = img.clientHeight * s, bw = box.clientWidth, bh = box.clientHeight;
+      const mx = Math.max(0, (w - bw) / 2 + 16), my = Math.max(0, (h - bh) / 2 + 16);
+      x = Math.max(-mx, Math.min(mx, x)); y = Math.max(-my, Math.min(my, y));
+    };
+    const apply = (anim) => { img.classList.toggle('anim', !!anim); clampXY(); img.style.transform = s === 1 && !x && !y ? '' : `translate(${x}px, ${y}px) scale(${s})`; box.classList.toggle('zoomed', s > 1.01); };
+    const zoomTo = (ns, cx, cy, anim) => { // cx, cy: 확대할 중심 (화면 좌표)
+      const r = box.getBoundingClientRect(); ns = Math.max(1, Math.min(maxS(), ns));
+      const ox = (cx ?? r.left + r.width / 2) - (r.left + r.width / 2), oy = (cy ?? r.top + r.height / 2) - (r.top + r.height / 2);
+      x = ox - (ox - x) * (ns / s); y = oy - (oy - y) * (ns / s); s = ns; if (s === 1) { x = 0; y = 0; }
+      apply(anim);
+    };
+    const toggle = (cx, cy) => zoomTo(s > 1.01 ? 1 : (ratio() > 1.05 ? ratio() : 2), cx, cy, true); // 원래 크기로 (이미 원래 크기면 2배)
+    box.addEventListener('pointerdown', (e) => {
+      if (e.target !== img && s <= 1.01) return; // 확대하지 않았을 때 그림 바깥은 닫기용
+      box.setPointerCapture(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pts.size === 2) { const [p, q] = [...pts.values()]; pinch = { d: Math.hypot(p.x - q.x, p.y - q.y), s, mx: (p.x + q.x) / 2, my: (p.y + q.y) / 2 }; drag = null; }
+      else { drag = { x: e.clientX, y: e.clientY }; downAt = Date.now(); downXY = { x: e.clientX, y: e.clientY }; onImg = e.target === img; } // 손가락을 붙잡아 두면 뒤의 이벤트는 대상이 바뀌므로 여기서 기억
+    });
+    box.addEventListener('pointermove', (e) => {
+      if (!pts.has(e.pointerId)) return;
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pinch && pts.size >= 2) { const [p, q] = [...pts.values()]; zoomTo(pinch.s * Math.hypot(p.x - q.x, p.y - q.y) / pinch.d, pinch.mx, pinch.my); gestureAt = Date.now(); return; }
+      if (drag && s > 1.01) { x += e.clientX - drag.x; y += e.clientY - drag.y; drag = { x: e.clientX, y: e.clientY }; apply(); if (Math.hypot(e.clientX - downXY.x, e.clientY - downXY.y) > 6) gestureAt = Date.now(); }
+    });
+    const up = (e) => {
+      if (!pts.has(e.pointerId)) return;
+      pts.delete(e.pointerId);
+      if (pts.size < 2) pinch = null;
+      if (pts.size) { const p = [...pts.values()][0]; drag = { x: p.x, y: p.y }; return; }
+      drag = null;
+      const tap = Date.now() - downAt < 300 && downXY && Math.hypot(e.clientX - downXY.x, e.clientY - downXY.y) < 8 && Date.now() - gestureAt > 300;
+      if (!tap || (!onImg && s <= 1.01)) return;
+      if (e.pointerType === 'mouse') { toggle(e.clientX, e.clientY); gestureAt = Date.now(); return; } // 컴퓨터: 한 번 누르면
+      if (Date.now() - lastTap < 320) { toggle(e.clientX, e.clientY); lastTap = 0; gestureAt = Date.now(); } else lastTap = Date.now(); // 폰: 두 번 톡
+    };
+    box.addEventListener('pointerup', up); box.addEventListener('pointercancel', up);
+    box.addEventListener('wheel', (e) => { e.preventDefault(); zoomTo(s * (e.deltaY < 0 ? 1.15 : 1 / 1.15), e.clientX, e.clientY); }, { passive: false });
+    img.addEventListener('dragstart', (e) => e.preventDefault());
+    return { reset: () => { s = 1; x = 0; y = 0; pts.clear(); pinch = drag = null; apply(); }, busy: () => Date.now() - gestureAt < 350 || s > 1.01 };
+  })();
   $('img-view-x').addEventListener('click', () => $('img-view').close());
-  $('img-view').addEventListener('click', (e) => { if (e.target === $('img-view') || e.target === $('img-view-in')) $('img-view').close(); }); // 그림 바깥을 누르면 닫힘
-  $('img-view').addEventListener('close', () => { $('img-view-img').removeAttribute('src'); });
+  // 그림 바깥을 누르면 닫힘 (확대하거나 끌던 중에는 닫히지 않게)
+  $('img-view').addEventListener('click', (e) => { if ((e.target === $('img-view') || e.target === $('img-view-in')) && !IV.busy()) $('img-view').close(); });
+  $('img-view').addEventListener('close', () => { $('img-view-img').removeAttribute('src'); IV.reset(); });
   // 선물 그림: 작게, 누르면 원래 크기로 새 창에. 정리되어 사라졌으면 칸째 숨김
   // 이미지로 보낸 창작 선물: 테두리·바탕 없이 (투명한 바탕은 뒤가 그대로 비침). 이름은 아이템 이름처럼 따로 (눌러도 새 창이 뜨지 않음)
   // 이미지를 누르면 원래 크기로 새 창에. noName: 이름을 따로 보이지 않음 (보물 상자처럼 이미 제목에 있을 때)

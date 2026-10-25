@@ -410,7 +410,7 @@ function tick(d, kin, now = Date.now()) {
     if (k.type === 'drake' && k.status === 'home') {
       const wasHungry = k.data.sat != null && k.data.sat < DF.hungry;
       satUpdate(k, now, false, DF, drakeFloor(k, now));
-      if (!wasHungry && k.data.sat < DF.hungry) { out.lines.push(`${ga(k)} 배가 고픈지 둥지 바닥을 발톱으로 긁으며 칭얼거린다.`); growAdd(k, 'hungry'); }
+      if (!wasHungry && k.data.sat < DF.hungry) { out.lines.push(['젊은 용', '다 자란 용'].includes(stageOf(k, now).name) ? `${ga(k)} 배가 고픈지 둥지 입구에서 먼 들판을 한참 노려본다.` : `${ga(k)} 배가 고픈지 둥지 바닥을 발톱으로 긁으며 칭얼거린다.`); growAdd(k, 'hungry'); }
     }
     if (k.type === 'human' && k.status === 'home') {
       const a = ageOf(k, now);
@@ -733,10 +733,13 @@ function feedDrake(d, kin, k, item, have, now) {
   k.data.sat = Math.min(100, k.data.sat + f.sat);
   k.data.lastFeed = now;
   const name = ITEMS[item].name;
-  const lines = [`${k.name}에게 ${name}${josa(name, '을', '를')} 주었다. ${hungry ? '배가 고팠는지 단숨에 삼키고 더 달라는 듯 입을 벌린다.' : '꼬리를 흔들며 오물오물 씹어 먹는다.'}`];
+  const big = ['젊은 용', '다 자란 용'].includes(stageOf(k, now).name); // 큰 새끼는 어린 새끼처럼 굴지 않음
+  const lines = [`${k.name}에게 ${name}${josa(name, '을', '를')} 주었다. ${hungry
+    ? (big ? '배가 고팠는지 한입에 삼키고 더 없느냐는 듯 이쪽을 본다.' : '배가 고팠는지 단숨에 삼키고 더 달라는 듯 입을 벌린다.')
+    : (big ? '먹는 내내 꼬리 끝이 느긋하게 흔들렸다. 만족스러운 모양이다.' : '꼬리를 흔들며 오물오물 씹어 먹는다.')}`];
   if (fav) {
     if (!k.data.favKnown) { k.data.favKnown = true; lines.push(`${ga(k)} 눈을 반짝이며 콧김을 내뿜었다. ${k.name}${josa(k.name, '은', '는')} ${name}${josa(name, '을', '를')} 가장 좋아하는 것 같다!`); }
-    else lines.push(`가장 좋아하는 ${name}이다. ${ga(k)} 날개를 파닥이며 좋아한다.`);
+    else lines.push(`가장 좋아하는 ${name}이다. ${big ? `${ga(k)} 한 입 한 입 아껴 가며 음미한다.` : `${ga(k)} 날개를 파닥이며 좋아한다.`}`);
   }
   if (drakeFull(k)) lines.push('배가 든든하니 가르칠 때 더 잘 따를 것이다.');
   lines.push(`유대 +${gain} · ${satWord(k.data.sat)}`);
@@ -787,14 +790,14 @@ const TOUCH_FIRST = { pat: '처음 머리를 쓰다듬어 주었다.', hug: '처
 const ASK_LINE = { pat: '머리를 쓰다듬어 달라고 슬그머니 다가온다', hug: '안아 달라고 팔을 뻗는다', play: '놀아 달라고 자꾸 잡아당긴다', story: '이야기를 해 달라고 조른다', ride: '등에 태워 달라고 조른다', fly: '함께 날자고 날개를 퍼덕인다' };
 // 반응 문장: [행동][좋음·보통·싫음] (n: 이름, g: 이름+이/가, e: 이름+은/는)
 const TOUCH_LINES = {
-  pat: { like: ['{g} 눈을 가늘게 뜨고 손길에 머리를 비빈다.', '{g} 기분 좋은 듯 가르릉 소리를 낸다.'], ok: ['{g} 가만히 쓰다듬어지다가 씩 웃는다.'], dislike: ['{e} "이제 애 아니거든!" 하고 고개를 홱 돌린다.', '{e} 머리를 피하며 투덜거린다.'] },
+  pat: { like: ['{g} 눈을 가늘게 뜨고 손길에 머리를 비빈다.', '{g} 기분 좋은 듯 {purr}'], ok: ['{g} 가만히 쓰다듬어지다가 씩 웃는다.'], dislike: ['{e} "이제 애 아니거든!" 하고 고개를 홱 돌린다.', '{e} 머리를 피하며 투덜거린다.'] },
   hug: { like: ['{g} 품에 쏙 안겨 한참을 떨어지지 않는다.', '{g} 꼭 안긴 채 작게 웃음소리를 낸다.'], ok: ['{g} 잠깐 안겨 있다가 꼼지락거리며 내려간다.'], dislike: ['{e} "창피해요!" 하고 품에서 빠져나간다.', '{e} 버둥거리며 몸을 빼낸다.'] },
   play: { like: ['{g} 신이 나서 둥지 안을 뛰어다닌다.', '{g} 숨이 찰 때까지 깔깔거리며 논다.'], ok: ['{g} 한참 함께 뛰어놀았다.'], dislike: ['{e} 내키지 않는지 금방 시들해진다.'] },
   story: { like: ['{g} 눈을 반짝이며 다음 이야기를 조른다.', '{g} 이야기 끝까지 숨죽여 듣는다.'], ok: ['{g} 이야기를 듣다가 고개를 끄덕인다.'], dislike: ['{e} 듣는 둥 마는 둥 하품을 한다.'] },
   ride: { like: ['{g} 등 위에서 두 팔을 활짝 펴고 소리친다.', '{g} 등에 매달려 신나게 웃는다.'], ok: ['{g} 등에 올라 둥지 둘레를 한 바퀴 돌았다.'], dislike: ['{e} 등에 오르기 싫다며 고개를 젓는다.'] },
   fly: { like: ['{g} 날개를 나란히 펴고 신나게 바람을 가른다.', '{g} 구름 사이를 빙글빙글 돌며 좋아한다.'], ok: ['{g} 뒤따라 둥지 위를 몇 바퀴 날았다.'], dislike: ['{e} 날개를 접고 따라오지 않는다.'] },
 };
-const fillLine = (t, k) => t.replace('{g}', ga(k)).replace('{e}', `${k.name}${josa(k.name, '은', '는')}`).replace('{n}', k.name);
+const fillLine = (t, k) => t.replace('{g}', ga(k)).replace('{e}', `${k.name}${josa(k.name, '은', '는')}`).replace('{n}', k.name).replace('{purr}', k.type === 'drake' ? '가르릉 소리를 낸다.' : '눈을 감고 배시시 웃는다.'); // 사람 아이는 가르릉거리지 않음
 const pickLine = (arr) => arr[Math.floor(Math.random() * arr.length)];
 function touch(d, kin, id, act, now = Date.now()) {
   const err = atNest(d);
@@ -1750,5 +1753,5 @@ module.exports = {
   care, rename, choosePath, incubate, train, release,
   expStart, expFinish, companions, restTogether,
   rollEvent, getEvent, chooseEvent, forceEvent, diary, addBond, // diary·addBond: 다른 둥지 아이와 맺어질 때 (kinlove.js)
-  newHuman, newEgg, setCompanion, sendErrand, setJob, harvest, cook, cookLeft, expWent, searchRunaway, sendSeek, callName, // 시험용
+  newHuman, newEgg, hatch, setCompanion, sendErrand, setJob, harvest, cook, cookLeft, expWent, searchRunaway, sendSeek, callName, // 시험용
 };

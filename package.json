@@ -5,7 +5,8 @@
   "description": "용의 대륙 — 드래곤이 되어 함께 노는 웹 텍스트 게임",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "check": "node tools/check-events.js"
   },
   "engines": {
     "node": ">=20"
