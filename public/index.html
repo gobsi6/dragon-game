@@ -7276,7 +7276,8 @@
       const box = document.createElement('div');
       for (const x of list) {
         const r = document.createElement('div');
-        r.className = 'fr-row';
+        r.className = `fr-row${x.idle ? ' idle' : ''}`; // 3일 넘게 자리를 비운 드래곤은 흐리게
+        if (x.idle) r.title = '3일 넘게 자리를 비웠다';
         r.appendChild(avaEl(x, 34));
         const t = document.createElement('div');
         t.innerHTML = '<b></b><small></small>';
@@ -10298,7 +10299,8 @@
     const box = document.createElement('div');
     for (const x of res.list) {
       const r = document.createElement('div');
-      r.className = 'fr-row';
+      r.className = `fr-row${x.idle ? ' idle' : ''}`; // 3일 넘게 자리를 비운 드래곤은 흐리게
+      if (x.idle) r.title = '3일 넘게 자리를 비웠다';
       r.appendChild(avaEl(x, 34));
       const t = document.createElement('div');
       t.innerHTML = '<b></b><small></small>';

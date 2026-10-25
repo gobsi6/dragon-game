@@ -3,7 +3,7 @@
 // - 실시간 결투: 둘 다 접속해 있을 때. 신청 → 수락 → 둘 다 고르면 한 턴. 시간을 넘기면 자동으로 고름
 // - 자동 결투: 상대가 '자동 결투 허용'을 켜 두었으면, 접속하지 않았어도 서로의 스킬 구성대로 자동으로 싸움
 // 결투에서는 다치지 않음 (가득 찬 상태로 싸우고, 끝나면 원래대로). 전적과 명성, 경험치만 남음
-const { COMBAT, MIND, REGIONS, BOND_RULES, ITEMS, isTestDragon } = require('./game-data');
+const { COMBAT, MIND, REGIONS, BOND_RULES, ITEMS, RULES, isTestDragon } = require('./game-data');
 
 const str = (v) => (typeof v === 'string' ? v.trim() : '');
 function josa(word, a, b) {
@@ -492,6 +492,7 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
         return {
           id: r.id, name: o.name, kind: o.kind, level: o.level, av: r.has_avatar ? r.avatar_ver : 0,
           online: !!e, lastSeen: e ? Date.now() : r.lastSeen, at: e ? (e.at || 0) : r.lastSeen || 0, w: oc.w, l: oc.l,
+          idle: !e && Date.now() - (r.lastSeen || 0) >= RULES.awayMs, // 3일 넘게 자리를 비움 (목록에서 흐리게)
           rel: db.relGet(d.id, r.id), live: why.live, auto: why.auto,
         };
       });

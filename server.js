@@ -593,13 +593,17 @@ function withTitles(list) {
 
 // 이 지역에 머무는 드래곤: 접속 중인 드래곤이 먼저, 그다음 접속하지 않은 드래곤(마지막으로 본 순서)
 // 창을 내리거나 닫아도 목록에서 사라지지 않고 '접속 안 함'으로 남음
+// 오래 자리를 비운 드래곤: 접속하지 않은 지 이만큼 지나면 '이곳의 드래곤' 목록에서 잠시 빠짐 (잠깐 쉬는 것일 뿐, 다시 접속하면 그대로 돌아옴)
+const AWAY_MS = RULES.awayMs; // 3일 (game-data.js RULES.awayMs)
 function occupants(region) {
   const list = [];
+  const awayBefore = Date.now() - AWAY_MS;
   for (const { dragon } of online.values()) {
     if (dragon.region === region) list.push({ ...publicDragon(dragon), online: true });
   }
   for (const d of db.dragonsIn(region)) {
     if (online.has(d.id)) continue;
+    if ((d.last_seen || 0) < awayBefore) continue; // 3일 넘게 자리를 비움: 목록에서 잠시 빠짐
     list.push({ ...publicDragon(d), online: false, lastSeen: d.last_seen || 0 });
   }
   return list;
@@ -669,10 +673,11 @@ function enterWorld(socket, dragon) {
   online.set(dragon.id, { socket, dragon, at: Date.now() }); // at: 이번에 접속한 시각 (결투장 목록 순서 등)
   socket.join(dragon.region);
   setImmediate(() => rivalNear(dragon));
-  db.touch(dragon.id);
+  const back = !prev && Date.now() - (dragon.last_seen || 0) >= AWAY_MS; // 오래 자리를 비웠다가 돌아옴
+  db.touch(dragon.id); dragon.last_seen = Date.now(); // 메모리의 값도 맞춰 둠 (다음 판정이 예전 값을 보지 않게)
 
   if (!prev) {
-    system(dragon.region, `${dragon.name}${josa(dragon.name, '이', '가')} 이곳에 모습을 드러냈다.`, socket);
+    system(dragon.region, back ? `오랫동안 보이지 않던 ${dragon.name}${josa(dragon.name, '이', '가')} 먼 길을 돌아 다시 이곳에 모습을 드러냈다.` : `${dragon.name}${josa(dragon.name, '이', '가')} 이곳에 모습을 드러냈다.`, socket);
   }
   sendRegionState(socket, dragon);
   broadcastPresence(dragon.region);
@@ -845,6 +850,14 @@ const ruin = (() => {
 })();
 logic.hooks.purify = (d, kind) => (logic.isRuin(d.region) ? ruin.add(d, kind) : purify.add(d, kind));
 logic.hooks.companionsHere = (d) => { for (const e of online.values()) if (e.dragon.id !== d.id && e.dragon.region === d.region && !e.dragon.dead_at) return true; return false; };
+// 청출어람: 내 스승의 레벨을 따라잡았으면 그 스승의 이름 (칭호 판정에서 씀)
+logic.hooks.surpassed = (d) => {
+  for (const id of db.relByBond(d.id, 'mentor')) {
+    const m = online.get(id)?.dragon || db.getDragon(id);
+    if (m && !m.dead_at && d.level >= m.level) return m.name;
+  }
+  return null;
+};
 logic.hooks.purifyDebug = purify.debugSet; // 시험용: 정화 진행을 바로 정함
 // ── 자유 제작: 직접 빚은 물건 (월드에 저장, 켤 때 ITEMS에 다시 올림) ──
 const free = require('./game-free');

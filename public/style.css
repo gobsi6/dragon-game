@@ -1463,6 +1463,9 @@ dialog.trip-dlg {
 .gp-box { margin: 6px 0 10px; }
 .fr-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 4px; border-top: 1px solid var(--line-in); cursor: pointer; }
 .fr-row:hover { background: #F2F3F1; }
+/* 3일 넘게 자리를 비운 드래곤: 그림과 글을 흐리게 (단추는 그대로 눌러 보이게) */
+.fr-row.idle > :not(.acts) { opacity: .5; }
+.fr-row.idle > :first-child { filter: grayscale(.6); }
 .fr-row .ava { width: 34px; height: 34px; }
 .fr-row b { font: 700 14px/1.3 var(--serif); }
 .fr-row small { display: block; font-size: 12px; color: var(--muted); }

@@ -153,6 +153,11 @@ function titleCondText(t) {
 function checkTitles(d) {
   if (d.dead_at) return [];
   const t = titlesOf(d);
+  // 청출어람: 예전에는 스승이 가르치는 순간에만 따졌음 → 사냥 등으로 레벨이 올라 따라잡아도 얻지 못했음. 이제 칭호를 따질 때마다 봄
+  if (!t.have.includes('surpass') && !(traitsOf(d).counts.surpass > 0)) {
+    const mentor = hooks.surpassed?.(d); // 레벨을 따라잡은 스승의 이름 (없으면 null)
+    if (mentor) { traitCount(d, 'surpass'); chron(d, 'mark', `스승 ${mentor}의 레벨을 따라잡았다.`); }
+  }
   const got = [];
   for (const ti of TITLES) {
     if (t.have.includes(ti.id)) continue;
@@ -684,11 +689,12 @@ function gather(d) {
   const st = statsOf(d);
 
   const wx = weatherFx(d.region);
-  const n = Math.random() < 0.35 + st.wisdom * 0.01 + traitMods(d).gatherExtra + wx.gatherExtra ? 2 : 1;
+  const tg = titleMods(d); // 칭호: 채집 (gatherExtra 하나 더 찾을 확률 · gatherRare 귀한 물건)
+  const n = Math.random() < 0.35 + st.wisdom * 0.01 + traitMods(d).gatherExtra + wx.gatherExtra + (tg.gatherExtra || 0) ? 2 : 1;
   const ids = [];
   for (let i = 0; i < n; i++) {
     const pl = placeLoot(d);
-    ids.push(rollItem(d.region, { uncommon: 0.12 + st.wisdom * 0.006 + pl.uncommon, rare: Math.max(0, 0.01 + st.wisdom * 0.001 + pl.rare + wx.findRare) }));
+    ids.push(rollItem(d.region, { uncommon: 0.12 + st.wisdom * 0.006 + pl.uncommon, rare: Math.max(0, 0.01 + st.wisdom * 0.001 + pl.rare + wx.findRare + (tg.gatherRare || 0)) }));
   }
   if (d.region === FISHING.region) { // 해안: 갯바위 틈의 미끼와 소금
     if (Math.random() < FISHING.gatherBait) ids.push(...Array(randInt(1, 2)).fill('bait_shrimp'));

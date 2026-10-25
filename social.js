@@ -11,7 +11,7 @@
 // 입양   둥지의 알이나 아직 어른이 되지 않은 인간 아이를 동료에게 보내자고 제안. 받는 쪽이 데려오기로 하면
 //        그 둥지로 옮겨 감 (받는 쪽 둥지에 빈자리가 있어야 함). 정할 때까지는 보내는 쪽 둥지에 있음
 
-const { ITEMS, KINDS, STANCES, MIND, SKILLS, HEAL_OTHER, fameTier, KIN, DAY, BONDS, MARKS, BOND_RULES, FESTIVAL, BUFFS, REGIONS, isTestDragon } = require('./game-data');
+const { ITEMS, KINDS, STANCES, MIND, SKILLS, HEAL_OTHER, fameTier, KIN, DAY, BONDS, MARKS, BOND_RULES, FESTIVAL, BUFFS, REGIONS, RULES, isTestDragon } = require('./game-data');
 
 const ADOPT = { days: 3 };         // 입양 제안을 기다리는 날 (지나면 저절로 거둬짐)
 
@@ -311,7 +311,8 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     const out = { friends: [], rivals: [], wary: [], nemesis: [] };
     for (const r of db.relList(me.id)) {
       const e = live(r.id);
-      const row = { id: r.id, name: r.name, kind: r.dkind, level: r.level, av: r.has_avatar ? r.avatar_ver : 0, online: !!e };
+      const row = { id: r.id, name: r.name, kind: r.dkind, level: r.level, av: r.has_avatar ? r.avatar_ver : 0, online: !!e,
+        idle: !e && Date.now() - (r.last_seen || 0) >= RULES.awayMs }; // 3일 넘게 자리를 비움 (목록에서 흐리게)
       if (r.kind === 'friend') {
         row.bond = r.bond || 'comrade';
         row.region = e ? e.dragon.region : r.region;
@@ -322,7 +323,8 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       else if (r.kind === 'nemesis') out.nemesis.push(row);
     }
     out.friends.sort((a, b) => b.online - a.online);
-    const view = (r) => ({ id: r.id, name: r.name, kind: r.dkind, level: r.level, av: r.has_avatar ? r.avatar_ver : 0, online: !!live(r.id), bond: r.bond || 'comrade' });
+    const view = (r) => ({ id: r.id, name: r.name, kind: r.dkind, level: r.level, av: r.has_avatar ? r.avatar_ver : 0, online: !!live(r.id), bond: r.bond || 'comrade',
+      idle: !live(r.id) && r.last_seen != null && Date.now() - r.last_seen >= RULES.awayMs });
     out.incoming = db.reqIn(me.id).map(view);
     // 나를 라이벌로 정했지만 나는 아직 정하지 않은 드래곤
     const mine = new Set(out.rivals.map((x) => x.id));

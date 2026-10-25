@@ -418,7 +418,7 @@ const q = {
   reqAddBond:   db.prepare('INSERT OR REPLACE INTO friend_requests (from_id, to_id, at, bond) VALUES (?, ?, ?, ?)'),
   kinAdoptedOut: db.prepare(`SELECT k.id, k.type, k.status, k.name, k.data, k.dragon_id AS owner_id, d.name AS owner FROM kin k JOIN dragons d ON d.id = k.dragon_id
     WHERE k.status IN ('home', 'egg') AND d.dead_at IS NULL AND json_extract(k.data, '$.adoptedFromId') = ?`),
-  relList:      db.prepare(`SELECT r.to_id AS id, r.kind, r.bond, d.name, d.kind AS dkind, d.level, d.region, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar
+  relList:      db.prepare(`SELECT r.to_id AS id, r.kind, r.bond, d.name, d.kind AS dkind, d.level, d.region, d.last_seen, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar
                             FROM relations r JOIN dragons d ON d.id = r.to_id WHERE r.from_id = ? ORDER BY d.name`),
   // 관계도: 대륙의 모든 드래곤과 서로 맺은 관계 (한 쌍에 한 줄. bond는 from에게 to가 무엇인지)
   mapDragons:   db.prepare('SELECT id, name, kind, level, avatar_ver, (avatar IS NOT NULL) AS has_avatar, map_public FROM dragons WHERE dead_at IS NULL'),
