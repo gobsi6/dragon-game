@@ -277,7 +277,8 @@
       <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
       <button class="here-x" id="here-x" type="button" aria-label="이곳의 이야기 닫기"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       <div class="orn-h" style="padding: 0 10px"><h2>이곳의 이야기</h2></div>
-      <div class="here">
+      <div class="here" id="here-box">
+        <button type="button" class="here-tog" id="here-tog" aria-expanded="false" aria-controls="here"><span class="t"></span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
         <div class="cnt"><span>이곳의 드래곤</span><b id="here-n"></b></div>
         <div id="here" class="here-list"></div>
       </div>
@@ -9023,6 +9024,19 @@
     if (!d || e.target !== d || !d.open || !outsideOf(d, e)) return;
     if (d.dispatchEvent(new Event('cancel', { cancelable: true }))) d.close();
   });
+  // 창 오른쪽 위 ✕: 바깥(어두운 배경)을 누른 것과 똑같이 닫음 (폰에서는 바깥 여백을 누르기 어려워서)
+  // 확인·선택을 눌러야 하는 창(처음 안내·선물·특성·쓰러짐·떠남·내기·초대·거래·싸우는 중의 전투)에는 넣지 않음
+  const NO_X = new Set(['welcome-dlg', 'gift-dlg', 'trait-dlg', 'fall-dlg', 'rip-dlg', 'bet-dlg', 'invite-dlg', 'trade-dlg', 'battle-dlg']);
+  for (const d of document.querySelectorAll('dialog.dlg')) {
+    if (NO_X.has(d.id) || d.querySelector(':scope > .dlg-x')) continue;
+    const x = document.createElement('button');
+    x.type = 'button';
+    x.className = 'dlg-x auto';
+    x.setAttribute('aria-label', '닫기');
+    x.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+    x.addEventListener('click', () => { if (d.dispatchEvent(new Event('cancel', { cancelable: true }))) d.close(); });
+    d.prepend(x);
+  }
 
   function openPanel(id) {
     const dlg = $(id);
@@ -11421,6 +11435,10 @@
     $('here-n').textContent = onN === S.occupants.length ? `${onN}` : `접속 ${onN} · ${S.occupants.length}`;
     $('here-badge').textContent = S.occupants.length; $('here-badge').hidden = !S.occupants.length;
     $('here-open').setAttribute('aria-label', `이곳의 이야기 보기 (이곳의 드래곤 ${S.occupants.length})`);
+    { // 폰 이야기 창 안의 접힌 머리 칸: '이곳의 드래곤 3 · 청우, 흑룡, 에스텔'
+      const nm = S.occupants.slice(0, 3).map((d) => d.name).join(', ');
+      $('here-tog').querySelector('.t').textContent = `이곳의 드래곤 ${S.occupants.length}${nm ? ` · ${nm}${S.occupants.length > 3 ? ' 외' : ''}` : ''}`;
+    }
     const box = $('here');
     box.replaceChildren();
     for (const d of S.occupants) {
@@ -12048,6 +12066,21 @@
   window.addEventListener('resize', () => { if (!narrowMq.matches && document.body.classList.contains('here-sheet')) hereSheet(false); });
   // 이곳의 드래곤을 누르면(말 걸기·기록 보기 창) 띄운 칸은 닫음
   $('here').addEventListener('click', () => { if (document.body.classList.contains('here-sheet')) setTimeout(() => { if (document.querySelector('dialog[open]')) hereSheet(false); }, 0); });
+  {
+    const hereBox = $('here-box'), side = hereBox.parentElement, chatEl = $('chat'), chatH = chatEl.querySelector('.chat-h');
+    let hereOpen = (() => { try { return localStorage.getItem('dragon-here-open') === '1'; } catch { return false; } })();
+    const applyHere = () => {
+      hereBox.classList.toggle('folded', !hereOpen);
+      $('here-tog').setAttribute('aria-expanded', String(hereOpen));
+    };
+    const placeHere = () => {
+      if (narrowMq.matches) { if (hereBox.parentElement !== chatEl) chatH.after(hereBox); hereBox.classList.add('in-chat'); }
+      else { if (hereBox.parentElement !== side) side.querySelector(':scope > .orn-h').after(hereBox); hereBox.classList.remove('in-chat'); }
+    };
+    $('here-tog').addEventListener('click', () => { hereOpen = !hereOpen; try { localStorage.setItem('dragon-here-open', hereOpen ? '1' : '0'); } catch {} applyHere(); });
+    narrowMq.addEventListener?.('change', placeHere);
+    placeHere(); applyHere();
+  }
   let pfFolded = (() => { try { return localStorage.getItem('dragon-pf-fold') !== '0'; } catch { return true; } })();
   const applyPfFold = () => {
     $('pf-panel').classList.toggle('folded', pfFolded);
