@@ -3046,6 +3046,7 @@
     if (im.w && im.h) { img.width = im.w; img.height = im.h; }
     img.addEventListener('error', () => { l.replaceWith(Object.assign(document.createElement('p'), { className: 'note', textContent: '그림은 오래되어 사라졌다.' })); });
     l.appendChild(img);
+    if (im.t && cls !== 'chest-img') { const c = document.createElement('span'); c.className = 'gift-imgcap'; c.textContent = im.t; l.appendChild(c); } // 보낸 이가 붙인 이름 (보물 상자에서는 이미 제목으로 보임)
     return l;
   }
   // 선물에 그림 한 장 끼우기: '함께 보낼 말' 칸 안 오른쪽 아래의 작은 그림 단추. 붙이면 칸 위에 작은 미리보기
@@ -3063,13 +3064,15 @@
     wrap.append(pick, file);
     const prev = document.createElement('div'); prev.className = 'sl-cimg gift-prev'; prev.hidden = true;
     row.before(prev);
+    // 그림 이름: 그림을 끼웠을 때만 미리보기 옆에 보임 (보물 상자에 간직하면 이 이름으로)
+    const title = document.createElement('input'); title.className = 'input gift-imgt'; title.maxLength = 20; title.placeholder = '그림 이름 (적지 않아도 된다, 20자)'; title.setAttribute('aria-label', '그림 이름');
     const draw = (url) => {
       prev.replaceChildren(); prev.hidden = !url; pick.classList.toggle('on', !!url);
-      if (!url) return;
+      if (!url) { title.value = ''; return; }
       const t = document.createElement('div'); t.className = `sl-thumb${st.busy ? ' busy' : ''}`;
       const img = document.createElement('img'); img.src = url; img.alt = '끼운 그림'; t.appendChild(img);
       if (!st.busy) { const x = document.createElement('button'); x.className = 'sl-thumb-x'; x.type = 'button'; x.textContent = '×'; x.title = '그림 빼기'; x.setAttribute('aria-label', '끼운 그림 빼기'); x.addEventListener('click', () => { st.id = 0; draw(''); }); t.appendChild(x); }
-      prev.appendChild(t);
+      prev.append(t, title);
     };
     file.addEventListener('change', async () => {
       const fl = file.files[0]; file.value = '';
@@ -3078,7 +3081,7 @@
       try { const sm = await slShrink(fl); draw(sm.url); const res = await giftUpload(sm); st.id = res.id; st.busy = false; draw(sm.url); }
       catch (e) { st.busy = false; st.id = 0; draw(''); toast(e.message || '그림을 올리지 못했다.'); }
     });
-    return { id: () => st.id, busy: () => st.busy, clear: () => { st.id = 0; draw(''); } };
+    return { id: () => st.id, title: () => title.value.trim(), busy: () => st.busy, clear: () => { st.id = 0; draw(''); } };
   }
   function renderLedger(list) {
     const box = $('ledger-list');
@@ -7289,7 +7292,7 @@
       const items = id && qty > 0 ? [{ id, qty }] : [];
       const msg = gift.querySelector('.msg').value.trim();
       if (gImg.busy()) return toast('그림을 올리는 중이다. 잠깐 기다리자.');
-      socket.emit('gift:send', { id: p.id, gold, items, msg, img: gImg.id() }, (res) => {
+      socket.emit('gift:send', { id: p.id, gold, items, msg, img: gImg.id(), imgTitle: gImg.id() ? gImg.title() : '' }, (res) => {
         if (res.error) return toast(res.error);
         toast(res.lines.join(' '));
         gImg.clear(); gift.querySelector('.msg').value = '';

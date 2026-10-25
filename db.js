@@ -795,7 +795,7 @@ module.exports = {
       other_id: e.other?.id ?? null, other_name: e.other?.name || '', other_kind: e.other?.kind || null,
       gold_in: Math.max(0, e.goldIn || 0), gold_out: Math.max(0, e.goldOut || 0),
       items_in: clean(e.itemsIn), items_out: clean(e.itemsOut), msg: e.msg || '', note: e.note || '',
-      img: e.img ? JSON.stringify({ id: e.img.id, key: e.img.key, w: e.img.w || null, h: e.img.h || null }) : '',
+      img: e.img ? JSON.stringify({ id: e.img.id, key: e.img.key, w: e.img.w || null, h: e.img.h || null, ...(e.img.t ? { t: e.img.t } : {}) }) : '',
     });
     q.ledgerPrune.run({ d: dragonId, old: Date.now() - LEDGER.days * 86400000, keep: LEDGER.keep });
   },

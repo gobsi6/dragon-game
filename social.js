@@ -846,7 +846,8 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       // 함께 끼운 그림 한 장: 내가 올려 두고 아직 보내지 않은 것만. 그림만 보내도 됨
       const gi = Number(p.img) || 0, gm = gi ? db.giftImg.meta(gi) : null;
       if (gi && (!gm || gm.dragon_id !== d.id || gm.sent_at != null)) return { error: '끼울 그림을 찾지 못했다. 다시 넣어 보자.' };
-      const img = gm ? { id: gm.id, key: gm.key, w: gm.w, h: gm.h } : null;
+      const imgT = (typeof p.imgTitle === 'string' ? p.imgTitle : '').replace(/\s+/g, ' ').trim().slice(0, 20); // 그림 이름 (보물 상자에 간직하면 이 이름으로)
+      const img = gm ? { id: gm.id, key: gm.key, w: gm.w, h: gm.h, ...(imgT ? { t: imgT } : {}) } : null;
       if (!gold && !items.length && !img) return { error: '보낼 것을 골라야 한다.' };
       const bad = checkOffer(d, gold, items);
       if (bad) return { error: bad };

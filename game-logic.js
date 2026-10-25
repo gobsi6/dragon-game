@@ -2029,7 +2029,7 @@ function chestAdd(d, kind, from = '', text = '', now = Date.now(), custom = null
   const e = { k: custom ? 'custom' : kind, n: String(from || '').slice(0, 24), t: String(text || '').slice(0, 400), at: now };
   if (meta.id) e.id = meta.id;
   if (meta.src) e.src = meta.src;
-  if (meta.img) e.img = { id: meta.img.id, key: meta.img.key, w: meta.img.w || null, h: meta.img.h || null }; // 선물로 받은 그림
+  if (meta.img) e.img = { id: meta.img.id, key: meta.img.key, w: meta.img.w || null, h: meta.img.h || null, ...(meta.img.t ? { t: String(meta.img.t).slice(0, 20) } : {}) }; // 선물로 받은 그림 (t: 보낸 이가 붙인 이름)
   if (custom) Object.assign(e, { nm: custom.name, ds: custom.desc || '', v: custom.value || 0, by: custom.by || '' }); // 직접 빚은 선물
   chestOf(d).push(e);
   return true;
@@ -2040,6 +2040,7 @@ function chestLabel(e) {
   if (e.k === 'custom') return e.n ? `${e.n}에게 받은 ${e.nm}` : e.by ? `${e.by}${josa(e.by, '이', '가')} 빚은 ${e.nm}` : e.nm;
   const K = KEEPSAKES[e.k];
   if (!K) return '';
+  if (e.k === 'gift_pic' && e.img?.t) return e.n ? `${e.n}에게 받은 ${e.img.t}` : e.img.t; // 이름을 붙여 보낸 그림
   if (!e.n) return K.name;
   return K.fmt === 'from' ? `${e.n}에게 받은 ${K.name}` : `${e.n}의 ${K.name}`;
 }
