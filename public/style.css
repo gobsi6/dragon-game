@@ -3212,8 +3212,7 @@ button.rm-step { cursor: pointer; }
   body:has(.center:not(.paneled) > .region-card:not([hidden]) #actions:not([hidden])) .main { padding-bottom: calc(51px + 12px); } /* 행동 줄 높이만큼만 */
   /* 4. 아래 탭으로 연 화면: '닫기'와 아래쪽 '이곳의 이야기'는 대륙 화면에만 (이야기 창 버튼은 그대로) */
   .dlg.as-panel .row:has(> .btn[id$="-close"]:only-child) { display: none; }
-  .main:has(.center.paneled) .side { padding: 0; border: 0; box-shadow: none; background: none; min-height: 0; }
-  .main:has(.center.paneled) .side > .orn-h, .main:has(.center.paneled) .side > .here, .main:has(.center.paneled) .side > .c { display: none; }
+  /* (아래쪽 '이곳의 이야기' 칸은 이제 폰에서 늘 숨기고 머리줄 단추로 띄움 — 아래 '이곳의 이야기' 규칙) */
   /* 폰에서는 이야기 창이 이 칸 아래에 붙지 않으니, 그 사이를 가르던 아래 여백과 선을 뺌 */
   .side .here { padding-bottom: 8px; border-bottom: 0; }
   /* 7. 이야기 창 버튼: 조금 작게 */
@@ -3291,7 +3290,8 @@ button.rm-step { cursor: pointer; }
 @media (max-width: 860px) {
   .top .pf-open { display: none !important; }
   .top .here-open { display: inline-flex; position: relative; flex: none; }
-  .here-badge { position: absolute; top: 1px; right: -2px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--steel); color: #fff; font: 600 10px/16px var(--sans); text-align: center; box-shadow: 0 0 0 2px var(--surface); pointer-events: none; }
+  /* 이곳의 드래곤 수: 알림 숫자처럼 보이지 않게 동그라미 없이 아이콘 옆에 옅은 글씨로 */
+  .here-badge { margin-left: 2px; font: 600 12.5px/1 var(--sans); color: var(--muted); font-variant-numeric: tabular-nums; pointer-events: none; }
   .here-badge[hidden] { display: none; }
 
   /* 드래곤 기록: 띄우는 창 대신 늘 맨 위에 */
@@ -3348,7 +3348,7 @@ button.rm-step { cursor: pointer; }
   body.here-sheet .here-backdrop { display: block; position: fixed; inset: 0; z-index: 44; background: rgba(20, 30, 40, .3); }
   body.here-sheet { overflow: hidden; }
 }
-@media (max-width: 520px) { .top .here-open { margin-left: auto; width: 38px; } }
+@media (max-width: 520px) { .top .here-open { margin-left: auto; width: auto; min-width: 38px; padding: 0 6px; gap: 0; } }
 @media (max-width: 860px) and (prefers-reduced-motion: reduce) { body.here-sheet .side { animation: none; } }
 
 /* ── 탐사·채집으로 얻은 것: 아래쪽에 잠깐 떴다가 사라지는 알림 (폰·넓은 화면 모두) ── */

@@ -3144,6 +3144,14 @@
       openBattle(b, { title: `도둑 추격 · ${b.foes ? b.foes.length : 1}명`, lines: res.result.lines });
     });
   }
+  // 둥지에서만 할 수 있는 단추·입력: 둥지 바깥(또는 원정 중)에서는 숨기지 않고 회색으로 둠 (무엇이 있는지는 보이게)
+  const AWAY_WHY = () => (S.me?.exp ? '원정을 떠나 있는 동안에는 할 수 없다.' : '둥지에 있을 때만 할 수 있다.');
+  function lockAway(el, on = true) {
+    if (!el || !on || !el.querySelectorAll) return el;
+    const ctl = el.matches?.('button, select, input') ? [el] : [...el.querySelectorAll('button, select, input')].filter((x) => !x.classList.contains('linkbtn') && !x.closest('summary'));
+    for (const x of ctl) { x.disabled = true; x.classList.add('away-lock'); x.title = AWAY_WHY(); }
+    return el;
+  }
   function nestAct(event, payload = {}, big) {
     socket.emit(event, payload, (res) => {
       if (res.error) { SFX.play('error'); return toast(res.error); }
@@ -3268,7 +3276,15 @@
     return bits.join(' · ');
   }
   function kinCard(v, canAct, partner = null) {
-    KIN_CAN_ACT = !!canAct; // 교감 칸도 돌보기처럼 둥지에 있을 때만
+    const card = kinCardBody(v, partner);
+    KIN_CAN_ACT = !!canAct;
+    // 둥지 바깥·원정 중: 할 수 있는 일은 그대로 보여 주되 누를 수 없게 (이름 바꾸기는 어디서든)
+    if (!canAct) lockAway(card);
+    return card;
+  }
+  function kinCardBody(v, partner = null) {
+    const canAct = true; // 할 수 있는 일을 다 그려 두고, 둥지 바깥이면 kinCard에서 잠금
+    KIN_CAN_ACT = true;
     const R = S.kinRules;
     const card = document.createElement('div');
     card.className = 'kin-card';
@@ -3915,7 +3931,7 @@
       const ts = el('small'); ts.textContent = sub;
       tx.append(tb, ts);
       r.append(el('span', 'fac-ic', facIcon(id)), tx);
-      if (label && n.here) r.append(B(label, fn, cls));
+      if (label) r.append(lockAway(B(label, fn, cls), !n.here));
       todo.appendChild(r);
     };
     let todoN = 0;
@@ -3926,7 +3942,7 @@
       todoN++;
       const ready = S.facility.cookable.filter((id) => { const r = S.recipes.find((x) => x.out === id); return r && Object.entries(r.needs).every(([x, q]) => (invCache[x] || 0) >= q); });
       tItem('kitchen', '부엌에 요리 맡기기', `${kitB.worker.name} · 오늘 ${kitB.cookLeft}번 남음${ready.length ? '' : ' · 재료가 다 있는 요리가 없다'}`);
-      if (ready.length && n.here) {
+      if (ready.length) {
         const row = todo.lastChild;
         row.classList.add('cook');
         const rs = el('select', 'input kin-sel');
@@ -3934,7 +3950,7 @@
         for (const id of ready) { const o = el('option'); o.value = id; o.textContent = S.items[id].name; rs.appendChild(o); }
         const go = el('div', 'fac-cook');
         go.append(rs, B('요리 맡기기', () => nestAct('nest:cook', { recipe: rs.value }), 'primary'));
-        row.appendChild(go);
+        row.appendChild(lockAway(go, !n.here));
       }
     }
     const idle = humans.filter((v) => !v.job?.working);
@@ -3944,7 +3960,7 @@
       const tx = el('span', 'fac-idle');
       tx.textContent = `일이 없는 식구 ${idle.length}명 · ${idle.map((v) => v.name).join(', ')}`;
       r.appendChild(tx);
-      if (n.here) r.appendChild(B('고르기', () => { FAC_SEL = idle[0].id; renderNestAgain(); }));
+      r.appendChild(lockAway(B('고르기', () => { FAC_SEL = idle[0].id; renderNestAgain(); }), !n.here));
       todo.appendChild(r);
     }
     if (!todoN) todo.appendChild(el('p', 'fac-done', F0.built.length ? '오늘 할 일을 모두 마쳤다.' : '아직 지은 시설이 없다. 빈 칸을 눌러 시설을 지어 보자.'));
@@ -3952,7 +3968,7 @@
     // 머리줄
     const top = el('div', 'fac-top');
     top.append(el('b', 'fac-h', `시설 ${F0.built.length}/${F0.slots}칸`));
-    if (n.here) top.append(B(FAC_BUILD ? '짓기 닫기' : '＋ 짓기', () => { FAC_BUILD = !FAC_BUILD; renderNestAgain(); }, 'small'));
+    top.append(lockAway(B(FAC_BUILD ? '짓기 닫기' : '＋ 짓기', () => { FAC_BUILD = !FAC_BUILD; renderNestAgain(); }, 'small'), !n.here));
     wrap.appendChild(top);
     // 시설 자리: 지은 시설과 빈 칸을 한 격자에 (모든 칸의 높이가 같음)
     const grid = el('div', 'fac-grid');
@@ -3966,9 +3982,9 @@
       const head = el('div', 'fac-head');
       head.append(el('span', 'fac-ic', facIcon(f.id)), el('b', 'fac-name', ''));
       head.querySelector('.fac-name').textContent = F.name;
-      if (n.here) { // 오른쪽 위: 허물기
+      { // 오른쪽 위: 허물기
         const rm = B('허물기', () => { if (confirm(`${F.name}${josa(F.name, '을', '를')} 허물까? 지을 때 쓴 재료는 돌아오지 않는다.`)) nestAct('nest:fac:remove', { id: f.id }); }, 'fac-rm');
-        head.appendChild(rm);
+        head.appendChild(lockAway(rm, !n.here));
       }
       card.appendChild(head);
       const desc = el('p', 'fac-desc');
@@ -3999,7 +4015,7 @@
         txt.append(nb, rs);
         who.append(face, txt);
         if (f.worker.fit) who.append(el('span', 'fac-fit', '잘 맞음'));
-        if (n.here) who.append(B('쉬게 하기', () => nestAct('nest:job', { kin: f.worker.id, fac: '' }), 'small link'));
+        who.append(lockAway(B('쉬게 하기', () => nestAct('nest:job', { kin: f.worker.id, fac: '' }), 'small link'), !n.here));
         card.appendChild(who);
       } else {
         const empty = el('div', 'fac-empty');
@@ -4012,8 +4028,8 @@
     for (let i = F0.built.length; i < F0.slots; i++) {
       const e = el('button', 'fac-slot');
       e.type = 'button';
-      e.textContent = n.here ? '빈 칸 · 눌러서 시설 짓기' : '빈 칸';
-      e.disabled = !n.here;
+      e.textContent = '빈 칸 · 눌러서 시설 짓기';
+      lockAway(e, !n.here);
       e.addEventListener('click', () => { FAC_BUILD = true; renderNestAgain(); });
       grid.appendChild(e);
     }
@@ -4069,7 +4085,7 @@
       job.textContent = v.job?.working ? v.job.name : v.job ? `${v.job.name} · ${v.job.why || '쉬는 중'}` : '일 없음'; // 맡았지만 지금 못 하면 그 까닭을
       b.append(face, txt, job);
       b.addEventListener('click', () => { FAC_SEL = FAC_SEL === v.id ? null : v.id; renderNestAgain(); });
-      kids.appendChild(b);
+      kids.appendChild(lockAway(b, !n.here));
     }
     // 고른 식구에게 잘 맞는 시설 추천
     if (sel) {
@@ -4126,6 +4142,7 @@
             note.textContent = S.regions[S.region]?.realm === 'ruin' ? '다른 대륙에 있을 땐 둥지로 돌아가려면 대륙을 넘어야 한다.' : S.nestRules.homeFlightAp > 0 ? `어디서든 둥지로 곧장 날아갈 수 있다. 행동력 ${S.nestRules.homeFlightAp}이 든다.` : '어디서든 둥지로 곧장 날아갈 수 있다. 행동력은 들지 않는다.';
             // 반려의 둥지에 와 있으면 그곳에서도 쉴 수 있음
             const pn = me.partnerNest;
+            if (!(pn && pn.region === S.region)) row.appendChild(lockAway(btn('둥지에서 쉬기', () => {}, false)));
             if (pn && pn.region === S.region) row.appendChild(me.restAt ? btn('깨어나기', () => nestAct('rest:stop'), true) : btn(`반려 ${pn.name}의 둥지에서 쉬기`, () => nestAct('rest:start'), true, !!me.exp));
             if (pn && pn.region === S.region) note.textContent += ` 반려 ${pn.name}의 식구는 '식구' 탭에서 함께 돌볼 수 있다.`;
             row.appendChild(btn(`둥지로 날아가기${S.nestRules.homeFlightAp > 0 ? ` −${S.nestRules.homeFlightAp}` : ''}`, () => { nestAct('nest:home'); }, true, !!me.exp || !!me.restAt || me.ap < S.nestRules.homeFlightAp));
@@ -4177,7 +4194,8 @@
           rc.querySelector('.when').textContent = `${dur(r.until - Date.now())} 안에 쫓아가 이기면 모두 되찾는다. 지면 쓰러지고, 물러나면 다시 쫓을 수 있다.`;
           const row2 = rc.querySelector('.row');
           if (n.here) row2.appendChild(btn(`도둑 쫓기 −${S.raidRules.chaseAp}`, raidChase, true, !!me.exp || !!me.restAt || me.ap < S.raidRules.chaseAp));
-          else row2.appendChild(btn(`둥지로 날아가기${S.nestRules.homeFlightAp > 0 ? ` −${S.nestRules.homeFlightAp}` : ''}`, () => nestAct('nest:home'), true, !!me.exp || !!me.restAt || me.ap < S.nestRules.homeFlightAp));
+          else row2.append(lockAway(btn(`도둑 쫓기 −${S.raidRules.chaseAp}`, raidChase, false)));
+          if (!n.here) row2.appendChild(btn(`둥지로 날아가기${S.nestRules.homeFlightAp > 0 ? ` −${S.nestRules.homeFlightAp}` : ''}`, () => nestAct('nest:home'), true, !!me.exp || !!me.restAt || me.ap < S.nestRules.homeFlightAp));
         }
 
         // 탭: 둥지(단계·넓히기·지키기) / 식구 / 보물더미. 탭 이름 아래에 요약을 작게
@@ -4288,20 +4306,16 @@
               srcChip(cl.lastChild, id, host, cl);
             }
             host.appendChild(cl);
-            if (n.here) {
+            {
               const b2 = btn(`${next.name}${ro(next.name)} 넓히기`, () => {
                 if (confirm(`둥지를 넓혀 ${next.name}${ro(next.name)} 만들까? 금화 ${c.gold}닢과 재료가 든다. (모자란 금화는 보물더미에서 꺼내 쓴다)`)) nestAct('nest:expand');
               }, ready, !!me.exp || !!me.restAt || !ready);
               const wrap = document.createElement('div');
               wrap.className = 'row';
               wrap.style.justifyContent = 'flex-start';
-              wrap.appendChild(b2);
+              wrap.appendChild(lockAway(b2, !n.here));
               host.appendChild(wrap);
-            } else {
-              const p3 = document.createElement('p');
-              p3.className = 'note';
-              p3.textContent = '둥지를 넓히려면 둥지에 있어야 한다.';
-              host.appendChild(p3);
+              if (!n.here) { const p3 = document.createElement('p'); p3.className = 'note'; p3.textContent = '둥지를 넓히려면 둥지에 있어야 한다.'; host.appendChild(p3); }
             }
           }
         }
@@ -4419,7 +4433,7 @@
             r4.querySelector('.q').textContent = `${n.wards?.[key] || 0}/${S.nestRules.wardMax}`;
             const own = invCache[id] || 0;
             r4.querySelector('small').textContent = `${it.desc} 제작에서 만들 수 있다.${own ? ` (가진 것 ${own})` : ''}`;
-            if (n.here && own > 0) r4.querySelector('.acts').append(btn('설치하기', () => nestAct('item:use', { item: id }), false, (n.wards?.[key] || 0) >= S.nestRules.wardMax));
+            if (own > 0) r4.querySelector('.acts').append(lockAway(btn('설치하기', () => nestAct('item:use', { item: id }), false, (n.wards?.[key] || 0) >= S.nestRules.wardMax), !n.here));
             wl.appendChild(r4);
           }
           host.appendChild(wl);
@@ -4435,7 +4449,9 @@
             p.className = 'note';
             p.textContent = '보물더미는 둥지에 있을 때만 넣고 꺼낼 수 있다.';
             host.appendChild(p);
-          } else {
+          }
+          {
+            const hoardFrom = host.childNodes.length; // 여기부터 그린 것은 둥지 바깥이면 잠금 (쌓인 보물·소지품 탭 전환은 그대로)
             const gm = add('<div class="gold-move"><label class="sr" for="hoard-gold">금화 수</label><input class="input" id="hoard-gold" type="number" min="1" inputmode="numeric" placeholder="금화"></div>');
             const box = gm.querySelector('.gold-move');
             const amount = () => Number($('hoard-gold').value);
@@ -4514,6 +4530,7 @@
             };
             sub.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { HOARD_SUB = b.dataset.k; showSub(); } });
             showSub();
+            if (!n.here) for (const nd of [...host.childNodes].slice(hoardFrom)) if (nd !== sub) lockAway(nd);
           }
         }
 
