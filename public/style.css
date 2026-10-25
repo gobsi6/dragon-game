@@ -3399,11 +3399,13 @@ button.rm-step { cursor: pointer; }
 }
 
 /* ── 팝업창: 오른쪽 위 ✕ 닫기, 폰 주소창이 오르내려도 위가 잘리지 않게, 창이 떠 있는 동안 바깥 화면은 스크롤되지 않게 ── */
-.dlg-x.auto { display: grid; place-items: center; top: 9px; right: 9px; width: 34px; height: 34px; padding: 0; border: 1px solid var(--line-in); background: var(--surface-2); color: var(--steel-d); cursor: pointer; }
-.dlg-x.auto:hover { border-color: var(--line-soft); }
-.dlg.as-panel > .dlg-x.auto { display: none; } /* 폰에서 탭 화면으로 보일 때는 아래 탭 줄로 오감 */
-.dlg:not(.as-panel) > .orn-h { padding-left: 36px; padding-right: 36px; } /* 제목 줄이 ✕와 겹치지 않게 (양쪽을 똑같이 비워 가운데는 그대로) */
-@media (max-width: 860px) { .dlg-x.auto { width: 38px; height: 38px; top: 8px; right: 8px; } }
+.dlg-x.auto { display: none; } /* 넓은 화면은 바깥을 누르기 쉬워 ✕ 없이 */
+@media (max-width: 860px) {
+  .dlg-x.auto { display: grid; place-items: center; top: 8px; right: 8px; width: 38px; height: 38px; padding: 0; border: 1px solid var(--line-in); background: var(--surface-2); color: var(--steel-d); cursor: pointer; }
+  .dlg.as-panel > .dlg-x.auto { display: none; } /* 폰에서 탭 화면으로 보일 때는 아래 탭 줄로 오감 */
+  .dlg:not(.as-panel) .x-dup, .dlg:not(.as-panel) .x-dup-row { display: none !important; } /* ✕가 있으니 아래쪽 '닫기'는 숨김 */
+  .dlg:not(.as-panel) > .orn-h { padding-left: 38px; padding-right: 38px; } /* 제목 줄이 ✕와 겹치지 않게 (양쪽을 똑같이 비워 가운데는 그대로) */
+}
 /* svh: 주소창이 보일 때의 작은 화면 높이 기준이라, 주소창이 나타나도 창 위쪽이 화면 밖으로 밀리지 않음 */
 .dlg { max-height: calc(100svh - var(--dock-h, 56px) - 32px); }
 html:has(dialog.dlg:modal), html:has(dialog.dlg:modal) body { overflow: hidden; overscroll-behavior: none; }

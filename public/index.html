@@ -9036,6 +9036,20 @@
     x.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
     x.addEventListener('click', () => { if (d.dispatchEvent(new Event('cancel', { cancelable: true }))) d.close(); });
     d.prepend(x);
+    // 폰에서는 ✕가 닫기를 대신하니, 아래쪽 '닫기' 단추는 숨김 (그 줄에 다른 단추가 없으면 줄째로). '취소' 등 다른 뜻의 단추는 그대로
+    const markClose = () => {
+      for (const b of d.querySelectorAll('button')) {
+        if (b === x || b.classList.contains('x-dup')) continue;
+        if (b.textContent.trim() === '닫기') b.classList.add('x-dup'); // 글씨가 '닫기'인 것만 ('그만두기'처럼 다른 뜻이 있는 단추는 그대로)
+      }
+      for (const r of d.querySelectorAll('.row, .acts, .btns')) {
+        const kids = [...r.children].filter((k) => !k.hidden);
+        r.classList.toggle('x-dup-row', kids.length > 0 && kids.every((k) => k.classList.contains('x-dup')));
+      }
+    };
+    markClose();
+    let mcT = 0;
+    new MutationObserver(() => { clearTimeout(mcT); mcT = setTimeout(markClose, 0); }).observe(d, { childList: true, subtree: true });
   }
 
   function openPanel(id) {
