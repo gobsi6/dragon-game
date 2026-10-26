@@ -155,7 +155,17 @@
       </div>
       <div class="buff-row" id="buff-row" hidden></div>
       <div class="pts-row" id="pts-row" hidden><span>나눌 능력치 포인트 <b id="pts-n"></b></span><button class="btn primary" type="button" id="pts-open">나누기</button></div>
-      <button type="button" class="linkbtn more-char" id="char-more">특성 · 장신구 · 성향 자세히 보기</button>
+      <!-- 회복 가방: '회복'을 누르면 그림(넓은 화면)·능력치가 접히고 이 자리에 열림. 막대와 숫자는 그대로 보여 쓰는 대로 차오름 -->
+      <div class="pf-bag" id="pf-bag" hidden>
+        <div class="bag-tabs" id="bag-tabs" role="tablist" aria-label="회복 물건 거르기"></div>
+        <div class="bag-list" id="bag-list"></div>
+      </div>
+      <div class="pf-acts" id="pf-acts">
+        <button class="btn" type="button" id="pf-titles"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h12v6a6 6 0 0 1-12 0z"/><path d="M9 20h6M12 16v4"/><path d="M6 6H3.5v1.5A3 3 0 0 0 6 10.5M18 6h2.5v1.5a3 3 0 0 1-2.5 3"/></svg><span>칭호</span></button>
+        <button class="btn" type="button" id="pf-skills"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 3 5 13h6l-1 8 8-10h-6z"/></svg><span>스킬</span></button>
+        <button class="btn" type="button" id="pf-bag-btn" aria-expanded="false" aria-controls="pf-bag"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/><path d="M10 13h4M12 11v4"/></svg><span>회복</span></button>
+      </div>
+      <button class="pf-qbag" type="button" id="pf-qbag" aria-label="회복 가방 열기"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/><path d="M10 13h4M12 11v4"/></svg></button><!-- 폰에서 접힌 줄에만: 펼치면서 가방을 엶 -->
       </div>
     </section>
 
@@ -701,16 +711,35 @@
   <div class="row" style="margin-top: 12px"><button class="btn" type="button" id="gm-close">닫기</button></div>
 </dialog>
 
+<!-- 칭호 · 스킬: 드래곤 기록 아래 단추로 여는 창 (예전엔 상태 안의 탭) -->
+<dialog class="frame dlg wide" id="title-dlg" aria-labelledby="title-dlg-h">
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="title-dlg-h">칭호</h2></div>
+  <div class="body">
+    <p class="note" id="char-title-note"></p>
+    <div class="tt-filter utabs" id="char-title-filter" role="group" aria-label="칭호 분류"></div>
+    <div class="tt-list" id="char-titles"></div>
+  </div>
+  <div class="row"><button class="btn" type="button" id="title-close">닫기</button></div>
+</dialog>
+<dialog class="frame dlg wide" id="skill-dlg" aria-labelledby="skill-dlg-h">
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="skill-dlg-h">전투 스킬</h2></div>
+  <div class="body">
+    <p class="note" id="char-skill-note"></p>
+    <div class="traits" id="char-skills"></div>
+  </div>
+  <div class="row"><button class="btn" type="button" id="skill-close">닫기</button></div>
+</dialog>
+
 <dialog class="frame dlg wide" id="char-dlg" aria-labelledby="char-dlg-title">
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="char-dlg-title">상태</h2></div>
   <div class="body">
     <div class="char-head" id="char-head"></div>
-    <!-- 상태 안의 메뉴: 기본(특성·장신구·성향) / 칭호 / 스킬 / 기록(발자취·업적·도감) -->
+    <!-- 상태 안의 메뉴: 기본(특성·장신구·성향) / 기록(발자취·업적·도감). 칭호·스킬은 드래곤 기록 아래 단추의 따로 된 창으로 -->
     <div class="seg ctabs" id="char-tabs" role="tablist" aria-label="상태 메뉴">
       <button type="button" role="tab" data-ct="base" class="on">기본</button>
-      <button type="button" role="tab" data-ct="titles">칭호</button>
-      <button type="button" role="tab" data-ct="skills">스킬</button>
       <button type="button" role="tab" data-ct="rec">기록<i class="tab-dot" id="rec-dot" hidden></i></button>
     </div>
     <section class="ctab" data-ct="base" role="tabpanel">
@@ -744,17 +773,6 @@
           <div class="row" style="justify-content: flex-end"><button class="btn danger" type="button" id="depart-go" disabled>먼 여행을 떠난다</button></div>
         </div>
       </details>
-    </section>
-    <section class="ctab" data-ct="titles" role="tabpanel" hidden>
-    <h3>칭호</h3>
-    <p class="note" id="char-title-note"></p>
-    <div class="tt-filter utabs" id="char-title-filter" role="group" aria-label="칭호 분류"></div>
-    <div class="tt-list" id="char-titles"></div>
-    </section>
-    <section class="ctab" data-ct="skills" role="tabpanel" hidden>
-    <h3>전투 스킬</h3>
-    <p class="note" id="char-skill-note"></p>
-    <div class="traits" id="char-skills"></div>
     </section>
     <section class="ctab" data-ct="rec" id="rec" role="tabpanel" hidden>
     <h3 class="rec-title">기 록</h3>
@@ -1387,6 +1405,9 @@
     $('pts-n').textContent = me.statPts || 0;
     renderGear();
     if ($('char-dlg').open) renderChar();
+    if ($('title-dlg').open) renderTitles();
+    if ($('skill-dlg').open) renderSkills();
+    if (bagOpen) renderBag(); // 회복 가방: 막대가 차면 순서·흐림이 바뀜
     checkTraitPick();
     for (const s of $('stance').children) {
       s.classList.toggle('on', s.dataset.s === me.stance);
@@ -2635,7 +2656,7 @@
       SFX.play({ 'item:drop': 'drop', craft: 'craft' }[event] || 'use');
       if (res.result?.lines) toast(res.result.lines.join(' '));
       // 다시 그려도 보던 자리에 머물게 (쓰고 나서 맨 위로 올라가지 않게)
-      fetchInv(() => { if ($('inv-dlg').open) keepScroll($('inv-dlg'), renderInv); if ($('craft-dlg').open) keepScroll($('craft-dlg'), renderCraft); });
+      fetchInv(() => { if ($('inv-dlg').open) keepScroll($('inv-dlg'), renderInv); if ($('craft-dlg').open) keepScroll($('craft-dlg'), renderCraft); if (bagOpen) renderBag(); });
     });
   }
   let gearSumOpen = false;
@@ -8368,7 +8389,64 @@
   }
   $('chron-more').addEventListener('click', () => { chronShow += 30; renderChron(); });
   $('dock-char').addEventListener('click', openChar);
-  $('char-more').addEventListener('click', () => { charTab = 'base'; openChar(); }); // '특성 · 장신구 · 성향 자세히 보기'는 기본 메뉴로
+  // 드래곤 기록 아래: 칭호 · 스킬 창
+  $('pf-titles').addEventListener('click', () => { renderTitles(); if (!$('title-dlg').open) $('title-dlg').showModal(); $('pf-titles').classList.add('on'); });
+  $('pf-skills').addEventListener('click', () => { renderSkills(); if (!$('skill-dlg').open) $('skill-dlg').showModal(); $('pf-skills').classList.add('on'); });
+  // 창이 열려 있는 동안은 단추를 눌린 색으로 (닫히면 되돌림: ✕·Esc·닫기 모두)
+  $('title-dlg').addEventListener('close', () => $('pf-titles').classList.remove('on'));
+  $('skill-dlg').addEventListener('close', () => $('pf-skills').classList.remove('on'));
+  $('title-close').addEventListener('click', () => $('title-dlg').close());
+  $('skill-close').addEventListener('click', () => $('skill-dlg').close());
+  // ── 회복 가방: 가진 회복 물건(체력·기력·정신·행동력을 채우는 것)을 바로 씀 ──
+  // 열면 그림(넓은 화면)·능력치가 접히고 막대와 숫자만 남음. 지금 비어 있는 쪽을 많이 채워 주는 물건부터, 이미 가득 찬 쪽만 채우는 물건은 맨 아래에 흐리게
+  let bagOpen = false, bagTab = 'all', bagRefold = false;
+  const BAG_K = [['hp', '체력'], ['en', '기력'], ['mind', '정신'], ['ap', '행동력']];
+  const bagMax = (k, me) => ({ hp: me.hpMax, en: me.enMax, mind: me.mindMax, ap: me.apMax }[k] || 1);
+  function bagItems() {
+    const me = S.me; if (!me) return [];
+    return Object.entries(invCache).filter(([id, q]) => q > 0 && S.items[id]?.type === 'use' && BAG_K.some(([k]) => (S.items[id].use?.[k] || 0) > 0))
+      .map(([id, q]) => { const u = S.items[id].use; const eff = BAG_K.filter(([k]) => (u[k] || 0) > 0).map(([k, l]) => ({ k, l, v: u[k] }));
+        const useful = eff.reduce((a, e) => a + Math.min(e.v, Math.max(0, bagMax(e.k, me) - (me[e.k] || 0))) / bagMax(e.k, me), 0);
+        return { id, q, name: S.items[id].name, eff, useful }; });
+  }
+  function renderBag() {
+    const box = $('pf-bag'); if (!bagOpen) return;
+    const all = bagItems();
+    const tabs = $('bag-tabs'); tabs.replaceChildren();
+    for (const [k, l] of [['all', '전체'], ...BAG_K]) {
+      const b = document.createElement('button'); b.type = 'button'; b.role = 'tab'; b.className = `bag-tab${bagTab === k ? ' on' : ''}`; b.textContent = l;
+      b.setAttribute('aria-selected', String(bagTab === k)); b.addEventListener('click', () => { bagTab = k; renderBag(); }); tabs.appendChild(b);
+    }
+    const list = all.filter((x) => bagTab === 'all' || x.eff.some((e) => e.k === bagTab))
+      .sort((a, b) => (b.useful > 0) - (a.useful > 0) || b.useful - a.useful || a.name.localeCompare(b.name, 'ko'));
+    const ul = $('bag-list'); ul.replaceChildren();
+    if (!list.length) { const p = document.createElement('p'); p.className = 'note'; p.textContent = all.length ? '이 칸에 해당하는 물건이 없다.' : '가진 회복 물건이 없다.'; ul.appendChild(p); }
+    for (const x of list) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'bag-it'; b.disabled = x.useful <= 0;
+      b.title = x.useful <= 0 ? '이미 가득 차 있다' : '';
+      const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = x.name;
+      const q = document.createElement('span'); q.className = 'q'; q.textContent = `×${x.q}`;
+      const ef = document.createElement('span'); ef.className = 'efs';
+      for (const e of x.eff) { const c = document.createElement('span'); c.className = `ef ef-${e.k}`; c.textContent = `${e.l} +${e.v}`; ef.appendChild(c); }
+      b.append(nm, q, ef);
+      b.setAttribute('aria-label', `${x.name} ${x.eff.map((e) => `${e.l} +${e.v}`).join(', ')}, ${x.q}개`);
+      b.addEventListener('click', () => itemAct('item:use', { item: x.id }));
+      ul.appendChild(b);
+    }
+  }
+  function setBag(on) {
+    bagOpen = on;
+    $('pf-panel').classList.toggle('bag-open', on);
+    $('pf-bag').hidden = !on;
+    $('pf-bag-btn').setAttribute('aria-expanded', String(on));
+    $('pf-bag-btn').classList.toggle('on', on);
+    $('pf-bag-btn').querySelector('span').textContent = on ? '닫기' : '회복';
+    if (on) fetchInv(renderBag);
+    else if (bagRefold) { bagRefold = false; setPfFold(true); } // 접힌 줄에서 열었으면 닫을 때 다시 접음
+  }
+  $('pf-bag-btn').addEventListener('click', () => setBag(!bagOpen));
+  // 폰: 접힌 줄의 가방 단추 → 펼치면서 가방을 엶
+  $('pf-qbag').addEventListener('click', (e) => { e.stopPropagation(); bagRefold = true; setPfFold(false); setBag(true); });
   $('char-close').addEventListener('click', () => $('char-dlg').close());
 
   // ── 장소 ──
@@ -12458,7 +12536,7 @@
     pinBusy = true;
     const wide = window.innerWidth > 860 && pinMain.offsetParent !== null;
     // 먼저 모두 풀어서 원래 자리를 잼
-    pinEls.forEach((el, i) => { el.classList.remove('pinned'); el.style.left = ''; el.style.width = ''; pinSpacers[i].style.display = 'none'; });
+    pinEls.forEach((el, i) => { el.classList.remove('pinned', 'wrapped'); el.style.left = ''; el.style.width = ''; el.style.marginLeft = ''; el.style.flex = ''; el.style.maxWidth = ''; el.style.position = ''; pinSpacers[i].style.display = 'none'; });
     if (wide) {
       // 붙어 다니기(sticky)를 잠깐 끄고 원래 자리를 잼. 창이 좁아 아래 줄로 내려간 칸은 고정하지 않음 (가운데 칸과 같은 줄일 때만)
       pinEls.forEach((el) => { el.style.position = 'static'; });
@@ -12466,13 +12544,25 @@
       const top0 = center ? center.getBoundingClientRect().top : null;
       const rects = pinEls.map((el) => el.getBoundingClientRect());
       pinEls.forEach((el) => { el.style.position = ''; });
+      const cRect = center ? center.getBoundingClientRect() : null;
+      const wrapped = [];
       pinEls.forEach((el, i) => {
         const r = rects[i];
+        if (r.width && top0 != null && Math.abs(r.top - top0) > 2) wrapped.push(el); // 창이 좁아 다른 줄로 내려간 칸
         if (!r.width || top0 == null || Math.abs(r.top - top0) > 2) return;
         const sp = pinSpacers[i];
         sp.style.display = 'block'; sp.style.flex = `0 0 ${r.width}px`; sp.style.width = `${r.width}px`; sp.style.height = '1px';
         el.classList.add('pinned'); el.style.left = `${r.left}px`; el.style.width = `${r.width}px`;
       });
+      // 아래 줄로 내려간 칸 정리:
+      // · 이곳의 이야기가 내려가면 왼쪽(고정된 드래곤 기록 밑)이 아니라 가운데 칸 아래에 같은 폭으로 (예전엔 드래곤 기록에 가려졌음)
+      // · 드래곤 기록이 혼자 위 줄에 남으면(가운데 칸까지 내려간 좁은 화면) 붙어 다니지 않게 해서 아래 칸을 덮지 않음
+      for (const el of wrapped) {
+        if (el.matches('.side') && cRect && pinMain.querySelector(':scope > .profile.pinned')) {
+          const mainLeft = pinMain.getBoundingClientRect().left + (parseFloat(getComputedStyle(pinMain).paddingLeft) || 0);
+          el.classList.add('wrapped'); el.style.marginLeft = `${Math.max(0, cRect.left - mainLeft)}px`; el.style.flex = `0 0 ${cRect.width}px`; el.style.maxWidth = 'none';
+        } else if (el.matches('.profile')) el.style.position = 'static';
+      }
     }
     pinBusy = false;
   }
@@ -12532,9 +12622,9 @@
     $('pf-fold').setAttribute('aria-label', pfFolded ? '드래곤 기록 펼치기' : '드래곤 기록 접기');
   };
   const setPfFold = (v) => { pfFolded = v; try { localStorage.setItem('dragon-pf-fold', v ? '1' : '0'); } catch {} applyPfFold(); };
-  $('pf-fold').addEventListener('click', (e) => { e.stopPropagation(); setPfFold(!pfFolded); });
+  $('pf-fold').addEventListener('click', (e) => { e.stopPropagation(); if (bagOpen) { bagRefold = false; setBag(false); } setPfFold(!pfFolded); }); // 접을 때 열린 가방은 닫음
   // 접힌 상태에서는 칸 어디를 눌러도 펼침
-  $('pf-panel').addEventListener('click', (e) => { if (narrowMq.matches && pfFolded && !e.target.closest('#pf-fold')) { e.preventDefault(); e.stopPropagation(); setPfFold(false); } }, true);
+  $('pf-panel').addEventListener('click', (e) => { if (narrowMq.matches && pfFolded && !e.target.closest('#pf-fold, #pf-qbag')) { e.preventDefault(); e.stopPropagation(); setPfFold(false); } }, true);
   applyPfFold();
   // 버튼 옆 작은 막대: 기록 칸의 체력·기력·정신 막대 길이를 그대로 따라감
   const pfMirror = [['hp-bar', 'pfm-hp'], ['en-bar', 'pfm-en'], ['mind-bar', 'pfm-mind']];

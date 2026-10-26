@@ -588,7 +588,7 @@ function sendMe(socket, d) {
   const got = logic.checkTitles(d);
   if (got.length) {
     db.saveState(d);
-    socket.emit('notice', { title: '칭호', lines: got.map((t) => `칭호 '${t.name}'${josa(t.name, '을', '를')} 얻었다. (${t.eff})`).concat(before ? [] : [`'${got[got.length - 1].name}' 칭호를 달았다. '상태'에서 바꿀 수 있다.`]) });
+    socket.emit('notice', { title: '칭호', lines: got.map((t) => `칭호 '${t.name}'${josa(t.name, '을', '를')} 얻었다. (${t.eff})`).concat(before ? [] : [`'${got[got.length - 1].name}' 칭호를 달았다. 드래곤 기록 아래 '칭호'에서 바꿀 수 있다.`]) });
     if (logic.titleName(d) !== before) setImmediate(() => broadcastPresence(d.region));
   }
   // 새로 이룬 업적. 처음 판정할 때는 도감부터 옮겨 오고, 그동안의 기록으로 이룬 것은 한 줄로만 알림

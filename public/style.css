@@ -2060,6 +2060,7 @@ button.trait.bad.on { background: #FBF1F2; box-shadow: inset 0 0 0 1px #A63E4B; 
 /* 정렬: 탭 아래 오른쪽 '정렬 기본순 ▾' 글자 단추 + 펼침 메뉴 (분류 ▾ 상자와 같은 모양) */
 .inv-sort { position: relative; display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin: -12px 0 4px; }
 .inv-sort .inv-q { flex: 1 1 auto; min-width: 0; max-width: 240px; min-height: 0; height: 30px; margin-right: auto; padding: 0 10px; font-size: 13px; } /* 소지품 찾기: 정렬과 같은 줄에 얇게 */
+@media (min-width: 861px) { .inv-sort .inv-q { max-width: none; height: 32px; padding: 0 12px 0 32px; font-size: 13.5px; background: var(--surface-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237E8389' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='m20 20-4.2-4.2'/%3E%3C/svg%3E") no-repeat 10px center; } } /* 넓은 화면: 정렬 단추 앞까지 길게, 돋보기 표시 */
 .inv-sort-btn { display: inline-flex; align-items: center; gap: 5px; min-height: 30px; padding: 0 4px 0 8px; border: 0; border-radius: 3px; background: none; font: 500 12.5px/1 var(--sans); color: var(--ink-2); cursor: pointer; }
 .inv-sort-btn:hover { background: #EEF2F6; color: var(--steel-d); }
 .inv-sort-btn .k { color: var(--muted); }
@@ -2526,9 +2527,8 @@ header.top .in { padding-top: 6px; padding-bottom: 6px; }
 /* 넓은 화면: 왼쪽 드래곤 기록은 스크롤해도 제자리에 붙어 있고, 화면이 낮아 다 안 들어가면 그 안에서만 스크롤 */
 @media (min-width: 861px) {
   .profile { position: sticky; top: calc(var(--head-h, 0px) + 22px); align-self: flex-start; max-height: calc(100vh - var(--head-h, 0px) - var(--dock-h, 56px) - 44px); will-change: transform; } /* 따로 그려서 스크롤 중 아이콘이 흔들리지 않게 */
-  .pf-body { overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: #C9CCC8 transparent; }
-  .pf-body::-webkit-scrollbar { width: 6px; }
-  .pf-body::-webkit-scrollbar-thumb { background: #C9CCC8; border-radius: 3px; }
+  .pf-body { overflow-y: auto; overflow-x: hidden; scrollbar-width: none; } /* 스크롤은 되지만 막대는 숨김 (휠·끌기로 그대로 넘겨 봄) */
+  .pf-body::-webkit-scrollbar { display: none; }
 }
 .center { flex: 999 1 540px; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
 /* 하단 메뉴 화면은 팝업 대신 가운데 칸(지역·지도 자리)에 펼친다 */
@@ -3488,4 +3488,53 @@ html:has(dialog.dlg:modal), html:has(dialog.dlg:modal) body { overflow: hidden; 
   .gs-t b { display: block; font: 600 11.5px/1.3 var(--sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .gs-c.empty .gs-t b { font-weight: 400; color: #A3A7AB; }
   .inv-gear.folded { display: none; }
+}
+
+/* ── 드래곤 기록 아래: 칭호 · 스킬 · 회복 (예전 '특성 · 장신구 · 성향 자세히 보기' 자리) ── */
+.pf-acts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.pf-acts .btn { min-height: 32px; height: 32px; padding: 0 6px; gap: 5px; font-size: 12.5px; border-radius: 0; box-shadow: none; } /* 얇게, 모서리 각지게, 안쪽 겹선 없이 */
+.pf-acts .btn svg { flex: none; width: 15px; height: 15px; }
+/* 드래곤 기록에 녹아들게: 테두리는 능력치 줄의 선과 같은 옅은 색, 바탕은 기록 칸과 같게, 아이콘은 능력치 아이콘처럼 차분하게 */
+.pf-acts .btn { border-color: var(--line-soft); background: var(--surface); color: var(--ink-2); }
+.pf-acts .btn svg { color: #3C5A73; stroke-width: 1.5; } /* 능력치 아이콘과 같은 색·굵기 */
+.pf-acts .btn:hover { border-color: var(--steel); color: var(--ink); background: #fff; }
+.pf-acts .btn:hover svg { color: var(--steel-d); }
+.pf-acts .btn.on svg, .pf-acts .btn:active svg { color: inherit; }
+.pf-acts .btn.on, .pf-acts .btn:active { background: var(--steel); color: #F4F7FA; border-color: var(--steel-d); } /* 누를 때와 가방이 열린 동안: 탐사 단추와 같은 색 */
+.pf-qbag { display: none; }
+/* 회복 가방: 열면 그림·능력치를 접고 그 자리에 */
+.profile.bag-open .portrait, .profile.bag-open .pf-body > .attrs { display: none !important; }
+.profile.bag-open .nameplate { margin-top: 0; }
+.pf-bag { display: flex; flex-direction: column; gap: 6px; padding: 8px; background: #FCFCFB; border: 1px solid #C9CFD5; border-radius: 4px; }
+.pf-bag[hidden] { display: none; }
+.bag-tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-bottom: 1px solid var(--line-in); }
+.bag-tab { min-height: 32px; padding: 0 2px 1px; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; background: none; font: 500 12px/1 var(--sans); color: #5B6066; cursor: pointer; }
+.bag-tab:hover { color: var(--ink); }
+.bag-tab.on { border-bottom-color: var(--steel-d); color: var(--steel-d); font-weight: 600; }
+.bag-list { display: flex; flex-direction: column; gap: 3px; max-height: 300px; overflow-y: auto; overscroll-behavior: contain; }
+.bag-list { scrollbar-width: thin; scrollbar-color: #B9BFC5 transparent; padding-right: 2px; } /* 스크롤 막대를 얇게 */
+.bag-list::-webkit-scrollbar { width: 5px; }
+.bag-list::-webkit-scrollbar-track { background: transparent; }
+.bag-list::-webkit-scrollbar-thumb { background: #B9BFC5; border-radius: 3px; }
+.bag-list::-webkit-scrollbar-thumb:hover { background: #8E969D; }
+.bag-list .note { margin: 6px 2px; }
+.bag-it { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 8px; padding: 5px 9px; background: #F7F7F5; border: 1px solid #DDDFDB; border-radius: 3px; font: 500 12.5px/1.3 var(--sans); color: var(--ink); cursor: pointer; text-align: left; }
+.bag-it:hover:not(:disabled) { border-color: var(--steel); background: #fff; }
+.bag-it:disabled { opacity: .45; cursor: default; }
+.bag-it .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bag-it .q { grid-row: 1 / 3; grid-column: 2; font-variant-numeric: tabular-nums; color: #4E5358; font-size: 12px; }
+.bag-it .efs { grid-column: 1; display: flex; flex-wrap: wrap; gap: 3px; }
+.bag-it .ef { padding: 0 5px; border-radius: 3px; font: 600 10.5px/1.6 var(--sans); font-variant-numeric: tabular-nums; }
+.ef-hp { background: #F6E4E6; color: #8E3340; } .ef-en { background: #E2EFE7; color: #2F6248; } .ef-mind { background: #ECE8F6; color: #4A3F78; } .ef-ap { background: #E3EAF0; color: #2A4256; }
+@media (max-width: 860px) {
+  .pf-body > .pf-acts, .pf-body > .pf-bag { grid-column: 1 / -1; }
+  .bag-list { max-height: 260px; }
+  .profile.bag-open .portrait { display: block !important; } /* 폰: 동그란 그림은 작아서 그대로 두고 능력치만 접음 */
+  .profile.folded .pf-body > .pf-acts, .profile.folded .pf-body > .pf-bag { display: none !important; }
+  /* 접힌 줄: 그림 · 이름 · 막대 · 가방 단추 (막대를 조금 줄여 자리를 냄) */
+  .profile.folded .pf-body { grid-template-columns: 52px minmax(0, 1fr) 70px 40px; }
+  .profile.folded .nameplate .sub { flex-wrap: nowrap; white-space: nowrap; min-width: 0; max-width: 100%; overflow: hidden; } /* 좁아도 'Lv. 25 화이트 드래곤'이 한 줄에 (넘치면 종류 이름만 잘림) */
+  .profile.folded .nameplate .sub .lv { flex: none; white-space: nowrap; }
+  .profile.folded .nameplate .sub > :not(.lv) { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .profile.folded .pf-qbag { display: grid; place-items: center; grid-column: 4; grid-row: 1; width: 40px; height: 40px; padding: 0; border: 1px solid #9A9C98; border-radius: 3px; background: #FCFCFB; box-shadow: inset 0 0 0 2px #FCFCFB, inset 0 0 0 3px #E0E2DE; color: var(--steel-d); cursor: pointer; }
 }

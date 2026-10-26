@@ -125,6 +125,8 @@ b, strong { font-weight: 600; }
 .m-at b { font: 700 16px/1.2 var(--serif); }
 .m-at span { font-size: 11px; color: var(--muted); }
 .m-pts { margin-top: 10px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-2); }
+  .m-acts { margin-top: 10px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .m-acts > span:not(.pin) { display: grid; place-items: center; min-height: 30px; border: 1px solid #9A9C98; border-radius: 3px; background: #FCFCFB; font-size: 12px; color: var(--ink); }
 .m-pts span:last-child { margin-left: auto; padding: 3px 10px; background: var(--steel); color: #F4F7FA; border-radius: 2px; font-weight: 600; font-size: 11.5px; }
 /* 번호 표 (본뜬 액자 위) */
 .zone { position: relative; border-radius: 3px; transition: box-shadow .15s, background-color .15s; }
@@ -364,17 +366,19 @@ table.kinds.lands td.home span { display: block; white-space: nowrap; }
             <div><b>9</b><span>발톱</span></div><div><b>11</b><span>비늘</span></div><div><b>8</b><span>날개</span></div><div><b>12</b><span>지혜</span></div><div><b>13</b><span>위엄</span></div>
           </div>
           <div class="zone m-pts" data-z="8"><span class="pin" style="top: -1px; left: -26px">8</span>나눌 능력치 포인트 <b>1</b><span>나누기</span></div>
+          <div class="zone m-acts" data-z="9"><span class="pin" style="top: -1px; left: -26px">9</span><span>칭호</span><span>스킬</span><span>회복</span></div>
         </div>
 
         <ol class="legend" id="legend">
           <li data-z="1"><span class="no">1</span><b>그림 칸</b><p>누르면 그림을 올리거나 다시 자를 수 있습니다. 그림이 없으면 종류의 문양이 보입니다. 원정 중·쉬는 중이면 위에 꼬리표와 남은 시간이 붙습니다.</p></li>
-          <li data-z="2"><span class="no">2</span><b>이름표</b><p>단 칭호, 이름, 레벨, 드래곤 종류입니다. 칭호는 '상태 → 칭호'에서 고릅니다.</p></li>
+          <li data-z="2"><span class="no">2</span><b>이름표</b><p>단 칭호, 이름, 레벨, 드래곤 종류입니다. 칭호는 아래 '칭호' 단추로 고릅니다.</p></li>
           <li data-z="3"><span class="no">3</span><b>경험</b><p>지금 레벨에서 모은 경험치입니다. 끝까지 차면 레벨이 오릅니다. 레벨 상한은 25입니다.</p></li>
           <li data-z="4"><span class="no">4</span><b>체력</b><p>싸우면 깎입니다. 최대의 10% 아래로 떨어지면 액자 테두리가 붉게 빛납니다. 그때는 싸움을 멈추고 쉬세요.</p></li>
           <li data-z="5"><span class="no">5</span><b>기력</b><p>스킬과 제작에 씁니다. 숨결도 스킬이라 기력이 있어야 뿜을 수 있습니다.</p></li>
           <li data-z="6"><span class="no">6</span><b>정신</b><p>오염된 땅에 가지 않으면 거의 줄지 않습니다. 낮아지면 막대가 깜빡이고 화면 바탕이 어두워집니다.</p></li>
           <li data-z="7"><span class="no">7</span><b>능력치</b><p>장신구와 용족 명성까지 모두 더한 값입니다. 마우스를 올리면 타고난 값과 더해진 몫이 따로 보입니다. 상흔이 남은 능력치는 붉게 표시됩니다.</p></li>
           <li data-z="8"><span class="no">8</span><b>나눌 포인트</b><p>아직 나누지 않은 포인트가 있을 때만 보입니다.</p></li>
+          <li data-z="9"><span class="no">9</span><b>칭호 · 스킬 · 회복</b><p>칭호와 스킬은 누르면 창이 떠서 칭호를 달거나 싸움에 들고 갈 스킬을 고를 수 있습니다. 회복을 누르면 가진 회복 물건이 모인 가방이 열리고, 누르는 대로 바로 씁니다. 지금 비어 있는 쪽을 많이 채워 주는 물건이 위에 옵니다. 폰에서 드래곤 기록을 접어 두었을 때는 접힌 줄의 가방 단추로 바로 열 수 있습니다.</p></li>
         </ol>
       </div>
       <p class="note">행동력과 금화는 드래곤 기록이 아니라 맨 위 줄에 있습니다. 행동력 옆의 작은 글씨는 다음 1이 차기까지 남은 시간입니다.</p>
@@ -489,7 +493,7 @@ table.kinds.lands td.home span { display: block; white-space: nowrap; }
       <h2><small>5</small>레벨과 성장</h2>
       <p class="lead">경험치는 사냥과 강적, 의뢰, 원정, 이벤트에서 얻습니다. 레벨이 오르면 아래가 함께 바뀝니다.</p>
       <h3>레벨이 오르면</h3>
-      <p>능력치 포인트 1점이 생기고, 레벨 5·10·15·20·25에 최대 행동력이 1씩 늘어납니다. 정해진 레벨에 새 스킬을 배웁니다(꼬리치기 Lv1, 비늘 세우기 Lv2, 포효 Lv3, 치유 Lv4 …). 배운 스킬 가운데 셋을 골라 싸움에 들고 가는데, '상태 → 스킬'에서 바꿀 수 있습니다.</p>
+      <p>능력치 포인트 1점이 생기고, 레벨 5·10·15·20·25에 최대 행동력이 1씩 늘어납니다. 정해진 레벨에 새 스킬을 배웁니다(꼬리치기 Lv1, 비늘 세우기 Lv2, 포효 Lv3, 치유 Lv4 …). 배운 스킬 가운데 셋을 골라 싸움에 들고 가는데, 드래곤 기록 아래 '스킬' 단추로 바꿀 수 있습니다.</p>
       <h3>갈 수 있는 사냥터</h3>
       <p>야생 지역마다 장소가 넷씩 있고, 입구는 쉽고 안쪽일수록 어렵습니다. 내 레벨보다 3을 넘게 높은 곳은 들어갈 수 없습니다. 넷째 장소는 Lv13부터의 고레벨 구역이고, 바다 건너 멸망한 대륙은 Lv20부터 건널 수 있습니다.</p>
       <h3>필요한 경험치</h3>
