@@ -1823,7 +1823,7 @@
   function renderExpGoals() {
     const box = $('exp-goals');
     box.replaceChildren();
-    const town = S.regions[S.region]?.tag !== '야생';
+    const town = !!S.region && S.shops.includes(S.region); // 사냥 원정은 인간 마을(시장이 있는 곳)에서만 막음 (서버와 같게. 에레보스에서는 됨)
     for (const [k, g] of Object.entries(S.expGoals || {})) {
       const b = document.createElement('button');
       b.type = 'button';
@@ -1859,7 +1859,7 @@
     expPick = expPick || S.rules.expeditionMinutes[0];
     $('exp-dlg-where').textContent = `${S.regions[S.region].name} 깊은 곳으로 떠난다.`;
     try { $('exp-notify').checked = localStorage.getItem('exp-notify') === '1'; } catch {}
-    if (S.expGoals?.[expGoal]?.wild && S.regions[S.region]?.tag !== '야생') expGoal = 'gather';
+    if (S.expGoals?.[expGoal]?.wild && S.shops.includes(S.region)) expGoal = 'gather';
     renderExpGoals();
     renderExpOpts();
     expStay = new Set();
