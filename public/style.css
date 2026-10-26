@@ -1796,8 +1796,7 @@ button.trait.bad.on { background: #FBF1F2; box-shadow: inset 0 0 0 1px #A63E4B; 
 .nt-body { display: flex; flex-direction: column; gap: 6px; padding: 0 14px 13px 28px; }
 .nt-body p { margin: 0; font-size: 13.5px; line-height: 1.7; color: var(--ink); word-break: keep-all; }
 /* 소제목: 목록 바로 위의 한 줄 (첫 소제목 말고는 위에 여백과 가는 줄) */
-.nt-body p.nt-h { display: flex; align-items: center; gap: 8px; margin-top: 6px; font: 700 14.5px/1.5 var(--serif); color: var(--steel-d); }
-.nt-body p.nt-h::before { content: ""; flex: none; width: 6px; height: 6px; transform: rotate(45deg); background: var(--steel); }
+.nt-body p.nt-h { margin-top: 6px; font: 700 14.5px/1.5 var(--serif); color: var(--steel-d); }
 .nt-body p.nt-h ~ p.nt-h { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line-in); }
 .nt-body p.nt-h + ul { margin-top: -2px; }
 .nt-body ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
