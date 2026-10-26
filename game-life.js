@@ -586,11 +586,14 @@ function perksOf(kin, now = Date.now()) {
   }
   for (const k of kin) {
     if (k.type !== 'human' || k.status !== 'home' || !k.data.path) continue;
-    if (k.data.path === 'stay') {
-      p[k.data.talent] = k.name;
-      if (k.data.bond >= H.traderBond) p.trader = k.name;
-    }
+    if (k.data.path === 'stay') p[k.data.talent] = k.name;
     if (k.data.path === 'knight') p.knight = k.name;
+  }
+  // 적대 드래곤 대신 시장에서 흥정해 주는 사람: 청소년부터 (어른·노년은 둥지에 남은 사람. 용기사는 아님), 유대 H.traderBond 이상, 지금 둥지에 있음
+  if (!p.trader) for (const k of kin) {
+    if (k.type !== 'human' || k.status !== 'home' || k.data.onExp || k.data.runaway || k.data.path === 'knight') continue;
+    if (!['청소년', '어른', '노년'].includes(stageOf(k, now).name) || (k.data.bond || 0) < H.traderBond) continue;
+    p.trader = k.name; break;
   }
   return p;
 }

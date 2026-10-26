@@ -185,6 +185,7 @@
         <div class="rampage-bars" id="grave-bars"></div>
         <div class="rampage-bars" id="rescue-bars"></div>
         <div class="corrupt-note" id="corrupt-note" hidden></div>
+        <div class="mf-note" id="mf-note" hidden></div><!-- 무너진 시장 (GM 이벤트) -->
         <div class="mob-bar" id="mob-bar" hidden>
           <span class="mob-em" id="mob-em"></span>
           <div class="mob-t"><b id="mob-name"></b><small id="mob-sub"></small></div>
@@ -812,6 +813,13 @@
 <dialog class="img-view" id="img-view" aria-label="그림 크게 보기">
   <button class="img-view-x" type="button" id="img-view-x" aria-label="닫기"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   <div class="img-view-in" id="img-view-in"><img id="img-view-img" alt=""></div>
+</dialog>
+
+<dialog class="frame dlg" id="mf-dlg" aria-labelledby="mf-title">
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="mf-title">시장 다시 세우기</h2></div>
+  <div class="body"><p class="note" id="mf-lead"></p><div class="mf-form" id="mf-form"></div></div>
+  <div class="row"><button class="btn" type="button" id="mf-close">닫기</button><button class="btn primary" type="button" id="mf-go">보태기</button></div>
 </dialog>
 
 <dialog class="frame dlg" id="gift-dlg" aria-labelledby="gift-title">
@@ -2659,6 +2667,22 @@
     g.classList.toggle('folded', !gearSumOpen);
     gs.classList.toggle('open', gearSumOpen);
   }
+  let INV_Q = ''; // 소지품 찾기 칸에 적은 것 (다시 그려도 남음)
+  // 찾기: 이름이 맞지 않는 물건 줄은 숨기고, 다 숨은 묶음은 제목도 숨김 (제작의 찾기와 같은 방식)
+  function applyInvQ(box) {
+    const q = INV_Q.trim().toLowerCase();
+    let any = 0;
+    for (const row of box.querySelectorAll('.it[data-q]')) { const on = !q || row.dataset.q.toLowerCase().includes(q); row.hidden = !on; if (on) any++; }
+    for (const h of box.querySelectorAll('h3.inv-h')) {
+      const grp = h.nextElementSibling;
+      const vis = grp ? [...grp.querySelectorAll('.it[data-q]')].filter((r) => !r.hidden).length : 0;
+      h.hidden = !!q && !vis; if (grp) grp.hidden = !!q && !vis;
+      const hn = h.querySelector('.inv-hn'); if (hn) { hn.dataset.all ||= hn.textContent; hn.textContent = q ? `${vis}종` : hn.dataset.all; }
+    }
+    let none = box.querySelector('.inv-q-none');
+    if (q && !any) { if (!none) { none = document.createElement('p'); none.className = 'note inv-q-none'; box.querySelector('.inv-sort')?.after(none); } none.textContent = `'${INV_Q.trim()}'${josa(INV_Q.trim(), '이', '가')} 들어간 물건이 이 분류에 없다.`; none.hidden = false; }
+    else if (none) none.hidden = true;
+  }
   function renderInv() {
     const g = $('inv-gear');
     g.replaceChildren();
@@ -2761,7 +2785,12 @@
       document.addEventListener('click', onSortDoc, true);
     });
     sb.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !smenu.hidden) { e.stopPropagation(); closeSort(); sbtn.focus(); } });
-    sb.append(sbtn, smenu);
+    // 물건 이름으로 찾기: 정렬 단추와 같은 줄 왼쪽에 얇게 (따로 줄을 차지하지 않음)
+    const iq = document.createElement('input');
+    iq.type = 'search'; iq.className = 'input inv-q'; iq.placeholder = '물건 이름으로 찾기'; iq.setAttribute('aria-label', '가진 물건 찾기'); iq.autocomplete = 'off'; iq.dataset.keep = 'inv-q';
+    iq.value = INV_Q;
+    iq.addEventListener('input', () => { INV_Q = iq.value; applyInvQ(box); });
+    sb.append(iq, sbtn, smenu);
     box.appendChild(sb);
     const buf = S.me.buff && S.me.buff.until > Date.now() ? S.buffs?.[S.me.buff.id] : null;
     if (buf) {
@@ -2806,6 +2835,7 @@
       }
       const row = document.createElement('div');
       row.className = `it ${it.rarity}`;
+      row.dataset.q = it.name; // 찾기 칸에서 이름으로 거름
       row.innerHTML = '<b><span class="nm"></span><span class="q"></span></b><small></small>';
       const gmod = kind === 'enh' ? S.me.craft?.gear?.[id] : null; // 보통 것 줄에는 강화·각인 표시 없음
       row.querySelector('.nm').textContent = `${it.name}${gmod?.plus ? ` +${gmod.plus}` : ''}`;
@@ -2897,6 +2927,7 @@
       row.appendChild(acts);
       group.appendChild(row);
     }
+    applyInvQ(box); // 찾기 칸에 적어 둔 것이 있으면 다시 그린 뒤에도 거름
   }
   // 밑줄 글자 탭: 다시 그린 뒤 전의 가로 위치로 돌리고, 고른 탭이 화면 밖이면 보이는 자리로
   function showTab(bar, x) {
@@ -9886,7 +9917,62 @@
   $('ruin-close').addEventListener('click', () => $('ruin-dlg').close());
   $('orsha-open').addEventListener('click', openRuinTrade);
 
+  // ── 무너진 시장 (GM 이벤트): 그 마을에 있으면 지역 카드에 진행 막대와 '복구 돕기' ──
+  function renderMarketFall() {
+    const v = S.me?.marketFall, box = $('mf-note');
+    const on = !!v && v.town === S.region;
+    box.hidden = !on;
+    if ($('market-open')) { const down = !!v && v.town === S.region; $('market-open').classList.toggle('mf-down', down); $('market-open').disabled = down; $('market-open').title = down ? '시장이 무너져 다시 세우는 중이다' : ''; } // 무너진 동안 시장을 열 수 없음
+    if (!on) return;
+    box.replaceChildren();
+    const h = document.createElement('p');
+    h.innerHTML = '<b>시장이 무너졌다.</b> ';
+    h.append(`${v.attacker ? `${v.attacker}${josa(v.attacker, '이', '가')}` : '정체를 알 수 없는 드래곤이'} 덮친 뒤로 가게들이 문을 닫았다. 금화와 재료를 모아 함께 다시 세우자.`);
+    box.appendChild(h);
+    for (const r of v.res) {
+      const row = document.createElement('div'); row.className = 'mf-res';
+      row.innerHTML = '<div class="mf-l"><span></span><span></span></div><div class="mf-bar"><i></i></div>';
+      row.querySelector('.mf-l span').textContent = r.name;
+      row.querySelector('.mf-l span + span').textContent = `${r.got.toLocaleString()} / ${r.goal.toLocaleString()}`;
+      row.querySelector('.mf-bar i').style.width = `${Math.min(100, (r.got / r.goal) * 100)}%`;
+      box.appendChild(row);
+    }
+    const foot = document.createElement('div'); foot.className = 'mf-foot';
+    const rw = v.reward || { sun: 5, salt: 15 }, mx = v.maxPts || v.full || 400;
+    const rr = Math.min(1, v.mine / mx), exp = v.mine ? { sun: Math.round(rr * rw.sun), salt: Math.max(1, Math.round(rr * rw.salt)) } : null;
+    const s = document.createElement('small'); s.textContent = `함께하는 드래곤 ${v.people} · 내 기여 ${v.mine} / ${mx}${exp ? ` (다 세우면 태양석 ${exp.sun} · 소금 결정 ${exp.salt})` : ''} · 보탤 수 있는 만큼 다 보태면 태양석 ${rw.sun}개와 소금 결정 ${rw.salt}개${v.cap ? ` · 한 드래곤은 자원마다 ${v.cap}%까지 (${fmtLeft(v.capFree)} 뒤 풀림)` : ''}`;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn primary'; b.textContent = '복구 돕기'; b.addEventListener('click', openMarketHelp);
+    foot.append(s, b); box.appendChild(foot);
+  }
+  function openMarketHelp() {
+    const v = S.me?.marketFall; if (!v) return;
+    fetchInv(() => {
+      $('mf-lead').textContent = '보탤 만큼 적어 넣자. 이미 다 모인 것은 받지 않는다.';
+      const f = $('mf-form'); f.replaceChildren();
+      for (const r of v.res) {
+        const left = Math.max(0, Math.min(r.goal - r.got, r.myCap != null ? r.myCap - r.mine : Infinity)), have = r.id === 'gold' ? (S.me.gold || 0) : (invCache[r.id] || 0); // 남은 몫과 내 몫 제한
+        const row = document.createElement('label'); row.className = 'mf-in';
+        row.innerHTML = '<span></span><input class="input num" type="number" min="0" step="1" inputmode="numeric"><small></small>';
+        row.querySelector('span').textContent = r.name;
+        const inp = row.querySelector('input'); inp.dataset.id = r.id; inp.max = String(Math.min(left, have)); inp.disabled = !left || !have; inp.placeholder = '0';
+        row.querySelector('small').textContent = `가진 것 ${have.toLocaleString()} · 더 보탤 수 있는 몫 ${left.toLocaleString()}${r.myCap != null ? ` (내가 보탠 ${r.mine.toLocaleString()} / ${r.myCap.toLocaleString()})` : ''}`;
+        f.appendChild(row);
+      }
+      if (!$('mf-dlg').open) $('mf-dlg').showModal();
+    });
+  }
+  $('mf-close').addEventListener('click', () => $('mf-dlg').close());
+  $('mf-go').addEventListener('click', () => {
+    let gold = 0; const items = {};
+    for (const i of $('mf-form').querySelectorAll('input')) { const n = Math.floor(Number(i.value) || 0); if (n <= 0) continue; if (i.dataset.id === 'gold') gold = n; else items[i.dataset.id] = n; }
+    if (!gold && !Object.keys(items).length) return toast('보탤 양을 적어 넣자.');
+    socket.emit('market:help', { gold, items }, (res) => {
+      if (res.error) { SFX.play('error'); return toast(res.error); }
+      $('mf-dlg').close(); showResult(res);
+    });
+  });
   function renderCorrupt() {
+    renderMarketFall();
     if (realmOf(S.region) === 'ruin') return renderRuin($('corrupt-note'));
     $('corrupt-note').classList.remove('ruin');
     const c = S.me?.corrupt;
@@ -11466,6 +11552,32 @@
       }, 'link');
     }
 
+    // 무너진 시장 (단발 이벤트)
+    const mfv = S.me?.marketFall;
+    const msec = gmSection(body, '무너진 시장', mfv
+      ? `지금: ${S.regions[mfv.town]?.name} · ${Math.round(mfv.pct * 100)}% · 함께하는 드래곤 ${mfv.people}`
+      : '인간 마을 하나의 시장이 무너지고, 모두가 금화와 재료를 모아 다시 세운다. 다 세우면 보탠 몫에 따라 태양석·소금 결정을 나눈다.');
+    if (mfv) {
+      const r0 = gmRow(msec, '');
+      gBtn(r0, '이벤트 끝내기 (그대로 다시 세움)', () => { if (!confirm('보상 없이 시장을 바로 다시 세울까?')) return; gmCall('gm:marketfall', { stop: true }, () => { toast('무너진 시장 이벤트를 끝냈다.'); renderGm(); }); }, 'link');
+    } else {
+      const r1 = gmRow(msec, '마을');
+      const mtown = gSelect(r1, '마을', S.shops.map((id) => [id, S.regions[id].name]), S.shops.includes('coast') ? 'coast' : S.shops[0]); // 기본은 남쪽 해안 절벽
+      const matk = gEl('input', 'input'); matk.placeholder = '덮친 드래곤 이름 (비워 두면 정체불명)'; matk.maxLength = 16; matk.setAttribute('aria-label', '덮친 드래곤 이름'); r1.appendChild(matk);
+      const r2 = gmRow(msec, '모을 것');
+      const mg = gNum(r2, '금화', '200000', '96px'), mc = gNum(r2, '붉은 점토', '200', '60px'), mi = gNum(r2, '늪철', '100', '60px'), mb = gNum(r2, '나무껍질', '100', '60px'); // 기본값: 드래곤 30마리, 그중 10마리쯤이 만렙인 규모
+      const r3 = gmRow(msec, '보상 (한 드래곤 최대)');
+      const ms = gNum(r3, '태양석', '5', '56px'), ml = gNum(r3, '소금 결정', '15', '56px');
+      r3.appendChild(gEl('small', 'gm-hint', '몫 제한까지 다 보탠 드래곤이 받는 양. 덜 보탰으면 그 비율만큼 (다른 드래곤과 상관없음)'));
+      const r4 = gmRow(msec, '한 드래곤의 몫');
+      const mcap = gNum(r4, '자원마다 %', '10', '56px');
+      r4.appendChild(gEl('small', 'gm-hint', '한 드래곤이 자원마다 목표의 몇 %까지 보탤 수 있는지 (0이면 제한 없음). 시작하고 하루가 지나면 풀림'));
+      gBtn(r3, '시장 무너뜨리기', () => {
+        if (!confirm(`${S.regions[mtown.value].name}의 시장을 무너뜨릴까? 다 세울 때까지 그곳 시장을 쓸 수 없다.`)) return;
+        gmCall('gm:marketfall', { town: mtown.value, attacker: matk.value.trim(), gold: mg.value, items: { red_clay: mc.value, bog_iron: mi.value, living_bark: mb.value }, sun: ms.value, salt: ml.value, cap: mcap.value }, () => { toast('시장을 무너뜨렸다.'); renderGm(); });
+      }, 'primary');
+    }
+
     // 오염: 지금 상태와 즉시 일으키기
     const cr = S.me?.corrupt;
     const cpur = cr?.purify;
@@ -11857,6 +11969,12 @@
     b.addEventListener('click', loadOlder);
     return b;
   }
+  // 첫 쪽에 앞당겨 보여 준, 지역 대화가 덮는 기간보다 오래된 용언 (맨 위에 모여 있음).
+  // 지난 이야기를 불러올 때 이것들을 떼어 냈다가 새로 온 말과 함께 시간 순서대로 다시 그림
+  let CHAT_EARLY = [], CHAT_PAGE = 60;
+  const regionalOf = (hist) => hist.filter((m) => !m.shout && !m.news);
+  const earlyOf = (hist, full) => { const r = regionalOf(hist); if (!full || !r.length) return []; const start = Math.min(...r.map((m) => m.at)); return hist.filter((m) => m.shout && m.at < start); };
+  const byTime = (a, b) => a.at - b.at || a.id - b.id;
   function loadOlder() {
     if (CHAT_LOADING || !CHAT_OLDEST) return;
     CHAT_LOADING = true;
@@ -11866,12 +11984,17 @@
     socket.emit('chat:older', { before: CHAT_OLDEST }, (res) => {
       CHAT_LOADING = false;
       if (res.error) { if (btn) btn.textContent = '지난 이야기 더 보기'; return toast(res.error); }
+      const oldH = log.scrollHeight, oldTop = log.scrollTop; // 보던 자리 (떼어 내기 전에 잼)
+      // 맨 위의 앞당긴 용언을 떼어 내고, 새로 온 말과 합쳐 시간 순서대로
+      for (const m of CHAT_EARLY) { const line = log.querySelector(`.ml[data-id="${m.id}"]`); if (!line) continue; const g = line.closest('.msg'); line.remove(); if (g && !g.querySelector('.ml')) g.remove(); }
+      const seen = new Set(res.history.map((m) => m.id));
+      const merged = [...res.history, ...CHAT_EARLY.filter((m) => !seen.has(m.id))].sort(byTime);
+      CHAT_EARLY = earlyOf(merged, regionalOf(res.history).length >= (CHAT_PAGE || 60));
       const tmp = document.createElement('div');
       LOG_TARGET = tmp;
-      try { for (const m of res.history) addHistory(m); } finally { LOG_TARGET = null; }
-      if (res.history.length) CHAT_OLDEST = Math.min(...res.history.map((m) => m.id));
+      try { for (const m of merged) addHistory(m); } finally { LOG_TARGET = null; }
+      if (res.history.length) CHAT_OLDEST = oldestOf(res.history);
       // 보던 자리를 그대로 두고 위에 끼워 넣음
-      const oldH = log.scrollHeight, oldTop = log.scrollTop;
       const first = btn ? btn.nextSibling : log.firstChild;
       for (const n of [...tmp.childNodes]) log.insertBefore(n, first);
       log.scrollTop = oldTop + (log.scrollHeight - oldH);
@@ -11967,7 +12090,10 @@
     addLine(p);
   }
   // 기록 한 줄: 대륙 소식이면 알림 줄로, 아니면 말
-  const addHistory = (m) => (m.news ? addSystem(m.text, m.at, true) : addChat(m));
+  // (이미 보이는 말은 다시 그리지 않음: 첫 쪽에 앞당겨 보여 준 용언이 지난 말을 불러올 때 또 오기 때문)
+  const addHistory = (m) => (m.news ? addSystem(m.text, m.at, true) : (m.id && $('log').querySelector(`.ml[data-id="${m.id}"]`)) ? null : addChat(m));
+  // 지난 말을 불러올 기준: 지역 대화 가운데 가장 오래된 것 (앞당겨 보여 준 오래된 용언을 기준으로 삼으면 그 사이 지역 대화가 빠짐)
+  const oldestOf = (hist) => { const here = hist.filter((m) => !m.shout && !m.news); return (here.length ? here : hist).reduce((a, m) => Math.min(a, m.id), Infinity); };
   // 보기 칩: 전체 · 이곳 · 용언과 소식 (걸러 보기만 하고, 들어온 기록은 그대로)
   $('chat-view').addEventListener('click', (e) => {
     const b = e.target.closest('[data-v]'); if (!b) return;
@@ -12174,8 +12300,11 @@
       renderRegion();
       renderHere();
       $('log').replaceChildren();
-      CHAT_OLDEST = data.history.length ? Math.min(...data.history.map((m) => m.id)) : 0;
-      if (data.more && data.history.length >= 30) $('log').appendChild(olderBtn()); // 30개(서버의 HISTORY)를 다 채웠으면 더 있을 수 있음
+      CHAT_OLDEST = data.history.length ? oldestOf(data.history) : 0;
+      CHAT_PAGE = data.page || 60;
+      const full = regionalOf(data.history).length >= CHAT_PAGE; // 지역 대화로 한 쪽을 다 채웠으면 더 있을 수 있음
+      CHAT_EARLY = earlyOf(data.history, full);
+      if (data.more && full) $('log').appendChild(olderBtn());
       for (const m of data.history) addHistory(m); // 지역 대화 · 용언 · 대륙 소식
       addSystem(`${S.regions[data.region].name}에 내려앉았다`);
       $('log').scrollTop = $('log').scrollHeight;
@@ -12193,6 +12322,7 @@
     });
     socket.on('chat', onLiveChat);
     socket.on('chat:deleted', onChatDeleted);
+    socket.on('marketfall', (v) => { if (S.me) S.me.marketFall = v; if (S.region) renderMarketFall(); if ($('gm-dlg')?.open && GM.tab === 'announce') renderGm(); });
     socket.on('notice', (r) => {
       SFX.play('notice');
       // 동료·선물·교환 소식은 바로 알림으로, 둥지 소식은 소식 카드로

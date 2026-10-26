@@ -662,7 +662,7 @@ for (const it of Object.values(ITEMS)) if (it.value == null) it.value = RARITY_V
 // 시장이 있는 지역과 파는 물건
 const SHOPS = {
   capital: ['herbal_ointment', 'strong_wine', 'silver_chain', 'travel_map', 'holy_water'],
-  coast:   ['herbal_ointment', 'salted_fish', 'bait_worm', 'silver_chain', 'sea_compass'],
+  coast:   ['herbal_ointment', 'salted_fish', 'bait_worm', 'silver_chain', 'sea_compass', 'salt_crystal'],
 };
 
 // 우호 성향이고 마을 평판이 '호의'(20) 이상일 때만 파는 물건
@@ -826,7 +826,7 @@ const RUIN = {
 
 const TRADE = {
   // 시장에서 하루(한국 날짜)에 살 수 있는 개수. 적지 않은 물건은 제한 없음
-  dailyBuy: { salted_fish: 5, holy_water: 5, herbal_ointment: 10, strong_wine: 10, bait_worm: 10 },
+  dailyBuy: { salted_fish: 5, holy_water: 5, herbal_ointment: 10, strong_wine: 10, bait_worm: 10, salt_crystal: 5 },
   stanceCooldown: 12 * 60 * 60 * 1000, // 성향을 바꾼 뒤 다시 바꾸기까지 (12시간)
   refuseBelow: -40,                 // 평판이 이보다 낮으면 상인이 거래를 거절
   intimidateCost: 2,                // 위협하기에 드는 행동력
@@ -851,7 +851,7 @@ const KIN = {
     neglectPerDay: 5,                 // 하루에 유대가 이만큼 줄어듦
     restBondPer30m: 1,                // 둥지에서 함께 쉬면 30분마다 유대
     knightBond: 60,                   // 용기사로 삼으려면 필요한 유대
-    traderBond: 50,                   // 적대 드래곤 대신 시장에서 흥정해 주려면 필요한 유대
+    traderBond: 50,                   // 적대 드래곤 대신 시장에서 흥정해 주려면 필요한 유대 (청소년부터)
     returnRep: 40,                    // 마을로 돌려보내면 오르는 평판 (원수였어도 -20부터 계산)
     herbEvery: DAY,                   // 약초꾼이 꿀 고약을 만드는 간격
   },

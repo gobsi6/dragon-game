@@ -1545,6 +1545,7 @@ function marketCheck(d) {
   if (d.rest_at) return { error: RESTING };
   const shop = SHOPS[d.region];
   if (!shop) return { error: '이곳에는 시장이 없다.' };
+  if (hooks.marketDown?.(d.region)) return { error: '시장이 무너져 아무것도 사고팔 수 없다. 마을 사람들과 함께 다시 세우는 중이다.' }; // GM 이벤트: 무너진 시장
   if (d.stance === 'hostile' && !d.perks?.trader) return { error: '상인들이 드래곤을 보자마자 가게 문을 닫았다.' };
   const rep = repOf(d)[d.region] || 0;
   if (d.stance === 'friendly' && rep < TRADE.refuseBelow) return { error: '상인들이 아직 지난 일을 잊지 않았다. 거래를 거절한다.' };
@@ -1565,6 +1566,7 @@ const buyPrice = (d, id) => Math.ceil(ITEMS[id].value * priceRates(d, d.region).
 function marketInfo(d, invList) {
   const shop = SHOPS[d.region];
   if (!shop) return { error: '이곳에는 시장이 없다.' };
+  if (hooks.marketDown?.(d.region)) return { error: '시장이 무너져 가게들이 모두 문을 닫았다. 다시 세울 때까지 시장을 쓸 수 없다.' }; // 무너진 시장 (GM 이벤트)
   const rep = repOf(d)[d.region] || 0;
   const closed = marketCheck(d);
   return {
