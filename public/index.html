@@ -6743,6 +6743,15 @@
       '{n}[이/가] 원정에서 돌아와 남은 식구들에게 본 것을 늘어놓는다.',
       '원정에서 돌아온 {n}[이/가] 짐도 풀기 전에 둥지 바닥에 쓰러져 잠들었다.',
     ],
+    // 둥지에 남은 식구가 없을 때 (모두 함께 떠났을 때)
+    departAll: [
+      '{n}[이/가] {o}[을/를] 따라 원정길에 올랐다. {r}[으로/로] 간다며 들떠 있다.',
+      '둥지 식구가 모두 {o}[을/를] 따라 원정을 떠났다. 텅 빈 둥지에 바람만 드나든다.',
+    ],
+    backAll: [
+      '원정에서 돌아온 {n}[이/가] 짐도 풀기 전에 둥지 바닥에 쓰러져 잠들었다.',
+      '{n}[이/가] 원정에서 돌아와 비어 있던 둥지에 다시 불을 지폈다.',
+    ],
     tripH: [
       '{a}[이/가] {r}의 낯선 길에서 처음 보는 꽃을 꺾어 들었다.',
       '{a}[이/가] {o}의 등 위에서 바람에 머리칼을 날리며 아래를 내려다본다.',
@@ -6835,18 +6844,22 @@
   const STAGE_GROUP = { '아기': 'babyH', '아이': 'kidH', '소년': 'kidH', '청소년': 'youthH', '어른': 'adultH', '노년': 'elderH', '해츨링': 'hatch', '어린 용': 'littleD', '젊은 용': 'olderD', '다 자란 용': 'olderD' };
   const SMALL = new Set(['아기', '아이', '해츨링']);   // 돌봄을 받는 어린 식구
   const GROWN = new Set(['청소년', '어른', '노년', '젊은 용', '다 자란 용']);
-  const joinNames = (list) => list.map((k, i) => (i < list.length - 1 ? `${k.name}${josa(k.name, '과', '와')}` : k.name)).join(' ');
-  function storyMoment(slot, all, n, salt = 0) {
+  // 이름 잇기: 둘이면 'ㄱ과 ㄴ', 셋 이상이면 'ㄱ, ㄴ과 ㄷ'
+  const joinNames = (list) => (list.length < 2 ? (list[0]?.name || '') : `${list.slice(0, -1).map((k) => k.name).join(', ')}${josa(list.at(-2).name, '과', '와')} ${list.at(-1).name}`);
+  // every: 곁에 둔 새끼까지 포함한 식구 (원정에 따라나서고 돌아오는 장면에는 곁에 둔 새끼도 함께 적음)
+  function storyMoment(slot, all, n, salt = 0, every = all) {
     const rnd = storyRng((slot % 1000003) * 7919 + all.reduce((a, k) => a + k.id * 97, 0) + salt * 104729);
     rnd(); rnd();
     const t0 = slot * STORY_SLOT, t1 = t0 + STORY_SLOT;
     // 원정에 따라나선 때, 돌아온 때는 그 시간의 이야기로 꼭 남김
-    const dep = all.filter((k) => k.expAt >= t0 && k.expAt < t1);
-    if (dep.length && !salt) { storyCtx.n = joinNames(dep); return storyText(pickOf(rnd, STORY.depart)); }
+    const dep = every.filter((k) => k.expAt >= t0 && k.expAt < t1);
+    // 남은 식구: 이번에 떠나지 않았고 원정길에도 없는 식구. 없으면 '배웅했다'·'남은 식구들에게' 같은 문장을 쓰지 않음
+    const stayers = (list) => all.filter((k) => !list.includes(k) && !k.companion && !(k.onExp && (!k.expBack || k.expBack > t1)));
+    if (dep.length && !salt) { storyCtx.n = joinNames(dep); return storyText(pickOf(rnd, stayers(dep).length ? STORY.depart : STORY.departAll)); }
     const fest = all.filter((k) => k.festAt >= t0 && k.festAt < t1);
     if (fest.length && !salt) { storyCtx.n = joinNames(fest); return storyText(pickOf(rnd, STORY.festGo)); }
-    const back = all.filter((k) => k.expBack >= t0 && k.expBack < t1);
-    if (back.length && !salt) { storyCtx.n = joinNames(back); return storyText(pickOf(rnd, STORY.back)); }
+    const back = every.filter((k) => k.expBack >= t0 && k.expBack < t1);
+    if (back.length && !salt) { storyCtx.n = joinNames(back); return storyText(pickOf(rnd, stayers(back).length ? STORY.back : STORY.backAll)); }
     const away = all.filter((k) => k.onExp && (!k.expAt || k.expAt < t0));          // 이 시간에 원정길에 있던 식구
     const home = all.filter((k) => !(k.onExp && (!k.expAt || k.expAt < t1)));        // 둥지에 있던 식구
     if (!home.length && !away.length) return '';
@@ -6905,6 +6918,7 @@
   }
   function renderNestStory(host, n) {
     const kids = (n.kin?.home || []).filter((v) => v.status === 'home' && !v.errand && !v.runaway && !v.companion);
+    const every = (n.kin?.home || []).filter((v) => v.status === 'home' && !v.errand && !v.runaway); // 곁에 둔 새끼도 (원정 장면용)
     storyCtx = { o: S.me?.name || '주인', r: S.regions?.[S.me?.exp?.region]?.name || '먼 곳', n: '' };
     const sec = document.createElement('div');
     sec.className = 'nest-story';
@@ -6934,8 +6948,8 @@
       t.textContent = i === 0 ? '지금' : `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
       const p = document.createElement('p');
       // 바로 앞 장면과 같으면 다시 고름 (같은 때에는 늘 같은 결과)
-      let text = storyMoment(slot, kids, n);
-      for (let k = 1; k < 4 && text === prevText; k++) text = storyMoment(slot, kids, n, k);
+      let text = storyMoment(slot, kids, n, 0, every);
+      for (let k = 1; k < 4 && text === prevText; k++) text = storyMoment(slot, kids, n, k, every);
       prevText = text;
       p.textContent = text;
       li.append(t, p);
