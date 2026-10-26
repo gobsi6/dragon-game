@@ -233,6 +233,9 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS ledger_dragon ON ledger(dragon_id, id);
 `);
 const LEDGER = { keep: 300, days: 90 };
+// 채팅 기록을 남겨 두는 수: 지역마다 · 용언 · 대륙 소식 (예전엔 모두 200개)
+const CHAT_KEEP = { region: 1000, '*': 3000, '!': 1000 };
+const chatPruneTick = new Proxy({}, { get: (o, k) => o[k] || 0, set: (o, k, v) => { o[k] = v; return true; } }); // 20번 쓸 때마다 한 번 정리 (매번 지우지 않게)
 // 선물에 끼운 그림: 먼저 올려 두고(sent_at 없음) 선물을 보낼 때 붙임. key는 주소에 넣는 비밀 글자 (선물 그림은 주고받은 둘만 보도록)
 // 정리 (giftImgSweep): 안 보낸 그림 하루 · 보냈지만 보물 상자에 간직하지 않은 그림 90일(주고받은 기록과 같음) · 간직한 그림은 상자에서 사라지면
 db.exec(`
@@ -583,7 +586,7 @@ const q = {
   arenaList:    db.prepare(`SELECT id, name, kind, level, combat, last_seen AS lastSeen, avatar_ver, (avatar IS NOT NULL) AS has_avatar
                             FROM dragons WHERE id != ? AND dead_at IS NULL ORDER BY last_seen DESC LIMIT 60`),
   kinDel:       db.prepare('DELETE FROM kin WHERE id = ? AND dragon_id = ?'),
-  pruneChat:    db.prepare('DELETE FROM chat WHERE region = ? AND id <= (SELECT id FROM chat WHERE region = ? ORDER BY id DESC LIMIT 1 OFFSET 200)'),
+  pruneChat:    db.prepare('DELETE FROM chat WHERE region = ? AND id <= (SELECT id FROM chat WHERE region = ? ORDER BY id DESC LIMIT 1 OFFSET ?)'),
 };
 
 // 드래곤의 바뀌는 상태(체력, 행동력, 원정 등)와 얻은 물건을 저장 (트랜잭션은 부르는 쪽에서)
@@ -916,7 +919,8 @@ module.exports = {
   touch: (dragonId) => q.touch.run(Date.now(), dragonId),
   addChat: (region, m) => {
     const id = Number(q.addChat.run(region, m.dragonId, m.name, m.kind, m.text, m.at).lastInsertRowid);
-    q.pruneChat.run(region, region); // 지역별 최근 200개만 보관
+    // 지역별로 최근 몇 개까지 보관 (용언 '*'·대륙 소식 '!'은 대륙 전체가 함께 쓰므로 더 넉넉히). 한 줄이 작아 수천 개도 몇 MB
+    if (++chatPruneTick[region] % 20 === 1 || !chatPruneTick[region]) q.pruneChat.run(region, region, CHAT_KEEP[region] || CHAT_KEEP.region);
     return id;
   },
   recentChat: (region, limit) => q.recentChat.all(region, limit).reverse(),
