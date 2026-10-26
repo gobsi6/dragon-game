@@ -218,6 +218,22 @@ app.get('/api/version', (req, res) => {
 
 const server = http.createServer(app);
 const io = new Server(server, { maxHttpBufferSize: 1e6, perMessageDeflate: { threshold: 4096 }, pingInterval: 10000, pingTimeout: 8000 }); // 끊긴 연결을 18초 안에 알아챔 (기본은 25초+20초) // 한 번에 받는 크기 (프로필 그림이 가장 큼) · 4KB 넘는 메시지는 압축해서 보냄 (접속할 때 받는 물건 목록 등)
+
+// 대륙 전체에 보내는 알림(계절·정화·습격·야시장·창작·먼 여행 등)은 모두 '대륙 소식'으로 기록에 남김.
+// 예전엔 이 가운데 쓰러짐·광폭화·부고 같은 몇 가지만 남아서, 다른 지역에 다녀오거나 다시 접속하면 '용언과 소식'에서 사라졌음.
+// (한 지역에만 보내는 알림 io.to(지역)은 그대로 그 자리에서만)
+{
+  const emitAll = io.emit.bind(io);
+  io.emit = (ev, data, ...rest) => {
+    if (ev === 'system' && data && typeof data.text === 'string' && !data.news) {
+      const at = data.at || Date.now();
+      let id = 0;
+      try { id = db.addChat('!', { dragonId: 0, name: '', kind: '', text: data.text, at }); } catch (e) { console.error('[대륙 소식]', e.message); }
+      data = { ...data, at, news: true, id };
+    }
+    return emitAll(ev, data, ...rest);
+  };
+}
 // 한 연결이 짧은 사이에 너무 많은 요청을 보내면 잠시 무시 (서버를 멈추게 하려는 도배 방지). 보통 놀이는 1초에 몇 번이 고작
 const FLOOD = { perSec: 30, burst: 60 };
 io.use((socket, next) => {
