@@ -9968,7 +9968,7 @@
     if (!gold && !Object.keys(items).length) return toast('보탤 양을 적어 넣자.');
     socket.emit('market:help', { gold, items }, (res) => {
       if (res.error) { SFX.play('error'); return toast(res.error); }
-      $('mf-dlg').close(); showResult(res);
+      $('mf-dlg').close(); showResult(res.result); // itemAction은 { ok, result }로 답함
     });
   });
   function renderCorrupt() {
