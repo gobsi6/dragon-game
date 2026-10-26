@@ -55,14 +55,23 @@ function chooseTraits(d, good, bad) {
 function traitCount(d, key, n = 1) {
   const t = traitsOf(d);
   t.counts[key] = (t.counts[key] || 0) + n;
+  t.mark ||= {};
   const lines = [];
+  // 없애기만 하는 규칙(예: 쉬기 40번 → 얇은 비늘이 사라짐)은 그 특성이 생긴 뒤부터 센다.
+  // 예전에는 특성이 생기기 전에 횟수를 채우면 규칙이 '이미 지나감'이 되어, 나중에 생긴 특성은 영영 사라지지 않았음
+  const loseOnly = (r) => (r.lose || []).length && !(r.gain || []).length;
   for (const r of TRAIT_EARN) {
-    if (r.count !== key || t.done.includes(r.id) || t.counts[key] < r.at) continue;
-    t.done.push(r.id);
+    if (r.count !== key) continue;
+    if (loseOnly(r) && t.done.includes(r.id) && r.lose.some((id) => t.list.includes(id))) t.done = t.done.filter((x) => x !== r.id); // 예전에 잘못 지나간 규칙 되살림
+    if (t.done.includes(r.id) || t.counts[key] - (loseOnly(r) ? t.mark[r.id] || 0 : 0) < r.at) continue;
     const got = (r.gain || []).filter((id) => !t.list.includes(id));
     const lost = (r.lose || []).filter((id) => t.list.includes(id));
+    if (loseOnly(r) && !lost.length) continue; // 없앨 특성이 아직 없으면 기다림 (지나간 것으로 치지 않음)
+    t.done.push(r.id);
     if (!got.length && !lost.length) continue;
     t.list = [...t.list.filter((id) => !lost.includes(id)), ...got];
+    // 새로 생긴 특성을 없애는 규칙은 지금부터 다시 셈
+    for (const r2 of TRAIT_EARN) if (loseOnly(r2) && r2.lose.some((id) => got.includes(id))) { t.mark[r2.id] = t.counts[r2.count] || 0; t.done = t.done.filter((x) => x !== r2.id); }
     lines.push(r.line);
     for (const id of got) lines.push(`새 특성 '${TRAITS[id].name}'${josa(TRAITS[id].name, '이', '가')} 생겼다. ${TRAITS[id].desc}`);
     for (const id of lost) lines.push(`'${TRAITS[id].name}' 특성이 사라졌다.`);

@@ -487,7 +487,7 @@ const meOf = (d) => ({
   relIn: db.reqInCount(d.id),         // 받은 동료 요청 수
   tpUnread: db.tpUnread(d.id),        // 아직 듣지 않은 텔레파시 수
   kin: d.kinSummary || { home: [], lineage: 0 },
-  traits: (() => { const t = logic.traitsOf(d); return { list: t.list, chosen: !!t.chosen, counts: t.counts, done: t.done }; })(),
+  traits: (() => { const t = logic.traitsOf(d); return { list: t.list, chosen: !!t.chosen, counts: t.counts, done: t.done, mark: t.mark || {} }; })(), // mark: 없애기만 하는 규칙을 다시 세기 시작한 횟수
   combat: (() => { const c = combat.combatOf(d); return { skills: combat.loadout(d), w: c.w, l: c.l, duelOn: c.duelOn, autoDuel: c.autoDuel }; })(),
   battle: arena ? arena.inBattle(d.id) : false,
   perks: d.perks || {},

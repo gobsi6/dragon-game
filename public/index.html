@@ -1104,11 +1104,21 @@
   let toastTimer = null;
   // action: { label, run, alt: { label, run }(두 번째 버튼), ttl(이 시간이 지나면 저절로 사라짐, ms) }
   // 알림을 맨 위 층(top layer)에 올림: 제작·시설처럼 화면 위에 뜬 창보다 앞에 보이게 (다시 열어 가장 위로)
+  // 알림을 맨 위 층에 올림. 창(모달)이 열려 있으면 그 창 바깥은 모두 '눌리지 않는 곳'이 되어,
+  // 알림의 단추(듣기·둥지 보기 등)를 눌러도 아래에 겹친 창의 단추가 눌렸음 → 알림을 맨 위에 열린 창 안으로 옮겨서 띄움
+  function toastHome() {
+    const open = [...document.querySelectorAll('dialog[open]')].filter((d) => { try { return d.matches(':modal'); } catch { return false; } });
+    return open.pop() || document.body;
+  }
   function toastOnTop() {
     const t = $('toast');
+    const home = toastHome();
+    if (t.parentElement !== home) { try { if (t.matches(':popover-open')) t.hidePopover(); } catch {} home.appendChild(t); }
     if (!t.showPopover) return; // 오래된 브라우저는 예전처럼
     try { if (t.matches(':popover-open')) t.hidePopover(); t.showPopover(); } catch {}
   }
+  // 알림이 들어가 있던 창이 닫히면, 떠 있는 알림은 그다음 창(또는 화면)으로 옮겨 계속 보이게
+  document.addEventListener('close', (e) => { const t = $('toast'); if (e.target.tagName === 'DIALOG' && e.target.contains(t) && !t.hidden) setTimeout(toastOnTop, 0); }, true);
   function toast(text, action) {
     clearTimeout(toastTimer);
     $('toast-text').textContent = text;
@@ -5035,16 +5045,18 @@
   function noteBody(text) {
     const box = document.createElement('div');
     box.className = 'nt-body';
-    let ul = null;
+    let ul = null, lastP = null;
     for (const raw of String(text || '').split('\n')) {
       const line = raw.trim();
-      if (!line) { ul = null; continue; }
+      if (!line) { ul = null; lastP = null; continue; }
       if (/^[-·•]\s*/.test(line)) {
+        // 목록 바로 위의 한 줄은 소제목으로 (예: '그림 크게 보기' 다음에 '- …'가 이어질 때)
+        if (!ul && lastP) { lastP.classList.add('nt-h'); lastP = null; }
         if (!ul) { ul = document.createElement('ul'); box.appendChild(ul); }
         const li = document.createElement('li'); li.textContent = line.replace(/^[-·•]\s*/, ''); ul.appendChild(li);
       } else {
         ul = null;
-        const p = document.createElement('p'); p.textContent = line; box.appendChild(p);
+        const p = document.createElement('p'); p.textContent = line; box.appendChild(p); lastP = p;
       }
     }
     return box;
@@ -8056,12 +8068,14 @@
     const counts = me.traits?.counts || {};
     const done = me.traits?.done || [];
     const has = new Set(me.traits?.list || []);
+    const mark = me.traits?.mark || {};
     for (const r of S.traitEarn) {
-      if (done.includes(r.id)) continue;
+      const loseOnly = (r.lose || []).length && !(r.gain || []).length; // 없애기만 하는 규칙: 그 특성이 생긴 뒤부터 셈
       const gain = (r.gain || []).filter((x) => !has.has(x));
       const lose = (r.lose || []).filter((x) => has.has(x));
+      if (done.includes(r.id) && !(loseOnly && lose.length)) continue;
       if (!gain.length && !lose.length) continue;
-      const n = Math.min(counts[r.count] || 0, r.at);
+      const n = Math.max(0, Math.min((counts[r.count] || 0) - (loseOnly ? mark[r.id] || 0 : 0), r.at));
       const row = document.createElement('div');
       row.className = 'road';
       const what = [...gain.map((x) => `'${traitName(x)}' 생김`), ...lose.map((x) => `'${traitName(x)}' 사라짐`)].join(', ');

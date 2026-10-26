@@ -106,7 +106,8 @@ function resolve(ids, wis, greatChance, rnd = Math.random) {
   pts = Math.min(pts, FREE.plainTopSum + ruin);
   if (aura) pts = Math.max(1, pts - 1); // 기운에 점수 1을 씀
   // 나누기: 가장 센 효능에 6할, 나머지는 두 번째 효능에. 한 능력치는 상한(보통 5 · 운이 좋으면 6, 2단계 재료면 7)을 넘지 못함
-  const cap = quality !== 'normal' || mw ? FREE.statCapLucky[Math.min(ruin, FREE.statCapLucky.length - 1)] : FREE.statCap;
+  // 걸작이면 한 능력치 상한도 1 더 (효능이 하나뿐인 장신구에서 걸작 +1이 상한에 잘려 사라지지 않게. 최대는 정식 걸작 장신구와 같은 7, 2단계 재료면 8)
+  const cap = (quality !== 'normal' || mw ? FREE.statCapLucky[Math.min(ruin, FREE.statCapLucky.length - 1)] : FREE.statCap) + (mw ? 1 : 0);
   const bonus = {};
   let a = second && pts > 1 ? Math.ceil(pts * 0.6) : pts;
   a = Math.min(cap, a);
