@@ -2281,6 +2281,12 @@ function onConnect(socket) {
     if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
     const before = Math.floor(Number(p?.before));
     if (!(before > 0)) return ack({ error: '불러올 곳을 모르겠다.' });
+    // '용언과 소식'만 볼 때: 그 아래 용언·소식만 거슬러 올라감 (지역 대화가 덮는 기간과 상관없이)
+    if (p?.only === 'shout') {
+      const list = [...db.olderChat(SHOUT_REGION, before, 60).map((m) => ({ ...m, shout: true })), ...db.olderChat(NEWS_REGION, before, 30).map((m) => ({ ...m, news: true }))]
+        .sort((a, c) => a.at - c.at || a.id - c.id);
+      return ack({ ok: true, history: withTitles(list), more: list.length > 0 });
+    }
     const list = chatPage(entry.dragon.region, before);
     ack({ ok: true, history: withTitles(list), more: list.length > 0 });
   });
