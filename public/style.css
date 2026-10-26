@@ -3491,16 +3491,16 @@ html:has(dialog.dlg:modal), html:has(dialog.dlg:modal) body { overflow: hidden; 
 }
 
 /* ── 드래곤 기록 아래: 칭호 · 스킬 · 회복 (예전 '특성 · 장신구 · 성향 자세히 보기' 자리) ── */
-.pf-acts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-.pf-acts .btn { min-height: 32px; height: 32px; padding: 0 6px; gap: 5px; font-size: 12.5px; border-radius: 0; box-shadow: none; } /* 얇게, 모서리 각지게, 안쪽 겹선 없이 */
-.pf-acts .btn svg { flex: none; width: 15px; height: 15px; }
+.pf-quick { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.pf-quick .btn { min-height: 32px; height: 32px; padding: 0 6px; gap: 5px; font-size: 12.5px; border-radius: 0; box-shadow: none; } /* 얇게, 모서리 각지게, 안쪽 겹선 없이 */
+.pf-quick .btn svg { flex: none; width: 15px; height: 15px; }
 /* 드래곤 기록에 녹아들게: 테두리는 능력치 줄의 선과 같은 옅은 색, 바탕은 기록 칸과 같게, 아이콘은 능력치 아이콘처럼 차분하게 */
-.pf-acts .btn { border-color: var(--line-soft); background: var(--surface); color: var(--ink-2); }
-.pf-acts .btn svg { color: #3C5A73; stroke-width: 1.5; } /* 능력치 아이콘과 같은 색·굵기 */
-.pf-acts .btn:hover { border-color: var(--steel); color: var(--ink); background: #fff; }
-.pf-acts .btn:hover svg { color: var(--steel-d); }
-.pf-acts .btn.on svg, .pf-acts .btn:active svg { color: inherit; }
-.pf-acts .btn.on, .pf-acts .btn:active { background: var(--steel); color: #F4F7FA; border-color: var(--steel-d); } /* 누를 때와 가방이 열린 동안: 탐사 단추와 같은 색 */
+.pf-quick .btn { border-color: var(--line-soft); background: var(--surface); color: var(--ink-2); }
+.pf-quick .btn svg { color: #3C5A73; stroke-width: 1.5; } /* 능력치 아이콘과 같은 색·굵기 */
+.pf-quick .btn:hover { border-color: var(--steel); color: var(--ink); background: #fff; }
+.pf-quick .btn:hover svg { color: var(--steel-d); }
+.pf-quick .btn.on svg, .pf-quick .btn:active svg { color: inherit; }
+.pf-quick .btn.on, .pf-quick .btn:active { background: var(--steel); color: #F4F7FA; border-color: var(--steel-d); } /* 누를 때와 가방이 열린 동안: 탐사 단추와 같은 색 */
 .pf-qbag { display: none; }
 /* 회복 가방: 열면 그림·능력치를 접고 그 자리에 */
 .profile.bag-open .portrait, .profile.bag-open .pf-body > .attrs { display: none !important; }
@@ -3527,10 +3527,10 @@ html:has(dialog.dlg:modal), html:has(dialog.dlg:modal) body { overflow: hidden; 
 .bag-it .ef { padding: 0 5px; border-radius: 3px; font: 600 10.5px/1.6 var(--sans); font-variant-numeric: tabular-nums; }
 .ef-hp { background: #F6E4E6; color: #8E3340; } .ef-en { background: #E2EFE7; color: #2F6248; } .ef-mind { background: #ECE8F6; color: #4A3F78; } .ef-ap { background: #E3EAF0; color: #2A4256; }
 @media (max-width: 860px) {
-  .pf-body > .pf-acts, .pf-body > .pf-bag { grid-column: 1 / -1; }
+  .pf-body > .pf-quick, .pf-body > .pf-bag { grid-column: 1 / -1; }
   .bag-list { max-height: 260px; }
   .profile.bag-open .portrait { display: block !important; } /* 폰: 동그란 그림은 작아서 그대로 두고 능력치만 접음 */
-  .profile.folded .pf-body > .pf-acts, .profile.folded .pf-body > .pf-bag { display: none !important; }
+  .profile.folded .pf-body > .pf-quick, .profile.folded .pf-body > .pf-bag { display: none !important; }
   /* 접힌 줄: 그림 · 이름 · 막대 · 가방 단추 (막대를 조금 줄여 자리를 냄) */
   .profile.folded .pf-body { grid-template-columns: 52px minmax(0, 1fr) 70px 40px; }
   .profile.folded .nameplate .sub { flex-wrap: nowrap; white-space: nowrap; min-width: 0; max-width: 100%; overflow: hidden; } /* 좁아도 'Lv. 25 화이트 드래곤'이 한 줄에 (넘치면 종류 이름만 잘림) */

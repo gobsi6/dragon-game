@@ -126,7 +126,8 @@ b, strong { font-weight: 600; }
 .m-at span { font-size: 11px; color: var(--muted); }
 .m-pts { margin-top: 10px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-2); }
   .m-acts { margin-top: 10px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
-  .m-acts > span:not(.pin) { display: grid; place-items: center; min-height: 30px; border: 1px solid #9A9C98; border-radius: 3px; background: #FCFCFB; font-size: 12px; color: var(--ink); }
+  .m-acts > span:not(.pin) { display: flex; align-items: center; justify-content: center; gap: 5px; height: 30px; border: 1px solid #C4C6C2; border-radius: 0; background: #F7F7F5; font-size: 12px; color: #4E5358; } /* 게임의 칭호 · 스킬 · 회복 단추와 같은 모양 (각진 네모, 옅은 테두리, 청회색 아이콘) */
+  .m-acts svg { flex: none; width: 14px; height: 14px; fill: none; stroke: #3C5A73; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 .m-pts span:last-child { margin-left: auto; padding: 3px 10px; background: var(--steel); color: #F4F7FA; border-radius: 2px; font-weight: 600; font-size: 11.5px; }
 /* 번호 표 (본뜬 액자 위) */
 .zone { position: relative; border-radius: 3px; transition: box-shadow .15s, background-color .15s; }
@@ -366,7 +367,7 @@ table.kinds.lands td.home span { display: block; white-space: nowrap; }
             <div><b>9</b><span>발톱</span></div><div><b>11</b><span>비늘</span></div><div><b>8</b><span>날개</span></div><div><b>12</b><span>지혜</span></div><div><b>13</b><span>위엄</span></div>
           </div>
           <div class="zone m-pts" data-z="8"><span class="pin" style="top: -1px; left: -26px">8</span>나눌 능력치 포인트 <b>1</b><span>나누기</span></div>
-          <div class="zone m-acts" data-z="9"><span class="pin" style="top: -1px; left: -26px">9</span><span>칭호</span><span>스킬</span><span>회복</span></div>
+          <div class="zone m-acts" data-z="9"><span class="pin" style="top: -1px; left: -26px">9</span><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v6a6 6 0 0 1-12 0z"/><path d="M9 20h6M12 16v4"/><path d="M6 6H3.5v1.5A3 3 0 0 0 6 10.5M18 6h2.5v1.5a3 3 0 0 1-2.5 3"/></svg>칭호</span><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3 5 13h6l-1 8 8-10h-6z"/></svg>스킬</span><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/><path d="M10 13h4M12 11v4"/></svg>회복</span></div>
         </div>
 
         <ol class="legend" id="legend">
@@ -502,7 +503,7 @@ table.kinds.lands td.home span { display: block; white-space: nowrap; }
       <p>레벨 상한은 25입니다. Lv25가 되면 경험치는 더 쌓이지 않고, 그때부터는 다른 방식으로 강해지고 즐기게 됩니다. 바다 건너 <a href="#erebus">에레보스</a>를 함께 정화해 더 깊은 땅을 열고, <a href="#maze">지하 회랑</a>의 일곱 층을 밝혀 고대도시로 가는 길을 엽니다. 강적에게서 희귀 장비를 모으거나 재료로 직접 장신구를 빚고, 둥지를 넓혀 식구를 키우는 일도 이어집니다.</p>
       <p>대륙에는 아직 누구도 발을 들이지 못한 곳이 남아 있습니다. 새로운 길이 열리면 업데이트 노트로 알려 드릴게요.</p>
       <h3>특성과 칭호</h3>
-      <p>특성은 같은 일을 거듭하면 새로 생기거나 사라집니다. '상태 → 기본'의 '앞으로 생길 수 있는 변화'에서 무엇이 가까운지 볼 수 있습니다. 칭호는 업적을 이루면 저절로 얻고, 하나를 골라 답니다. 칭호마다 작은 효과가 붙습니다.</p>
+      <p>특성은 같은 일을 거듭하면 새로 생기거나 사라집니다. '상태 → 기본'의 '앞으로 생길 수 있는 변화'에서 무엇이 가까운지 볼 수 있습니다. 칭호는 업적을 이루면 저절로 얻고, 드래곤 기록 아래 '칭호' 단추에서 하나를 골라 답니다. 칭호마다 작은 효과가 붙습니다.</p>
     </section>
 
     <!-- 6 -->
@@ -644,7 +645,7 @@ table.kinds.lands td.home span { display: block; white-space: nowrap; }
         <h3>아래 메뉴</h3>
         <dl>
           <div class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg><dt>대륙</dt><dd>대륙 지도와 지금 머무는 지역 카드로 돌아옵니다. 탐사·채집·사냥·원정은 여기서 합니다.</dd></div>
-          <div class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h11l3 3v15H5z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg><dt>상태</dt><dd>기본(특성·장신구·성향), 칭호, 스킬, 기록(발자취·업적·도감)이 있습니다.</dd></div>
+          <div class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h11l3 3v15H5z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg><dt>상태</dt><dd>기본(특성·장신구·성향)과 기록(발자취·업적·도감)이 있습니다. 칭호와 스킬은 드래곤 기록 아래 단추로 엽니다.</dd></div>
           <div class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M3 20c0-6 4-11 9-11s9 5 9 11z"/><path d="M9 20c0-3 1.4-5 3-5s3 2 3 5"/></svg><dt>둥지</dt><dd>쉬기, 보물더미, 둥지 넓히기, 식구 돌보기를 합니다.</dd></div>
           <div class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg><dt>소지품</dt><dd>가진 물건과 장신구입니다. 재료를 누르면 그걸로 만들 수 있는 것이 보이고, 제작도 여기서 엽니다.</dd></div>
           <div class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M5 19L19 5M14 5h5v5M19 19L5 5M10 5H5v5"/></svg><dt>결투장</dt><dd>다른 드래곤과 겨룹니다. 결투로는 다치지 않습니다.</dd></div>

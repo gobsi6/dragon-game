@@ -160,7 +160,7 @@
         <div class="bag-tabs" id="bag-tabs" role="tablist" aria-label="회복 물건 거르기"></div>
         <div class="bag-list" id="bag-list"></div>
       </div>
-      <div class="pf-acts" id="pf-acts">
+      <div class="pf-quick" id="pf-acts">
         <button class="btn" type="button" id="pf-titles"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h12v6a6 6 0 0 1-12 0z"/><path d="M9 20h6M12 16v4"/><path d="M6 6H3.5v1.5A3 3 0 0 0 6 10.5M18 6h2.5v1.5a3 3 0 0 1-2.5 3"/></svg><span>칭호</span></button>
         <button class="btn" type="button" id="pf-skills"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 3 5 13h6l-1 8 8-10h-6z"/></svg><span>스킬</span></button>
         <button class="btn" type="button" id="pf-bag-btn" aria-expanded="false" aria-controls="pf-bag"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/><path d="M10 13h4M12 11v4"/></svg><span>회복</span></button>
@@ -2625,11 +2625,12 @@
   setInterval(() => { if (S.me) renderBuff(); }, 30000);
 
   // ── 소지품 ──
-  let invCache = {}, invSrc = {};
+  let invCache = {}, invSrc = {}, invReady = false;
   function fetchInv(done) {
     socket.emit('inv:get', {}, (res) => {
       if (res.error) return toast(res.error);
       invCache = Object.fromEntries(res.items.map((x) => [x.item, x.qty]));
+      invReady = true; // 소지품을 한 번이라도 받아 왔는지 (회복 가방이 빈 채로 먼저 열리지 않게)
       invSrc = res.giftSrc || {}; // 선물 물건: 받은 것 · 직접 만든 것 개수
       done && done(res);
     });
@@ -8434,15 +8435,20 @@
       ul.appendChild(b);
     }
   }
-  function setBag(on) {
-    bagOpen = on;
+  // 열 때: 그림·능력치를 접는 것과 가방 목록을 채우는 것을 같은 순간에 (예전엔 빈 가방이 먼저 열렸다가
+  // 소지품이 도착하면 목록이 늘어나며 칸이 한 번 더 움직여서 '튀어' 보였음)
+  function showBag(on) {
     $('pf-panel').classList.toggle('bag-open', on);
     $('pf-bag').hidden = !on;
     $('pf-bag-btn').setAttribute('aria-expanded', String(on));
     $('pf-bag-btn').classList.toggle('on', on);
     $('pf-bag-btn').querySelector('span').textContent = on ? '닫기' : '회복';
-    if (on) fetchInv(renderBag);
-    else if (bagRefold) { bagRefold = false; setPfFold(true); } // 접힌 줄에서 열었으면 닫을 때 다시 접음
+  }
+  function setBag(on) {
+    bagOpen = on;
+    if (!on) { showBag(false); if (bagRefold) { bagRefold = false; setPfFold(true); } return; } // 접힌 줄에서 열었으면 닫을 때 다시 접음
+    if (invReady) { renderBag(); showBag(true); fetchInv(() => { if (bagOpen) renderBag(); }); } // 가진 소지품으로 바로 그리고, 새로 받아 오면 고쳐 그림
+    else { $('pf-bag-btn').classList.add('on'); fetchInv(() => { if (!bagOpen) return; renderBag(); showBag(true); }); } // 처음: 받아 온 뒤 한 번에 열기
   }
   $('pf-bag-btn').addEventListener('click', () => setBag(!bagOpen));
   // 폰: 접힌 줄의 가방 단추 → 펼치면서 가방을 엶
