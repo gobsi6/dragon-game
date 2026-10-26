@@ -29,6 +29,13 @@ const fmtDays = (d) => (d >= 1 ? `${Math.ceil(d)}일` : `${Math.max(1, Math.ceil
 // ── 나이와 성장 단계 ──────────────────────────────
 const isHome = (k) => k.status === 'home' || k.status === 'egg';
 const ageOf = (k, now) => (k.data.born ? (now - k.data.born) / DAY : 0);
+// 새끼 드래곤이 이 단계에서 더 자랄 수 있는 몫 (능력치 합의 상한 − 지금 합). 0이면 더 자라지 않음
+function statRoom(k, now = Date.now()) {
+  if (k.type !== 'drake' || !k.data.stats) return 0;
+  const cap = (R.statCap || [])[stageOf(k, now).i];
+  if (cap == null) return Infinity;
+  return Math.max(0, cap - STAT_KEYS.reduce((a, s) => a + (k.data.stats[s] || 0), 0));
+}
 function stageOf(k, now) {
   if (k.status === 'egg') return { i: -1, name: '알', next: null };
   const list = k.type === 'human' ? H.stages : R.stages;
@@ -676,6 +683,7 @@ function view(k, now, d) {
   } else {
     v.kind = k.data.kind;
     v.stats = k.data.stats;
+    { const cap = (R.statCap || [])[stageOf(k, now).i]; if (cap != null) v.statCap = cap; } // 이 단계의 능력치 합 상한 (식구 카드에 '합 ○○ / ○○')
     v.trains = k.data.trains;
     v.trainLimit = R.trainLimit[Math.max(0, st.i)];
     v.trainIn = Math.max(0, (k.data.lastTrain || 0) + trainCd(k) - now);
@@ -1315,13 +1323,14 @@ function train(d, kin, id, stat, now = Date.now(), opt = {}) {
   if (!STAT_KEYS.includes(stat)) return { error: '알 수 없는 능력치다.' };
   const limit = R.trainLimit[stageOf(k, now).i];
   if (k.data.trains >= limit) return { error: '지금은 더 가르쳐도 소용이 없다. 조금 더 자라야 한다.' };
+  if (statRoom(k, now) <= 0) return { error: `${ga(k)} 지금 배울 수 있는 만큼은 다 배웠다. 조금 더 자라야 한다.` };
   if (now - (k.data.lastTrain || 0) < trainCd(k)) return { error: `${ga(k)} 지쳐 있다. 조금 쉬게 하자.` };
   if (d.ap < R.trainAp) return { error: `행동력이 모자란다. (${R.trainAp} 필요)` };
   if (d.en < R.trainEn) return { error: `기력이 모자란다. (${R.trainEn} 필요)` };
   if (d.ap >= logic.apCap(d)) d.ap_at = now;
   d.ap -= R.trainAp;
   d.en -= R.trainEn;
-  const up = hasT(k, 'clever') && Math.random() < TR.cleverChance ? 2 : 1; // 영리한: 가끔 한 번 더
+  const up = Math.min(statRoom(k, now), hasT(k, 'clever') && Math.random() < TR.cleverChance ? 2 : 1); // 영리한: 가끔 한 번 더 (합의 상한까지)
   const bondUp = 3 + (clingyish(k) ? 2 : 0) + (hasT(k, 'affable') ? 1 : 0) + (drakeFull(k) ? DF.fullTrainBond + (hasT(k, 'greedy') ? 1 : 0) : 0); // 응석받이·속 깊은·살가운·배부름(먹성 좋은은 더)
   k.data.stats[stat] += up;
   if (['claw', 'wing', 'wisdom'].includes(stat)) growAdd(k, stat); // 자람 기록: 가르친 쪽
@@ -1412,7 +1421,8 @@ function expFinish(kin, minutes) {
       growAdd(k, 'trip');
       if (!k.data.talent) k.data.lean.guard += KIN.tripTalent;
     } else {
-      const n = Math.min(2, Math.floor(minutes / 60)) + (hasT(k, 'wild') && minutes >= 60 && Math.random() < GR.wildChance ? 1 : 0); // 천방지축: 가끔 하나 더
+      const want = Math.min(2, Math.floor(minutes / 60)) + (hasT(k, 'wild') && minutes >= 60 && Math.random() < GR.wildChance ? 1 : 0); // 천방지축: 가끔 하나 더
+      const n = Math.min(want, statRoom(k)); // 이 단계의 능력치 합 상한까지
       const got = [];
       // 날쌘·고집 센·꿈꾸는: 그쪽으로 잘 자람
       const bias = hasT(k, 'swift') ? 'wing' : hasT(k, 'stubborn') ? 'claw' : hasT(k, 'dreamy') ? 'wisdom' : hasT(k, 'proud') ? 'majesty' : null;
@@ -1422,6 +1432,7 @@ function expFinish(kin, minutes) {
         got.push(STATS.find((x) => x.key === s).name);
       }
       if (got.length) lines.push(`${ga(k)} 원정에서 자랐다. ${got.map((g) => `${g} +1`).join(', ')}`);
+      else if (want > 0) lines.push(`${ga(k)} 원정에서 많은 것을 보고 왔지만, 더 자라려면 시간이 필요해 보인다.`);
     }
   }
   if (back.length) lines.unshift(`${back.join(', ')}${josa(back.at(-1), '이', '가')} 함께 다녀왔다. 유대 +3`);
@@ -1591,7 +1602,7 @@ function chooseEvent(d, kin, have, idx, now = Date.now()) {
     en: (n) => { d.en = clamp(d.en + n, 0, logic.enCap(d)); },
     bond: (k, n) => { if (k) addBond(k, n); },
     lean: (k, t, n) => { if (k && !k.data.talent) k.data.lean[t] += n; },
-    train: (k, s) => { if (k && k.data.stats) k.data.stats[s] += 1; },
+    train: (k, s) => { if (k && k.data.stats && statRoom(k, now) > 0) k.data.stats[s] += 1; }, // 능력치 합의 상한까지
     leave: (k, status) => { k.status = status; k.data.ended = now; },
     // 새끼의 성격을 한쪽으로 기울임 (그 성향 밑에서 며칠 더 자란 것처럼)
     nudge: (k, stance, days) => {

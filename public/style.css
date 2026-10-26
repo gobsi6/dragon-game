@@ -1121,6 +1121,8 @@ dialog.trip-dlg {
 .bond span:last-child { min-width: 3ch; text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); }
 .kin-stats { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--ink-2); }
 .kin-stats b { font-weight: 600; color: var(--ink); }
+.kin-stats .st-sum { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; } /* 이 단계의 능력치 합 / 상한 */
+.kin-stats .st-sum.full { color: var(--steel-d); font-weight: 600; }
 .kin-acts { display: flex; flex-wrap: wrap; gap: 6px; }
 .kin-acts .btn { min-height: 32px; padding: 0 10px; font-size: 12.5px; }
 .kin-acts .lbl { width: 100%; font-size: 11.5px; color: var(--muted); }

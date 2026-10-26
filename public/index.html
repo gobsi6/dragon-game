@@ -3643,6 +3643,7 @@
       const st = document.createElement('div');
       st.className = 'kin-stats';
       st.innerHTML = S.stats.map((x) => `<span>${x.name} <b>${v.stats[x.key]}</b></span>`).join('');
+      if (v.statCap) { const sum = S.stats.reduce((a, x) => a + (v.stats[x.key] || 0), 0); const t = document.createElement('span'); t.className = 'st-sum'; t.textContent = `합 ${sum} / ${v.statCap}`; t.title = sum >= v.statCap ? '이 단계에서 자랄 수 있는 만큼 다 자랐다. 다음 단계가 되면 다시 자란다.' : '이 단계에서 자랄 수 있는 능력치 합'; if (sum >= v.statCap) t.classList.add('full'); st.appendChild(t); }
       card.appendChild(st);
       const pers = { friendly: '인간과 어울리는', hermit: '조용히 홀로 지내는', hostile: '거칠고 대담한' }[v.personality];
       // 성격은 보호자가 가장 오래 지낸 성향을 따름. 지금 성향과 다르면 '닮아'가 아니라 그 까닭을 적음
