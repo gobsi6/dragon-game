@@ -1920,7 +1920,9 @@ function onConnect(socket) {
   // 둥지 시설
   itemAction('nest:fac:build', (d, p, have) => logic.buildFacility(d, str(p.id), have));
   itemAction('nest:fac:remove', (d, p) => logic.removeFacility(d, str(p.id)));
-  itemAction('nest:job', (d, p, have, kin) => life.setJob(d, kin, p.kin, str(p.fac)));
+  // 시설 일 맡기기 · 새끼 심부름: 둥지 밖에서도 할 수 있음 (결과 첫 줄에 멀리서 일러두었다고 적음)
+  const byTelepathy = (d, r) => { if (r && !r.error && d.region !== d.nest && Array.isArray(r.lines)) r.lines.unshift('멀리서 일러두었다.'); return r; };
+  itemAction('nest:job', (d, p, have, kin) => byTelepathy(d, life.setJob(d, kin, p.kin, str(p.fac))));
   itemAction('nest:harvest', (d, p, have, kin) => life.harvest(d, kin));
   itemAction('nest:cook', (d, p, have, kin) => life.cook(d, kin, str(p.recipe), have));
   itemAction('order:fill', (d, p, have) => logic.fillOrder(d, str(p.key), have, Date.now(), p?.alt === true)); // alt: 걸작·정성 들인 것으로 채워 납품
@@ -2092,7 +2094,7 @@ function onConnect(socket) {
   itemAction('kin:companion', (d, p, have, kin) => life.setCompanion(kin, p.id)); // 곁에 둘 새끼 (사냥·강적에 함께 나섬)
   itemAction('kin:search', (d, p, have, kin) => life.searchRunaway(d, kin, p.id, have)); // 가출한 식구 직접 찾기
   itemAction('kin:seek', (d, p, have, kin) => life.sendSeek(kin, p.id, p.target)); // 새끼 드래곤을 보내 찾아오게
-  itemAction('kin:errand', (d, p, have, kin) => life.sendErrand(kin, p.id, str(p.region), Number(p.minutes), ruin.unlocked(str(p.region)))); // 새끼 혼자 심부름
+  itemAction('kin:errand', (d, p, have, kin) => byTelepathy(d, life.sendErrand(kin, p.id, str(p.region), Number(p.minutes), ruin.unlocked(str(p.region))))); // 새끼 혼자 심부름 (둥지 밖에서도)
   itemAction('kin:release', (d, p, have, kin) => life.release(d, kin, p.id));
 
   // ── 이벤트 ──

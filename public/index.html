@@ -3391,7 +3391,7 @@
     const k = n.kin;
     const canAct = !!n.here && !S.me.exp;
     if (!k.home.length) note('아직 함께 사는 식구가 없다. 탐사나 원정 중에 아이나 알을 만날지도 모른다.');
-    else if (!canAct) { note(S.me.exp ? '원정 중에는 식구를 돌볼 수 없다.' : '둥지에 있을 때만 식구를 돌볼 수 있다.'); wrap.lastChild.classList.add('kin-away-note'); }
+    else if (!canAct) { note(`${S.me.exp ? '원정 중에는 식구를 돌볼 수 없다.' : '둥지에 있을 때만 식구를 돌볼 수 있다.'} 새끼의 심부름과 시설 일은 멀리서도 맡길 수 있다.`); wrap.lastChild.classList.add('kin-away-note'); }
     for (const v of k.home) wrap.appendChild(kinCard(v, canAct));
     if (k.past.length) {
       const h2 = document.createElement('h3');
@@ -3710,7 +3710,7 @@
       // 보호자를 돕는 법: 곁에 두기(함께 싸움), 심부름
       if (v.companion) meta('<b>곁에 둔 새끼</b> · 사냥과 강적·재앙과의 싸움에 함께 나서 매 턴 덤벼든다.', 'talent');
       if (v.errand) meta(`<b>심부름 중</b> · ${esc(S.regions[v.errand.region]?.name || '')} · ${dur(Math.max(0, v.errand.end - Date.now()))} 뒤 돌아온다`, 'talent');
-      if (canAct && !partner && !v.errand && !v.onExp) {
+      if ((canAct || !partner) && !partner && !v.errand && !v.onExp) { // 심부름은 둥지 밖에서도
         if (v.canCompanion) btn(v.companion ? '곁에서 풀기' : '곁에 두기 (함께 싸움)', () => nestAct('kin:companion', { id: v.id }, true)).classList.toggle('primary', !v.companion);
         else label('어린 용이 되면 곁에 두고 함께 싸우거나 심부름을 보낼 수 있다.');
         // 심부름 보내기: 곁에 두지 않은 새끼만
@@ -3728,7 +3728,7 @@
           ms.className = 'input kin-sel';
           ms.setAttribute('aria-label', '심부름 시간');
           for (const m of EH.minutes) { const o = document.createElement('option'); o.value = m; o.textContent = `${m / 60}시간`; ms.appendChild(o); }
-          label(`심부름: 혼자 다녀오며 그 지역의 재료를 구해 온다. 날개가 높을수록 많이, 지혜가 높을수록 귀한 것을 찾는다.${v.errandRuin ? '' : ' (멸망한 대륙은 다 자란 용만)'}`);
+          label(`심부름: 혼자 다녀오며 그 지역의 재료를 구해 온다. 날개가 높을수록 많이, 지혜가 높을수록 귀한 것을 찾는다.${v.errandRuin ? '' : ' (멸망한 대륙은 다 자란 용만)'}${canAct ? '' : ' · 둥지 밖에서도 보낼 수 있다.'}`);
           acts.append(rs, ms);
           btn('심부름 보내기', () => nestAct('kin:errand', { id: v.id, region: rs.value, minutes: Number(ms.value) }, true));
         }
@@ -4175,7 +4175,7 @@
       const tx = el('span', 'fac-idle');
       tx.textContent = `일이 없는 식구 ${idle.length}명 · ${idle.map((v) => v.name).join(', ')}`;
       r.appendChild(tx);
-      if (n.here) r.appendChild(B('고르기', () => { FAC_SEL = idle[0].id; renderNestAgain(); }));
+      r.appendChild(B('고르기', () => { FAC_SEL = idle[0].id; renderNestAgain(); })); // 일 맡기기는 둥지 밖에서도
       todo.appendChild(r);
     }
     if (!todoN) todo.appendChild(el('p', 'fac-done', F0.built.length ? '오늘 할 일을 모두 마쳤다.' : '아직 지은 시설이 없다. 빈 칸을 눌러 시설을 지어 보자.'));
@@ -4208,7 +4208,7 @@
       // 일하는 식구 / 빈 자리
       const wv = f.worker && n.kin.home.find((v) => v.id === f.worker.id);
       const place = () => { const id = sel.id; FAC_SEL = null; nestAct('nest:job', { kin: id, fac: f.id }); };
-      const target = n.here && sel && wv?.id !== sel.id; // 고른 식구를 여기에 둘 수 있음
+      const target = sel && wv?.id !== sel.id; // 고른 식구를 여기에 둘 수 있음 (둥지 밖에서도)
       if (target) {
         // 배치할 자리: 빈 자리면 그대로, 이미 누가 있으면 바꾸기
         const drop = el('button', `fac-drop${wv ? ' swap' : ''}`);
@@ -4230,7 +4230,7 @@
         txt.append(nb, rs);
         who.append(face, txt);
         if (f.worker.fit) who.append(el('span', 'fac-fit', '잘 맞음'));
-        if (n.here) who.append(B('쉬게 하기', () => nestAct('nest:job', { kin: f.worker.id, fac: '' }), 'small link'));
+        who.append(B('쉬게 하기', () => nestAct('nest:job', { kin: f.worker.id, fac: '' }), 'small link'));
         card.appendChild(who);
       } else {
         const empty = el('div', 'fac-empty');
@@ -4313,7 +4313,7 @@
         : `${sel.name}에게 특별히 잘 맞는 시설은 없지만, 어디서든 일할 수 있다.`;
       wrap.appendChild(tip);
     }
-    if (!n.here) wrap.appendChild(el('p', 'note', '시설은 둥지에 있을 때 짓고 맡길 수 있다.'));
+    if (!n.here) wrap.appendChild(el('p', 'note', '시설을 짓거나 허무는 일은 둥지에 있을 때만 할 수 있다. 식구에게 일을 맡기거나 쉬게 하는 것은 멀리서도 할 수 있다.'));
     pane.appendChild(wrap);
   }
   function drawNest(res) {
@@ -12029,7 +12029,7 @@
     const log = $('log');
     const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
     log.appendChild(node);
-    markDays();
+    markDayAt(node); // 새 말: 바로 앞에 보이는 말과 날짜만 비교 (예전엔 이야기 창 전체를 다시 훑었음)
     if (atBottom) log.scrollTop = log.scrollHeight;
   }
   // ── 날짜 구분: 이야기 창의 맨 위와 날짜가 바뀌는 자리마다 '10월 27일 (화)' 한 줄. 지금 보기(전체·이곳·용언과 소식)에 보이는 말만 따져서 매김 ──
@@ -12040,6 +12040,22 @@
     if (view === 'shout') return el.matches('.msg.shout, .sys.wnews');
     if (view === 'here') return !el.matches('.msg.shout, .sys.wnews');
     return true;
+  }
+  // 맨 아래에 붙은 한 칸만: 바로 앞의 (지금 보기에서 보이는) 날짜 있는 칸과 날이 다르면 그 앞에 날짜 줄
+  function markDayAt(node) {
+    const log = $('log'), view = log.dataset.view || 'all';
+    if (!node.dataset?.at || !seenInView(node, view)) return;
+    let p = node.previousElementSibling;
+    while (p && !(p.classList.contains('day-sep') || (p.dataset.at && seenInView(p, view)))) p = p.previousElementSibling;
+    const k = dayKey(Number(node.dataset.at));
+    if (p && !p.classList.contains('day-sep') && dayKey(Number(p.dataset.at)) === k) return; // 같은 날
+    if (p && p.classList.contains('day-sep')) { // 앞이 날짜 줄이면 그 줄의 날과 비교 (그 줄 바로 다음 칸의 날)
+      let q = p.nextElementSibling; while (q && q !== node && !(q.dataset.at && seenInView(q, view))) q = q.nextElementSibling;
+      if (q && q !== node && dayKey(Number(q.dataset.at)) === k) return;
+      if (q === node) return; // 이 날짜 줄이 바로 이 칸의 것
+    }
+    const s = document.createElement('div'); s.className = 'day-sep'; s.setAttribute('role', 'separator'); s.textContent = dayLabel(Number(node.dataset.at));
+    node.before(s);
   }
   function markDays() {
     const log = $('log'); if (!log) return;
