@@ -3149,54 +3149,61 @@
     IV.reset(); img.src = a.href; img.alt = a.querySelector('img')?.alt || '그림';
     if (!$('img-view').open) $('img-view').showModal();
   });
-  // 확대·축소: 처음엔 화면에 맞는 크기 (작은 그림은 원래 크기 그대로).
-  // 폰: 두 손가락으로 벌리고 오므리기, 두 번 톡 치면 원래 크기 ↔ 화면에 맞춤, 확대한 채로 끌면 이동
-  // 컴퓨터: 그림을 누르면 원래 크기 ↔ 화면에 맞춤, 휠로 확대·축소, 끌어서 이동
+  // 크게 보기: 그림의 너비를 바꿔 확대·축소하고, 넘치면 창 안에서 그대로 스크롤 (휠·손가락으로 위아래)
+  // · 처음: 화면에 다 들어오게. 아주 긴 그림은 화면 너비에 맞추고 위아래로 스크롤
+  // · 원래 크기보다 크게는 키우지 않음
+  // · 컴퓨터: 그림을 누르면 원래 크기 ↔ 처음 크기, Ctrl+휠로 확대·축소, 끌어서 옮기기. 폰: 두 번 톡, 두 손가락으로 벌리고 오므리기
   const IV = (() => {
     const box = $('img-view-in'), img = $('img-view-img');
-    let s = 1, x = 0, y = 0, pts = new Map(), pinch = null, drag = null, lastTap = 0, gestureAt = 0, downAt = 0, downXY = null, onImg = false;
-    const ratio = () => (img.clientWidth ? Math.max(1, img.naturalWidth / img.clientWidth) : 1); // 원래 크기가 지금보다 몇 배인지
-    const maxS = () => Math.min(8, Math.max(2, ratio() * 2));
-    const clampXY = () => {
-      const w = img.clientWidth * s, h = img.clientHeight * s, bw = box.clientWidth, bh = box.clientHeight;
-      const mx = Math.max(0, (w - bw) / 2 + 16), my = Math.max(0, (h - bh) / 2 + 16);
-      x = Math.max(-mx, Math.min(mx, x)); y = Math.max(-my, Math.min(my, y));
+    let w = 0, pts = new Map(), pinch = null, drag = null, lastTap = 0, gestureAt = 0, downAt = 0, downXY = null, onImg = false;
+    const nat = () => img.naturalWidth || 1, ar = () => (img.naturalHeight || 1) / nat();
+    const room = () => { const cs = getComputedStyle(box); return { W: box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), H: box.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) }; };
+    const fitAll = () => { const { W, H } = room(); return Math.max(1, Math.min(nat(), W, H / ar())); }; // 다 들어오게
+    const fitWide = () => { const { W } = room(); return Math.max(1, Math.min(nat(), W)); };          // 너비에 맞춤
+    const start = () => { const { H } = room(); return fitWide() * ar() > H * 1.6 ? fitWide() : fitAll(); }; // 아주 긴 그림은 너비에 맞춰 스크롤
+    const minW = () => Math.min(fitAll(), start());
+    const set = (nw, cx, cy) => {
+      nw = Math.max(minW(), Math.min(nat(), nw));
+      const r = box.getBoundingClientRect(), ir = img.getBoundingClientRect();
+      // 누른 자리(cx, cy)가 확대 뒤에도 그 자리에 오도록 스크롤을 맞춤
+      const fx = ir.width ? ((cx ?? r.left + r.width / 2) - ir.left) / ir.width : 0.5, fy = ir.height ? ((cy ?? r.top + r.height / 2) - ir.top) / ir.height : 0.5;
+      w = nw; img.style.width = `${Math.round(w)}px`;
+      const nr = img.getBoundingClientRect();
+      box.scrollLeft += (nr.left + fx * nr.width) - (cx ?? r.left + r.width / 2);
+      box.scrollTop += (nr.top + fy * nr.height) - (cy ?? r.top + r.height / 2);
+      box.classList.toggle('zoomed', w > start() + 1);
     };
-    const apply = (anim) => { img.classList.toggle('anim', !!anim); clampXY(); img.style.transform = s === 1 && !x && !y ? '' : `translate(${x}px, ${y}px) scale(${s})`; box.classList.toggle('zoomed', s > 1.01); };
-    const zoomTo = (ns, cx, cy, anim) => { // cx, cy: 확대할 중심 (화면 좌표)
-      const r = box.getBoundingClientRect(); ns = Math.max(1, Math.min(maxS(), ns));
-      const ox = (cx ?? r.left + r.width / 2) - (r.left + r.width / 2), oy = (cy ?? r.top + r.height / 2) - (r.top + r.height / 2);
-      x = ox - (ox - x) * (ns / s); y = oy - (oy - y) * (ns / s); s = ns; if (s === 1) { x = 0; y = 0; }
-      apply(anim);
-    };
-    const toggle = (cx, cy) => zoomTo(s > 1.01 ? 1 : (ratio() > 1.05 ? ratio() : 2), cx, cy, true); // 원래 크기로 (이미 원래 크기면 2배)
+    const toggle = (cx, cy) => (w < nat() - 1 ? set(nat(), cx, cy) : (set(start(), cx, cy), box.scrollTop = 0));
+    const init = () => { if (!box.clientWidth || !img.naturalWidth) return requestAnimationFrame(init); w = start(); img.style.width = `${Math.round(w)}px`; box.scrollTop = 0; box.scrollLeft = 0; box.classList.remove('zoomed'); }; // 창이 열린 뒤에 잼
+    img.addEventListener('load', init);
     box.addEventListener('pointerdown', (e) => {
-      if (e.target !== img && s <= 1.01) return; // 확대하지 않았을 때 그림 바깥은 닫기용
-      box.setPointerCapture(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (pts.size === 2) { const [p, q] = [...pts.values()]; pinch = { d: Math.hypot(p.x - q.x, p.y - q.y), s, mx: (p.x + q.x) / 2, my: (p.y + q.y) / 2 }; drag = null; }
-      else { drag = { x: e.clientX, y: e.clientY }; downAt = Date.now(); downXY = { x: e.clientX, y: e.clientY }; onImg = e.target === img; } // 손가락을 붙잡아 두면 뒤의 이벤트는 대상이 바뀌므로 여기서 기억
+      if (e.pointerType === 'touch' && pts.size === 0) { pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); downAt = Date.now(); downXY = { x: e.clientX, y: e.clientY }; onImg = e.target === img; return; } // 한 손가락: 그대로 스크롤
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pts.size === 2) { const [p, q] = [...pts.values()]; pinch = { d: Math.hypot(p.x - q.x, p.y - q.y), w, mx: (p.x + q.x) / 2, my: (p.y + q.y) / 2 }; return; }
+      if (e.pointerType === 'mouse' && e.button === 0) { drag = { x: e.clientX, y: e.clientY }; downAt = Date.now(); downXY = { x: e.clientX, y: e.clientY }; onImg = e.target === img; box.setPointerCapture(e.pointerId); }
     });
     box.addEventListener('pointermove', (e) => {
       if (!pts.has(e.pointerId)) return;
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (pinch && pts.size >= 2) { const [p, q] = [...pts.values()]; zoomTo(pinch.s * Math.hypot(p.x - q.x, p.y - q.y) / pinch.d, pinch.mx, pinch.my); gestureAt = Date.now(); return; }
-      if (drag && s > 1.01) { x += e.clientX - drag.x; y += e.clientY - drag.y; drag = { x: e.clientX, y: e.clientY }; apply(); if (Math.hypot(e.clientX - downXY.x, e.clientY - downXY.y) > 6) gestureAt = Date.now(); }
+      if (pinch && pts.size >= 2) { const [p, q] = [...pts.values()]; set(pinch.w * Math.hypot(p.x - q.x, p.y - q.y) / pinch.d, pinch.mx, pinch.my); gestureAt = Date.now(); return; }
+      if (drag) { box.scrollLeft -= e.clientX - drag.x; box.scrollTop -= e.clientY - drag.y; drag = { x: e.clientX, y: e.clientY }; if (Math.hypot(e.clientX - downXY.x, e.clientY - downXY.y) > 6) gestureAt = Date.now(); }
+      else if (downXY && Math.hypot(e.clientX - downXY.x, e.clientY - downXY.y) > 8) gestureAt = Date.now(); // 손가락 스크롤
     });
     const up = (e) => {
       if (!pts.has(e.pointerId)) return;
       pts.delete(e.pointerId);
       if (pts.size < 2) pinch = null;
-      if (pts.size) { const p = [...pts.values()][0]; drag = { x: p.x, y: p.y }; return; }
+      if (pts.size) return;
       drag = null;
       const tap = Date.now() - downAt < 300 && downXY && Math.hypot(e.clientX - downXY.x, e.clientY - downXY.y) < 8 && Date.now() - gestureAt > 300;
-      if (!tap || (!onImg && s <= 1.01)) return;
+      if (!tap || !onImg) return;
       if (e.pointerType === 'mouse') { toggle(e.clientX, e.clientY); gestureAt = Date.now(); return; } // 컴퓨터: 한 번 누르면
       if (Date.now() - lastTap < 320) { toggle(e.clientX, e.clientY); lastTap = 0; gestureAt = Date.now(); } else lastTap = Date.now(); // 폰: 두 번 톡
     };
     box.addEventListener('pointerup', up); box.addEventListener('pointercancel', up);
-    box.addEventListener('wheel', (e) => { e.preventDefault(); zoomTo(s * (e.deltaY < 0 ? 1.15 : 1 / 1.15), e.clientX, e.clientY); }, { passive: false });
+    box.addEventListener('wheel', (e) => { if (!e.ctrlKey) return; e.preventDefault(); set(w * (e.deltaY < 0 ? 1.15 : 1 / 1.15), e.clientX, e.clientY); gestureAt = Date.now(); }, { passive: false }); // 휠은 스크롤, Ctrl+휠은 확대·축소
     img.addEventListener('dragstart', (e) => e.preventDefault());
-    return { reset: () => { s = 1; x = 0; y = 0; pts.clear(); pinch = drag = null; apply(); }, busy: () => Date.now() - gestureAt < 350 || s > 1.01 };
+    return { reset: () => { pts.clear(); pinch = drag = null; img.style.width = '0px'; box.classList.remove('zoomed'); box.scrollTop = 0; box.scrollLeft = 0; }, busy: () => Date.now() - gestureAt < 350 };
   })();
   $('img-view-x').addEventListener('click', () => $('img-view').close());
   // 그림 바깥을 누르면 닫힘 (확대하거나 끌던 중에는 닫히지 않게)
