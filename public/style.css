@@ -454,8 +454,8 @@ dialog.frame:not(.as-panel) > .bl { bottom: 2px; left: 2px; } dialog.frame:not(.
 .gift-prev .sl-thumb img { object-fit: contain; }
 .gift-prev .sl-thumb-x { top: -5px; right: -7px; width: 16px; height: 16px; font-size: 11px; line-height: 16px; }
 /* 답에 붙은 그림: 작게, 누르면 원래 크기로 */
-.sl-cmimg { grid-column: 2; display: block; width: fit-content; max-width: min(100%, 240px); margin-top: 4px; border: 0; background: none; }
-.sl-cmimg img { display: block; max-width: 100%; height: auto; max-height: 160px; object-fit: contain; }
+.sl-cmimg { grid-column: 2; display: block; width: fit-content; max-width: min(100%, 320px); margin-top: 4px; border: 0; background: none; } /* 예전 240px */
+.sl-cmimg img { display: block; max-width: 100%; height: auto; max-height: 220px; object-fit: contain; } /* 예전 160px */
 /* 새기기 · 고치기 */
 .sl-form { display: flex; flex-direction: column; gap: 12px; margin-top: 2px; }
 .sl-form label { display: block; }
@@ -476,7 +476,7 @@ dialog.frame:not(.as-panel) > .bl { bottom: 2px; left: 2px; } dialog.frame:not(.
 .sl-addimg svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .sl-imgs { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
 .sl-img { display: block; border: 0; background: none; } /* 테두리·바탕 없이 (투명한 바탕은 뒤가 그대로 이어짐) */
-.sl-img img { display: block; width: auto; max-width: 100%; height: auto; max-height: 520px; object-fit: contain; background: none; }
+.sl-img img { display: block; width: auto; max-width: 100%; height: auto; max-height: 680px; object-fit: contain; background: none; } /* 예전 520px */
 @media (max-width: 560px) {
   .sl-post { padding: 14px 13px; }
 }

@@ -9084,8 +9084,8 @@
   };
   const slTag = () => slEl('span', 'sl-tag pin', '고정'); // GM이 고정한 글 표시
   const slCm = (n) => { const c = slEl('span', 'sl-cm'); c.innerHTML = SL_CM; c.append(String(n)); c.title = `남긴 답 ${n}`; return c; };
-  // 석판 그림 줄이기: 긴 변 1024px, webp 품질 75%(안 되면 jpeg). 300KB가 넘으면 품질·크기를 더 낮춤 → 대개 한 장 70~180KB
-  const SL_IMG_MAX = 300 * 1024;
+  // 석판 그림 줄이기: 긴 변 1600px, webp 품질 88%(안 되면 jpeg). 700KB가 넘으면 품질·크기를 조금씩 낮춤 → 대개 한 장 150~450KB (예전 1024px · 75% · 300KB)
+  const SL_IMG_MAX = 700 * 1024;
   function slShrink(file) {
     return new Promise((ok, no) => {
       if (!/^image\//.test(file.type)) return no(new Error('그림 파일만 넣을 수 있다.'));
@@ -9094,8 +9094,8 @@
       img.onload = async () => {
         URL.revokeObjectURL(url);
         const toBlob = (c, type, q) => new Promise((r) => c.toBlob(r, type, q));
-        let side = 1024, q = 0.75, blob = null, w = 0, h = 0;
-        for (let t = 0; t < 6; t++) {
+        let side = 1600, q = 0.88, blob = null, w = 0, h = 0;
+        for (let t = 0; t < 7; t++) {
           const k = Math.min(1, side / Math.max(img.naturalWidth, img.naturalHeight));
           w = Math.max(1, Math.round(img.naturalWidth * k)); h = Math.max(1, Math.round(img.naturalHeight * k));
           const c = document.createElement('canvas'); c.width = w; c.height = h;
@@ -9103,7 +9103,7 @@
           blob = await toBlob(c, 'image/webp', q);
           if (!blob || blob.type !== 'image/webp') blob = await toBlob(c, 'image/jpeg', q);
           if (blob && blob.size <= SL_IMG_MAX) break;
-          q = Math.max(0.5, q - 0.1); side = Math.round(side * 0.82);
+          q = Math.max(0.6, q - 0.06); side = Math.round(side * 0.88); // 한 번에 조금씩만 낮춤 (화질을 되도록 지키며)
         }
         if (!blob || blob.size > SL_IMG_MAX) return no(new Error('그림이 너무 크다.'));
         ok({ blob, url: URL.createObjectURL(blob), w, h });

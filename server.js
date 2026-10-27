@@ -321,7 +321,7 @@ app.post('/api/login', async (req, res) => {
 });
 
 // 석판 그림 올리기: 그림 파일 그대로(바이트)를 받음. 로그인 토큰은 Authorization: Bearer, 크기는 ?w=&h=
-app.post('/api/slate-img', express.raw({ type: ['image/webp', 'image/jpeg', 'image/png'], limit: '330kb' }), (req, res) => {
+app.post('/api/slate-img', express.raw({ type: ['image/webp', 'image/jpeg', 'image/png'], limit: '760kb' }), (req, res) => {
   const token = str((req.get('authorization') || '').replace(/^Bearer\s+/i, ''));
   const user = token ? db.getSessionUser(token) : null;
   if (!user) return res.status(401).json({ error: '다시 로그인해야 한다.' });

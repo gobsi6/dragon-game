@@ -4,7 +4,7 @@ const { isTestDragon } = require('./game-data');
 const HEADS = ['story', 'tip', 'party', 'free'];      // 말머리 (지금 화면에서는 고르지 않아 늘 free로 새김)
 const RULES = {
   title: 40, body: 1000, comment: 100,                // 글자 수
-  imgs: 3, imgMax: 320 * 1024, imgGap: 1500,          // 글 하나에 그림 몇 장, 한 장 최대 크기(바이트), 올리는 간격
+  imgs: 3, imgMax: 720 * 1024, imgGap: 1500,          // 글 하나에 그림 몇 장, 한 장 최대 크기(바이트), 올리는 간격
   imgDay: 20,                                         // 한 드래곤이 하루(24시간)에 올릴 수 있는 석판 그림 (글·답 합쳐서)
   postGap: 30 * 1000, perDay: 20,                     // 글 간격, 하루에 새길 수 있는 글 수
   commentGap: 3 * 1000,
