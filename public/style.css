@@ -2092,7 +2092,7 @@ button.trait.bad.on { background: #FBF1F2; box-shadow: inset 0 0 0 1px #A63E4B; 
 .utabs-menu button:hover { background: #F2F5F8; }
 .utabs-menu button.on { background: #EEF2F6; color: var(--steel-d); font-weight: 700; }
 .utabs-menu button:focus-visible { outline: 2px solid var(--steel); outline-offset: -2px; }
-@media (min-width: 561px) { .utabs-menu { display: none !important; } }
+@media (min-width: 561px) { .utabs-wrap:not(.squeeze) .utabs-menu { display: none !important; } } /* 넓은 화면은 탭이 넘쳐 접혔을 때만 '분류' 메뉴를 씀 */
 /* 폰: 전체 · 즐겨찾기 · '분류 ▾' 세 개만 한 줄로 (나머지 분류는 펼침 상자 안) */
 @media (max-width: 560px) {
   .utabs { flex-wrap: wrap; overflow: visible; -webkit-mask-image: none; mask-image: none; margin-left: -8px;
