@@ -2974,8 +2974,18 @@
     applyInvQ(box); // 찾기 칸에 적어 둔 것이 있으면 다시 그린 뒤에도 거름
   }
   // 밑줄 글자 탭: 다시 그린 뒤 전의 가로 위치로 돌리고, 고른 탭이 화면 밖이면 보이는 자리로
+  // 넓은 화면에서도 탭이 칸을 넘치면(창을 좁혔을 때) 분류 탭을 '분류 ▾' 하나로 접음 (가려져 안 보이는 탭이 없게)
+  function fitTabs(bar) {
+    const wrap = bar?.parentElement;
+    if (!wrap?.classList.contains('utabs-wrap') || !wrap.querySelector('.chipbtn.more')) return;
+    if (!bar.clientWidth) { if (!bar._fitWait) { bar._fitWait = true; requestAnimationFrame(() => { bar._fitWait = false; if (bar.isConnected && bar.clientWidth) fitTabs(bar); }); } return; } // 창이 아직 열리기 전: 그려진 뒤 다시
+    wrap.classList.remove('squeeze');
+    if (bar.scrollWidth > bar.clientWidth + 2) wrap.classList.add('squeeze');
+  }
+  { let t = 0; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => { for (const b of document.querySelectorAll('.utabs-wrap > .utabs')) fitTabs(b); }, 120); }); }
   function showTab(bar, x) {
     if (!bar) return;
+    fitTabs(bar);
     bar.scrollLeft = x || 0;
     const on = bar.querySelector('.on');
     if (!on || !bar.clientWidth) return;

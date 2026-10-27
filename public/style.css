@@ -3552,3 +3552,7 @@ html:has(dialog.dlg:modal), html:has(dialog.dlg:modal) body { overflow: hidden; 
 .day-sep { margin: 10px 4px 6px; text-align: center; font: 600 11.5px/1.4 var(--sans); color: var(--muted); } /* 양옆 선 없이 날짜 글자만 */
 
 .inv-sub { margin: 2px 0 12px; } /* 소지품 장신구 탭의 부위 고르기 */
+
+/* 창을 좁혀 탭이 넘칠 때: 분류 탭을 '분류 ▾'로 접음 (폰과 같은 방식) */
+.utabs-wrap.squeeze .utabs .chipbtn[data-cat] { display: none; }
+.utabs-wrap.squeeze .utabs .chipbtn.more { display: inline-flex; }
