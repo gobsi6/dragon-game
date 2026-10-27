@@ -12029,7 +12029,31 @@
     const log = $('log');
     const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
     log.appendChild(node);
+    markDays();
     if (atBottom) log.scrollTop = log.scrollHeight;
+  }
+  // ── 날짜 구분: 이야기 창의 맨 위와 날짜가 바뀌는 자리마다 '10월 27일 (화)' 한 줄. 지금 보기(전체·이곳·용언과 소식)에 보이는 말만 따져서 매김 ──
+  const DAY_KO = ['일', '월', '화', '수', '목', '금', '토'];
+  const dayKey = (at) => { const d = new Date(at); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; };
+  const dayLabel = (at) => { const d = new Date(at), now = new Date(); const y = d.getFullYear() !== now.getFullYear() ? `${d.getFullYear()}년 ` : ''; return `${y}${d.getMonth() + 1}월 ${d.getDate()}일 (${DAY_KO[d.getDay()]})`; };
+  function seenInView(el, view) {
+    if (view === 'shout') return el.matches('.msg.shout, .sys.wnews');
+    if (view === 'here') return !el.matches('.msg.shout, .sys.wnews');
+    return true;
+  }
+  function markDays() {
+    const log = $('log'); if (!log) return;
+    const view = log.dataset.view || 'all';
+    for (const s of log.querySelectorAll(':scope > .day-sep')) s.remove();
+    let prev = '';
+    for (const el of [...log.children]) {
+      if (!el.dataset.at || !seenInView(el, view)) continue;
+      const k = dayKey(Number(el.dataset.at));
+      if (k !== prev) {
+        { const s = document.createElement('div'); s.className = 'day-sep'; s.setAttribute('role', 'separator'); s.innerHTML = '<span></span>'; s.firstChild.textContent = dayLabel(Number(el.dataset.at)); el.before(s); }
+        prev = k;
+      }
+    }
   }
   // 이야기 창의 크기가 바뀌어도(화면 회전, 주소창, 창 크기) 맨 아래를 보고 있었다면 맨 아래에 붙여 둠. 글자가 위아래로 밀려 보이지 않게
   {
@@ -12060,8 +12084,10 @@
   const earlyOf = (hist, full) => { const r = regionalOf(hist); if (!full || !r.length) return []; const start = Math.min(...r.map((m) => m.at)); return hist.filter((m) => m.shout && m.at < start); };
   const byTime = (a, b) => a.at - b.at || a.id - b.id;
   // '용언과 소식'만 볼 때 위로 올리면: 지금 보이는 가장 오래된 용언·소식보다 앞선 것을 60개씩, 시간 순서 제자리에 끼워 넣음
-  let CHAT_SHOUT_OLDEST = 0, CHAT_SHOUT_END = false;
+  // 용언과 소식은 따로 셈: 소식이 용언보다 더 멀리까지 남아 있어도 그 사이 용언이 건너뛰어지지 않게
+  let CHAT_SHOUT_OLDEST = 0, CHAT_SHOUT_END = false, CHAT_S_OLD = 0, CHAT_N_OLD = 0, CHAT_S_END = false, CHAT_N_END = false;
   const shoutOldestOf = (hist) => hist.filter((m) => m.shout || m.news).reduce((a, m) => Math.min(a, m.id), Infinity);
+  const oldestKind = (hist, k) => { const v = hist.filter((m) => m[k]).reduce((a, m) => Math.min(a, m.id), Infinity); return Number.isFinite(v) ? v : 0; };
   // 지역 이야기도 용언·소식도 다 불러왔으면 '더 보기'를 끝 표시로 바꿈
   function chatEndCheck() {
     if (CHAT_OLDEST || !CHAT_SHOUT_END) return false;
@@ -12075,13 +12101,16 @@
     CHAT_LOADING = true;
     const log = $('log'), btn = log.querySelector('.log-older');
     if (btn) btn.textContent = '불러오는 중…';
-    socket.emit('chat:older', { before: CHAT_SHOUT_OLDEST, only: 'shout' }, (res) => {
+    socket.emit('chat:older', { before: CHAT_SHOUT_OLDEST, beforeShout: CHAT_S_OLD || 9e15, beforeNews: CHAT_N_OLD || 9e15, /* 첫 쪽에 소식이 하나도 없었으면 가장 최근 소식부터 */ shoutEnd: CHAT_S_END, newsEnd: CHAT_N_END, only: 'shout' }, (res) => {
       CHAT_LOADING = false;
       if (btn) btn.textContent = '지난 이야기 더 보기';
       if (res.error) return toast(res.error);
       const fresh = res.history.filter((m) => !(m.id && log.querySelector(`.ml[data-id="${m.id}"]`)));
       if (!res.history.length) { CHAT_SHOUT_END = true; if (!chatEndCheck()) toast('더 오래된 용언과 소식은 없다.'); return; }
       CHAT_SHOUT_OLDEST = Math.min(CHAT_SHOUT_OLDEST, shoutOldestOf(res.history));
+      const os = oldestKind(res.history, 'shout'), on = oldestKind(res.history, 'news');
+      if (os) CHAT_S_OLD = CHAT_S_OLD ? Math.min(CHAT_S_OLD, os) : os; else CHAT_S_END = true;
+      if (on) CHAT_N_OLD = CHAT_N_OLD ? Math.min(CHAT_N_OLD, on) : on; else CHAT_N_END = true;
       // 보던 자리 기억: 화면 맨 위에 걸친 칸
       const kids = [...log.children], anchor = kids.find((n) => n.offsetTop + n.offsetHeight > log.scrollTop);
       const anchorY = anchor ? anchor.offsetTop - log.scrollTop : 0;
@@ -12093,6 +12122,7 @@
         const after = [...log.children].find((c) => c.dataset.at && Number(c.dataset.at) > at); // 이보다 늦은 첫 칸 앞에
         log.insertBefore(n, after || null);
       }
+      markDays();
       if (anchor) log.scrollTop = anchor.offsetTop - anchorY;
     });
   }
@@ -12122,6 +12152,7 @@
       // 보던 자리를 그대로 두고 위에 끼워 넣음
       const first = btn ? btn.nextSibling : log.firstChild;
       for (const n of [...tmp.childNodes]) log.insertBefore(n, first);
+      markDays();
       log.scrollTop = oldTop + (log.scrollHeight - oldH);
       if (!(res.more && regionalOf(res.history).length)) CHAT_OLDEST = 0; // 지역 이야기는 여기까지
       if (btn) btn.textContent = '지난 이야기 더 보기';
@@ -12226,6 +12257,7 @@
     for (const x of $('chat-view').children) { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-selected', String(on)); }
     const log = $('log');
     log.dataset.view = b.dataset.v;
+    markDays(); // 보기마다 보이는 말이 달라 날짜 구분도 다시
     log.scrollTop = log.scrollHeight;
   });
   // 폰에서 이야기 창 접기·펴기. 접혀 있는 동안 들어온 남의 말은 버튼에 숫자로
@@ -12430,7 +12462,9 @@
       CHAT_PAGE = data.page || 60;
       const full = regionalOf(data.history).length >= CHAT_PAGE; // 지역 대화로 한 쪽을 다 채웠으면 더 있을 수 있음
       CHAT_EARLY = earlyOf(data.history, full);
+      markDays();
       CHAT_SHOUT_OLDEST = shoutOldestOf(data.history); CHAT_SHOUT_END = false;
+      CHAT_S_OLD = oldestKind(data.history, 'shout'); CHAT_N_OLD = oldestKind(data.history, 'news'); CHAT_S_END = false; CHAT_N_END = false;
       if (!Number.isFinite(CHAT_SHOUT_OLDEST)) CHAT_SHOUT_OLDEST = 0;
       if (data.history.length) $('log').prepend(olderBtn()); // 기록이 있으면 늘 '더 보기' (더 없는지는 불러와 보고 앎: 지역 대화가 적어도 용언·소식은 더 있을 수 있음)
       for (const m of data.history) addHistory(m); // 지역 대화 · 용언 · 대륙 소식

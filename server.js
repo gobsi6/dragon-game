@@ -59,9 +59,9 @@ const CHAT_COOLDOWN = 700;  // ms, 도배 방지
 const CHAT_MAX = 200;       // 글자 수
 // 용언: 지역과 관계없이 대륙의 모든 드래곤에게 닿는 말 (횟수 제한 없음, 도배 방지 간격만)
 const SHOUT_REGION = '*';   // 채팅 기록에서 용언을 담는 자리
-const SHOUT_HISTORY = 30;   // 지역에 들어갈 때 함께 보여 줄 지난 용언 수 (지역 대화가 많아도 최근 용언은 이만큼 늘 보이게)
+const SHOUT_HISTORY = 200;  // 지역에 들어갈 때 함께 보여 줄 지난 용언 수 (지역 대화가 많아도 최근 용언은 이만큼 늘 보이게. 예전 30 → 100 → 200)
 const NEWS_REGION = '!';    // 채팅 기록에서 대륙 소식(쓰러짐·구조·광폭화·부고)을 담는 자리
-const NEWS_HISTORY = 30;    // 지역에 들어갈 때 함께 보여 줄 지난 대륙 소식 수
+const NEWS_HISTORY = 100;   // 지역에 들어갈 때 함께 보여 줄 지난 대륙 소식 수 (예전 30 → 50 → 100)
 const HISTORY = 60;         // 지역에 들어갈 때 보여줄 지난 대화 수 (지난 이야기 더 보기도 한 번에 이만큼)
 const AVATAR_MAX = 400000;  // 프로필 그림 최대 크기 (base64 글자 수, 약 300KB)
 const AVATAR_COOLDOWN = 5000;
@@ -718,17 +718,20 @@ function chatPage(region, before) {
   const b = Number.isFinite(before) ? before : BIG_ID;
   const here = Number.isFinite(before) ? db.olderChat(region, b, HISTORY) : db.recentChat(region, HISTORY);
   const since = here.length >= HISTORY ? Math.min(...here.map((m) => m.at)) : null; // 이 쪽이 덮는 기간의 시작
-  const side = (rg, n) => (since != null ? db.chatSince(rg, b, since, 200) : db.olderChat(rg, b, n));
+  const side = (rg, n) => (since != null ? db.chatSince(rg, b, since, Math.max(200, n)) : db.olderChat(rg, b, n));
   // 첫 쪽에는 지역 대화가 덮는 기간보다 오래된 용언이라도 최근 SHOUT_HISTORY개는 함께 (활발한 지역에서 용언이 몇 개만 보이지 않게)
   let shouts = side(SHOUT_REGION, SHOUT_HISTORY);
   if (!Number.isFinite(before) && since != null && shouts.length < SHOUT_HISTORY) {
     const ids = new Set(shouts.map((m) => m.id));
     shouts = [...shouts, ...db.olderChat(SHOUT_REGION, BIG_ID, SHOUT_HISTORY).filter((m) => !ids.has(m.id))];
   }
+  let news = side(NEWS_REGION, NEWS_HISTORY);
+  // 첫 쪽: 용언이 더 남아 있으면 소식도 가장 오래된 용언 시각까지만 (소식만 더 멀리 이어져 '용언이 끊긴 것'처럼 보이지 않게. 그 앞은 위로 올려 함께 불러옴)
+  if (!Number.isFinite(before) && shouts.length >= SHOUT_HISTORY) { const sMin = Math.min(...shouts.map((m) => m.at)); news = news.filter((m) => m.at >= sMin); }
   return [
     ...here,
     ...shouts.map((m) => ({ ...m, shout: true })),
-    ...side(NEWS_REGION, NEWS_HISTORY).map((m) => ({ ...m, news: true })),
+    ...news.map((m) => ({ ...m, news: true })),
   ].sort((a, c) => a.at - c.at || a.id - c.id);
 }
 function enterWorld(socket, dragon) {
@@ -802,8 +805,11 @@ const wxTicker = setInterval(() => {
     if (prev.id !== w.id || prev.until !== w.until) changed = true;
     if (prev.id !== w.id) system(r, `하늘이 바뀌었다: ${WEATHERS[prev.id].name} → ${WEATHERS[w.id].name}. ${WEATHERS[w.id].desc}`);
   }
+  // 날씨가 바뀐 지역에 있는 드래곤은 행동 단추의 행동력(뇌우의 사냥 +1 등)을 새로 받음. 예전엔 다음 행동 전까지 옛 날씨의 값이 남아 있었음
+  const wxChanged = new Set(Object.entries(cur.regions).filter(([r, w]) => wxLast.regions[r]?.id !== w.id).map(([r]) => r));
   wxLast = cur;
   if (changed) io.emit('weather', cur);
+  if (wxChanged.size) for (const e of online.values()) if (e.dragon && wxChanged.has(e.dragon.region)) sendMe(e.socket, e.dragon);
 }, 20000);
 wxTicker.unref?.();
 
@@ -2299,7 +2305,9 @@ function onConnect(socket) {
     if (!(before > 0)) return ack({ error: '불러올 곳을 모르겠다.' });
     // '용언과 소식'만 볼 때: 그 아래 용언·소식만 거슬러 올라감 (지역 대화가 덮는 기간과 상관없이)
     if (p?.only === 'shout') {
-      const list = [...db.olderChat(SHOUT_REGION, before, 60).map((m) => ({ ...m, shout: true })), ...db.olderChat(NEWS_REGION, before, 30).map((m) => ({ ...m, news: true }))]
+      // 용언과 소식은 따로 거슬러 올라감 (하나의 기준으로 자르면, 더 멀리 남은 쪽에 맞춰 다른 쪽 사이가 빠졌음)
+      const bs = Number(p.beforeShout) || before, bn = Number(p.beforeNews) || before;
+      const list = [...(p.shoutEnd ? [] : db.olderChat(SHOUT_REGION, bs, 200).map((m) => ({ ...m, shout: true }))), ...(p.newsEnd ? [] : db.olderChat(NEWS_REGION, bn, 100).map((m) => ({ ...m, news: true })))]
         .sort((a, c) => a.at - c.at || a.id - c.id);
       return ack({ ok: true, history: withTitles(list), more: list.length > 0 });
     }
@@ -2326,6 +2334,7 @@ function onConnect(socket) {
     const cur = weatherAll();
     wxLast = cur;
     io.emit('weather', cur);
+    for (const e of online.values()) if (e.dragon && e.dragon.region === r) sendMe(e.socket, e.dragon); // 그 지역 드래곤의 행동력 표시도 새로
     ack({ ok: true, weather: cur, log: db.gmLogList(40) });
   });
 

@@ -3547,3 +3547,6 @@ html:has(dialog.dlg:modal), html:has(dialog.dlg:modal) body { overflow: hidden; 
   .profile.folded .nameplate .sub > :not(.lv) { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .profile.folded .pf-qbag { display: grid; place-items: center; grid-column: 4; grid-row: 1; width: 40px; height: 40px; padding: 0; border: 1px solid #9A9C98; border-radius: 3px; background: #FCFCFB; box-shadow: inset 0 0 0 2px #FCFCFB, inset 0 0 0 3px #E0E2DE; color: var(--steel-d); cursor: pointer; }
 }
+
+/* 이야기 창의 날짜 구분 */
+.day-sep { margin: 10px 4px 6px; text-align: center; font: 600 11.5px/1.4 var(--sans); color: var(--muted); } /* 양옆 선 없이 날짜 글자만 */
