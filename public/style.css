@@ -3550,3 +3550,5 @@ html:has(dialog.dlg:modal), html:has(dialog.dlg:modal) body { overflow: hidden; 
 
 /* 이야기 창의 날짜 구분 */
 .day-sep { margin: 10px 4px 6px; text-align: center; font: 600 11.5px/1.4 var(--sans); color: var(--muted); } /* 양옆 선 없이 날짜 글자만 */
+
+.inv-sub { margin: 2px 0 12px; } /* 소지품 장신구 탭의 부위 고르기 */

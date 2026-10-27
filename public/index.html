@@ -2690,6 +2690,7 @@
     gs.classList.toggle('open', gearSumOpen);
   }
   let INV_Q = ''; // 소지품 찾기 칸에 적은 것 (다시 그려도 남음)
+  let invSlot = 'all'; // 장신구 탭의 부위 (전체 · 머리 · 목 · 발톱 · 부적 · 날개 · 꼬리)
   // 찾기: 이름이 맞지 않는 물건 줄은 숨기고, 다 숨은 묶음은 제목도 숨김 (제작의 찾기와 같은 방식)
   function applyInvQ(box) {
     const q = INV_Q.trim().toLowerCase();
@@ -2754,6 +2755,7 @@
     const pw = invSort === 'power' ? invPower : invSort === 'value' ? (id) => S.items[id]?.value || 0 : null;
     const list = [...all, ...zeros]
       .filter(([id]) => invTab === 'all' || (invTab === 'fav' ? isFav(id) : itemCat(S.items[id]) === invTab))
+      .filter(([id]) => invTab !== 'equip' || invSlot === 'all' || S.items[id].slot === invSlot) // 장신구 탭: 부위별 소분류
       .sort(([a], [b]) => GORDER.indexOf(groupOf(a)) - GORDER.indexOf(groupOf(b))
         || isFav(b) - isFav(a)
         || (pw ? pw(b) - pw(a) : 0)
@@ -2814,6 +2816,26 @@
     iq.addEventListener('input', () => { INV_Q = iq.value; applyInvQ(box); });
     sb.append(iq, sbtn, smenu);
     box.appendChild(sb);
+    // 장신구 탭: 부위별 소분류 (만들기 창과 같은 모양). 가진 장신구 수를 함께
+    if (invTab === 'equip') {
+      const cnt = {};
+      for (const [id] of all) if (S.items[id].type === 'equip') cnt[S.items[id].slot] = (cnt[S.items[id].slot] || 0) + 1;
+      if (invSlot !== 'all' && !cnt[invSlot]) invSlot = 'all';
+      const sub = document.createElement('div');
+      sub.className = 'craft-sub inv-sub';
+      sub.setAttribute('role', 'group');
+      sub.setAttribute('aria-label', '장신구 부위');
+      for (const [k, label] of [['all', '전체'], ...S.slots.filter((sl) => cnt[sl.key]).map((sl) => [sl.key, sl.name])]) {
+        const bt = document.createElement('button');
+        bt.type = 'button';
+        bt.className = `subchip${invSlot === k ? ' on' : ''}`;
+        bt.setAttribute('aria-pressed', String(invSlot === k));
+        bt.textContent = k === 'all' ? label : `${label} ${cnt[k]}`;
+        bt.addEventListener('click', () => { invSlot = k; keepScroll($('inv-dlg'), renderInv); });
+        sub.appendChild(bt);
+      }
+      box.appendChild(sub);
+    }
     const buf = S.me.buff && S.me.buff.until > Date.now() ? S.buffs?.[S.me.buff.id] : null;
     if (buf) {
       const n = document.createElement('div');
