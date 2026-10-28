@@ -2071,14 +2071,14 @@ const RAIDBOSS = {
       region: 'ruin_plain', place: '검은 밀밭 한가운데', name: '이삭지기 모르벤',
       desc: '카르넴 왕실이 곡창 평원에 보낸 풍요의 마법사. 오백 년 동안 홀로 남아 아무도 없는 밭의 추수를 기다린다.',
       // 만렙 넷이 기믹을 하나도 놓치지 않으면 17턴쯤에 쓰러지는 체력 (허수아비·그림자에 쓰는 턴과 빗나감까지 셈해 시험으로 맞춤)
-      lv: 27, hp: 3200, lordShare: 0.25, atk: 50, def: 16, spd: 22, mag: 50, maj: 32, // maj: 포효로 노래를 끊는 판정의 기준 (만렙 평균 위엄 + 5쯤)
+      lv: 27, hp: 3200, lordShare: 0.25, atk: 63, def: 16, spd: 22, mag: 50, maj: 32, // maj: 포효로 노래를 끊는 판정의 기준 (만렙 평균 위엄 + 5쯤)
       lord:   { name: '허수아비 군주', type: 'construct', weak: ['fire', 'poison'], resist: ['earth'] },
       boss:   { name: '이삭지기 모르벤', short: '모르벤', type: 'human', weak: ['spirit', 'lightning'], resist: ['poison'] },
       shadow: { name: '모르벤의 그림자', type: 'spirit', weak: ['spirit', 'fire'], resist: ['poison', 'ice'], atk: 0.8 },
       crow:   { name: '검은 허수아비', type: 'construct', weak: ['fire', 'poison'], resist: ['earth'], atk: 0.5, def: 0.6, sides: ['왼편', '오른편'] },
       gaze:  { every: 3, power: 3.5 },                    // 1단계: 세 턴마다 '고개 돌리기' (예고 다음 턴에 한 드래곤에게 낫질 ×3.5)
       fire:  { per: 0.04, max: 3 },                       // 불 숨결로 허수아비를 치면 밀밭에 불길 (단계마다 턴 끝에 최대 체력의 4%). 얼음·물 숨결이 한 단계씩 끔
-      song:  { every: 4, pct: 0.3, cut: 0.5 },            // 2단계: 네 턴마다 '추수의 노래' (모두 최대 체력의 30%, 포효로 끊으면 그 절반)
+      song:  { every: 4, pct: 0.36, cut: 0.5 },           // 2단계: 네 턴마다 '추수의 노래' (모두 최대 체력의 36%, 포효로 끊으면 그 절반)
       ears:  { every: 2, n: 2, max: 3, mind: 8, cleanseWis: 15 }, // 2단계부터 두 턴마다 두 드래곤에게 검은 이삭. 3개면 거두어짐 (한 턴 행동 불가, 정신 −8). 치유 한 번에 1 + 지혜 15마다 1개씩 씻음
       summon: { at: [2, 7, 12], n: 2, hp: 0.06, shield: 0.5 }, // 2단계의 이 턴마다 허수아비 둘 (하나당 모르벤 체력의 6%). 서 있는 동안 모르벤이 받는 피해 절반
       split: { below: 0.3, floor: 0.15, window: 2, revive: 0.7 }, // 체력 30% 아래로 떨어지면 그림자와 갈라짐 (갈라질 때 둘 다 최소 15%). 하나가 쓰러지고 2턴 안에 나머지를 못 쓰러뜨리면 70%로 되살아남
@@ -2101,13 +2101,13 @@ const RAIDBOSS = {
       region: 'ruin_capital', place: '무너진 성문 앞', name: '마지막 기사단장 헤이른',
       desc: '카르넴 기사단의 마지막 단장. 왕이 "문을 열지 마라"는 말을 남기고 들어간 뒤로, 오백 년 동안 대열을 풀지 않았다.',
       // 모르벤보다 한 단계 위 (성문 사냥터가 Lv.25·26). 실제 수치는 시험으로 다시 맞춤
-      lv: 28, hp: 4000, knightShare: 0.08, atk: 56, def: 18, spd: 24, mag: 46, maj: 34,
+      lv: 28, hp: 4000, knightShare: 0.08, atk: 70, def: 18, spd: 24, mag: 46, maj: 34,
       knight: { name: '카르넴 기사', type: 'human', weak: ['lightning', 'spirit'], resist: ['earth'], atk: 0.45, def: 1.1, names: ['왼쪽 방패 기사', '오른쪽 방패 기사', '창 기사', '늙은 기사'] },
       boss:   { name: '마지막 기사단장 헤이른', short: '헤이른', type: 'human', weak: ['lightning', 'spirit'], resist: ['earth', 'poison'] },
       banner: { name: '기사단 깃발', type: 'construct', weak: [], resist: [], def: 0.5, spd: 1, hp: 0.08, taken: 0.6, regen: 0.025, back: 4, only: ['dive', 'gust'] }, // 헤이른 체력의 8%. 서 있는 동안 헤이른 받는 피해 ×0.6, 턴마다 2% 회복. 꺾이면 4턴 뒤 다시
       wall:   { every: 2, front: 0.3, broken: 1.5 },        // 1단계: 두 턴마다 방패벽 (정면 ×0.3). 우회·땅울림으로 깨면 그 턴 남은 공격 ×1.5
       flank:  { wing: 25, power: 0.8 },                     // 우회: 50% + (날개 − 25) × 4% (20~95%). 방패벽이 아닌 턴에는 ×0.8 공격
-      charge: { every: 4, n: 2, power: 3.5 },                 // 2·3단계: 네 턴마다 두 드래곤에게 돌격 ×3 (날개 돌풍으로 피함, 막아서기 가능)
+      charge: { every: 4, n: 2, power: 3.5 },                 // 2·3단계: 네 턴마다 두 드래곤에게 돌격 ×3.5 (날개 돌풍으로 피함, 막아서기 가능)
       duel:   { below: 0.4, every: 5, turns: 3, heal: 0.1, after: 1.5, afterTurns: 3, punish: 1.5 }, // 3단계(40% 아래): 다섯 턴마다 3턴 일기토. 버티면 헤이른 ×1.5 (3턴), 지목된 드래곤이 쓰러지면 헤이른 10% 회복, 끼어들면 ×1.5 반격
       reward: { gold: [280, 450], shard: 'heiron_crest', shards: 2, firstShard: 5, purifyShard: 15, purify: 50, journal: 'knight_logbook', journalChance: 0.2, keepsake: 'knight_banner', fame: 3 },
       intro: '무너진 성문 앞, 녹슨 갑옷들이 한 치도 흐트러지지 않은 채 줄지어 서 있다. 가장 앞에 선 기사가 투구 너머로 낮게 말한다. "물러가라. 이 문은 열리지 않는다."',
