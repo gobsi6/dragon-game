@@ -1484,6 +1484,83 @@ function unequip(d, slot) {
   return { ok: true, items };
 }
 
+// ── 장비 프리셋: 장신구 여섯 자리 + 칭호를 이름 붙여 저장해 두고 한 번에 갈아입음 (combat JSON의 presets, 5칸) ──
+const PRESET_N = 5;
+function presetsOf(d) {
+  const c = combatJson(d);
+  if (!Array.isArray(c.presets)) c.presets = [];
+  while (c.presets.length < PRESET_N) c.presets.push(null);
+  c.presets.length = PRESET_N;
+  return c.presets;
+}
+const presetName = (v, i) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, 12) : '') || `프리셋 ${i + 1}`;
+// 지금 차림과 같은지 (강화한 것을 찼는지 보통 것을 찼는지까지)
+function presetSame(d, p) {
+  const eq = equipOf(d), g = gearOf(d);
+  for (const sl of SLOTS) {
+    const want = p.eq[sl.key] || null, cur = eq[sl.key] || null;
+    if (want !== cur) return false;
+    if (cur && g[cur] && (gearAt(d, cur) !== 'eq') !== !!p.plain?.[sl.key]) return false;
+  }
+  return (p.title || null) === (titlesOf(d).on || null);
+}
+function presetsView(d) {
+  return presetsOf(d).map((p, i) => (p ? {
+    i, name: p.name, title: p.title ? TITLE_BY_ID[p.title]?.name || '' : '',
+    eq: { ...p.eq }, active: presetSame(d, p),
+  } : null));
+}
+function presetSave(d, i, name) {
+  const ps = presetsOf(d);
+  if (!Number.isInteger(i) || i < 0 || i >= PRESET_N) return { error: '없는 칸이다.' };
+  const eq = equipOf(d), g = gearOf(d);
+  const plain = {};
+  for (const [slot, id] of Object.entries(eq)) if (g[id] && gearAt(d, id) !== 'eq') plain[slot] = true; // 강화한 것이 있는데 보통 것을 찼음
+  ps[i] = { name: presetName(name ?? ps[i]?.name, i), eq: { ...eq }, plain, title: titlesOf(d).on || null };
+  return { ok: true, lines: [`지금 차림을 '${ps[i].name}'에 담아 두었다.`] };
+}
+function presetRename(d, i, name) {
+  const ps = presetsOf(d);
+  if (!ps[i]) return { error: '비어 있는 칸이다.' };
+  ps[i].name = presetName(name, i);
+  return { ok: true, lines: [`'${ps[i].name}'${josa(ps[i].name, '으로', '로')} 이름을 바꿨다.`] };
+}
+function presetClear(d, i) {
+  const ps = presetsOf(d);
+  if (!ps[i]) return { error: '비어 있는 칸이다.' };
+  const n = ps[i].name;
+  ps[i] = null;
+  return { ok: true, lines: [`'${n}'${josa(n, '을', '를')} 비웠다.`] };
+}
+// 갈아입기: 자리마다 차례로 벗고 참. 가진 것이 없으면 그 자리는 그대로 두고 알림
+function presetUse(d, i, have) {
+  if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
+  const p = presetsOf(d)[i];
+  if (!p) return { error: '비어 있는 칸이다.' };
+  const delta = {};
+  const haveNow = (id) => have(id) + (delta[id] || 0);
+  const items = [], miss = [];
+  const add = (list) => { for (const x of list || []) { items.push(x); delta[x.id] = (delta[x.id] || 0) + x.qty; } };
+  const eq = equipOf(d), g = gearOf(d);
+  for (const sl of SLOTS) {
+    const want = p.eq[sl.key] || null, cur = eq[sl.key] || null;
+    const wantPlain = !!p.plain?.[sl.key];
+    if (!want) { if (cur) add(unequip(d, sl.key).items); continue; }
+    if (want === cur && !(g[cur] && (gearAt(d, cur) !== 'eq') !== wantPlain)) continue; // 이미 그대로
+    if (!ITEMS[want] || (want !== cur && haveNow(want) < 1)) { miss.push(ITEMS[want]?.name || '사라진 장신구'); continue; }
+    const r = equip(d, want, haveNow, wantPlain);
+    if (r.error) miss.push(ITEMS[want].name);
+    else add(r.items);
+  }
+  const t = titlesOf(d);
+  if (p.title && t.have.includes(p.title)) t.on = p.title;
+  else if (!p.title) t.on = null;
+  clampVitals(d);
+  const lines = [`'${p.name}' 차림으로 갈아입었다.`];
+  if (miss.length) lines.push(`${miss.join(', ')}${josa(miss[miss.length - 1], '은', '는')} 가지고 있지 않아 그 자리는 그대로 두었다.`);
+  return { ok: true, items, lines };
+}
+
 // ── 인간 마을: 평판 ────────────────────────────────
 function repOf(d) {
   if (typeof d.rep === 'string') {
@@ -2348,6 +2425,7 @@ module.exports = {
   regen, gather, explore, fishCast, fishReel, startExpedition, finishExpedition, chooseFork, forkView, expInfo,
   craft, experiment, freeCraft, enhanceGear, engraveGear, tidyGear, tidyHoardGear, engraveOf, gearOf, greatChance, craftView, ordersView, fillOrder, buildForge, atForge,
   useItem, equip, unequip, statsOf, bonusOf, hpCap, enCap, apCap, equipOf, buffOf, giveBuff,
+  presetsView, presetSave, presetRename, presetClear, presetUse, // 장비 프리셋
   repOf, setStance, marketInfo, buy, sell, intimidate,
   buildNest, flyHome, startRest, stopRest, hoardMove, hoardValue,
   actionCost, townArrows, festivalNow, hasBounty, addRep, addFame, craftEn, gainXp, spendStats,

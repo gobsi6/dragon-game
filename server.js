@@ -480,6 +480,7 @@ const meOf = (d) => ({
   bio: bioOf(d),
   statBonus: logic.bonusOf(d).stats,       // 그중 장신구 몫
   equip: logic.equipOf(d),
+  presets: logic.presetsView(d),            // 장비 프리셋 (장신구 + 칭호, 5칸)
   stance: d.stance, stanceName: STANCES[d.stance] || '',
   apAt: d.ap_at,
   enAt: d.en_at,
@@ -1991,6 +1992,11 @@ function onConnect(socket) {
   });
   itemAction('equip', (d, p, have) => logic.equip(d, str(p.item), have, p.plain === true)); // plain: 강화되지 않은 보통 것을 참
   itemAction('unequip', (d, p) => logic.unequip(d, str(p.slot)));
+  // 장비 프리셋: 담기 · 이름 바꾸기 · 비우기 · 갈아입기
+  itemAction('preset:save', (d, p) => logic.presetSave(d, Number(p.i), p.name == null ? null : str(p.name)));
+  itemAction('preset:rename', (d, p) => logic.presetRename(d, Number(p.i), str(p.name)));
+  itemAction('preset:clear', (d, p) => logic.presetClear(d, Number(p.i)));
+  itemAction('preset:use', (d, p, have) => logic.presetUse(d, Number(p.i), have), (d) => broadcastPresence(d.region)); // 칭호가 바뀌면 이곳의 드래곤 목록도
 
   // ── 인간 마을 ──
   itemAction('stance:set', (d, p) => logic.setStance(d, str(p.stance)));

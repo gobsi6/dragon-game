@@ -3604,3 +3604,34 @@ html:has(dialog.dlg:modal), html:has(dialog.dlg:modal) body { overflow: hidden; 
 .bt-log p.heal { color: #3A6B50; }
 .bt-log p.good { color: var(--steel-d); font-weight: 600; }
 .bt-log p.muted { color: #6E7378; }
+/* 장비 프리셋: 착용 칸 위 다섯 칸. 지금 차림과 같은 칸은 강철빛 테두리. 편집 때는 이름 칸 + 다시 담기·비우기 */
+.preset-bar { display: flex; align-items: flex-start; gap: 6px; margin-bottom: 6px; }
+.preset-bar .pr-row { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
+.pr-chip { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 5px 8px 6px; text-align: left; background: #fff; border: 1px solid var(--line-in); border-radius: 3px; cursor: pointer; font: inherit; color: var(--ink); }
+.pr-chip:hover:not(:disabled) { border-color: var(--steel); }
+.pr-chip:disabled { opacity: .55; cursor: default; }
+.pr-chip b { max-width: 100%; font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pr-chip small { max-width: 100%; font-size: 10.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pr-chip.empty { background: transparent; border-style: dashed; }
+.pr-chip.empty b { font-weight: 500; color: var(--ink-2); }
+.pr-chip.on { border-color: var(--steel-d); box-shadow: inset 0 0 0 1px var(--steel-d); }
+.pr-chip.on small { color: var(--steel-d); font-weight: 600; }
+.pr-chip.edit { cursor: default; gap: 4px; }
+.pr-chip.edit .input { width: 100%; min-height: 26px; padding: 0 6px; font-size: 12px; }
+.pr-chip .pr-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.pr-chip .pr-acts .link, .preset-bar .pr-edit { font-size: 11px; }
+.preset-bar .pr-edit { flex: none; align-self: center; padding: 0 2px; }
+@media (max-width: 620px) {
+  .preset-bar { flex-direction: column; align-items: stretch; }
+  .preset-bar .pr-row { gap: 4px; grid-template-columns: repeat(3, minmax(0, 1fr)); } /* 폰: 세 칸씩 두 줄 (이름이 잘리지 않게) */
+  .pr-chip { padding: 4px 5px 5px; }
+  .pr-chip b { font-size: 11.5px; }
+  .pr-chip small { font-size: 9.5px; }
+  .preset-bar .pr-edit { align-self: flex-end; }
+}
+.pr-chip .pr-acts .link, .preset-bar .pr-edit { padding: 0; background: none; border: 0; color: var(--steel-d); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; font-family: inherit; }
+.preset-bar .pr-row.list { grid-template-columns: minmax(0, 1fr); }
+.pr-row.list .pr-chip { flex-direction: row; align-items: center; gap: 10px; }
+.pr-row.list .pr-chip.edit .input { flex: 1 1 0; min-width: 0; width: auto; max-width: 220px; }
+.pr-row.list .pr-chip.empty small { margin-left: auto; }
+.pr-row.list .pr-chip .pr-acts { flex: none; margin-left: auto; gap: 12px; }
