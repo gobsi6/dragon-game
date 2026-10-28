@@ -2071,7 +2071,7 @@ const RAIDBOSS = {
       region: 'ruin_plain', place: '검은 밀밭 한가운데', name: '이삭지기 모르벤',
       desc: '카르넴 왕실이 곡창 평원에 보낸 풍요의 마법사. 오백 년 동안 홀로 남아 아무도 없는 밭의 추수를 기다린다.',
       // 만렙 넷이 기믹을 하나도 놓치지 않으면 17턴쯤에 쓰러지는 체력 (허수아비·그림자에 쓰는 턴과 빗나감까지 셈해 시험으로 맞춤)
-      lv: 27, hp: 3200, lordShare: 0.25, atk: 63, def: 16, spd: 22, mag: 50, maj: 32, // maj: 포효로 노래를 끊는 판정의 기준 (만렙 평균 위엄 + 5쯤)
+      lv: 27, hp: 3700, lordShare: 0.25, atk: 63, def: 16, spd: 22, mag: 50, maj: 32, // maj: 포효로 노래를 끊는 판정의 기준 (만렙 평균 위엄 + 5쯤)
       lord:   { name: '허수아비 군주', type: 'construct', weak: ['fire', 'poison'], resist: ['earth'] },
       boss:   { name: '이삭지기 모르벤', short: '모르벤', type: 'human', weak: ['spirit', 'lightning'], resist: ['poison'] },
       shadow: { name: '모르벤의 그림자', type: 'spirit', weak: ['spirit', 'fire'], resist: ['poison', 'ice'], atk: 0.8 },
@@ -2101,7 +2101,7 @@ const RAIDBOSS = {
       region: 'ruin_capital', place: '무너진 성문 앞', name: '마지막 기사단장 헤이른',
       desc: '카르넴 기사단의 마지막 단장. 왕이 "문을 열지 마라"는 말을 남기고 들어간 뒤로, 오백 년 동안 대열을 풀지 않았다.',
       // 모르벤보다 한 단계 위 (성문 사냥터가 Lv.25·26). 실제 수치는 시험으로 다시 맞춤
-      lv: 28, hp: 4000, knightShare: 0.08, atk: 70, def: 18, spd: 24, mag: 46, maj: 34,
+      lv: 28, hp: 4600, knightShare: 0.08, atk: 70, def: 18, spd: 24, mag: 46, maj: 34,
       knight: { name: '카르넴 기사', type: 'human', weak: ['lightning', 'spirit'], resist: ['earth'], atk: 0.45, def: 1.1, names: ['왼쪽 방패 기사', '오른쪽 방패 기사', '창 기사', '늙은 기사'] },
       boss:   { name: '마지막 기사단장 헤이른', short: '헤이른', type: 'human', weak: ['lightning', 'spirit'], resist: ['earth', 'poison'] },
       banner: { name: '기사단 깃발', type: 'construct', weak: [], resist: [], def: 0.5, spd: 1, hp: 0.08, taken: 0.6, regen: 0.025, back: 4, only: ['dive', 'gust'] }, // 헤이른 체력의 8%. 서 있는 동안 헤이른 받는 피해 ×0.6, 턴마다 2% 회복. 꺾이면 4턴 뒤 다시
