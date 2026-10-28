@@ -13338,9 +13338,21 @@
   // (예전에는 renderMazeDlg가 그릴 때마다 붙여서, 누를 때마다 처리기가 두 배로 늘어나 빠르게 누르면 멈췄음)
   $('maze-dlg-body').addEventListener('click', (e) => {
     if (!MZ.dlgView) return;
-    const pil = e.target.closest('.rm-pin[data-pil]'); // 찾아 둔 기둥: 누르면 상태를 보여 줌 (시작 점은 아님)
+    // 지도 점이 겹쳐 있어도 누른 자리에서 가장 가까운 점이 눌리게 (맨 위에 그려진 점이 아니라)
+    let near = null;
+    const map = e.target.closest('.rm-pickmap');
+    if (map && e.detail > 0) { // 마우스·손가락으로 누름 (키보드로 누르면 그 단추 그대로)
+      let best = 24 * 24;
+      for (const b of map.querySelectorAll('.rm-pin[data-key], .rm-pin[data-pil]')) {
+        const r = b.getBoundingClientRect();
+        const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2), d2 = dx * dx + dy * dy;
+        if (d2 < best) { best = d2; near = b; }
+      }
+    }
+    const hit = near || e.target;
+    const pil = hit.closest('.rm-pin[data-pil]'); // 찾아 둔 기둥: 누르면 상태를 보여 줌 (시작 점은 아님)
     if (pil) { MZ.pil = MZ.pil === +pil.dataset.pil ? null : +pil.dataset.pil; renderMazeDlg(); return; }
-    const pin = e.target.closest('.rm-pin[data-key]'); // 표식 표시(data-key 없음)는 고를 수 없는 점
+    const pin = hit.closest('.rm-pin[data-key]'); // 표식 표시(data-key 없음)는 고를 수 없는 점
     if (pin) { if (MZ.pick !== pin.dataset.key) { MZ.pick = pin.dataset.key; renderMazeDlg(); } return; }
     const st = e.target.closest('.rm-step[data-fi]');
     if (st && st.tagName === 'BUTTON' && !MZ.dlgLoading && +st.dataset.fi !== MZ.dlgView.fi) {
