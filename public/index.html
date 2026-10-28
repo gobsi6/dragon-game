@@ -10643,6 +10643,7 @@
       it.innerHTML = '<span class="k">다음 턴</span><div><b></b><small></small></div>';
       it.querySelector('b').textContent = v.intent.text;
       it.querySelector('small').textContent = v.intent.hint;
+      it.querySelector('small').hidden = !v.intent.hint; // 레이드는 풀이 없이 예고 문장만
       // 무리: 같은 일을 하려는 적은 이름을 묶어 한 줄로 ("회색 늑대, 굶주린 회색 늑대가 … 기세다!")
       if (v.foes && v.foes.length > 1) {
         const groups = new Map();
@@ -10702,16 +10703,14 @@
           const def = sk.id === 'breath' ? S.combat.breaths[S.me.kind] : S.combat.skills[sk.id];
           const cb = !why && sk.combo;
           const healPal = sk.id === 'mend' && pal && !pal.left;
-          const reap = healPal && (pal.tags || []).some((g) => g.t === '수확 예고');
-          add(sk.name, why || (healPal ? (pal.down ? `${pal.name} 일으키기` : reap ? `${pal.name} 이삭 씻기` : `${pal.name}에게`) : cb ? `연계! ${sk.combo}` : `기력 ${sk.en}`), { type: 'skill', id: sk.id }, { disabled: !!why, title: [def?.desc, ...comboHints(sk.id)].filter(Boolean).join('\n'), combo: !!cb && !healPal, suggest: !!reap });
+          add(sk.name, why || (healPal ? (pal.down ? `${pal.name} 일으키기` : `${pal.name}에게`) : cb ? `연계! ${sk.combo}` : `기력 ${sk.en}`), { type: 'skill', id: sk.id }, { disabled: !!why, title: [def?.desc, ...comboHints(sk.id)].filter(Boolean).join('\n'), combo: !!cb && !healPal });
         }
         const bigHit = v.intent && ['heavy', 'multi', 'debuff'].includes(v.intent.kind);
         add('방어', v.kind === 'raid' ? '피해 절반, 기력 +3' : bigHit ? '특기 피해 ¼ · 반격' : '피해 절반, 기력 +3', { type: 'guard' }, { suggest: bigHit && v.kind !== 'raid' });
         if (v.kind === 'raid') {
           const coverOk = pal && !pal.down && !pal.left;
-          const gazeOn = v.intent?.kind === 'heavy' && pal && v.intent.text.includes(pal.name);
-          add('막아서기', coverOk ? `${pal.name} 대신 맞는다` : '동료 카드를 먼저 고른다', { type: 'cover' }, { disabled: !coverOk, suggest: !!gazeOn });
-          if (v.script === 'knights') add('우회', '날개로 대열 옆을 찌른다', { type: 'flank' }, { suggest: (v.foes || [v.foe]).some((f) => (f.tags || []).some((g) => g.t === '방패벽')) || /대열을 세워라/.test(v.intent?.text || '') });
+          add('막아서기', coverOk ? `${pal.name} 대신 맞는다` : '동료 카드를 먼저 고른다', { type: 'cover' }, { disabled: !coverOk });
+          if (v.script === 'knights') add('우회', '날개로 대열 옆을 찌른다', { type: 'flank' });
         }
         add(v.kind === 'duel' ? '항복' : '물러나기', v.kind === 'duel' ? '결투를 포기한다' : v.kind === 'raid' ? '이번 레이드의 몫 없이 빠진다' : v.boss ? '입힌 피해는 남는다' : v.foes ? '쓰러뜨린 만큼만 얻는다' : '전리품 없이 피한다', { type: 'flee' });
         // 사냥: 나머지는 예전처럼 알아서 (기력을 조금 남기고, 체력이 낮아지면 물러남)
@@ -10726,7 +10725,7 @@
           // 자동 버튼이 없는 싸움: 왜 없는지 작게 알려 줌
           const note = document.createElement('p');
           note.className = 'bt-note';
-          note.textContent = v.kind === 'raid' ? (v.duelOn && v.duelOn !== v.me.id ? '일기토 중이다. 헤이른을 치면 기사도를 어긴 것이 된다. 치유와 막아서기는 괜찮다.' : '동료 카드를 누르면 치유하거나 막아설 대상으로 고른다.') : v.boss ? '재앙은 자동으로 맡길 수 없다.' : v.kind === 'calm' ? '폭주한 드래곤은 자동으로 맡길 수 없다.' : '강적은 자동으로 맡길 수 없다.';
+          note.textContent = v.kind === 'raid' ? '동료 카드를 누르면 치유하거나 막아설 대상으로 고른다.' : v.boss ? '재앙은 자동으로 맡길 수 없다.' : v.kind === 'calm' ? '폭주한 드래곤은 자동으로 맡길 수 없다.' : '강적은 자동으로 맡길 수 없다.';
           acts.appendChild(note);
         }
       }
@@ -13091,7 +13090,9 @@
     const sub = [];
     if (lb) {
       const left = Math.max(1, Math.ceil((lb.until - Date.now()) / 60000));
-      sub.push(`모집 중 ${lb.ids.length}/${V.size} (${lb.names.join(', ')}) · ${left}분 남음`);
+      const full = lb.ids.length >= V.size;
+      const names = lb.names.map((n, i) => (full && lb.ready.includes(lb.ids[i]) ? `${n} ✓` : n)).join(', ');
+      sub.push(full ? `준비 ${lb.ready.length}/${V.size} (${names}) · ${left}분 남음` : `모집 중 ${lb.ids.length}/${V.size} (${names}) · ${left}분 남음`);
     } else sub.push(`${V.size}인 레이드 · Lv.${V.minLevel} 이상`);
     if (R.fighting) sub.push(`지금 ${R.fighting}팀이 싸우는 중`);
     sub.push(used >= V.weekly ? `이번 주 보상 ${used}/${V.weekly} (도우러만 갈 수 있음)` : `이번 주 보상 ${used}/${V.weekly}`);
@@ -13116,7 +13117,11 @@
     if (!lb) btn('함께 갈 드래곤 찾기', 'raidboss:open', { primary: true, disabled: low || !!me.battle, title: low ? `레벨 ${V.minLevel}부터 함께할 수 있다.` : '' });
     else if (!mine) btn(`함께 가기 ${lb.ids.length}/${V.size}`, 'raidboss:join', { primary: true, disabled: low || lb.ids.length >= V.size || !!me.battle, title: low ? `레벨 ${V.minLevel}부터 함께할 수 있다.` : '' });
     else {
-      if (lead) btn('들어가기', 'raidboss:start', { primary: true, disabled: lb.ids.length < V.size && !S.isGm, title: lb.ids.length < V.size ? (S.isGm ? `GM 시험: 지금 들어가면 보상 없이 ${lb.ids.length}마리로 싸운다.` : `${V.size}마리가 모이면 들어갈 수 있다.`) : '' });
+      // 넷이 다 차면 저마다 '준비'. 넷 모두 준비하면 바로 들어감. GM은 모자란 채로 시험 입장 가능
+      if (lb.ids.length >= V.size) {
+        const rd = lb.ready.includes(me.id);
+        btn(rd ? '준비 취소' : '준비', 'raidboss:ready', { primary: !rd, title: rd ? '모두 준비하면 바로 들어간다.' : '' });
+      } else if (lead && lb.gm) btn('시험 입장', 'raidboss:start', { primary: true, title: `GM 시험: 지금 들어가면 보상 없이 ${lb.ids.length}마리로 싸운다.` });
       btn(lead && lb.ids.length === 1 ? '모집 닫기' : '빠지기', 'raidboss:leave');
     }
   }

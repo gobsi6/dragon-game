@@ -65,7 +65,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
         const lb = lobbies.get(key);
         return {
           key, name: B.name, region: B.region, place: B.place, open: isOpen(B.region), script: B.script || 'morven',
-          lobby: lb ? { leader: lb.leader, ids: lb.ids.slice(), names: lb.ids.map((id) => load(id)?.name || ''), until: lb.until } : null,
+          lobby: lb ? { leader: lb.leader, ids: lb.ids.slice(), names: lb.ids.map((id) => load(id)?.name || ''), until: lb.until, ready: lb.ready.slice(), gm: !!lb.gm } : null,
           fighting: [...fights.values()].filter((f) => f.key === key && !f.over).length,
           best: st.best[key] ? { turns: st.best[key].turns, names: st.best[key].names } : null,
           first: !!st.first[key],
@@ -113,7 +113,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     if (lobbies.has(key)) return { error: '이미 누군가 모집하고 있다. 함께 가기를 눌러 합류하자.' };
     if (lobbyOf(d.id)) return { error: '이미 다른 모집에 들어가 있다.' };
     const B = R.bosses[key];
-    const lb = { key, leader: d.id, ids: [d.id], until: Date.now() + R.recruitMs, gm: !!gm };
+    const lb = { key, leader: d.id, ids: [d.id], until: Date.now() + R.recruitMs, gm: !!gm, ready: [] }; // ready: 준비를 누른 드래곤 (넷이 다 차야 누를 수 있고, 넷 모두 누르면 들어감)
     if (relaxOf(lb)) { lb.timer = null; lobbies.set(key, lb); push(); return { ok: true }; } // 닫힌 레이드의 GM 시험은 알리지 않음
     lb.timer = setTimeout(() => { if (lobbies.get(key) === lb) closeLobby(lb, `${R.size}마리가 모이지 않아 ${B.place} 모집이 닫혔다.`); }, R.recruitMs);
     lb.timer.unref?.();
@@ -131,6 +131,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     const w = why(d, key, relaxOf(lb));
     if (w) return { error: w };
     lb.ids.push(d.id);
+    lb.ready = []; // 사람이 바뀌면 준비는 처음부터
     for (const id of lb.ids) if (id !== d.id) emitTo(id, 'system', { text: `[레이드] ${ga(d.name)} 함께하기로 했다. (${lb.ids.length}/${R.size})`, at: Date.now() });
     push();
     return { ok: true };
@@ -139,17 +140,35 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     const lb = lobbyOf(d.id);
     if (!lb) return { error: '모집에 들어가 있지 않다.' };
     lb.ids = lb.ids.filter((id) => id !== d.id);
+    lb.ready = [];
     if (!lb.ids.length) { closeLobby(lb, null); return { ok: true }; }
     if (lb.leader === d.id) lb.leader = lb.ids[0];
     for (const id of lb.ids) emitTo(id, 'system', { text: `[레이드] ${ga(d.name)} 빠졌다. (${lb.ids.length}/${R.size})`, at: Date.now() });
     push();
     return { ok: true };
   }
+  // GM 시험: 모집한 GM이 인원이 덜 차도 바로 들어감
   function startLobby(d, key) {
     const lb = lobbies.get(key);
     if (!lb || !lb.ids.includes(d.id)) return { error: '모집에 들어가 있지 않다.' };
-    if (lb.leader !== d.id) return { error: '모집한 드래곤만 들어갈 수 있다.' };
-    if (lb.ids.length < R.size && !lb.gm) return { error: `${R.size}마리가 모여야 들어갈 수 있다. (지금 ${lb.ids.length}마리)` };
+    if (!lb.gm || lb.leader !== d.id) return { error: `${R.size}마리가 모두 준비를 누르면 들어간다.` };
+    return launch(lb);
+  }
+  // 준비: 넷이 다 찬 뒤에 저마다 누름. 넷 모두 누르면 바로 들어감 (다시 누르면 준비 취소)
+  function readyLobby(d, key) {
+    const lb = lobbies.get(key);
+    if (!lb || !lb.ids.includes(d.id)) return { error: '모집에 들어가 있지 않다.' };
+    if (lb.ids.length < R.size) return { error: `${R.size}마리가 모이면 준비할 수 있다. (지금 ${lb.ids.length}마리)` };
+    const on = !lb.ready.includes(d.id);
+    lb.ready = on ? [...lb.ready, d.id] : lb.ready.filter((id) => id !== d.id);
+    const text = `[레이드] ${ga(d.name)} ${on ? '준비를 마쳤다' : '준비를 거두었다'}. (준비 ${lb.ready.length}/${R.size})`;
+    for (const id of lb.ids) emitTo(id, 'system', { text, at: Date.now() });
+    if (lb.ready.length >= R.size && lb.ids.every((id) => lb.ready.includes(id))) return launch(lb);
+    push();
+    return { ok: true };
+  }
+  function launch(lb) {
+    const key = lb.key;
     // 들어가기 직전에 모두 다시 살핌. 안 되는 드래곤은 빼고 알림
     const out = [];
     for (const id of lb.ids) {
@@ -159,6 +178,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     }
     if (out.length) {
       lb.ids = lb.ids.filter((id) => !out.some((o) => o.id === id));
+      lb.ready = [];
       if (!lb.ids.includes(lb.leader)) lb.leader = lb.ids[0];
       const text = `[레이드] 들어가지 못했다. ${out.map((o) => `${o.name}: ${o.w}`).join(' · ')}`;
       for (const id of [...lb.ids, ...out.map((o) => o.id)]) emitTo(id, 'system', { text, at: Date.now() });
@@ -264,24 +284,24 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     const hv = (fg.harvest || []).filter((h) => h.at === fg.turn + 1).map((h) => fg.players.find((p) => p.id === h.on)).filter((p) => p && alive(p));
     if (!hv.length) return r;
     const names = hv.map((p) => p.name).join(', ');
-    return { kind: 'heavy', text: `${ga(fg.B.boss.short)} 낫 끝을 ${names} 쪽으로 돌린다. 다 여문 이삭을 거둘 때다.`, hint: `다음 턴 ${names}${josa(hv[hv.length - 1].name, '이', '가')} 수확당한다(즉사). 치유로 이삭을 씻어 내야 한다. 막아서기로는 막을 수 없다.${r.kind === 'heavy' ? ` 그리고 ${r.text}` : ''}` };
+    return { kind: 'heavy', text: `${ga(fg.B.boss.short)} 낫 끝을 ${names} 쪽으로 돌린다. 다 여문 이삭을 거둘 때다.`, hint: r.kind === 'heavy' ? `그리고 ${r.text}` : '' };
   }
   function mvIntent0(fg) {
     const B = fg.B;
     const p = fg.plan;
     if (p?.type === 'gaze') {
       const t = fg.players.find((x) => x.id === p.on);
-      return { kind: 'heavy', text: `밭의 허수아비들이 일제히 ${t?.name || ''} 쪽으로 고개를 돌린다.`, hint: `다음 턴 낫질이 ${t?.name || ''}에게 몰린다. 동료가 막아서거나, 비늘 세우기·방어로 버티자.` };
+      return { kind: 'heavy', text: `밭의 허수아비들이 일제히 ${t?.name || ''} 쪽으로 고개를 돌린다.`, hint: '' };
     }
-    if (p?.type === 'song') return { kind: 'heavy', text: `${ga(B.boss.name)} 낫을 높이 들고 낮게 노래한다.`, hint: '다음 턴 모두가 크게 다친다. 포효로 노래를 끊을 수 있다 (위엄이 높을수록 잘 끊긴다). 비늘 세우기·방어도 통한다.' };
-    if (fg.phase === 1) return { kind: 'attack', text: `${ga(B.lord.name)} 낫을 끌며 다가온다.`, hint: '평범한 공격이 온다.' };
-    return { kind: 'attack', text: `${ga(B.boss.name)} 검은 이삭 사이를 천천히 걷는다.`, hint: fg.phase === 2 ? `이삭이 ${B.ears.max}개 다 여물면 수확당한다. 치유로 씻어 내자.` : '그림자와 본체를 함께 쓰러뜨려야 한다.' };
+    if (p?.type === 'song') return { kind: 'heavy', text: `${ga(B.boss.name)} 낫을 높이 들고 낮게 노래한다.`, hint: '' };
+    if (fg.phase === 1) return { kind: 'attack', text: `${ga(B.lord.name)} 낫을 끌며 다가온다.`, hint: '' };
+    return { kind: 'attack', text: `${ga(B.boss.name)} 검은 이삭 사이를 천천히 걷는다.`, hint: '' };
   }
 
   // ── 화면에 보낼 모습 ───────────────────────────────
   function tagsOf(p, fg) {
     const t = [];
-    if (p.ears) t.push({ t: p.ears >= (fg.B.ears?.max || 3) ? '수확 예고' : `검은 이삭 ${p.ears}`, bad: true });
+    if (p.ears) t.push({ t: `검은 이삭 ${p.ears}`, bad: true });
     if (p.reaped) t.push({ t: '거두어짐', bad: true });
     return t;
   }
@@ -596,7 +616,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
         fg.crows = [...fg.crows.filter((c) => c.hp > 0), ...add];
         fg.foes = [fg.boss, ...fg.crows];
         for (const k of Object.keys(fg.targets)) fg.targets[k] = 0;
-        lines.push(`${ga(B.boss.name)} 밭을 향해 손짓한다. ${B.crow.name} ${['', '하나가', '둘이', '셋이'][add.length] || `${add.length}개가`} 일어선다! 허수아비가 서 있는 동안 ${B.boss.name}에게는 피해가 절반만 들어간다.`);
+        lines.push(`${ga(B.boss.name)} 밭을 향해 손짓한다. ${B.crow.name} ${['', '하나가', '둘이', '셋이'][add.length] || `${add.length}개가`} 일어선다!`);
       }
     }
     downs(fg, lines);
@@ -647,16 +667,15 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     const B = fg.B;
     const p = fg.plan;
     const nm = (id) => fg.players.find((x) => x.id === id)?.name || '';
-    const flagHint = bannerUp(fg) ? ` 깃발이 서 있는 동안 ${B.boss.short}${josa(B.boss.short, '은', '는')} 덜 다치고 조금씩 회복한다. 하늘 낙하·날개 돌풍으로 꺾자.` : '';
-    if (p?.type === 'wall') return { kind: 'self', text: `${ga(B.boss.name)} 외친다. "대열을 세워라!"`, hint: '다음 턴 기사들이 방패를 맞댄다. 정면 공격은 거의 막힌다. 우회(날개)나 땅울림으로 대열을 깨자.' };
+    if (p?.type === 'wall') return { kind: 'self', text: `${ga(B.boss.name)} 외친다. "대열을 세워라!"`, hint: '' };
     if (p?.type === 'charge') {
       const [a, b] = p.on.map(nm);
-      return { kind: 'heavy', text: `${ga(B.boss.name)} 창을 낮추고 ${a}${b ? `${josa(a, '과', '와')} ${b}` : ''}${josa(b || a, '을', '를')} 한 줄로 꿰뚫을 자세를 잡는다.`, hint: `다음 턴 돌격이 온다. 날개 돌풍으로 피하거나, 동료가 막아서자. 방어로는 절반만 줄어든다.${flagHint}` };
+      return { kind: 'heavy', text: `${ga(B.boss.name)} 창을 낮추고 ${a}${b ? `${josa(a, '과', '와')} ${b}` : ''}${josa(b || a, '을', '를')} 한 줄로 꿰뚫을 자세를 잡는다.`, hint: '' };
     }
-    if (p?.type === 'duel') return { kind: 'debuff', text: `"${nm(p.on)}, 이름을 대라. 일대일로 겨루겠다."`, hint: `${B.duel.turns}턴 동안 ${B.boss.short}${josa(B.boss.short, '은', '는')} ${nm(p.on)}만 노린다. 다른 드래곤이 ${eul(B.boss.short)} 치면 기사도를 어긴 것이 된다. 치유와 막아서기는 괜찮다.` };
-    if (fg.duel && fg.turn + 1 <= fg.duel.until && fg.turn + 1 >= fg.duel.from) return { kind: 'debuff', text: `${B.boss.short}${josa(B.boss.short, '과', '와')} ${nm(fg.duel.on)}의 일기토가 이어진다. (남은 ${fg.duel.until - fg.turn}턴)`, hint: `${nm(fg.duel.on)}${josa(nm(fg.duel.on), '이', '가')} 버티면 ${ga(B.boss.short)} 방패를 내린다. 동료는 치유와 막아서기로 돕자.` };
-    if (fg.phase === 1) return { kind: 'attack', text: '기사들이 방패 너머로 창을 겨눈다.', hint: '평범한 공격이 온다.' };
-    return { kind: 'attack', text: `${ga(B.boss.name)} 검을 고쳐 쥔다.`, hint: `평범한 공격이 온다.${flagHint}` };
+    if (p?.type === 'duel') return { kind: 'debuff', text: `"${nm(p.on)}, 이름을 대라. 일대일로 겨루겠다."`, hint: '' };
+    if (fg.duel && fg.turn + 1 <= fg.duel.until && fg.turn + 1 >= fg.duel.from) return { kind: 'debuff', text: `${B.boss.short}${josa(B.boss.short, '과', '와')} ${nm(fg.duel.on)}의 일기토가 이어진다. (남은 ${fg.duel.until - fg.turn}턴)`, hint: '' };
+    if (fg.phase === 1) return { kind: 'attack', text: '기사들이 방패 너머로 창을 겨눈다.', hint: '' };
+    return { kind: 'attack', text: `${ga(B.boss.name)} 검을 고쳐 쥔다.`, hint: '' };
   }
   function knStart(fg, lines) {
     fg.wall = fg.phase === 1 && fg.plan?.type === 'wall' && fg.plan.at === fg.turn;
@@ -677,7 +696,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     if (foe === fg.banner) {
       const reach = a.type === 'skill' && B.banner.only.includes(a.id) && !combat.blocked(p, a);
       fg.banner.taken = reach ? 1 : 0;
-      if (!reach) { lines.push(`${ga(p.name)} 깃발을 노렸지만 높이 걸려 있어 닿지 않는다. 하늘 낙하나 날개 돌풍으로만 꺾을 수 있다.`); return true; }
+      if (!reach) { lines.push(`${ga(p.name)} 깃발을 노렸지만 높이 걸려 있어 닿지 않는다.`); return true; }
     }
     if (a.type !== 'flank') return false;
     // 우회: 방패벽 턴이면 날개로 판정. 성공하면 대열이 깨지고 그 턴 남은 공격이 모두 크게 들어감
@@ -794,7 +813,6 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
   function knTags(fg, f) {
     const t = [];
     if (f.raid === 'knight' && fg.wall && !fg.wallBroken && f.hp > 0) t.push({ t: '방패벽' });
-    if (f.raid === 'banner') t.push({ t: '하늘 낙하·돌풍으로만' });
     if (f === fg.boss) {
       if (bannerUp(fg)) t.push({ t: '깃발의 가호' });
       if (fg.exposedUntil >= fg.turn + 1) t.push({ t: '방패를 내림', bad: true });
@@ -807,7 +825,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     morven: { setup: mvSetup, schedule: mvSchedule, intent: mvIntent, beforeAct: mvBefore, afterAct: mvAfter, phases: mvPhases, endTurn: mvEnd, bossTurn: mvBossTurn, isWon: mvWon,
       // 자동으로 고를 때: 수확당할 동료(나 포함)가 있으면 치유로 이삭부터 씻음
       autoPick: (fg, p) => { const t = fg.players.find((x) => alive(x) && (fg.harvest || []).some((h) => h.on === x.id && h.at === fg.turn) && x.ears >= fg.B.ears.max); return t && p.skills.includes('mend') && !combat.blocked(p, { type: 'skill', id: 'mend' }) ? { type: 'skill', id: 'mend', ally: t.id === p.id ? null : t.id } : null; },
-      sub: (f) => (f.raid === 'crow' ? '허수아비' : '레이드'), foeTags: (fg, f) => (f === fg.boss && crowsUp(fg) ? [{ t: '허수아비 뒤에 숨음' }] : []) },
+      sub: (f) => (f.raid === 'crow' ? '허수아비' : '레이드'), foeTags: () => [] },
     knights: { setup: knSetup, schedule: knSchedule, intent: knIntent, startTurn: knStart, beforeAct: knBefore, afterAct: knAfter, phases: knPhases, endTurn: knEnd, bossTurn: knBossTurn, isWon: knWon,
       autoPick: knAuto, sub: knSub, foeTags: knTags },
   };
@@ -924,6 +942,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     on('raidboss:join', (d, p) => joinLobby(d, str(p.key)));
     on('raidboss:leave', (d) => leaveLobby(d));
     on('raidboss:start', (d, p) => startLobby(d, str(p.key)));
+    on('raidboss:ready', (d, p) => readyLobby(d, str(p.key)));
     on('raidboss:act', (d, p) => {
       const fg = inFight.get(d.id);
       if (!fg || fg.over) return { error: '레이드 중이 아니다.' };

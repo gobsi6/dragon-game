@@ -2074,7 +2074,7 @@ const RAIDBOSS = {
       region: 'ruin_plain', place: '검은 밀밭 한가운데', name: '이삭지기 모르벤',
       desc: '카르넴 왕실이 곡창 평원에 보낸 풍요의 마법사. 오백 년 동안 홀로 남아 아무도 없는 밭의 추수를 기다린다.',
       // 만렙 넷이 기믹을 하나도 놓치지 않으면 17턴쯤에 쓰러지는 체력 (허수아비·그림자에 쓰는 턴과 빗나감까지 셈해 시험으로 맞춤)
-      lv: 27, hp: 4200, lordShare: 0.25, atk: 63, def: 16, spd: 22, mag: 50, maj: 32, // maj: 포효로 노래를 끊는 판정의 기준 (만렙 평균 위엄 + 5쯤)
+      lv: 27, hp: 4800, lordShare: 0.25, atk: 63, def: 16, spd: 22, mag: 50, maj: 32, // maj: 포효로 노래를 끊는 판정의 기준 (만렙 평균 위엄 + 5쯤)
       lord:   { name: '허수아비 군주', type: 'construct', weak: ['fire', 'poison'], resist: ['earth'] },
       boss:   { name: '이삭지기 모르벤', short: '모르벤', type: 'human', weak: ['spirit', 'lightning'], resist: ['poison'] },
       shadow: { name: '모르벤의 그림자', type: 'spirit', weak: ['spirit', 'fire'], resist: ['poison', 'ice'], atk: 0.8 },
@@ -2090,7 +2090,7 @@ const RAIDBOSS = {
       intro: '검게 마른 이삭 사이로 들어서자 바람이 멎었다. 밭 한가운데, 낡은 로브를 걸친 사람이 낫을 쥔 채 이쪽을 돌아본다. "올해는 이삭이 무겁구나."',
       lines: {
         phase2: ['허수아비 군주가 실 끊긴 인형처럼 무너졌다.', '"거둘 때가 됐다." 모르벤이 낫을 고쳐 쥐고 직접 걸어 나온다. 검은 이삭이 그의 발밑에서 일제히 고개를 든다.'],
-        phase3: ['모르벤이 비틀거리자 그의 그림자가 땅에서 떨어져 나와 따로 선다.', '본체와 그림자를 거의 함께 쓰러뜨려야 한다. 하나만 쓰러뜨리면 다른 하나가 되살려 낸다.'],
+        phase3: ['모르벤이 비틀거리자 그의 그림자가 땅에서 떨어져 나와 따로 선다.', '"하나를 거두면 하나가 남지. 남은 하나가 다시 심는다."'],
         win: ['모르벤이 무릎을 꿇었다. 낫이 손에서 미끄러진다.', '"…올해 추수는, 끝났구나." 검은 이삭들이 바람에 부서지고, 그 사이로 금빛 이삭 몇 줄기가 고개를 내민다.'],
         time: ['해가 졌다. 모르벤이 낫을 높이 들어 마지막 추수를 거둔다.', '밀밭 전체가 검게 일렁이고, 드래곤들은 더 버티지 못하고 밭 밖으로 밀려났다.'],
         wipe: ['마지막 드래곤이 쓰러졌다. 모르벤은 낫을 거두고 다시 밭 한가운데로 돌아간다.', '"아직이다. 아직 덜 여물었어."'],
@@ -2104,7 +2104,7 @@ const RAIDBOSS = {
       region: 'ruin_capital', place: '무너진 성문 앞', name: '마지막 기사단장 헤이른',
       desc: '카르넴 기사단의 마지막 단장. 왕이 "문을 열지 마라"는 말을 남기고 들어간 뒤로, 오백 년 동안 대열을 풀지 않았다.',
       // 모르벤보다 한 단계 위 (성문 사냥터가 Lv.25·26). 실제 수치는 시험으로 다시 맞춤
-      lv: 28, hp: 5200, knightShare: 0.08, atk: 70, def: 18, spd: 24, mag: 46, maj: 34,
+      lv: 28, hp: 6000, knightShare: 0.08, atk: 70, def: 18, spd: 24, mag: 46, maj: 34,
       knight: { name: '카르넴 기사', type: 'human', weak: ['lightning', 'spirit'], resist: ['earth'], atk: 0.45, def: 1.1, names: ['왼쪽 방패 기사', '오른쪽 방패 기사', '창 기사', '늙은 기사'] },
       boss:   { name: '마지막 기사단장 헤이른', short: '헤이른', type: 'human', weak: ['lightning', 'spirit'], resist: ['earth', 'poison'] },
       banner: { name: '기사단 깃발', type: 'construct', weak: [], resist: [], def: 0.5, spd: 1, hp: 0.08, taken: 0.6, regen: 0.025, back: 4, only: ['dive', 'gust'] }, // 헤이른 체력의 8%. 서 있는 동안 헤이른 받는 피해 ×0.6, 턴마다 2% 회복. 꺾이면 4턴 뒤 다시
