@@ -888,6 +888,14 @@
     <div class="bt-intent" id="bt-intent" hidden></div>
     <div class="bt-turn" id="bt-turn"></div>
     <div class="bt-log" id="bt-log" aria-live="polite"></div>
+    <div class="bt-chat" id="bt-chat" hidden><!-- 레이드 작전 이야기: 함께 싸우는 넷만, 끝나면 사라짐 -->
+      <div class="bt-chat-log" id="bt-chat-log" aria-live="polite"></div>
+      <form class="say bt-chat-say" id="bt-chat-form">
+        <label class="sr" for="bt-chat-input">작전 이야기</label>
+        <input class="input" id="bt-chat-input" maxlength="120" autocomplete="off" placeholder="동료에게 한마디 · 레이드가 끝나면 사라진다">
+        <button class="say-send" type="submit" id="bt-chat-send" aria-label="보내기" title="보내기"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 15l7-7 7 7"/></svg></button>
+      </form>
+    </div>
     <div class="bt-acts" id="bt-acts"></div>
     <div class="bt-result" id="bt-result" hidden></div>
     <div class="row" id="bt-close-row" hidden><button class="btn" type="button" id="bt-close">닫기</button></div>
@@ -5400,7 +5408,7 @@
       $('mobd-say').textContent = `"${m.greet}"`;
       $('mobd-desc').textContent = m.desc;
       $('mob-n-quest').textContent = m.offers.filter((o) => o.state === 'open' || o.state === 'ready').length || '';
-      $('mob-n-story').textContent = m.story.cur ? `${m.story.ch + 1}/${m.story.total}` : '끝';
+      $('mob-n-story').textContent = m.story.cur ? `${m.story.ch + 1}/${m.story.total}` : m.past?.open && m.past.n < m.past.total && !m.past.today ? '옛일' : '끝';
       for (const t of $('mob-tabs').children) { const on = t.dataset.t === mobTab; t.classList.toggle('on', on); t.setAttribute('aria-selected', on); }
       const body = $('mob-body');
       body.replaceChildren();
@@ -5487,6 +5495,7 @@
           c.appendChild(foot);
           body.appendChild(c);
         }
+        if (m.past) renderPastCard(m, body, note); // 옛일 (이야기를 끝까지 들은 뒤, 하루 한 조각)
       } else {
         note(`인간 시장을 쓰지 못해도 드래곤끼리는 물건을 바꿀 수 있다. 교환마다 하루(또는 한 주) 횟수가 정해져 있다.`);
         for (const o of m.trades) {
@@ -5513,6 +5522,38 @@
       if (!dlg.open) dlg.showModal();
       else { dlg.scrollTop = keep[0]; scroller.scrollTop = keep[1]; }
     });
+  }
+  // 옛일: 토박이 드래곤이 저마다의 성향으로 기억하는 지난 일. 들은 조각은 남고, 하루에 하나씩 더 묻는다
+  function renderPastCard(m, body, note) {
+    const pa = m.past;
+    const h = document.createElement('h3'); h.className = 'inv-h'; h.textContent = '옛일'; body.appendChild(h);
+    if (!pa.open) {
+      const e = document.createElement('div'); e.className = 'mk-empty'; e.textContent = `'${m.story.title}' 이야기를 끝까지 들으면 ${m.name}에게 옛일을 물어볼 수 있다.`; body.appendChild(e);
+      return;
+    }
+    const n = note(`${pa.stance} 성향의 토박이 드래곤. 하루에 한 조각씩 털어놓는다.`);
+    n.lastChild.textContent = `${pa.n}/${pa.total}`;
+    if (pa.n) {
+      const r = document.createElement('p'); r.className = 'mob-past'; r.style.margin = '0'; r.textContent = `"${pa.react}"`; body.appendChild(r);
+      for (const piece of pa.heard) { const p = document.createElement('p'); p.className = 'mob-past'; p.style.margin = '0'; p.textContent = piece.map((t) => `"${t}"`).join(' '); body.appendChild(p); }
+    }
+    if (pa.n >= pa.total) {
+      const e = document.createElement('div'); e.className = 'mk-empty'; e.textContent = `${m.name}의 옛일을 모두 들었다.`; body.appendChild(e);
+      return;
+    }
+    const c = document.createElement('div'); c.className = `mob-card${pa.today ? ' done' : ''}`;
+    const say = document.createElement('span'); say.className = 'mc-say';
+    say.textContent = pa.today ? `${m.name}${josa(m.name, '은', '는')} 오늘은 더 말할 생각이 없어 보인다.` : pa.n ? `${m.name}${josa(m.name, '이', '가')} 다음 이야기를 고르는 듯 먼 곳을 바라본다.` : `${m.name}${josa(m.name, '이', '가')} 오래된 일을 떠올리는 눈치다.`;
+    const foot = document.createElement('div'); foot.className = 'mc-foot';
+    const sp = document.createElement('span'); sp.className = 'sp';
+    foot.append(sp, mobBtn(pa.today ? '내일 다시' : '옛일을 묻는다', true, pa.today, () => {
+      socket.emit('mob:past', { mob: m.id }, (res) => {
+        if (res.error) { SFX.play('error'); return toast(res.error); }
+        openMob();
+      });
+    }));
+    c.append(say, foot);
+    body.appendChild(c);
   }
   $('mob-open').addEventListener('click', () => { mobTab = 'quest'; fetchInv(() => openMob()); });
   $('mob-tabs').addEventListener('click', (e) => { const b = e.target.closest('button[data-t]'); if (!b) return; mobTab = b.dataset.t; openMob(); });
@@ -10432,6 +10473,39 @@
       box.appendChild(n);
     }
   }
+  // 레이드 작전 이야기: 같은 레이드의 넷만 보고, 끝나면 서버에서도 사라짐
+  function btChatLine(m) {
+    const p = document.createElement('p');
+    p.className = m.id === S.me?.id ? 'me' : '';
+    const b = document.createElement('b'); b.textContent = m.name;
+    p.append(b, document.createTextNode(` ${m.text}`));
+    return p;
+  }
+  function btChatFill(list) {
+    const box = $('bt-chat-log');
+    box.replaceChildren(...list.map(btChatLine));
+    if (!list.length) { const e = document.createElement('p'); e.className = 'empty'; e.textContent = '예고를 보고 누가 막아설지, 누가 포효할지 의논해 보자.'; box.appendChild(e); }
+    box.scrollTop = box.scrollHeight;
+  }
+  function btChatAdd(m) {
+    const box = $('bt-chat-log');
+    box.querySelector('.empty')?.remove();
+    const near = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+    box.appendChild(btChatLine(m));
+    while (box.children.length > 80) box.firstChild.remove();
+    if (near || m.id === S.me?.id) box.scrollTop = box.scrollHeight;
+  }
+  $('bt-chat-input').addEventListener('input', () => $('bt-chat-send').classList.toggle('ready', !!$('bt-chat-input').value.trim()));
+  $('bt-chat-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const inp = $('bt-chat-input');
+    const text = inp.value.trim();
+    if (!text) return;
+    socket.emit('raidboss:say', { text }, (res) => {
+      if (res.error) return toast(res.error);
+      inp.value = ''; $('bt-chat-send').classList.remove('ready');
+    });
+  });
   // 레이드: 함께 싸우는 동료. 누르면 치유·막아서기 대상으로 고름 (다시 누르면 풀림)
   function btAllies(v) {
     const box = $('bt-allies');
@@ -10557,6 +10631,8 @@
     if (v.foes && v.foes.length > 1) btFoes($('bt-foe'), v);
     else btFighter($('bt-foe'), v.foe, false);
     btAllies(v); // 레이드: 함께 싸우는 동료
+    $('bt-chat').hidden = v.kind !== 'raid' || !!v.over || !!BT.replay;
+    $('battle-dlg').classList.toggle('raid', v.kind === 'raid');
     // 상대가 다음 턴에 할 일 (사냥감·강적만)
     const it = $('bt-intent');
     it.hidden = !v.intent;
@@ -10672,6 +10748,7 @@
   }
   function openBattle(view, { title, lines = [], log = null, result = null, replay = false } = {}) {
     BT = { view, title, result, replay, waiting: !!view.waiting, foeReady: false, fxPrev: null, fxLines: [], ally: null };
+    btChatFill(view.chat || []);
     $('battle-title').textContent = title || (view.kind === 'duel' ? '결투' : view.kind === 'elite' ? '강적' : view.kind === 'raid' ? '레이드' : '전투');
     $('bt-log').replaceChildren();
     if (lines.length) btAddLines(lines, null);
@@ -12673,6 +12750,7 @@
     socket.on('rescued', (r) => { if ($('fall-dlg').open) $('fall-dlg').close(); showResult({ title: '구조', lines: r.lines }); });
     socket.on('rampage:end', onRampageEnd);
     socket.on('battle:start', (s2) => { if ($('arena-dlg').open) $('arena-dlg').close(); openBattle(s2.view, { lines: s2.lines, title: s2.title }); });
+    socket.on('raidboss:chat', (m) => { if (BT?.view.kind === 'raid') { (BT.view.chat ||= []).push(m); btChatAdd(m); } });
     socket.on('raidboss:wait', (p) => { if (BT?.view.kind !== 'raid') return; for (const a of BT.view.allies || []) a.chose = !!p.chosen[a.id]; renderBattle(); });
     socket.on('raidboss', (v) => { S.raidBoss = v; renderRaidBar(); });
     socket.on('battle:update', onBattleUpdate);

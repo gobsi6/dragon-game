@@ -3582,3 +3582,18 @@ html:has(dialog.dlg:modal), html:has(dialog.dlg:modal) body { overflow: hidden; 
   .bt-allies .bt-mini .num { font-size: 10.5px; }
 }
 .bt-fire { margin-left: 10px; padding: 0 6px; font: 600 11px/17px var(--sans); color: #A14A1E; background: #FBF0E6; border: 1px solid #E8C7AE; border-radius: 2px; }
+
+/* 레이드 작전 이야기: 전투 기록 아래 작은 채팅 칸. 이야기 창과 같은 보내기 단추 */
+.bt-chat { display: flex; flex-direction: column; border: 1px solid var(--line-in); background: #fff; }
+.bt-chat-log { height: 96px; overflow: auto; padding: 6px 10px; font-size: 13px; line-height: 1.55; }
+.bt-chat-log p { margin: 0; color: var(--ink-2); overflow-wrap: anywhere; }
+.bt-chat-log p b { font-weight: 600; color: var(--ink); margin-right: 2px; }
+.bt-chat-log p.me b { color: var(--steel-d); }
+.bt-chat-log p.empty { color: var(--muted); font-size: 12.5px; }
+.bt-chat .bt-chat-say { margin: 0; padding: 6px 6px 6px 8px; gap: 6px; border-top: 1px solid var(--line-in); }
+.bt-chat .bt-chat-say .input { min-height: 34px; font-size: 13.5px; }
+.bt-chat .bt-chat-say .say-send { width: 32px; height: 32px; }
+@media (max-width: 620px) { .bt-chat-log { height: 72px; } }
+.bt-log, .bt-chat { flex-shrink: 0; } /* 창이 길어져도 기록·작전 이야기 칸이 찌그러지지 않게 (창이 스크롤됨) */
+#battle-dlg.raid .bt-log { height: 132px; } /* 레이드는 동료 칸·작전 이야기가 더 있어 전투 기록을 조금 낮게 */
+@media (max-width: 620px) { #battle-dlg.raid .bt-log { height: 110px; } }

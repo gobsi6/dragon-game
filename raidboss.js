@@ -203,6 +203,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     const fight = {
       id: nextId++, key, B, test: !!test, ids: ids.slice(), players, foes: [], phase: 1, phaseAt: 0, turn: 0, plan: null, fire: 0,
       pending: {}, targets: {}, log: [], over: false, outcome: null, guards: {}, heals: {}, deadline: 0, timer: null,
+      chat: [], // 레이드 작전 이야기: 함께 싸우는 넷만 보고, 레이드가 끝나면 싸움과 함께 사라짐 (DB에 남기지 않음)
     };
     const opening = SC(fight).setup(fight, total);
     for (const id of ids) inFight.set(id, fight);
@@ -300,6 +301,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
       won: fg.over ? fg.outcome === 'win' : null,
       fled: fg.over && me.left ? 'me' : null,
       log: fg.log.slice(-1)[0]?.lines || [],
+      chat: fg.over ? [] : fg.chat,
     };
   }
 
@@ -922,6 +924,21 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
       const chosen = Object.fromEntries(fg.players.map((x) => [x.id, !!fg.pending[x.id] || !alive(x) || !!x.reaped]));
       for (const x of fg.players) if (x.id !== d.id) emitTo(x.id, 'raidboss:wait', { chosen });
       return { ok: true, waiting: true };
+    });
+    // 레이드 작전 이야기 (함께 싸우는 동료에게만)
+    on('raidboss:say', (d, p) => {
+      const fg = inFight.get(d.id);
+      if (!fg || fg.over) return { error: '레이드 중이 아니다.' };
+      const text = str(p.text).replace(/\s+/g, ' ').slice(0, R.chatMax);
+      if (!text) return { error: '할 말을 적자.' };
+      const now = Date.now();
+      if (now - (fg.saidAt?.[d.id] || 0) < 700) return { error: '조금 천천히 말하자.' };
+      (fg.saidAt ||= {})[d.id] = now;
+      const msg = { id: d.id, name: d.name, text, at: now };
+      fg.chat.push(msg);
+      if (fg.chat.length > 80) fg.chat.shift();
+      for (const x of fg.players) emitTo(x.id, 'raidboss:chat', msg);
+      return { ok: true };
     });
     on('raidboss:target', (d, p) => {
       const fg = inFight.get(d.id);

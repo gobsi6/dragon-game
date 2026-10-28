@@ -321,7 +321,7 @@ app.post('/api/login', async (req, res) => {
 });
 
 // 석판 그림 올리기: 그림 파일 그대로(바이트)를 받음. 로그인 토큰은 Authorization: Bearer, 크기는 ?w=&h=
-app.post('/api/slate-img', express.raw({ type: ['image/webp', 'image/jpeg', 'image/png'], limit: '330kb' }), (req, res) => {
+app.post('/api/slate-img', express.raw({ type: ['image/webp', 'image/jpeg', 'image/png'], limit: '760kb' }), (req, res) => {
   const token = str((req.get('authorization') || '').replace(/^Bearer\s+/i, ''));
   const user = token ? db.getSessionUser(token) : null;
   if (!user) return res.status(401).json({ error: '다시 로그인해야 한다.' });
@@ -507,6 +507,7 @@ const meOf = (d) => ({
   traits: (() => { const t = logic.traitsOf(d); return { list: t.list, chosen: !!t.chosen, counts: t.counts, done: t.done, mark: t.mark || {} }; })(), // mark: 없애기만 하는 규칙을 다시 세기 시작한 횟수
   combat: (() => { const c = combat.combatOf(d); return { skills: combat.loadout(d), w: c.w, l: c.l, duelOn: c.duelOn, autoDuel: c.autoDuel }; })(),
   battle: arena ? arena.inBattle(d.id) : false,
+  raidBoss: raidBoss ? raidBoss.meView(d) : null, // 레이드: 이번 주 보상 횟수
   perks: d.perks || {},
   cost: { explore: logic.actionCost(d, 'explore'), gather: logic.actionCost(d, 'gather'), hunt: logic.actionCost(d, 'hunt') },
   exp: d.exp_end ? { region: d.exp_region, start: d.exp_start, end: d.exp_end, goal: logic.expInfo(d).goal || 'gather', fork: logic.forkView(d), plan: logic.planView(d), went: logic.expInfo(d).went || [] } : null,
@@ -777,6 +778,7 @@ const social = require('./social')({ db, online, entryOf, sendMe, logic, life, i
 
 // 강적·결투장·전투 설정·광폭화 (arena.js)
 let arena = null;
+let raidBoss = null; // 레이드 (아래에서 만들어짐. 쓰는 건 게임이 돌아갈 때라 괜찮음)
 arena = require('./arena')({ io, db, online, logic, combat, life, sendMe, broadcastPresence });
 const BERSERK = '광폭화한 몸이 제멋대로 날뛴다. 누군가 진정시켜 주기를 기다려야 한다.';
 
@@ -817,7 +819,7 @@ wxTicker.unref?.();
 const boss = require('./boss')({ io, db, online, logic, combat, arena, sendMe });
 // 떠돌이 야바위꾼: 하루 네 번 한 시간씩 대륙 어딘가에 판을 벌임 (yabawi.js)
 const slate = require('./slate')({ io, db, entryOf }); // 석판 (게시판)
-const yabawi = require('./yabawi')({ io, db, online, logic, sendMe, isOpen: (r) => ruin.unlocked(r) }); // ruin은 아래에서 만들어지지만, 쓰는 건 게임이 돌아갈 때라 괜찮음
+const yabawi = require('./yabawi')({ io, db, online, logic, sendMe, isOpen: (r) => (r.startsWith('raid:') ? !!raidBoss?.cleared(r.slice(5)) : ruin.unlocked(r)) }); // ruin은 아래에서 만들어지지만, 쓰는 건 게임이 돌아갈 때라 괜찮음
 // 왕도 야시장: 축제 날 저녁 6시~새벽 5시, 상인 노점과 드래곤들의 노점 (nightmarket.js)
 const nightMarket = require('./nightmarket')({ io, db, online, logic, sendMe });
 // 다른 둥지 아이와 맺어지기: 서로의 첫사랑 → 혼인 청 → 두 보호자 허락 (kinlove.js)
@@ -1026,6 +1028,11 @@ const ruin = (() => {
   return { add, view, top, unlocked, debugSet: (n) => { st.total = n; save(); goalAt = 0; settle(); } };
 })();
 logic.hooks.purify = (d, kind) => (logic.isRuin(d.region) ? ruin.add(d, kind) : purify.add(d, kind));
+// 레이드: 만렙 드래곤 넷이 모여 함께 맞서는 기믹 전투 (raidboss.js)
+raidBoss = require('./raidboss')({ io, db, online, logic, combat, arena, sendMe,
+  isOpen: (r) => ruin.unlocked(r), fall: death.fall, purify: (d, n) => ruin.add(d, 'raid', n),
+  news: (text) => { const at = Date.now(); let id = 0; try { id = db.addChat('!', { dragonId: 0, name: '', kind: '', text, at }); } catch {} io.emit('system', { text, at, news: true, id }); } });
+arena.setRaid(raidBoss);
 logic.hooks.companionsHere = (d) => { for (const e of online.values()) if (e.dragon.id !== d.id && e.dragon.region === d.region && !e.dragon.dead_at) return true; return false; };
 // 청출어람: 내 스승의 레벨을 따라잡았으면 그 스승의 이름 (칭호 판정에서 씀)
 logic.hooks.surpassed = (d) => {
@@ -1342,6 +1349,7 @@ function onConnect(socket) {
   socket.emit('boss', boss.view());
   socket.emit('weather', weatherAll());
   socket.emit('grave:list', death.graves());
+  socket.emit('raidboss', raidBoss.view());
   socket.emit('rescue:list', death.rescues());
   socket.emit('rescue:risen', death.risenList()); // 최근 다시 일어선 드래곤
 
@@ -1920,7 +1928,10 @@ function onConnect(socket) {
   // 둥지 시설
   itemAction('nest:fac:build', (d, p, have) => logic.buildFacility(d, str(p.id), have));
   itemAction('nest:fac:remove', (d, p) => logic.removeFacility(d, str(p.id)));
-  itemAction('nest:job', (d, p, have, kin) => life.setJob(d, kin, p.kin, str(p.fac)));
+  // 시설 일 맡기기 · 새끼 심부름: 둥지 밖에서도 할 수 있음 (결과 첫 줄에 멀리서 일러두었다고 적음)
+  const byTelepathy = (d, r) => { if (r && !r.error && d.region !== d.nest && Array.isArray(r.lines)) r.lines.unshift('멀리서 일러두었다.'); return r; };
+  itemAction('nest:job', (d, p, have, kin) => byTelepathy(d, life.setJob(d, kin, p.kin, str(p.fac))));
+  itemAction('mob:past', (d, p) => mobs.pastAsk(d, str(p.mob)));                  // 옛일 묻기 (이야기를 끝까지 들은 뒤, 하루 한 조각)
   itemAction('nest:harvest', (d, p, have, kin) => life.harvest(d, kin));
   itemAction('nest:cook', (d, p, have, kin) => life.cook(d, kin, str(p.recipe), have));
   itemAction('order:fill', (d, p, have) => logic.fillOrder(d, str(p.key), have, Date.now(), p?.alt === true)); // alt: 걸작·정성 들인 것으로 채워 납품
@@ -1941,7 +1952,6 @@ function onConnect(socket) {
   itemAction('mob:storyturn', (d, p, have) => mobs.storyTurnIn(d, str(p.mob), have));
   itemAction('mob:gate', (d, p) => mobs.storyAccept(d, str(p.mob), 'gate'));        // 지하 회랑 입장 부탁
   itemAction('mob:gateturn', (d, p, have) => mobs.storyTurnIn(d, str(p.mob), have, 'gate'));
-  itemAction('mob:past', (d, p) => mobs.pastAsk(d, str(p.mob)));                  // 옛일 묻기 (이야기를 끝까지 들은 뒤, 하루 한 조각)
   maze.bind(socket, () => entryOf(socket));
   itemAction('mob:trade', (d, p, have) => mobs.trade(d, str(p.mob), p.i, have));
   socket.on('order:list', (payload, ack) => {
@@ -2093,7 +2103,7 @@ function onConnect(socket) {
   itemAction('kin:companion', (d, p, have, kin) => life.setCompanion(kin, p.id)); // 곁에 둘 새끼 (사냥·강적에 함께 나섬)
   itemAction('kin:search', (d, p, have, kin) => life.searchRunaway(d, kin, p.id, have)); // 가출한 식구 직접 찾기
   itemAction('kin:seek', (d, p, have, kin) => life.sendSeek(kin, p.id, p.target)); // 새끼 드래곤을 보내 찾아오게
-  itemAction('kin:errand', (d, p, have, kin) => life.sendErrand(kin, p.id, str(p.region), Number(p.minutes), ruin.unlocked(str(p.region)))); // 새끼 혼자 심부름
+  itemAction('kin:errand', (d, p, have, kin) => byTelepathy(d, life.sendErrand(kin, p.id, str(p.region), Number(p.minutes), ruin.unlocked(str(p.region))))); // 새끼 혼자 심부름 (둥지 밖에서도)
   itemAction('kin:release', (d, p, have, kin) => life.release(d, kin, p.id));
 
   // ── 이벤트 ──
@@ -2559,6 +2569,7 @@ function onConnect(socket) {
   arena.attach(socket);
   death.attach(socket);
   boss.attach(socket);
+  raidBoss.attach(socket);
 
   socket.on('disconnect', () => {
     const entry = entryOf(socket);
