@@ -3597,3 +3597,4 @@ html:has(dialog.dlg:modal), html:has(dialog.dlg:modal) body { overflow: hidden; 
 .bt-log, .bt-chat { flex-shrink: 0; } /* 창이 길어져도 기록·작전 이야기 칸이 찌그러지지 않게 (창이 스크롤됨) */
 #battle-dlg.raid .bt-log { height: 132px; } /* 레이드는 동료 칸·작전 이야기가 더 있어 전투 기록을 조금 낮게 */
 @media (max-width: 620px) { #battle-dlg.raid .bt-log { height: 110px; } }
+.who .raid { font-size: 11px; color: #8A2E27; border: 1px solid #E3B9B4; background: #FBEFEE; padding: 0 6px; border-radius: 2px; margin-left: auto; margin-right: 2px; white-space: nowrap; } /* 이곳의 드래곤: 레이드 중 */

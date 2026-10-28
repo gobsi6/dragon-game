@@ -24,7 +24,7 @@ const ga = (n) => `${n}${josa(n, '이', '가')}`;
 const eul = (n) => `${n}${josa(n, '을', '를')}`;
 const ACTS = ['attack', 'skill', 'guard', 'flee', 'cover', 'flank']; // flank: 우회 (카르넴)
 
-module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, sendMe, isOpen, fall, purify, news }) {
+module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, sendMe, isOpen, fall, purify, news, presence }) {
   const R = RAIDBOSS;
   const K = combat.raidKit;
   let st = db.worldGet('raidboss', null) || {};
@@ -74,7 +74,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     };
   }
   const push = () => io.emit('raidboss', view());
-  const meView = (d) => ({ used: Object.fromEntries(Object.keys(R.bosses).map((k) => [k, usedOf(d.id, k)])), weekly: R.weekly });
+  const meView = (d) => ({ used: Object.fromEntries(Object.keys(R.bosses).map((k) => [k, usedOf(d.id, k)])), weekly: R.weekly, inRaid: inFight.has(d.id) });
 
   // ── 들어갈 수 있는지 ───────────────────────────────
   // relax: GM 시험 (아직 열리지 않은 레이드를 멸망한 대륙 어디서든 미리 해 봄)
@@ -219,6 +219,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
       emitTo(id, 'battle:start', { view: viewFor(fight, id), lines, title: `레이드 · ${B.boss.name}` });
       const e = live(id); if (e) sendMe(e.socket, e.dragon);
     }
+    presence?.(B.region); // 이곳의 드래곤 목록에 '레이드 중'
     push();
   }
 
@@ -259,6 +260,13 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     }
   }
   function mvIntent(fg) {
+    const r = mvIntent0(fg);
+    const hv = (fg.harvest || []).filter((h) => h.at === fg.turn + 1).map((h) => fg.players.find((p) => p.id === h.on)).filter((p) => p && alive(p));
+    if (!hv.length) return r;
+    const names = hv.map((p) => p.name).join(', ');
+    return { kind: 'heavy', text: `${ga(fg.B.boss.short)} 낫 끝을 ${names} 쪽으로 돌린다. 다 여문 이삭을 거둘 때다.`, hint: `다음 턴 ${names}${josa(hv[hv.length - 1].name, '이', '가')} 수확당한다(즉사). 치유로 이삭을 씻어 내야 한다. 막아서기로는 막을 수 없다.${r.kind === 'heavy' ? ` 그리고 ${r.text}` : ''}` };
+  }
+  function mvIntent0(fg) {
     const B = fg.B;
     const p = fg.plan;
     if (p?.type === 'gaze') {
@@ -267,13 +275,13 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     }
     if (p?.type === 'song') return { kind: 'heavy', text: `${ga(B.boss.name)} 낫을 높이 들고 낮게 노래한다.`, hint: '다음 턴 모두가 크게 다친다. 포효로 노래를 끊을 수 있다 (위엄이 높을수록 잘 끊긴다). 비늘 세우기·방어도 통한다.' };
     if (fg.phase === 1) return { kind: 'attack', text: `${ga(B.lord.name)} 낫을 끌며 다가온다.`, hint: '평범한 공격이 온다.' };
-    return { kind: 'attack', text: `${ga(B.boss.name)} 검은 이삭 사이를 천천히 걷는다.`, hint: fg.phase === 2 ? `이삭이 ${B.ears.max}개 쌓이면 거두어진다. 치유로 씻어 내자.` : '그림자와 본체를 함께 쓰러뜨려야 한다.' };
+    return { kind: 'attack', text: `${ga(B.boss.name)} 검은 이삭 사이를 천천히 걷는다.`, hint: fg.phase === 2 ? `이삭이 ${B.ears.max}개 다 여물면 수확당한다. 치유로 씻어 내자.` : '그림자와 본체를 함께 쓰러뜨려야 한다.' };
   }
 
   // ── 화면에 보낼 모습 ───────────────────────────────
-  function tagsOf(p) {
+  function tagsOf(p, fg) {
     const t = [];
-    if (p.ears) t.push({ t: `검은 이삭 ${p.ears}`, bad: true });
+    if (p.ears) t.push({ t: p.ears >= (fg.B.ears?.max || 3) ? '수확 예고' : `검은 이삭 ${p.ears}`, bad: true });
     if (p.reaped) t.push({ t: '거두어짐', bad: true });
     return t;
   }
@@ -281,7 +289,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     const me = fg.players.find((p) => p.id === id);
     const foeF = targetOf(fg, me);
     const mv = K.fighterView(me, true);
-    mv.tags = tagsOf(me);
+    mv.tags = tagsOf(me, fg);
     for (const sk of mv.skills || []) { const c = combat.comboOf(foeF, sk.id); if (c) sk.combo = c.name; }
     const ac = combat.comboOf(foeF, 'attack');
     if (ac) mv.attackCombo = ac.name;
@@ -294,7 +302,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
       foes: multi ? fg.foes.map((f, i) => ({ ...fv(f), i, intent: null })) : null,
       target: multi ? fg.targets[id] : null,
       intent,
-      allies: fg.players.filter((p) => p.id !== id).map((p) => ({ ...K.fighterView(p, false), tags: tagsOf(p), left: !!p.left, chose: !!fg.pending[p.id] || !alive(p) || !!p.reaped })),
+      allies: fg.players.filter((p) => p.id !== id).map((p) => ({ ...K.fighterView(p, false), tags: tagsOf(p, fg), left: !!p.left, chose: !!fg.pending[p.id] || !alive(p) || !!p.reaped })),
       fire: fg.fire, phase: fg.phase, script: fg.B.script || 'morven', duelOn: fg.duel && fg.turn + 1 >= fg.duel.from ? fg.duel.on : null,
       deadline: fg.deadline,
       waiting: !!fg.pending[id],
@@ -517,6 +525,16 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     const plan = fg.plan && fg.plan.at === fg.turn ? fg.plan : null;
     const actor = fg.phase === 1 ? fg.lord : fg.boss.hp > 0 ? fg.boss : fg.shadow;
     const can = (f) => f && f.hp > 0 && !(f.st.freeze > 0) && !(f.st.stun > 0);
+    // 수확: 이삭이 다 여문 드래곤을 거둠. 그 사이 이삭을 씻어 냈으면 낫이 허공을 가름
+    for (const h of fg.harvest.filter((x) => x.at === fg.turn)) {
+      const t = fg.players.find((p) => p.id === h.on);
+      if (!t || !alive(t)) continue;
+      if (t.ears >= B.ears.max) {
+        t.hp = 0; t.ears = 0; t.mindLoss = (t.mindLoss || 0) + B.ears.mind;
+        lines.push(`${ga(actor.name)} 낫을 크게 휘둘렀다. "거둘 때가 됐다." ${ga(t.name)} 수확당했다! (정신 −${B.ears.mind})`);
+      } else lines.push(`${ga(actor.name)} ${t.name} 쪽으로 낫을 휘둘렀지만, 이삭이 씻겨 나가 낫이 허공을 갈랐다.`);
+    }
+    fg.harvest = fg.harvest.filter((x) => x.at > fg.turn);
     // 예고했던 큰 공격
     if (plan?.type === 'gaze') {
       let t = fg.players.find((p) => p.id === plan.on && alive(p));
@@ -551,10 +569,10 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
         const pool = ps().slice().sort(() => Math.random() - 0.5).slice(0, B.ears.n);
         lines.push(`${ga(B.boss.name)} 검은 이삭 한 줌을 흩뿌렸다. ${pool.map((p) => p.name).join(', ')}에게 이삭이 박혔다.`);
         for (const p of pool) {
-          p.ears += 1;
-          if (p.ears >= B.ears.max) {
-            p.ears = 0; p.reaped = 1; p.reapedAt = fg.turn; p.mindLoss = (p.mindLoss || 0) + B.ears.mind;
-            lines.push(`${ga(p.name)} 거두어졌다! 다음 턴에 움직이지 못한다. (정신 −${B.ears.mind})`);
+          p.ears = Math.min(B.ears.max, p.ears + 1);
+          if (p.ears >= B.ears.max && !fg.harvest.some((h) => h.on === p.id)) {
+            fg.harvest.push({ on: p.id, at: fg.turn + 1 });
+            lines.push(`${p.name}의 이삭이 다 여물었다. ${ga(B.boss.short)} 낫 끝을 ${p.name} 쪽으로 돌린다…`);
           }
         }
       }
@@ -582,7 +600,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     const B = fg.B;
     fg.lord = part(B, 'lord', total * B.lordShare);
     fg.boss = part(B, 'boss', total * (1 - B.lordShare));
-    fg.shadow = null; fg.crows = []; fg.summons = 0; fg.splitDown = null;
+    fg.shadow = null; fg.crows = []; fg.summons = 0; fg.splitDown = null; fg.harvest = [];
     fg.foes = [fg.lord];
     return `${ga(B.lord.name)} 앞을 막아선다. 뒤에서 ${ga(B.boss.name)} 실을 당기듯 손가락을 움직인다.`;
   }
@@ -780,6 +798,8 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
 
   const SCRIPTS = {
     morven: { setup: mvSetup, schedule: mvSchedule, intent: mvIntent, beforeAct: mvBefore, afterAct: mvAfter, phases: mvPhases, endTurn: mvEnd, bossTurn: mvBossTurn, isWon: mvWon,
+      // 자동으로 고를 때: 수확당할 동료(나 포함)가 있으면 치유로 이삭부터 씻음
+      autoPick: (fg, p) => { const t = fg.players.find((x) => alive(x) && (fg.harvest || []).some((h) => h.on === x.id && h.at === fg.turn) && x.ears >= fg.B.ears.max); return t && p.skills.includes('mend') && !combat.blocked(p, { type: 'skill', id: 'mend' }) ? { type: 'skill', id: 'mend', ally: t.id === p.id ? null : t.id } : null; },
       sub: (f) => (f.raid === 'crow' ? '허수아비' : '레이드'), foeTags: (fg, f) => (f === fg.boss && crowsUp(fg) ? [{ t: '허수아비 뒤에 숨음' }] : []) },
     knights: { setup: knSetup, schedule: knSchedule, intent: knIntent, startTurn: knStart, beforeAct: knBefore, afterAct: knAfter, phases: knPhases, endTurn: knEnd, bossTurn: knBossTurn, isWon: knWon,
       autoPick: knAuto, sub: knSub, foeTags: knTags },
@@ -878,6 +898,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
       } else for (const l of [res.head, ...res.lines]) db.noteAdd(p.id, `[레이드] ${l}`);
       if (falls) fall(d, B.boss.name);
     }
+    for (const r of new Set(fg.ids.map((id) => load(id)?.region).filter(Boolean))) presence?.(r);
     push();
   }
   const ITEM_NAME = (id) => ITEMS[id]?.name || id;

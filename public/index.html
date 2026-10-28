@@ -2249,6 +2249,7 @@
     rest: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
     maze: '<path d="M12 3c2.2 2.4 3 4.2 3 6a3 3 0 0 1-6 0c0-1 .4-1.8 1-2.5.2 1 .8 1.6 1.5 1.8-.3-1.8.1-3.6.5-5.3z"/><path d="M10 13h4l-1 8h-2z"/>',
     fall: '<path d="M4 12h4l2-5 4 10 2-5h4"/>',
+    raid: '<path d="M5 19L17 7M14 4l6 6M4 16l4 4"/><path d="M19 19L7 7M10 4L4 10M20 16l-4 4"/>', // 엇갈린 두 검
   };
   const inMazeNow = () => { try { return mzInside(); } catch { return false; } }; // (회랑 코드는 파일 아래쪽에서 정해짐)
   // 시간 글씨 — 원정(남은 시간): 시:분:초 (0:01:12 · 1:12:30, 초는 올려 셈) / 쉼(쉰 시간): 38분 · 1시간 12분
@@ -2262,6 +2263,7 @@
     // 원정은 남은 시간(0:01:12), 쉼은 쉰 시간(38분). 원정이 끝났으면 시간 없이 '원정 끝'
     const st = me.fallen ? ['fall', '쓰러짐', '', true]
       : me.berserkInfo ? ['fall', '광폭화', '', true]
+      : me.raidBoss?.inRaid ? ['raid', '레이드 중', '']
       : me.exp ? (now >= me.exp.end ? ['exp', '원정 끝', ''] : ['exp', '원정 중', stClock(me.exp.end - now)])
       : inMazeNow() ? ['maze', '회랑 탐사', '']
       : me.restAt ? ['rest', '쉬는 중', stTime(now - me.restAt)]
@@ -10700,7 +10702,8 @@
           const def = sk.id === 'breath' ? S.combat.breaths[S.me.kind] : S.combat.skills[sk.id];
           const cb = !why && sk.combo;
           const healPal = sk.id === 'mend' && pal && !pal.left;
-          add(sk.name, why || (healPal ? (pal.down ? `${pal.name} 일으키기` : `${pal.name}에게`) : cb ? `연계! ${sk.combo}` : `기력 ${sk.en}`), { type: 'skill', id: sk.id }, { disabled: !!why, title: [def?.desc, ...comboHints(sk.id)].filter(Boolean).join('\n'), combo: !!cb && !healPal });
+          const reap = healPal && (pal.tags || []).some((g) => g.t === '수확 예고');
+          add(sk.name, why || (healPal ? (pal.down ? `${pal.name} 일으키기` : reap ? `${pal.name} 이삭 씻기` : `${pal.name}에게`) : cb ? `연계! ${sk.combo}` : `기력 ${sk.en}`), { type: 'skill', id: sk.id }, { disabled: !!why, title: [def?.desc, ...comboHints(sk.id)].filter(Boolean).join('\n'), combo: !!cb && !healPal, suggest: !!reap });
         }
         const bigHit = v.intent && ['heavy', 'multi', 'debuff'].includes(v.intent.kind);
         add('방어', v.kind === 'raid' ? '피해 절반, 기력 +3' : bigHit ? '특기 피해 ¼ · 반격' : '피해 절반, 기력 +3', { type: 'guard' }, { suggest: bigHit && v.kind !== 'raid' });
@@ -12186,7 +12189,12 @@
         a.textContent = '원정 중';
         row.appendChild(a);
       }
-      if (d.berserk || S.rampages.some((r) => r.id === d.id)) {
+      if (d.raid) {
+        const a = document.createElement('span');
+        a.className = 'raid';
+        a.textContent = '레이드 중';
+        row.appendChild(a);
+      } else if (d.berserk || S.rampages.some((r) => r.id === d.id)) {
         const a = document.createElement('span');
         a.className = 'rage';
         a.textContent = '광폭화';
@@ -12197,7 +12205,7 @@
         a.textContent = '쉬는 중';
         row.appendChild(a);
       }
-      if (S.me && d.id === S.me.id && !d.away && !d.resting) {
+      if (S.me && d.id === S.me.id && !d.away && !d.resting && !d.raid) {
         const me = document.createElement('span');
         me.className = 'me';
         me.textContent = '나';

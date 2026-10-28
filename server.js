@@ -422,7 +422,7 @@ const online = new Map();
 // av: 그림 버전. 0이면 그림이 없어서 종류별 문양을 보여줌
 // away: 원정을 떠나 자리를 비운 상태
 const publicDragon = (d) => ({
-  id: d.id, name: d.name, kind: d.kind, av: d.has_avatar ? d.avatar_ver : 0, away: !!d.exp_end, resting: !!d.rest_at,
+  id: d.id, name: d.name, kind: d.kind, av: d.has_avatar ? d.avatar_ver : 0, away: !!d.exp_end, resting: !!d.rest_at, raid: !!raidBoss?.busy(d.id),
   berserk: !!logic.berserkOf(d),
   place: logic.placeOf(d),
   title: logic.titleName(d),
@@ -1030,7 +1030,7 @@ const ruin = (() => {
 logic.hooks.purify = (d, kind) => (logic.isRuin(d.region) ? ruin.add(d, kind) : purify.add(d, kind));
 // 레이드: 만렙 드래곤 넷이 모여 함께 맞서는 기믹 전투 (raidboss.js)
 raidBoss = require('./raidboss')({ io, db, online, logic, combat, arena, sendMe,
-  isOpen: (r) => ruin.unlocked(r), fall: death.fall, purify: (d, n) => ruin.add(d, 'raid', n),
+  isOpen: (r) => ruin.unlocked(r), fall: death.fall, purify: (d, n) => ruin.add(d, 'raid', n), presence: (r) => broadcastPresence(r),
   news: (text) => { const at = Date.now(); let id = 0; try { id = db.addChat('!', { dragonId: 0, name: '', kind: '', text, at }); } catch {} io.emit('system', { text, at, news: true, id }); } });
 arena.setRaid(raidBoss);
 logic.hooks.companionsHere = (d) => { for (const e of online.values()) if (e.dragon.id !== d.id && e.dragon.region === d.region && !e.dragon.dead_at) return true; return false; };
