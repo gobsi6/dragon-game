@@ -3652,3 +3652,19 @@ html:has(dialog.dlg:modal), html:has(dialog.dlg:modal) body { overflow: hidden; 
   .pe-ed .pe-sum { order: 3; flex-basis: 100%; padding-left: 36px; }
   .pe-ed .pe-acts { margin-left: 0; }
 }
+/* 제작: 개수를 골라 한꺼번에 만들기 (− 개수 + 최대 · N개 만들기) */
+.recipe .rc-go { display: flex; align-items: center; gap: 8px; }
+.rc-qty { display: inline-flex; align-items: center; height: 32px; border: 1px solid var(--line-in); border-radius: 3px; background: #fff; }
+.rc-qty button { width: 28px; height: 100%; padding: 0; background: none; border: 0; font: 600 15px/1 var(--sans); color: var(--ink-2); cursor: pointer; }
+.rc-qty button:hover:not(:disabled) { color: var(--steel-d); background: #F3F5F7; }
+.rc-qty button:disabled { color: #C2C5C8; cursor: default; }
+.rc-qty input { width: 34px; height: 100%; padding: 0; text-align: center; border: 0; border-left: 1px solid var(--line-soft); border-right: 1px solid var(--line-soft); font: 600 13px/1 var(--sans); color: var(--ink); background: transparent; -moz-appearance: textfield; }
+.rc-qty input::-webkit-outer-spin-button, .rc-qty input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.rc-qty .rc-max { width: auto; padding: 0 8px; border-left: 1px solid var(--line-soft); font-size: 11.5px; font-weight: 500; }
+@media (max-width: 520px) { .recipe .rc-go:has(.rc-qty) { grid-column: 1 / -1; } .recipe .rc-go:has(.rc-qty) .btn { flex: 1; } } /* 폰: 개수 고르기가 있으면 이름 아래 한 줄을 다 씀 */
+.recipe .rc-go .btn { white-space: nowrap; }
+/* 둥지: 보물더미 순위 (티 나지 않게 작은 회색 한 줄) */
+.hoard-rank { margin: 6px 0 0; display: flex; flex-wrap: wrap; gap: 2px 10px; font: 400 11.5px/1.5 var(--sans); color: var(--muted); letter-spacing: 0; } /* 큰 숫자(.v)의 글꼴을 물려받지 않게 */
+.hoard-rank .r { font-variant-numeric: tabular-nums; }
+.hoard-rank .k { color: #9A9EA2; }
+.hoard-rank .r.me { color: var(--steel-d); font-weight: 600; }

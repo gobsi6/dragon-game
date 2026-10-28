@@ -4765,6 +4765,21 @@
             tierBox.append(bar, nx);
           }
           sum.firstChild.appendChild(tierBox);
+          // 서버 보물더미 순위: 눈에 띄지 않게 작은 한 줄 (1~3위, 순위 밖이면 내 순위)
+          if (n.rank?.top?.length) {
+            const rk = document.createElement('p');
+            rk.className = 'hoard-rank';
+            const k = document.createElement('span'); k.className = 'k'; k.textContent = '보물더미 순위';
+            rk.appendChild(k);
+            n.rank.top.forEach((x, i) => {
+              const s = document.createElement('span');
+              s.className = `r${x.me ? ' me' : ''}`;
+              s.textContent = `${i + 1}위 ${x.name} ${x.value.toLocaleString()}`;
+              rk.appendChild(s);
+            });
+            if (n.rank.mine && n.rank.mine > 3) { const s = document.createElement('span'); s.className = 'r me'; s.textContent = `내 둥지 ${n.rank.mine}위`; rk.appendChild(s); }
+            sum.firstChild.appendChild(rk);
+          }
 
           // 보물 상자: 아이의 선물·받은 꽃다발 (도둑이 손대지 못함. 물건으로 넣은 것은 다시 꺼낼 수 있음)
           const hc = document.createElement('h3');
@@ -6015,7 +6030,7 @@
         row.className = `recipe ${it.rarity}`;
     row.dataset.q = it.name; // 찾기 칸이 이름으로 거름
         row.dataset.out = r.out; // 쓰임새 창의 '만들러 가기'가 찾아옴
-        row.innerHTML = '<div class="nm"><b></b><span class="eff"></span></div><button type="button" class="btn primary">만들기</button><div class="needs"></div>';
+        row.innerHTML = '<div class="nm"><b></b><span class="eff"></span></div><div class="rc-go"><button type="button" class="btn primary">만들기</button></div><div class="needs"></div>';
         row.querySelector('b').textContent = it.name;
         row.querySelector('b').prepend(favBtn('recipes', r.out, renderCraft));
         row.querySelector('b').append(itemTags(it));
@@ -6024,8 +6039,10 @@
         const needs = row.querySelector('.needs');
         let ok = true;
         const add = (text, lack) => { const n = document.createElement('span'); n.className = `need${lack ? ' lack' : ''}`; n.textContent = text; needs.appendChild(n); if (lack) ok = false; };
+        const needEls = [];
         for (const [id, n] of Object.entries(r.needs)) {
           add(`${S.items[id].name} ${invCache[id] || 0}/${n}`, (invCache[id] || 0) < n);
+          needEls.push([needs.lastChild, id, n]);
           if (S.items[id].cat === 'trophy') needs.lastChild.title = effectText(S.items[id]);
           srcChip(needs.lastChild, id, row); // 누르면 그 재료를 얻는 곳이 펼쳐짐
         }
@@ -6033,11 +6050,35 @@
         const en = Math.ceil(r.en * (me.perks?.smith ? 0.7 : 1) * (me.craftMult || 1) * forgeM - 1e-9); // 둥지의 대장장이, 칭호, 공방
         const why = [me.perks?.smith, me.craftMult < 1 ? '칭호' : null, ci.forge ? '공방' : null].filter(Boolean).join('·');
         add(`기력 ${en}${en < r.en ? ` (${why} 덕분에 −${r.en - en})` : ''}`, me.en < en);
+        const enEl = needs.lastChild;
         if (r.wis) add(`지혜 ${r.wis} 이상`, me.stats.wisdom < r.wis);
         const bt = row.querySelector('.btn');
         bt.disabled = !ok || !!me.exp;
         // 장신구는 불 조절(두드리기)을 거쳐 만듦. 잘 맞추면 대성공 확률이 오름
-        bt.addEventListener('click', () => (it.type === 'equip' ? openForgeGame(r.out) : itemAct('craft', { recipe: r.out })));
+        // 장신구가 아니면 개수를 골라 한꺼번에 만듦 (− 개수 + · 최대). 재료·기력 표시도 고른 개수만큼으로
+        let qty = 1;
+        const maxN = Math.max(0, Math.min(99, ...Object.entries(r.needs).map(([id, n]) => Math.floor((invCache[id] || 0) / n)), en > 0 ? Math.floor(me.en / en) : 99));
+        if (it.type !== 'equip' && maxN > 1) {
+          const q = document.createElement('span'); q.className = 'rc-qty';
+          q.innerHTML = '<button type="button" aria-label="하나 덜">−</button><input type="number" inputmode="numeric" min="1" aria-label="만들 개수"><button type="button" aria-label="하나 더">+</button><button type="button" class="rc-max">최대</button>';
+          const [mi, inp, pl, mx] = q.children;
+          const set = (v) => {
+            qty = Math.max(1, Math.min(maxN, Math.floor(Number(v)) || 1));
+            inp.value = qty; inp.max = maxN;
+            mi.disabled = qty <= 1; pl.disabled = qty >= maxN; mx.disabled = qty >= maxN;
+            bt.textContent = qty > 1 ? `${qty}개 만들기` : '만들기';
+            for (const [el, id, n] of needEls) el.firstChild.nodeValue = `${S.items[id].name} ${invCache[id] || 0}/${n * qty}`;
+            enEl.firstChild.nodeValue = `기력 ${en * qty}${en < r.en ? ` (${why} 덕분에 −${(r.en - en) * qty})` : ''}`;
+          };
+          mi.addEventListener('click', () => set(qty - 1));
+          pl.addEventListener('click', () => set(qty + 1));
+          mx.addEventListener('click', () => set(maxN));
+          inp.addEventListener('change', () => set(inp.value));
+          inp.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { set(inp.value); bt.click(); } });
+          row.querySelector('.rc-go').prepend(q);
+          set(1);
+        }
+        bt.addEventListener('click', () => (it.type === 'equip' ? openForgeGame(r.out) : itemAct('craft', { recipe: r.out, qty })));
         grp.appendChild(row);
       }
     }

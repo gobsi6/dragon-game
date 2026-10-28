@@ -1086,6 +1086,31 @@ function craft(d, outId, have, focus = null) {
   const levelUp = gainXp(d, xp);
   return { title: great ? '제작 · 대성공' : '제작', lines, items, made: [{ id: madeId, qty }], gold: 0, xp, levelUp, great };
 }
+// 여러 개 한꺼번에 만들기 (장신구는 불 조절을 거치므로 하나씩). 재료나 기력이 모자라면 거기서 멈추고 만든 만큼만
+function craftMany(d, outId, have, focus = null, n = 1) {
+  n = Math.max(1, Math.min(99, Math.floor(Number(n)) || 1));
+  if (ITEMS[outId]?.type === 'equip') n = 1;
+  if (n === 1) return craft(d, outId, have, focus);
+  const delta = {};
+  const haveNow = (id) => have(id) + (delta[id] || 0);
+  const items = [], made = {}, lines = [];
+  let xp = 0, levelUp = 0, done = 0, greats = 0, stop = null;
+  for (let i = 0; i < n; i++) {
+    const r = craft(d, outId, haveNow, null);
+    if (r.error) { stop = r.error; break; }
+    done++;
+    if (r.great) greats++;
+    for (const x of r.items) { items.push(x); delta[x.id] = (delta[x.id] || 0) + x.qty; }
+    for (const m of r.made) made[m.id] = (made[m.id] || 0) + m.qty;
+    xp += r.xp; levelUp += r.levelUp || 0;
+  }
+  if (!done) return { error: stop };
+  const name = ITEMS[outId].name;
+  const total = Object.values(made).reduce((a, b) => a + b, 0);
+  lines.push(`${name}${josa(name, '을', '를')} ${done}번 만들어 ${total}개를 얻었다.${greats ? ` (대성공 ${greats}번)` : ''}`);
+  if (done < n) lines.push(`${n}번 중 ${done}번만 만들었다. ${stop}`);
+  return { title: greats ? '제작 · 대성공' : '제작', lines, items, made: Object.entries(made).map(([id, qty]) => ({ id, qty })), gold: 0, xp, levelUp, great: greats > 0 };
+}
 // 실험: 재료 2~3가지를 하나씩 넣어 섞어 봄. 숨겨진 제작법과 재료가 같으면 알게 됨
 function experiment(d, ids, have, opts = {}) {
   if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
@@ -2424,7 +2449,7 @@ module.exports = {
   seasonAt, weatherOf, weatherIdAt, weatherFx, fxText, fxProse, weatherDebug, SLOT_MS,
   nestInfo, nestTier, maxKinOf, expandNest, checkRaid, raidView, chaseCheck,
   regen, gather, explore, fishCast, fishReel, startExpedition, finishExpedition, chooseFork, forkView, expInfo,
-  craft, experiment, freeCraft, enhanceGear, engraveGear, tidyGear, tidyHoardGear, engraveOf, gearOf, greatChance, craftView, ordersView, fillOrder, buildForge, atForge,
+  craft, craftMany, experiment, freeCraft, enhanceGear, engraveGear, tidyGear, tidyHoardGear, engraveOf, gearOf, greatChance, craftView, ordersView, fillOrder, buildForge, atForge,
   useItem, equip, unequip, statsOf, bonusOf, hpCap, enCap, apCap, equipOf, buffOf, giveBuff,
   presetsView, presetSave, presetRename, presetClear, presetUse, // 장비 프리셋
   repOf, setStance, marketInfo, buy, sell, intimidate,

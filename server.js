@@ -20,7 +20,7 @@ const mobs = require('./game-mobs'); // 모브 드래곤: 의뢰·이야기·교
 const life = require('./game-life');
 // 예전 첫사랑 기록 채우기: 함께한 날들에 상대 이름이 들어간 줄 (한 번만, 이미 채운 아이는 건너뜀)
 { const n = db.kinFixAll(life.loveDiaryFix); if (n) console.log(`첫사랑 기록 ${n}명 채움`); }
-const { REGION_LOOT, SHOPS_SPECIAL, RUIN, FACILITY, KIN_TRAITS, KIN_PLAY } = require('./game-data');
+const { REGION_LOOT, SHOPS_SPECIAL, RUIN, FACILITY, KIN_TRAITS, KIN_PLAY, isTestDragon } = require('./game-data');
 
 // ── 물건을 얻는 곳: 제작 화면에서 재료를 누르면 보여 줌. 서버를 켤 때 한 번 정리해 둠 ──
 const ITEM_SOURCES = (() => {
@@ -993,6 +993,10 @@ const ruin = (() => {
     return goalV;
   };
   const pct = () => Math.min(1, st.total / goal());
+  // 정화도 칭호: 지금까지의 기여를 드래곤 기록(특성 횟수 ruinpts)에 옮겨 둠 (칭호가 생기기 전에 쌓은 기여도 인정)
+  for (const [id, p] of Object.entries(st.pts || {})) {
+    try { const d = db.getDragon(Number(id)); if (d && (logic.traitsOf(d).counts.ruinpts || 0) < p) { logic.traitsOf(d).counts.ruinpts = p; db.saveState(d); } } catch {}
+  }
   const gated = () => Object.values(REGIONS).filter((r) => r.realm === 'ruin' && r.unlock > 0);
   const openText = (r) => `[${RUIN.name}] 정화도 ${Math.round(r.unlock * 100)}%! 오염이 물러나며 ${r.name}${josa(r.name, '으로', '로')} 가는 길이 열렸다.`;
   // 예전 저장분: 열림 기록이 없으면 지금 정화도로 조용히 채움 (다시 알리지 않게)
@@ -1020,6 +1024,7 @@ const ruin = (() => {
     st.pts[d.id] = (st.pts[d.id] || 0) + v;
     st.names[d.id] = d.name;
     st.total += v;
+    logic.traitsOf(d).counts.ruinpts = st.pts[d.id]; // 칭호 판정용: 내 누적 기여 (정화도 칭호)
     const lines = settle().map(openText); // 새로 열린 지역이 있으면 내 결과 창에도
     save();
     return lines;
@@ -1030,6 +1035,26 @@ const ruin = (() => {
 })();
 logic.hooks.purify = (d, kind) => (logic.isRuin(d.region) ? ruin.add(d, kind) : purify.add(d, kind));
 // 레이드: 만렙 드래곤 넷이 모여 함께 맞서는 기믹 전투 (raidboss.js)
+// ── 보물더미 순위: 둥지가 있는 드래곤의 보물더미 가치 (금화 + 물건 + 보물 상자). 5분마다 새로 셈 ──
+let rankCache = { at: 0, list: [] };
+function hoardRank(me) {
+  const now = Date.now();
+  if (now - rankCache.at > 5 * 60000) {
+    const list = [];
+    for (const { id } of db.activeSince(0)) {
+      try {
+        const d = online.get(id)?.dragon || db.getDragon(id);
+        if (!d || !d.nest || d.dead_at || isTestDragon(d)) continue;
+        list.push({ id, name: d.name, value: logic.hoardValue(d.hoard_gold || 0, db.hoard(id)) + logic.chestValue(d) });
+      } catch {}
+    }
+    list.sort((a, b) => b.value - a.value);
+    rankCache = { at: now, list };
+  }
+  const l = rankCache.list;
+  const i = l.findIndex((x) => x.id === me.id);
+  return { top: l.slice(0, 3).map((x) => ({ name: x.name, value: x.value, me: x.id === me.id })), mine: i >= 0 ? i + 1 : null, of: l.length };
+}
 // ── 끊긴 싸움 안내: 싸우는 드래곤을 world 'liveFights'에 적어 두고, 서버가 다시 켜졌을 때 남아 있으면 쪽지로 알림 ──
 // (싸움은 메모리에만 있어서 서버를 다시 켜면 사라짐. 체력 등은 싸움이 끝날 때 저장되므로 잃는 것은 없음)
 const liveFights = (() => {
@@ -1937,7 +1962,7 @@ function onConnect(socket) {
   };
 // 직접 만든 선물(보물 상자에 간직할 수 있는 것) 개수를 셈: 상자에 넣을 때 '직접 만든 것'으로 적고, 소지품에서 받은 선물과 나눠 보여 줌
   const countMade = (d, res) => { if (res.error) return res; const c = logic.combatJson(d); for (const m of res.made || []) if (m.qty > 0 && ITEMS[m.id]?.use?.keep) { c.madeKeep ||= {}; c.madeKeep[m.id] = (c.madeKeep[m.id] || 0) + m.qty; } return res; };
-  itemAction('craft', (d, p, have) => countMade(d, logic.craft(d, str(p.recipe), have, p.focus)));
+  itemAction('craft', (d, p, have) => countMade(d, logic.craftMany(d, str(p.recipe), have, p.focus, p.qty))); // qty: 한꺼번에 만들 개수 (장신구는 하나씩)
   itemAction('craft:experiment', (d, p, have) => countMade(d, logic.experiment(d, p.items, have, { gift: p.gift === true }))); // gift: 선물로 빚기
   // 자유 제작: 내 제작법으로 다시 빚기 (저장한 재료 조합으로 실험)
   itemAction('craft:mine', (d, p, have) => {
@@ -2161,6 +2186,7 @@ function onConnect(socket) {
       nest: {
         region: d.nest, here: !!d.nest && d.region === d.nest,
         gold: d.hoard_gold || 0, items, value: logic.hoardValue(d.hoard_gold || 0, items) + logic.chestValue(d),
+        rank: d.nest ? hoardRank(d) : null, // 서버 보물더미 순위 (1~3위와 내 순위)
         chest: logic.chestView(d), // 보물 상자 (아이의 선물·받은 꽃다발)
         kin: life.views(kin, Date.now(), d),
         tier: logic.nestInfo(d).tier, maxKin: logic.maxKinOf(d),
