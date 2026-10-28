@@ -3598,3 +3598,9 @@ html:has(dialog.dlg:modal), html:has(dialog.dlg:modal) body { overflow: hidden; 
 #battle-dlg.raid .bt-log { height: 132px; } /* 레이드는 동료 칸·작전 이야기가 더 있어 전투 기록을 조금 낮게 */
 @media (max-width: 620px) { #battle-dlg.raid .bt-log { height: 110px; } }
 .who .raid { font-size: 11px; color: #8A2E27; border: 1px solid #E3B9B4; background: #FBEFEE; padding: 0 6px; border-radius: 2px; margin-left: auto; margin-right: 2px; white-space: nowrap; } /* 이곳의 드래곤: 레이드 중 */
+/* 전투 기록 줄의 색: 받은 피해·쓰러짐(붉게), 회복(초록), 잘 막아 냄·적이 쓰러짐(강철빛), 장면·대사(흐리게) */
+.bt-log p.hurt { color: #9A3A33; }
+.bt-log p.down { color: #8A2E27; font-weight: 700; }
+.bt-log p.heal { color: #3A6B50; }
+.bt-log p.good { color: var(--steel-d); font-weight: 600; }
+.bt-log p.muted { color: #6E7378; }

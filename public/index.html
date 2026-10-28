@@ -10612,14 +10612,34 @@
     BT.fxPrev = now;
     BT.fxLines = [];
   }
+  // 전투 기록 줄의 색: 우리 편이 받은 피해는 붉게, 회복은 초록, 기믹을 잘 막아 낸 일과 적이 쓰러짐은 강철빛 굵게, 장면·대사는 흐리게
+  const reEsc = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  function btLineClass(l) {
+    if (l.startsWith('연계!')) return 'combo';
+    if (/분노했다|틈을 보았다|틈을 찔렀다/.test(l)) return 'key';
+    const v = BT?.view;
+    const mine = [v?.me?.name, ...(v?.allies || []).map((a) => a.name)].filter(Boolean);
+    const subj = (n) => new RegExp(`^${reEsc(n)}(?:이|가|이\\(가\\))\\s`).test(l); // 이 줄의 주어가 우리 편인지
+    const isMine = mine.some(subj);
+    if (mine.some((n) => new RegExp(`${reEsc(n)}(?:이|가|이\\(가\\)) (?:쓰러졌다|수확당했다)`).test(l))) return 'down';
+    if (/되찾았다|일으켰다|씻겨 나갔다|상처가 빛 속에 아물/.test(l)) return 'heal';
+    if (/데었다/.test(l)) return 'hurt';
+    if (mine.some((n) => l.includes(`${n}에게 `) && /\d+의 피해/.test(l))) return 'hurt';
+    if (isMine && /\d+의 피해를 입었다/.test(l) && !/에게 /.test(l)) return 'hurt'; // 노래·불길·독처럼 우리 편이 입은 피해
+    if (isMine && /막아섰다|노래를 끊었다|파고들었다|피했다|흘려보냈다/.test(l)) return 'good';
+    if (/방패벽이 무너졌다|허공을 갈랐다|좋은 상대였다/.test(l)) return 'good';
+    if (!isMine && /(?:쓰러졌다|꺾였다|무릎을 꿇었다)/.test(l) && !mine.some((n) => l.includes(n))) return 'good';
+    if (!/\d/.test(l) && !isMine) return 'muted'; // 숫자 없는 장면·대사·알림
+    return '';
+  }
   function btAddLines(lines, turn) {
     if (BT) (BT.fxLines ||= []).push(...lines);
     const log = $('bt-log');
     if (turn != null) { const t = document.createElement('div'); t.className = 't'; t.textContent = turn ? `${turn}턴` : ''; if (turn) log.appendChild(t); }
     for (const l of lines) {
       const p = document.createElement('p');
-      // 연계·분노·반격은 눈에 띄게
-      p.className = `new${l.startsWith('연계!') ? ' combo' : /분노했다|틈을 보았다|틈을 찔렀다/.test(l) ? ' key' : ''}`;
+      const c = btLineClass(l);
+      p.className = `new${c ? ` ${c}` : ''}`;
       p.textContent = l;
       log.appendChild(p);
     }
