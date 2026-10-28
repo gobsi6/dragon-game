@@ -228,11 +228,6 @@ const ITEMS = {
   purified_pendant: { name: '정화된 심장 목걸이', rarity: 'rare', type: 'equip', slot: 'neck', bonus: { wisdom: 5, scale: 3 }, value: 100, desc: '정화한 잿빛 심장 한 조각을 왕국 문장 테두리에 박았다. 가슴께에서 희미한 온기가 번진다.' },
   king_tail:        { name: '왕룡의 비늘 꼬리갑', rarity: 'rare', type: 'equip', slot: 'tail', bonus: { scale: 5, claw: 3 }, value: 120, desc: '왕룡의 금빛 비늘을 카르넴 강철 위에 겹겹이 덧댔다. 꼬리를 휘두르면 금빛 잔상이 남는다.' },
   star_charm:     { name: '별빛 부적', rarity: 'rare', type: 'equip', slot: 'charm', bonus: { wisdom: 4 }, expRare: 0.03, value: 100, desc: '별똥별 조각을 엮은 부적. 원정에서 귀한 것이 더 잘 나온다.' },
-  // 레이드 장신구 (모르벤의 낫 조각으로 빚음). 둘 다 능력치 합 10: 여럿을 고르게 올리는 것과 하나를 높게 올리는 것
-  harvest_sickle:   { name: '이삭지기의 금빛 낫', rarity: 'rare', type: 'equip', slot: 'claw', bonus: { claw: 4, majesty: 3, wisdom: 3 }, value: 160, desc: '모르벤의 낫 조각을 녹여 발톱 끝에 덧씌웠다. 휘두를 때마다 마른 밀 향이 난다.' },
-  knight_tail_shield: { name: '성문 기사단의 꼬리 방패', rarity: 'rare', type: 'equip', slot: 'tail', bonus: { wing: 4, scale: 3, claw: 3 }, value: 160, desc: '헤이른의 방패를 잘라 꼬리 끝에 맞췄다. 휘두르면 대열을 갈랐던 바람 소리가 난다.' },
-  charge_banner_charm: { name: '돌격 깃발 장식', rarity: 'rare', type: 'equip', slot: 'charm', bonus: { wing: 8, claw: 2 }, value: 160, desc: '기사단 깃발의 술을 엮어 만든 장식. 날개를 펼치면 깃발처럼 펄럭인다.' },
-  harvest_pendant:  { name: '추수 축복의 목걸이', rarity: 'rare', type: 'equip', slot: 'neck', bonus: { wisdom: 8, scale: 2 }, value: 160, desc: '모르벤이 밀밭에 걸던 축복을 낫 조각에 새겨 다시 깨웠다. 목에 걸면 손끝이 따뜻해진다.' },
   // ── 실험 재료 (자유 제작에서 비어 있던 성질 조합을 채움. 정식 제작법에는 쓰이지 않음) ──
   tough_sinew:     { name: '질긴 힘줄',          rarity: 'uncommon', value: 12, desc: '사냥감의 다리에서 뽑아낸 힘줄. 말리면 어떤 끈보다 질기다.' },
   dry_vine:        { name: '마른 덩굴 줄기',     rarity: 'common',   value: 3,  desc: '숲 바닥을 기던 덩굴을 말린 것. 엮기 좋게 잘 휜다.' },
@@ -259,10 +254,6 @@ const ITEMS = {
   archivist_cord:  { name: '기록관의 비단 끈',     rarity: 'uncommon', value: 25, desc: '왕국의 기록을 묶던 비단 끈. 매듭마다 작은 글자가 수놓여 있어, 풀면 무엇을 묶었는지 알 수 있다.' },
   knight_blade:    { name: '기사단장의 부러진 검날', rarity: 'uncommon', value: 25, desc: '시든 밀밭에 꽂혀 있던 검의 윗동. 반으로 부러졌어도 날은 아직 서 있고, 손잡이 쪽에 기사단의 맹세가 새겨져 있다.' },
   royal_chronicle: { name: '카르넴 왕실 연대기',   rarity: 'rare',     value: 55, desc: '무너진 왕도의 서고에서 건진 두꺼운 기록. 왕국이 무너지던 마지막 날까지 같은 필체로 적혀 있다.' },
-  morven_shard:   { name: '모르벤의 낫 조각', rarity: 'rare', value: 60, desc: '이삭지기 모르벤의 낫에서 떨어져 나온 조각. 검게 녹슬었지만 날 끝에 아직 금빛이 남아 있다.' },
-  heiron_crest:   { name: '헤이른의 방패 조각', rarity: 'rare', value: 60, desc: '헤이른의 방패에서 떨어져 나온 조각. 용과 인간이 함께 새겨진 자리가 반쯤 깨져 있다.' },
-  knight_logbook: { name: '기사단 근무 일지', rarity: 'rare', value: 40, desc: '성문 경비 일지. 날마다 "이상 없음"이라고만 적혀 있고, 뒤로 갈수록 글씨가 흔들린다.' },
-  morven_journal: { name: '모르벤의 수확 일지', rarity: 'rare', value: 40, desc: '풍년을 적어 내려가던 낡은 일지. 뒤로 갈수록 같은 날짜만 몇 번이고 되풀이해 적혀 있다.' },
   abyss_fang:      { name: '심연의 송곳니',        rarity: 'rare',     value: 55, desc: '균열 아래에서 올라온 무언가가 남기고 간 이빨. 검게 빛나는 끝은 쇠를 긁어도 무뎌지지 않는다.' },
   corrupt_crystal:{ name: '오염 결정',      rarity: 'rare', value: 55, desc: '오염된 땅에서만 맺히는 검붉은 결정. 오래 쥐고 있으면 머릿속이 웅웅거린다.' },
   recipe_scroll:  { name: '바랜 제작서',   rarity: 'rare',     type: 'use', use: { recipe: true }, value: 40, desc: '누군가 남긴 제작법이 적힌 낡은 양피지. 읽으면 아직 모르는 제작법 하나를 알게 된다.' },
@@ -547,11 +538,6 @@ const RECIPES = [
   { out: 'purified_pendant', needs: { ashen_core: 1, faded_crest: 3, purify_shard: 15 }, en: 20, wis: 18 },
   { out: 'king_tail',      needs: { king_scale: 1, carnem_steel: 3, ashen_core: 1 },     en: 20, wis: 18 },
   { out: 'star_charm',     needs: { star_fragment: 3, purify_shard: 15, faded_crest: 2 }, en: 16, wis: 18 },
-  // 레이드 장신구 (이삭지기 모르벤을 처음 쓰러뜨리면 낫 조각을 하나 빚을 만큼 받음)
-  { out: 'harvest_sickle',  needs: { morven_shard: 5, purify_shard: 20, ashen_core: 1 }, en: 20, wis: 18 },
-  { out: 'harvest_pendant', needs: { morven_shard: 5, purify_shard: 15, faded_crest: 2 }, en: 20, wis: 18 },
-  { out: 'knight_tail_shield',  needs: { heiron_crest: 5, purify_shard: 20, carnem_steel: 3 }, en: 20, wis: 18 },
-  { out: 'charge_banner_charm', needs: { heiron_crest: 5, purify_shard: 15, faded_crest: 2 }, en: 20, wis: 18 },
   // 낚시
   { out: 'salted_fish',   needs: { fish_mackerel: 3, salt_crystal: 1 },                 en: 4,  wis: 0 },
   { out: 'bait_meat',     needs: { beast_hide: 1 },                                     en: 2,  wis: 0 },
@@ -1601,15 +1587,6 @@ const TITLES = [
   { id: 'boss1',     name: '재앙에 맞선 자',   cond: { count: 'bosswin', at: 1 },   mod: { eliteAtk: 1.04 }, eff: '강적과 싸울 때 공격 +4%' },
   { id: 'boss2',     name: '대륙의 방패',      cond: { count: 'bosswin', at: 10 },  mod: { atk: 1.04, taken: 0.97 }, eff: '사냥 공격 +4%, 받는 피해 −3%' },
   { id: 'bosslast',  name: '재앙을 끝낸 자',   cond: { count: 'bosslast', at: 1 },  mod: { eliteAtk: 1.06 }, eff: '강적과 싸울 때 공격 +6%' },
-  // 레이드 (raidboss.js)
-  { id: 'morven1',   name: '첫 추수',         cond: { count: 'raidwin_morven', at: 1 },  mod: { taken: 0.98 }, eff: '받는 피해 −2%' },
-  { id: 'morven10',  name: '이삭을 거둔 자',   cond: { count: 'raidwin_morven', at: 10 }, mod: { atk: 1.04 },   eff: '사냥 공격 +4%' },
-  { id: 'raidguard', name: '막아선 비늘',      cond: { count: 'raidguard', at: 20 },      mod: { taken: 0.97 }, eff: '받는 피해 −3%' },
-  { id: 'heiron1',   name: '성문의 증인',       cond: { count: 'raidwin_heiron', at: 1 },  mod: { taken: 0.98 }, eff: '받는 피해 −2%' },
-  { id: 'heiron10',  name: '기사단을 쉬게 한 자', cond: { count: 'raidwin_heiron', at: 10 }, mod: { atk: 1.04 },   eff: '사냥 공격 +4%' },
-  { id: 'raidflank', name: '대열을 깬 날개',     cond: { count: 'raidflank', at: 15 },      mod: { eliteAtk: 1.04 }, eff: '강적과 싸울 때 공격 +4%' },
-  { id: 'raidduel',  name: '일기토의 맞수',      cond: { count: 'raidduel', at: 5 },        mod: { taken: 0.97 }, eff: '받는 피해 −3%' },
-  { id: 'raidhelp',  name: '들판의 길잡이',    cond: { count: 'raidhelp', at: 10 },       mod: { huntGold: 1.05 }, eff: '사냥 금화 +5%' },
   // 보물더미
   { id: 'hoard1',    name: '보물을 품은 자',   cond: { hoard: 2000 },               mod: { mindWard: 0.9 },  eff: '깎이는 정신 −10%' },
   { id: 'hoard2',    name: '황금 산의 주인',   cond: { hoard: 5000 },               mod: { huntGold: 1.1, mindWard: 0.9 }, eff: '사냥 금화 +10%, 깎이는 정신 −10%' },
@@ -1620,7 +1597,7 @@ const TITLES = [
   { id: 'yb_gambler', name: '홀짝의 귀재', cond: { count: 'yabawi', at: 30 }, mod: { huntGold: 1.05 }, eff: '사냥 금화 +5%' },
 ];
 // 칭호 조건을 사람이 읽는 글로
-const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: `둥지에서 {n}번 쉬기 (한 번에 ${NEST.restCountMin}분 이상)`, craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격', raidwin_morven: '레이드에서 이삭지기 모르벤을 {n}번 쓰러뜨리기', raidguard: '레이드에서 막아서기로 동료를 {n}번 지키기', raidhelp: '보상을 다 받은 주에 레이드를 {n}번 도와 이기기', raidwin_heiron: '레이드에서 마지막 기사단장 헤이른을 {n}번 쓰러뜨리기', raidflank: '레이드에서 우회로 방패벽을 {n}번 깨기', raidduel: '레이드에서 일기토를 {n}번 끝까지 버티기', heir: '먼 여행을 떠난 드래곤의 의지를 잇기', teach: '제자를 {n}번 가르치기', surpass: '스승의 레벨을 따라잡기', sendoff: '다 자란 식구를 {n}번 떠나보내기', corrupt: '오염된 땅에서 {n}번 행동하기', purify: '오염된 땅을 {n}번 정화하기', firstcraft: '숨겨진 제작법을 대륙에서 처음 찾아내기', masterwork: '대성공 {n}번', mobquest: '모브 드래곤의 의뢰 {n}번 마치기', mobstory: '모브 드래곤의 이야기 {n}개를 끝까지 듣기', yabawimeet: '떠돌이 야바위꾼을 {n}번 만나기 (나타날 때마다 한 번)', yabawi: '야바위꾼과 홀짝 {n}판', dance: '왕도 축제에서 {n}번 춤추기', ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map((n) => [`mazef${n}`, `지하 회랑 제 ${n}층의 봉인이 풀린 날 수호자를 치거나 기둥을 밝히기`])), mazecity: '지하 회랑 일곱 층을 모두 밝힌 날 함께하기' };
+const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: `둥지에서 {n}번 쉬기 (한 번에 ${NEST.restCountMin}분 이상)`, craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격', heir: '먼 여행을 떠난 드래곤의 의지를 잇기', teach: '제자를 {n}번 가르치기', surpass: '스승의 레벨을 따라잡기', sendoff: '다 자란 식구를 {n}번 떠나보내기', corrupt: '오염된 땅에서 {n}번 행동하기', purify: '오염된 땅을 {n}번 정화하기', firstcraft: '숨겨진 제작법을 대륙에서 처음 찾아내기', masterwork: '대성공 {n}번', mobquest: '모브 드래곤의 의뢰 {n}번 마치기', mobstory: '모브 드래곤의 이야기 {n}개를 끝까지 듣기', yabawimeet: '떠돌이 야바위꾼을 {n}번 만나기 (나타날 때마다 한 번)', yabawi: '야바위꾼과 홀짝 {n}판', dance: '왕도 축제에서 {n}번 춤추기', ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map((n) => [`mazef${n}`, `지하 회랑 제 ${n}층의 봉인이 풀린 날 수호자를 치거나 기둥을 밝히기`])), mazecity: '지하 회랑 일곱 층을 모두 밝힌 날 함께하기' };
 
 // ── 장소와 사냥터 난이도 ───────────────────────────
 // 야생 지역마다 장소가 넷. 입구는 쉽고 안쪽일수록 사냥터 난이도가 높다 (셋째까지 Lv.1~12, 넷째는 고레벨 구역 Lv.13~24).
@@ -2053,76 +2030,6 @@ const BOSS = {
     minTries: 4,           // 맞선 횟수가 이보다 적으면 피해 기록은 반영하지 않음
   },
 };
-// ── 레이드: 만렙 드래곤 넷이 모여 함께 맞서는 기믹 전투 (raidboss.js) ──
-// 멸망한 대륙 지역마다 하나. 지금은 시든 평원의 이삭지기 모르벤
-const RAIDBOSS = {
-  size: 4, minLevel: 25, minHp: 15,  // 4인 고정 (GM은 혼자서도 시험 입장). 사냥·재앙처럼 체력 15부터
-  recruitMs: 10 * 60 * 1000,         // 모집이 열려 있는 시간
-  weekly: 3,                         // 보상을 받는 횟수 (월요일 0시 초기화). 그 뒤에도 도우러 들어갈 수 있음
-  turnSeconds: 30, maxTurns: 20,     // 한 턴을 고르는 시간, 턴 제한 (20턴째에 '마지막 추수')
-  coverTaken: 0.8,                   // 막아서기로 대신 맞을 때 받는 피해 배율 (피해는 막아선 쪽의 비늘로 셈)
-  retreatLoss: 0.4,                  // 시간 초과로 물러날 때 잃는 체력 (최대 체력 비율)
-  downHeal: 0.1,                     // 이겼을 때 쓰러져 있던 드래곤이 되찾는 체력 (최대 체력 비율)
-  nerf: { step: 0.1, max: 0.3 },     // 안전판: 한 주 동안 아무도 못 잡으면 다음 주 체력 −10% (최대 −30%). 잡히면 다음 주 원래대로
-  bosses: {
-    morven: {
-      script: 'morven', // raidboss.js의 기믹 갈래
-      region: 'ruin_plain', place: '검은 밀밭 한가운데', name: '이삭지기 모르벤',
-      desc: '카르넴 왕실이 곡창 평원에 보낸 풍요의 마법사. 오백 년 동안 홀로 남아 아무도 없는 밭의 추수를 기다린다.',
-      // 만렙 넷이 기믹을 하나도 놓치지 않으면 17턴쯤에 쓰러지는 체력 (허수아비·그림자에 쓰는 턴과 빗나감까지 셈해 시험으로 맞춤)
-      lv: 27, hp: 3200, lordShare: 0.25, atk: 50, def: 16, spd: 22, mag: 50, maj: 32, // maj: 포효로 노래를 끊는 판정의 기준 (만렙 평균 위엄 + 5쯤)
-      lord:   { name: '허수아비 군주', type: 'construct', weak: ['fire', 'poison'], resist: ['earth'] },
-      boss:   { name: '이삭지기 모르벤', short: '모르벤', type: 'human', weak: ['spirit', 'lightning'], resist: ['poison'] },
-      shadow: { name: '모르벤의 그림자', type: 'spirit', weak: ['spirit', 'fire'], resist: ['poison', 'ice'], atk: 0.8 },
-      crow:   { name: '검은 허수아비', type: 'construct', weak: ['fire', 'poison'], resist: ['earth'], atk: 0.5, def: 0.6, sides: ['왼편', '오른편'] },
-      gaze:  { every: 3, power: 3.5 },                    // 1단계: 세 턴마다 '고개 돌리기' (예고 다음 턴에 한 드래곤에게 낫질 ×3.5)
-      fire:  { per: 0.04, max: 3 },                       // 불 숨결로 허수아비를 치면 밀밭에 불길 (단계마다 턴 끝에 최대 체력의 4%). 얼음·물 숨결이 한 단계씩 끔
-      song:  { every: 4, pct: 0.3, cut: 0.5 },            // 2단계: 네 턴마다 '추수의 노래' (모두 최대 체력의 30%, 포효로 끊으면 그 절반)
-      ears:  { every: 2, n: 2, max: 3, mind: 8, cleanseWis: 15 }, // 2단계부터 두 턴마다 두 드래곤에게 검은 이삭. 3개면 거두어짐 (한 턴 행동 불가, 정신 −8). 치유 한 번에 1 + 지혜 15마다 1개씩 씻음
-      summon: { at: [2, 7, 12], n: 2, hp: 0.06, shield: 0.5 }, // 2단계의 이 턴마다 허수아비 둘 (하나당 모르벤 체력의 6%). 서 있는 동안 모르벤이 받는 피해 절반
-      split: { below: 0.3, floor: 0.15, window: 2, revive: 0.7 }, // 체력 30% 아래로 떨어지면 그림자와 갈라짐 (갈라질 때 둘 다 최소 15%). 하나가 쓰러지고 2턴 안에 나머지를 못 쓰러뜨리면 70%로 되살아남
-      p3Every: 2,                                          // 3단계: 두 턴마다 고개 돌리기·추수의 노래를 번갈아
-      reward: { gold: [250, 400], shard: 'morven_shard', shards: 2, firstShard: 5, purifyShard: 15, purify: 50, journal: 'morven_journal', journalChance: 0.2, keepsake: 'golden_wheat', fame: 3 },
-      intro: '검게 마른 이삭 사이로 들어서자 바람이 멎었다. 밭 한가운데, 낡은 로브를 걸친 사람이 낫을 쥔 채 이쪽을 돌아본다. "올해는 이삭이 무겁구나."',
-      lines: {
-        phase2: ['허수아비 군주가 실 끊긴 인형처럼 무너졌다.', '"거둘 때가 됐다." 모르벤이 낫을 고쳐 쥐고 직접 걸어 나온다. 검은 이삭이 그의 발밑에서 일제히 고개를 든다.'],
-        phase3: ['모르벤이 비틀거리자 그의 그림자가 땅에서 떨어져 나와 따로 선다.', '본체와 그림자를 거의 함께 쓰러뜨려야 한다. 하나만 쓰러뜨리면 다른 하나가 되살려 낸다.'],
-        win: ['모르벤이 무릎을 꿇었다. 낫이 손에서 미끄러진다.', '"…올해 추수는, 끝났구나." 검은 이삭들이 바람에 부서지고, 그 사이로 금빛 이삭 몇 줄기가 고개를 내민다.'],
-        time: ['해가 졌다. 모르벤이 낫을 높이 들어 마지막 추수를 거둔다.', '밀밭 전체가 검게 일렁이고, 드래곤들은 더 버티지 못하고 밭 밖으로 밀려났다.'],
-        wipe: ['마지막 드래곤이 쓰러졌다. 모르벤은 낫을 거두고 다시 밭 한가운데로 돌아간다.', '"아직이다. 아직 덜 여물었어."'],
-        timeHead: '마지막 추수를 견디지 못하고 물러났다.',
-        keepsake: '밭 가장자리에서 금빛으로 여문 이삭 한 줌을 꺾었다. 보물 상자에 간직했다.',
-        keepsakeNoNest: '금빛으로 여문 이삭 한 줌을 꺾었지만, 간직할 둥지가 없어 바람에 날려 보냈다.',
-      },
-    },
-    heiron: {
-      script: 'knights',
-      region: 'ruin_capital', place: '무너진 성문 앞', name: '마지막 기사단장 헤이른',
-      desc: '카르넴 기사단의 마지막 단장. 왕이 "문을 열지 마라"는 말을 남기고 들어간 뒤로, 오백 년 동안 대열을 풀지 않았다.',
-      // 모르벤보다 한 단계 위 (성문 사냥터가 Lv.25·26). 실제 수치는 시험으로 다시 맞춤
-      lv: 28, hp: 4000, knightShare: 0.08, atk: 56, def: 18, spd: 24, mag: 46, maj: 34,
-      knight: { name: '카르넴 기사', type: 'human', weak: ['lightning', 'spirit'], resist: ['earth'], atk: 0.45, def: 1.1, names: ['왼쪽 방패 기사', '오른쪽 방패 기사', '창 기사', '늙은 기사'] },
-      boss:   { name: '마지막 기사단장 헤이른', short: '헤이른', type: 'human', weak: ['lightning', 'spirit'], resist: ['earth', 'poison'] },
-      banner: { name: '기사단 깃발', type: 'construct', weak: [], resist: [], def: 0.5, spd: 1, hp: 0.08, taken: 0.6, regen: 0.025, back: 4, only: ['dive', 'gust'] }, // 헤이른 체력의 8%. 서 있는 동안 헤이른 받는 피해 ×0.6, 턴마다 2% 회복. 꺾이면 4턴 뒤 다시
-      wall:   { every: 2, front: 0.3, broken: 1.5 },        // 1단계: 두 턴마다 방패벽 (정면 ×0.3). 우회·땅울림으로 깨면 그 턴 남은 공격 ×1.5
-      flank:  { wing: 25, power: 0.8 },                     // 우회: 50% + (날개 − 25) × 4% (20~95%). 방패벽이 아닌 턴에는 ×0.8 공격
-      charge: { every: 4, n: 2, power: 3.5 },                 // 2·3단계: 네 턴마다 두 드래곤에게 돌격 ×3 (날개 돌풍으로 피함, 막아서기 가능)
-      duel:   { below: 0.4, every: 5, turns: 3, heal: 0.1, after: 1.5, afterTurns: 3, punish: 1.5 }, // 3단계(40% 아래): 다섯 턴마다 3턴 일기토. 버티면 헤이른 ×1.5 (3턴), 지목된 드래곤이 쓰러지면 헤이른 10% 회복, 끼어들면 ×1.5 반격
-      reward: { gold: [280, 450], shard: 'heiron_crest', shards: 2, firstShard: 5, purifyShard: 15, purify: 50, journal: 'knight_logbook', journalChance: 0.2, keepsake: 'knight_banner', fame: 3 },
-      intro: '무너진 성문 앞, 녹슨 갑옷들이 한 치도 흐트러지지 않은 채 줄지어 서 있다. 가장 앞에 선 기사가 투구 너머로 낮게 말한다. "물러가라. 이 문은 열리지 않는다."',
-      lines: {
-        phase2: ['마지막 기사가 무릎을 꿇었다.', '"대열이 무너졌는가." 헤이른이 땅에 꽂았던 검을 뽑는다. 성문 위로 찢긴 기사단 깃발이 다시 오른다.'],
-        phase3: ['헤이른의 투구에 금이 갔다. 그는 투구를 고쳐 쓰고 검 끝을 땅에 댄다.', '"이제 하나씩 겨루겠다. 이름을 대라."'],
-        win: ['헤이른이 한쪽 무릎을 꿇었다. 검이 손에서 미끄러진다.', '"…문은, 아직 닫혀 있는가." 닫혀 있다는 대답을 듣고서야 그는 투구를 벗는다. "그렇다면 됐다. 이제 쉬어도 되겠군."'],
-        time: ['해가 졌다. 헤이른이 검을 높이 들자 쓰러졌던 기사들이 일제히 일어선다.', '"성문을 지켜라!" 드래곤들은 더 버티지 못하고 성문 앞에서 밀려났다.'],
-        wipe: ['마지막 드래곤이 쓰러졌다. 헤이른은 검을 거두고 다시 성문 앞에 선다.', '"물러가라. 이 문은 열리지 않는다."'],
-        timeHead: '성문을 끝내 넘지 못하고 물러났다.',
-        keepsake: '꺾인 기사단 깃발에서 한 폭을 찢어 왔다. 보물 상자에 간직했다.',
-        keepsakeNoNest: '꺾인 깃발에서 한 폭을 찢어 왔지만, 간직할 둥지가 없어 성문 앞에 내려놓았다.',
-      },
-    },
-  },
-};
 // 사냥감의 전투 성질: 약점(피해 ×1.5)과 저항(피해 ×0.5, 상태 이상이 통하지 않음), 특기
 const CREATURE_COMBAT = {
   plains:  { weak: [],            resist: [],                    special: { name: '돌진', power: 1.6 } },
@@ -2203,8 +2110,6 @@ const KEEPSAKES = {
   paper_bird:    { name: '종이 새',           value: 5,  fmt: 'of',   desc: '종이를 접어 만든 작은 새. 날개 끝을 당기면 파닥인다.' },
   paper_kite:    { name: '종이 연',           value: 7,  fmt: 'of',   desc: '나뭇살에 종이를 붙여 만든 연. 한가운데 서툴게 그린 용 한 마리가 있다.' },
   portrait:      { name: '초상화',            value: 10, fmt: 'of',   say: false, desc: '숯으로 그린 초상화. 그린 이의 눈에 비친 모습이라 실제보다 조금 더 늠름하다.' },
-  knight_banner: { name: '빛바랜 기사단 깃발 한 폭', value: 10, fmt: 'of', say: false, desc: '꺾인 카르넴 기사단 깃발에서 찢어 낸 천. 용과 인간이 함께 그려진 문장의 한 귀퉁이가 남아 있다.' }, // 레이드 첫 처치
-  golden_wheat:  { name: '금빛 밀 이삭 한 줌', value: 10, fmt: 'of',   say: false, desc: '이삭지기 모르벤이 쓰러진 뒤, 시든 평원에 오백 년 만에 다시 여문 금빛 이삭. 흔들면 마른 밀 소리가 난다.' }, // 레이드 첫 처치
   herb_sachet:   { name: '약초 주머니',       value: 7,  fmt: 'of',   desc: '말린 약초를 천에 싸서 묶은 주머니. 맡으면 머리가 맑아지는 풀 냄새가 난다.' },
   acorns:        { name: '도토리 한 줌',      value: 4,  fmt: 'of',   desc: '반질반질한 도토리 한 줌. 겨울을 위해 모아 두라는 뜻인 모양이다.' },
   pinecone:      { name: '커다란 솔방울',     value: 4,  fmt: 'of',   desc: '꼭지까지 온전한 커다란 솔방울. 송진 냄새가 난다.' },
@@ -2335,7 +2240,7 @@ const YABAWI = {
   // kind — ruin: 멸망한 대륙 에레보스 (region이 열려 있을 때만) · tease: 아직 닫힌 region의 예고 (닫혀 있을 때만) · tale: 대륙의 옛이야기 · tip: 쓸모 있는 귀띔 (늘 사실)
   rumorLocked: '"단골한테만 하는 얘기가 있지. 자주 보는 얼굴이 되면 말이야."',
   rumorUsed: '"오늘 몫의 소문은 다 풀었어. 다음에 또 만나면 하나 더 해 주지."',
-  rumorKinds: { ruin: '에레보스 이야기', tease: '에레보스 이야기', raid: '에레보스 이야기', tale: '대륙의 옛이야기', tip: '귀띔' },
+  rumorKinds: { ruin: '에레보스 이야기', tease: '에레보스 이야기', tale: '대륙의 옛이야기', tip: '귀띔' },
   rumors: [
     { id: 'r_fire',    kind: 'ruin', region: 'ruin_shore', text: '검은 바다 건너 잿빛 상륙지에 모닥불 하나가 꺼지지 않는다더군. 늙은 드래곤 오르샤가 지킨대. 정화의 결정을 가져가면 살아남은 자들이 숨겨 둔 걸 내어 준다지.' },
     { id: 'r_nets',    kind: 'ruin', region: 'ruin_shore', text: '부서진 부두의 어부들 말이야, 아직도 그물을 던진대. 바다가 마을을 삼킨 날부터 하루도 안 쉬었다는 거야. 잡히는 건 하나도 없는데.' },
@@ -2344,8 +2249,6 @@ const YABAWI = {
     { id: 'r_wheat',   kind: 'ruin', region: 'ruin_plain', text: '시든 평원은 원래 금빛 밀밭이었대. 카르넴 사람들 배를 다 채우고도 남았다지. 지금은 허수아비만 남았는데… 그놈들이 고개를 돌린다는 거, 사실이야. 내가 봤거든.' },
     { id: 'r_river',   kind: 'ruin', region: 'ruin_plain', text: '말라붙은 강바닥에 뼈 와이번들이 산대. 강이 마를 때 물을 따라 떠나지 못한 놈들이라더군. 하늘에서 뼈 부딪히는 소리가 나면 고개 숙여.' },
     { id: 'r_scare',   kind: 'ruin', region: 'ruin_plain', text: '허수아비 군주 말이야, 원래는 농부들이 밭 지키라고 세운 거래. 지키라고 세웠더니 정말로 지키고 있는 거지. 지금도, 아무도 없는 밭을.' },
-    { id: 'r_heiron',  kind: 'raid', raid: 'heiron', text: '성문 앞 기사단 말이야, 드디어 쉬었대. 누가 그 단장을 꺾었는데, 쓰러지면서 "문은 아직 닫혀 있는가" 하고 묻더라나. 닫혀 있다니까 웃었대. 그 문 안에 뭐가 있길래 오백 년을 지켰을까.' }, // 레이드 첫 처치 뒤에 풀림
-    { id: 'r_morven',  kind: 'raid', raid: 'morven', text: '허수아비들이 밭을 지킨다는 얘기, 반만 맞았더라고. 지키라고 주문을 새긴 마법사가 아직 거기 있었대. 모르벤이라던가. 추수가 끝나지 않았다면서 오백 년을 버텼다지. 그걸 누가 끝내 줬다던데… 너도 거기 있었나?' }, // 레이드 첫 처치 뒤에 풀림
     { id: 'r_karnem',  kind: 'ruin', region: 'ruin_capital', text: '카르넴은 용과 인간이 함께 세운 왕도였어. 성벽은 인간이 쌓고, 탑 꼭대기는 용들이 불로 구웠다지. 그런 나라가 또 있을까 싶어.' },
     { id: 'r_crown',   kind: 'ruin', region: 'ruin_capital', text: '카르넴의 마지막 왕은 왕관을 반으로 쪼개서 반쪽을 용에게 줬대. 함께 다스리자는 약속이었다나. 나머지 반쪽이 어디 있냐고? 그걸 알면 내가 여기서 조약돌이나 굴리고 있겠나.' },
     { id: 'r_knights', kind: 'ruin', region: 'ruin_capital', text: '무너진 성문 앞 기사단은 아직 대열을 안 풀었대. 왕이 "문을 열지 마라" 하고 들어간 뒤로, 아무도 해산하라는 말을 안 했거든.' },
@@ -2357,6 +2260,10 @@ const YABAWI = {
     { id: 'r_core',    kind: 'ruin', region: 'ruin_shore', text: '잿빛 심장은 오염된 강적의 가슴에서 뛰던 거래. 꺼내도 식지 않아. 정화하면 단단한 힘이 된다지만, 손에 쥐고 있으면 기분이 묘하다더군.' },
     { id: 'r_orb',     kind: 'ruin', region: 'ruin_shore', text: '별을 담은 유리구슬은 그 땅 아이들 장난감이었대. 멸망한 날에도 어딘가 굴러다녔겠지. …이런 얘긴 판돈이 안 돼서 공짜야.' },
     { id: 'r_idol',    kind: 'ruin', region: 'ruin_shore', text: '오염된 용 석상을 둥지에 두면 이상하게 마음이 가라앉는다던데, 정말일까? 난 무서워서 못 두겠어.' },
+    { id: 'r_quiet',   kind: 'ruin', region: 'ruin_shore', text: '오르샤한테 그날 얘길 물어봐. 하늘이 어땠는지는 말해 줘도, 누가 그랬는지는 절대 말 안 해. 이천 년째 그렇다더군.' },
+    { id: 'r_library', kind: 'ruin', region: 'ruin_capital', text: '카르넴 서고에선 아직도 종이가 타고 있대. 그날부터 쭉. 그 땅은 시간이 고인다는 말이 있어. 깃발도, 어부도, 기사들도 그래서 그대로인 거라고.' },
+    { id: 'r_tower',   kind: 'ruin', region: 'ruin_capital', text: '카르넴이 무너진 날 밤, 마법사 탑에만 불이 켜져 있었대. 왜 하필 거기만이냐고? …난 모른다니까. 판이나 벌이자고.' },
+    { id: 'r_door',    kind: 'ruin', region: 'ruin_capital', text: '왕이 "문을 열지 마라" 했다는 그 문 말이야, 성문이 아니라는 얘기가 있어. 왕은 밖으로 나간 게 아니라 아래로 내려갔다나.' },
     { id: 't_plain',   kind: 'tease', region: 'ruin_plain', text: '상륙지 너머로 길이 하나 나 있는데, 오염이 짙어서 아직 아무도 못 갔지. 다들 결정을 모아 길을 열면… 금빛이었다는 들판을 볼 수 있으려나.' },
     { id: 't_capital', kind: 'tease', region: 'ruin_capital', text: '그 대륙 안쪽에 카르넴이라는 왕도가 있었대. 길이 열리면 가 봐. 무너진 성벽 위로 아직 깃발 하나가 펄럭인다더라.' },
     { id: 't_rift',    kind: 'tease', region: 'ruin_rift', text: '에레보스 가장 깊은 곳엔 대륙을 가른 틈이 있다더군. 거기까지 가는 길은 아직 오염에 막혀 있어. 정화도가 한참 올라야 할걸.' },
@@ -2373,6 +2280,17 @@ const YABAWI = {
     { id: 's_thief',   kind: 'tale', text: '보물 도둑 무리는 반짝이는 걸 좋아해. 보물더미가 클수록 잘 꼬이지. 둥지 지킬 거 하나쯤은 두는 게 좋아.' },
     { id: 's_calm',    kind: 'tale', text: '광폭화한 용을 붙잡아 주는 건 쉬운 일이 아니야. 그래도 곁에 누가 있으면 돌아오는 길이 짧대. 혼자는 위험해.' },
     { id: 's_fish',    kind: 'tale', text: '남쪽 해안 절벽에선 비 오는 날 연어가 잘 문대. 뇌우 치는 날엔 번개 장어가 올라온다더군. 짜릿하겠지.' },
+    { id: 's_ashwind', kind: 'tale', text: '아주 옛날 해안에 잿바람이 불었대. 용이 몰고 왔다는 사람도 있고, 마법사들이 불렀다는 사람도 있고. 나? 그땐 안 태어났지. 다행히.' },
+    { id: 's_shadow',  kind: 'tale', text: '요즘 하늘에 용 그림자가 부쩍 늘었지? 시장 할멈들이 "용이 늘면 재가 내린다" 하더라. 옛말이래. 나한텐 손님이 느는 거지만.' },
+    { id: 's_bell',    kind: 'tale', text: '옛날 바닷가 마을엔 용이 오면 치는 종이 있었대. 요즘 그런 종 치면 장사꾼들이 먼저 짐 싸. 단골손님이 놀라니까.' },
+    { id: 's_flag',    kind: 'tale', text: '무너진 성채에 옛 깃발 걸어 둔 기사들 있잖아. 아르덴 경비대랑은 다른 무리야. 팔백 년 전 일을 어제처럼 말한다더군. 술 한 잔 사 주면 밤새 떠들걸.' },
+    { id: 's_native',  kind: 'tale', text: '지역마다 머무는 늙은 드래곤들은 이 땅 토박이래. 요즘 용들은 대부분 바다 너머, 산맥 너머에서 건너왔다지. 토박이들이 옛날 얘기를 잘 안 하는 건… 할 얘기가 너무 많아서일걸.' },
+    { id: 's_fairy',   kind: 'tale', text: '바다 건너 용이랑 사람이 왕관을 나눠 쓰던 나라 얘기, 어릴 때 할머니가 해 주던 동화였거든. 근데 그게 진짜 있었다니. 다음엔 어떤 동화가 진짜로 튀어나올지 겁난다니까.' },
+    { id: 's_seabed',  kind: 'tale', text: '늙은 뱃사람들 말로는 바다 밑에 길이 있대. 옛날엔 저 대륙까지 걸어서 건넜다나. 술이 좀 들어간 얘기긴 했어.' },
+    { id: 's_pillar',  kind: 'tale', text: '고대 유적 석주들 말이야, 땅에 박은 게 아니라 땅 밑에서 솟은 거라는 얘기가 있어. 그럼 그 밑엔 뭐가 있겠어? …난 안 내려가.' },
+    { id: 's_sleep',   kind: 'tale', text: '늙은 용은 몇십 년, 몇백 년씩 잔대. 깨어나면 세상이 바뀌어 있겠지. 바르가스는 천 년 만에 깨서 제일 먼저 뭘 했을까. 배가 고팠겠지, 아마.' },
+    { id: 's_roots',   kind: 'tale', text: '독안개 숲 고목이 썩는 거, 누가 저주를 걸었다는 놈도 있더군. 근데 뿌리는 땅 밑으로 이어지잖아. 그럼 땅 밑은 또 어디로 이어질까?' },
+    { id: 's_noking',  kind: 'tale', text: '고대 유적 금고를 지키는 "이름 잃은 왕" 있잖아. 왕이 어쩌다 이름을 잃냐고. 나 같으면 금화를 잃었으면 잃었지.' },
     { id: 'p_weak',    kind: 'tip', text: '강적은 싫어하는 숨결이 있어. 도감에 약점이 적혀 있잖아? 그걸 보고 가. 옛 전장 망령은 불이랑 번개를, 갈대밭 늪 악어는 번개를 못 견뎌.' },
     { id: 'p_star',    kind: 'tip', text: '원정을 두 시간 넘게, 끝까지 다녀오면 별똥별 조각이 떨어져 있을 때가 있어. 세 시간이면 더 잘 보이지. 중간에 불러들이면 꽝이고.' },
     { id: 'p_pity',    kind: 'tip', text: '멸망한 대륙 강적이 안 잡힌다고? 만나기만 해도 운이 쌓인대. 마흔 번쯤 만나면, 그다음 이길 때 귀한 장비가 꼭 나온다더라.' },
@@ -2390,6 +2308,7 @@ const YABAWI = {
     { id: 'p_boss',    kind: 'tip', text: '대륙의 재앙은 다 같이 때려잡는 거야. 마지막 일격을 넣은 녀석한텐 따로 칭호도 준다더군.' },
     { id: 'p_mobq',    kind: 'tip', text: '지역의 드래곤들이 주는 의뢰는 자정이 지나면 바뀌어. 하루 두 개씩이니까 아침마다 들러 봐.' },
     { id: 'p_open',    kind: 'tip', text: '멸망한 대륙은 다 같이 정화할수록 새 길이 열려. 한 번 열린 길은 다시 안 닫히니까, 한 발씩만 거들어도 돼.' },
+    { id: 'p_past',    kind: 'tip', text: '지역 드래곤들 이야기를 끝까지 들어 주면 옛일도 털어놓는대. 하루에 한 조각씩만. 다들 말이 달라서 문제지. 누구 말이 맞는지는… 그걸 맞히는 게 야바위 아니겠어?' },
   ],
 };
 
@@ -2453,5 +2372,5 @@ module.exports = {
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, FESTIVAL, NIGHT_MARKET, KIN_FEST, TITLES, TITLE_COUNT_NAMES, ACHIEVEMENTS, YABAWI, KEEPSAKES,
   PURIFY, CRAFT, SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, FISHING, RUIN, FACILITY, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
   DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, KIN_GROW, KIN_PLAY, KIN_TOUCH, KIN_BOND, FREE, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
-  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, RAIDBOSS, DEPART, BONDS, MARKS, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG,
+  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, DEPART, BONDS, MARKS, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG,
 };

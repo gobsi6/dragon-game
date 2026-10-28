@@ -57,7 +57,7 @@ const MOBS = {
         { intro: '내 뿔이 왜 부러졌는지 궁금하냐? …먼저 쓸만한 녀석인지 보자. 옛 전장의 망령 다섯을 쓰러뜨려라.',
           g: { win: 'plains_war', n: 5 }, t: 2,
           done: '망령들이 흩어진 자리에서 낡은 기사단 깃발 조각이 나왔다. 바르그가 그것을 오래 바라본다.' },
-        { intro: '백 년 전, 나는 인간 기사단과 싸웠다. 그때 나와 함께 날던 녀석이 있었지. 그 녀석을 위해 언덕에 돌무덤을 쌓을 거다. 짐승 가죽과 송곳니를 가져와.',
+        { intro: '팔백 년 전, 나는 인간 기사단과 싸웠다. 그때 나와 함께 날던 녀석이 있었지. 그 녀석을 위해 언덕에 돌무덤을 쌓을 거다. 짐승 가죽과 송곳니를 가져와.',
           g: { bring: { beast_hide: 4, sharp_fang: 2 } }, t: 2,
           done: '바르그가 언덕 꼭대기에 작은 돌무덤을 쌓았다. "…이제야 인사를 하는군."' },
         { intro: '그날 우리를 쫓던 들소왕의 후손이 아직 평원을 누빈다. 놈을 쓰러뜨려라. 그러면 내 뿔을 너에게 주마.',
@@ -330,6 +330,105 @@ const MOBS = {
 };
 const MOB_BY_REGION = Object.fromEntries(Object.entries(MOBS).map(([id, m]) => [m.region, id]));
 
+// ── 옛일: 이야기를 끝까지 들어 준 드래곤에게 지난 일을 묻는다 (하루에 한 조각) ──
+// 토박이 드래곤들은 저마다의 성향(stance)으로 과거를 기억한다. 아무도 거짓말을 하지 않지만, 아무도 전부를 알지 못한다.
+// react: 처음 물었을 때, 묻는 드래곤의 성향에 따라 먼저 하는 말 (성향이 없으면 hermit 줄)
+// talks: 한 번 물을 때마다 하나씩 털어놓는 조각. 한 조각은 여러 줄
+const MOB_PAST = {
+  barg: {
+    stance: 'hostile',
+    react: {
+      hostile: '같은 하늘을 보는 눈이군. 좋다, 들려주마.',
+      hermit: '숨어 사는 녀석이 옛일은 왜 묻나. …뭐, 알아 둬서 나쁠 건 없지.',
+      friendly: '인간 편에 선 녀석이로군. 그래도 들어라. 네가 손잡은 게 뭔지는 알아야지.',
+    },
+    talks: [
+      ['팔백 년 전, 인간들은 종을 울리며 하늘을 뒤졌다. 창끝에 용의 피를 바르고, 쓰러뜨린 용의 뿔을 성채에 걸었지.', '놈들이 먼저 사냥을 시작했다. 난 그걸 똑똑히 봤다.'],
+      ['내가 싸움에 뛰어든 건 해안이 이미 불탄 뒤였다. 누가 먼저 불을 놓았는지는… 모른다.', '내가 본 건 종을 울리며 하늘을 뒤지는 인간들뿐이었다. 그거면 충분했지.'],
+      ['요즘 젊은 것들은 인간 시장에서 흥정이나 한다더군. 바다 너머, 산맥 너머에서 건너온 녀석들이다.', '그 녀석들은 종소리를 들어 본 적이 없어. 무너진 성채에 아직 그 깃발이 걸려 있다는 걸, 너는 잊지 마라.'],
+    ],
+  },
+  ignar: {
+    stance: 'hostile',
+    react: {
+      hostile: '불을 아는 눈이다. 앉아라.',
+      hermit: '화로 곁은 따뜻하지. 숨어 사는 녀석도 가끔은 쬐러 와야 해.',
+      friendly: '인간 친구가 많다지. 그럼 이걸 봐 둬라.',
+    },
+    talks: [
+      ['이 창날이 보이나? 용 잡는 창이다. 팔백 년 동안 이런 걸 녹여 왔지.', '처음엔 전쟁터에서 주워 온 것들이었다. …이건 작년에 녹인 거다.'],
+      ['아르덴 어딘가에 아직 이걸 벼리는 대장간이 있다. 무너진 성채에 깃발을 거는 놈들이 쓰지.', '인간들은 그놈들이 몇 안 되는 늙은이들이라고 하더군. 늙은이가 든 창도 창이다.'],
+      ['인간이 다 그렇다는 건 아니다. …나도 안다.', '하지만 창은 불에 녹아도, 그 창을 만든 마음은 안 녹아. 난 그게 무섭다.'],
+    ],
+  },
+  morgana: {
+    stance: 'hostile',
+    react: {
+      hostile: '너도 느끼지? 땅이 아파하는 거.',
+      hermit: '숲에 숨어 사는 건 나도 마찬가지야. 차 한 잔 하면서 들어.',
+      friendly: '인간 편이라… 그래도 이건 들어 둬. 네 친구들 얘기니까.',
+    },
+    talks: [
+      ['숲의 늙은 용한테 들은 얘기야. 아주 오래전, 해안에 잿바람이 불었대.', '인간 마법사들이 바다 건너 물건으로 무슨 의식을 벌였다지. 그 바람이 지나간 숲은 백 년 동안 꽃이 안 폈대.'],
+      ['고목 뿌리에서 나온 검붉은 진액 기억나? 그거, 잿바람 냄새랑 똑같아.', '누가 또 그런 짓을 하고 있는 거야. 틀림없어.'],
+      ['증거? …없어.', '하지만 그때도 아무도 몰랐대. 알았을 땐 이미 늦었고. 난 이번엔 늦고 싶지 않아.'],
+    ],
+  },
+  skrag: {
+    stance: 'hermit',
+    react: {
+      hostile: '…용이 옳았다고 믿는 눈이군. 그런 눈은 많이 봤다.',
+      hermit: '…늪은 조용해서 좋지. 너도 그래서 숨었나.',
+      friendly: '…인간 마을에 드나든다지. 그럼 더 들어야겠군.',
+    },
+    talks: [
+      ['팔백 년 전, 해안에 재가 내렸다. 우린 그게 인간 짓이라는 걸 알았다. 그래서 날아갔다.', '의식을 벌인 놈들을 찾으러 간 게 아니었다. 그냥… 보이는 마을부터 태웠다.'],
+      ['먼저 불을 놓은 건 우리다. 기사단은 그다음에 생겼어. 종은 그다음에 울렸고.', '다들 순서를 거꾸로 기억하지. 그 편이 편하니까.'],
+      ['이 늪에 가라앉은 마을은 의식과 아무 상관 없었다. 그날 밤 종이 울려서, 내가 둑을 무너뜨렸을 뿐이다.', '용이 옳았다고 말하는 녀석들 앞에서 난 입을 다문다. …내가 그 증거니까.'],
+    ],
+  },
+  harsia: {
+    stance: 'hermit',
+    react: {
+      hostile: '분노는 따뜻하지. 하지만 오래 품으면 얼어붙어.',
+      hermit: '너도 혼자가 편하구나. …그럼 조용히 들어 줘.',
+      friendly: '인간과 가깝다니… 다치지 않길 바라.',
+    },
+    talks: [
+      ['그 시절엔 하늘이 늘 시끄러웠어. 종소리, 날갯소리, 우는 소리.', '누가 먼저였는지는… 이제 잘 모르겠어. 기억하려고 하면 눈보라가 먼저 와.'],
+      ['알을 잃은 것도 그 무렵이야. 둥지를 옮기다가 놓쳤어.', '트롤 탓을 했지만, 사실은 도망치느라 바빴던 거야.'],
+      ['얽히면 잃어. 용이든 인간이든. 그래서 난 눈보라 속에 있어.', '…그런데 네가 이 아이를 찾아 줬지. 그건, 조금 헷갈려.'],
+    ],
+  },
+  ordin: {
+    stance: 'friendly',
+    react: {
+      hostile: '흠, 인간을 미워하는 자네라도 돌은 거짓말을 하지 않네.',
+      hermit: '세상과 거리를 둔 자네라면 기록의 값어치를 알겠지.',
+      friendly: '오오, 자네라면 이 이야기를 반길 걸세!',
+    },
+    talks: [
+      ['비문을 기억하나? "용과 인간이 함께 재앙을 봉인하였노라." 내 셈으로는 만 년쯤 된 글이네.', '그때 용과 인간은 같은 도시에 살았어. 묘실의 부조가 그 증거지.'],
+      ['재미있는 걸 찾았네. 유적의 석주들 말일세, 땅 위에 따로 세운 기둥이 아니라 더 큰 무언가의 꼭대기 같아.', '벽돌 쌓는 법이 회랑 아래층과 똑같거든. 우리가 밟고 선 이 땅 밑에… 아니, 아직은 짐작일 뿐이네.'],
+      ['다른 늙은이들은 내가 순진하다고 하지. 전쟁을 겪어 보지 않았으니까. 맞는 말이네.', '하지만 함께였던 시대가 있었다는 것도 사실이야. 그걸 잊으면, 우리에겐 싸운 기억만 남네.'],
+    ],
+  },
+  aurel: {
+    stance: 'friendly',
+    react: {
+      hostile: '어이쿠, 날 선 손님이군. 장사꾼 얘기 하나 해 줄까?',
+      hermit: '조용한 손님 좋아. 소문 잘 안 퍼뜨리잖아.',
+      friendly: '인간 시장 단골이지? 그럼 이 얘기가 재밌을 거야.',
+    },
+    talks: [
+      ['장사꾼들 사이엔 오래된 얘기가 돌아. 팔백 년 전엔 바다 건너 물건이 금보다 비쌌대.', '도굴꾼들이 배 가득 실어 왔지. 사 간 건 아르덴의 마법사들이었고.'],
+      ['그게 어떻게 끝났는지는 알지? 잿바람, 불, 종소리. 장사가 망하는 건 순식간이야.', '그 뒤로 백 년 동안 해안엔 시장이 안 섰대.'],
+      ['그래도 결국 다시 섰잖아. 바다 너머에서 온 용들이 금을 들고 왔고, 인간들은 물건을 내놨지. 원한보다 장사가 오래가는 법이야.', '바다 건너 물건은 사고팔아도 돼. 문제는 그걸로 뭘 하려느냐지. 그때 마법사들은 물건을 산 게 아니라, 문을 사려 했던 거야.'],
+    ],
+  },
+};
+const STANCE_NAME = { hostile: '적대', hermit: '은둔', friendly: '우호' };
+
 // ── 목표 ────────────────────────────────────────────
 const josa = (w, a, b) => {
   const c = w.charCodeAt(w.length - 1);
@@ -372,6 +471,7 @@ function stateOf(d) {
   if (!m.story || typeof m.story !== 'object') m.story = {};
   if (!m.done || typeof m.done !== 'object') m.done = { day: 0, keys: [] };
   if (!m.tr || typeof m.tr !== 'object') m.tr = { day: 0, n: {} };
+  if (!m.past || typeof m.past !== 'object') m.past = {}; // 옛일: { [mobId]: { n: 들은 조각 수, day: 마지막으로 물은 날 } }
   return m;
 }
 function todayDone(m, now) {
@@ -585,6 +685,32 @@ function storyTurnIn(d, mobId, have, kind = 'story') {
   return { title: `${bk.title} · ${s.ch + 1}장`, lines, items: [...items, ...r.items], gold: r.gold };
 }
 
+// ── 옛일 ────────────────────────────────────────────
+const pastOf = (m, mobId) => { const s = m.past[mobId]; return s && typeof s === 'object' ? s : { n: 0, day: -1 }; };
+const pastOpen = (m, mobId) => storyOf(m, mobId).ch >= MOBS[mobId].story.ch.length;
+function pastAsk(d, mobId, now = Date.now()) {
+  const err = here(d, mobId);
+  if (err) return err;
+  const mb = MOBS[mobId];
+  const p = MOB_PAST[mobId];
+  if (!p) return { error: `${mb.name}${josa(mb.name, '은', '는')} 옛일을 말하지 않는다.` };
+  const m = stateOf(d);
+  if (!pastOpen(m, mobId)) return { error: `'${mb.story.title}' 이야기를 끝까지 들어야 옛일을 털어놓는다.` };
+  const s = pastOf(m, mobId);
+  if (s.n >= p.talks.length) return { error: `${mb.name}${josa(mb.name, '은', '는')} 더 털어놓을 옛일이 없다고 한다.` };
+  const day = logic.dayIdx(now);
+  if (s.day === day) return { error: '오늘은 여기까지라고 한다. 내일 다시 물어보자.' };
+  const first = s.n === 0;
+  const piece = p.talks[s.n];
+  m.past[mobId] = { n: s.n + 1, day };
+  const lines = [...(first ? [`"${p.react[d.stance] || p.react.hermit}"`] : []), ...piece.map((t) => `"${t}"`)];
+  if (s.n + 1 >= p.talks.length) {
+    lines.push(`${mb.name}의 옛일을 모두 들었다.`);
+    logic.chron(d, 'mark', `${mb.name}에게서 옛일을 모두 들었다.`);
+  }
+  return { title: `${mb.name}의 옛일`, lines };
+}
+
 // ── 용족 교환소 ─────────────────────────────────────
 function trade(d, mobId, i, have, now = Date.now()) {
   const err = here(d, mobId);
@@ -690,6 +816,16 @@ function view(d, mobId, have, now = Date.now()) {
       } : null,
     };
   }
+  // 옛일 (이야기를 끝까지 들은 뒤)
+  let past = null;
+  if (MOB_PAST[mobId]) {
+    const p = MOB_PAST[mobId];
+    const ps = pastOf(m, mobId);
+    past = {
+      stance: STANCE_NAME[p.stance], open: pastOpen(m, mobId), total: p.talks.length, n: ps.n, react: p.react[d.stance] || p.react.hermit,
+      heard: p.talks.slice(0, ps.n), today: ps.day === logic.dayIdx(now),
+    };
+  }
   const used = todayTrades(m, now);
   const usedW = weekTrades(m, now);
   const trades = mb.trades.map((o, i) => ({
@@ -702,7 +838,7 @@ function view(d, mobId, have, now = Date.now()) {
   return {
     id: mobId, name: mb.name, kind: mb.kind, who: mb.who, desc: mb.desc,
     greet: gate?.done && mb.gate.greetIn ? mb.gate.greetIn : greetOf(d, mb).text, fame: greetOf(d, mb).fame, mood: greetOf(d, mb).mood, region: mb.region,
-    offers, story, gate, trades, act: activeView(d), max: MOB_RULES.maxActive,
+    offers, story, gate, past, trades, act: activeView(d), max: MOB_RULES.maxActive,
     resetAt: (logic.dayIdx(now) + 1) * 86400000 - 9 * 3600000,
   };
 }
@@ -711,5 +847,5 @@ const listForClient = () => Object.fromEntries(Object.entries(MOBS).map(([id, m]
 
 module.exports = {
   MOBS, MOB_RULES, MOB_BY_REGION, goalKey, goalText, offersOf, rewardFor,
-  accept, turnIn, abandon, storyAccept, storyTurnIn, trade, view, summary, listForClient,
+  accept, turnIn, abandon, storyAccept, storyTurnIn, pastAsk, trade, view, summary, listForClient,
 };

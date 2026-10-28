@@ -212,11 +212,6 @@
           <div class="mob-t"><b id="maze-bar-t">지하 회랑</b><small id="maze-bar-s"></small></div>
           <button class="btn primary" type="button" id="maze-bar-go">내려간다</button>
         </div>
-        <div class="mob-bar rb-bar" id="rb-bar" hidden><!-- 레이드: 그 지역의 모집 줄 -->
-          <span class="rb-em" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 20c2.5-1 4-3.4 4.6-6.4"/><path d="M9.6 13.6C10 8.4 14.4 4.6 19.5 4.6c-1 3.4-3.6 6.2-7 7.4"/><path d="M14 19.5v-6M16.5 19.5v-4.5M19 19.5v-6"/><path d="M13.2 14.2l.8-1 .8 1M15.7 15.7l.8-1 .8 1M18.2 14.2l.8-1 .8 1"/></svg></span>
-          <div class="mob-t"><b id="rb-bar-t"></b><small id="rb-bar-s"></small></div>
-          <div class="rb-btns" id="rb-bar-btns"></div>
-        </div>
         <div class="mob-bar yaba-bar yaba-hint" id="yaba-hint" hidden>
           <span class="mob-em yaba-em" aria-hidden="true"><svg width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="17" r="16" fill="#F1E7D2" stroke="#B08A3E" stroke-width="1.2"/><ellipse cx="12" cy="20" rx="4.2" ry="3.4" fill="#9A9184"/><ellipse cx="21" cy="21.5" rx="3.6" ry="3" fill="#B3AA9C"/><ellipse cx="17" cy="14" rx="3.9" ry="3.2" fill="#857C70"/></svg></span>
           <div class="mob-t"><b>떠돌이 야바위꾼이 판을 벌였다</b><small id="yaba-hint-t"></small></div>
@@ -884,7 +879,6 @@
   <div class="orn-h"><h2 id="battle-title">전투</h2></div>
   <div class="body">
     <div class="bt-sides"><div class="bt-f" id="bt-me"></div><div class="bt-vs">VS</div><div class="bt-f foe" id="bt-foe"></div></div>
-    <div class="bt-allies" id="bt-allies" hidden></div>
     <div class="bt-intent" id="bt-intent" hidden></div>
     <div class="bt-turn" id="bt-turn"></div>
     <div class="bt-log" id="bt-log" aria-live="polite"></div>
@@ -2696,7 +2690,6 @@
     gs.classList.toggle('open', gearSumOpen);
   }
   let INV_Q = ''; // 소지품 찾기 칸에 적은 것 (다시 그려도 남음)
-  let invSlot = 'all'; // 장신구 탭의 부위 (전체 · 머리 · 목 · 발톱 · 부적 · 날개 · 꼬리)
   // 찾기: 이름이 맞지 않는 물건 줄은 숨기고, 다 숨은 묶음은 제목도 숨김 (제작의 찾기와 같은 방식)
   function applyInvQ(box) {
     const q = INV_Q.trim().toLowerCase();
@@ -2761,7 +2754,6 @@
     const pw = invSort === 'power' ? invPower : invSort === 'value' ? (id) => S.items[id]?.value || 0 : null;
     const list = [...all, ...zeros]
       .filter(([id]) => invTab === 'all' || (invTab === 'fav' ? isFav(id) : itemCat(S.items[id]) === invTab))
-      .filter(([id]) => invTab !== 'equip' || invSlot === 'all' || S.items[id].slot === invSlot) // 장신구 탭: 부위별 소분류
       .sort(([a], [b]) => GORDER.indexOf(groupOf(a)) - GORDER.indexOf(groupOf(b))
         || isFav(b) - isFav(a)
         || (pw ? pw(b) - pw(a) : 0)
@@ -2822,26 +2814,6 @@
     iq.addEventListener('input', () => { INV_Q = iq.value; applyInvQ(box); });
     sb.append(iq, sbtn, smenu);
     box.appendChild(sb);
-    // 장신구 탭: 부위별 소분류 (만들기 창과 같은 모양). 가진 장신구 수를 함께
-    if (invTab === 'equip') {
-      const cnt = {};
-      for (const [id] of all) if (S.items[id].type === 'equip') cnt[S.items[id].slot] = (cnt[S.items[id].slot] || 0) + 1;
-      if (invSlot !== 'all' && !cnt[invSlot]) invSlot = 'all';
-      const sub = document.createElement('div');
-      sub.className = 'craft-sub inv-sub';
-      sub.setAttribute('role', 'group');
-      sub.setAttribute('aria-label', '장신구 부위');
-      for (const [k, label] of [['all', '전체'], ...S.slots.filter((sl) => cnt[sl.key]).map((sl) => [sl.key, sl.name])]) {
-        const bt = document.createElement('button');
-        bt.type = 'button';
-        bt.className = `subchip${invSlot === k ? ' on' : ''}`;
-        bt.setAttribute('aria-pressed', String(invSlot === k));
-        bt.textContent = k === 'all' ? label : `${label} ${cnt[k]}`;
-        bt.addEventListener('click', () => { invSlot = k; keepScroll($('inv-dlg'), renderInv); });
-        sub.appendChild(bt);
-      }
-      box.appendChild(sub);
-    }
     const buf = S.me.buff && S.me.buff.until > Date.now() ? S.buffs?.[S.me.buff.id] : null;
     if (buf) {
       const n = document.createElement('div');
@@ -2980,18 +2952,8 @@
     applyInvQ(box); // 찾기 칸에 적어 둔 것이 있으면 다시 그린 뒤에도 거름
   }
   // 밑줄 글자 탭: 다시 그린 뒤 전의 가로 위치로 돌리고, 고른 탭이 화면 밖이면 보이는 자리로
-  // 넓은 화면에서도 탭이 칸을 넘치면(창을 좁혔을 때) 분류 탭을 '분류 ▾' 하나로 접음 (가려져 안 보이는 탭이 없게)
-  function fitTabs(bar) {
-    const wrap = bar?.parentElement;
-    if (!wrap?.classList.contains('utabs-wrap') || !wrap.querySelector('.chipbtn.more')) return;
-    if (!bar.clientWidth) { if (!bar._fitWait) { bar._fitWait = true; requestAnimationFrame(() => { bar._fitWait = false; if (bar.isConnected && bar.clientWidth) fitTabs(bar); }); } return; } // 창이 아직 열리기 전: 그려진 뒤 다시
-    wrap.classList.remove('squeeze');
-    if (bar.scrollWidth > bar.clientWidth + 2) wrap.classList.add('squeeze');
-  }
-  { let t = 0; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => { for (const b of document.querySelectorAll('.utabs-wrap > .utabs')) fitTabs(b); }, 120); }); }
   function showTab(bar, x) {
     if (!bar) return;
-    fitTabs(bar);
     bar.scrollLeft = x || 0;
     const on = bar.querySelector('.on');
     if (!on || !bar.clientWidth) return;
@@ -3155,61 +3117,73 @@
     IV.reset(); img.src = a.href; img.alt = a.querySelector('img')?.alt || '그림';
     if (!$('img-view').open) $('img-view').showModal();
   });
-  // 크게 보기: 그림의 너비를 바꿔 확대·축소하고, 넘치면 창 안에서 그대로 스크롤 (휠·손가락으로 위아래)
-  // · 처음: 화면에 다 들어오게. 아주 긴 그림은 화면 너비에 맞추고 위아래로 스크롤
-  // · 원래 크기보다 크게는 키우지 않음
-  // · 컴퓨터: 그림을 누르면 원래 크기 ↔ 처음 크기, Ctrl+휠로 확대·축소, 끌어서 옮기기. 폰: 두 번 톡, 두 손가락으로 벌리고 오므리기
+  // 확대·축소: 처음엔 화면에 맞는 크기 (작은 그림은 원래 크기 그대로). 세로로 긴 그림은 처음부터 폭에 맞춰 맨 위가 보이게 열고, 끌어서 내려 봄
+  // 폰: 두 손가락으로 벌리고 오므리기, 두 번 톡 치면 원래 크기(긴 그림은 폭에 맞춤) ↔ 화면에 맞춤, 확대한 채로 끌면 이동
+  // 컴퓨터: 그림을 누르면 원래 크기 ↔ 화면에 맞춤, 휠로 확대·축소, 끌어서 이동
   const IV = (() => {
     const box = $('img-view-in'), img = $('img-view-img');
-    let w = 0, pts = new Map(), pinch = null, drag = null, lastTap = 0, gestureAt = 0, downAt = 0, downXY = null, onImg = false;
-    const nat = () => img.naturalWidth || 1, ar = () => (img.naturalHeight || 1) / nat();
-    const room = () => { const cs = getComputedStyle(box); return { W: box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), H: box.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) }; };
-    const fitAll = () => { const { W, H } = room(); return Math.max(1, Math.min(nat(), W, H / ar())); }; // 다 들어오게
-    const fitWide = () => { const { W } = room(); return Math.max(1, Math.min(nat(), W)); };          // 너비에 맞춤
-    const start = () => { const { H } = room(); return fitWide() * ar() > H * 1.6 ? fitWide() : fitAll(); }; // 아주 긴 그림은 너비에 맞춰 스크롤
-    const minW = () => Math.min(fitAll(), start());
-    const set = (nw, cx, cy) => {
-      nw = Math.max(minW(), Math.min(nat(), nw));
-      const r = box.getBoundingClientRect(), ir = img.getBoundingClientRect();
-      // 누른 자리(cx, cy)가 확대 뒤에도 그 자리에 오도록 스크롤을 맞춤
-      const fx = ir.width ? ((cx ?? r.left + r.width / 2) - ir.left) / ir.width : 0.5, fy = ir.height ? ((cy ?? r.top + r.height / 2) - ir.top) / ir.height : 0.5;
-      w = nw; img.style.width = `${Math.round(w)}px`;
-      const nr = img.getBoundingClientRect();
-      box.scrollLeft += (nr.left + fx * nr.width) - (cx ?? r.left + r.width / 2);
-      box.scrollTop += (nr.top + fy * nr.height) - (cy ?? r.top + r.height / 2);
-      box.classList.toggle('zoomed', w > start() + 1);
+    let s = 1, x = 0, y = 0, pts = new Map(), pinch = null, drag = null, lastTap = 0, gestureAt = 0, downAt = 0, downXY = null, onImg = false;
+    const ratio = () => (img.clientWidth ? Math.max(1, img.naturalWidth / img.clientWidth) : 1); // 원래 크기가 지금보다 몇 배인지
+    // 그림이 들어갈 칸 (여백을 뺀 크기)
+    const inner = () => { const cs = getComputedStyle(box); return { w: box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), h: box.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) }; };
+    // 폭에 맞추려면 몇 배 키워야 하는지 (원래 폭보다 크게는 안 함). 세로로 긴 그림이면 이 값이 큼
+    const wScale = () => (img.clientWidth ? Math.max(1, Math.min(inner().w, img.naturalWidth) / img.clientWidth) : 1);
+    const isLong = () => wScale() > 1.8;
+    const maxS = () => Math.max(2, Math.min(8, ratio() * 2), wScale() * 2); // 긴 그림은 폭에 맞춘 뒤로도 더 키울 수 있게
+    // 화면에 맞는 크기를 직접 정함 (CSS 퍼센트 높이가 폰 브라우저에서 안 먹어 긴 그림이 잘리는 일이 없게)
+    const fit = () => {
+      if (!img.naturalWidth) return;
+      const { w, h } = inner();
+      const k = Math.min(1, w / img.naturalWidth, h / img.naturalHeight);
+      img.style.width = `${Math.round(img.naturalWidth * k)}px`; img.style.height = `${Math.round(img.naturalHeight * k)}px`;
     };
-    const toggle = (cx, cy) => (w < nat() - 1 ? set(nat(), cx, cy) : (set(start(), cx, cy), box.scrollTop = 0));
-    const init = () => { if (!box.clientWidth || !img.naturalWidth) return requestAnimationFrame(init); w = start(); img.style.width = `${Math.round(w)}px`; box.scrollTop = 0; box.scrollLeft = 0; box.classList.remove('zoomed'); }; // 창이 열린 뒤에 잼
-    img.addEventListener('load', init);
+    const clampXY = () => {
+      const w = img.clientWidth * s, h = img.clientHeight * s, bw = box.clientWidth, bh = box.clientHeight;
+      const mx = Math.max(0, (w - bw) / 2 + 16), my = Math.max(0, (h - bh) / 2 + 16);
+      x = Math.max(-mx, Math.min(mx, x)); y = Math.max(-my, Math.min(my, y));
+    };
+    const apply = (anim) => { img.classList.toggle('anim', !!anim); clampXY(); img.style.transform = s === 1 && !x && !y ? '' : `translate(${x}px, ${y}px) scale(${s})`; box.classList.toggle('zoomed', s > 1.01); };
+    const zoomTo = (ns, cx, cy, anim) => { // cx, cy: 확대할 중심 (화면 좌표)
+      const r = box.getBoundingClientRect(); ns = Math.max(1, Math.min(maxS(), ns));
+      const ox = (cx ?? r.left + r.width / 2) - (r.left + r.width / 2), oy = (cy ?? r.top + r.height / 2) - (r.top + r.height / 2);
+      x = ox - (ox - x) * (ns / s); y = oy - (oy - y) * (ns / s); s = ns; if (s === 1) { x = 0; y = 0; }
+      apply(anim);
+    };
+    const toggle = (cx, cy) => zoomTo(s > 1.01 ? 1 : isLong() ? wScale() : (ratio() > 1.05 ? ratio() : 2), cx, cy, true); // 원래 크기로 (이미 원래 크기면 2배, 긴 그림은 폭에 맞춤)
+    // 그림이 다 불러와지면: 화면에 맞추고, 세로로 긴 그림이면 폭에 맞춰 맨 위부터
+    img.addEventListener('load', () => {
+      fit(); s = 1; x = 0; y = 0;
+      if (isLong()) { s = wScale(); y = (img.clientHeight * s - inner().h) / 2; } // 그림 맨 위를 칸 맨 위에 맞춤
+      apply();
+    });
+    window.addEventListener('resize', () => { if ($('img-view').open) { fit(); apply(); } });
     box.addEventListener('pointerdown', (e) => {
-      if (e.pointerType === 'touch' && pts.size === 0) { pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); downAt = Date.now(); downXY = { x: e.clientX, y: e.clientY }; onImg = e.target === img; return; } // 한 손가락: 그대로 스크롤
-      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (pts.size === 2) { const [p, q] = [...pts.values()]; pinch = { d: Math.hypot(p.x - q.x, p.y - q.y), w, mx: (p.x + q.x) / 2, my: (p.y + q.y) / 2 }; return; }
-      if (e.pointerType === 'mouse' && e.button === 0) { drag = { x: e.clientX, y: e.clientY }; downAt = Date.now(); downXY = { x: e.clientX, y: e.clientY }; onImg = e.target === img; box.setPointerCapture(e.pointerId); }
+      if (e.target !== img && s <= 1.01) return; // 확대하지 않았을 때 그림 바깥은 닫기용
+      box.setPointerCapture(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pts.size === 2) { const [p, q] = [...pts.values()]; pinch = { d: Math.hypot(p.x - q.x, p.y - q.y), s, mx: (p.x + q.x) / 2, my: (p.y + q.y) / 2 }; drag = null; }
+      else { drag = { x: e.clientX, y: e.clientY }; downAt = Date.now(); downXY = { x: e.clientX, y: e.clientY }; onImg = e.target === img; } // 손가락을 붙잡아 두면 뒤의 이벤트는 대상이 바뀌므로 여기서 기억
     });
     box.addEventListener('pointermove', (e) => {
       if (!pts.has(e.pointerId)) return;
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (pinch && pts.size >= 2) { const [p, q] = [...pts.values()]; set(pinch.w * Math.hypot(p.x - q.x, p.y - q.y) / pinch.d, pinch.mx, pinch.my); gestureAt = Date.now(); return; }
-      if (drag) { box.scrollLeft -= e.clientX - drag.x; box.scrollTop -= e.clientY - drag.y; drag = { x: e.clientX, y: e.clientY }; if (Math.hypot(e.clientX - downXY.x, e.clientY - downXY.y) > 6) gestureAt = Date.now(); }
-      else if (downXY && Math.hypot(e.clientX - downXY.x, e.clientY - downXY.y) > 8) gestureAt = Date.now(); // 손가락 스크롤
+      if (pinch && pts.size >= 2) { const [p, q] = [...pts.values()]; zoomTo(pinch.s * Math.hypot(p.x - q.x, p.y - q.y) / pinch.d, pinch.mx, pinch.my); gestureAt = Date.now(); return; }
+      if (drag && s > 1.01) { x += e.clientX - drag.x; y += e.clientY - drag.y; drag = { x: e.clientX, y: e.clientY }; apply(); if (Math.hypot(e.clientX - downXY.x, e.clientY - downXY.y) > 6) gestureAt = Date.now(); }
     });
     const up = (e) => {
       if (!pts.has(e.pointerId)) return;
       pts.delete(e.pointerId);
       if (pts.size < 2) pinch = null;
-      if (pts.size) return;
+      if (pts.size) { const p = [...pts.values()][0]; drag = { x: p.x, y: p.y }; return; }
       drag = null;
       const tap = Date.now() - downAt < 300 && downXY && Math.hypot(e.clientX - downXY.x, e.clientY - downXY.y) < 8 && Date.now() - gestureAt > 300;
-      if (!tap || !onImg) return;
+      if (!tap || (!onImg && s <= 1.01)) return;
       if (e.pointerType === 'mouse') { toggle(e.clientX, e.clientY); gestureAt = Date.now(); return; } // 컴퓨터: 한 번 누르면
       if (Date.now() - lastTap < 320) { toggle(e.clientX, e.clientY); lastTap = 0; gestureAt = Date.now(); } else lastTap = Date.now(); // 폰: 두 번 톡
     };
     box.addEventListener('pointerup', up); box.addEventListener('pointercancel', up);
-    box.addEventListener('wheel', (e) => { if (!e.ctrlKey) return; e.preventDefault(); set(w * (e.deltaY < 0 ? 1.15 : 1 / 1.15), e.clientX, e.clientY); gestureAt = Date.now(); }, { passive: false }); // 휠은 스크롤, Ctrl+휠은 확대·축소
+    box.addEventListener('wheel', (e) => { e.preventDefault(); zoomTo(s * (e.deltaY < 0 ? 1.15 : 1 / 1.15), e.clientX, e.clientY); }, { passive: false });
     img.addEventListener('dragstart', (e) => e.preventDefault());
-    return { reset: () => { pts.clear(); pinch = drag = null; img.style.width = '0px'; box.classList.remove('zoomed'); box.scrollTop = 0; box.scrollLeft = 0; }, busy: () => Date.now() - gestureAt < 350 };
+    return { reset: () => { s = 1; x = 0; y = 0; pts.clear(); pinch = drag = null; img.style.width = img.style.height = ''; apply(); }, busy: () => Date.now() - gestureAt < 350 || s > 1.01 };
   })();
   $('img-view-x').addEventListener('click', () => $('img-view').close());
   // 그림 바깥을 누르면 닫힘 (확대하거나 끌던 중에는 닫히지 않게)
@@ -3436,7 +3410,7 @@
     const k = n.kin;
     const canAct = !!n.here && !S.me.exp;
     if (!k.home.length) note('아직 함께 사는 식구가 없다. 탐사나 원정 중에 아이나 알을 만날지도 모른다.');
-    else if (!canAct) { note(`${S.me.exp ? '원정 중에는 식구를 돌볼 수 없다.' : '둥지에 있을 때만 식구를 돌볼 수 있다.'} 새끼의 심부름과 시설 일은 멀리서도 맡길 수 있다.`); wrap.lastChild.classList.add('kin-away-note'); }
+    else if (!canAct) { note(S.me.exp ? '원정 중에는 식구를 돌볼 수 없다.' : '둥지에 있을 때만 식구를 돌볼 수 있다.'); wrap.lastChild.classList.add('kin-away-note'); }
     for (const v of k.home) wrap.appendChild(kinCard(v, canAct));
     if (k.past.length) {
       const h2 = document.createElement('h3');
@@ -3755,7 +3729,7 @@
       // 보호자를 돕는 법: 곁에 두기(함께 싸움), 심부름
       if (v.companion) meta('<b>곁에 둔 새끼</b> · 사냥과 강적·재앙과의 싸움에 함께 나서 매 턴 덤벼든다.', 'talent');
       if (v.errand) meta(`<b>심부름 중</b> · ${esc(S.regions[v.errand.region]?.name || '')} · ${dur(Math.max(0, v.errand.end - Date.now()))} 뒤 돌아온다`, 'talent');
-      if ((canAct || !partner) && !partner && !v.errand && !v.onExp) { // 심부름은 둥지 밖에서도
+      if (canAct && !partner && !v.errand && !v.onExp) {
         if (v.canCompanion) btn(v.companion ? '곁에서 풀기' : '곁에 두기 (함께 싸움)', () => nestAct('kin:companion', { id: v.id }, true)).classList.toggle('primary', !v.companion);
         else label('어린 용이 되면 곁에 두고 함께 싸우거나 심부름을 보낼 수 있다.');
         // 심부름 보내기: 곁에 두지 않은 새끼만
@@ -3773,7 +3747,7 @@
           ms.className = 'input kin-sel';
           ms.setAttribute('aria-label', '심부름 시간');
           for (const m of EH.minutes) { const o = document.createElement('option'); o.value = m; o.textContent = `${m / 60}시간`; ms.appendChild(o); }
-          label(`심부름: 혼자 다녀오며 그 지역의 재료를 구해 온다. 날개가 높을수록 많이, 지혜가 높을수록 귀한 것을 찾는다.${v.errandRuin ? '' : ' (멸망한 대륙은 다 자란 용만)'}${canAct ? '' : ' · 둥지 밖에서도 보낼 수 있다.'}`);
+          label(`심부름: 혼자 다녀오며 그 지역의 재료를 구해 온다. 날개가 높을수록 많이, 지혜가 높을수록 귀한 것을 찾는다.${v.errandRuin ? '' : ' (멸망한 대륙은 다 자란 용만)'}`);
           acts.append(rs, ms);
           btn('심부름 보내기', () => nestAct('kin:errand', { id: v.id, region: rs.value, minutes: Number(ms.value) }, true));
         }
@@ -4220,7 +4194,7 @@
       const tx = el('span', 'fac-idle');
       tx.textContent = `일이 없는 식구 ${idle.length}명 · ${idle.map((v) => v.name).join(', ')}`;
       r.appendChild(tx);
-      r.appendChild(B('고르기', () => { FAC_SEL = idle[0].id; renderNestAgain(); })); // 일 맡기기는 둥지 밖에서도
+      if (n.here) r.appendChild(B('고르기', () => { FAC_SEL = idle[0].id; renderNestAgain(); }));
       todo.appendChild(r);
     }
     if (!todoN) todo.appendChild(el('p', 'fac-done', F0.built.length ? '오늘 할 일을 모두 마쳤다.' : '아직 지은 시설이 없다. 빈 칸을 눌러 시설을 지어 보자.'));
@@ -4253,7 +4227,7 @@
       // 일하는 식구 / 빈 자리
       const wv = f.worker && n.kin.home.find((v) => v.id === f.worker.id);
       const place = () => { const id = sel.id; FAC_SEL = null; nestAct('nest:job', { kin: id, fac: f.id }); };
-      const target = sel && wv?.id !== sel.id; // 고른 식구를 여기에 둘 수 있음 (둥지 밖에서도)
+      const target = n.here && sel && wv?.id !== sel.id; // 고른 식구를 여기에 둘 수 있음
       if (target) {
         // 배치할 자리: 빈 자리면 그대로, 이미 누가 있으면 바꾸기
         const drop = el('button', `fac-drop${wv ? ' swap' : ''}`);
@@ -4275,7 +4249,7 @@
         txt.append(nb, rs);
         who.append(face, txt);
         if (f.worker.fit) who.append(el('span', 'fac-fit', '잘 맞음'));
-        who.append(B('쉬게 하기', () => nestAct('nest:job', { kin: f.worker.id, fac: '' }), 'small link'));
+        if (n.here) who.append(B('쉬게 하기', () => nestAct('nest:job', { kin: f.worker.id, fac: '' }), 'small link'));
         card.appendChild(who);
       } else {
         const empty = el('div', 'fac-empty');
@@ -4358,7 +4332,7 @@
         : `${sel.name}에게 특별히 잘 맞는 시설은 없지만, 어디서든 일할 수 있다.`;
       wrap.appendChild(tip);
     }
-    if (!n.here) wrap.appendChild(el('p', 'note', '시설을 짓거나 허무는 일은 둥지에 있을 때만 할 수 있다. 식구에게 일을 맡기거나 쉬게 하는 것은 멀리서도 할 수 있다.'));
+    if (!n.here) wrap.appendChild(el('p', 'note', '시설은 둥지에 있을 때 짓고 맡길 수 있다.'));
     pane.appendChild(wrap);
   }
   function drawNest(res) {
@@ -5344,7 +5318,6 @@
       }
     }
     renderMazeBar(); // 지하 회랑 입구 띠·회랑 화면
-    renderRaidBar(); // 레이드 모집 줄
     // 생존자 오르샤 (잿빛 상륙지)
     const ob = $('orsha-bar');
     ob.hidden = S.region !== S.ruinRules?.gateTo || !!me.exp;
@@ -5400,7 +5373,7 @@
       $('mobd-say').textContent = `"${m.greet}"`;
       $('mobd-desc').textContent = m.desc;
       $('mob-n-quest').textContent = m.offers.filter((o) => o.state === 'open' || o.state === 'ready').length || '';
-      $('mob-n-story').textContent = m.story.cur ? `${m.story.ch + 1}/${m.story.total}` : '끝';
+      $('mob-n-story').textContent = m.story.cur ? `${m.story.ch + 1}/${m.story.total}` : m.past?.open && m.past.n < m.past.total && !m.past.today ? '옛일' : '끝';
       for (const t of $('mob-tabs').children) { const on = t.dataset.t === mobTab; t.classList.toggle('on', on); t.setAttribute('aria-selected', on); }
       const body = $('mob-body');
       body.replaceChildren();
@@ -5487,6 +5460,7 @@
           c.appendChild(foot);
           body.appendChild(c);
         }
+        if (m.past) renderPastCard(m, body, note); // 옛일 (이야기를 끝까지 들은 뒤, 하루 한 조각)
       } else {
         note(`인간 시장을 쓰지 못해도 드래곤끼리는 물건을 바꿀 수 있다. 교환마다 하루(또는 한 주) 횟수가 정해져 있다.`);
         for (const o of m.trades) {
@@ -5513,6 +5487,38 @@
       if (!dlg.open) dlg.showModal();
       else { dlg.scrollTop = keep[0]; scroller.scrollTop = keep[1]; }
     });
+  }
+  // 옛일: 토박이 드래곤이 저마다의 성향으로 기억하는 지난 일. 들은 조각은 남고, 하루에 하나씩 더 묻는다
+  function renderPastCard(m, body, note) {
+    const pa = m.past;
+    const h = document.createElement('h3'); h.className = 'inv-h'; h.textContent = '옛일'; body.appendChild(h);
+    if (!pa.open) {
+      const e = document.createElement('div'); e.className = 'mk-empty'; e.textContent = `'${m.story.title}' 이야기를 끝까지 들으면 ${m.name}에게 옛일을 물어볼 수 있다.`; body.appendChild(e);
+      return;
+    }
+    const n = note(`${pa.stance} 성향의 토박이 드래곤. 하루에 한 조각씩 털어놓는다.`);
+    n.lastChild.textContent = `${pa.n}/${pa.total}`;
+    if (pa.n) {
+      const r = document.createElement('p'); r.className = 'mob-past'; r.style.margin = '0'; r.textContent = `"${pa.react}"`; body.appendChild(r);
+      for (const piece of pa.heard) { const p = document.createElement('p'); p.className = 'mob-past'; p.style.margin = '0'; p.textContent = piece.map((t) => `"${t}"`).join(' '); body.appendChild(p); }
+    }
+    if (pa.n >= pa.total) {
+      const e = document.createElement('div'); e.className = 'mk-empty'; e.textContent = `${m.name}의 옛일을 모두 들었다.`; body.appendChild(e);
+      return;
+    }
+    const c = document.createElement('div'); c.className = `mob-card${pa.today ? ' done' : ''}`;
+    const say = document.createElement('span'); say.className = 'mc-say';
+    say.textContent = pa.today ? `${m.name}${josa(m.name, '은', '는')} 오늘은 더 말할 생각이 없어 보인다.` : pa.n ? `${m.name}${josa(m.name, '이', '가')} 다음 이야기를 고르는 듯 먼 곳을 바라본다.` : `${m.name}${josa(m.name, '이', '가')} 오래된 일을 떠올리는 눈치다.`;
+    const foot = document.createElement('div'); foot.className = 'mc-foot';
+    const sp = document.createElement('span'); sp.className = 'sp';
+    foot.append(sp, mobBtn(pa.today ? '내일 다시' : '옛일을 묻는다', true, pa.today, () => {
+      socket.emit('mob:past', { mob: m.id }, (res) => {
+        if (res.error) { SFX.play('error'); return toast(res.error); }
+        openMob();
+      });
+    }));
+    c.append(say, foot);
+    body.appendChild(c);
   }
   $('mob-open').addEventListener('click', () => { mobTab = 'quest'; fetchInv(() => openMob()); });
   $('mob-tabs').addEventListener('click', (e) => { const b = e.target.closest('button[data-t]'); if (!b) return; mobTab = b.dataset.t; openMob(); });
@@ -9098,8 +9104,8 @@
   };
   const slTag = () => slEl('span', 'sl-tag pin', '고정'); // GM이 고정한 글 표시
   const slCm = (n) => { const c = slEl('span', 'sl-cm'); c.innerHTML = SL_CM; c.append(String(n)); c.title = `남긴 답 ${n}`; return c; };
-  // 석판 그림 줄이기: 긴 변 1600px, webp 품질 88%(안 되면 jpeg). 700KB가 넘으면 품질·크기를 조금씩 낮춤 → 대개 한 장 150~450KB (예전 1024px · 75% · 300KB)
-  const SL_IMG_MAX = 700 * 1024;
+  // 석판 그림 줄이기: 긴 변 1024px, webp 품질 75%(안 되면 jpeg). 300KB가 넘으면 품질·크기를 더 낮춤 → 대개 한 장 70~180KB
+  const SL_IMG_MAX = 300 * 1024;
   function slShrink(file) {
     return new Promise((ok, no) => {
       if (!/^image\//.test(file.type)) return no(new Error('그림 파일만 넣을 수 있다.'));
@@ -9108,8 +9114,8 @@
       img.onload = async () => {
         URL.revokeObjectURL(url);
         const toBlob = (c, type, q) => new Promise((r) => c.toBlob(r, type, q));
-        let side = 1600, q = 0.88, blob = null, w = 0, h = 0;
-        for (let t = 0; t < 7; t++) {
+        let side = 1024, q = 0.75, blob = null, w = 0, h = 0;
+        for (let t = 0; t < 6; t++) {
           const k = Math.min(1, side / Math.max(img.naturalWidth, img.naturalHeight));
           w = Math.max(1, Math.round(img.naturalWidth * k)); h = Math.max(1, Math.round(img.naturalHeight * k));
           const c = document.createElement('canvas'); c.width = w; c.height = h;
@@ -9117,7 +9123,7 @@
           blob = await toBlob(c, 'image/webp', q);
           if (!blob || blob.type !== 'image/webp') blob = await toBlob(c, 'image/jpeg', q);
           if (blob && blob.size <= SL_IMG_MAX) break;
-          q = Math.max(0.6, q - 0.06); side = Math.round(side * 0.88); // 한 번에 조금씩만 낮춤 (화질을 되도록 지키며)
+          q = Math.max(0.5, q - 0.1); side = Math.round(side * 0.82);
         }
         if (!blob || blob.size > SL_IMG_MAX) return no(new Error('그림이 너무 크다.'));
         ok({ blob, url: URL.createObjectURL(blob), w, h });
@@ -10356,7 +10362,7 @@
     t.style.minWidth = '0';
     t.innerHTML = '<b></b><small></small>';
     t.querySelector('b').textContent = f.name;
-    t.querySelector('small').textContent = f.creature ? (f.sub || (f.elite ? '강적' : '사냥감')) : `${S.kinds[f.kind]?.name || ''}${mine ? ' · 나' : ''}`;
+    t.querySelector('small').textContent = f.creature ? (f.elite ? '강적' : '사냥감') : `${S.kinds[f.kind]?.name || ''}${mine ? ' · 나' : ''}`;
     if (f.enraged) { const r = document.createElement('span'); r.className = 'rage-b'; r.textContent = '분노'; t.querySelector('small').append(' ', r); }
     who.appendChild(t);
     box.classList.toggle('enraged', !!f.enraged);
@@ -10381,7 +10387,6 @@
       c.textContent = `${S.combat.status[k]} ${n}`;
       sts.appendChild(c);
     }
-    for (const g of f.tags || []) { const c = document.createElement('span'); c.className = g.bad ? 'bad' : ''; c.textContent = g.t; sts.appendChild(c); } // 레이드: 검은 이삭 등
     box.appendChild(sts);
     if (f.creature && (f.weak.length || f.resist.length)) {
       const el = document.createElement('div');
@@ -10412,12 +10417,11 @@
       c.querySelector('.bar i').style.width = `${Math.max(0, Math.min(100, (f.hp / f.hpMax) * 100))}%`;
       const sts = c.querySelector('.sts');
       for (const [k, n] of Object.entries(f.st || {})) { const x = document.createElement('span'); x.className = statusBad.has(k) ? 'bad' : ''; x.textContent = `${S.combat.status[k]} ${n}`; sts.appendChild(x); }
-      for (const g of f.tags || []) { const x = document.createElement('span'); x.className = g.bad ? 'bad' : ''; x.textContent = g.t; sts.appendChild(x); }
       c.setAttribute('aria-pressed', String(on));
       c.setAttribute('aria-label', `${f.name}, 체력 ${Math.max(0, f.hp)} / ${f.hpMax}${f.down ? ', 쓰러짐' : on ? ', 노리는 중' : ', 눌러서 노리기'}`);
       c.addEventListener('click', () => {
         if (on || f.down) return;
-        socket.emit(v.kind === 'raid' ? 'raidboss:target' : 'battle:target', { t: f.i }, (res) => {
+        socket.emit('battle:target', { t: f.i }, (res) => {
           if (res.error) return toast(res.error);
           BT.view = res.view;
           renderBattle();
@@ -10431,42 +10435,6 @@
       n.textContent = '눌러서 노릴 적을 고른다.';
       box.appendChild(n);
     }
-  }
-  // 레이드: 함께 싸우는 동료. 누르면 치유·막아서기 대상으로 고름 (다시 누르면 풀림)
-  function btAllies(v) {
-    const box = $('bt-allies');
-    const list = v.kind === 'raid' ? v.allies || [] : [];
-    box.hidden = !list.length;
-    box.replaceChildren();
-    if (!list.length) return;
-    if (BT.ally && !list.some((a) => a.id === BT.ally && !a.left)) BT.ally = null;
-    const h = document.createElement('div');
-    h.className = 'bt-many-h';
-    h.textContent = BT.ally ? `동료 · ${list.find((a) => a.id === BT.ally)?.name} 고름` : '동료';
-    box.appendChild(h);
-    const row = document.createElement('div');
-    row.className = 'bt-al-row';
-    for (const a of list) {
-      const c = document.createElement('button');
-      c.type = 'button';
-      const on = a.id === BT.ally;
-      c.className = `bt-mini${on ? ' on' : ''}${a.down || a.left ? ' down' : ''}`;
-      c.disabled = a.left || v.over || BT.replay;
-      c.innerHTML = '<span class="nm"><b></b><em></em></span><span class="num"></span><span class="bar hp"><i></i></span><span class="sts"></span>';
-      c.querySelector('b').textContent = a.name;
-      c.querySelector('em').textContent = a.left ? '물러남' : a.down ? '쓰러짐' : v.over ? '' : a.chose ? '골랐다' : '고르는 중';
-      c.querySelector('em').classList.toggle('ok', !a.left && !a.down && !!a.chose && !v.over);
-      c.querySelector('.num').textContent = `${Math.max(0, a.hp)} / ${a.hpMax}`;
-      c.querySelector('.bar i').style.width = `${Math.max(0, Math.min(100, (a.hp / a.hpMax) * 100))}%`;
-      const sts = c.querySelector('.sts');
-      for (const [k, n] of Object.entries(a.st || {})) { const x = document.createElement('span'); x.className = statusBad.has(k) ? 'bad' : ''; x.textContent = `${S.combat.status[k]} ${n}`; sts.appendChild(x); }
-      for (const g of a.tags || []) { const x = document.createElement('span'); x.className = g.bad ? 'bad' : ''; x.textContent = g.t; sts.appendChild(x); }
-      c.setAttribute('aria-pressed', String(on));
-      c.setAttribute('aria-label', `${a.name}, 체력 ${Math.max(0, a.hp)} / ${a.hpMax}${a.left ? ', 물러남' : a.down ? ', 쓰러짐' : ''}${on ? ', 고름' : ', 눌러서 고르기'}`);
-      c.addEventListener('click', () => { BT.ally = on ? null : a.id; renderBattle(); });
-      row.appendChild(c);
-    }
-    box.appendChild(row);
   }
   // ── 전투 효과: 지난 모습과 비교해 맞은 쪽은 흔들리고 붉게, 회복한 쪽은 초록 빛, 피하면 '회피' ──
   function btFxTargets(v) {
@@ -10556,7 +10524,6 @@
     $('bt-foe').parentElement.classList.toggle('multi', !!(v.foes && v.foes.length > 1));
     if (v.foes && v.foes.length > 1) btFoes($('bt-foe'), v);
     else btFighter($('bt-foe'), v.foe, false);
-    btAllies(v); // 레이드: 함께 싸우는 동료
     // 상대가 다음 턴에 할 일 (사냥감·강적만)
     const it = $('bt-intent');
     it.hidden = !v.intent;
@@ -10588,20 +10555,15 @@
     // 턴과 남은 시간
     const left = v.deadline && !v.over ? Math.max(0, Math.ceil((v.deadline - Date.now()) / 1000)) : null;
     $('bt-turn').innerHTML = `<span>${v.over ? '전투 끝' : `<b>${v.turn + 1}턴</b> / ${v.maxTurns}`}${v.weather && WX_PATH[v.weather.id] ? `<span class="bt-wx" style="color:${WX_COLOR[v.weather.id]}" title="${(S.weathers[v.weather.id]?.pros || []).concat(S.weathers[v.weather.id]?.cons || []).join(', ')}">${wxSvg(v.weather.id, 15)}<span style="color:var(--muted)">${v.weather.name}</span></span>` : ''}</span><span>${left != null ? `남은 시간 ${left}초 · 시간이 다 되면 자동으로 고른다` : ''}</span>`;
-    if (v.kind === 'raid' && v.fire > 0 && !v.over) { const fz = document.createElement('span'); fz.className = 'bt-fire'; fz.textContent = `밀밭의 불길 ${v.fire}단계`; $('bt-turn').firstElementChild.appendChild(fz); }
     // 행동 버튼
     const acts = $('bt-acts');
     acts.replaceChildren();
     acts.hidden = v.over || BT.replay;
     if (!v.over && !BT.replay) {
-      const rbStop = v.kind === 'raid' ? (v.me.down ? '쓰러져 있다. 동료가 치유로 일으켜 주기를 기다린다.' : (v.me.tags || []).some((g) => g.t === '거두어짐') ? '검은 이삭에 거두어져 이번 턴은 움직일 수 없다.' : '') : '';
-      if (BT.waiting || rbStop) {
+      if (BT.waiting) {
         const w = document.createElement('div');
         w.className = 'wait';
-        if (v.kind === 'raid') {
-          const all = [true, ...(v.allies || []).filter((a) => !a.left && !a.down).map((a) => a.chose)];
-          w.textContent = rbStop || `골랐다. 동료를 기다린다. (${all.filter(Boolean).length}/${all.length})`;
-        } else w.textContent = BT.foeReady ? '상대도 골랐다. 곧 턴이 펼쳐진다.' : '골랐다. 상대의 선택을 기다린다.';
+        w.textContent = BT.foeReady ? '상대도 골랐다. 곧 턴이 펼쳐진다.' : '골랐다. 상대의 선택을 기다린다.';
         acts.appendChild(w);
       } else {
         const frozen = v.me.st?.freeze || v.me.st?.stun;
@@ -10618,23 +10580,15 @@
           acts.appendChild(b);
         };
         add('할퀴기', frozen ? '이번 턴은 움직일 수 없다' : v.me.attackCombo ? `연계! ${v.me.attackCombo}` : '기본 공격', { type: 'attack' }, { primary: true, combo: !!v.me.attackCombo });
-        const pal = v.kind === 'raid' && BT.ally ? (v.allies || []).find((a) => a.id === BT.ally) : null; // 고른 동료
         for (const sk of v.me.skills || []) {
           const why = sk.cd > 0 ? `${sk.cd}턴 뒤` : v.me.en < sk.en ? '기력 부족' : '';
           const def = sk.id === 'breath' ? S.combat.breaths[S.me.kind] : S.combat.skills[sk.id];
           const cb = !why && sk.combo;
-          const healPal = sk.id === 'mend' && pal && !pal.left;
-          add(sk.name, why || (healPal ? (pal.down ? `${pal.name} 일으키기` : `${pal.name}에게`) : cb ? `연계! ${sk.combo}` : `기력 ${sk.en}`), { type: 'skill', id: sk.id }, { disabled: !!why, title: [def?.desc, ...comboHints(sk.id)].filter(Boolean).join('\n'), combo: !!cb && !healPal });
+          add(sk.name, why || (cb ? `연계! ${sk.combo}` : `기력 ${sk.en}`), { type: 'skill', id: sk.id }, { disabled: !!why, title: [def?.desc, ...comboHints(sk.id)].filter(Boolean).join('\n'), combo: !!cb });
         }
         const bigHit = v.intent && ['heavy', 'multi', 'debuff'].includes(v.intent.kind);
-        add('방어', v.kind === 'raid' ? '피해 절반, 기력 +3' : bigHit ? '특기 피해 ¼ · 반격' : '피해 절반, 기력 +3', { type: 'guard' }, { suggest: bigHit && v.kind !== 'raid' });
-        if (v.kind === 'raid') {
-          const coverOk = pal && !pal.down && !pal.left;
-          const gazeOn = v.intent?.kind === 'heavy' && pal && v.intent.text.includes(pal.name);
-          add('막아서기', coverOk ? `${pal.name} 대신 맞는다` : '동료 카드를 먼저 고른다', { type: 'cover' }, { disabled: !coverOk, suggest: !!gazeOn });
-          if (v.script === 'knights') add('우회', '날개로 대열 옆을 찌른다', { type: 'flank' }, { suggest: (v.foes || [v.foe]).some((f) => (f.tags || []).some((g) => g.t === '방패벽')) || /대열을 세워라/.test(v.intent?.text || '') });
-        }
-        add(v.kind === 'duel' ? '항복' : '물러나기', v.kind === 'duel' ? '결투를 포기한다' : v.kind === 'raid' ? '이번 레이드의 몫 없이 빠진다' : v.boss ? '입힌 피해는 남는다' : v.foes ? '쓰러뜨린 만큼만 얻는다' : '전리품 없이 피한다', { type: 'flee' });
+        add('방어', bigHit ? '특기 피해 ¼ · 반격' : '피해 절반, 기력 +3', { type: 'guard' }, { suggest: bigHit });
+        add(v.kind === 'duel' ? '항복' : '물러나기', v.kind === 'duel' ? '결투를 포기한다' : v.boss ? '입힌 피해는 남는다' : v.foes ? '쓰러뜨린 만큼만 얻는다' : '전리품 없이 피한다', { type: 'flee' });
         // 사냥: 나머지는 예전처럼 알아서 (기력을 조금 남기고, 체력이 낮아지면 물러남)
         if (v.kind === 'hunt') {
           const b = document.createElement('button');
@@ -10647,7 +10601,7 @@
           // 자동 버튼이 없는 싸움: 왜 없는지 작게 알려 줌
           const note = document.createElement('p');
           note.className = 'bt-note';
-          note.textContent = v.kind === 'raid' ? (v.duelOn && v.duelOn !== v.me.id ? '일기토 중이다. 헤이른을 치면 기사도를 어긴 것이 된다. 치유와 막아서기는 괜찮다.' : '동료 카드를 누르면 치유하거나 막아설 대상으로 고른다.') : v.boss ? '재앙은 자동으로 맡길 수 없다.' : v.kind === 'calm' ? '폭주한 드래곤은 자동으로 맡길 수 없다.' : '강적은 자동으로 맡길 수 없다.';
+          note.textContent = v.boss ? '재앙은 자동으로 맡길 수 없다.' : v.kind === 'calm' ? '폭주한 드래곤은 자동으로 맡길 수 없다.' : '강적은 자동으로 맡길 수 없다.';
           acts.appendChild(note);
         }
       }
@@ -10660,7 +10614,7 @@
       const bossHit = v.boss && (BT.result?.dealt || 0) > 0;
       r.className = `bt-result ${v.won || bossHit ? 'win' : 'lose'}`;
       r.innerHTML = '<b></b><ul></ul>';
-      r.querySelector('b').textContent = BT.result?.head || (v.boss ? (v.won ? '재앙을 쓰러뜨렸다!' : bossHit ? `피해를 ${BT.result.dealt} 입히고 물러났다.` : '물러났다.') : v.won ? '이겼다!' : v.fled === 'me' ? '물러났다.' : '졌다.');
+      r.querySelector('b').textContent = v.boss ? (v.won ? '재앙을 쓰러뜨렸다!' : bossHit ? `피해를 ${BT.result.dealt} 입히고 물러났다.` : '물러났다.') : v.won ? '이겼다!' : v.fled === 'me' ? '물러났다.' : '졌다.';
       for (const l of BT.result?.lines || []) { const li = document.createElement('li'); li.textContent = l; r.querySelector('ul').appendChild(li); }
       for (const it of BT.result?.items || []) { const li = document.createElement('li'); li.textContent = `${S.items[it.id]?.name} ×${it.qty}`; r.querySelector('ul').appendChild(li); }
     }
@@ -10671,8 +10625,8 @@
     return Object.values(S.combat.combos || {}).filter((c) => c.skill.includes(id)).map((c) => `연계 · ${c.name}: ${c.desc}`);
   }
   function openBattle(view, { title, lines = [], log = null, result = null, replay = false } = {}) {
-    BT = { view, title, result, replay, waiting: !!view.waiting, foeReady: false, fxPrev: null, fxLines: [], ally: null };
-    $('battle-title').textContent = title || (view.kind === 'duel' ? '결투' : view.kind === 'elite' ? '강적' : view.kind === 'raid' ? '레이드' : '전투');
+    BT = { view, title, result, replay, waiting: !!view.waiting, foeReady: false, fxPrev: null, fxLines: [] };
+    $('battle-title').textContent = title || (view.kind === 'duel' ? '결투' : view.kind === 'elite' ? '강적' : '전투');
     $('bt-log').replaceChildren();
     if (lines.length) btAddLines(lines, null);
     if (log) for (const t of log) btAddLines(t.lines, t.turn);
@@ -10685,15 +10639,6 @@
   function btAct(act) {
     if (!BT || BT.view.over) return;
     if (BT.view.foes) act = { ...act, t: BT.view.target };
-    if (BT.view.kind === 'raid') {
-      if (BT.ally) act = { ...act, ally: BT.ally };
-      socket.emit('raidboss:act', act, (res) => {
-        if (res.error) return toast(res.error);
-        BT.waiting = !!res.waiting;
-        renderBattle();
-      });
-      return;
-    }
     socket.emit('battle:act', act, (res) => {
       if (res.error) return toast(res.error);
       if (BT.view.kind !== 'duel') {
@@ -10749,7 +10694,7 @@
   function resumeBattle() {
     if (!S.me?.battle || BT) return;
     socket.emit('battle:get', {}, (res) => {
-      if (res.view) openBattle(res.view, { lines: res.log?.slice(-6) || [], title: res.title });
+      if (res.view) openBattle(res.view, { lines: res.log?.slice(-6) || [] });
     });
   }
 
@@ -12544,7 +12489,7 @@
       }
     });
     socket.on('me', (me) => {
-      setMe(me); renderSayMode(); maybeWelcome(); renderMazeBar(); renderRaidBar(); renderNmRow(); if ($('nm-dlg').open && !(me.nightMarket?.open && (me.nightMarket.here || nmTab === 'mine'))) $('nm-dlg').close(); FAV.migrate(); SEEN.migrate(); renderSlateDot(); renderNotesDot();
+      setMe(me); renderSayMode(); maybeWelcome(); renderMazeBar(); renderNmRow(); if ($('nm-dlg').open && !(me.nightMarket?.open && (me.nightMarket.here || nmTab === 'mine'))) $('nm-dlg').close(); FAV.migrate(); SEEN.migrate(); renderSlateDot(); renderNotesDot();
       if (!S.seenReady) { S.seenReady = true; renderRescues(); } // 서버의 읽음 표시를 받은 뒤 한 번 다시 그림 (먼저 온 '다시 일어선 드래곤' 알림)
       if (!SL.peeked) { SL.peeked = true; socket.emit('slate:peek', {}, (r) => { if (r?.ok) { SL.latest = Math.max(SL.latest, r.latest || 0); SL.replyAt = r.replyAt || 0; renderSlateDot(); } }); } // 내 글에 새 답이 왔는지
     });
@@ -12672,9 +12617,7 @@
     socket.on('rescue:risen', (l) => { S.risen = l || []; renderRescues(); });
     socket.on('rescued', (r) => { if ($('fall-dlg').open) $('fall-dlg').close(); showResult({ title: '구조', lines: r.lines }); });
     socket.on('rampage:end', onRampageEnd);
-    socket.on('battle:start', (s2) => { if ($('arena-dlg').open) $('arena-dlg').close(); openBattle(s2.view, { lines: s2.lines, title: s2.title }); });
-    socket.on('raidboss:wait', (p) => { if (BT?.view.kind !== 'raid') return; for (const a of BT.view.allies || []) a.chose = !!p.chosen[a.id]; renderBattle(); });
-    socket.on('raidboss', (v) => { S.raidBoss = v; renderRaidBar(); });
+    socket.on('battle:start', (s2) => { if ($('arena-dlg').open) $('arena-dlg').close(); openBattle(s2.view, { lines: s2.lines }); });
     socket.on('battle:update', onBattleUpdate);
     socket.on('battle:ready', () => { if (BT) { BT.foeReady = true; if (BT.waiting) renderBattle(); } });
     socket.on('battle:end', onBattleEnd);
@@ -12987,54 +12930,6 @@
     if (inside && (!MZ.floor || MZ.floor.fi !== mz.fi || !MZ.rows)) fetchMaze(mz.fi);
     if (!inside) { MZ.floor = null; MZ.rows = null; }
   }
-  // ── 레이드 모집 줄: 그 레이드가 있는 지역에서만. 모집이 없으면 열기, 있으면 함께 가기·빠지기·들어가기 ──
-  S.raidBoss = null;
-  function renderRaidBar() {
-    const bar = $('rb-bar'), me = S.me, V = S.raidBoss;
-    if (!bar || !me) return;
-    // GM은 아직 열리지 않은 레이드를 멸망한 대륙 어디서든 시험할 수 있음 (보상·기록 없음)
-    const gmTest = (x) => S.isGm && !x.open && S.regions[S.region]?.realm === 'ruin';
-    const R = V?.list.find((x) => x.region === S.region && x.open) || (S.isGm ? V?.list.find((x) => gmTest(x) && (!x.lobby || x.lobby.ids.includes(me.id))) : null);
-    bar.hidden = !R || !!me.exp || !!me.fallen;
-    if (bar.hidden) return;
-    const lb = R.lobby;
-    const mine = !!lb && lb.ids.includes(me.id);
-    const lead = mine && lb.leader === me.id;
-    const used = me.raidBoss?.used?.[R.key] || 0;
-    $('rb-bar-t').textContent = `${R.place} · ${R.name}${gmTest(R) ? ' (GM 시험 · 아직 닫힘)' : ''}`;
-    const sub = [];
-    if (lb) {
-      const left = Math.max(1, Math.ceil((lb.until - Date.now()) / 60000));
-      sub.push(`모집 중 ${lb.ids.length}/${V.size} (${lb.names.join(', ')}) · ${left}분 남음`);
-    } else sub.push(`만렙 드래곤 ${V.size}마리가 함께 맞서는 레이드`);
-    if (R.fighting) sub.push(`지금 ${R.fighting}팀이 싸우는 중`);
-    sub.push(used >= V.weekly ? `이번 주 보상은 다 받았다 · 동료를 도우러 갈 수 있다` : `이번 주 보상 ${used}/${V.weekly}`);
-    if (R.best) sub.push(`가장 빠른 기록 ${R.best.turns}턴`);
-    $('rb-bar-s').textContent = sub.join(' · ');
-    const box = $('rb-bar-btns');
-    box.replaceChildren();
-    const btn = (label, ev, opt = {}) => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = `btn${opt.primary ? ' primary' : ''}`;
-      b.textContent = label;
-      b.disabled = !!opt.disabled;
-      if (opt.title) b.title = opt.title;
-      b.addEventListener('click', () => {
-        if (opt.confirm && !confirm(opt.confirm)) return;
-        socket.emit(ev, { key: R.key }, (res) => { if (res.error) toast(res.error); });
-      });
-      box.appendChild(b);
-    };
-    const low = me.level < V.minLevel;
-    if (!lb) btn('함께 갈 드래곤 찾기', 'raidboss:open', { primary: true, disabled: low || !!me.battle, title: low ? `레벨 ${V.minLevel}부터 함께할 수 있다.` : '' });
-    else if (!mine) btn(`함께 가기 ${lb.ids.length}/${V.size}`, 'raidboss:join', { primary: true, disabled: low || lb.ids.length >= V.size || !!me.battle, title: low ? `레벨 ${V.minLevel}부터 함께할 수 있다.` : '' });
-    else {
-      if (lead) btn('들어가기', 'raidboss:start', { primary: true, disabled: lb.ids.length < V.size && !S.isGm, title: lb.ids.length < V.size ? (S.isGm ? `GM 시험: 지금 들어가면 보상 없이 ${lb.ids.length}마리로 싸운다.` : `${V.size}마리가 모이면 들어갈 수 있다.`) : '' });
-      btn(lead && lb.ids.length === 1 ? '모집 닫기' : '빠지기', 'raidboss:leave');
-    }
-  }
-  setInterval(() => { if (S.raidBoss?.list.some((x) => x.lobby)) renderRaidBar(); }, 30000);
   $('maze-bar-go').addEventListener('click', () => { if (mzInside()) { $('maze-card').scrollIntoView({ behavior: 'smooth', block: 'start' }); renderMazeCard(); } else openMazeDlg(); });
 
   // ── 회랑 창: 깊이 눈금 + 지도를 눌러 들어갈 곳 고르기 ──
