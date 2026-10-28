@@ -2447,7 +2447,7 @@
       if (u.en) out.push(`기력 +${u.en}`);
       if (u.ap) out.push(`행동력 +${u.ap}`);
       if (u.mind) out.push(`정신 +${u.mind}`);
-      if (u.scar) out.push('가장 최근 상흔 하나를 씻어 냄 (30일에 한 번)');
+      if (u.scar) out.push('가장 최근 상흔 하나를 씻어 냄 (7일에 한 번)');
       if (u.keep && !u.mind) out.push(`보물 상자에 간직할 선물${it.value ? ` · 가치 ${it.value}` : ''}`);
       return out.join(', ');
     }

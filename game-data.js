@@ -209,8 +209,8 @@ const ITEMS = {
   mz_scale_charm: { name: '고대 용의 비늘 장식', rarity: 'rare', cat: 'treasure', value: 300, desc: '회랑 벽에 박혀 있던 비늘. 누구의 것인지 모르지만, 손에 쥐면 희미하게 따뜻하다.' },
   mz_crystal_eye: { name: '잠든 수정 눈',       rarity: 'rare', cat: 'treasure', value: 380, desc: '돌 파수꾼의 눈이었던 수정. 어둠 속에서 아주 느리게 깜박인다.' },
   mz_king_seal:   { name: '옛 왕의 인장',       rarity: 'rare', cat: 'treasure', value: 500, desc: '지하 회랑을 판 이들의 인장. 용과 사람의 손이 함께 새겨져 있다.' },
-  // 상흔을 하나 씻어 냄: 지하 회랑 수호자(아주 드물게) · 멸망한 대륙 생존자 교환. 30일에 한 번 (game-logic.js useItem)
-  scar_tonic:     { name: '옛 샘의 정수', rarity: 'rare', type: 'use', use: { scar: 1 }, value: 900, desc: '고대도시 아래 샘에서 스며 나온 물을 정화의 결정으로 맑힌 것. 마시면 가장 최근에 입은 상흔 하나가 씻겨 나간다. 몸이 받아들이는 것은 30일에 한 번뿐이다.' },
+  // 상흔을 하나 씻어 냄: 지하 회랑 수호자(아주 드물게) · 멸망한 대륙 생존자 교환. 7일에 한 번 (game-logic.js useItem)
+  scar_tonic:     { name: '옛 샘의 정수', rarity: 'rare', type: 'use', use: { scar: 1 }, value: 900, desc: '고대도시 아래 샘에서 스며 나온 물을 정화의 결정으로 맑힌 것. 마시면 가장 최근에 입은 상흔 하나가 씻겨 나간다. 몸이 받아들이는 것은 7일에 한 번뿐이다.' },
   mz_city_key:    { name: '고대도시의 열쇠 조각', rarity: 'rare', cat: 'treasure', value: 650, desc: '일곱 층 아래 문의 열쇠였던 것. 조각만으로도 보물더미가 묘하게 환해진다.' },
   tr_ash_mirror:  { name: '잿빛 거울',     rarity: 'rare',     cat: 'treasure', value: 500, desc: '비추면 잿빛 하늘만 보이는 거울. 가끔 멸망 전의 맑은 하늘이 스친다.' },
   tr_broken_crown:{ name: '카르넴의 깨진 왕관', rarity: 'rare', cat: 'treasure', value: 700, desc: '마지막 왕이 쓰던 왕관. 반쪽이 떨어져 나갔지만 보석은 아직 빛난다.' },
@@ -826,7 +826,7 @@ const RUIN = {
     { id: 'fire_crystal',   cost: 15 }, { id: 'eternal_ice', cost: 15 }, { id: 'sun_stone', cost: 15 },
     { id: 'heartwood',      cost: 15 }, { id: 'bog_pearl', cost: 15 }, { id: 'deep_pearl', cost: 15 }, { id: 'ancient_relic', cost: 15 },
     { id: 'ashen_core',     cost: 40 },
-    { id: 'scar_tonic',     cost: 400 }, // 상흔을 하나 씻어 냄 (30일에 한 번 쓸 수 있음)
+    { id: 'scar_tonic',     cost: 400 }, // 상흔을 하나 씻어 냄 (7일에 한 번 쓸 수 있음)
     { id: 'tr_map_piece',   cost: 60 }, { id: 'tr_star_orb', cost: 80 }, { id: 'tr_dragon_idol', cost: 105 }, // 보물 (가치 250 · 320 · 450)
   ],
   // 강적·사냥에서 나오는 것 (멸망한 대륙)
