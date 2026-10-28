@@ -336,8 +336,15 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     let recv = t;
     const cv = coverOf(fg, t);
     if (cv) { recv = cv; lines.push(`${ga(cv.name)} ${t.name} 앞을 막아섰다!`); fg.guards[cv.id] = (fg.guards[cv.id] || 0) + 1; }
-    if (!opt.sure && K.dodged(att, recv, lines)) return;
-    const { dmg, note } = K.damage(att, recv, power * (cv ? R.coverTaken : 1), {});
+    // 레이드 보스는 눈이 밝음: 피하기를 잴 때만 속도를 R.accuracy만큼 더 높게 봄 (날개가 높아도 잘 못 피함. 돌풍은 그대로 통함)
+    if (!opt.sure) { const s0 = att.spd; att.spd = s0 + R.accuracy; const miss = K.dodged(att, recv, lines); att.spd = s0; if (miss) return; }
+    const k = power * (cv ? R.coverTaken : 1);
+    const hit = K.damage(att, recv, k, { armorK: R.armorK });
+    // 비늘이 아무리 두꺼워도 레이드 보스의 공격은 최대 체력에 비례한 몫이 더 들어감 (만렙 드래곤에게도 아프게)
+    // 거기에도 방어·비늘 세우기·돌 비늘·받는 피해 줄이기는 똑같이 통함. 부하(기사·허수아비)는 공격 세기만큼만
+    const red = (recv.guarding ? 0.5 : 1) * ((recv.st.harden || 0) > 0 ? 0.5 : 1) * ((recv.st.stone || 0) > 0 ? 0.7 : 1) * (recv.taken || 1);
+    const extra = Math.round(recv.hpMax * R.hitPct * k * Math.min(1, att.atk / fg.B.atk) * red);
+    const dmg = hit.dmg + extra, note = hit.note;
     recv.hp = Math.max(0, recv.hp - dmg);
     lines.push(`${verb} ${recv.name}에게 ${dmg}의 피해를 입혔다.${note}`);
   }
