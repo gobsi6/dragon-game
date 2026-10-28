@@ -53,7 +53,7 @@ module.exports = function setupYabawi({ io, db, online, logic, sendMe, isOpen = 
   const wearing = (d) => logic.titlesOf(d).on === RUMOR_TITLE;
   const rumorState = (d, s) => (!wearing(d) ? 'locked' : ybOf(d).said === s.key ? 'used' : 'ok');
   // 지금 들려줄 수 있는 소문: 에레보스 이야기는 열린 지역만, 예고는 아직 닫힌 지역만
-  const rumorPool = () => Y.rumors.filter((r) => (r.kind === 'ruin' ? isOpen(r.region) : r.kind === 'tease' ? !isOpen(r.region) : true));
+  const rumorPool = () => Y.rumors.filter((r) => (r.kind === 'ruin' ? isOpen(r.region) : r.kind === 'tease' ? !isOpen(r.region) : r.kind === 'raid' ? isOpen(`raid:${r.raid}`) : true)); // raid: 그 레이드를 누군가 처음 쓰러뜨린 뒤
   // 내 정보에 붙임: 같은 장소에 있을 때만 (다른 곳에서는 어디 있는지 알려 주지 않음)
   function here(d, now = Date.now()) {
     const s = slotNow(now);

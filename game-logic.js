@@ -5,7 +5,7 @@
 
 const {
   REGIONS, ITEMS, REGION_LOOT, CREATURES, SCENES, SCENES_HUMAN, RULES, RECIPES, SLOTS, STANCES, SHOPS, REP_TIERS, repTier, TRADE, NEST, hoardTier, RAID, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, ELEMENTS,
-  HOARD_TIERS, CRAFT, SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, SKILLS, FISHING, RUIN, FACILITY, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG, BOSSES, ACHIEVEMENTS, KEEPSAKES,
+  HOARD_TIERS, CRAFT, SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, SKILLS, FISHING, RUIN, FACILITY, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG, BOSSES, RAIDBOSS, ACHIEVEMENTS, KEEPSAKES,
   FREE, FESTIVAL, DAY,
 } = require('./game-data');
 
@@ -2202,6 +2202,12 @@ function dexView(d) {
     const where = `${dexRegionName(r)}에 나타남`;
     return e ? { seen: true, name: B.name, where, desc: B.desc, info: fightInfo(B), sub: `쓰러뜨린 수 ${e[1]}`, at: e[0], fresh: isNew(e[0]) } : { seen: false, where };
   });
+  // 레이드 보스도 같은 칸에 (만나면 이름, 쓰러뜨린 수)
+  for (const [k, B] of Object.entries(RAIDBOSS.bosses)) {
+    const e = x.m[`raid:${k}`];
+    const where = `${dexRegionName(B.region)} · 레이드`;
+    bosses.push(e ? { seen: true, name: B.name, where, desc: B.desc, info: fightInfo(B.boss), sub: `쓰러뜨린 수 ${e[1]}`, at: e[0], fresh: isNew(e[0]) } : { seen: false, where });
+  }
   // 물고기
   const fish = FISHING.fish.map((f) => {
     const it = ITEMS[f.id];

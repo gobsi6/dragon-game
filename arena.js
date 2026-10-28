@@ -23,7 +23,9 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
 
   const live = (id) => online.get(id) || null;
   const emitTo = (id, ev, data) => { const e = live(id); if (e) e.socket.emit(ev, data); };
-  const inBattle = (id) => sessions.has(id);
+  let raid = null; // 레이드 (raidboss.js): 싸우는 중이면 다른 싸움·행동이 막히고, 창을 다시 열거나 다시 접속하면 레이드 화면을 줌
+  const setRaid = (r) => { raid = r; };
+  const inBattle = (id) => sessions.has(id) || !!raid?.busy(id);
   // 접속 중이면 그 객체를, 아니면 저장된 것을 불러옴
   const load = (id) => { const e = live(id); return e ? e.dragon : db.getDragon(id); };
 
@@ -429,7 +431,7 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
     // 지금 싸우는 중인 전투 (창을 다시 열 때)
     on('battle:get', (d) => {
       const s = sessions.get(d.id);
-      if (!s) return { ok: true, view: null };
+      if (!s) return raid?.get(d.id) || { ok: true, view: null };
       const k = s.side[d.id];
       return { ok: true, view: { ...combat.view(s.b, k), deadline: s.deadline, waiting: s.kind === 'duel' && !!s.pending?.[k] }, log: s.b.log.flatMap((t) => t.lines) };
     });
@@ -677,7 +679,7 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
     clearTimeout(leaving.get(id));
     leaving.delete(id);
     const s = sessions.get(id);
-    if (!s || s.b.over) return false;
+    if (!s || s.b.over) return raid?.resume(id, socket) || false;
     const k = s.side[id];
     socket.emit('battle:start', { view: { ...combat.view(s.b, k), deadline: s.deadline }, lines: ['다시 돌아와 싸움을 이어 간다.'] });
     return true;
@@ -697,5 +699,5 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
     finishDuel(s);
   }
 
-  return { attach, startElite, startHunt, inBattle, onLeave, resume, checkMind, rampages, endBerserk, startBerserk, setFall };
+  return { attach, startElite, startHunt, inBattle, onLeave, resume, checkMind, rampages, endBerserk, startBerserk, setFall, setRaid };
 };

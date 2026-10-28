@@ -1027,4 +1027,5 @@ module.exports = {
   combatOf, loadout, learned, setSkills, setSettings,
   fromDragon, fromCreature, newBattle, round, aiPick, autoAct, runAuto, blocked, view, comboOf, intentOf, targetOf,
   hunt, huntReward, eliteReward, creatureBase, raidBattle, raidReward, fromBoss, bossBattle, weatherize, debug,
+  raidKit: { perform, endOfTurn, damage, dodged, healAmount, fighterView }, // 레이드(raidboss.js)가 넷이 함께 싸우는 턴을 직접 짤 때 씀
 };

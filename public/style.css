@@ -3555,3 +3555,30 @@ html:has(dialog.dlg:modal), html:has(dialog.dlg:modal) body { overflow: hidden; 
 /* 창을 좁혀 탭이 넘칠 때: 분류 탭을 '분류 ▾'로 접음 (폰과 같은 방식) */
 .utabs-wrap.squeeze .utabs .chipbtn[data-cat] { display: none; }
 .utabs-wrap.squeeze .utabs .chipbtn.more { display: inline-flex; }
+
+/* ── 레이드 ── */
+/* 모집 줄: 시든 평원의 바랜 밀빛. 아이콘은 회랑 띠와 같은 동그라미 */
+.rb-bar { background: #F6F3EA; border-color: #D8CDB2; }
+.rb-em { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #fff; border: 1px solid #D8CDB2; color: #6E5A2E; flex: none; }
+.rb-em svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.rb-btns { display: flex; gap: 6px; flex: none; }
+@media (max-width: 520px) {
+  .rb-bar { flex-wrap: wrap; }
+  .rb-bar .mob-t { flex-basis: calc(100% - 48px); }
+  .rb-btns { width: 100%; justify-content: flex-end; }
+}
+/* 전투 창의 동료 칸: 무리 카드와 같은 작은 카드. 고른 동료는 강철빛 테두리 */
+.bt-allies { display: flex; flex-direction: column; gap: 5px; padding: 8px; background: #F6F6F3; border: 1px solid var(--line-in); }
+.bt-al-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.bt-allies .bt-mini.on { cursor: pointer; }
+.bt-allies .bt-mini .nm em { color: var(--muted); }
+.bt-allies .bt-mini .nm em.ok { color: var(--forest); }
+/* 폰: 세 동료를 한 줄에 좁게. 이름 아래에 체력 숫자, 상태 글씨는 작게 */
+@media (max-width: 620px) {
+  .bt-al-row { gap: 4px; }
+  .bt-allies .bt-mini { grid-template-columns: minmax(0, 1fr); gap: 2px; padding: 5px 6px 6px; }
+  .bt-allies .bt-mini .nm { flex-direction: column; align-items: flex-start; gap: 1px; }
+  .bt-allies .bt-mini .nm em { font-size: 10px; }
+  .bt-allies .bt-mini .num { font-size: 10.5px; }
+}
+.bt-fire { margin-left: 10px; padding: 0 6px; font: 600 11px/17px var(--sans); color: #A14A1E; background: #FBF0E6; border: 1px solid #E8C7AE; border-radius: 2px; }

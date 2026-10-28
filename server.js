@@ -507,6 +507,7 @@ const meOf = (d) => ({
   traits: (() => { const t = logic.traitsOf(d); return { list: t.list, chosen: !!t.chosen, counts: t.counts, done: t.done, mark: t.mark || {} }; })(), // mark: 없애기만 하는 규칙을 다시 세기 시작한 횟수
   combat: (() => { const c = combat.combatOf(d); return { skills: combat.loadout(d), w: c.w, l: c.l, duelOn: c.duelOn, autoDuel: c.autoDuel }; })(),
   battle: arena ? arena.inBattle(d.id) : false,
+  raidBoss: raidBoss ? raidBoss.meView(d) : null, // 레이드: 이번 주 보상 횟수
   perks: d.perks || {},
   cost: { explore: logic.actionCost(d, 'explore'), gather: logic.actionCost(d, 'gather'), hunt: logic.actionCost(d, 'hunt') },
   exp: d.exp_end ? { region: d.exp_region, start: d.exp_start, end: d.exp_end, goal: logic.expInfo(d).goal || 'gather', fork: logic.forkView(d), plan: logic.planView(d), went: logic.expInfo(d).went || [] } : null,
@@ -777,6 +778,7 @@ const social = require('./social')({ db, online, entryOf, sendMe, logic, life, i
 
 // 강적·결투장·전투 설정·광폭화 (arena.js)
 let arena = null;
+let raidBoss = null; // 레이드 (아래에서 만들어짐. 쓰는 건 게임이 돌아갈 때라 괜찮음)
 arena = require('./arena')({ io, db, online, logic, combat, life, sendMe, broadcastPresence });
 const BERSERK = '광폭화한 몸이 제멋대로 날뛴다. 누군가 진정시켜 주기를 기다려야 한다.';
 
@@ -817,7 +819,7 @@ wxTicker.unref?.();
 const boss = require('./boss')({ io, db, online, logic, combat, arena, sendMe });
 // 떠돌이 야바위꾼: 하루 네 번 한 시간씩 대륙 어딘가에 판을 벌임 (yabawi.js)
 const slate = require('./slate')({ io, db, entryOf }); // 석판 (게시판)
-const yabawi = require('./yabawi')({ io, db, online, logic, sendMe, isOpen: (r) => ruin.unlocked(r) }); // ruin은 아래에서 만들어지지만, 쓰는 건 게임이 돌아갈 때라 괜찮음
+const yabawi = require('./yabawi')({ io, db, online, logic, sendMe, isOpen: (r) => (r.startsWith('raid:') ? !!raidBoss?.cleared(r.slice(5)) : ruin.unlocked(r)) }); // ruin은 아래에서 만들어지지만, 쓰는 건 게임이 돌아갈 때라 괜찮음
 // 왕도 야시장: 축제 날 저녁 6시~새벽 5시, 상인 노점과 드래곤들의 노점 (nightmarket.js)
 const nightMarket = require('./nightmarket')({ io, db, online, logic, sendMe });
 // 다른 둥지 아이와 맺어지기: 서로의 첫사랑 → 혼인 청 → 두 보호자 허락 (kinlove.js)
@@ -1026,6 +1028,11 @@ const ruin = (() => {
   return { add, view, top, unlocked, debugSet: (n) => { st.total = n; save(); goalAt = 0; settle(); } };
 })();
 logic.hooks.purify = (d, kind) => (logic.isRuin(d.region) ? ruin.add(d, kind) : purify.add(d, kind));
+// 레이드: 만렙 드래곤 넷이 모여 함께 맞서는 기믹 전투 (raidboss.js)
+raidBoss = require('./raidboss')({ io, db, online, logic, combat, arena, sendMe,
+  isOpen: (r) => ruin.unlocked(r), fall: death.fall, purify: (d, n) => ruin.add(d, 'raid', n),
+  news: (text) => { const at = Date.now(); let id = 0; try { id = db.addChat('!', { dragonId: 0, name: '', kind: '', text, at }); } catch {} io.emit('system', { text, at, news: true, id }); } });
+arena.setRaid(raidBoss);
 logic.hooks.companionsHere = (d) => { for (const e of online.values()) if (e.dragon.id !== d.id && e.dragon.region === d.region && !e.dragon.dead_at) return true; return false; };
 // 청출어람: 내 스승의 레벨을 따라잡았으면 그 스승의 이름 (칭호 판정에서 씀)
 logic.hooks.surpassed = (d) => {
@@ -1342,6 +1349,7 @@ function onConnect(socket) {
   socket.emit('boss', boss.view());
   socket.emit('weather', weatherAll());
   socket.emit('grave:list', death.graves());
+  socket.emit('raidboss', raidBoss.view());
   socket.emit('rescue:list', death.rescues());
   socket.emit('rescue:risen', death.risenList()); // 최근 다시 일어선 드래곤
 
@@ -2560,6 +2568,7 @@ function onConnect(socket) {
   arena.attach(socket);
   death.attach(socket);
   boss.attach(socket);
+  raidBoss.attach(socket);
 
   socket.on('disconnect', () => {
     const entry = entryOf(socket);

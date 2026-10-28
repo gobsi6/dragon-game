@@ -212,6 +212,11 @@
           <div class="mob-t"><b id="maze-bar-t">지하 회랑</b><small id="maze-bar-s"></small></div>
           <button class="btn primary" type="button" id="maze-bar-go">내려간다</button>
         </div>
+        <div class="mob-bar rb-bar" id="rb-bar" hidden><!-- 레이드: 그 지역의 모집 줄 -->
+          <span class="rb-em" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 20c2.5-1 4-3.4 4.6-6.4"/><path d="M9.6 13.6C10 8.4 14.4 4.6 19.5 4.6c-1 3.4-3.6 6.2-7 7.4"/><path d="M14 19.5v-6M16.5 19.5v-4.5M19 19.5v-6"/><path d="M13.2 14.2l.8-1 .8 1M15.7 15.7l.8-1 .8 1M18.2 14.2l.8-1 .8 1"/></svg></span>
+          <div class="mob-t"><b id="rb-bar-t"></b><small id="rb-bar-s"></small></div>
+          <div class="rb-btns" id="rb-bar-btns"></div>
+        </div>
         <div class="mob-bar yaba-bar yaba-hint" id="yaba-hint" hidden>
           <span class="mob-em yaba-em" aria-hidden="true"><svg width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="17" r="16" fill="#F1E7D2" stroke="#B08A3E" stroke-width="1.2"/><ellipse cx="12" cy="20" rx="4.2" ry="3.4" fill="#9A9184"/><ellipse cx="21" cy="21.5" rx="3.6" ry="3" fill="#B3AA9C"/><ellipse cx="17" cy="14" rx="3.9" ry="3.2" fill="#857C70"/></svg></span>
           <div class="mob-t"><b>떠돌이 야바위꾼이 판을 벌였다</b><small id="yaba-hint-t"></small></div>
@@ -879,6 +884,7 @@
   <div class="orn-h"><h2 id="battle-title">전투</h2></div>
   <div class="body">
     <div class="bt-sides"><div class="bt-f" id="bt-me"></div><div class="bt-vs">VS</div><div class="bt-f foe" id="bt-foe"></div></div>
+    <div class="bt-allies" id="bt-allies" hidden></div>
     <div class="bt-intent" id="bt-intent" hidden></div>
     <div class="bt-turn" id="bt-turn"></div>
     <div class="bt-log" id="bt-log" aria-live="polite"></div>
@@ -5338,6 +5344,7 @@
       }
     }
     renderMazeBar(); // 지하 회랑 입구 띠·회랑 화면
+    renderRaidBar(); // 레이드 모집 줄
     // 생존자 오르샤 (잿빛 상륙지)
     const ob = $('orsha-bar');
     ob.hidden = S.region !== S.ruinRules?.gateTo || !!me.exp;
@@ -10349,7 +10356,7 @@
     t.style.minWidth = '0';
     t.innerHTML = '<b></b><small></small>';
     t.querySelector('b').textContent = f.name;
-    t.querySelector('small').textContent = f.creature ? (f.elite ? '강적' : '사냥감') : `${S.kinds[f.kind]?.name || ''}${mine ? ' · 나' : ''}`;
+    t.querySelector('small').textContent = f.creature ? (f.sub || (f.elite ? '강적' : '사냥감')) : `${S.kinds[f.kind]?.name || ''}${mine ? ' · 나' : ''}`;
     if (f.enraged) { const r = document.createElement('span'); r.className = 'rage-b'; r.textContent = '분노'; t.querySelector('small').append(' ', r); }
     who.appendChild(t);
     box.classList.toggle('enraged', !!f.enraged);
@@ -10374,6 +10381,7 @@
       c.textContent = `${S.combat.status[k]} ${n}`;
       sts.appendChild(c);
     }
+    for (const g of f.tags || []) { const c = document.createElement('span'); c.className = g.bad ? 'bad' : ''; c.textContent = g.t; sts.appendChild(c); } // 레이드: 검은 이삭 등
     box.appendChild(sts);
     if (f.creature && (f.weak.length || f.resist.length)) {
       const el = document.createElement('div');
@@ -10404,11 +10412,12 @@
       c.querySelector('.bar i').style.width = `${Math.max(0, Math.min(100, (f.hp / f.hpMax) * 100))}%`;
       const sts = c.querySelector('.sts');
       for (const [k, n] of Object.entries(f.st || {})) { const x = document.createElement('span'); x.className = statusBad.has(k) ? 'bad' : ''; x.textContent = `${S.combat.status[k]} ${n}`; sts.appendChild(x); }
+      for (const g of f.tags || []) { const x = document.createElement('span'); x.className = g.bad ? 'bad' : ''; x.textContent = g.t; sts.appendChild(x); }
       c.setAttribute('aria-pressed', String(on));
       c.setAttribute('aria-label', `${f.name}, 체력 ${Math.max(0, f.hp)} / ${f.hpMax}${f.down ? ', 쓰러짐' : on ? ', 노리는 중' : ', 눌러서 노리기'}`);
       c.addEventListener('click', () => {
         if (on || f.down) return;
-        socket.emit('battle:target', { t: f.i }, (res) => {
+        socket.emit(v.kind === 'raid' ? 'raidboss:target' : 'battle:target', { t: f.i }, (res) => {
           if (res.error) return toast(res.error);
           BT.view = res.view;
           renderBattle();
@@ -10422,6 +10431,42 @@
       n.textContent = '눌러서 노릴 적을 고른다.';
       box.appendChild(n);
     }
+  }
+  // 레이드: 함께 싸우는 동료. 누르면 치유·막아서기 대상으로 고름 (다시 누르면 풀림)
+  function btAllies(v) {
+    const box = $('bt-allies');
+    const list = v.kind === 'raid' ? v.allies || [] : [];
+    box.hidden = !list.length;
+    box.replaceChildren();
+    if (!list.length) return;
+    if (BT.ally && !list.some((a) => a.id === BT.ally && !a.left)) BT.ally = null;
+    const h = document.createElement('div');
+    h.className = 'bt-many-h';
+    h.textContent = BT.ally ? `동료 · ${list.find((a) => a.id === BT.ally)?.name} 고름` : '동료';
+    box.appendChild(h);
+    const row = document.createElement('div');
+    row.className = 'bt-al-row';
+    for (const a of list) {
+      const c = document.createElement('button');
+      c.type = 'button';
+      const on = a.id === BT.ally;
+      c.className = `bt-mini${on ? ' on' : ''}${a.down || a.left ? ' down' : ''}`;
+      c.disabled = a.left || v.over || BT.replay;
+      c.innerHTML = '<span class="nm"><b></b><em></em></span><span class="num"></span><span class="bar hp"><i></i></span><span class="sts"></span>';
+      c.querySelector('b').textContent = a.name;
+      c.querySelector('em').textContent = a.left ? '물러남' : a.down ? '쓰러짐' : v.over ? '' : a.chose ? '골랐다' : '고르는 중';
+      c.querySelector('em').classList.toggle('ok', !a.left && !a.down && !!a.chose && !v.over);
+      c.querySelector('.num').textContent = `${Math.max(0, a.hp)} / ${a.hpMax}`;
+      c.querySelector('.bar i').style.width = `${Math.max(0, Math.min(100, (a.hp / a.hpMax) * 100))}%`;
+      const sts = c.querySelector('.sts');
+      for (const [k, n] of Object.entries(a.st || {})) { const x = document.createElement('span'); x.className = statusBad.has(k) ? 'bad' : ''; x.textContent = `${S.combat.status[k]} ${n}`; sts.appendChild(x); }
+      for (const g of a.tags || []) { const x = document.createElement('span'); x.className = g.bad ? 'bad' : ''; x.textContent = g.t; sts.appendChild(x); }
+      c.setAttribute('aria-pressed', String(on));
+      c.setAttribute('aria-label', `${a.name}, 체력 ${Math.max(0, a.hp)} / ${a.hpMax}${a.left ? ', 물러남' : a.down ? ', 쓰러짐' : ''}${on ? ', 고름' : ', 눌러서 고르기'}`);
+      c.addEventListener('click', () => { BT.ally = on ? null : a.id; renderBattle(); });
+      row.appendChild(c);
+    }
+    box.appendChild(row);
   }
   // ── 전투 효과: 지난 모습과 비교해 맞은 쪽은 흔들리고 붉게, 회복한 쪽은 초록 빛, 피하면 '회피' ──
   function btFxTargets(v) {
@@ -10511,6 +10556,7 @@
     $('bt-foe').parentElement.classList.toggle('multi', !!(v.foes && v.foes.length > 1));
     if (v.foes && v.foes.length > 1) btFoes($('bt-foe'), v);
     else btFighter($('bt-foe'), v.foe, false);
+    btAllies(v); // 레이드: 함께 싸우는 동료
     // 상대가 다음 턴에 할 일 (사냥감·강적만)
     const it = $('bt-intent');
     it.hidden = !v.intent;
@@ -10542,15 +10588,20 @@
     // 턴과 남은 시간
     const left = v.deadline && !v.over ? Math.max(0, Math.ceil((v.deadline - Date.now()) / 1000)) : null;
     $('bt-turn').innerHTML = `<span>${v.over ? '전투 끝' : `<b>${v.turn + 1}턴</b> / ${v.maxTurns}`}${v.weather && WX_PATH[v.weather.id] ? `<span class="bt-wx" style="color:${WX_COLOR[v.weather.id]}" title="${(S.weathers[v.weather.id]?.pros || []).concat(S.weathers[v.weather.id]?.cons || []).join(', ')}">${wxSvg(v.weather.id, 15)}<span style="color:var(--muted)">${v.weather.name}</span></span>` : ''}</span><span>${left != null ? `남은 시간 ${left}초 · 시간이 다 되면 자동으로 고른다` : ''}</span>`;
+    if (v.kind === 'raid' && v.fire > 0 && !v.over) { const fz = document.createElement('span'); fz.className = 'bt-fire'; fz.textContent = `밀밭의 불길 ${v.fire}단계`; $('bt-turn').firstElementChild.appendChild(fz); }
     // 행동 버튼
     const acts = $('bt-acts');
     acts.replaceChildren();
     acts.hidden = v.over || BT.replay;
     if (!v.over && !BT.replay) {
-      if (BT.waiting) {
+      const rbStop = v.kind === 'raid' ? (v.me.down ? '쓰러져 있다. 동료가 치유로 일으켜 주기를 기다린다.' : (v.me.tags || []).some((g) => g.t === '거두어짐') ? '검은 이삭에 거두어져 이번 턴은 움직일 수 없다.' : '') : '';
+      if (BT.waiting || rbStop) {
         const w = document.createElement('div');
         w.className = 'wait';
-        w.textContent = BT.foeReady ? '상대도 골랐다. 곧 턴이 펼쳐진다.' : '골랐다. 상대의 선택을 기다린다.';
+        if (v.kind === 'raid') {
+          const all = [true, ...(v.allies || []).filter((a) => !a.left && !a.down).map((a) => a.chose)];
+          w.textContent = rbStop || `골랐다. 동료를 기다린다. (${all.filter(Boolean).length}/${all.length})`;
+        } else w.textContent = BT.foeReady ? '상대도 골랐다. 곧 턴이 펼쳐진다.' : '골랐다. 상대의 선택을 기다린다.';
         acts.appendChild(w);
       } else {
         const frozen = v.me.st?.freeze || v.me.st?.stun;
@@ -10567,15 +10618,23 @@
           acts.appendChild(b);
         };
         add('할퀴기', frozen ? '이번 턴은 움직일 수 없다' : v.me.attackCombo ? `연계! ${v.me.attackCombo}` : '기본 공격', { type: 'attack' }, { primary: true, combo: !!v.me.attackCombo });
+        const pal = v.kind === 'raid' && BT.ally ? (v.allies || []).find((a) => a.id === BT.ally) : null; // 고른 동료
         for (const sk of v.me.skills || []) {
           const why = sk.cd > 0 ? `${sk.cd}턴 뒤` : v.me.en < sk.en ? '기력 부족' : '';
           const def = sk.id === 'breath' ? S.combat.breaths[S.me.kind] : S.combat.skills[sk.id];
           const cb = !why && sk.combo;
-          add(sk.name, why || (cb ? `연계! ${sk.combo}` : `기력 ${sk.en}`), { type: 'skill', id: sk.id }, { disabled: !!why, title: [def?.desc, ...comboHints(sk.id)].filter(Boolean).join('\n'), combo: !!cb });
+          const healPal = sk.id === 'mend' && pal && !pal.left;
+          add(sk.name, why || (healPal ? (pal.down ? `${pal.name} 일으키기` : `${pal.name}에게`) : cb ? `연계! ${sk.combo}` : `기력 ${sk.en}`), { type: 'skill', id: sk.id }, { disabled: !!why, title: [def?.desc, ...comboHints(sk.id)].filter(Boolean).join('\n'), combo: !!cb && !healPal });
         }
         const bigHit = v.intent && ['heavy', 'multi', 'debuff'].includes(v.intent.kind);
-        add('방어', bigHit ? '특기 피해 ¼ · 반격' : '피해 절반, 기력 +3', { type: 'guard' }, { suggest: bigHit });
-        add(v.kind === 'duel' ? '항복' : '물러나기', v.kind === 'duel' ? '결투를 포기한다' : v.boss ? '입힌 피해는 남는다' : v.foes ? '쓰러뜨린 만큼만 얻는다' : '전리품 없이 피한다', { type: 'flee' });
+        add('방어', v.kind === 'raid' ? '피해 절반, 기력 +3' : bigHit ? '특기 피해 ¼ · 반격' : '피해 절반, 기력 +3', { type: 'guard' }, { suggest: bigHit && v.kind !== 'raid' });
+        if (v.kind === 'raid') {
+          const coverOk = pal && !pal.down && !pal.left;
+          const gazeOn = v.intent?.kind === 'heavy' && pal && v.intent.text.includes(pal.name);
+          add('막아서기', coverOk ? `${pal.name} 대신 맞는다` : '동료 카드를 먼저 고른다', { type: 'cover' }, { disabled: !coverOk, suggest: !!gazeOn });
+          if (v.script === 'knights') add('우회', '날개로 대열 옆을 찌른다', { type: 'flank' }, { suggest: (v.foes || [v.foe]).some((f) => (f.tags || []).some((g) => g.t === '방패벽')) || /대열을 세워라/.test(v.intent?.text || '') });
+        }
+        add(v.kind === 'duel' ? '항복' : '물러나기', v.kind === 'duel' ? '결투를 포기한다' : v.kind === 'raid' ? '이번 레이드의 몫 없이 빠진다' : v.boss ? '입힌 피해는 남는다' : v.foes ? '쓰러뜨린 만큼만 얻는다' : '전리품 없이 피한다', { type: 'flee' });
         // 사냥: 나머지는 예전처럼 알아서 (기력을 조금 남기고, 체력이 낮아지면 물러남)
         if (v.kind === 'hunt') {
           const b = document.createElement('button');
@@ -10588,7 +10647,7 @@
           // 자동 버튼이 없는 싸움: 왜 없는지 작게 알려 줌
           const note = document.createElement('p');
           note.className = 'bt-note';
-          note.textContent = v.boss ? '재앙은 자동으로 맡길 수 없다.' : v.kind === 'calm' ? '폭주한 드래곤은 자동으로 맡길 수 없다.' : '강적은 자동으로 맡길 수 없다.';
+          note.textContent = v.kind === 'raid' ? (v.duelOn && v.duelOn !== v.me.id ? '일기토 중이다. 헤이른을 치면 기사도를 어긴 것이 된다. 치유와 막아서기는 괜찮다.' : '동료 카드를 누르면 치유하거나 막아설 대상으로 고른다.') : v.boss ? '재앙은 자동으로 맡길 수 없다.' : v.kind === 'calm' ? '폭주한 드래곤은 자동으로 맡길 수 없다.' : '강적은 자동으로 맡길 수 없다.';
           acts.appendChild(note);
         }
       }
@@ -10601,7 +10660,7 @@
       const bossHit = v.boss && (BT.result?.dealt || 0) > 0;
       r.className = `bt-result ${v.won || bossHit ? 'win' : 'lose'}`;
       r.innerHTML = '<b></b><ul></ul>';
-      r.querySelector('b').textContent = v.boss ? (v.won ? '재앙을 쓰러뜨렸다!' : bossHit ? `피해를 ${BT.result.dealt} 입히고 물러났다.` : '물러났다.') : v.won ? '이겼다!' : v.fled === 'me' ? '물러났다.' : '졌다.';
+      r.querySelector('b').textContent = BT.result?.head || (v.boss ? (v.won ? '재앙을 쓰러뜨렸다!' : bossHit ? `피해를 ${BT.result.dealt} 입히고 물러났다.` : '물러났다.') : v.won ? '이겼다!' : v.fled === 'me' ? '물러났다.' : '졌다.');
       for (const l of BT.result?.lines || []) { const li = document.createElement('li'); li.textContent = l; r.querySelector('ul').appendChild(li); }
       for (const it of BT.result?.items || []) { const li = document.createElement('li'); li.textContent = `${S.items[it.id]?.name} ×${it.qty}`; r.querySelector('ul').appendChild(li); }
     }
@@ -10612,8 +10671,8 @@
     return Object.values(S.combat.combos || {}).filter((c) => c.skill.includes(id)).map((c) => `연계 · ${c.name}: ${c.desc}`);
   }
   function openBattle(view, { title, lines = [], log = null, result = null, replay = false } = {}) {
-    BT = { view, title, result, replay, waiting: !!view.waiting, foeReady: false, fxPrev: null, fxLines: [] };
-    $('battle-title').textContent = title || (view.kind === 'duel' ? '결투' : view.kind === 'elite' ? '강적' : '전투');
+    BT = { view, title, result, replay, waiting: !!view.waiting, foeReady: false, fxPrev: null, fxLines: [], ally: null };
+    $('battle-title').textContent = title || (view.kind === 'duel' ? '결투' : view.kind === 'elite' ? '강적' : view.kind === 'raid' ? '레이드' : '전투');
     $('bt-log').replaceChildren();
     if (lines.length) btAddLines(lines, null);
     if (log) for (const t of log) btAddLines(t.lines, t.turn);
@@ -10626,6 +10685,15 @@
   function btAct(act) {
     if (!BT || BT.view.over) return;
     if (BT.view.foes) act = { ...act, t: BT.view.target };
+    if (BT.view.kind === 'raid') {
+      if (BT.ally) act = { ...act, ally: BT.ally };
+      socket.emit('raidboss:act', act, (res) => {
+        if (res.error) return toast(res.error);
+        BT.waiting = !!res.waiting;
+        renderBattle();
+      });
+      return;
+    }
     socket.emit('battle:act', act, (res) => {
       if (res.error) return toast(res.error);
       if (BT.view.kind !== 'duel') {
@@ -10681,7 +10749,7 @@
   function resumeBattle() {
     if (!S.me?.battle || BT) return;
     socket.emit('battle:get', {}, (res) => {
-      if (res.view) openBattle(res.view, { lines: res.log?.slice(-6) || [] });
+      if (res.view) openBattle(res.view, { lines: res.log?.slice(-6) || [], title: res.title });
     });
   }
 
@@ -12476,7 +12544,7 @@
       }
     });
     socket.on('me', (me) => {
-      setMe(me); renderSayMode(); maybeWelcome(); renderMazeBar(); renderNmRow(); if ($('nm-dlg').open && !(me.nightMarket?.open && (me.nightMarket.here || nmTab === 'mine'))) $('nm-dlg').close(); FAV.migrate(); SEEN.migrate(); renderSlateDot(); renderNotesDot();
+      setMe(me); renderSayMode(); maybeWelcome(); renderMazeBar(); renderRaidBar(); renderNmRow(); if ($('nm-dlg').open && !(me.nightMarket?.open && (me.nightMarket.here || nmTab === 'mine'))) $('nm-dlg').close(); FAV.migrate(); SEEN.migrate(); renderSlateDot(); renderNotesDot();
       if (!S.seenReady) { S.seenReady = true; renderRescues(); } // 서버의 읽음 표시를 받은 뒤 한 번 다시 그림 (먼저 온 '다시 일어선 드래곤' 알림)
       if (!SL.peeked) { SL.peeked = true; socket.emit('slate:peek', {}, (r) => { if (r?.ok) { SL.latest = Math.max(SL.latest, r.latest || 0); SL.replyAt = r.replyAt || 0; renderSlateDot(); } }); } // 내 글에 새 답이 왔는지
     });
@@ -12604,7 +12672,9 @@
     socket.on('rescue:risen', (l) => { S.risen = l || []; renderRescues(); });
     socket.on('rescued', (r) => { if ($('fall-dlg').open) $('fall-dlg').close(); showResult({ title: '구조', lines: r.lines }); });
     socket.on('rampage:end', onRampageEnd);
-    socket.on('battle:start', (s2) => { if ($('arena-dlg').open) $('arena-dlg').close(); openBattle(s2.view, { lines: s2.lines }); });
+    socket.on('battle:start', (s2) => { if ($('arena-dlg').open) $('arena-dlg').close(); openBattle(s2.view, { lines: s2.lines, title: s2.title }); });
+    socket.on('raidboss:wait', (p) => { if (BT?.view.kind !== 'raid') return; for (const a of BT.view.allies || []) a.chose = !!p.chosen[a.id]; renderBattle(); });
+    socket.on('raidboss', (v) => { S.raidBoss = v; renderRaidBar(); });
     socket.on('battle:update', onBattleUpdate);
     socket.on('battle:ready', () => { if (BT) { BT.foeReady = true; if (BT.waiting) renderBattle(); } });
     socket.on('battle:end', onBattleEnd);
@@ -12917,6 +12987,54 @@
     if (inside && (!MZ.floor || MZ.floor.fi !== mz.fi || !MZ.rows)) fetchMaze(mz.fi);
     if (!inside) { MZ.floor = null; MZ.rows = null; }
   }
+  // ── 레이드 모집 줄: 그 레이드가 있는 지역에서만. 모집이 없으면 열기, 있으면 함께 가기·빠지기·들어가기 ──
+  S.raidBoss = null;
+  function renderRaidBar() {
+    const bar = $('rb-bar'), me = S.me, V = S.raidBoss;
+    if (!bar || !me) return;
+    // GM은 아직 열리지 않은 레이드를 멸망한 대륙 어디서든 시험할 수 있음 (보상·기록 없음)
+    const gmTest = (x) => S.isGm && !x.open && S.regions[S.region]?.realm === 'ruin';
+    const R = V?.list.find((x) => x.region === S.region && x.open) || (S.isGm ? V?.list.find((x) => gmTest(x) && (!x.lobby || x.lobby.ids.includes(me.id))) : null);
+    bar.hidden = !R || !!me.exp || !!me.fallen;
+    if (bar.hidden) return;
+    const lb = R.lobby;
+    const mine = !!lb && lb.ids.includes(me.id);
+    const lead = mine && lb.leader === me.id;
+    const used = me.raidBoss?.used?.[R.key] || 0;
+    $('rb-bar-t').textContent = `${R.place} · ${R.name}${gmTest(R) ? ' (GM 시험 · 아직 닫힘)' : ''}`;
+    const sub = [];
+    if (lb) {
+      const left = Math.max(1, Math.ceil((lb.until - Date.now()) / 60000));
+      sub.push(`모집 중 ${lb.ids.length}/${V.size} (${lb.names.join(', ')}) · ${left}분 남음`);
+    } else sub.push(`만렙 드래곤 ${V.size}마리가 함께 맞서는 레이드`);
+    if (R.fighting) sub.push(`지금 ${R.fighting}팀이 싸우는 중`);
+    sub.push(used >= V.weekly ? `이번 주 보상은 다 받았다 · 동료를 도우러 갈 수 있다` : `이번 주 보상 ${used}/${V.weekly}`);
+    if (R.best) sub.push(`가장 빠른 기록 ${R.best.turns}턴`);
+    $('rb-bar-s').textContent = sub.join(' · ');
+    const box = $('rb-bar-btns');
+    box.replaceChildren();
+    const btn = (label, ev, opt = {}) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `btn${opt.primary ? ' primary' : ''}`;
+      b.textContent = label;
+      b.disabled = !!opt.disabled;
+      if (opt.title) b.title = opt.title;
+      b.addEventListener('click', () => {
+        if (opt.confirm && !confirm(opt.confirm)) return;
+        socket.emit(ev, { key: R.key }, (res) => { if (res.error) toast(res.error); });
+      });
+      box.appendChild(b);
+    };
+    const low = me.level < V.minLevel;
+    if (!lb) btn('함께 갈 드래곤 찾기', 'raidboss:open', { primary: true, disabled: low || !!me.battle, title: low ? `레벨 ${V.minLevel}부터 함께할 수 있다.` : '' });
+    else if (!mine) btn(`함께 가기 ${lb.ids.length}/${V.size}`, 'raidboss:join', { primary: true, disabled: low || lb.ids.length >= V.size || !!me.battle, title: low ? `레벨 ${V.minLevel}부터 함께할 수 있다.` : '' });
+    else {
+      if (lead) btn('들어가기', 'raidboss:start', { primary: true, disabled: lb.ids.length < V.size && !S.isGm, title: lb.ids.length < V.size ? (S.isGm ? `GM 시험: 지금 들어가면 보상 없이 ${lb.ids.length}마리로 싸운다.` : `${V.size}마리가 모이면 들어갈 수 있다.`) : '' });
+      btn(lead && lb.ids.length === 1 ? '모집 닫기' : '빠지기', 'raidboss:leave');
+    }
+  }
+  setInterval(() => { if (S.raidBoss?.list.some((x) => x.lobby)) renderRaidBar(); }, 30000);
   $('maze-bar-go').addEventListener('click', () => { if (mzInside()) { $('maze-card').scrollIntoView({ behavior: 'smooth', block: 'start' }); renderMazeCard(); } else openMazeDlg(); });
 
   // ── 회랑 창: 깊이 눈금 + 지도를 눌러 들어갈 곳 고르기 ──
