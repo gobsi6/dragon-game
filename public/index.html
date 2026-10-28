@@ -2759,32 +2759,73 @@
     more.addEventListener('click', () => { PRESET_EDIT = !PRESET_EDIT; renderPresets(); });
     nums.appendChild(more);
     box.append(nm, nums);
-    // 편집: 한 줄에 하나씩
+    // 편집: 담긴 것은 한 줄씩 (번호 · 이름 · 담긴 부위 그림 · 칭호 · 다시 담기 · 비우기), 빈 번호는 맨 아래 한 줄에 모아 누르면 담음
     ed.hidden = !PRESET_EDIT;
     ed.replaceChildren();
     if (!PRESET_EDIT) return;
-    list.forEach((p, i) => {
-      const r = document.createElement('div'); r.className = `pe-ed${p ? '' : ' empty'}`;
-      const no = document.createElement('span'); no.className = `pe-b${p ? '' : ' empty'}${i === cur ? ' on' : ''}`; no.textContent = i + 1; no.setAttribute('aria-hidden', 'true');
-      r.appendChild(no);
-      if (p) {
-        const inp = document.createElement('input'); inp.className = 'input'; inp.maxLength = 12; inp.value = p.name; inp.setAttribute('aria-label', `프리셋 ${i + 1} 이름`);
-        inp.addEventListener('change', () => { const v = inp.value.trim(); if (v && v !== p.name) itemAct('preset:rename', { i, name: v }); });
-        inp.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) inp.blur(); });
-        const acts = document.createElement('span'); acts.className = 'pe-acts';
-        const b1 = document.createElement('button'); b1.type = 'button'; b1.className = 'pe-link'; b1.textContent = '다시 담기'; b1.title = '지금 차림으로 덮어쓴다.';
-        b1.addEventListener('click', () => itemAct('preset:save', { i }));
-        const b2 = document.createElement('button'); b2.type = 'button'; b2.className = 'pe-link'; b2.textContent = '비우기';
-        b2.addEventListener('click', () => { if (confirm(`'${p.name}'${josa(p.name, '을', '를')} 비울까?`)) itemAct('preset:clear', { i }); });
-        acts.append(b1, b2);
-        r.append(inp, acts);
-      } else {
-        const b = document.createElement('button'); b.type = 'button'; b.className = 'pe-link'; b.textContent = '지금 차림 담기';
-        b.addEventListener('click', () => itemAct('preset:save', { i }));
-        r.appendChild(b);
+    const filled = list.map((p, i) => [p, i]).filter(([p]) => p);
+    for (const [p, i] of filled) {
+      const r = document.createElement('div'); r.className = `pe-ed${i === cur ? ' cur' : ''}`;
+      const no = document.createElement('span'); no.className = `pe-b${i === cur ? ' on' : ''}`; no.textContent = i + 1; no.setAttribute('aria-hidden', 'true');
+      // 이름: 평소에는 글씨로만 보이고, 누르면 입력 칸으로 바뀜 (Enter·칸 밖을 누르면 저장, Esc는 취소)
+      const inp = document.createElement('button'); inp.type = 'button'; inp.className = 'pe-name'; inp.textContent = p.name;
+      inp.title = '눌러서 이름 바꾸기'; inp.setAttribute('aria-label', `프리셋 ${i + 1} 이름 ${p.name}, 눌러서 바꾸기`);
+      inp.addEventListener('click', () => {
+        const f = document.createElement('input'); f.className = 'input pe-name-in'; f.maxLength = 12; f.value = p.name; f.setAttribute('aria-label', `프리셋 ${i + 1} 이름`);
+        let done = false;
+        const finish = (keep) => {
+          if (done) return; done = true;
+          const v = f.value.trim();
+          if (keep && v && v !== p.name) itemAct('preset:rename', { i, name: v });
+          f.replaceWith(inp);
+        };
+        f.addEventListener('keydown', (e) => {
+          if (e.isComposing) return;
+          if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+          else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); finish(false); } // 창이 닫히지 않게
+        });
+        f.addEventListener('blur', () => finish(true));
+        inp.replaceWith(f);
+        f.focus(); f.select();
+      });
+      // 담긴 것: 여섯 부위 그림 (찬 자리만 진하게, 희귀도 색) + 칭호
+      const sum = document.createElement('span'); sum.className = 'pe-sum';
+      const ics = document.createElement('span'); ics.className = 'pe-ics';
+      for (const sl of S.slots) {
+        const id = p.eq[sl.key];
+        const ic = document.createElement('i');
+        ic.className = id ? `has ${S.items[id]?.rarity || 'common'}` : '';
+        ic.title = `${sl.name}: ${id ? S.items[id]?.name || '?' : '비어 있음'}`;
+        ic.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SLOT_ICON[sl.key] || ''}</svg>`;
+        ics.appendChild(ic);
       }
+      const tt = document.createElement('small'); tt.className = 'pe-tt'; tt.textContent = p.title || '칭호 없음';
+      sum.append(ics, tt);
+      sum.title = presetTip(p);
+      const acts = document.createElement('span'); acts.className = 'pe-acts';
+      const b1 = document.createElement('button'); b1.type = 'button'; b1.className = 'pe-link'; b1.textContent = '다시 담기'; b1.title = '지금 차림으로 덮어쓴다.';
+      b1.disabled = i === cur;
+      b1.addEventListener('click', () => { if (confirm(`'${p.name}'에 지금 차림을 다시 담을까?`)) itemAct('preset:save', { i }); });
+      const b2 = document.createElement('button'); b2.type = 'button'; b2.className = 'pe-link danger'; b2.textContent = '비우기';
+      b2.addEventListener('click', () => { if (confirm(`'${p.name}'${josa(p.name, '을', '를')} 비울까?`)) itemAct('preset:clear', { i }); });
+      acts.append(b1, b2);
+      r.append(no, inp, sum, acts);
       ed.appendChild(r);
-    });
+    }
+    const empty = list.map((p, i) => (p ? -1 : i)).filter((i) => i >= 0);
+    if (empty.length) {
+      const r = document.createElement('div'); r.className = 'pe-ed pe-empty';
+      const k = document.createElement('small'); k.textContent = filled.length ? '빈 번호에 지금 차림 담기' : '번호를 골라 지금 차림을 담는다';
+      const ns = document.createElement('span'); ns.className = 'pe-nums';
+      for (const i of empty) {
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'pe-b empty'; b.textContent = i + 1;
+        b.setAttribute('aria-label', `빈 칸 ${i + 1}에 지금 차림 담기`);
+        b.addEventListener('click', () => itemAct('preset:save', { i }));
+        ns.appendChild(b);
+      }
+      r.append(k, ns);
+      ed.appendChild(r);
+    }
   }
   function renderInv() {
     renderPresets();

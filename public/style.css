@@ -3619,14 +3619,35 @@ html:has(dialog.dlg:modal), html:has(dialog.dlg:modal) body { overflow: hidden; 
 .pe-b.on { background: var(--steel-d); border-color: var(--steel-d); color: #F4F7FA; }
 .pe-more { width: 26px; height: 26px; display: inline-grid; place-items: center; padding: 0; background: none; border: 0; border-radius: 50%; color: var(--muted); cursor: pointer; }
 .pe-more:hover, .pe-more.on { color: var(--steel-d); background: rgba(42, 66, 86, .08); }
-.preset-edit { display: flex; flex-direction: column; gap: 4px; padding: 6px; background: #fff; border: 1px solid var(--line-in); border-radius: 3px; }
-.pe-ed { display: flex; align-items: center; gap: 8px; min-height: 32px; }
+.preset-edit { display: flex; flex-direction: column; background: #fff; border: 1px solid var(--line-in); border-radius: 3px; }
+.pe-ed { display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 6px 10px; }
+.pe-ed + .pe-ed { border-top: 1px solid var(--line-soft); }
+.pe-ed.cur { background: #F5F7F9; }
 .pe-ed .pe-b { cursor: default; }
-.pe-ed .input { flex: 1 1 0; min-width: 0; max-width: 220px; min-height: 28px; padding: 0 8px; font-size: 12.5px; }
+.pe-name { flex: 0 1 150px; min-width: 0; min-height: 28px; padding: 0 8px; text-align: left; background: none; border: 1px solid transparent; border-radius: 3px; font: 600 13px/26px var(--sans); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: text; } /* 이름: 평소엔 글씨처럼, 마우스를 올리면 테두리 */
+.pe-name:hover, .pe-name:focus-visible { border-color: var(--line-in); background: #fff; }
+.pe-ed .pe-name-in { flex: 0 1 150px; min-width: 0; min-height: 28px; padding: 0 7px; font-size: 13px; }
+.pe-sum { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 8px; }
+.pe-ics { flex: none; display: flex; gap: 2px; }
+.pe-ics i { width: 18px; height: 18px; display: grid; place-items: center; border: 1px solid var(--line-soft); border-radius: 2px; color: #C5C8CB; background: #FAFAF8; }
+.pe-ics i svg { width: 12px; height: 12px; }
+.pe-ics i.has { color: var(--ink-2); background: #fff; border-color: var(--line-in); }
+.pe-ics i.has.uncommon { color: #2F6A55; border-color: #B9D6C7; background: #F1F8F4; }
+.pe-ics i.has.rare { color: #8A6516; border-color: #E2CF9E; background: #FBF6E8; }
+.pe-tt { min-width: 0; font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pe-acts { flex: none; margin-left: auto; display: flex; gap: 12px; }
-.pe-link { padding: 0; background: none; border: 0; color: var(--steel-d); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; font: inherit; font-size: 12px; }
-.pe-ed.empty .pe-link { color: var(--ink-2); }
+.pe-link { padding: 2px 0; background: none; border: 0; color: var(--steel-d); cursor: pointer; font: inherit; font-size: 12px; white-space: nowrap; }
+.pe-link:hover:not(:disabled) { color: var(--ink); }
+.pe-link:disabled { color: #B7BABD; cursor: default; }
+.pe-link.danger { color: #8A2E27; }
+.pe-link.danger:hover { color: #6E2019; }
+.pe-empty { justify-content: space-between; background: #FAFAF8; }
+.pe-empty small { font-size: 11.5px; color: var(--muted); }
 @media (max-width: 620px) {
   .preset-bar { flex-basis: 100%; justify-content: space-between; } /* 폰: 제목 아래 한 줄로 */
   .pe-n .pe-k { display: none; } /* 폰: '프리셋' 글자는 빼고 이름만 */
+  .pe-ed { flex-wrap: wrap; row-gap: 6px; } /* 폰: 부위 그림·칭호는 둘째 줄로 */
+  .pe-ed .pe-name, .pe-ed .pe-name-in { flex: 1 1 0; }
+  .pe-ed .pe-sum { order: 3; flex-basis: 100%; padding-left: 36px; }
+  .pe-ed .pe-acts { margin-left: 0; }
 }
