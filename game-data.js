@@ -212,6 +212,8 @@ const ITEMS = {
   // 상흔을 하나 씻어 냄: 지하 회랑 수호자(아주 드물게) · 멸망한 대륙 생존자 교환. 7일에 한 번 (game-logic.js useItem)
   scar_tonic:     { name: '옛 샘의 정수', rarity: 'rare', type: 'use', use: { scar: 1 }, value: 900, desc: '고대도시 아래 샘에서 스며 나온 물을 정화의 결정으로 맑힌 것. 마시면 가장 최근에 입은 상흔 하나가 씻겨 나간다. 몸이 받아들이는 것은 7일에 한 번뿐이다.' },
   mz_city_key:    { name: '고대도시의 열쇠 조각', rarity: 'rare', cat: 'treasure', value: 650, desc: '일곱 층 아래 문의 열쇠였던 것. 조각만으로도 보물더미가 묘하게 환해진다.' },
+  tr_seed_sack:   { name: '백 년 묵은 씨앗 자루', rarity: 'rare', cat: 'treasure', value: 600, desc: '모르벤의 밭 가장자리에 묻혀 있던 자루. 아직 싹을 틔울 수 있을 것만 같은 씨앗이 가득하다.' }, // 레이드 (모르벤)
+  tr_oath_ring:   { name: '기사단장의 맹세 반지', rarity: 'rare', cat: 'treasure', value: 700, desc: '헤이른의 손가락에 끼워져 있던 반지. 안쪽에 "문을 지킨다"는 맹세가 새겨져 있다.' }, // 레이드 (헤이른)
   tr_ash_mirror:  { name: '잿빛 거울',     rarity: 'rare',     cat: 'treasure', value: 500, desc: '비추면 잿빛 하늘만 보이는 거울. 가끔 멸망 전의 맑은 하늘이 스친다.' },
   tr_broken_crown:{ name: '카르넴의 깨진 왕관', rarity: 'rare', cat: 'treasure', value: 700, desc: '마지막 왕이 쓰던 왕관. 반쪽이 떨어져 나갔지만 보석은 아직 빛난다.' },
   tr_last_claw:   { name: '거대 고룡의 발톱', rarity: 'rare',   cat: 'treasure', value: 900, desc: '대륙이 무너지던 날까지 싸운 거대한 고룡의 발톱. 사람 키보다 길고, 아직 따뜻하다.' },
@@ -230,6 +232,11 @@ const ITEMS = {
   star_charm:     { name: '별빛 부적', rarity: 'rare', type: 'equip', slot: 'charm', bonus: { wisdom: 4 }, expRare: 0.03, value: 100, desc: '별똥별 조각을 엮은 부적. 원정에서 귀한 것이 더 잘 나온다.' },
   // 레이드 장신구 (모르벤의 낫 조각으로 빚음). 둘 다 능력치 합 10: 여럿을 고르게 올리는 것과 하나를 높게 올리는 것
   harvest_sickle:   { name: '이삭지기의 금빛 낫', rarity: 'rare', type: 'equip', slot: 'claw', bonus: { claw: 4, majesty: 3, wisdom: 3 }, value: 160, desc: '모르벤의 낫 조각을 녹여 발톱 끝에 덧씌웠다. 휘두를 때마다 마른 밀 향이 난다.' },
+  // 레이드 희귀 장비 (레이드 보스가 아주 드물게 떨어뜨림. gear: 사냥·레이드에서만 듣는 특별한 효과)
+  raid_harvest_crown: { name: '거둔 이삭의 관',           rarity: 'rare', type: 'equip', slot: 'head', bonus: { wisdom: 4, majesty: 3 }, gear: { heal: 1.15 }, value: 140, desc: '모르벤이 마지막으로 거둔 이삭을 엮은 관. 치유로 되찾는 체력 +15%.' },
+  raid_scarecrow_cloak: { name: '허수아비 군주의 넝마 망토', rarity: 'rare', type: 'equip', slot: 'wing', bonus: { scale: 4, wing: 3 }, gear: { cover: 0.8 }, value: 140, desc: '군주가 걸치고 있던 넝마. 몇 번을 베여도 찢어지지 않는다. 막아서기로 대신 맞을 때 받는 피해 −20%.' },
+  raid_heiron_helm:   { name: '헤이른의 금 간 투구',       rarity: 'rare', type: 'equip', slot: 'head', bonus: { scale: 4, majesty: 3 }, gear: { raidAtk: 1.1 }, value: 140, desc: '오백 년 동안 성문을 지킨 투구. 금이 간 자리로 바람이 들어온다. 레이드 보스에게 주는 피해 +10%.' },
+  raid_banner_wing:   { name: '기사단 깃발의 날개덮개',    rarity: 'rare', type: 'equip', slot: 'wing', bonus: { wing: 5, claw: 2 }, gear: { flank: 0.15 }, value: 140, desc: '꺾인 깃발 천으로 날개 끝을 감쌌다. 펼치면 대열이 흔들린다. 우회 성공 확률 +15%.' },
   knight_tail_shield: { name: '성문 기사단의 꼬리 방패', rarity: 'rare', type: 'equip', slot: 'tail', bonus: { wing: 4, scale: 3, claw: 3 }, value: 160, desc: '헤이른의 방패를 잘라 꼬리 끝에 맞췄다. 휘두르면 대열을 갈랐던 바람 소리가 난다.' },
   charge_banner_charm: { name: '돌격 깃발 장식', rarity: 'rare', type: 'equip', slot: 'charm', bonus: { wing: 8, claw: 2 }, value: 160, desc: '기사단 깃발의 술을 엮어 만든 장식. 날개를 펼치면 깃발처럼 펄럭인다.' },
   harvest_pendant:  { name: '추수 축복의 목걸이', rarity: 'rare', type: 'equip', slot: 'neck', bonus: { wisdom: 8, scale: 2 }, value: 160, desc: '모르벤이 밀밭에 걸던 축복을 낫 조각에 새겨 다시 깨웠다. 목에 걸면 손끝이 따뜻해진다.' },
@@ -2064,6 +2071,7 @@ const RAIDBOSS = {
   coverTaken: 0.8,                   // 막아서기로 대신 맞을 때 받는 피해 배율 (피해는 막아선 쪽의 비늘로 셈)
   armorK: 0.35,                      // 레이드 보스 공격이 비늘을 얼마나 받는지 (보통 0.5. 낮을수록 비늘이 덜 막음)
   accuracy: 20,                      // 레이드 적의 명중: 피하기를 잴 때 공격하는 쪽 속도에 더함 (날개 45 드래곤도 열 번에 한 번쯤만 피함)
+  rareChance: { gear: 0.02, treasure: 0.06 }, // 보상을 받는 판마다 드래곤마다 따로: 희귀 장비 2% (둘 중 하나), 보물 6%
   hitPct: 0.08,                      // 레이드 보스 공격에 더해지는 몫: 맞는 쪽 최대 체력의 8% × 공격 배율 (큰 기믹은 그만큼 크게)
   retreatLoss: 0.4,                  // 시간 초과로 물러날 때 잃는 체력 (최대 체력 비율)
   downHeal: 0.1,                     // 이겼을 때 쓰러져 있던 드래곤이 되찾는 체력 (최대 체력 비율)
@@ -2074,7 +2082,7 @@ const RAIDBOSS = {
       region: 'ruin_plain', place: '검은 밀밭 한가운데', name: '이삭지기 모르벤',
       desc: '카르넴 왕실이 곡창 평원에 보낸 풍요의 마법사. 오백 년 동안 홀로 남아 아무도 없는 밭의 추수를 기다린다.',
       // 만렙 넷이 기믹을 하나도 놓치지 않으면 17턴쯤에 쓰러지는 체력 (허수아비·그림자에 쓰는 턴과 빗나감까지 셈해 시험으로 맞춤)
-      lv: 27, hp: 4800, lordShare: 0.25, atk: 63, def: 16, spd: 22, mag: 50, maj: 32, // maj: 포효로 노래를 끊는 판정의 기준 (만렙 평균 위엄 + 5쯤)
+      lv: 27, hp: 4400, lordShare: 0.25, atk: 60, def: 16, spd: 22, mag: 50, maj: 32, // maj: 포효로 노래를 끊는 판정의 기준 (만렙 평균 위엄 + 5쯤)
       lord:   { name: '허수아비 군주', type: 'construct', weak: ['fire', 'poison'], resist: ['earth'] },
       boss:   { name: '이삭지기 모르벤', short: '모르벤', type: 'human', weak: ['spirit', 'lightning'], resist: ['poison'] },
       shadow: { name: '모르벤의 그림자', type: 'spirit', weak: ['spirit', 'fire'], resist: ['poison', 'ice'], atk: 0.8 },
@@ -2086,6 +2094,7 @@ const RAIDBOSS = {
       summon: { at: [2, 7, 12], n: 2, hp: 0.06, shield: 0.5 }, // 2단계의 이 턴마다 허수아비 둘 (하나당 모르벤 체력의 6%). 서 있는 동안 모르벤이 받는 피해 절반
       split: { below: 0.3, floor: 0.15, window: 2, revive: 0.7 }, // 체력 30% 아래로 떨어지면 그림자와 갈라짐 (갈라질 때 둘 다 최소 15%). 하나가 쓰러지고 2턴 안에 나머지를 못 쓰러뜨리면 70%로 되살아남
       p3Every: 2,                                          // 3단계: 두 턴마다 고개 돌리기·추수의 노래를 번갈아
+      rare: { gear: ['raid_harvest_crown', 'raid_scarecrow_cloak'], treasure: 'tr_seed_sack' }, // 희귀 전리품 (확률은 RAIDBOSS.rareChance)
       reward: { gold: [250, 400], shard: 'morven_shard', shards: 2, firstShard: 5, purifyShard: 15, purify: 50, journal: 'morven_journal', journalChance: 0.2, keepsake: 'golden_wheat', fame: 3 },
       intro: '검게 마른 이삭 사이로 들어서자 바람이 멎었다. 밭 한가운데, 낡은 로브를 걸친 사람이 낫을 쥔 채 이쪽을 돌아본다. "올해는 이삭이 무겁구나."',
       lines: {
@@ -2112,6 +2121,7 @@ const RAIDBOSS = {
       flank:  { wing: 25, power: 0.8 },                     // 우회: 50% + (날개 − 25) × 4% (20~95%). 방패벽이 아닌 턴에는 ×0.8 공격
       charge: { every: 4, n: 2, power: 3.5 },                 // 2·3단계: 네 턴마다 두 드래곤에게 돌격 ×3.5 (날개 돌풍으로 피함, 막아서기 가능)
       duel:   { below: 0.4, every: 5, turns: 3, heal: 0.1, after: 1.5, afterTurns: 3, punish: 1.5 }, // 3단계(40% 아래): 다섯 턴마다 3턴 일기토. 버티면 헤이른 ×1.5 (3턴), 지목된 드래곤이 쓰러지면 헤이른 10% 회복, 끼어들면 ×1.5 반격
+      rare: { gear: ['raid_heiron_helm', 'raid_banner_wing'], treasure: 'tr_oath_ring' },
       reward: { gold: [280, 450], shard: 'heiron_crest', shards: 2, firstShard: 5, purifyShard: 15, purify: 50, journal: 'knight_logbook', journalChance: 0.2, keepsake: 'knight_banner', fame: 3 },
       intro: '무너진 성문 앞, 녹슨 갑옷들이 한 치도 흐트러지지 않은 채 줄지어 서 있다. 가장 앞에 선 기사가 투구 너머로 낮게 말한다. "물러가라. 이 문은 열리지 않는다."',
       lines: {

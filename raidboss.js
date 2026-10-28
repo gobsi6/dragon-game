@@ -24,7 +24,7 @@ const ga = (n) => `${n}${josa(n, '이', '가')}`;
 const eul = (n) => `${n}${josa(n, '을', '를')}`;
 const ACTS = ['attack', 'skill', 'guard', 'flee', 'cover', 'flank']; // flank: 우회 (카르넴)
 
-module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, sendMe, isOpen, fall, purify, news, presence }) {
+module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, sendMe, isOpen, fall, purify, news, presence, track }) {
   const R = RAIDBOSS;
   const K = combat.raidKit;
   let st = db.worldGet('raidboss', null) || {};
@@ -49,6 +49,9 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
   const lobbies = new Map(); // 레이드 key → { key, leader, ids, until, timer }
   const fights = new Map();  // 싸움 id → 싸움
   const inFight = new Map(); // 드래곤 id → 싸움
+  { const set = inFight.set.bind(inFight), del = inFight.delete.bind(inFight); // 서버가 다시 켜졌을 때 끊긴 레이드를 안내하려고 바깥에 알림
+    inFight.set = (id, f) => { track?.(id, 'raid'); return set(id, f); };
+    inFight.delete = (id) => { track?.(id, null); return del(id); }; }
   let nextId = 1;
   const live = (id) => online.get(id) || null;
   const load = (id) => { const e = live(id); return e ? e.dragon : db.getDragon(id); };
@@ -358,7 +361,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     if (cv) { recv = cv; lines.push(`${ga(cv.name)} ${t.name} 앞을 막아섰다!`); fg.guards[cv.id] = (fg.guards[cv.id] || 0) + 1; }
     // 레이드 보스는 눈이 밝음: 피하기를 잴 때만 속도를 R.accuracy만큼 더 높게 봄 (날개가 높아도 잘 못 피함. 돌풍은 그대로 통함)
     if (!opt.sure) { const s0 = att.spd; att.spd = s0 + R.accuracy; const miss = K.dodged(att, recv, lines); att.spd = s0; if (miss) return; }
-    const k = power * (cv ? R.coverTaken : 1);
+    const k = power * (cv ? R.coverTaken * (cv.coverK || 1) : 1); // 막아선 쪽의 희귀 장비(넝마 망토)
     const hit = K.damage(att, recv, k, { armorK: R.armorK });
     // 비늘이 아무리 두꺼워도 레이드 보스의 공격은 최대 체력에 비례한 몫이 더 들어감 (만렙 드래곤에게도 아프게)
     // 거기에도 방어·비늘 세우기·돌 비늘·받는 피해 줄이기는 똑같이 통함. 부하(기사·허수아비)는 공격 세기만큼만
@@ -420,7 +423,10 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     const usedN = (p.used || []).length;
     const earsBefore = p.ears;
     const bossHp = fg.boss.hp;
-    K.perform(b, p, foe, a, lines);
+    // 희귀 장비(금 간 투구): 레이드 적에게 주는 피해. 이 행동 동안만 적들이 그만큼 더 다침 (치유량에는 영향 없음)
+    const rk = p.raidAtk || 1, t0 = rk !== 1 ? fg.foes.map((f) => f.taken) : null;
+    if (t0) for (const f of fg.foes) f.taken *= rk;
+    try { K.perform(b, p, foe, a, lines); } finally { if (t0) fg.foes.forEach((f, i) => { f.taken = t0[i]; }); }
     const did = a.type === 'skill' && (p.used || []).length > usedN; // 스킬을 실제로 썼는지 (얼어붙었거나 기력이 모자라면 아님)
     if (did && a.id === 'roar') (fg.roared ||= []).push(p);
     SC(fg).afterAct(fg, p, a, foe, { did, earsBefore, bossHp }, lines);
@@ -703,7 +709,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     const bossHp = fg.boss.hp;
     let power = B.flank.power;
     if (fg.wall && !fg.wallBroken) {
-      const ch = clamp(0.5 + ((p.spd || 0) - B.flank.wing) * 0.04, 0.2, 0.95);
+      const ch = clamp(0.5 + ((p.spd || 0) - B.flank.wing) * 0.04 + (p.flankK || 0), 0.2, 0.95); // 희귀 장비(깃발의 날개덮개)
       if (Math.random() < ch) {
         fg.wallBroken = true; power = 1;
         fg.flanks[p.id] = (fg.flanks[p.id] || 0) + 1;
@@ -712,7 +718,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
       } else lines.push(`${ga(p.name)} 옆으로 돌아들었지만 방패에 막혔다.`);
     } else lines.push(`${ga(p.name)} 옆으로 돌아들어 ${foe.name}의 빈 곳을 노린다.`);
     if (K.dodged(p, foe, lines)) return true;
-    const { dmg, note } = K.damage(p, foe, power, {});
+    const { dmg, note } = K.damage(p, foe, power * (p.raidAtk || 1), {});
     foe.hp = Math.max(0, foe.hp - dmg);
     lines.push(`${ga(p.name)} ${foe.name}에게 ${dmg}의 피해를 입혔다.${note}`);
     knAfter(fg, p, a, foe, { did: false, bossHp }, lines);
@@ -879,6 +885,16 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
             if (Math.random() < W.journalChance) items.push({ id: W.journal, qty: 1 });
             const got = [...items.map((x) => logic.itemLabel(x)), `금화 ${gold}닢`].join(', ');
             res.lines.push(`${got}${josa(got, '을', '를')} 얻었다.`);
+            // 희귀 전리품: 드래곤마다 따로 굴림 (장비 둘 중 하나, 보물 하나). 얻으면 대륙 소식에도
+            const RC = R.rareChance || {};
+            const found = [];
+            if (B.rare?.gear?.length && Math.random() < (RC.gear || 0)) found.push(pick(B.rare.gear));
+            if (B.rare?.treasure && Math.random() < (RC.treasure || 0)) found.push(B.rare.treasure);
+            for (const id of found) {
+              items.push({ id, qty: 1 });
+              res.lines.push(`${B.boss.short}의 발치에서 ${eul(ITEM_NAME(id))} 찾았다! (희귀)`);
+              news(`[레이드] ${ga(d.name)} ${B.boss.short}의 발치에서 ${eul(ITEM_NAME(id))} 찾았다!`);
+            }
             if (first) res.lines.push(`처음 쓰러뜨렸으니 ${eul(ITEM_NAME(W.shard))} 넉넉히 챙겼다. 장신구 하나를 빚을 만큼이다.`);
             if (first) res.lines.push(logic.chestAdd(d, W.keepsake, '', '', now, null, {}) ? B.lines.keepsake : `${B.lines.keepsakeNoNest}`);
             res.lines.push(...purify(d, W.purify));

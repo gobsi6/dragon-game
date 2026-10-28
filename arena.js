@@ -18,6 +18,12 @@ const stakeEmpty = (s) => !s || (!s.gold && !s.items.length);
 
 module.exports = function setupArena({ io, db, online, logic, combat, life, sendMe, broadcastPresence }) {
   const sessions = new Map(); // 드래곤 id → 전투 { id, kind, b, side: {드래곤 id: 'a'|'b'}, ids: {a, b}, pending, timer, deadline }
+  // 싸우는 드래곤을 바깥에 알림 (서버가 다시 켜졌을 때 끊긴 싸움을 안내하려고: server.js liveFights)
+  let track = null;
+  const setTrack = (fn) => { track = fn; };
+  { const set = sessions.set.bind(sessions), del = sessions.delete.bind(sessions);
+    sessions.set = (id, s) => { track?.(id, s.kind || 'duel'); return set(id, s); };
+    sessions.delete = (id) => { track?.(id, null); return del(id); }; }
   const invites = new Map();  // 신청 id → { id, from, to, timer }
   let nextId = 1;
 
@@ -699,5 +705,5 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
     finishDuel(s);
   }
 
-  return { attach, startElite, startHunt, inBattle, onLeave, resume, checkMind, rampages, endBerserk, startBerserk, setFall, setRaid };
+  return { attach, startElite, startHunt, inBattle, onLeave, resume, checkMind, rampages, endBerserk, startBerserk, setFall, setRaid, setTrack };
 };

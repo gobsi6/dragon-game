@@ -495,12 +495,13 @@ function nearestTown(region) {
 // 장신구가 막아 주는 정도 (정화의 부적)
 // 희귀 장비의 특별한 효과 (사냥·강적에서만): vsCorrupt·eliteAtk·taken은 곱하고, shard는 더함
 function gearMods(d) {
-  const m = { vsCorrupt: 1, eliteAtk: 1, taken: 1, shard: 0 };
+  const m = { vsCorrupt: 1, eliteAtk: 1, taken: 1, shard: 0, heal: 1, cover: 1, raidAtk: 1, flank: 0 };
   for (const id of Object.values(equipOf(d))) {
     const g = ITEMS[id]?.gear;
     if (!g) continue;
-    for (const k of ['vsCorrupt', 'eliteAtk', 'taken']) if (g[k]) m[k] *= g[k];
+    for (const k of ['vsCorrupt', 'eliteAtk', 'taken', 'heal', 'cover', 'raidAtk']) if (g[k]) m[k] *= g[k]; // heal·cover·raidAtk: 레이드 희귀 장비
     if (g.shard) m.shard += g.shard;
+    if (g.flank) m.flank += g.flank;
   }
   return m;
 }

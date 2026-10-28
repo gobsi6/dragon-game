@@ -1030,7 +1030,30 @@ const ruin = (() => {
 })();
 logic.hooks.purify = (d, kind) => (logic.isRuin(d.region) ? ruin.add(d, kind) : purify.add(d, kind));
 // 레이드: 만렙 드래곤 넷이 모여 함께 맞서는 기믹 전투 (raidboss.js)
-raidBoss = require('./raidboss')({ io, db, online, logic, combat, arena, sendMe,
+// ── 끊긴 싸움 안내: 싸우는 드래곤을 world 'liveFights'에 적어 두고, 서버가 다시 켜졌을 때 남아 있으면 쪽지로 알림 ──
+// (싸움은 메모리에만 있어서 서버를 다시 켜면 사라짐. 체력 등은 싸움이 끝날 때 저장되므로 잃는 것은 없음)
+const liveFights = (() => {
+  const LOST = {
+    raid: '서버가 다시 시작되어 하던 레이드가 끊겼다. 체력과 주간 보상 횟수는 그대로이고, 잃은 것은 없다.',
+    duel: '서버가 다시 시작되어 하던 결투가 끊겼다. 결투는 없던 일이 되었다.',
+    bet: '서버가 다시 시작되어 하던 내기 결투가 끊겼다. 결투는 없던 일이 되었다.',
+    elite: '서버가 다시 시작되어 강적과의 싸움이 끊겼다. 싸움은 없던 일이 되었다.',
+    hunt: '서버가 다시 시작되어 사냥하던 싸움이 끊겼다. 싸움은 없던 일이 되었다.',
+    calm: '서버가 다시 시작되어 광폭한 드래곤을 진정시키던 싸움이 끊겼다.',
+  };
+  // 켜질 때: 지난번에 싸우던 드래곤에게 쪽지 (다시 접속하면 '자리를 비운 동안'으로 보임)
+  const before = db.worldGet('liveFights', null) || {};
+  let n = 0;
+  for (const [id, kind] of Object.entries(before)) { try { db.noteAdd(Number(id), `[서버 점검] ${LOST[kind] || LOST.hunt}`); n++; } catch {} }
+  if (n) console.log(`[끊긴 싸움] ${n}마리에게 안내를 남겼다.`);
+  const st = {};
+  db.worldSet('liveFights', st);
+  let t = null;
+  const save = () => { if (t) return; t = setTimeout(() => { t = null; db.worldSet('liveFights', st); }, 1000); t.unref?.(); };
+  return (id, kind) => { if (kind) st[id] = kind; else delete st[id]; save(); };
+})();
+arena.setTrack(liveFights);
+raidBoss = require('./raidboss')({ io, db, online, logic, combat, arena, sendMe, track: liveFights,
   isOpen: (r) => ruin.unlocked(r), fall: death.fall, purify: (d, n) => ruin.add(d, 'raid', n), presence: (r) => broadcastPresence(r),
   news: (text) => { const at = Date.now(); let id = 0; try { id = db.addChat('!', { dragonId: 0, name: '', kind: '', text, at }); } catch {} io.emit('system', { text, at, news: true, id }); } });
 arena.setRaid(raidBoss);

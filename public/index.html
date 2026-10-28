@@ -10943,9 +10943,12 @@
   $('battle-dlg').addEventListener('cancel', (e) => { if (BT && !BT.view.over && !BT.replay) e.preventDefault(); });
   $('battle-dlg').addEventListener('close', () => {
     clearInterval(btTimer);
+    // 아직 끝나지 않은 싸움인데 창이 닫힘 ('대륙' 단추 등 다른 창을 모두 닫는 동작): 싸움은 계속되므로 곧바로 다시 엶
+    const still = BT && !BT.replay && !BT.view.over;
     // 사냥·강적: 창을 닫으면 결과를 지역 카드에도 남기고, 생긴 일이 있으면 이어서 보여 줌
     const r = BT && !BT.replay && BT.view.over && ['hunt', 'elite'].includes(BT.view.kind) ? BT.result : null;
     BT = null;
+    if (still) { setTimeout(resumeBattle, 0); return; }
     if (r) showResult({ ...r, log: null, done: true });
     if (r && $('nest-dlg').open) openNest(); // 도둑을 쫓고 돌아오면 둥지 화면을 새로
   });
@@ -12754,7 +12757,8 @@
       }
     });
     socket.on('me', (me) => {
-      setMe(me); renderSayMode(); maybeWelcome(); renderMazeBar(); renderRaidBar(); renderNmRow(); if ($('nm-dlg').open && !(me.nightMarket?.open && (me.nightMarket.here || nmTab === 'mine'))) $('nm-dlg').close(); FAV.migrate(); SEEN.migrate(); renderSlateDot(); renderNotesDot();
+      setMe(me); if (me.battle && !BT) resumeBattle(); // 싸우는 중인데 창이 없으면 (새로고침·재접속 때 순서가 엇갈려도) 다시 엶
+      renderSayMode(); maybeWelcome(); renderMazeBar(); renderRaidBar(); renderNmRow(); if ($('nm-dlg').open && !(me.nightMarket?.open && (me.nightMarket.here || nmTab === 'mine'))) $('nm-dlg').close(); FAV.migrate(); SEEN.migrate(); renderSlateDot(); renderNotesDot();
       if (!S.seenReady) { S.seenReady = true; renderRescues(); } // 서버의 읽음 표시를 받은 뒤 한 번 다시 그림 (먼저 온 '다시 일어선 드래곤' 알림)
       if (!SL.peeked) { SL.peeked = true; socket.emit('slate:peek', {}, (r) => { if (r?.ok) { SL.latest = Math.max(SL.latest, r.latest || 0); SL.replyAt = r.replyAt || 0; renderSlateDot(); } }); } // 내 글에 새 답이 왔는지
     });

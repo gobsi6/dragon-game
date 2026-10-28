@@ -82,7 +82,8 @@ function fromDragon(d, context) {
     atk: atk * (bf?.atk || 1) * (ti.atk || 1), def: st.scale, spd: st.wing + (bf?.spd || 0), mag: st.wisdom * (bf?.mag || 1), maj: st.majesty,
     taken: (hunt ? tm.huntDmg * (d.perks?.knight ? 0.7 : 1) * (ally?.guard ? KIN_GROW.shieldmate : 1) : 1) * (bf?.taken || 1) * (ti.taken || 1) * love * (gm?.taken || 1), // 받는 피해 배율 (등을 맡기는 새끼가 곁에 있으면 조금 덜)
     vsCorrupt: gm?.vsCorrupt || 1,
-    healMult: ti.heal || 1,
+    healMult: (ti.heal || 1) * (gm?.heal || 1), // 칭호·희귀 장비(거둔 이삭의 관)
+    coverK: gm?.cover || 1, raidAtk: gm?.raidAtk || 1, flankK: gm?.flank || 0, // 레이드 희귀 장비: 막아서기 피해, 레이드 보스에게 주는 피해, 우회 확률
     engrave: logic.engraveOf(d), // 장신구에 새긴 속성: 그 속성 공격 피해 배율
     buff: bf?.id || null,
     element: BREATHS[d.kind]?.element || null,
