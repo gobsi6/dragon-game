@@ -204,7 +204,8 @@ function playTogether(a, me, b, other, now = Date.now()) {
   if (n === 1) { diary(a, `${other.name}의 둥지 ${b.name}${josa(b.name, '과', '와')} 처음 만나 함께 놀았다.`, now); diary(b, `${me.name}의 둥지 ${a.name}${josa(a.name, '과', '와')} 처음 만나 함께 놀았다.`, now); }
   if (n === PL.friendAt) { diary(a, `${other.name}의 둥지 ${b.name}${josa(b.name, '과', '와')} 단짝이 되었다.`, now); diary(b, `${me.name}의 둥지 ${a.name}${josa(a.name, '과', '와')} 단짝이 되었다.`, now); }
   const kind = (x) => (x.type === 'human' ? 'h' : 'd');
-  const sceneFor = (x, y, yOwner) => fillT(pick(PL.scenes[kind(x) + kind(y)]), { a: x.name, b: y.name, o: yOwner.name });
+  const old = PL.older.includes(stageOf(a, now).name) || PL.older.includes(stageOf(b, now).name); // 큰 아이가 끼면 어린아이 놀이 대신
+  const sceneFor = (x, y, yOwner) => fillT(pick((old ? PL.scenesOld : PL.scenes)[kind(x) + kind(y)]), { a: x.name, b: y.name, o: yOwner.name });
   const mine = [sceneFor(a, b, other)], theirs = [sceneFor(b, a, me)];
   if (n === PL.friendAt) {
     mine.push(fillT(PL.bestLine, { a: a.name, b: b.name, o: other.name }));
@@ -1403,7 +1404,7 @@ function expStart(kin, now = Date.now(), stay = []) {
 // 함께 간 식구의 이름·종류·나잇대 (원정 길 팝업의 말: 아이·청소년·어른, 새끼 드래곤)
 const ageGroup = (k, now) => {
   const s = stageOf(k, now).name;
-  if (k.type === 'drake') return s === '해츨링' ? 'drake' : ['젊은 용', '다 자란 용'].includes(s) ? 'dadult' : 'dyoung'; // 해츨링은 말을 못 하고(몸짓), 어린 용부터는 말을 함 (드래곤다운 말)
+  if (k.type === 'drake') return s === '해츨링' ? 'drake' : s === '다 자란 용' ? 'dadult' : s === '젊은 용' ? 'dteen' : 'dyoung'; // 해츨링은 말을 못 하고(몸짓), 어린 용부터는 말을 함 (드래곤다운 말). 젊은 용은 한창 커 가는 나이의 말투
   return ['어른', '노년'].includes(s) ? 'adult' : s === '청소년' ? 'young' : 'child';
 };
 const expWent = (kin, now = Date.now()) => kin.filter((k) => k.status === 'home' && k.data.onExp).map((k) => ({ name: k.name, age: ageGroup(k, now) }));
