@@ -54,7 +54,7 @@ module.exports = function setupSlate({ io, db, entryOf }) {
       return {
         ok: true, gm: isGm(),
         post: { id: r.id, head: r.head, title: r.title, body: r.body, at: r.at, edited: r.edited_at || 0, pinned: !!r.pinned, who: who(r, 'cur_name', 'cur_kind'), mine: r.dragon_id === d.id, imgs: db.slate.imgsOf(r.id) },
-        comments: (() => { const ci = new Map(db.slate.cmImgs(r.id).map((x) => [x.comment_id, { id: x.id, w: x.w, h: x.h }]));
+        comments: (() => { const ci = new Map(db.slate.cmImgs(r.id).map((x) => [x.comment_id, { id: x.id, w: x.w, h: x.h, at: x.at }]));
           return db.slate.comments(r.id).map((c) => ({ id: c.id, text: c.text, at: c.at, edited: !!c.edited_at, who: who(c), mine: c.dragon_id === d.id, parent: c.parent_id || null, img: ci.get(c.id) || null })); })(),
       };
     });

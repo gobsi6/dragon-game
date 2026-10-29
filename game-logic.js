@@ -792,7 +792,8 @@ function startExpedition(d, minutes, goal = 'gather', now = Date.now()) {
   d.exp_end = now + minutes * 60 * 1000;
   d.exp_region = d.region;
   // 갈림길: 원정 중간쯤 한 번
-  const forks = EXP_FORKS.filter((f) => !f.wild || !isTown(d.region));
+  const ruin = isRuin(d.region); // 멸망한 대륙에는 그 땅에 어울리는 갈림길만 (상단·불어난 강 같은 본 대륙 장면은 빼고)
+  const forks = EXP_FORKS.filter((f) => (!f.wild || !isTown(d.region)) && (ruin ? f.where !== 'main' : f.where !== 'ruin'));
   const at = Math.round(now + minutes * 60000 * rand(EXP_RULES.forkFrom, EXP_RULES.forkTo));
   d.exp_info = { goal, fork: { id: pick(forks).id, at, pick: null }, last: expInfo(d).last || null };
   return { ok: true };

@@ -2036,7 +2036,7 @@
       dyoung: ['나도 불 뿜었어! 봤지? 조금이지만!', '다음엔 내가 먼저 덤빌 거야!', '{call}, 그 꼬리 휘두르는 거 나도 가르쳐 줘!'], dteen: ['봤어? 나도 한 번 물었어!', '{call}, 나 방금 꽤 잘하지 않았어?', '다음엔 나한테도 한 마리 맡겨 줘. 작은 걸로.'], dadult: ['{call}, 다친 데 없어? 한쪽은 내가 막아 봤어.', '호흡이 잘 맞았어.', '{call} 곁이라 나도 덜 헤맸어.'] },
     rare: { child: ['반짝반짝해! 나 만져 봐도 돼?', '보물이다, 보물!', '{call}, 그거 나 주면 안 돼?'], young: ['그거, 꽤 귀한 것 같은데.', '눈이 밝네, {call}.', '오늘 운이 좋다.'], adult: ['좋은 걸 찾았구나.'],
       drake: ['(눈을 동그랗게 뜨고 들여다보았다)', '(반짝이는 것을 앞발로 톡톡 건드려 보았다)', '(제 보물인 양 품에 끌어안으려 했다)'],
-      dyoung: ['보물이다! 둥지 보물더미에 넣자!', '반짝이는 건 다 좋아!', '{call}, 그거 내가 들고 갈래!'], dteen: ['그거 내 보물더미에 두면 안 돼? 아직 작지만.', '다음엔 내가 먼저 찾을 거야. 두고 봐.'], dadult: ['보물더미가 또 빛나겠네.', '와, 그걸 어떻게 찾았어?'] },
+      dyoung: ['보물이다! 둥지 보물더미에 넣자!', '반짝이는 건 다 좋아!', '{call}, 그거 내가 들고 갈래!'], dteen: ['그거 내 보물더미에 두면 안 돼? 아직 작지만.', '나도 하나 찾고 싶다. 이제부터 눈 크게 뜨고 다녀야지.'], dadult: ['보물더미가 또 빛나겠네.', '와, 그걸 어떻게 찾았어?'] },
     scrape: { child: ['{call}, 아파? 호 해 줄게.', '괜찮아? 피 나?'], young: ['괜찮아? 잠깐 쉬어 가자.', '상처는 돌아가서 꼭 보자.'], adult: ['서두르지 말자. 천천히 가.'],
       drake: ['(걱정스럽게 끼룩 울었다)', '(다친 자리를 작은 혀로 핥아 주었다)'], dyoung: ['{call}, 비늘 긁혔어! 괜찮아?', '내가 대신 앞에서 날까?'], dteen: ['{call}, 괜찮아? 피 나? 잠깐 내려가자.', '내가 앞에서 날까? …아니면 그냥 옆에 꼭 붙어 있을게.'], dadult: ['{call}, 괜찮아? 잠깐 내려앉아 쉬자. 주위는 내가 볼게.'] },
     heal: { child: ['따뜻해… 여기서 자고 싶다.', '조금만 더 있다 가자!'], young: ['이런 쉼도 필요하지.', '볕이 좋다.'], adult: ['잘 쉬었다.'],
@@ -9534,6 +9534,8 @@
       done && done();
     });
   }
+  // 석판 그림 주소: 올린 때(at)를 붙임. 지워진 그림의 번호가 새 그림에 다시 쓰여도, 브라우저가 기억해 둔 옛 그림을 보여 주지 않게
+  const slImgUrl = (im) => `/slate-img/${im.id}?v=${im.at || 0}`;
   function slGo(page, cur) { SL.page = page; if (cur != null) SL.cur = cur; if (page === 'list') return loadSlate(); if (page === 'post') return loadSlatePost(); drawSlate(); }
   function loadSlatePost() {
     socket.emit('slate:get', { id: SL.cur }, (res) => {
@@ -9650,8 +9652,8 @@
   }
   // 답에 붙은 그림: 작게 보이고, 누르면 원래 크기로 새 창에
   function slCmImg(im) {
-    const l = slEl('a', 'sl-cmimg'); l.href = `/slate-img/${im.id}`; l.target = '_blank'; l.rel = 'noopener';
-    const img = slEl('img'); img.src = `/slate-img/${im.id}`; img.alt = '답에 붙은 그림'; img.loading = 'lazy'; img.decoding = 'async';
+    const l = slEl('a', 'sl-cmimg'); l.href = slImgUrl(im); l.target = '_blank'; l.rel = 'noopener';
+    const img = slEl('img'); img.src = slImgUrl(im); img.alt = '답에 붙은 그림'; img.loading = 'lazy'; img.decoding = 'async';
     if (im.w && im.h) { img.width = im.w; img.height = im.h; }
     l.appendChild(img);
     return l;
@@ -9674,8 +9676,8 @@
     if (p.imgs?.length) {
       const g = slEl('div', 'sl-imgs');
       for (const im of p.imgs) {
-        const l = slEl('a', 'sl-img'); l.href = `/slate-img/${im.id}`; l.target = '_blank'; l.rel = 'noopener';
-        const img = slEl('img'); img.src = `/slate-img/${im.id}`; img.alt = `${p.title}에 붙은 그림`; img.loading = 'lazy'; img.decoding = 'async';
+        const l = slEl('a', 'sl-img'); l.href = slImgUrl(im); l.target = '_blank'; l.rel = 'noopener';
+        const img = slEl('img'); img.src = slImgUrl(im); img.alt = `${p.title}에 붙은 그림`; img.loading = 'lazy'; img.decoding = 'async';
         if (im.w && im.h) { img.width = im.w; img.height = im.h; }
         l.appendChild(img); g.appendChild(l);
       }
@@ -9790,7 +9792,7 @@
       strip.replaceChildren();
       d.imgs.forEach((im, i) => {
         const t = slEl('div', `sl-thumb${im.busy ? ' busy' : ''}`);
-        const img = slEl('img'); img.src = im.url || `/slate-img/${im.id}`; img.alt = `그림 ${i + 1}`;
+        const img = slEl('img'); img.src = im.url || slImgUrl(im); img.alt = `그림 ${i + 1}`;
         const x = slEl('button', 'sl-thumb-x', '×'); x.type = 'button'; x.title = '이 그림 빼기'; x.setAttribute('aria-label', `그림 ${i + 1} 빼기`);
         x.addEventListener('click', () => { d.imgs.splice(i, 1); drawThumbs(); });
         t.append(img); if (!im.busy) t.append(x);

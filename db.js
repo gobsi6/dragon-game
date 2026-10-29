@@ -359,6 +359,16 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS slate_images_post ON slate_images(post_id, ord);
 `);
+// 드래곤별로 자주 찾는 표에 색인 (예전엔 표 전체를 훑었음. 기록이 쌓여도 빠르게)
+db.exec(`
+  CREATE INDEX IF NOT EXISTS gift_inbox_to ON gift_inbox(to_id, id);
+  CREATE INDEX IF NOT EXISTS notes_dragon ON notes(dragon_id, id);
+  CREATE INDEX IF NOT EXISTS friend_requests_to ON friend_requests(to_id);
+  CREATE INDEX IF NOT EXISTS kin_offers_to ON kin_offers(to_id);
+  CREATE INDEX IF NOT EXISTS kin_offers_from ON kin_offers(from_id);
+  CREATE INDEX IF NOT EXISTS relations_to ON relations(to_id);
+  CREATE INDEX IF NOT EXISTS rel_memos_to ON rel_memos(to_id);
+`);
 // 답에 붙은 그림: post_id(그 글)와 함께 comment_id(그 답)를 적어 둠. 글이 지워지면 글과 함께, 답이 지워지면 따로 지움
 if (!db.prepare('PRAGMA table_info(slate_images)').all().some((c) => c.name === 'comment_id')) db.exec('ALTER TABLE slate_images ADD COLUMN comment_id INTEGER');
 
@@ -553,8 +563,8 @@ const q = {
   slateImgAdd:  db.prepare('INSERT INTO slate_images (dragon_id, type, data, w, h, at) VALUES (?, ?, ?, ?, ?, ?)'),
   slateImgGet:  db.prepare('SELECT id, post_id, dragon_id, type, data FROM slate_images WHERE id = ?'),
   slateImgMeta: db.prepare('SELECT id, post_id, dragon_id FROM slate_images WHERE id = ?'),
-  slateImgsOf:  db.prepare('SELECT id, w, h FROM slate_images WHERE post_id = ? AND comment_id IS NULL ORDER BY ord, id'), // 글의 그림 (답의 그림은 빼고)
-  slateCmImgs:  db.prepare('SELECT id, comment_id, w, h FROM slate_images WHERE post_id = ? AND comment_id IS NOT NULL'),
+  slateImgsOf:  db.prepare('SELECT id, w, h, at FROM slate_images WHERE post_id = ? AND comment_id IS NULL ORDER BY ord, id'), // 글의 그림 (답의 그림은 빼고)
+  slateCmImgs:  db.prepare('SELECT id, comment_id, w, h, at FROM slate_images WHERE post_id = ? AND comment_id IS NOT NULL'),
   slateCmImgSet: db.prepare('UPDATE slate_images SET post_id = ?, comment_id = ?, ord = 0 WHERE id = ?'),
   slateCmImgDel: db.prepare('DELETE FROM slate_images WHERE comment_id = ? OR comment_id IN (SELECT id FROM slate_comments WHERE parent_id = ?)'),
   slateImgSet:  db.prepare('UPDATE slate_images SET post_id = ?, ord = ? WHERE id = ?'),
