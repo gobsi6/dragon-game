@@ -914,6 +914,9 @@ const KIN = {
     salted_fish: { bond: 6, talent: 'guard', sat: 30 }, beast_hide: { bond: 4, talent: 'guard' }, sharp_fang: { bond: 5, talent: 'guard' },
   },
   tripTalent: 2,                      // 원정에 한 번 따라갈 때마다 파수꾼 쪽으로
+  // 유대가 조금씩 옅어짐: 마지막으로 유대가 오른 뒤 idleH시간이 지나면 everyH시간마다 1씩 줄어듦 (floor까지만. 그 아래는 오래 돌보지 않을 때의 규칙만)
+  // 외로움을 타는: lonelyH시간부터 · 의젓한: 두 배 느리게 · 혼자서도 씩씩한: 4분의 1 덜 (KIN_GROW.tough) · 새침한: 줄지 않음. 원정·심부름·가출·곁에 둔 동안·둥지에서 함께 쉬는 동안은 멈춤
+  bondFade: { idleH: 8, everyH: 2, floor: 30, lonelyH: 6 }, // 하루를 통째로 비우면 −9쯤, 이틀이면 −21쯤. 날마다 챙겨야 높은 유대가 지켜짐 (30에서 멈춤. 40 아래로 내려가면 가출이 잦아짐)
   // 가출: 소년(인간)과 해츨링·어린 용(새끼 드래곤)이 가끔 둥지를 나감. 영영 떠나지는 않음
   runaway: {
     human: ['소년'], drake: ['해츨링', '어린 용'],

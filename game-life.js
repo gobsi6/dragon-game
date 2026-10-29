@@ -358,6 +358,27 @@ function personalityOf(k) {
   return Object.keys(ms).sort((a, b) => ms[b] - ms[a])[0] || 'hermit';
 }
 
+// ── 유대가 조금씩 옅어짐 ─────────────────────────
+// 마지막으로 유대가 오른 때(어떤 방법이든)를 적어 두고, 오래 오르지 않으면 바닥선(floor)까지 조금씩 줄임
+// 유대가 올랐는지는 지난번에 본 값(bondSeen)과 비교해서 알아냄 (돌보기·먹이·가르치기·놀기·함께 쉬기 등 어디서 올렸든)
+const BF = KIN.bondFade;
+function bondFade(k, now, out, d) {
+  const b = k.data.bond ?? 0;
+  const away = k.data.onExp || k.data.errand || k.data.runaway || k.data.companion || d?.rest_at; // 함께 있거나(곁에 둠·둥지에서 함께 쉬는 중) 둥지를 비운 동안은 멈춤
+  if (k.data.bondSeen == null || b > k.data.bondSeen || away || !k.data.bondUpAt) { k.data.bondUpAt = now; k.data.fadeN = 0; }
+  if (!away && !hasT(k, 'aloof') && !hasT(k, 'aloofd') && b > BF.floor) {
+    const idle = (hasT(k, 'lonely') ? BF.lonelyH : BF.idleH) * 3600000;
+    const every = BF.everyH * 3600000 * (hasT(k, 'steady') ? 2 : 1) * (hasT(k, 'tough') ? 1 / GR.tough : 1); // 혼자서도 씩씩한: 오래 돌보지 않을 때와 같이 4분의 1 덜 (간격 4/3배)
+    const steps = Math.max(0, Math.floor((now - k.data.bondUpAt - idle) / every) + 1);
+    const n = Math.min(steps - (k.data.fadeN || 0), b - BF.floor);
+    if (n > 0) {
+      k.data.bond = b - n;
+      out.lines.push(`${ga(k)} 조금 서운해한다. 한동안 마음을 나누지 못했다. (유대 −${n})`);
+    }
+    k.data.fadeN = Math.max(k.data.fadeN || 0, steps);
+  }
+}
+
 // ── 시간이 흐르며 일어나는 일 ──────────────────────
 // 접속하거나 무언가를 할 때마다 부름. 지난 시간만큼 한꺼번에 계산함
 function tick(d, kin, now = Date.now()) {
@@ -375,6 +396,7 @@ function tick(d, kin, now = Date.now()) {
     if (k.status === 'home' && rollLooks(k)) out.lines.push(`${k.name}${josa(k.name, '을', '를')} 다시 찬찬히 들여다보았다. ${introOf(k)}`);
     if (k.status === 'home') { fillLooks(k); diaryStart(k); }
     if (k.status === 'home') { touchTick(k, now, out); bondGift(k, out, now); } // 교감: 아이가 먼저 조르기 · 놓침 · 서운함 · 유대가 깊으면 선물
+    if (k.status === 'home' && k.type !== 'egg') bondFade(k, now, out, d); // 유대가 조금씩 옅어짐
     if (k.type === 'drake' && k.status === 'home' && k.data.errand && now >= k.data.errand.end) {
       const seek = k.data.errand.seek;
       if (seek) {
@@ -558,6 +580,7 @@ function tick(d, kin, now = Date.now()) {
     out.lines.push(`독립한 ${ga(k)} 선물을 보내왔다. 금화 ${g}닢${id ? `과 ${ITEMS[id].name}` : ''}.`);
   }
   d.gold += out.gold;
+  for (const k of kin) if (k.data) k.data.bondSeen = k.data.bond ?? 0; // 유대가 옅어지는 규칙: 다음에 볼 때 그 사이에 직접 올려 준 것만 '챙겨 줌'으로 셈
   return out;
 }
 
