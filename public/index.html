@@ -4834,6 +4834,20 @@
               cl.appendChild(it);
             }
             host.appendChild(cl);
+            // 접기: 제목을 누르면 설명과 목록을 접고 폄 (이 기기에 기억)
+            const fb = document.createElement('button'); fb.type = 'button'; fb.className = 'chest-fold';
+            fb.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+            hc.appendChild(fb); hc.classList.add('can-fold');
+            const syncFold = (folded) => {
+              cnote.hidden = folded; cl.hidden = folded;
+              fb.setAttribute('aria-expanded', String(!folded)); fb.setAttribute('aria-label', folded ? '보물 상자 펼치기' : '보물 상자 접기');
+            };
+            syncFold((() => { try { return localStorage.getItem('dragon-chest-fold') === '1'; } catch { return false; } })());
+            hc.addEventListener('click', () => {
+              const folded = !cl.hidden;
+              syncFold(folded);
+              try { localStorage.setItem('dragon-chest-fold', folded ? '1' : '0'); } catch {}
+            });
           }
 
           // 둥지 지키기: 덫·결계석, 도둑이 들 수 있는지 (둥지 탭에)

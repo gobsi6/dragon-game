@@ -463,8 +463,8 @@ const ITEMS = {
   calamity_charm:{ name: '재앙을 이긴 증표', rarity: 'rare',    type: 'equip', slot: 'charm', bonus: { claw: 2, scale: 2, wing: 1, wisdom: 1, majesty: 2 }, desc: '재앙의 핵을 고대의 유물에 박아 넣었다. 지닌 드래곤의 이름이 대륙에 울린다.' },
 
   // ── 둥지에 설치하는 것: 쓰면 둥지에 놓임 (보물 도둑을 막음) ──
-  thorn_trap:   { name: '가시 덫',          rarity: 'common',   type: 'use', use: { nestWard: 'trap' },  desc: '둥지 입구에 숨겨 두는 덫. 도둑이 들면 가져가는 양이 절반으로 줄고, 다친 채로 달아난다. 한 번 쓰면 망가진다.' },
-  ward_stone:   { name: '수호 결계석',      rarity: 'rare',     type: 'use', use: { nestWard: 'stone' }, desc: '룬을 새긴 결계석. 도둑을 한 번 통째로 쫓아내고 부서진다.' },
+  thorn_trap:   { name: '가시 덫',          rarity: 'common',   type: 'use', use: { nestWard: 'trap' },  desc: '둥지 입구에 숨겨 두는 덫. 도둑이 들면 가져가는 양이 절반으로 줄고, 다친 채로 달아난다. 보물을 물어 가는 까마귀도 붙잡는다. 한 번 쓰면 망가진다.' },
+  ward_stone:   { name: '수호 결계석',      rarity: 'rare',     type: 'use', use: { nestWard: 'stone' }, desc: '룬을 새긴 결계석. 도둑을 한 번 통째로 쫓아내고 부서진다. 덫이 없으면 보물을 물어 가는 까마귀도 쫓아낸다.' },
 
   // ── 인간의 시장에서 파는 물건 (value: 기준 값) ──
   holy_water:   { name: '성수',             rarity: 'uncommon', type: 'use', use: { mind: 30 }, value: 30, desc: '왕도 성당에서 축복한 물. 흐려진 정신을 맑게 한다.' },
@@ -914,9 +914,6 @@ const KIN = {
     salted_fish: { bond: 6, talent: 'guard', sat: 30 }, beast_hide: { bond: 4, talent: 'guard' }, sharp_fang: { bond: 5, talent: 'guard' },
   },
   tripTalent: 2,                      // 원정에 한 번 따라갈 때마다 파수꾼 쪽으로
-  // 유대가 조금씩 옅어짐: 마지막으로 유대가 오른 뒤 idleH시간이 지나면 everyH시간마다 1씩 줄어듦 (floor까지만. 그 아래는 오래 돌보지 않을 때의 규칙만)
-  // 외로움을 타는: lonelyH시간부터 · 의젓한: 두 배 느리게 · 혼자서도 씩씩한: 1.5배 느리게 · 새침한: 줄지 않음. 원정·심부름·가출·곁에 둔 동안은 멈춤
-  bondFade: { idleH: 8, everyH: 2, floor: 30, lonelyH: 6 }, // 하루를 통째로 비우면 −9쯤, 이틀이면 −21쯤. 날마다 챙겨야 높은 유대가 지켜짐 (30에서 멈춤. 40 아래로 내려가면 가출이 잦아짐)
   // 가출: 소년(인간)과 해츨링·어린 용(새끼 드래곤)이 가끔 둥지를 나감. 영영 떠나지는 않음
   runaway: {
     human: ['소년'], drake: ['해츨링', '어린 용'],

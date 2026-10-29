@@ -1002,10 +1002,27 @@ module.exports = [
     when: ['wake'],
     weight: 3,
     cond: (c) => !!c.nest && c.hoard.some((x) => ITEMS[x.item] && ITEMS[x.item].type !== 'use'),
-    setup: (c) => ({ item: pick(c.hoard.filter((x) => ITEMS[x.item] && ITEMS[x.item].type !== 'use')).item }),
-    text: (c, v) => [`눈을 뜨자 까마귀 한 마리가 보물더미에서 ${ITEMS[v.item].name}${c.josa(ITEMS[v.item].name, '을', '를')} 물고 날아오르고 있다.`, '반짝이는 것을 좋아하는 녀석들이다.'],
+    // 둥지에 덫이나 결계석이 있으면 까마귀를 막음 (값싼 덫부터 씀)
+    setup: (c) => {
+      const w = require('./game-logic').nestInfo(c.d).wards;
+      return { item: pick(c.hoard.filter((x) => ITEMS[x.item] && ITEMS[x.item].type !== 'use')).item, ward: w.trap > 0 ? 'trap' : w.stone > 0 ? 'stone' : null };
+    },
+    text: (c, v) => {
+      const nm = `${ITEMS[v.item].name}${c.josa(ITEMS[v.item].name, '을', '를')}`;
+      if (v.ward === 'trap') return [`눈을 뜨자 까마귀 한 마리가 ${nm} 물고 날아오르려다, 둥지 입구의 가시 덫에 발이 걸려 퍼덕이고 있다.`];
+      if (v.ward === 'stone') return [`눈을 뜨자 까마귀 한 마리가 ${nm} 물고 날아오르려는 순간, 결계석의 룬이 번쩍였다.`, '놀란 까마귀가 물건을 떨어뜨리고 달아난다.'];
+      return [`눈을 뜨자 까마귀 한 마리가 보물더미에서 ${nm} 물고 날아오르고 있다.`, '반짝이는 것을 좋아하는 녀석들이다.'];
+    },
     choices: [
-      { label: '쫓아간다 (기력 6)', need: (c) => (c.d.en < 6 ? '기력이 모자란다.' : null), run: (h, c, v) => {
+      { label: '보물을 주워 온다', show: (c, v) => !!v.ward, run: (h, c, v) => {
+        const w = require('./game-logic').nestInfo(c.d).wards;
+        const used = v.ward === 'trap' && w.trap > 0 ? 'trap' : w.stone > 0 ? 'stone' : w.trap > 0 ? 'trap' : null; // 그사이 바뀌었으면 남은 것으로
+        if (used) w[used] -= 1;
+        h.say(`${ITEMS[v.item].name}${h.josa(ITEMS[v.item].name, '을', '를')} 보물더미에 도로 올려 두었다.`);
+        if (used === 'trap') h.say(`가시 덫은 까마귀가 버둥대다 망가졌다. (남은 덫 ${w.trap})`);
+        if (used === 'stone') h.say(`결계석 하나가 부서졌다. (남은 결계석 ${w.stone})`);
+      } },
+      { label: '쫓아간다 (기력 6)', show: (c, v) => !v.ward, need: (c) => (c.d.en < 6 ? '기력이 모자란다.' : null), run: (h, c, v) => {
         h.en(-6);
         if (Math.random() < 0.7) {
           const g = randInt(5, 15);
@@ -1016,7 +1033,7 @@ module.exports = [
           h.say('바위 틈으로 숨어든 까마귀를 끝내 놓쳤다.');
         }
       } },
-      { label: '내버려 둔다', run: (h, c, v) => {
+      { label: '내버려 둔다', show: (c, v) => !v.ward, run: (h, c, v) => {
         h.hoardTake(v.item, 1); h.mind(3);
         h.say('반짝이 하나쯤이야. 다시 눈을 감았다.');
       } },
