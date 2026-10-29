@@ -92,6 +92,7 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
     save();
     const T = BOSSES[key];
     shout(`[대륙의 재앙] ${REGIONS[key].name}에 ${ga(T.name)} 나타났다! ${T.desc} 모든 드래곤이 힘을 모아야 한다. (${BOSS.lastsHours}시간 안에)`);
+    st.pin = io.lastNews || null; save(); // 재앙이 머무는 동안 이 알림은 이야기 창 기록에 늘 남김
     push();
     return { ok: true, view: view() };
   }
@@ -303,5 +304,5 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
     return { name: BOSSES[st.key].name, won: st.done === 'win' };
   }
 
-  return { attach, view, spawn, trace, nextAt: () => nextAt, _state: () => st };
+  return { attach, view, spawn, trace, nextAt: () => nextAt, _state: () => st, pin: () => (active() ? st.pin || null : null) };
 };

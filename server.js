@@ -230,6 +230,7 @@ const io = new Server(server, { maxHttpBufferSize: 1e6, perMessageDeflate: { thr
       let id = 0;
       try { id = db.addChat('!', { dragonId: 0, name: '', kind: '', text: data.text, at }); } catch (e) { console.error('[대륙 소식]', e.message); }
       data = { ...data, at, news: true, id };
+      io.lastNews = { id, at, text: data.text }; // 방금 남긴 소식 (진행 중인 사건의 알림을 기록 첫 쪽에 늘 끼워 넣을 때 씀)
     }
     return emitAll(ev, data, ...rest);
   };
@@ -730,11 +731,23 @@ function chatPage(region, before) {
   let news = side(NEWS_REGION, NEWS_HISTORY);
   // 첫 쪽: 용언이 더 남아 있으면 소식도 가장 오래된 용언 시각까지만 (소식만 더 멀리 이어져 '용언이 끊긴 것'처럼 보이지 않게. 그 앞은 위로 올려 함께 불러옴)
   if (!Number.isFinite(before) && shouts.length >= SHOUT_HISTORY) { const sMin = Math.min(...shouts.map((m) => m.at)); news = news.filter((m) => m.at >= sMin); }
+  // 첫 쪽: 아직 진행 중인 큰 사건(무너진 시장·대륙의 재앙·오염)의 알림은 오래되었어도 늘 함께 (다른 소식에 밀려 나중에 온 드래곤이 못 보는 일이 없게)
+  if (!Number.isFinite(before)) {
+    const have = new Set(news.map((m) => m.id));
+    for (const p of livePins()) if (p?.id && !have.has(p.id)) { have.add(p.id); news.push({ id: p.id, at: p.at, text: p.text, dragonId: 0, name: '', kind: '' }); }
+  }
   return [
     ...here,
     ...shouts.map((m) => ({ ...m, shout: true })),
     ...news.map((m) => ({ ...m, news: true })),
   ].sort((a, c) => a.at - c.at || a.id - c.id);
+}
+// 진행 중인 큰 사건의 알림 (끝나면 빠짐)
+function livePins() {
+  const out = [marketFall.state()?.pin, boss.pin()];
+  const cp = db.worldGet('corruptPin');
+  if (cp && cp.region === logic.corruptedRegion() && logic.isCorrupted(cp.region)) out.push(cp);
+  return out.filter(Boolean);
 }
 function enterWorld(socket, dragon) {
   const prev = online.get(dragon.id);
@@ -761,8 +774,9 @@ function enterWorld(socket, dragon) {
   const back = !prev && Date.now() - (dragon.last_seen || 0) >= AWAY_MS; // 오래 자리를 비웠다가 돌아옴
   db.touch(dragon.id); dragon.last_seen = Date.now(); // 메모리의 값도 맞춰 둠 (다음 판정이 예전 값을 보지 않게)
 
-  if (!prev) {
-    system(dragon.region, back ? `오랫동안 보이지 않던 ${dragon.name}${josa(dragon.name, '이', '가')} 먼 길을 돌아 다시 이곳에 모습을 드러냈다.` : `${dragon.name}${josa(dragon.name, '이', '가')} 이곳에 모습을 드러냈다.`, socket);
+  // 들어오고 나가는 알림은 띄우지 않음 (창을 내렸다 켤 때마다 다시 접속해 쌓였음). 오래 비웠다가 돌아올 때만 알림
+  if (!prev && back) {
+    system(dragon.region, `오랫동안 보이지 않던 ${dragon.name}${josa(dragon.name, '이', '가')} 먼 길을 돌아 다시 이곳에 모습을 드러냈다.`, socket);
   }
   sendRegionState(socket, dragon);
   broadcastPresence(dragon.region);
@@ -919,6 +933,7 @@ const marketFall = (() => {
     save();
     const tn = REGIONS[town].name;
     io.emit('system', { text: `[습격] ${attacker ? `${attacker}${josa(attacker, '이', '가')}` : '정체를 알 수 없는 드래곤이'} ${tn}의 시장을 덮쳤다! 가게들이 무너져 장사를 할 수 없다. ${tn}에서 금화와 재료를 모아 함께 다시 세우자.`, at: Date.now() });
+    st.pin = io.lastNews || null; save(); // 다시 세울 때까지 이 알림은 이야기 창 기록에 늘 남김
     push();
   }
   // 보태기: { gold, items: { id: 개수 } }. 목표를 넘는 몫은 받지 않음. 점수 = 자원마다 (보탠 양 ÷ 목표) × 100
@@ -2358,6 +2373,7 @@ function onConnect(socket) {
     const region = logic.corruptedRegion(now);
     db.gmLog(socket.data.user.username, null, `오염을 일으킴: ${REGIONS[region].name}`);
     io.emit('system', { text: `[오염] ${REGIONS[region].name}에 검은 기운이 번졌다! 함께 정화하자.`, at: now });
+    db.worldSet('corruptPin', io.lastNews ? { ...io.lastNews, region } : null); // 그 땅이 정화되거나 오염이 옮겨 갈 때까지 기록에 늘 남김
     for (const e of online.values()) sendMe(e.socket, e.dragon);
     ack({ ok: true, region, until: logic.corruptUntil(now) });
   });
@@ -2637,7 +2653,6 @@ function onConnect(socket) {
     db.touch(entry.dragon.id);
     if (socket.data.kicked) return; // 다른 창으로 옮겨간 경우는 조용히
     const d = entry.dragon;
-    system(d.region, `${d.name}${josa(d.name, '이', '가')} 구름 속으로 사라졌다.`);
     broadcastPresence(d.region);
     broadcastCounts();
   });
