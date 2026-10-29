@@ -3737,11 +3737,22 @@
         card.append(tw, desc);
       }
       if (v.hint) { const hn = document.createElement('p'); hn.className = 'kin-hint'; hn.textContent = v.hint; card.appendChild(hn); } // 자람 기록 힌트: '요즘 ~한 것 같다'
-      if (v.friends?.length) { // 다른 둥지의 친구
-        const fp = document.createElement('p'); fp.className = 'kin-meta';
-        fp.textContent = `친구: ${v.friends.map((f) => `${f.name}(${f.owner}의 둥지)${f.best ? ' · 단짝' : ''}`).join(', ')}`;
-        fp.dataset.sec = 'friends';
-        card.appendChild(fp);
+      if (v.friends?.length) { // 다른 둥지의 친구: 단짝은 둥지 주인까지, 나머지는 이름만 (누르면 둥지 주인이 보임)
+        const line = (label, list, full) => {
+          if (!list.length) return;
+          const fp = document.createElement('p'); fp.className = 'kin-meta';
+          fp.append(`${label}: `);
+          list.forEach((f, i) => {
+            if (i) fp.append(', ');
+            const nm = document.createElement('span'); nm.textContent = full ? `${f.name}(${f.owner}의 둥지)` : f.name;
+            if (!full) { nm.style.cursor = 'pointer'; nm.title = `${f.owner}의 둥지`; nm.onclick = () => { nm.textContent = nm.textContent === f.name ? `${f.name}(${f.owner}의 둥지)` : f.name; }; }
+            fp.appendChild(nm);
+          });
+          fp.dataset.sec = 'friends';
+          card.appendChild(fp);
+        };
+        line('단짝', v.friends.filter((f) => f.best), true);
+        line('친구', v.friends.filter((f) => !f.best), false);
       }
       const dy = kinDiary(v); if (dy) card.appendChild(dy); // 함께한 날들
     } else if (v.status === 'egg') {

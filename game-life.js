@@ -668,8 +668,8 @@ function view(k, now, d) {
     v.looks = k.data.looks || [];
     v.traits = (k.data.traits || []).filter((id) => KIN_TRAITS[id]).map((id) => ({ id, name: KIN_TRAITS[id].name, desc: KIN_TRAITS[id].desc, grown: !!KIN_TRAITS[id].grown, flaw: !!KIN_TRAITS[id].flaw }));
     v.hint = growHint(k); // '요즘 ~한 것 같다'
-    // 다른 둥지의 친구 (많이 만난 순서로 셋까지)
-    const fr = Object.values(k.data.friends || {}).sort((p, q) => q.n - p.n).slice(0, 3);
+    // 다른 둥지의 친구 (많이 만난 순서로 모두, 최대 keepFriends명)
+    const fr = Object.values(k.data.friends || {}).sort((p, q) => q.n - p.n);
     if (fr.length) v.friends = fr.map((f) => ({ name: f.name, owner: f.owner, best: f.n >= PL.friendAt }));
   }
   if (isHome(k)) v.nextIn = st.next != null ? (st.next - a) * DAY : null;
