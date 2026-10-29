@@ -219,7 +219,7 @@ const ITEMS = {
   tr_last_claw:   { name: '거대 고룡의 발톱', rarity: 'rare',   cat: 'treasure', value: 900, desc: '대륙이 무너지던 날까지 싸운 거대한 고룡의 발톱. 사람 키보다 길고, 아직 따뜻하다.' },
   // ── 멸망한 대륙: 희귀 장비 (강적이 아주 드물게 떨어뜨림. gear: 사냥·강적에서만 듣는 특별한 효과) ──
   erebus_eye:     { name: '에레보스의 눈', rarity: 'rare', type: 'equip', slot: 'head', bonus: { wisdom: 4, majesty: 2 }, gear: { vsCorrupt: 1.15 }, value: 120, desc: '멸망한 대륙을 끝까지 지켜본 눈. 오염된 적에게 주는 피해 +15%.' },
-  knight_gauntlet:{ name: '카르넴 기사단의 발톱갑', rarity: 'rare', type: 'equip', slot: 'claw', bonus: { claw: 6 }, gear: { eliteAtk: 1.12 }, value: 120, desc: '마지막 기사단장이 끼던 발톱 덮개. 강적에게 주는 피해 +12%.' },
+  knight_gauntlet:{ name: '카르넴 기사단의 발톱갑', rarity: 'rare', type: 'equip', slot: 'claw', bonus: { claw: 6 }, gear: { eliteAtk: 1.12 }, value: 120, desc: '성문 근위대장이 끼던 발톱 덮개. 강적에게 주는 피해 +12%.' },
   void_ring:      { name: '공허의 꼬리고리', rarity: 'rare', type: 'equip', slot: 'tail', bonus: { scale: 4, wing: 2 }, gear: { taken: 0.92 }, value: 120, desc: '균열에서 건진 검은 고리. 받는 피해 −8%.' },
   abyss_membrane: { name: '심연의 날개막', rarity: 'rare', type: 'equip', slot: 'wing', bonus: { wing: 6 }, gear: { shard: 1 }, value: 120, desc: '심연의 고룡에게서 떨어진 날개막. 멸망한 대륙에서 사냥·강적을 이기면 정화의 결정 +1.' },
   // ── 멸망한 대륙: 만드는 장비 (재료를 모으면 반드시 만들 수 있음) ──
@@ -1727,7 +1727,7 @@ const PLACES = {
     desc: '검게 마른 이삭 사이로 낫을 든 그림자들이 천천히 걸어 다닌다.' },
   ruin_river:    { region: 'ruin_plain', name: '말라붙은 강바닥', level: 24, hpMul: 2.0, creature: '뼈 와이번', type: 'flyer', elite: '뼈만 남은 와이번 왕', weak: ['spirit', 'fire'], resist: ['poison', 'ice'], special: { name: '썩은 숨결', power: 1.0, debuff: { poison: 2 } },
     desc: '강이 흐르던 자리에 갈라진 진흙만 남았다. 하늘에서 뼈가 부딪히는 소리가 들린다.' },
-  ruin_gate:     { region: 'ruin_capital', name: '무너진 성문', level: 25, hpMul: 2.1, creature: '기사단', type: 'human', elite: '마지막 기사단장', weak: ['lightning', 'spirit'], resist: ['earth'], special: { name: '돌격 대열', power: 1.4, debuff: { weaken: 2 } },
+  ruin_gate:     { region: 'ruin_capital', name: '무너진 성문', level: 25, hpMul: 2.1, creature: '기사단', type: 'human', elite: '성문 근위대장', weak: ['lightning', 'spirit'], resist: ['earth'], special: { name: '돌격 대열', power: 1.4, debuff: { weaken: 2 } },
     desc: '부서진 성문 앞에 갑옷을 입은 기사들이 아직 대열을 지키고 서 있다.' },
   ruin_throne:   { region: 'ruin_capital', name: '왕좌의 회랑', level: 26, hpMul: 2.2, creature: '왕궁의 드래곤', type: 'drake', elite: '카르넴의 왕룡', weak: ['spirit', 'ice'], resist: ['fire'], special: { name: '검게 탄 숨결', power: 1.6, debuff: { burn: 3 }, element: 'fire' },
     desc: '왕좌로 이어지는 긴 회랑. 왕을 지키던 용들이 검게 물든 비늘로 기둥을 감고 있다.' },

@@ -1023,7 +1023,10 @@ const ruin = (() => {
       st.open.push(r.id);
       io.emit('system', { text: openText(r), at: Date.now() });
     }
-    if (opened.length) save();
+    if (opened.length) {
+      save();
+      if (raidBoss) setTimeout(() => io.emit('raidboss', raidBoss.view()), 0); // 새로 열린 땅의 레이드도 바로 '열림'으로 (접속해 있던 드래곤들의 레이드 모습이 닫힘에 머물지 않게)
+    }
     return opened;
   }
   const unlocked = (region) => {
