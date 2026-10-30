@@ -2141,7 +2141,7 @@ const RAIDBOSS = {
       region: 'ruin_capital', place: '무너진 성문 앞', name: '마지막 기사단장 헤이른',
       desc: '카르넴 기사단의 마지막 단장. 왕이 "문을 열지 마라"는 말을 남기고 들어간 뒤로, 오백 년 동안 대열을 풀지 않았다.',
       // 모르벤보다 한 단계 위 (성문 사냥터가 Lv.25·26). 실제 수치는 시험으로 다시 맞춤
-      lv: 28, hp: 4872, knightShare: 0.07553, atk: 70, def: 18, spd: 24, mag: 46, maj: 34, // 기사 넷은 하나당 368 그대로, 헤이른 본체 3400
+      lv: 28, hp: 4722, knightShare: 0.07793, atk: 70, def: 18, spd: 24, mag: 46, maj: 34, // 기사 넷은 하나당 368 그대로, 헤이른 본체 3250
       knight: { name: '카르넴 기사', type: 'human', weak: ['lightning', 'spirit'], resist: ['earth'], atk: 0.45, def: 1.1, names: ['왼쪽 방패 기사', '오른쪽 방패 기사', '창 기사', '늙은 기사'] },
       boss:   { name: '마지막 기사단장 헤이른', short: '헤이른', type: 'human', weak: ['lightning', 'spirit'], resist: ['earth', 'poison'] },
       banner: { name: '기사단 깃발', type: 'construct', weak: [], resist: [], def: 0.5, spd: 1, hp: 0.08, taken: 0.6, regen: 0.025, back: 4, only: ['dive', 'gust'] }, // 헤이른 체력의 8%. 서 있는 동안 헤이른 받는 피해 ×0.6, 턴마다 2% 회복. 꺾이면 4턴 뒤 다시
