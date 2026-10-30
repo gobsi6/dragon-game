@@ -3,7 +3,7 @@
 // - 강적·결투장: 매 턴 직접 고름 (실시간 결투에서 시간을 넘기면 자동으로 고름)
 // 전투 하나 = battle { kind, turn, a, b, log, over, winner }. a·b는 싸우는 쪽(fighter)
 const {
-  KIN, KIN_GROW, COMBAT, CRAFT, BREATHS, BREATH_COST, SKILLS, STATUS, ITEMS, RULES, STANCE_RULES, MIND, PLACES, PLACE_RULES, COMBOS, ENRAGE, RAID, BOSSES, BOSS, RUIN, REGIONS,
+  KIN, KIN_GROW, COMBAT, CRAFT, ELEMENTS, BREATHS, BREATH_COST, SKILLS, STATUS, ITEMS, RULES, STANCE_RULES, MIND, PLACES, PLACE_RULES, COMBOS, ENRAGE, RAID, BOSSES, BOSS, RUIN, REGIONS,
 } = require('./game-data');
 const logic = require('./game-logic');
 
@@ -282,7 +282,7 @@ function damage(att, def, power, opt = {}) {
   if (element && att.engrave?.[element]) raw *= att.engrave[element]; // 장신구 각인
   if (def.corrupted && att.vsCorrupt) raw *= att.vsCorrupt; // 희귀 장비: 오염된 적에게
   if (element && def.weak.includes(element)) { raw *= 1.5; note = ' 약점을 찔렀다!'; }
-  if (element && def.resist.includes(element)) { raw *= 0.5; note = ' 잘 통하지 않는다.'; }
+  if (element && def.resist.includes(element)) { raw *= COMBAT.resist.dmg; note = ' 잘 통하지 않는다.'; } // 저항: 피해가 줄어듦
   const WC = att.duel || def.duel ? COMBAT.wingDuel.crit : COMBAT.wingCrit;
   const crit = !magic && (opt.crit || Math.random() < WC.base + Math.max(0, spdOf(att) - spdOf(def)) * WC.per); // 날개(속도)가 높을수록 급소 (결투는 따로)
   if (crit) { raw *= 1.5; note += ' 급소를 찔렀다!'; }
@@ -338,8 +338,12 @@ function pressed(att, def, lines, k) {
 }
 function applyDebuff(att, def, debuff, chance, element, lines) {
   if (!debuff) return;
-  if (element && def.resist.includes(element)) return;
   if (chance != null && Math.random() >= chance) return;
+  // 저항: 그 속성에 강하면 상태 이상을 확률로 막음 (완전 면역은 아님)
+  if (element && def.resist.includes(element) && Math.random() < COMBAT.resist.block) {
+    lines.push(`${ga(def)} ${ELEMENTS[element] || ''}에 강해 ${STATUS[Object.keys(debuff)[0]] || '상태 이상'}에 빠지지 않았다.`);
+    return;
+  }
   if (pressed(att, def, lines, Object.keys(debuff)[0])) return; // 위압: 위엄이 높은 쪽은 상태 이상을 떨쳐 냄
   // 위엄: 드래곤은 기세로 얼어붙음·마비를 떨쳐 내고, 지속 피해를 한 턴 짧게 버팀
   const MR = COMBAT.majResist;
