@@ -194,7 +194,7 @@ function evenOut(a, b, k = COMBAT.duelGap) {
     a[key] = round(mid + (a[key] - mid) * k);
     b[key] = round(mid + (b[key] - mid) * k);
   }
-  for (const f of [a, b]) { f.hp = f.hpMax; f.hp0 = f.hpMax; f.en = f.enMax; f.swing = COMBAT.duelSwing; } // 결투는 늘 가득 찬 채로 시작
+  for (const f of [a, b]) { f.hp = f.hpMax; f.hp0 = f.hpMax; f.en = f.enMax; f.swing = COMBAT.duelSwing; f.duel = true; } // 결투는 늘 가득 찬 채로 시작 (duel: 날개 효과를 결투용 값으로)
 }
 function newBattle(kind, a, b, extras = []) {
   if (kind === 'duel') evenOut(a, b);
@@ -282,7 +282,8 @@ function damage(att, def, power, opt = {}) {
   if (def.corrupted && att.vsCorrupt) raw *= att.vsCorrupt; // 희귀 장비: 오염된 적에게
   if (element && def.weak.includes(element)) { raw *= 1.5; note = ' 약점을 찔렀다!'; }
   if (element && def.resist.includes(element)) { raw *= 0.5; note = ' 잘 통하지 않는다.'; }
-  const crit = !magic && (opt.crit || Math.random() < 0.06 + Math.max(0, spdOf(att) - spdOf(def)) * 0.005);
+  const WC = att.duel || def.duel ? COMBAT.wingDuel.crit : COMBAT.wingCrit;
+  const crit = !magic && (opt.crit || Math.random() < WC.base + Math.max(0, spdOf(att) - spdOf(def)) * WC.per); // 날개(속도)가 높을수록 급소 (결투는 따로)
   if (crit) { raw *= 1.5; note += ' 급소를 찔렀다!'; }
   if (def.guarding) raw *= opt.special ? 0.25 : 0.5; // 예고된 특기를 방어하면 4분의 1
   if (has(def, 'harden')) raw *= 0.5;
@@ -300,7 +301,8 @@ function dodged(att, def, lines) {
   const gust = has(def, 'dodge') ? COMBAT.gustDodge : 0;
   if (gust) def.st.dodge = 0; // 돌풍: 다음 공격 한 번
   const blind = has(att, 'blind') ? 0.25 : 0; // 흙먼지
-  const evade = has(def, 'soak') ? 0.02 : clamp(0.05 + (spdOf(def) - spdOf(att)) * 0.015, 0.03, 0.3) + (has(def, 'evade') ? 0.4 : 0);
+  const WD = att.duel || def.duel ? COMBAT.wingDuel.dodge : COMBAT.wingDodge; // 날개(속도) 차이로 피하기 (결투는 따로)
+  const evade = has(def, 'soak') ? 0.02 : clamp(WD.base + (spdOf(def) - spdOf(att)) * WD.per, WD.min, WD.max) + (has(def, 'evade') ? 0.4 : 0);
   // 연속 빗나감 보호: 이 공격자가 COMBAT.missRun번 연달아 빗나갔으면 이번엔 반드시 맞음 (돌풍은 써 버린 채로)
   const miss = (att.missRun || 0) >= (COMBAT.missRun ?? 99) ? 0 : Math.min(COMBAT.dodgeCap ?? 1, 1 - (1 - gust) * (1 - blind) * (1 - Math.min(1, evade)));
   if (Math.random() >= miss) {
@@ -344,13 +346,17 @@ function applyDebuff(att, def, debuff, chance, element, lines) {
   for (let [k, n] of Object.entries(debuff)) {
     if ((k === 'freeze' || k === 'stun') && resisted(def, lines, k)) continue;
     if (resist && (k === 'burn' || k === 'poison' || k === 'bleed') && n > 1 && Math.random() < resist) n -= 1;
+    // 지혜: 드래곤이 거는 상태 이상이 확률로 한 턴 더 감 (확률 = 지혜 × per, 최대 max. 얼어붙음·마비는 빼고)
+    const WL = COMBAT.wisLinger;
+    const longer = !!WL && !att.creature && !WL.skip.includes(k) && Math.random() < Math.min(WL.max, (att.mag || 0) * WL.per);
+    if (longer) n += 1;
     def.st[k] = Math.max(def.st[k] || 0, n);
     // 지속 피해는 건 쪽의 힘으로 정해짐. 사냥감(사냥·강적·도둑)은 비늘로 막히지 않는 피해라 기울기를 COMBAT.creatureDot배로 (대륙의 재앙은 그대로)
     const dot = att.creature && !att.boss ? (COMBAT.creatureDot ?? 1) : 1;
     if (k === 'burn') def.st.burnDmg = Math.round(3 + att.mag * 0.3 * dot);
     if (k === 'poison') def.st.poisonDmg = Math.round(3 + att.mag * 0.35 * dot); // 독: 바로 주는 피해가 약한 대신 지속 피해는 화상보다 조금 세게
     if (k === 'bleed') def.st.bleedDmg = Math.round(2 + att.atk * 0.15);
-    lines.push(`${ga(def)} ${STATUS[k]} 상태가 되었다.`);
+    lines.push(`${ga(def)} ${STATUS[k]} 상태가 되었다.${longer ? ' (지혜로 한 턴 더)' : ''}`);
   }
 }
 function hit(att, def, power, opt, lines, verb) {
@@ -532,7 +538,7 @@ function round(b, actA, actB) {
   // 방어·비늘 세우기처럼 몸을 지키는 행동은 먼저 (예고를 보고 막을 수 있게). 나머지는 빠른 쪽이 먼저
   const guardish = (f, act) => !!act && (act.type === 'guard' || (act.type === 'skill' && !blocked(f, act) && (() => { const sk = skillOf(f, act.id); return sk && sk.self && !sk.power && !sk.heal; })()));
   const actors = [{ f: b.a, act: actA, side: 'a' }, ...foes.filter(alive).map((f) => ({ f, act: f.creature ? (f.next || { type: 'attack' }) : actB, side: 'b' }))];
-  for (const x of actors) { x.pri = guardish(x.f, x.act) ? 1 : 0; x.sp = spdOf(x.f) + rand(0, COMBAT.initSwing ?? 3); }
+  for (const x of actors) { x.pri = guardish(x.f, x.act) ? 1 : 0; x.sp = spdOf(x.f) + rand(0, (x.f.duel ? COMBAT.wingDuel.initSwing : COMBAT.initSwing) ?? 3); }
   actors.sort((p, q) => q.pri - p.pri || q.sp - p.sp);
   for (const x of actors) {
     const f = x.f;
