@@ -483,7 +483,13 @@ function comboAfter(f, foe, cb, lines) {
     lines.push(`불길이 번져 ${ga(foe)} ${n}의 화상 피해를 더 입었다. (화상 3턴 연장)`);
   }
   if (cb.key === 'flay') { foe.st.bleedDmg = (foe.st.bleedDmg || 3) * 2; foe.st.bleed = Math.max(foe.st.bleed || 0, 3); lines.push(`녹은 비늘 사이로 상처가 깊게 벌어졌다. (출혈 피해 ×2)`); }
-  if (cb.key === 'spread') { foe.st.poisonDmg = Math.round((foe.st.poisonDmg || 3) * 1.5); foe.st.poison = (foe.st.poison || 0) + 2; lines.push(`독이 온몸으로 퍼졌다. (독 피해 +50%, 중독 2턴 연장)`); }
+  // 독 터뜨리기: 남은 중독 피해를 한꺼번에 (× mult) 주고 중독은 끝남. 짧은 결투에서도 독이 제 몫을 하게
+  if (cb.key === 'spread' && foe.hp > 0) {
+    const n = Math.round((foe.st.poisonDmg || 3) * Math.max(1, foe.st.poison || 0) * (COMBOS.spread.mult || 1.5));
+    foe.hp = Math.max(0, foe.hp - n);
+    foe.st.poison = 0;
+    lines.push(`몸속에 퍼진 독이 한꺼번에 터졌다! ${ga(foe)} ${n}의 독 피해를 입었다.`);
+  }
 }
 
 // 턴 끝: 지속 피해, 상태와 재사용 대기 줄이기, 기력 조금 회복
