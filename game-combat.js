@@ -324,10 +324,10 @@ function resisted(def, lines, k) {
   lines.push(`${ga(def)} 기세로 버텨 내 ${STATUS[k]}에 빠지지 않았다.`);
   return true;
 }
-// 위압 (드래곤끼리): 위엄이 상대보다 높으면 그만큼 상대가 거는 상태 이상을 떨쳐 냄 (떨쳐 냈으면 true)
+// 위압: 드래곤의 위엄이 상대(드래곤·사냥감·강적·도둑)보다 높으면 그만큼 상대가 거는 상태 이상을 떨쳐 냄 (떨쳐 냈으면 true)
 function pressed(att, def, lines, k) {
   const P = COMBAT.majPress;
-  if (!P || !att || att.creature || def.creature) return false;
+  if (!P || !att || def.creature) return false; // 떨쳐 내는 건 드래곤뿐
   const p = Math.min(P.max, Math.max(0, ((def.maj || 0) - (att.maj || 0)) * P.per));
   if (!(p > 0) || Math.random() >= p) return false;
   lines.push(`${ga(def)} 위엄으로 ${att.name}${josa(att.name, '을', '를')} 눌러 ${STATUS[k]}에 빠지지 않았다.`);
