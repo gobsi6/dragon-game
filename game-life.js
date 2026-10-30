@@ -1742,10 +1742,19 @@ function festOuting(d, kin, fest, nightOpen, now = Date.now()) {
   const line = (tpl, k) => fillT(tpl, { a: k ? k.name : '', o: callFor(d, k, now) }); // 다 큰 식구는 어머니·아버지
   const lines = [pick(nightOpen ? F.openNight : F.open)];
   const used = new Set(); // 한 나들이에서 같은 장면이 겹치지 않게
+  // 다른 식구가 있어야 말이 되는 장면은 그럴 때만: '어린 식구들'은 더 어린 식구가 함께 왔을 때, '식구들 몫'은 둘 이상 함께 왔을 때
+  const YOUNG = new Set(['babyH', 'kidH', 'hatch', 'littleD']);
+  const groupOf = (k) => FEST_GROUP[stageOf(k, now).name] || 'kidH';
+  const fits = (tpl, k) => {
+    if (/어린 식구/.test(tpl)) return went.some((o) => o !== k && YOUNG.has(groupOf(o)));
+    if (/식구들 몫/.test(tpl)) return went.length > 1;
+    return true;
+  };
   for (const k of went) {
-    const g = FEST_GROUP[stageOf(k, now).name] || 'kidH';
+    const g = groupOf(k);
     const pool = [...(F.scene[g] || F.scene.kidH)];
     if (nightOpen) pool.push(...(g === 'hatch' || g === 'babyH' ? [] : F.night.any), ...(F.night[g] || [])); // 밤에는 야시장 장면도 (아기·해츨링은 제 장면만)
+    for (let i = pool.length - 1; i >= 0; i--) if (!fits(pool[i], k)) pool.splice(i, 1);
     // 제 장면을 다 썼으면 꺼내 쓰는 장면에서 (한 나들이에서 같은 문장이 두 번 나오지 않게)
     let fresh = pool.filter((t) => !used.has(t));
     if (!fresh.length) fresh = (F.spare[g === 'babyH' || g === 'hatch' ? g : k.type] || []).filter((t) => !used.has(t));
