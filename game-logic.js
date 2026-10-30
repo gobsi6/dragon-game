@@ -1068,7 +1068,8 @@ function craft(d, outId, have, focus = null) {
   let qty = 1;
   let great = false;
   let madeId = r.out;
-  if (f != null) lines.push(f >= 0.85 ? '불길을 완벽하게 다스렸다!' : f >= 0.55 ? '불길을 제법 잘 다스렸다.' : '불길이 조금 흔들렸다.');
+  // 불 조절은 걸작이 될 기운을 북돋울 뿐 걸작을 정하지는 않음. 결과는 바로 아래 줄에서 따로 알림
+  if (f != null) lines.push(f >= 0.85 ? '불길을 완벽하게 다스렸다. 쇠가 맑게 울린다.' : f >= 0.55 ? '불길을 제법 잘 다스렸다.' : '불길이 조금 흔들렸다.');
   if (Math.random() < chance) {
     great = true;
     if (it.type === 'equip' && ITEMS[`${r.out}__mw`]) {
@@ -1079,7 +1080,8 @@ function craft(d, outId, have, focus = null) {
       lines.push(`대성공! 재료를 아껴 ${name}${josa(name, '을', '를')} 하나 더 만들었다. (2개)`);
     }
     lines.push(...traitCount(d, 'masterwork'));
-  } else lines.push(`${name}${josa(name, '을', '를')} 만들었다.`);
+  } else if (f != null && f >= 0.85 && ITEMS[`${r.out}__mw`]) lines.push(`하지만 걸작에는 이르지 못했다. 평범한 ${name}${josa(name, '을', '를')} 만들었다.`); // 완벽하게 다스려도 걸작은 확률이라, 아니었다는 걸 분명히
+  else lines.push(`${name}${josa(name, '을', '를')} 만들었다.`);
   items.push({ id: madeId, qty });
   traitCount(d, 'craft'); // 칭호: 제작 횟수
   let xp = 4 + Math.floor(r.en / 2) + (great ? 4 : 0);
