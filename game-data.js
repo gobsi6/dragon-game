@@ -1888,15 +1888,16 @@ const COMBAT = {
   },
 };
 // 종류마다 하나뿐인 숨결. 기력 12, 3턴마다
+// 숨결 위력: 하위권 종족을 조금 끌어올림 (산 1.35→1.4, 눈보라 1.0→1.22, 해일 0.9→1.0. 같은 능력치 결투 시험에서 평균 쪽으로)
 const BREATHS = {
   red:    { name: '화염 숨결',   element: 'fire',      power: 1.35, debuff: { burn: 3 }, desc: '불길을 쏟아 큰 피해를 주고, 세 턴 동안 불태운다.' },
-  black:  { name: '산 숨결',     element: 'acid',      power: 1.35,  debuff: { acid: 3 }, desc: '비늘을 녹여 세 턴 동안 상대의 방어를 절반으로 만들고, 받는 피해를 15% 늘린다.' },
-  white:  { name: '눈보라 숨결', element: 'ice',       power: 1.0,  debuff: { freeze: 1 }, chance: 0.45, desc: '얼음 폭풍으로 피해를 주고, 절반 가까운 확률로 한 턴 얼려 움직이지 못하게 한다.' },
+  black:  { name: '산 숨결',     element: 'acid',      power: 1.4,   debuff: { acid: 3 }, desc: '비늘을 녹여 세 턴 동안 상대의 방어를 절반으로 만들고, 받는 피해를 15% 늘린다.' },
+  white:  { name: '눈보라 숨결', element: 'ice',       power: 1.22, debuff: { freeze: 1 }, chance: 0.45, desc: '얼음 폭풍으로 피해를 주고, 절반 가까운 확률로 한 턴 얼려 움직이지 못하게 한다.' },
   gold:   { name: '번개 숨결',   element: 'lightning', power: 1.7,  debuff: { stun: 1 }, chance: 0.3, desc: '가장 강한 한 방. 가끔 상대를 마비시켜 한 턴 쉬게 한다.' },
   green:  { name: '독 숨결',     element: 'poison',    power: 0.9,  debuff: { poison: 3 }, desc: '짙은 독안개로 세 턴 동안 중독시킨다.' },
   clear:  { name: '투명한 숨결', element: 'mist', power: 0.8, desc: '시험용 숨결. 바람이 스칠 뿐 아무 일도 일어나지 않는다.' },
   silver: { name: '안개 숨결',   element: 'mist',      power: 0.8,  self: { evade: 3 }, desc: '은빛 안개에 몸을 숨겨, 세 턴 동안 공격을 잘 피한다.' },
-  blue:   { name: '해일 숨결',   element: 'water',     power: 0.9, debuff: { soak: 2 }, desc: '거센 물살로 피해를 주고, 두 턴 동안 흠뻑 젖게 해 굼뜨게 만든다 (속도 −30%, 잘 피하지 못함). 젖은 적에게 꼬리치기를 하면 넘어뜨린다.' },
+  blue:   { name: '해일 숨결',   element: 'water',     power: 1.0, debuff: { soak: 2 }, desc: '거센 물살로 피해를 주고, 두 턴 동안 흠뻑 젖게 해 굼뜨게 만든다 (속도 −30%, 잘 피하지 못함). 젖은 적에게 꼬리치기를 하면 넘어뜨린다.' },
   purple: { name: '자수정 숨결', element: 'spirit',    power: 1.15, drain: 0.55, cleanse: 1, desc: '보랏빛 결정을 쏟아 피해를 주고, 입힌 피해의 55%만큼 체력을 되찾으며 나쁜 상태 하나를 씻어 낸다.' },
   bronze: { name: '모래 폭풍 숨결', element: 'earth',  power: 1.2,  self: { stone: 3 }, desc: '모래와 돌 조각을 쏟아 피해를 주고, 세 턴 동안 비늘이 돌처럼 굳어 받는 피해가 30% 준다.' },
 };
