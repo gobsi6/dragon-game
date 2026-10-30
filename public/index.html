@@ -191,6 +191,10 @@
           </div>
         </div>
         <div class="boss-card" id="boss-card" hidden></div>
+        <div class="mob-bar scar-bar" id="scar-bar" hidden><!-- 놓친 재앙이 남긴 상처 (그 지역에서만) -->
+          <span class="scar-em" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 19l5-6 3 3 6-9"/><path d="M14 7h5v5"/></svg></span>
+          <div class="mob-t"><b id="scar-t"></b><small id="scar-s"></small></div>
+        </div>
         <div class="rampage-bars" id="rampage-bars"></div>
         <div class="rampage-bars" id="grave-bars"></div>
         <div class="rampage-bars" id="rescue-bars"></div>
@@ -1472,6 +1476,7 @@
     renderEventBar();
     renderRaidBar();
     renderBoss();
+    renderScar();
     renderFriendsBadge(me.relIn || 0);
     renderTpBadge(me.tpUnread || 0);
     $('ap').textContent = `${me.ap} / ${me.apMax}`;
@@ -5502,6 +5507,7 @@
     }
     renderMazeBar(); // 지하 회랑 입구 띠·회랑 화면
     renderRaidBar(); // 레이드 모집 줄
+    renderScar(); // 놓친 재앙이 남긴 상처
     // 생존자 오르샤 (잿빛 상륙지)
     const ob = $('orsha-bar');
     ob.hidden = S.region !== S.ruinRules?.gateTo || !!me.exp;
@@ -10577,6 +10583,18 @@
       openBattle(res.battle, { title: res.title, lines: res.lines });
     });
   }
+  // 놓친 재앙이 남긴 상처: 그 지역에 있을 때만 작은 띠로 (사냥감이 사나움)
+  S.bossScar = null;
+  function renderScar() {
+    const bar = $('scar-bar'), s = S.bossScar;
+    const on = !!s && s.until > Date.now() && S.region === s.region;
+    bar.hidden = !on;
+    if (!on) return;
+    const left = s.until - Date.now();
+    $('scar-t').textContent = `${s.name}${josa(s.name, '이', '가')} 휩쓸고 간 자리`;
+    $('scar-s').textContent = `짐승들이 사나워져 있다 · 사냥감·강적 공격 +${Math.round((s.atk - 1) * 100)}% · ${left >= 3600000 ? `${Math.floor(left / 3600000)}시간` : `${Math.max(1, Math.ceil(left / 60000))}분`} 남음`;
+  }
+  setInterval(() => { if (S.bossScar) renderScar(); }, 60000);
   function onBoss(v) {
     const before = S.boss;
     S.boss = v || null;
@@ -11186,8 +11204,8 @@
     clearInterval(btTimer);
     // 아직 끝나지 않은 싸움인데 창이 닫힘 ('대륙' 단추 등 다른 창을 모두 닫는 동작): 싸움은 계속되므로 곧바로 다시 엶
     const still = BT && !BT.replay && !BT.view.over;
-    // 사냥·강적: 창을 닫으면 결과를 지역 카드에도 남기고, 생긴 일이 있으면 이어서 보여 줌
-    const r = BT && !BT.replay && BT.view.over && ['hunt', 'elite'].includes(BT.view.kind) ? BT.result : null;
+    // 사냥·강적·레이드: 창을 닫으면 결과를 지역 카드에도 남기고, 생긴 일이 있으면 이어서 보여 줌 (레이드는 얻은 것을 다시 확인할 수 있게)
+    const r = BT && !BT.replay && BT.view.over && ['hunt', 'elite', 'raid'].includes(BT.view.kind) ? BT.result : null;
     BT = null;
     if (still) { setTimeout(resumeBattle, 0); return; }
     if (r) showResult({ ...r, log: null, done: true });
@@ -13082,6 +13100,7 @@
     socket.on('rampage:list', (l) => { S.rampages = l || []; renderRampages(); renderHere(); if (S.region) renderOverlay(); });
     socket.on('rampage', onRampage);
     socket.on('boss', onBoss);
+    socket.on('boss:scar', (s) => { S.bossScar = s || null; renderScar(); });
     socket.on('kin:offer:got', (o) => {
       SFX.play('notice');
       toast(`${o.from.name}${josa(o.from.name, '이', '가')} ${o.kin.name}${josa(o.kin.name, '을', '를')} 맡아 달라고 한다.`, { label: '둥지 보기', run: () => { hideToast(); openNest(); }, ttl: 15000 });

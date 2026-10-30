@@ -20,6 +20,11 @@ const rand = (a, b) => a + Math.random() * (b - a);
 module.exports = function setupBoss({ io, db, online, logic, combat, arena, sendMe }) {
   let st = db.worldGet('boss', null);           // 지금 재앙 (없거나 끝났으면 done이 있음)
   let nextAt = db.worldGet('boss_next', null);  // 다음 재앙이 오는 시각
+  let scar = db.worldGet('boss_scar', null);    // 놓친 재앙이 남긴 상처 { region, name, until } (다음 재앙과 따로 둠)
+  const scarNow = () => (scar && scar.until > Date.now() ? scar : null);
+  const scarView = () => { const s = scarNow(); return s ? { region: s.region, name: s.name, until: s.until, atk: BOSS.scar.atk } : null; };
+  // 사냥감 세기에 곱할 값 (game-combat.js의 fromCreature가 씀)
+  logic.hooks.bossScar = (region) => { const s = scarNow(); return s && s.region === region ? BOSS.scar.atk : 1; };
   // 지난 재앙에서 배운 값: ratio(실제 한 번 피해 ÷ 공식이 가정한 피해), mult(쓰러지는 빠르기에 맞춘 체력 배율), 기록 몇 줄
   let tune = db.worldGet('boss_tune', null) || { ratio: 1, mult: 1, log: [] };
   const saveTune = () => db.worldSet('boss_tune', tune);
@@ -152,6 +157,13 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
     save();
     learn();
     shout(`[대륙의 재앙] ${ga(T.name)} ${REGIONS[st.region].name}${josa(REGIONS[st.region].name, '을', '를')} 휩쓸고 어디론가 떠났다. 남은 체력 ${Math.round((st.hp / st.hpMax) * 100)}%.`);
+    // 놓친 대가: 휩쓸고 간 땅의 짐승들이 한동안 사나워짐 (GM이 떠나보낸 재앙은 제외)
+    if (!st.gm && BOSS.scar) {
+      scar = { region: st.region, name: T.name, until: Date.now() + BOSS.scar.hours * HOUR };
+      db.worldSet('boss_scar', scar);
+      shout(`[대륙의 재앙] ${T.name}${josa(T.name, '이', '가')} 휩쓸고 간 ${REGIONS[st.region].name}의 짐승들이 ${BOSS.scar.hours}시간 동안 사나워졌다. (사냥감·강적 공격 +${Math.round((BOSS.scar.atk - 1) * 100)}%)`);
+      io.emit('boss:scar', scarView());
+    }
     push();
   }
 
@@ -239,6 +251,7 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
   function attach(socket) {
     const me = () => { const e = online.get(socket.data.dragonId); return e && e.socket === socket ? e.dragon : null; };
     socket.on('boss:get', (p, ack) => { if (typeof ack === 'function') ack({ ok: true, boss: view() }); });
+    socket.emit('boss:scar', scarView()); // 놓친 재앙이 남긴 상처
     socket.on('boss:fight', (p, ack) => {
       if (typeof ack !== 'function') return;
       const d = me();

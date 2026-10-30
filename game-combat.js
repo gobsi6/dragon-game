@@ -150,6 +150,7 @@ function fromCreature(place, elite, corrupted = false, minion = null) {
   const ruinMul = pl.hpMul ? (elite ? 1 + (pl.hpMul - 1) * (RUIN.eliteHp ?? 0.5) : pl.hpMul) : 1; // 멸망한 대륙: 체력이 훨씬 높음 (강적은 RUIN.eliteHp만큼만 적용해 잡을 길을 남김)
   const hpMax = Math.round(CB.hp * (elite ? K.eliteHp : 1) * (minion ? G.hp : 1) * DF.hp * ruinMul);
   const base = elite ? pl.elite : pl.creature;
+  const scarK = logic.hooks.bossScar?.(pl.region) || 1; // 놓친 재앙이 휩쓸고 간 땅: 짐승들이 사나움
   // 무리의 말이 이름에 이미 들어 있으면 두 번 붙이지 않음 (예: '어린' + '어린 ○○')
   const name = minion && !base.startsWith(`${minion} `) ? `${minion} ${base}` : base;
   return {
@@ -158,7 +159,7 @@ function fromCreature(place, elite, corrupted = false, minion = null) {
     type: (elite && pl.eliteType) || pl.type || null, // 화면 아이콘 계통
     corrupted, mindDrain: corrupted ? MIND.monster : 0,
     hp: hpMax, hpMax, en: 0, enMax: 0,
-    atk: CB.atk * (elite ? K.eliteAtk : 1) * (corrupted ? MIND.monsterAtk : 1) * (minion ? G.atk : 1) * DF.atk, def: CB.def, spd: 6 + lv * 2, mag: 4 + lv * 2, maj: creatureMaj(lv),
+    atk: CB.atk * (elite ? K.eliteAtk : 1) * (corrupted ? MIND.monsterAtk : 1) * (minion ? G.atk : 1) * DF.atk * scarK, def: CB.def, spd: 6 + lv * 2, mag: 4 + lv * 2, maj: creatureMaj(lv),
     taken: 1, element: cc.special.element || null,
     breath: null, skills: [], special: cc.special,
     weak: cc.weak, resist: cc.resist,

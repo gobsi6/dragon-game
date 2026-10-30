@@ -3672,3 +3672,7 @@ html:has(dialog.dlg:modal), html:has(dialog.dlg:modal) body { overflow: hidden; 
 .hoard-rank .r { font-variant-numeric: tabular-nums; }
 .hoard-rank .k { color: #9A9EA2; }
 .hoard-rank .r.me { color: var(--steel-d); font-weight: 600; }
+/* 놓친 재앙이 남긴 상처 (그 지역에서만 보이는 띠) */
+.scar-bar { background: #F6EEEC; border-color: #E0C3BE; }
+.scar-em { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #fff; border: 1px solid #E0C3BE; color: #8A2E27; flex: none; }
+.scar-em svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }

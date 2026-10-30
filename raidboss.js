@@ -860,7 +860,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
       const d = load(p.id);
       if (!d) continue;
       logic.regen(d);
-      const res = { title: `레이드 · ${B.boss.name}`, lines: [], items: [], win: won };
+      const res = { title: `레이드 · ${B.boss.name}`, lines: [], items: [], win: won && !p.left };
       const items = [];
       let falls = false;
       if (p.left) {
@@ -882,6 +882,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
             const W = B.reward;
             const gold = randInt(...W.gold);
             d.gold += gold;
+            res.gold = gold; // 결과 카드에 금화 칩으로
             items.push({ id: W.shard, qty: first ? W.firstShard : W.shards }, { id: 'purify_shard', qty: W.purifyShard });
             if (Math.random() < W.journalChance) items.push({ id: W.journal, qty: 1 });
             const got = [...items.map((x) => logic.itemLabel(x)), `금화 ${gold}닢`].join(', ');
@@ -931,6 +932,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
       if (p.mindLoss && !fg.test) res.lines.push(...logic.loseMind(d, p.mindLoss));
       if (falls) d.hp = 1;
       if (fg.test && !p.left) { d.hp = Math.max(1, Math.round(p.hp0 ?? d.hp)); res.lines.push('GM 시험이라 체력은 들어가기 전으로 돌아왔다.'); } // 시험은 다치지 않음
+      res.items = items; // 화면이 소지품을 새로 받아 오게 (얻은 것 확인)
       db.saveState(d, items);
       const e = live(p.id);
       const v = viewFor(fg, p.id);

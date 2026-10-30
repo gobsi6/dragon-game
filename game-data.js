@@ -2076,6 +2076,8 @@ const BOSSES = {
 const BOSS = {
   gapHours: [10, 20],      // 재앙이 사라진 뒤 다음 재앙까지 (시간, 이 사이에서 무작위)
   lastsHours: 18,          // 나타난 뒤 이 시간 안에 쓰러뜨려야 함
+  // 놓치면 남는 상처: 쓰러뜨리지 못하고 떠나면 휩쓸고 간 지역의 사냥감·강적이 hours시간 동안 사나워짐 (공격 × atk)
+  scar: { hours: 24, atk: 1.2 },
   ap: 3,                   // 한 번 맞서는 데 드는 행동력
   turns: 8,                // 한 번 맞서면 이만큼 싸우고 물러남
   activeDays: 2,           // 최근 이 기간에 접속한 드래곤 수로 체력을 정함
@@ -2122,8 +2124,8 @@ const RAIDBOSS = {
       // 만렙 넷이 기믹을 하나도 놓치지 않으면 17턴쯤에 쓰러지는 체력 (허수아비·그림자에 쓰는 턴과 빗나감까지 셈해 시험으로 맞춤)
       lv: 27, hp: 4400, lordShare: 0.25, atk: 60, def: 16, spd: 22, mag: 50, maj: 32, // maj: 포효로 노래를 끊는 판정의 기준 (만렙 평균 위엄 + 5쯤)
       lord:   { name: '허수아비 군주', type: 'construct', weak: ['fire', 'poison'], resist: ['earth'] },
-      boss:   { name: '이삭지기 모르벤', short: '모르벤', type: 'human', weak: ['spirit', 'lightning'], resist: ['poison'] },
-      shadow: { name: '모르벤의 그림자', type: 'spirit', weak: ['spirit', 'fire'], resist: ['poison', 'ice'], atk: 0.8 },
+      boss:   { name: '이삭지기 모르벤', short: '모르벤', type: 'human', weak: ['spirit', 'lightning'], resist: ['earth'] }, // 땅의 마법사: 대지 저항 (독 저항은 빼서 그린도 독을 걸 수 있게)
+      shadow: { name: '모르벤의 그림자', type: 'spirit', weak: ['spirit', 'fire'], resist: ['ice'], atk: 0.8 }, // 독 저항은 뺌
       crow:   { name: '검은 허수아비', type: 'construct', weak: ['fire', 'poison'], resist: ['earth'], atk: 0.5, def: 0.6, sides: ['왼편', '오른편'] },
       gaze:  { every: 3, power: 3.5 },                    // 1단계: 세 턴마다 '고개 돌리기' (예고 다음 턴에 한 드래곤에게 낫질 ×3.5)
       fire:  { per: 0.04, max: 3 },                       // 불 숨결로 허수아비를 치면 밀밭에 불길 (단계마다 턴 끝에 최대 체력의 4%). 얼음·물 숨결이 한 단계씩 끔
@@ -2151,9 +2153,9 @@ const RAIDBOSS = {
       region: 'ruin_capital', place: '무너진 성문 앞', name: '마지막 기사단장 헤이른',
       desc: '카르넴 기사단의 마지막 단장. 왕이 "문을 열지 마라"는 말을 남기고 들어간 뒤로, 오백 년 동안 대열을 풀지 않았다.',
       // 모르벤보다 한 단계 위 (성문 사냥터가 Lv.25·26). 실제 수치는 시험으로 다시 맞춤
-      lv: 28, hp: 4852, knightShare: 0.07585, atk: 73, def: 18, spd: 24, mag: 46, maj: 34, // 기사 넷은 하나당 368 그대로, 헤이른 본체 3380
+      lv: 28, hp: 4972, knightShare: 0.07401, atk: 73, def: 18, spd: 24, mag: 46, maj: 34, // 기사 넷은 하나당 368 그대로, 헤이른 본체 3500
       knight: { name: '카르넴 기사', type: 'human', weak: ['lightning', 'spirit'], resist: ['earth'], atk: 0.45, def: 1.1, names: ['왼쪽 방패 기사', '오른쪽 방패 기사', '창 기사', '늙은 기사'] },
-      boss:   { name: '마지막 기사단장 헤이른', short: '헤이른', type: 'human', weak: ['lightning', 'spirit'], resist: ['earth', 'poison'] },
+      boss:   { name: '마지막 기사단장 헤이른', short: '헤이른', type: 'human', weak: ['lightning', 'spirit'], resist: ['earth'] }, // 독 저항은 빼서 그린도 독을 걸 수 있게
       banner: { name: '기사단 깃발', type: 'construct', weak: [], resist: [], def: 0.5, spd: 1, hp: 0.08, taken: 0.6, regen: 0.025, back: 4, only: ['dive', 'gust'] }, // 헤이른 체력의 8%. 서 있는 동안 헤이른 받는 피해 ×0.6, 턴마다 2% 회복. 꺾이면 4턴 뒤 다시
       wall:   { every: 2, front: 0.3, broken: 1.5 },        // 1단계: 두 턴마다 방패벽 (정면 ×0.3). 우회·땅울림으로 깨면 그 턴 남은 공격 ×1.5
       flank:  { wing: 25, power: 0.8 },                     // 우회: 50% + (날개 − 25) × 4% (20~95%). 방패벽이 아닌 턴에는 ×0.8 공격
