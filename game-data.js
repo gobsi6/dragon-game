@@ -212,7 +212,7 @@ const ITEMS = {
   // 상흔을 하나 씻어 냄: 지하 회랑 수호자(아주 드물게) · 멸망한 대륙 생존자 교환. 7일에 한 번 (game-logic.js useItem)
   scar_tonic:     { name: '옛 샘의 정수', rarity: 'rare', type: 'use', use: { scar: 1 }, value: 900, desc: '고대도시 아래 샘에서 스며 나온 물을 정화의 결정으로 맑힌 것. 마시면 가장 최근에 입은 상흔 하나가 씻겨 나간다. 몸이 받아들이는 것은 7일에 한 번뿐이다.' },
   mz_city_key:    { name: '고대도시의 열쇠 조각', rarity: 'rare', cat: 'treasure', value: 650, desc: '일곱 층 아래 문의 열쇠였던 것. 조각만으로도 보물더미가 묘하게 환해진다.' },
-  tr_seed_sack:   { name: '백 년 묵은 씨앗 자루', rarity: 'rare', cat: 'treasure', value: 600, desc: '모르벤의 밭 가장자리에 묻혀 있던 자루. 아직 싹을 틔울 수 있을 것만 같은 씨앗이 가득하다.' }, // 레이드 (모르벤)
+  tr_seed_sack:   { name: '이천 년 묵은 씨앗 자루', rarity: 'rare', cat: 'treasure', value: 600, desc: '모르벤의 밭 가장자리에 묻혀 있던 자루. 아직 싹을 틔울 수 있을 것만 같은 씨앗이 가득하다.' }, // 레이드 (모르벤)
   tr_oath_ring:   { name: '기사단장의 맹세 반지', rarity: 'rare', cat: 'treasure', value: 700, desc: '헤이른의 손가락에 끼워져 있던 반지. 안쪽에 "문을 지킨다"는 맹세가 새겨져 있다.' }, // 레이드 (헤이른)
   tr_ash_mirror:  { name: '잿빛 거울',     rarity: 'rare',     cat: 'treasure', value: 500, desc: '비추면 잿빛 하늘만 보이는 거울. 가끔 멸망 전의 맑은 하늘이 스친다.' },
   tr_broken_crown:{ name: '카르넴의 깨진 왕관', rarity: 'rare', cat: 'treasure', value: 700, desc: '마지막 왕이 쓰던 왕관. 반쪽이 떨어져 나갔지만 보석은 아직 빛난다.' },
@@ -235,7 +235,7 @@ const ITEMS = {
   // 레이드 희귀 장비 (레이드 보스가 아주 드물게 떨어뜨림. gear: 사냥·레이드에서만 듣는 특별한 효과)
   raid_harvest_crown: { name: '거둔 이삭의 관',           rarity: 'rare', type: 'equip', slot: 'head', bonus: { wisdom: 4, majesty: 3 }, gear: { heal: 1.15 }, value: 140, desc: '모르벤이 마지막으로 거둔 이삭을 엮은 관. 치유로 되찾는 체력 +15%.' },
   raid_scarecrow_cloak: { name: '허수아비 군주의 넝마 망토', rarity: 'rare', type: 'equip', slot: 'wing', bonus: { scale: 4, wing: 3 }, gear: { cover: 0.8 }, value: 140, desc: '군주가 걸치고 있던 넝마. 몇 번을 베여도 찢어지지 않는다. 막아서기로 대신 맞을 때 받는 피해 −20%.' },
-  raid_heiron_helm:   { name: '헤이른의 금 간 투구',       rarity: 'rare', type: 'equip', slot: 'head', bonus: { scale: 4, majesty: 3 }, gear: { raidAtk: 1.1 }, value: 140, desc: '오백 년 동안 성문을 지킨 투구. 금이 간 자리로 바람이 들어온다. 레이드 보스에게 주는 피해 +10%.' },
+  raid_heiron_helm:   { name: '헤이른의 금 간 투구',       rarity: 'rare', type: 'equip', slot: 'head', bonus: { scale: 4, majesty: 3 }, gear: { raidAtk: 1.1 }, value: 140, desc: '이천 년 동안 성문을 지킨 투구. 금이 간 자리로 바람이 들어온다. 레이드 보스에게 주는 피해 +10%.' },
   raid_banner_wing:   { name: '기사단 깃발의 날개덮개',    rarity: 'rare', type: 'equip', slot: 'wing', bonus: { wing: 5, claw: 2 }, gear: { flank: 0.15 }, value: 140, desc: '꺾인 깃발 천으로 날개 끝을 감쌌다. 펼치면 대열이 흔들린다. 우회 성공 확률 +15%.' },
   knight_tail_shield: { name: '성문 기사단의 꼬리 방패', rarity: 'rare', type: 'equip', slot: 'tail', bonus: { wing: 4, scale: 3, claw: 3 }, value: 160, desc: '헤이른의 방패를 잘라 꼬리 끝에 맞췄다. 휘두르면 대열을 갈랐던 바람 소리가 난다.' },
   charge_banner_charm: { name: '돌격 깃발 장식', rarity: 'rare', type: 'equip', slot: 'charm', bonus: { wing: 8, claw: 2 }, value: 160, desc: '기사단 깃발의 술을 엮어 만든 장식. 날개를 펼치면 깃발처럼 펄럭인다.' },
@@ -2122,7 +2122,7 @@ const RAIDBOSS = {
     morven: {
       script: 'morven', // raidboss.js의 기믹 갈래
       region: 'ruin_plain', place: '검은 밀밭 한가운데', name: '이삭지기 모르벤',
-      desc: '카르넴 왕실이 곡창 평원에 보낸 풍요의 마법사. 오백 년 동안 홀로 남아 아무도 없는 밭의 추수를 기다린다.',
+      desc: '카르넴 왕실이 곡창 평원에 보낸 풍요의 마법사. 이천 년 동안 홀로 남아 아무도 없는 밭의 추수를 기다린다.',
       // 만렙 넷이 기믹을 하나도 놓치지 않으면 17턴쯤에 쓰러지는 체력 (허수아비·그림자에 쓰는 턴과 빗나감까지 셈해 시험으로 맞춤)
       lv: 27, hp: 4400, lordShare: 0.25, atk: 60, def: 16, spd: 22, mag: 50, maj: 32, // maj: 포효로 노래를 끊는 판정의 기준 (만렙 평균 위엄 + 5쯤)
       lord:   { name: '허수아비 군주', type: 'construct', weak: ['fire', 'poison'], resist: ['earth'] },
@@ -2153,7 +2153,7 @@ const RAIDBOSS = {
     heiron: {
       script: 'knights',
       region: 'ruin_capital', place: '무너진 성문 앞', name: '마지막 기사단장 헤이른',
-      desc: '카르넴 기사단의 마지막 단장. 왕이 "문을 열지 마라"는 말을 남기고 들어간 뒤로, 오백 년 동안 대열을 풀지 않았다.',
+      desc: '카르넴 기사단의 마지막 단장. 왕이 "문을 열지 마라"는 말을 남기고 들어간 뒤로, 이천 년 동안 대열을 풀지 않았다.',
       // 모르벤보다 한 단계 위 (성문 사냥터가 Lv.25·26). 실제 수치는 시험으로 다시 맞춤
       lv: 28, hp: 4972, knightShare: 0.07401, atk: 73, def: 18, spd: 24, mag: 46, maj: 34, // 기사 넷은 하나당 368 그대로, 헤이른 본체 3500
       knight: { name: '카르넴 기사', type: 'human', weak: ['lightning', 'spirit'], resist: ['earth'], atk: 0.45, def: 1.1, names: ['왼쪽 방패 기사', '오른쪽 방패 기사', '창 기사', '늙은 기사'] },
@@ -2260,7 +2260,7 @@ const KEEPSAKES = {
   paper_kite:    { name: '종이 연',           value: 7,  fmt: 'of',   desc: '나뭇살에 종이를 붙여 만든 연. 한가운데 서툴게 그린 용 한 마리가 있다.' },
   portrait:      { name: '초상화',            value: 10, fmt: 'of',   say: false, desc: '숯으로 그린 초상화. 그린 이의 눈에 비친 모습이라 실제보다 조금 더 늠름하다.' },
   knight_banner: { name: '빛바랜 기사단 깃발 한 폭', value: 10, fmt: 'of', say: false, desc: '꺾인 카르넴 기사단 깃발에서 찢어 낸 천. 용과 인간이 함께 그려진 문장의 한 귀퉁이가 남아 있다.' }, // 레이드 첫 처치
-  golden_wheat:  { name: '금빛 밀 이삭 한 줌', value: 10, fmt: 'of',   say: false, desc: '이삭지기 모르벤이 쓰러진 뒤, 시든 평원에 오백 년 만에 다시 여문 금빛 이삭. 흔들면 마른 밀 소리가 난다.' }, // 레이드 첫 처치
+  golden_wheat:  { name: '금빛 밀 이삭 한 줌', value: 10, fmt: 'of',   say: false, desc: '이삭지기 모르벤이 쓰러진 뒤, 시든 평원에 이천 년 만에 다시 여문 금빛 이삭. 흔들면 마른 밀 소리가 난다.' }, // 레이드 첫 처치
   herb_sachet:   { name: '약초 주머니',       value: 7,  fmt: 'of',   desc: '말린 약초를 천에 싸서 묶은 주머니. 맡으면 머리가 맑아지는 풀 냄새가 난다.' },
   acorns:        { name: '도토리 한 줌',      value: 4,  fmt: 'of',   desc: '반질반질한 도토리 한 줌. 겨울을 위해 모아 두라는 뜻인 모양이다.' },
   pinecone:      { name: '커다란 솔방울',     value: 4,  fmt: 'of',   desc: '꼭지까지 온전한 커다란 솔방울. 송진 냄새가 난다.' },
@@ -2400,8 +2400,8 @@ const YABAWI = {
     { id: 'r_wheat',   kind: 'ruin', region: 'ruin_plain', text: '시든 평원은 원래 금빛 밀밭이었대. 카르넴 사람들 배를 다 채우고도 남았다지. 지금은 허수아비만 남았는데… 그놈들이 고개를 돌린다는 거, 사실이야. 내가 봤거든.' },
     { id: 'r_river',   kind: 'ruin', region: 'ruin_plain', text: '말라붙은 강바닥에 뼈 와이번들이 산대. 강이 마를 때 물을 따라 떠나지 못한 놈들이라더군. 하늘에서 뼈 부딪히는 소리가 나면 고개 숙여.' },
     { id: 'r_scare',   kind: 'ruin', region: 'ruin_plain', text: '허수아비 군주 말이야, 원래는 농부들이 밭 지키라고 세운 거래. 지키라고 세웠더니 정말로 지키고 있는 거지. 지금도, 아무도 없는 밭을.' },
-    { id: 'r_heiron',  kind: 'raid', raid: 'heiron', text: '성문 앞 기사단 말이야, 드디어 쉬었대. 누가 그 단장을 꺾었는데, 쓰러지면서 "문은 아직 닫혀 있는가" 하고 묻더라나. 닫혀 있다니까 웃었대. 그 문 안에 뭐가 있길래 오백 년을 지켰을까.' }, // 레이드 첫 처치 뒤에 풀림
-    { id: 'r_morven',  kind: 'raid', raid: 'morven', text: '허수아비들이 밭을 지킨다는 얘기, 반만 맞았더라고. 지키라고 주문을 새긴 마법사가 아직 거기 있었대. 모르벤이라던가. 추수가 끝나지 않았다면서 오백 년을 버텼다지. 그걸 누가 끝내 줬다던데… 너도 거기 있었나?' }, // 레이드 첫 처치 뒤에 풀림
+    { id: 'r_heiron',  kind: 'raid', raid: 'heiron', text: '성문 앞 기사단 말이야, 드디어 쉬었대. 누가 그 단장을 꺾었는데, 쓰러지면서 "문은 아직 닫혀 있는가" 하고 묻더라나. 닫혀 있다니까 웃었대. 그 문 안에 뭐가 있길래 이천 년을 지켰을까.' }, // 레이드 첫 처치 뒤에 풀림
+    { id: 'r_morven',  kind: 'raid', raid: 'morven', text: '허수아비들이 밭을 지킨다는 얘기, 반만 맞았더라고. 지키라고 주문을 새긴 마법사가 아직 거기 있었대. 모르벤이라던가. 추수가 끝나지 않았다면서 이천 년을 버텼다지. 그걸 누가 끝내 줬다던데… 너도 거기 있었나?' }, // 레이드 첫 처치 뒤에 풀림
     { id: 'r_karnem',  kind: 'ruin', region: 'ruin_capital', text: '카르넴은 용과 인간이 함께 세운 왕도였어. 성벽은 인간이 쌓고, 탑 꼭대기는 용들이 불로 구웠다지. 그런 나라가 또 있을까 싶어.' },
     { id: 'r_crown',   kind: 'ruin', region: 'ruin_capital', text: '카르넴의 마지막 왕은 왕관을 반으로 쪼개서 반쪽을 용에게 줬대. 함께 다스리자는 약속이었다나. 나머지 반쪽이 어디 있냐고? 그걸 알면 내가 여기서 조약돌이나 굴리고 있겠나.' },
     { id: 'r_knights', kind: 'ruin', region: 'ruin_capital', text: '무너진 성문 앞 기사단은 아직 대열을 안 풀었대. 왕이 "문을 열지 마라" 하고 들어간 뒤로, 아무도 해산하라는 말을 안 했거든.' },
