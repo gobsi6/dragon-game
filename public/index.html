@@ -8579,11 +8579,12 @@
     const mark = me.traits?.mark || {};
     for (const r of S.traitEarn) {
       const loseOnly = (r.lose || []).length && !(r.gain || []).length; // 없애기만 하는 규칙: 그 특성이 생긴 뒤부터 셈
+      const recount = loseOnly || ((r.lose || []).length && r.id in mark); // 지나간 뒤 되살아난 규칙도 다시 셈
       const gain = (r.gain || []).filter((x) => !has.has(x));
       const lose = (r.lose || []).filter((x) => has.has(x));
-      if (done.includes(r.id) && !(loseOnly && lose.length)) continue;
+      if (done.includes(r.id) && !lose.length) continue;
       if (!gain.length && !lose.length) continue;
-      const n = Math.max(0, Math.min((counts[r.count] || 0) - (loseOnly ? mark[r.id] || 0 : 0), r.at));
+      const n = Math.max(0, Math.min((counts[r.count] || 0) - (recount ? mark[r.id] || 0 : 0), r.at));
       const row = document.createElement('div');
       row.className = 'road';
       const what = [...gain.map((x) => `'${traitName(x)}' 생김`), ...lose.map((x) => `'${traitName(x)}' 사라짐`)].join(', ');
@@ -9309,31 +9310,7 @@
       row.append(b1, b2);
       box.appendChild(row);
     }
-    // 도움을 청했다가 다시 일어선 드래곤 (3시간 동안, 닫으면 이 기기에서는 숨김)
-    const hidden = [...new Set([...SEEN.list('risen'), ...risenLocal()])]; // 서버(드래곤마다)와 이 기기에서 닫은 것
-    for (const x of S.risen || []) {
-      if (x.id === S.me?.id || hidden.includes(`${x.id}:${x.at}`) || S.rescues.some((r) => r.id === x.id)) continue;
-      const row = document.createElement('div');
-      row.className = 'rampage rescue done';
-      const t = document.createElement('div');
-      t.className = 't';
-      t.innerHTML = '<b></b><small></small>';
-      t.querySelector('b').textContent = `${x.name}${josa(x.name, '이', '가')} 다시 일어섰다`;
-      const ago = Math.max(1, Math.round((Date.now() - x.at) / 60000));
-      t.querySelector('small').textContent = `${x.where} · ${x.how === 'rescued' ? `${x.by}의 도움으로` : '상흔을 입고 스스로'} · ${ago >= 60 ? `${Math.floor(ago / 60)}시간` : `${ago}분`} 전`;
-      const cb = document.createElement('button');
-      cb.type = 'button'; cb.className = 'btn'; cb.textContent = '확인';
-      cb.addEventListener('click', () => {
-        // 지금 떠 있는 카드의 표시만 남김: 지난 표시가 쌓여 앞쪽(다른 기기에서 확인한 것)이 잘려 나가지 않게
-        const live = risenKeys();
-        const l = [...new Set([...SEEN.list('risen'), ...risenLocal(), `${x.id}:${x.at}`])].filter((k) => live.has(k));
-        try { localStorage.setItem('dragon-risen-hide', JSON.stringify(l)); } catch {}
-        SEEN.set('risen', l);
-        renderRescues();
-      });
-      row.append(t, cb);
-      box.appendChild(row);
-    }
+    // '다시 일어섰다' 카드는 뺌: 구조·일어섬이 이야기 창의 대륙 소식에 남으므로
     for (const r of S.rescues) {
       if (r.id === S.me?.id || r.until <= Date.now()) continue;
       const here = r.region === S.region;

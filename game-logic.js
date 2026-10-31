@@ -60,18 +60,25 @@ function traitCount(d, key, n = 1) {
   // 없애기만 하는 규칙(예: 쉬기 40번 → 얇은 비늘이 사라짐)은 그 특성이 생긴 뒤부터 센다.
   // 예전에는 특성이 생기기 전에 횟수를 채우면 규칙이 '이미 지나감'이 되어, 나중에 생긴 특성은 영영 사라지지 않았음
   const loseOnly = (r) => (r.lose || []).length && !(r.gain || []).length;
+  // 다시 세는 규칙: 없애기만 하는 규칙, 또는 생기고 사라지는 규칙이 이미 지나간 뒤 없앨 특성이 새로 생겨 되살아난 것(mark가 있음)
+  // 예) 오염 40번으로 '강인한 정신'이 먼저 생긴 뒤 광폭화로 '불안정'이 생기면, 예전에는 규칙이 이미 지나가 '불안정'이 영영 사라지지 않았음
+  const recount = (r) => loseOnly(r) || ((r.lose || []).length && r.id in t.mark);
   for (const r of TRAIT_EARN) {
     if (r.count !== key) continue;
-    if (loseOnly(r) && t.done.includes(r.id) && r.lose.some((id) => t.list.includes(id))) t.done = t.done.filter((x) => x !== r.id); // 예전에 잘못 지나간 규칙 되살림
-    if (t.done.includes(r.id) || t.counts[key] - (loseOnly(r) ? t.mark[r.id] || 0 : 0) < r.at) continue;
+    if ((r.lose || []).length && t.done.includes(r.id) && r.lose.some((id) => t.list.includes(id))) { // 예전에 잘못 지나간 규칙 되살림
+      t.done = t.done.filter((x) => x !== r.id);
+      if (!loseOnly(r) && !(r.id in t.mark)) t.mark[r.id] = 0; // 이미 쌓인 횟수로 바로 일어남
+    }
+    if (t.done.includes(r.id) || t.counts[key] - (recount(r) ? t.mark[r.id] || 0 : 0) < r.at) continue;
     const got = (r.gain || []).filter((id) => !t.list.includes(id));
     const lost = (r.lose || []).filter((id) => t.list.includes(id));
-    if (loseOnly(r) && !lost.length) continue; // 없앨 특성이 아직 없으면 기다림 (지나간 것으로 치지 않음)
+    if (recount(r) && !lost.length) continue; // 없앨 특성이 아직 없으면 기다림 (지나간 것으로 치지 않음)
     t.done.push(r.id);
     if (!got.length && !lost.length) continue;
     t.list = [...t.list.filter((id) => !lost.includes(id)), ...got];
     // 새로 생긴 특성을 없애는 규칙은 지금부터 다시 셈
-    for (const r2 of TRAIT_EARN) if (loseOnly(r2) && r2.lose.some((id) => got.includes(id))) { t.mark[r2.id] = t.counts[r2.count] || 0; t.done = t.done.filter((x) => x !== r2.id); }
+    // (생기고 사라지는 규칙은 이미 지나간 경우에만 — 아직 안 지나갔으면 원래 문턱에서 그대로 없애 줌)
+    for (const r2 of TRAIT_EARN) if ((r2.lose || []).some((id) => got.includes(id)) && (loseOnly(r2) || t.done.includes(r2.id))) { t.mark[r2.id] = t.counts[r2.count] || 0; t.done = t.done.filter((x) => x !== r2.id); }
     lines.push(r.line);
     for (const id of got) lines.push(`새 특성 '${TRAITS[id].name}'${josa(TRAITS[id].name, '이', '가')} 생겼다. ${TRAITS[id].desc}`);
     for (const id of lost) lines.push(`'${TRAITS[id].name}' 특성이 사라졌다.`);
@@ -1322,7 +1329,7 @@ function fillOrder(d, key, have, now = Date.now(), useAlt = false) {
   const what = nAlt ? `${altPart}${n ? `${josa(nAlt > 1 ? '개' : altPart, '과', '와')} ${ITEMS[o.id].name}${n > 1 ? ` ${n}개` : ''}` : ''}` : `${ITEMS[o.id].name}${o.qty > 1 ? ` ${o.qty}개` : ''}`;
   const lines = [`${what}${josa(what.endsWith('개') ? '개' : what, '을', '를')} 건네자 의뢰인이 활짝 웃었다.`];
   if (nAlt) lines.push(ITEMS[o.alt].mwOf ? '솜씨에 감탄한 의뢰인이 웃돈을 얹어 주었다.' : '정성이 듬뿍 담긴 것을 알아본 의뢰인이 웃돈을 얹어 주었다.');
-  lines.push(`금화 ${gold}닢, ${REGIONS[d.region].name} 평판 +${o.rep}`);
+  lines.push(`금화 ${gold}닢, ${REGIONS[d.region].name} 평판 +${o.rep}`, ...traitCount(d, 'order')); // 특성: 악명이 사라짐
   return { title: '의뢰', lines, items, gold };
 }
 // ── 둥지 공방(화로) ──

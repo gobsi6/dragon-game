@@ -141,7 +141,7 @@ module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broa
     logic.chron(helper, 'mark', `쓰러진 ${eul(t.name)} 일으켜 세웠다.`);
     t.hp_at = Date.now();
     db.saveState(t);
-    logic.traitCount(helper, 'rescue');
+    const traitLines = logic.traitCount(helper, 'rescue'); // 특성: 오만이 사라짐
     const fame = logic.addFame(helper, DEATH.helpFame);
     const xp = logic.xpOf(helper, DEATH.helpXp);
     const levelUp = logic.gainXp(helper, xp);
@@ -155,6 +155,7 @@ module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broa
     pushRescues();
     const lines = [`쓰러진 ${t.name}에게 다가가 ${healer ? '치유의 힘으로 상처를 덮고 ' : ''}일으켜 세웠다.`];
     if (fame) lines.push(fame);
+    lines.push(...traitLines);
     return { title: '구조', lines, xp, levelUp, items: [], gold: 0 };
   }
 

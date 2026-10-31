@@ -1046,7 +1046,7 @@ const KIN_TRAITS = {
   tough:     { for: 'human', grown: true, name: '혼자서도 씩씩한', desc: '한동안 돌보지 못해도 유대가 4분의 1 덜 줄어든다.' },
   fussy:     { for: 'human', grown: true, flaw: true, name: '투정쟁이',   desc: '배가 고파지면 입이 삐죽 나와 유대가 1 줄지만, 가장 좋아하는 요리를 먹으면 유대가 3 더 오른다.' },
   willful:   { for: 'human', grown: true, flaw: true, name: '제멋대로인', desc: '돌볼 때 네 번에 한 번은 딴청을 피워 유대가 1 덜 오르지만, 그때 어디서 주워 온 것을 내민다.' },
-  opened:    { for: 'human', grown: true, name: '마음을 연',      desc: '수줍던 아이가 마음을 열었다. 돌볼 때 유대가 2 더 오른다.' },
+  opened:    { for: 'human', grown: true, from: 'shy', name: '마음을 연',      desc: '수줍던 아이가 마음을 열었다. 돌볼 때 유대가 2 더 오른다.' },
   // 새끼 드래곤
   fierce:    { for: 'drake', grown: true, name: '사나운',         desc: '함께 싸울 때 주는 피해가 20% 크다.' },
   windrider: { for: 'drake', grown: true, name: '바람을 타는',     desc: '심부름을 25% 빨리 다녀온다.' },
@@ -1059,7 +1059,7 @@ const KIN_TRAITS = {
   wild:      { for: 'drake', grown: true, flaw: true, name: '천방지축', desc: '가르치기 간격이 1시간 길지만, 원정에서 자랄 때 가끔 능력치가 하나 더 오른다.' },
   sociable:  { for: 'human', grown: true, name: '친구가 많은',     desc: '다른 둥지의 아이와 놀다 오면 유대가 2 더 오른다.' },
   packmate:  { for: 'drake', grown: true, name: '어울리기 좋아하는', desc: '다른 둥지의 아이와 놀다 오면 유대가 2 더 오른다.' },
-  dignified: { for: 'drake', grown: true, name: '속 깊은',         desc: '응석받이가 다 자라 속이 깊어졌다. 가르칠 때 유대가 2 더 오르고, 먹이를 주면 1 더 오른다.' },
+  dignified: { for: 'drake', grown: true, from: 'clingy', name: '속 깊은',         desc: '응석받이가 다 자라 속이 깊어졌다. 가르칠 때 유대가 2 더 오르고, 먹이를 주면 1 더 오른다.' },
   spoiled:    { for: 'human', grown: true, flaw: true, name: '응석받이',   desc: '교감할 때 유대가 1 더 오르지만, 하루 넘게 교감이 없으면 서운해서 유대가 2 준다.' },
   aloof:      { for: 'human', grown: true, flaw: true, name: '새침한',     desc: '교감할 때 유대가 1 덜 오르지만, 한동안 교감을 못 받아도 서운해하지 않는다.' },
   babyish:    { for: 'drake', grown: true, flaw: true, name: '어리광쟁이', desc: '교감할 때 유대가 1 더 오르지만, 하루 넘게 교감이 없으면 서운해서 유대가 2 준다.' },
@@ -1501,12 +1501,15 @@ const TRAIT_EARN = [
   { id: 'corrupt40', count: 'corrupt', at: 40, gain: ['iron_will'], lose: ['unstable'], line: '오염된 땅을 수없이 견뎌 낸 끝에 정신이 단단해졌다.' },
   { id: 'berserk1', count: 'berserk', at: 1, gain: ['unstable'], line: '한 번 무너진 정신에는 금이 남았다.' },
   { id: 'rest40', count: 'rest', at: 40, lose: ['thin_scale'], line: '오랜 휴식 끝에 묵은 상처가 아물었다.' },
+  { id: 'hunt80', count: 'hunt', at: 80, lose: ['frail'], line: '수없이 사냥감과 부딪치는 사이 약하던 몸이 단단해졌다.' },
+  { id: 'order20', count: 'order', at: 20, lose: ['notorious'], line: '마을의 일을 거들어 온 날들이 쌓여, 사람들의 눈빛이 조금씩 누그러졌다.' },
+  { id: 'rescue5', count: 'rescue', at: 5, lose: ['arrogant'], line: '쓰러진 동료에게 몇 번이고 몸을 낮춰 손을 내미는 사이, 높던 콧대가 꺾였다.' },
 ];
 // 화면에 보여 줄 행동 이름
 const TRAIT_COUNTS = {
   hunt: '사냥', wound: '큰 상처', gather: '채집', explore: '탐사', expedition: '원정', intimidate: '위협',
   trade: '시장 거래', care: '식구 돌보기', neglect: '식구를 외롭게 함', rest: '둥지에서 쉬기',
-  corrupt: '오염된 땅에서 행동', berserk: '광폭화',
+  corrupt: '오염된 땅에서 행동', berserk: '광폭화', order: '제작 의뢰 납품', rescue: '쓰러진 드래곤 일으키기',
 };
 
 // ── 원정: 목적과 갈림길 ────────────────────────────

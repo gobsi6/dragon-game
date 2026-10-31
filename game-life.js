@@ -139,7 +139,8 @@ function growAdd(k, key, n = 1) {
   g[key] = (g[key] || 0) + n;
 }
 const isGrown = (k) => ['어른', '노년', '젊은 용', '다 자란 용'].includes(stageOf(k, Date.now()).name); // 다 큰 식구 (힌트·성격 문장을 나이에 맞게)
-const grownCount = (k) => (k.data.traits || []).filter((id) => KIN_TRAITS[id]?.grown).length;
+// from: 타고난 성격이 자라 바뀐 것(수줍은 → 마음을 연 등)은 타고난 몫이라 세지 않음
+const grownCount = (k) => (k.data.traits || []).filter((id) => KIN_TRAITS[id]?.grown && !KIN_TRAITS[id].from).length;
 // 아직 붙지 않은 성격 가운데 자람 기록 점수가 가장 큰 것
 function growBest(k) {
   const g = k.data.grow || {};
@@ -543,8 +544,9 @@ function tick(d, kin, now = Date.now()) {
         diary(k, `'${st.name}'${josa(st.name, '이', '가')} 되었다.`, now);
         bondDip(k, st, out, now); // 젊은 용: 조금 서먹해짐
         growCheck(d, k, out.lines, true); // 자라는 단계마다 성격 하나
-        if (st.name === '다 자란 용') growUp(d, k, out.lines, 'clingy', 'dignified', `늘 꼬리를 물고 따라다니던 ${ga(k)} 이제는 말없이 곁에 앉아 먼저 마음을 살핀다. 응석받이의 속이 깊어졌다.`);
       }
+      // 응석받이 → 속 깊은: 예전에는 '다 자란 용'이 되는 그 순간에만 따져서, 이 성격 변화가 생기기 전에 이미 다 자란 새끼는 영영 바뀌지 않았음
+      if (st.name === '다 자란 용') growUp(d, k, out.lines, 'clingy', 'dignified', `늘 꼬리를 물고 따라다니던 ${ga(k)} 이제는 말없이 곁에 앉아 먼저 마음을 살핀다. 응석받이의 속이 깊어졌다.`);
       growCheck(d, k, out.lines, false); // 특별한 순간
       // 젊은 용부터 혼자 사냥해 옴
       if (a >= R.huntFrom && !k.data.onExp && !k.data.errand) {
