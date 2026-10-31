@@ -3683,3 +3683,7 @@ html:has(dialog.dlg:modal), html:has(dialog.dlg:modal) body { overflow: hidden; 
 .wait .pick-redo { margin-left: 8px; padding: 2px 8px; font: 500 12px/1.4 var(--sans); color: var(--steel-d); background: #fff; border: 1px solid var(--line-in); border-radius: 3px; cursor: pointer; }
 .wait .pick-redo:hover { border-color: var(--steel); }
 .bt-mini .sts span.pick-tag { color: var(--steel-d); border-color: var(--steel); background: #EEF2F6; font-weight: 600; }
+/* 로그인: 비밀번호를 잊었다면 · 임시 비밀번호 요청 */
+.auth-forgot { display: block; margin: 10px auto 0; font-size: 13px; }
+#pwreq-form .note { font-size: 13px; color: var(--muted); margin: 0 0 12px; line-height: 1.6; }
+#pwreq-msg.ok { color: var(--steel-d); }

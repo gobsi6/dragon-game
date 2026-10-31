@@ -34,6 +34,19 @@
     <div class="row">
       <button class="btn primary" type="submit" id="auth-go" data-mode="login">로그인</button>
     </div>
+    <button class="linkbtn auth-forgot" type="button" id="auth-forgot">비밀번호를 잊었다면</button>
+  </form>
+  <!-- 임시 비밀번호 요청: GM이 본인인지 확인한 뒤 따로 전해 줌 -->
+  <form id="pwreq-form" hidden>
+    <p class="note">GM에게 임시 비밀번호를 부탁한다. GM이 본인인지 확인한 뒤, 적어 준 곳으로 따로 전해 준다.</p>
+    <label class="field"><span>아이디</span><input class="input" name="username" autocomplete="username" required maxlength="16"></label>
+    <label class="field"><span>본인 확인</span><input class="input" name="note" required maxlength="60" autocomplete="off">
+      <small class="hint">가입할 때 적은 계정, 또는 임시 비밀번호를 받을 곳</small></label>
+    <p class="error" id="pwreq-msg" role="alert"></p>
+    <div class="row">
+      <button class="btn" type="button" id="pwreq-back">돌아가기</button>
+      <button class="btn primary" type="submit" id="pwreq-go">요청 보내기</button>
+    </div>
   </form>
 </section>
 
@@ -715,7 +728,7 @@
 <dialog class="frame dlg wide gm-dlg" id="gm-dlg" aria-labelledby="gm-dlg-title">
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="gm-dlg-title">GM 도구</h2></div>
-  <div class="seg gm-tabs" id="gm-tabs" role="group" aria-label="GM 도구 메뉴"><button type="button" data-t="dragons" class="on">드래곤</button><button type="button" data-t="give">일괄 지급</button><button type="button" data-t="announce">공지</button><button type="button" data-t="log">기록</button><button type="button" data-t="me">내 드래곤</button></div>
+  <div class="seg gm-tabs" id="gm-tabs" role="group" aria-label="GM 도구 메뉴"><button type="button" data-t="dragons" class="on">드래곤</button><button type="button" data-t="give">일괄 지급</button><button type="button" data-t="announce">공지</button><button type="button" data-t="log">기록</button><button type="button" data-t="pwreq">요청</button><button type="button" data-t="me">내 드래곤</button></div>
   <div class="body" id="gm-body"></div>
   <div class="row" style="margin-top: 12px"><button class="btn" type="button" id="gm-close">닫기</button></div>
 </dialog>
@@ -1229,6 +1242,27 @@
     $('auth-go').textContent = mode === 'register' ? '계정 만들기' : '로그인';
     $('auth-form').password.autocomplete = mode === 'register' ? 'new-password' : 'current-password';
     $('auth-error').textContent = '';
+    $('auth-forgot').hidden = mode !== 'login';
+  });
+  // 비밀번호를 잊었다면: 로그인 칸 대신 요청 칸
+  const showPwReq = (on) => {
+    $('auth-form').hidden = on; $('auth-tabs').hidden = on; $('pwreq-form').hidden = !on;
+    $('pwreq-msg').textContent = ''; $('pwreq-msg').classList.remove('ok');
+    if (on) { $('pwreq-form').username.value = $('auth-form').username.value; $('pwreq-form').username.focus(); }
+  };
+  $('auth-forgot').addEventListener('click', () => showPwReq(true));
+  $('pwreq-back').addEventListener('click', () => showPwReq(false));
+  $('pwreq-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const f = e.target;
+    $('pwreq-msg').textContent = ''; $('pwreq-msg').classList.remove('ok');
+    try {
+      const res = await fetch('/api/pw-request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: f.username.value, note: f.note.value }) });
+      const data = await res.json();
+      if (!res.ok) return ($('pwreq-msg').textContent = data.error || '다시 시도해 보자.');
+      $('pwreq-msg').textContent = data.text; $('pwreq-msg').classList.add('ok');
+      $('pwreq-go').disabled = true; setTimeout(() => ($('pwreq-go').disabled = false), 5000);
+    } catch { $('pwreq-msg').textContent = '서버에 연결하지 못했다.'; }
   });
   $('auth-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1245,6 +1279,7 @@
       const data = await res.json();
       if (!res.ok) return ($('auth-error').textContent = data.error || '다시 시도해 보자.');
       store.set(data.token);
+      try { if (data.temp) localStorage.setItem('pw-temp', '1'); else localStorage.removeItem('pw-temp'); } catch {} // 임시 비밀번호로 들어왔으면 들어간 뒤 새 비밀번호로 바꾸라고
       f.reset();
       connect();
     } catch {
@@ -1252,6 +1287,13 @@
     }
   });
 
+  // 임시 비밀번호로 들어왔을 때: 다른 창(환영 인사 등)이 떠 있으면 그 창을 닫은 뒤에 비밀번호 바꾸기를 열어 줌
+  function showPwTemp() {
+    const busy = [...document.querySelectorAll('dialog[open]')].find((x) => x.id !== 'settings-dlg');
+    if (busy) { busy.addEventListener('close', () => setTimeout(showPwTemp, 300), { once: true }); return; }
+    openSettings(); $('pw-open').click();
+    toast('임시 비밀번호로 들어왔다. 새 비밀번호로 바꿔 두자. 지금 비밀번호 칸에는 받은 임시 비밀번호를 적으면 된다.');
+  }
   // ── 설정 메뉴 ──
   $('menu-btn').addEventListener('click', () => {
     const open = $('menu').hidden;
@@ -11663,6 +11705,7 @@
     socket.emit('account:password', { current: cur, next }, (res) => {
       if (res.error) { $('pw-error').textContent = res.error; return; }
       closePw();
+      try { localStorage.removeItem('pw-temp'); } catch {}
       toast('비밀번호를 바꿨다. 다른 기기에서는 새 비밀번호로 다시 들어와야 한다.');
     });
   });
@@ -11782,6 +11825,7 @@
     if (GM.tab === 'give') return renderGmGive(body);
     if (GM.tab === 'announce') return renderGmAnnounce(body);
     if (GM.tab === 'log') return renderGmLog(body);
+    if (GM.tab === 'pwreq') return renderGmPwReq(body);
     if (GM.tab === 'me') return renderGmMe(body);
     if (GM.d) return renderGmDragon(body, GM.d);
     renderGmList(body);
@@ -11818,6 +11862,38 @@
     }
     if (!GM.list.length) box.appendChild(gEl('p', 'note', '찾는 드래곤이 없다.'));
     body.appendChild(box);
+  }
+
+  // 임시 비밀번호 요청 (로그인 화면에서 들어온 것): 본인인지 확인하고 발급해 직접 전해 줌
+  function renderGmPwReq(body) {
+    body.appendChild(gEl('p', 'note', '로그인 화면에서 들어온 임시 비밀번호 요청이다. 가입 때 적은 계정과 요청 메모를 견주어 본인인지 확인한 뒤 발급하고, 메모에 적힌 곳으로 직접 전해 주자.'));
+    const box = gEl('div');
+    body.appendChild(box);
+    const draw = (list) => {
+      box.replaceChildren();
+      if (!list.length) { box.appendChild(gEl('p', 'note', '들어온 요청이 없다.')); return; }
+      for (const x of list) {
+        const r = gEl('div', 'fr-row');
+        const t = gEl('div');
+        t.appendChild(gEl('b', null, `${x.name} · 아이디 ${x.username}`));
+        t.appendChild(gEl('small', null, `가입 때 적은 계정: ${x.link || '없음'} · 요청 메모: ${x.note} · ${ago(x.at)}`));
+        r.appendChild(t);
+        const a = gEl('div', 'acts');
+        if (x.id) gBtn(a, '임시 비밀번호 발급', () => {
+          if (!confirm(`${x.name}(아이디 ${x.username})의 비밀번호를 임시 비밀번호로 바꿀까? 지금 비밀번호로는 더 이상 들어올 수 없고, 접속 중이면 끊긴다.`)) return;
+          socket.emit('gm:pwreset', { id: x.id }, (res) => {
+            if (res.error) return toast(res.error);
+            prompt(`아이디 ${res.username}의 임시 비밀번호. 복사해서 '${x.note}'(으)로 본인에게만 전해 주세요. (이 창을 닫으면 다시 볼 수 없다)\n들어오면 새 비밀번호로 바꾸라는 안내가 뜬다.`, res.temp);
+            load();
+          });
+        }, 'warn');
+        gBtn(a, '지우기', () => socket.emit('gm:pwreq:del', { uid: x.uid }, (res) => { if (!res.error) draw(res.list); }));
+        r.appendChild(a);
+        box.appendChild(r);
+      }
+    };
+    const load = () => socket.emit('gm:pwreqs', {}, (res) => { if (res.error) return toast(res.error); draw(res.list); });
+    load();
   }
 
   function gmSection(body, title, note) {
@@ -13056,7 +13132,9 @@
     socket.on('me', (me) => {
       setMe(me); if (me.battle && !BT) resumeBattle(); // 싸우는 중인데 창이 없으면 (새로고침·재접속 때 순서가 엇갈려도) 다시 엶
       renderSayMode(); maybeWelcome(); renderMazeBar(); renderRaidBar(); renderNmRow(); if ($('nm-dlg').open && !(me.nightMarket?.open && (me.nightMarket.here || nmTab === 'mine'))) $('nm-dlg').close(); FAV.migrate(); SEEN.migrate(); renderSlateDot(); renderNotesDot();
-      if (!S.seenReady) { S.seenReady = true; renderRescues(); } // 서버의 읽음 표시를 받은 뒤 한 번 다시 그림 (먼저 온 '다시 일어선 드래곤' 알림)
+      if (!S.seenReady) { S.seenReady = true; renderRescues(); }
+      // 임시 비밀번호로 들어왔으면: 설정의 비밀번호 바꾸기를 열어 줌 (바꾸면 안내 끝)
+      if (!S.pwTempShown) { let t = null; try { t = localStorage.getItem('pw-temp'); } catch {} if (t) { S.pwTempShown = true; setTimeout(showPwTemp, 800); } } // 서버의 읽음 표시를 받은 뒤 한 번 다시 그림 (먼저 온 '다시 일어선 드래곤' 알림)
       if (!SL.peeked) { SL.peeked = true; socket.emit('slate:peek', {}, (r) => { if (r?.ok) { SL.latest = Math.max(SL.latest, r.latest || 0); SL.replyAt = r.replyAt || 0; renderSlateDot(); } }); } // 내 글에 새 답이 왔는지
     });
     bindMazeSocket(); // 지하 회랑

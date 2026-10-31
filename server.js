@@ -98,6 +98,7 @@ app.use((req, res, next) => {
 const LIMIT = {
   login: { ip: 20, user: 8, windowMs: 15 * 60 * 1000 },   // 15분 동안 같은 주소 20번 · 같은 아이디 8번 틀리면
   register: { ip: 5, windowMs: 60 * 60 * 1000 },          // 한 시간에 같은 주소에서 계정 5개까지
+  pwreq: { ip: 5, user: 1, windowMs: 60 * 60 * 1000 },     // 임시 비밀번호 요청: 한 시간에 같은 주소 5번, 같은 아이디 1번
 };
 const tries = new Map(); // 열쇠 → [시각, ...]
 const hit = (key, windowMs) => { const now = Date.now(); const a = (tries.get(key) || []).filter((t) => now - t < windowMs); a.push(now); tries.set(key, a); return a.length; };
@@ -303,6 +304,27 @@ app.post('/api/register', async (req, res) => {
   res.json({ token });
 });
 
+// 임시 비밀번호 요청: 비밀번호를 잃어버린 멤버가 로그인 화면에서 GM에게 부탁함 (GM 도구 > 요청에서 확인하고 임시 비밀번호를 발급해 직접 전해 줌)
+// 아이디가 있든 없든 같은 대답 (아이디가 있는지 알아내는 데 쓰이지 않게)
+app.post('/api/pw-request', (req, res) => {
+  const username = str(req.body?.username).slice(0, 16);
+  const note = str(req.body?.note).replace(/\s+/g, ' ').trim().slice(0, 60);
+  const L = LIMIT.pwreq, ipKey = `pwreq:${req.ip}`, userKey = `pwreq-user:${username.toLowerCase()}`;
+  if (!username) return res.status(400).json({ error: '아이디를 적어 주자.' });
+  if (!note) return res.status(400).json({ error: '본인 확인을 위해 가입할 때 적은 계정이나 연락받을 곳을 적어 주자.' });
+  if (count(ipKey, L.windowMs) >= L.ip) return res.status(429).json({ error: '요청을 너무 여러 번 보냈다. 잠시 뒤에 다시 해 보자.' });
+  hit(ipKey, L.windowMs);
+  const user = db.getUserByName(username);
+  if (user && count(userKey, L.windowMs) < L.user) {
+    hit(userKey, L.windowMs);
+    const list = (db.worldGet('pwreq', []) || []).filter((x) => x.uid !== user.id);
+    list.unshift({ uid: user.id, username: user.username, note, at: Date.now() });
+    db.worldSet('pwreq', list.slice(0, 50));
+    for (const e of online.values()) if (e.socket?.data?.user?.is_gm) e.socket.emit('system', { text: `[GM] 임시 비밀번호 요청이 들어왔다. (아이디 ${user.username}) GM 도구 > 요청에서 확인하자.`, at: Date.now() });
+  }
+  res.json({ ok: true, text: '요청을 GM에게 보냈다. GM이 본인인지 확인한 뒤, 적어 준 곳으로 임시 비밀번호를 따로 전해 줄 것이다.' });
+});
+
 app.post('/api/login', async (req, res) => {
   const username = str(req.body?.username);
   const password = typeof req.body?.password === 'string' ? req.body.password : '';
@@ -318,7 +340,8 @@ app.post('/api/login', async (req, res) => {
   tries.delete(userKey); // 맞히면 그 아이디의 틀린 횟수는 지움
   const token = crypto.randomBytes(24).toString('hex');
   db.createSession(token, user.id);
-  res.json({ token });
+  const temp = !!(db.worldGet('pwtemp', {}) || {})[user.id]; // 임시 비밀번호로 들어왔으면 새 비밀번호로 바꾸라고 안내
+  res.json({ token, temp });
 });
 
 // 석판 그림 올리기: 그림 파일 그대로(바이트)를 받음. 로그인 토큰은 Authorization: Bearer, 크기는 ?w=&h=
@@ -1000,6 +1023,7 @@ const ruin = (() => {
   const save = () => db.worldSet('ruin', st);
   let goalAt = 0, goalV = RUIN.goalMin; // 목표는 1분씩 캐시 (저장 공간을 자주 두드리지 않게)
   const goal = (now = Date.now()) => {
+    if (RUIN.goalFixed) return RUIN.goalFixed; // 고정 목표 (8만)
     if (now - goalAt > 60000) {
       const n = db.activeSince(now - RUIN.activeDays * 24 * 3600000).filter((x) => x.level >= RUIN.minLevel).length;
       goalV = Math.max(RUIN.goalMin, n * RUIN.goalPer);
@@ -2537,6 +2561,7 @@ function onConnect(socket) {
     if (next.length < 8 || next.length > 64) return ack({ error: '새 비밀번호는 8~64자로 정해야 한다.' });
     if (next === cur) return ack({ error: '지금 비밀번호와 다른 비밀번호를 정하자.' });
     db.setPassword(u.id, await bcrypt.hash(next, 10), socket.handshake.auth?.token || null);
+    { const t = db.worldGet('pwtemp', {}) || {}; if (t[u.id]) { delete t[u.id]; db.worldSet('pwtemp', t); } } // 임시 비밀번호를 바꿨으면 안내 끝
     ack({ ok: true });
   });
 

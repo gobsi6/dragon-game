@@ -482,10 +482,25 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
       const ABC = 'abcdefghjkmnpqrstuvwxyz23456789'; // 헷갈리는 글자(0 o 1 l i) 뺌
       const temp = Array.from(crypto.randomBytes(8), (b) => ABC[b % ABC.length]).join('');
       db.setPassword(u.id, bcrypt.hashSync(temp, 10));
+      { const t = db.worldGet('pwtemp', {}) || {}; t[u.id] = Date.now(); db.worldSet('pwtemp', t); } // 들어오면 새 비밀번호로 바꾸라고 안내
+      db.worldSet('pwreq', (db.worldGet('pwreq', []) || []).filter((x) => x.uid !== u.id)); // 그 계정의 요청은 처리됨
       const entry = online.get(id);
       if (entry && entry.socket !== socket) kick(entry.socket);
       db.gmLog(gmName(), db.getDragon(id).name, `임시 비밀번호 발급 (아이디 ${u.username})`);
       return { ok: true, username: u.username, temp, dragon: detail(id), log: db.gmLogList(40) };
+    });
+
+    // 임시 비밀번호 요청 목록 (로그인 화면에서 들어온 것)
+    const pwreqs = () => (db.worldGet('pwreq', []) || []).map((x) => {
+      const d = db.getDragonByUser(x.uid);
+      const u = d ? db.gmUserOf(d.id) : null;
+      return { uid: x.uid, username: x.username, note: x.note, at: x.at, id: d?.id || null, name: d?.name || '(드래곤 없음)', link: u?.link || '' };
+    });
+    on('gm:pwreqs', () => ({ ok: true, list: pwreqs() }));
+    on('gm:pwreq:del', (p) => {
+      const uid = int(p.uid);
+      db.worldSet('pwreq', (db.worldGet('pwreq', []) || []).filter((x) => x.uid !== uid));
+      return { ok: true, list: pwreqs() };
     });
 
     on('gm:kick', (p) => {

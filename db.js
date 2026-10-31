@@ -707,7 +707,7 @@ module.exports = {
   // 비밀번호 바꾸기. keepToken이 있으면 그 접속만 남기고 다른 기기의 로그인은 모두 끊음
   setPassword: (userId, hash, keepToken = null) => {
     q.setPw.run(hash, userId);
-    const keep = keepToken ? q.sessUser.get(keepToken) : null;
+    const keep = keepToken ? q.sessUser.get(keepToken, 0) : null; // 세션 조회는 (토큰, 이 시각 이후) 두 값을 받음 — 예전엔 하나만 넘겨 비밀번호 바꾸기가 늘 실패했음
     q.delSessOf.run(userId);
     if (keep && keep.id === userId) q.createSess.run(keepToken, userId, Date.now());
   },
