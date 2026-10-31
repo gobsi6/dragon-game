@@ -83,7 +83,8 @@ function fromDragon(d, context) {
     taken: (hunt ? tm.huntDmg * (d.perks?.knight ? 0.7 : 1) * (ally?.guard ? KIN_GROW.shieldmate : 1) : 1) * (bf?.taken || 1) * (ti.taken || 1) * love * (gm?.taken || 1), // 받는 피해 배율 (등을 맡기는 새끼가 곁에 있으면 조금 덜)
     vsCorrupt: gm?.vsCorrupt || 1,
     healMult: (ti.heal || 1) * (gm?.heal || 1), // 칭호·희귀 장비(거둔 이삭의 관)
-    coverK: gm?.cover || 1, raidAtk: gm?.raidAtk || 1, flankK: gm?.flank || 0, // 레이드 희귀 장비: 막아서기 피해, 레이드 보스에게 주는 피해, 우회 확률
+    coverK: gm?.cover || 1, raidAtk: gm?.raidAtk || 1, flankK: gm?.flank || 0,
+    lingerK: gm?.linger || 0, ccResist: ti.ccResist || 0, roarK: ti.roar || 0, // 균열 레이드 보상: 상태 이상 한 턴 더(장비), 마비·얼어붙음 떨쳐 내기·포효(칭호) // 레이드 희귀 장비: 막아서기 피해, 레이드 보스에게 주는 피해, 우회 확률
     engrave: logic.engraveOf(d), // 장신구에 새긴 속성: 그 속성 공격 피해 배율
     buff: bf?.id || null,
     element: BREATHS[d.kind]?.element || null,
@@ -323,7 +324,7 @@ function dodged(att, def, lines) {
 // 위엄: 드래곤이 얼어붙음·마비를 기세로 떨쳐 냄 (떨쳐 냈으면 true)
 function resisted(def, lines, k) {
   const MR = COMBAT.majResist;
-  if (def.creature || !MR || Math.random() >= Math.min(MR.max, (def.maj || 0) * MR.per)) return false;
+  if (def.creature || !MR || Math.random() >= Math.min(MR.max, (def.maj || 0) * MR.per) + (['freeze', 'stun'].includes(k) ? def.ccResist || 0 : 0)) return false; // 칭호 '마지막 숨을 끊은 자': 마비·얼어붙음 떨쳐 내기
   lines.push(`${ga(def)} 기세로 버텨 내 ${STATUS[k]}에 빠지지 않았다.`);
   return true;
 }
@@ -353,7 +354,7 @@ function applyDebuff(att, def, debuff, chance, element, lines) {
     if (resist && (k === 'burn' || k === 'poison' || k === 'bleed') && n > 1 && Math.random() < resist) n -= 1;
     // 지혜: 드래곤이 거는 상태 이상이 확률로 한 턴 더 감 (확률 = 지혜 × per, 최대 max. 얼어붙음·마비는 빼고)
     const WL = COMBAT.wisLinger;
-    const longer = !!WL && !att.creature && !WL.skip.includes(k) && Math.random() < Math.min(WL.max, (att.mag || 0) * WL.per);
+    const longer = !!WL && !att.creature && !WL.skip.includes(k) && Math.random() < Math.min(WL.max, (att.mag || 0) * WL.per) + (att.lingerK || 0); // 심연을 본 눈 (희귀 장비)
     if (longer) n += 1;
     def.st[k] = Math.max(def.st[k] || 0, n);
     // 지속 피해는 건 쪽의 힘으로 정해짐. 사냥감(사냥·강적·도둑)은 비늘로 막히지 않는 피해라 기울기를 COMBAT.creatureDot배로 (대륙의 재앙은 그대로)

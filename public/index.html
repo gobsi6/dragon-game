@@ -10850,7 +10850,19 @@
       inp.value = ''; $('bt-chat-send').classList.remove('ready');
     });
   });
-  // 레이드: 함께 싸우는 동료. 누르면 치유·막아서기 대상으로 고름 (다시 누르면 풀림)
+  // 레이드: 고른 행동의 이름과 대상 (기다리는 동안 보여 줌)
+  function btPick(v) {
+    const p = v.pick;
+    if (!p) return null;
+    const sk = p.type === 'skill' ? (v.me.skills || []).find((x) => x.id === p.id) : null;
+    const name = { attack: '할퀴기', guard: '방어', cover: '막아서기', flee: '물러나기', flank: '우회' }[p.type] || sk?.name || '스킬';
+    const usesAlly = p.type === 'cover' || (p.type === 'skill' && p.id === 'mend');
+    let tgt = '';
+    if (usesAlly) tgt = p.ally ? (v.allies || []).find((a) => a.id === p.ally)?.name || '' : p.type === 'skill' ? '나' : '';
+    else if (['attack', 'flank'].includes(p.type) || (p.type === 'skill' && !['harden', 'focus', 'roar', 'quake'].includes(p.id))) tgt = (v.foes ? v.foes[v.target]?.name : v.foe?.name) || '';
+    return { name, tgt, usesAlly, foe: !usesAlly && !!tgt };
+  }
+  // 레이드: 함께 싸우는 동료. 누르면 치유·막아서기 대상으로 고름 (다시 누르면 풀림). 행동을 고른 뒤에는 그 행동의 대상만 바꿈
   function btAllies(v) {
     const box = $('bt-allies');
     const list = v.kind === 'raid' ? v.allies || [] : [];
@@ -10858,22 +10870,26 @@
     box.replaceChildren();
     if (!list.length) return;
     if (BT.ally && !list.some((a) => a.id === BT.ally && !a.left)) BT.ally = null;
+    const pk = BT.waiting ? btPick(v) : null;
+    const sel = pk ? (pk.usesAlly ? v.pick.ally : null) : BT.ally; // 기다리는 중이면 고른 행동의 대상
+    const role = pk?.usesAlly ? (v.pick.type === 'cover' ? '막아설 대상' : '치유 대상') : '';
     const h = document.createElement('div');
     h.className = 'bt-many-h';
-    h.textContent = BT.ally ? `동료 · ${list.find((a) => a.id === BT.ally)?.name} 고름` : '동료';
+    h.textContent = sel ? `동료 · ${list.find((a) => a.id === sel)?.name} ${pk ? role : '고름'}` : '동료';
     box.appendChild(h);
     const row = document.createElement('div');
     row.className = 'bt-al-row';
     for (const a of list) {
       const c = document.createElement('button');
       c.type = 'button';
-      const on = a.id === BT.ally;
+      const on = a.id === sel;
       c.className = `bt-mini${on ? ' on' : ''}${a.down || a.left ? ' down' : ''}`;
       c.disabled = a.left || v.over || BT.replay;
       c.innerHTML = '<span class="nm"><b></b><em></em></span><span class="num"></span><span class="bar hp"><i></i></span><span class="sts"></span>';
       c.querySelector('b').textContent = a.name;
-      c.querySelector('em').textContent = a.left ? '물러남' : a.down ? '쓰러짐' : v.over ? '' : a.chose ? '골랐다' : '고르는 중';
-      c.querySelector('em').classList.toggle('ok', !a.left && !a.down && !!a.chose && !v.over);
+      const ember = a.id === 'ember'; // 균열: 지켜야 할 불씨 (행동을 고르지 않음)
+      c.querySelector('em').textContent = ember ? (a.left ? '꺼짐' : '') : a.left ? '물러남' : a.down ? '쓰러짐' : v.over ? '' : a.chose ? '골랐다' : '고르는 중';
+      c.querySelector('em').classList.toggle('ok', !ember && !a.left && !a.down && !!a.chose && !v.over);
       c.querySelector('.num').textContent = `${Math.max(0, a.hp)} / ${a.hpMax}`;
       c.querySelector('.bar i').style.width = `${Math.max(0, Math.min(100, (a.hp / a.hpMax) * 100))}%`;
       const sts = c.querySelector('.sts');
@@ -10881,7 +10897,15 @@
       for (const g of a.tags || []) { const x = document.createElement('span'); x.className = g.bad ? 'bad' : ''; x.textContent = g.t; sts.appendChild(x); }
       c.setAttribute('aria-pressed', String(on));
       c.setAttribute('aria-label', `${a.name}, 체력 ${Math.max(0, a.hp)} / ${a.hpMax}${a.left ? ', 물러남' : a.down ? ', 쓰러짐' : ''}${on ? ', 고름' : ', 눌러서 고르기'}`);
-      c.addEventListener('click', () => { BT.ally = on ? null : a.id; renderBattle(); });
+      if (on && role) { const x = document.createElement('span'); x.className = 'pick-tag'; x.textContent = role; c.querySelector('.sts').prepend(x); }
+      c.addEventListener('click', () => {
+        if (BT.waiting) { // 고른 뒤: 치유·막아서기면 대상만 바꿈, 다른 행동이면 아무 일도 없음
+          if (!pk?.usesAlly || on) return;
+          socket.emit('raidboss:ally', { ally: a.id }, (res) => { if (res.error) return toast(res.error); BT.view = res.view; renderBattle(); });
+          return;
+        }
+        BT.ally = on ? null : a.id; renderBattle();
+      });
       row.appendChild(c);
     }
     box.appendChild(row);
@@ -10893,6 +10917,11 @@
       const minis = $('bt-foe').querySelectorAll('.bt-mini');
       v.foes.forEach((f, i) => out.push({ key: `f${i}`, f, el: minis[i] }));
     } else out.push({ key: 'foe', f: v.foe, el: $('bt-foe') });
+    // 레이드: 동료 카드도 (누가 치유받았는지·다쳤는지 그 카드에서 보이게)
+    if (v.kind === 'raid' && v.allies?.length) {
+      const cards = $('bt-allies').querySelectorAll('.bt-al-row .bt-mini');
+      v.allies.forEach((a, i) => { if (cards[i]) out.push({ key: `a${a.id}`, f: a, el: cards[i] }); });
+    }
     return out;
   }
   function btPlay(el, cls) {
@@ -10930,8 +10959,18 @@
       // 이 턴에 피했으면
       if (lines.some((l) => l.startsWith(x.f.name) && /날렵하게 피했다|흘려보냈다/.test(l))) btFloat(x.el, '회피', 'miss', k++);
       // 한 턴에 맞기도 하고 회복하기도 하면 둘 다 보여 줌 ("체력을 N 되찾았다" 줄로 회복량을 앎)
+      // 회복한 쪽을 정확히: 'A가 B에게 치유 마법을 펼쳤다! B가 체력을 N 되찾았다'는 B, 'A가 쓰러진 B를 일으켰다! 체력을 N'도 B (A가 아님)
       let heal = 0;
-      for (const l of lines) { if (!l.startsWith(x.f.name)) continue; const m = /체력을 (\d+) 되찾았다/.exec(l); if (m) heal += Number(m[1]); }
+      const nm = x.f.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const subjHeal = new RegExp(`${nm}(?:이|가|이\\(가\\)) 체력을 (\\d+) 되찾았다`);
+      for (const l of lines) {
+        const n = /체력을 (\d+) 되찾았다/.exec(l);
+        if (!n) continue;
+        const m = subjHeal.exec(l);
+        if (m) { heal += Number(m[1]); continue; }
+        if (l.includes(`쓰러진 ${x.f.name}`) && /일으켰다/.test(l)) { heal += Number(n[1]); continue; }
+        if (l.startsWith(x.f.name) && !/에게 치유|쓰러진 .+ 일으켰다/.test(l)) heal += Number(n[1]); // 스스로 치유
+      }
       heal = Math.min(heal, Math.max(0, x.f.hpMax - p.hp));
       const dmg = Math.max(0, heal - d);
       if (dmg > 0) {
@@ -11035,13 +11074,34 @@
     acts.replaceChildren();
     acts.hidden = v.over || BT.replay;
     if (!v.over && !BT.replay) {
-      const rbStop = v.kind === 'raid' ? (v.me.down ? '쓰러져 있다. 동료가 치유로 일으켜 주기를 기다린다.' : (v.me.tags || []).some((g) => g.t === '거두어짐') ? '검은 이삭에 거두어져 이번 턴은 움직일 수 없다.' : '') : '';
+      const tg = (t) => (v.me.tags || []).some((g) => g.t === t || g.t.startsWith(t));
+      const rbStop = v.kind === 'raid' ? (v.me.down ? '쓰러져 있다. 동료가 치유로 일으켜 주기를 기다린다.' : tg('거두어짐') ? '검은 이삭에 거두어져 이번 턴은 움직일 수 없다.' : tg('잿빛에 먹힘') ? '잿빛에 먹혀 이번 턴은 몸이 말을 듣지 않는다. 동료가 포효나 치유로 깨워 주기를 기다린다.' : tg('균열 끝') ? '균열 끝에 매달려 있다. 곧 올라와 싸움에 돌아간다.' : '') : '';
       if (BT.waiting || rbStop) {
         const w = document.createElement('div');
         w.className = 'wait';
         if (v.kind === 'raid') {
           const all = [true, ...(v.allies || []).filter((a) => !a.left && !a.down).map((a) => a.chose)];
           w.textContent = rbStop || `골랐다. 동료를 기다린다. (${all.filter(Boolean).length}/${all.length})`;
+          // 고른 행동과 대상: 카드를 다시 누르면 대상만 바뀌고, '다시 고르기'로 행동을 물림
+          const pk = !rbStop && btPick(v);
+          if (pk) {
+            const line = document.createElement('div');
+            line.className = 'pick';
+            const k = document.createElement('span'); k.textContent = '고른 행동 · ';
+            const b = document.createElement('b'); b.textContent = pk.tgt ? `${pk.name} → ${pk.tgt}` : pk.name;
+            line.append(k, b);
+            const hint = pk.usesAlly ? '다른 동료를 누르면 대상만 바뀐다' : pk.foe && v.foes?.length > 1 ? '다른 적을 누르면 대상만 바뀐다' : '';
+            if (hint) { const h = document.createElement('small'); h.textContent = ` · ${hint}`; line.appendChild(h); }
+            const redo = document.createElement('button');
+            redo.type = 'button'; redo.className = 'pick-redo'; redo.textContent = '다시 고르기';
+            redo.addEventListener('click', () => socket.emit('raidboss:undo', {}, (res) => {
+              if (res.error) return toast(res.error);
+              BT.ally = v.pick?.ally ?? BT.ally; // 고르던 동료는 그대로 둠
+              BT.waiting = false; BT.view = res.view; renderBattle();
+            }));
+            line.appendChild(redo);
+            w.appendChild(line);
+          }
         } else w.textContent = BT.foeReady ? '상대도 골랐다. 곧 턴이 펼쳐진다.' : '골랐다. 상대의 선택을 기다린다.';
         acts.appendChild(w);
       } else {
@@ -11131,6 +11191,7 @@
       socket.emit('raidboss:act', act, (res) => {
         if (res.error) return toast(res.error);
         BT.waiting = !!res.waiting;
+        if (res.view && !res.view.over && res.view.turn === BT.view.turn) BT.view = res.view; // 고른 행동과 대상을 보여 주려고 (턴이 이미 넘어갔으면 그대로)
         renderBattle();
       });
       return;
@@ -13453,6 +13514,8 @@
     const mine = !!lb && lb.ids.includes(me.id);
     const lead = mine && lb.leader === me.id;
     const used = me.raidBoss?.used?.[R.key] || 0;
+    const W = R.weekly || V.weekly; // 레이드마다 주간 보상 횟수 (균열은 2회)
+    const locked = !!me.raidBoss?.locked?.[R.key] && !S.isGm; // 아직 자격이 없음 (무엇이 모자란지는 밝히지 않음)
     $('rb-bar-t').textContent = `${R.place} · ${R.name}${gmTest(R) ? ' (GM 시험 · 아직 닫힘)' : ''}`;
     const sub = [];
     if (lb) {
@@ -13462,7 +13525,8 @@
       sub.push(full ? `준비 ${lb.ready.length}/${V.size} (${names}) · ${left}분 남음` : `모집 중 ${lb.ids.length}/${V.size} (${names}) · ${left}분 남음`);
     } else sub.push(`${V.size}인 레이드 · Lv.${V.minLevel} 이상`);
     if (R.fighting) sub.push(`지금 ${R.fighting}팀이 싸우는 중`);
-    sub.push(used >= V.weekly ? `이번 주 보상 ${used}/${V.weekly} (도우러만 갈 수 있음)` : `이번 주 보상 ${used}/${V.weekly}`);
+    sub.push(used >= W ? `이번 주 보상 ${used}/${W} (도우러만 갈 수 있음)` : `이번 주 보상 ${used}/${W}`);
+    if (locked) sub.splice(0, sub.length, '아직 균열 아래로 내려갈 때가 아니다.');
     if (R.best) sub.push(`최고 기록 ${R.best.turns}턴`);
     $('rb-bar-s').textContent = sub.join(' · ');
     const box = $('rb-bar-btns');
@@ -13480,7 +13544,7 @@
       });
       box.appendChild(b);
     };
-    const low = me.level < V.minLevel;
+    const low = me.level < V.minLevel || locked;
     if (!lb) btn('함께 갈 드래곤 찾기', 'raidboss:open', { primary: true, disabled: low || !!me.battle, title: low ? `레벨 ${V.minLevel}부터 함께할 수 있다.` : '' });
     else if (!mine) btn(`함께 가기 ${lb.ids.length}/${V.size}`, 'raidboss:join', { primary: true, disabled: low || lb.ids.length >= V.size || !!me.battle, title: low ? `레벨 ${V.minLevel}부터 함께할 수 있다.` : '' });
     else {

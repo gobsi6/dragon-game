@@ -3676,3 +3676,10 @@ html:has(dialog.dlg:modal), html:has(dialog.dlg:modal) body { overflow: hidden; 
 .scar-bar { background: #F6EEEC; border-color: #E0C3BE; }
 .scar-em { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #fff; border: 1px solid #E0C3BE; color: #8A2E27; flex: none; }
 .scar-em svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+/* 레이드: 고른 행동과 대상 (기다리는 동안) · 다시 고르기 */
+.wait .pick { margin-top: 6px; font-size: 13px; color: var(--ink-2); display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 4px; justify-content: center; }
+.wait .pick b { color: var(--steel-d); font-weight: 600; }
+.wait .pick small { color: var(--muted); font-size: 12px; }
+.wait .pick-redo { margin-left: 8px; padding: 2px 8px; font: 500 12px/1.4 var(--sans); color: var(--steel-d); background: #fff; border: 1px solid var(--line-in); border-radius: 3px; cursor: pointer; }
+.wait .pick-redo:hover { border-color: var(--steel); }
+.bt-mini .sts span.pick-tag { color: var(--steel-d); border-color: var(--steel); background: #EEF2F6; font-weight: 600; }

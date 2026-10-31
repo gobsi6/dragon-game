@@ -58,6 +58,10 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
   const emitTo = (id, ev, data) => { const e = live(id); if (e) e.socket.emit(ev, data); };
   const lobbyOf = (id) => [...lobbies.values()].find((l) => l.ids.includes(id)) || null;
   const usedOf = (id, key) => { roll(); return st.used[key]?.[id] || 0; }; // 이번 주에 그 레이드 보상을 받은 횟수
+  const weeklyOf = (key) => R.bosses[key]?.weekly || R.weekly;   // 레이드마다 주간 보상 횟수 (균열은 2회)
+  const turnsOf = (fg) => fg.B.maxTurns || R.maxTurns;            // 레이드마다 턴 제한 (균열은 22턴)
+  // 입장 자격 (균열: 모르벤·헤이른을 각각 한 번 이상 쓰러뜨렸는지. 첫 처치 칭호로 셈)
+  const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.titlesOf(d).have.includes(t));
 
   // ── 모두에게 보낼 모습 ─────────────────────────────
   function view() {
@@ -67,7 +71,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
       list: Object.entries(R.bosses).map(([key, B]) => {
         const lb = lobbies.get(key);
         return {
-          key, name: B.name, region: B.region, place: B.place, open: isOpen(B.region), script: B.script || 'morven',
+          key, name: B.name, region: B.region, place: B.place, open: isOpen(B.region), script: B.script || 'morven', weekly: weeklyOf(key),
           lobby: lb ? { leader: lb.leader, ids: lb.ids.slice(), names: lb.ids.map((id) => load(id)?.name || ''), until: lb.until, ready: lb.ready.slice(), gm: !!lb.gm } : null,
           fighting: [...fights.values()].filter((f) => f.key === key && !f.over).length,
           best: st.best[key] ? { turns: st.best[key].turns, names: st.best[key].names } : null,
@@ -77,15 +81,17 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     };
   }
   const push = () => io.emit('raidboss', view());
-  const meView = (d) => ({ used: Object.fromEntries(Object.keys(R.bosses).map((k) => [k, usedOf(d.id, k)])), weekly: R.weekly, inRaid: inFight.has(d.id) });
+  const meView = (d) => ({ used: Object.fromEntries(Object.keys(R.bosses).map((k) => [k, usedOf(d.id, k)])), weekly: R.weekly, inRaid: inFight.has(d.id),
+    locked: Object.fromEntries(Object.keys(R.bosses).filter((k) => !qualified(d, k)).map((k) => [k, true])) }); // 아직 자격이 없는 레이드
 
   // ── 들어갈 수 있는지 ───────────────────────────────
   // relax: GM 시험 (아직 열리지 않은 레이드를 멸망한 대륙 어디서든 미리 해 봄)
-  function why(d, key, relax = false) {
+  function why(d, key, relax = false, gm = false) {
     const B = R.bosses[key];
     if (!B) return '그런 레이드는 없다.';
     if (isTestDragon(d)) return '시험용 드래곤은 다른 드래곤과 어울릴 수 없다.';
     if (d.level < R.minLevel) return `레벨 ${R.minLevel}이 되어야 함께할 수 있다.`;
+    if (!gm && !qualified(d, key)) return '아직 균열 아래로 내려갈 때가 아니다.'; // 무엇이 모자란지는 밝히지 않음 (GM 시험은 자격 없이)
     if (relax) { if (!logic.isRuin(d.region)) return '멸망한 대륙에 가야 시험할 수 있다.'; }
     else {
       if (!isOpen(B.region)) return `${REGIONS[B.region].name}${josa(REGIONS[B.region].name, '은', '는')} 아직 열리지 않았다.`;
@@ -111,7 +117,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
   const relaxOf = (lb) => !!lb.gm && !isOpen(R.bosses[lb.key].region); // 닫힌 레이드의 GM 시험
   function openLobby(d, key, gm) {
     if (!R.bosses[key]) return { error: '그런 레이드는 없다.' };
-    const w = why(d, key, !!gm && !isOpen(R.bosses[key].region));
+    const w = why(d, key, !!gm && !isOpen(R.bosses[key].region), !!gm);
     if (w) return { error: w };
     if (lobbies.has(key)) return { error: '이미 누군가 모집하고 있다. 함께 가기를 눌러 합류하자.' };
     if (lobbyOf(d.id)) return { error: '이미 다른 모집에 들어가 있다.' };
@@ -176,7 +182,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     const out = [];
     for (const id of lb.ids) {
       const x = load(id);
-      const w = !x ? '사라졌다.' : !live(id) ? '접속해 있지 않다.' : why(x, key, relaxOf(lb));
+      const w = !x ? '사라졌다.' : !live(id) ? '접속해 있지 않다.' : why(x, key, relaxOf(lb), lb.gm && id === lb.leader);
       if (w) out.push({ id, name: x?.name || '', w });
     }
     if (out.length) {
@@ -217,7 +223,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
       f.ally = null; // 곁에 둔 새끼는 레이드에 따라오지 않음
       f.atk *= (logic.titleMods(d).eliteAtk || 1) * logic.gearMods(d).eliteAtk; // 레이드 보스도 강적: '강적과 싸울 때 공격' 칭호·희귀 장비가 듦 (강적 전투와 같은 방식)
       f.hp = Math.min(f.hp, f.hpMax); f.hp0 = f.hp;
-      f.ears = 0; f.reaped = 0; f.mindLoss = 0;
+      f.ears = 0; f.reaped = 0; f.mindLoss = 0; f.erosion = 0; f.consumed = false; f.away = 0; // erosion·consumed·away: 균열 (잿빛 침식, 잿빛에 먹힘, 가장자리로 밀려남)
       players.push(f);
       logic.dexMeet(d, `raid:${key}`);
       db.saveState(d);
@@ -234,7 +240,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     fights.set(fight.id, fight);
     if (!test) { st.tried[key] = true; save(); }
     const nerf = st.nerf[key] ? ` 지난주의 상처가 남아 있어 조금 약해져 있다. (체력 −${Math.round(st.nerf[key] * 100)}%)` : '';
-    const lines = [B.intro, `${opening}${nerf}`, `${R.maxTurns}턴 안에 쓰러뜨려야 한다. 보스가 다음 턴에 할 일은 미리 보인다.`];
+    const lines = [B.intro, `${opening}${nerf}`, `${B.maxTurns || R.maxTurns}턴 안에 쓰러뜨려야 한다. 보스가 다음 턴에 할 일은 미리 보인다.`];
     if (test) lines.push(`GM 시험: ${ids.length}마리로 들어갔다. 보상과 기록은 남지 않는다.`);
     fight.log.push({ turn: 0, lines });
     schedule(fight);
@@ -307,6 +313,9 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     const t = [];
     if (p.ears) t.push({ t: `검은 이삭 ${p.ears}`, bad: true });
     if (p.reaped) t.push({ t: '거두어짐', bad: true });
+    if (p.erosion) t.push({ t: `잿빛 침식 ${p.erosion}`, bad: true });
+    if (p.consumed) t.push({ t: '잿빛에 먹힘', bad: true });
+    if (p.away) t.push({ t: `균열 끝 · ${p.away}턴`, bad: true });
     return t;
   }
   function viewFor(fg, id) {
@@ -321,15 +330,17 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     const multi = fg.foes.length > 1;
     const intent = intentOf(fg);
     return {
-      kind: 'raid', raid: fg.key, turn: fg.turn, maxTurns: R.maxTurns, over: fg.over, boss: false, weather: null,
+      kind: 'raid', raid: fg.key, turn: fg.turn, maxTurns: turnsOf(fg), over: fg.over, boss: false, weather: null,
       me: mv, foe: fv(foeF),
       foes: multi ? fg.foes.map((f, i) => ({ ...fv(f), i, intent: null })) : null,
       target: multi ? fg.targets[id] : null,
       intent,
-      allies: fg.players.filter((p) => p.id !== id).map((p) => ({ ...K.fighterView(p, false), tags: tagsOf(p, fg), left: !!p.left, chose: !!fg.pending[p.id] || !alive(p) || !!p.reaped })),
+      allies: [...fg.players.filter((p) => p.id !== id).map((p) => ({ ...K.fighterView(p, false), tags: tagsOf(p, fg), left: !!p.left, chose: !!fg.pending[p.id] || !alive(p) || !!p.reaped || !!p.away || !!p.consumed })),
+        ...(fg.ember ? [{ ...K.fighterView(fg.ember, false), id: 'ember', tags: [{ t: fg.ember.hp > 0 ? '지켜야 할 불씨' : '꺼짐', bad: fg.ember.hp <= 0 }], chose: true, left: fg.ember.hp <= 0 }] : [])], // 균열: 불씨도 동료처럼 골라 막아서기·치유
       fire: fg.fire, phase: fg.phase, script: fg.B.script || 'morven', duelOn: fg.duel && fg.turn + 1 >= fg.duel.from ? fg.duel.on : null,
       deadline: fg.deadline,
       waiting: !!fg.pending[id],
+      pick: fg.pending[id] ? { type: fg.pending[id].type, id: fg.pending[id].id || null, ally: fg.pending[id].ally ?? null } : null, // 고른 행동 (대상을 바꾸거나 다시 고를 때 화면에 보임)
       won: fg.over ? fg.outcome === 'win' : null,
       fled: fg.over && me.left ? 'me' : null,
       log: fg.log.slice(-1)[0]?.lines || [],
@@ -340,11 +351,13 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
   // ── 한 턴 ──────────────────────────────────────────
   function arm(fg) {
     clearTimeout(fg.timer);
-    fg.deadline = Date.now() + R.turnSeconds * 1000;
-    fg.timer = setTimeout(() => resolve(fg), R.turnSeconds * 1000 + 300);
+    // 이번 턴에 고를 수 있는 드래곤이 아무도 없으면 (모두 잿빛에 먹혔거나 밀려났거나 거두어짐) 60초를 기다리지 않고 곧 넘어감
+    const wait = needs(fg).length ? R.turnSeconds * 1000 : 3000;
+    fg.deadline = Date.now() + wait;
+    fg.timer = setTimeout(() => resolve(fg), wait + 300);
     fg.timer.unref?.();
   }
-  const needs = (fg) => livePlayers(fg).filter((p) => !p.reaped);
+  const needs = (fg) => livePlayers(fg).filter((p) => !p.reaped && !p.away && !p.consumed);
   // 자동으로 고르기: 예고된 큰 공격은 막고, 위험하면 치유, 아니면 평소처럼
   function autoPick(fg, p) {
     const foe = targetOf(fg, p);
@@ -383,19 +396,20 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     p.covering = null;
     const B = fg.B;
     if (p.reaped) { lines.push(`${ga(p.name)} 거두어져 움직이지 못했다.`); return; }
+    if (SC(fg).override?.(fg, p, a, lines)) return; // 보스마다 내 차례를 빼앗는 일 (균열: 잿빛에 먹힘, 가장자리로 밀려남)
     if (a.type === 'flee') {
       p.left = true;
       lines.push(`${ga(p.name)} 싸움에서 물러났다.`);
       return;
     }
     if (a.type === 'cover') {
-      const t = fg.players.find((x) => x.id === a.ally && x !== p && alive(x));
+      const t = fg.players.find((x) => x.id === a.ally && x !== p && alive(x)) || (a.ally === 'ember' && fg.ember?.hp > 0 ? fg.ember : null);
       if (!t) a = { type: 'guard' };
       else { p.covering = t.id; p.guarding = false; lines.push(`${ga(p.name)} ${t.name} 곁을 지키며 막아설 채비를 했다.`); return; }
     }
     // 동료를 치유 (쓰러진 동료면 일으킴)
     if (a.type === 'skill' && a.id === 'mend' && a.ally && a.ally !== p.id && p.skills.includes('mend')) {
-      const t = fg.players.find((x) => x.id === a.ally && !x.left);
+      const t = fg.players.find((x) => x.id === a.ally && !x.left) || (a.ally === 'ember' && fg.ember?.hp > 0 ? fg.ember : null);
       const why2 = combat.blocked(p, a);
       if (t && !why2 && !p.st.freeze && !p.st.stun) {
         const s = SKILLS.mend;
@@ -411,6 +425,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
         for (const k of gone) t.st[k] = 0;
         if (gone.length) lines.push(`${t.name}의 ${gone.map((k) => STATUS[k]).join('·')} 상태가 씻겨 나갔다.`);
         if (B.ears) earsOff(t, 1 + Math.floor((p.mag || 0) / B.ears.cleanseWis), lines);
+        if (B.erosion && t.erosion) erosionOff(t, 1 + Math.floor((p.mag || 0) / B.erosion.cleanseWis), lines); // 균열: 잿빛 침식 씻기 (먹힌 동료도 깨어남)
         fg.heals[p.id] = (fg.heals[p.id] || 0) + 1;
         return;
       }
@@ -515,7 +530,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     }
     if (isWon(fg)) { fg.outcome = 'win'; lines.push(...B.lines.win); }
     else if (!livePlayers(fg).length) { fg.outcome = fg.players.some((p) => p.hp > 0) ? 'left' : 'wipe'; if (fg.outcome === 'wipe') lines.push(...B.lines.wipe); }
-    else if (fg.turn >= R.maxTurns) { fg.outcome = 'time'; lines.push(...B.lines.time); }
+    else if (fg.turn >= turnsOf(fg)) { fg.outcome = 'time'; lines.push(...B.lines.time); }
     fg.log.push({ turn: fg.turn, lines });
     if (fg.outcome) return finish(fg, lines);
     schedule(fg);
@@ -828,6 +843,214 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     return t;
   }
 
+  // ── 균열을 지킨 자 아스테르 (엔드 레이드): 잿빛 침식, 심연의 숨, 번개 숨결, 꺼지지 않은 불씨, 가장자리, 마지막 숨 ──
+  function erosionOff(p, n, lines) {
+    if (!p.erosion || n <= 0) return;
+    const k = Math.min(p.erosion, n);
+    p.erosion -= k;
+    lines.push(`${p.name}에게 스며든 잿빛 침식이 ${k}겹 씻겨 나갔다.`);
+    if (p.consumed) { p.consumed = false; lines.push(`${ga(p.name)} 정신을 차렸다.`); }
+  }
+  const rps = (fg) => livePlayers(fg).filter((p) => !p.away); // 가장자리로 밀려나지 않은 드래곤
+  const rtNow = (fg, type) => (fg.plans || []).find((x) => x.at === fg.turn && x.type === type);
+  const rtNext = (fg) => (fg.plans || []).filter((x) => x.at === fg.turn + 1);
+  function rtSetup(fg, total) {
+    const B = fg.B;
+    fg.boss = part(B, 'boss', total);
+    fg.foes = [fg.boss];
+    fg.ember = null; fg.emberLost = false; fg.last = null; fg.plans = []; fg.roarDelays = {}; fg.dispersed = false;
+    return `${ga(B.boss.name)} 균열 위로 몸을 끌어올린다. 금빛과 잿빛이 뒤섞인 비늘이 번개를 머금고 일렁인다.`;
+  }
+  function rtSchedule(fg) {
+    const B = fg.B;
+    const nt = fg.turn + 1, rel = nt - fg.phaseAt;
+    const ps = rps(fg);
+    fg.plans = [];
+    if (!ps.length) return;
+    const plans = [];
+    if (fg.phase === 3 && fg.ember?.hp > 0 && rel > 0 && rel % B.hesitate.every === 0) plans.push({ type: 'hesitate' });
+    else {
+      if (fg.phase <= 2 && rel > 0 && rel % B.abyss.every === 0) plans.push({ type: 'abyss' });
+      if (nt % B.bolt.every === 0) plans.push({ type: 'bolt', on: ps.slice().sort(() => Math.random() - 0.5).slice(0, B.bolt.n).map((p) => p.id) });
+      if (fg.phase >= 2 && fg.ember?.hp > 0 && rel > 0 && rel % B.emberHit.every === 0) plans.push({ type: 'ember' });
+      if (fg.phase >= 2 && rel > 0 && rel % B.push.every === 0) plans.push({ type: 'push', on: pick(ps).id });
+    }
+    fg.plans = plans.map((x) => ({ ...x, at: nt }));
+  }
+  function rtIntent(fg) {
+    const B = fg.B;
+    const nm = (id) => fg.players.find((x) => x.id === id)?.name || '';
+    const parts = [];
+    let heavy = false;
+    for (const x of rtNext(fg)) {
+      if (x.type === 'hesitate') return { kind: 'self', text: `${B.boss.short}의 눈빛이 잠깐 흔들린다. 가슴의 불씨가 깜빡인다.`, hint: '' };
+      if (x.type === 'abyss') { heavy = true; parts.push(`${ga(B.boss.short)} 균열 아래로 고개를 숙여 깊은 숨을 들이마신다.`); }
+      if (x.type === 'bolt') { heavy = true; const ns = x.on.map(nm); parts.push(`비늘 사이로 번개가 튄다. ${ns.join(josa(ns[0], '과', '와') + ' ')} 쪽을 노린다.`); }
+      if (x.type === 'ember') { heavy = true; parts.push('심연의 숨이 불씨 쪽으로 일렁인다.'); }
+      if (x.type === 'push') parts.push(`${ga(B.boss.short)} 날개를 들어 ${nm(x.on)}${josa(nm(x.on), '을', '를')} 균열 끝으로 쓸어내려 한다.`);
+    }
+    if (fg.phase === 3 && fg.last) { heavy = heavy || fg.last.n + 1 >= B.last.charge; parts.push(`마지막 숨이 모인다. (${fg.last.n}/${B.last.charge})`); }
+    if (!parts.length) parts.push(fg.phase === 1 ? `${ga(B.boss.short)} 바위를 움켜쥐고 이쪽을 노려본다.` : `${ga(B.boss.short)} 잿빛 발톱을 치켜든다.`);
+    return { kind: heavy ? 'heavy' : 'attack', text: parts.join(' '), hint: '' };
+  }
+  // 내 차례를 빼앗는 일: 가장자리로 밀려났거나, 잿빛에 먹혔으면 아무것도 못 함 (먹힌 드래곤은 보스 차례에 동료를 공격)
+  function rtOverride(fg, p, a, lines) {
+    if (p.away > 0) { lines.push(`${ga(p.name)} 균열 끝에 매달려 올라오려 애쓴다.`); return true; }
+    if (p.consumed) { lines.push(`${ga(p.name)} 잿빛에 먹혀 몸이 말을 듣지 않는다…`); return true; }
+    return false;
+  }
+  function rtAfter(fg, p, a, foe, { did, bossHp }, lines) {
+    const B = fg.B;
+    if (did && a.id === 'mend') erosionOff(p, 1 + Math.floor((p.mag || 0) / B.erosion.cleanseWis), lines);
+    // 날개 돌풍으로 심연의 숨 흩트리기
+    if (did && a.id === 'gust' && rtNow(fg, 'abyss') && !fg.dispersed) {
+      const G = B.abyss.gust;
+      if (Math.random() < clamp(0.5 + ((p.spd || 0) - G.wing) * G.per, 0.1, 0.95)) { fg.dispersed = true; lines.push(`${ga(p.name)} 날개 돌풍으로 모이던 심연의 숨을 흩트렸다!`); }
+      else { p.gustFail = true; lines.push(`${p.name}의 돌풍이 심연의 숨을 다 흩트리지 못했다.`); }
+    }
+    if (did && a.id === 'roar') {
+      // 포효: 잿빛에 먹힌 동료를 깨움
+      for (const x of fg.players) if (x.consumed && x !== p) { x.consumed = false; x.erosion = 0; lines.push(`${p.name}의 포효에 ${ga(x.name)} 정신을 차렸다. 잿빛 침식이 걷혔다.`); }
+      // 마지막 숨 늦추기 (위엄)
+      if (fg.phase === 3 && fg.last?.n > 0) {
+        const L = B.last;
+        if (Math.random() < clamp(L.roarBase + ((p.maj || 0) - B.maj) * L.roarPer + (p.roarK || 0), 0.2, 0.95)) {
+          fg.last.n -= 1;
+          fg.roarDelays[p.id] = (fg.roarDelays[p.id] || 0) + 1;
+          lines.push(`${p.name}의 포효에 모이던 마지막 숨이 흐트러졌다. (${fg.last.n}/${L.charge})`);
+        } else lines.push(`${p.name}의 포효가 마지막 숨을 막지 못했다.`);
+      }
+    }
+    // 마지막 숨: 모으는 동안 큰 피해를 주면 흩어짐
+    if (fg.phase === 3 && fg.last && fg.last.n > 0 && bossHp > fg.boss.hp) {
+      fg.last.dealt += bossHp - fg.boss.hp;
+      if (fg.last.dealt >= fg.boss.hpMax * B.last.cut) { fg.last.n = 0; fg.last.dealt = 0; lines.push('거센 공격에 고룡이 휘청인다. 모으던 마지막 숨이 흩어졌다!'); }
+    }
+  }
+  function rtPhases(fg, lines) {
+    const B = fg.B;
+    if (fg.phase === 1 && fg.boss.hp > 0 && fg.boss.hp <= fg.boss.hpMax * B.phase2) {
+      fg.phase = 2; fg.phaseAt = fg.turn;
+      fg.ember = part(B, 'ember', B.ember.hp); fg.ember.id = 'ember'; fg.ember.atk = 0;
+      lines.push(...B.lines.phase2);
+    }
+    if (fg.phase === 2 && fg.boss.hp > 0 && fg.boss.hp <= fg.boss.hpMax * B.phase3) {
+      fg.phase = 3; fg.phaseAt = fg.turn; fg.last = { n: 0, dealt: 0 };
+      lines.push(...B.lines.phase3);
+    }
+  }
+  const rtWon = (fg) => fg.boss.hp <= 0;
+  function rtBossTurn(fg, lines) {
+    const B = fg.B, h = fg.boss;
+    const ps = () => rps(fg);
+    const red = (p) => (p.guarding ? 0.5 : 1) * ((p.st.harden || 0) > 0 ? 0.5 : 1) * ((p.st.stone || 0) > 0 ? 0.7 : 1) * (p.taken || 1);
+    // 잿빛에 먹힌 드래곤이 동료에게 달려듦
+    for (const p of livePlayers(fg)) {
+      if (!p.consumed || p.away) continue;
+      const others = ps().filter((x) => x !== p);
+      if (others.length) { const t = pick(others); const { dmg } = K.damage(p, t, 1, {}); t.hp = Math.max(0, t.hp - dmg); lines.push(`잿빛에 먹힌 ${ga(p.name)} ${t.name}에게 달려들어 ${dmg}의 피해를 입혔다!`); }
+      p.consumed = false; p.erosion = 0;
+    }
+    downs(fg, lines);
+    if (!ps().length || h.hp <= 0) return;
+    if (rtNow(fg, 'hesitate')) { lines.push(`${ga(h.name)} 멈칫한다. 가슴의 불씨가 깜빡이며 발톱이 허공에서 멈춘다. "…아직… 아니다."`); return; }
+    if (h.st.freeze > 0 || h.st.stun > 0) { lines.push(`${ga(h.name)} 움직이지 못했다.`); return; }
+    let heavy = false;
+    if (rtNow(fg, 'abyss')) {
+      heavy = true;
+      const pct = B.abyss.pct * (fg.dispersed ? 0.5 : 1);
+      const hits = ps().map((p) => { const n = Math.max(1, Math.round(p.hpMax * pct * red(p) * (p.gustFail ? B.abyss.gust.fail : 1))); p.hp = Math.max(0, p.hp - n); return `${p.name} ${n}`; });
+      lines.push(`심연의 숨이 균열 위를 덮쳤다!${fg.dispersed ? ' (흩어져 절반)' : ''} ${hits.join(', ')}의 피해.`);
+    }
+    const bolt = rtNow(fg, 'bolt');
+    if (bolt) {
+      heavy = true;
+      lines.push(`${ga(h.name)} 번개 숨결을 내리쳤다!`);
+      for (const id of bolt.on) {
+        const t = fg.players.find((x) => x.id === id && alive(x) && !x.away);
+        if (!t) continue;
+        const recv = coverOf(fg, t) || t;
+        const before = recv.hp;
+        bossStrike(fg, h, t, B.bolt.power, lines, '번개가');
+        if (recv.hp < before && recv.hp > 0) {
+          const K2 = B.bolt;
+          const keep = clamp(((recv.maj || 0) - K2.majBase) * K2.majPer, 0, K2.majMax) + (recv.ccResist || 0);
+          if (Math.random() < keep) lines.push(`${ga(recv.name)} 위엄으로 번개를 떨쳐 내 마비되지 않았다.`);
+          else { recv.st.stun = 2; lines.push(`${ga(recv.name)} 마비되었다!`); }
+        }
+      }
+    }
+    if (rtNow(fg, 'ember') && fg.ember?.hp > 0) { heavy = true; bossStrike(fg, h, fg.ember, B.emberHit.power, lines, '심연의 숨이 불씨를 덮쳐'); }
+    const push = rtNow(fg, 'push');
+    if (push) {
+      const t = fg.players.find((x) => x.id === push.on && alive(x) && !x.away);
+      if (t) {
+        const P = B.push;
+        if (Math.random() < clamp(0.5 + ((t.spd || 0) - P.wing) * P.per, 0.1, 0.95)) lines.push(`${ga(t.name)} 날개를 펼쳐 균열 가장자리에서 버텼다.`);
+        else { t.away = P.away; t.awaySet = fg.turn; lines.push(`${ga(t.name)} 균열 끝으로 밀려났다! (${P.away}턴 동안 싸움에서 빠진다)`); }
+      }
+    }
+    if (fg.phase === 3 && fg.last) {
+      fg.last.n += 1;
+      if (fg.last.n >= B.last.charge) {
+        heavy = true;
+        const hits = ps().map((p) => { const n = Math.max(1, Math.round(p.hpMax * B.last.pct * red(p))); p.hp = Math.max(0, p.hp - n); return `${p.name} ${n}`; });
+        lines.push(`${ga(h.name)} 마지막 숨을 토해 냈다! 균열 위가 잿빛으로 뒤덮인다. ${hits.join(', ')}의 피해.`);
+        fg.last.n = 0; fg.last.dealt = 0;
+      } else lines.push(`마지막 숨이 모인다. (${fg.last.n}/${B.last.charge})`);
+    }
+    if (!heavy && ps().length) bossStrike(fg, h, pick(ps()), 1, lines, `${ga(h.name)} 발톱을 휘둘러`);
+    // 잿빛 침식이 스며듦
+    const er = ps().slice().sort(() => Math.random() - 0.5).slice(0, B.erosion.n);
+    for (const p of er) {
+      p.erosion = Math.min(B.erosion.max, (p.erosion || 0) + 1);
+      if (p.erosion >= B.erosion.max && !p.consumed) { p.consumed = true; lines.push(`${p.name}의 눈빛이 잿빛으로 흐려진다…`); }
+    }
+    if (er.length) lines.push(`잿빛 침식이 ${er.map((p) => p.name).join(', ')}에게 스며든다.`);
+    downs(fg, lines);
+  }
+  function rtEnd(fg, lines) {
+    const B = fg.B;
+    fg.dispersed = false;
+    for (const p of fg.players) p.gustFail = false;
+    downs(fg, lines);
+    phases(fg, lines);
+    if (fg.ember && fg.ember.hp <= 0 && !fg.emberLost) {
+      fg.emberLost = true;
+      fg.boss.atk *= B.emberHit.lost;
+      lines.push(`불씨가 꺼졌다. ${ga(fg.boss.name)} 완전히 심연에 넘어갔다. 눈빛에서 금빛이 사라진다.`);
+    }
+    for (const p of fg.players) {
+      if (!(p.away > 0) || p.awaySet === fg.turn) continue;
+      p.away -= 1;
+      if (p.away === 0 && p.hp > 0) {
+        p.hp = Math.min(p.hp, Math.round(p.hpMax * B.push.back));
+        lines.push(`${ga(p.name)} 균열 끝에서 기어올라 싸움에 돌아왔다.`);
+      }
+    }
+  }
+  // 자동으로 고를 때: 먹힌 동료 깨우기, 심연의 숨 흩트리기, 불씨 지키기, 침식 씻기, 마지막 숨 늦추기
+  function rtAuto(fg, p) {
+    const has = (id) => p.skills.includes(id) && !combat.blocked(p, { type: 'skill', id });
+    if (has('roar') && (fg.players.some((x) => x.consumed && x !== p) || (fg.phase === 3 && fg.last?.n >= 3))) return { type: 'skill', id: 'roar' };
+    if (rtNow(fg, 'abyss') && has('gust')) return { type: 'skill', id: 'gust' };
+    if (rtNow(fg, 'ember') && fg.ember?.hp > 0) {
+      const tank = rps(fg).slice().sort((a, b) => (b.def || 0) - (a.def || 0))[0];
+      if (tank === p) return { type: 'cover', ally: 'ember' };
+    }
+    const er = rps(fg).find((x) => x !== p && x.erosion >= fg.B.erosion.max - 1);
+    if (er && has('mend')) return { type: 'skill', id: 'mend', ally: er.id };
+    return null;
+  }
+  function rtTags(fg, f) {
+    const t = [];
+    if (f === fg.boss) {
+      if (fg.emberLost) t.push({ t: '심연에 넘어감', bad: true });
+      if (fg.phase === 3 && fg.last) t.push({ t: `마지막 숨 ${fg.last.n}/${fg.B.last.charge}` });
+    }
+    return t;
+  }
+
   const SCRIPTS = {
     morven: { setup: mvSetup, schedule: mvSchedule, intent: mvIntent, beforeAct: mvBefore, afterAct: mvAfter, phases: mvPhases, endTurn: mvEnd, bossTurn: mvBossTurn, isWon: mvWon,
       // 자동으로 고를 때: 수확당할 동료(나 포함)가 있으면 치유로 이삭부터 씻음
@@ -835,6 +1058,8 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
       sub: (f) => (f.raid === 'crow' ? '허수아비' : '레이드'), foeTags: () => [] },
     knights: { setup: knSetup, schedule: knSchedule, intent: knIntent, startTurn: knStart, beforeAct: knBefore, afterAct: knAfter, phases: knPhases, endTurn: knEnd, bossTurn: knBossTurn, isWon: knWon,
       autoPick: knAuto, sub: knSub, foeTags: knTags },
+    rift: { setup: rtSetup, schedule: rtSchedule, intent: rtIntent, override: rtOverride, beforeAct: () => false, afterAct: rtAfter, phases: rtPhases, endTurn: rtEnd, bossTurn: rtBossTurn, isWon: rtWon,
+      autoPick: rtAuto, sub: () => '레이드', foeTags: rtTags },
   };
 
   // ── 끝내기 ─────────────────────────────────────────
@@ -851,6 +1076,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
       const names = fg.players.map((p) => p.name);
       if (!st.first[fg.key]) {
         st.first[fg.key] = { at: now, names };
+        fg.firstClear = true;
         news(`[레이드] ${names.join(', ')}${josa(names[names.length - 1], '이', '가')} ${REGIONS[B.region].name}에서 ${eul(B.boss.name)} 처음 쓰러뜨렸다! (${fg.turn}턴)`);
       } else io.emit('system', { text: `[레이드] ${names.join(', ')}${josa(names[names.length - 1], '이', '가')} ${eul(B.boss.name)} 쓰러뜨렸다. (${fg.turn}턴)`, at: now }); // 대륙 소식(기록)에는 첫 처치만
       if (!st.best[fg.key] || fg.turn < st.best[fg.key].turns) st.best[fg.key] = { turns: fg.turn, names, at: now };
@@ -877,7 +1103,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
           logic.dexWin(d, `raid:${fg.key}`);
           res.lines.push(...logic.traitCount(d, `raidwin_${fg.key}`));
           const first = (logic.traitsOf(d).counts[`raidwin_${fg.key}`] || 0) === 1;
-          if (usedOf(d.id, fg.key) < R.weekly) {
+          if (usedOf(d.id, fg.key) < weeklyOf(fg.key)) {
             (st.used[fg.key] ||= {})[d.id] = usedOf(d.id, fg.key) + 1;
             const W = B.reward;
             const gold = randInt(...W.gold);
@@ -900,7 +1126,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
             if (first) res.lines.push(`처음 쓰러뜨렸으니 ${eul(ITEM_NAME(W.shard))} 넉넉히 챙겼다. 장신구 하나를 빚을 만큼이다.`);
             if (first) res.lines.push(logic.chestAdd(d, W.keepsake, '', '', now, null, {}) ? B.lines.keepsake : `${B.lines.keepsakeNoNest}`);
             res.lines.push(...purify(d, W.purify));
-            res.lines.push(`이번 주 ${B.boss.name} 보상 ${st.used[fg.key][d.id]}/${R.weekly}`);
+            res.lines.push(`이번 주 ${B.boss.name} 보상 ${st.used[fg.key][d.id]}/${weeklyOf(fg.key)}`);
             const f = logic.addFame(d, W.fame);
             if (f) res.lines.push(f);
             save();
@@ -929,6 +1155,9 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
       if (fg.heals[p.id] && !fg.test) res.lines.push(...logic.traitCount(d, 'healother', fg.heals[p.id]));
       if (fg.flanks?.[p.id] && !fg.test) res.lines.push(...logic.traitCount(d, 'raidflank', fg.flanks[p.id]));
       if (fg.duels?.[p.id] && !fg.test) res.lines.push(...logic.traitCount(d, 'raidduel', fg.duels[p.id]));
+      if (fg.roarDelays?.[p.id] && !fg.test) res.lines.push(...logic.traitCount(d, 'riftroar', fg.roarDelays[p.id])); // 균열: 마지막 숨을 포효로 늦춘 횟수
+      if (won && !p.left && !fg.test && fg.ember && fg.ember.hp > 0) res.lines.push(...logic.traitCount(d, 'riftember')); // 균열: 불씨를 지킨 채 쓰러뜨림
+      if (won && !p.left && !fg.test && fg.firstClear && B.firstTitle) res.lines.push(...logic.traitCount(d, B.firstTitle)); // 서버에서 처음 쓰러뜨린 넷 (전시용 칭호)
       if (p.mindLoss && !fg.test) res.lines.push(...logic.loseMind(d, p.mindLoss));
       if (falls) d.hp = 1;
       if (fg.test && !p.left) { d.hp = Math.max(1, Math.round(p.hp0 ?? d.hp)); res.lines.push('GM 시험이라 체력은 들어가기 전으로 돌아왔다.'); } // 시험은 다치지 않음
@@ -968,28 +1197,31 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
       const me2 = fg.players.find((x) => x.id === d.id);
       if (!alive(me2)) return { error: me2.left ? '이미 물러났다.' : '쓰러져 있다. 동료가 일으켜 주기를 기다리자.' };
       if (me2.reaped) return { error: '거두어져 이번 턴은 움직일 수 없다.' };
+      if (me2.away) return { error: '균열 끝에 매달려 있어 움직일 수 없다.' };
+      if (me2.consumed) return { error: '잿빛에 먹혀 이번 턴은 몸이 말을 듣지 않는다.' };
       if (fg.pending[d.id]) return { error: '이미 골랐다. 동료를 기다리는 중이다.' };
       const type = str(p.type);
       if (!ACTS.includes(type)) return { error: '알 수 없는 행동이다.' };
       const a = type === 'skill' ? { type, id: str(p.id) } : { type };
       if (type === 'flank' && fg.B.script !== 'knights') return { error: '이 레이드에서는 우회할 대열이 없다.' };
       if (Number.isInteger(p.t) && fg.foes[p.t] && fg.foes[p.t].hp > 0) fg.targets[d.id] = p.t;
-      const ally = Number(p.ally) || null;
+      const emberOk = p.ally === 'ember' && fg.ember?.hp > 0; // 균열: 불씨도 막아서기·치유 대상
+      const ally = emberOk ? 'ember' : Number(p.ally) || null;
       if (type === 'cover') {
-        if (!ally || !fg.players.some((x) => x.id === ally && x.id !== d.id && alive(x))) return { error: '막아설 동료를 먼저 고르자.' };
+        if (!ally || !(emberOk || fg.players.some((x) => x.id === ally && x.id !== d.id && alive(x)))) return { error: '막아설 동료를 먼저 고르자.' };
         a.ally = ally;
       }
       if (type === 'skill' && a.id === 'mend' && ally && ally !== d.id) {
-        if (!fg.players.some((x) => x.id === ally && !x.left)) return { error: '그 동료는 이미 물러났다.' };
+        if (!(emberOk || fg.players.some((x) => x.id === ally && !x.left))) return { error: '그 동료는 이미 물러났다.' };
         a.ally = ally;
       }
       const why2 = combat.blocked(me2, a);
       if (why2) return { error: why2 };
       fg.pending[d.id] = a;
       if (needs(fg).every((x) => fg.pending[x.id])) { setImmediate(() => resolve(fg)); return { ok: true, waiting: true }; }
-      const chosen = Object.fromEntries(fg.players.map((x) => [x.id, !!fg.pending[x.id] || !alive(x) || !!x.reaped]));
+      const chosen = Object.fromEntries(fg.players.map((x) => [x.id, !!fg.pending[x.id] || !alive(x) || !!x.reaped || !!x.away || !!x.consumed]));
       for (const x of fg.players) if (x.id !== d.id) emitTo(x.id, 'raidboss:wait', { chosen });
-      return { ok: true, waiting: true };
+      return { ok: true, waiting: true, view: viewFor(fg, d.id) }; // 고른 행동(pick)이 화면에 보이게
     });
     // 레이드 작전 이야기 (함께 싸우는 동료에게만)
     on('raidboss:say', (d, p) => {
@@ -1005,6 +1237,31 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
       if (fg.chat.length > 80) fg.chat.shift();
       for (const x of fg.players) emitTo(x.id, 'raidboss:chat', msg);
       return { ok: true };
+    });
+    // 고른 행동의 동료 대상만 바꿈 (치유·막아서기). 다른 행동이면 아무 일도 없음
+    on('raidboss:ally', (d, p) => {
+      const fg = inFight.get(d.id);
+      if (!fg || fg.over) return { error: '레이드 중이 아니다.' };
+      const a = fg.pending[d.id];
+      const uses = a && (a.type === 'cover' || (a.type === 'skill' && a.id === 'mend'));
+      if (!uses) return { ok: true, view: viewFor(fg, d.id) };
+      const emberOk = p.ally === 'ember' && fg.ember?.hp > 0;
+      const ally = emberOk ? 'ember' : Number(p.ally) || null;
+      if (a.type === 'cover') {
+        if (!ally || !(emberOk || fg.players.some((x) => x.id === ally && x.id !== d.id && alive(x)))) return { error: '막아설 수 없는 동료다.' };
+      } else if (ally && ally !== d.id && !(emberOk || fg.players.some((x) => x.id === ally && !x.left))) return { error: '그 동료는 이미 물러났다.' };
+      a.ally = ally === d.id ? null : ally;
+      return { ok: true, view: viewFor(fg, d.id) };
+    });
+    // 고른 행동 물리기 (턴이 넘어가기 전까지)
+    on('raidboss:undo', (d) => {
+      const fg = inFight.get(d.id);
+      if (!fg || fg.over) return { error: '레이드 중이 아니다.' };
+      if (!fg.pending[d.id]) return { ok: true, view: viewFor(fg, d.id) };
+      delete fg.pending[d.id];
+      const chosen = Object.fromEntries(fg.players.map((x) => [x.id, !!fg.pending[x.id] || !alive(x) || !!x.reaped || !!x.away || !!x.consumed]));
+      for (const x of fg.players) if (x.id !== d.id) emitTo(x.id, 'raidboss:wait', { chosen });
+      return { ok: true, view: viewFor(fg, d.id) };
     });
     on('raidboss:target', (d, p) => {
       const fg = inFight.get(d.id);
