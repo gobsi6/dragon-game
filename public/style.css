@@ -876,13 +876,9 @@ dialog.frame:not(.as-panel) > .bl { bottom: 2px; left: 2px; } dialog.frame:not(.
 .kin-body > .kin-acts .lbl.sub { margin-top: 2px; font-weight: 500; font-size: 11px; color: var(--muted); } /* 돌보기 안의 '음식'·'물건' 작은 제목 */
 /* 돌보기: '음식'·'물건'을 왼쪽 작은 제목으로 두고 줄을 나눔 */
 .kin-grp { width: 100%; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 6px; align-items: start; }
-.kin-grp-l { padding-top: 5px; font-size: 11px; color: var(--muted); }
+.kin-grp-l { padding-top: 7px; font-size: 11px; color: var(--muted); } /* 단추(32px) 글씨와 높이를 맞춤 */
 .kin-grp-r { display: flex; flex-wrap: wrap; gap: 6px; }
 .kin-acts .btn .cnt { font-size: 11px; color: var(--muted); }
-/* 식구 카드 안의 단추: 안쪽 테두리 없이 낮게 (폰에서는 누르기 편하게 조금 크게) */
-.kin-card .kin-acts .btn, .kin-card .kt-btn { min-height: 28px; box-shadow: none; border-color: #A9ADA8; }
-.kin-card .kt-btn.asked { box-shadow: none; }
-@media (max-width: 520px) { .kin-card .kin-acts .btn, .kin-card .kt-btn { min-height: 32px; padding: 0 12px; } .kin-grp-l { padding-top: 7px; } }
 /* 성격 · 모습 · 가족 (접히는 칸) */
 .kin-info { border: 1px solid #E4E6E2; border-radius: 3px; background: #F9F9F7; font-size: 12.5px; }
 .kin-info > summary { display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 10px; cursor: pointer; color: var(--steel-d); font-weight: 600; list-style: none; }
