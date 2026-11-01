@@ -261,7 +261,10 @@ function introOf(k) {
 
 // ── 포만감 (인간 식구) ─────────────────────────────
 const HG = KIN.hunger;
-const isFood = (item) => (KIN.care[item]?.sat || 0) > 0;
+// 식구에게 건넬 수 있는 것: 정해 둔 것(KIN.care) + 자유 제작으로 빚은 식구 요리(ITEMS[id].kin)
+const careOf = (item) => KIN.care[item] || (ITEMS[item]?.kin ? { bond: ITEMS[item].kin.bond, sat: ITEMS[item].kin.sat, talent: ITEMS[item].kin.talent || null, eat: '한 숟가락 떠먹더니 눈이 동그래진다. 그릇을 싹싹 비우고 빈 그릇을 내민다.' } : null);
+const drakeFoodOf = (item) => DF.items[item] || (ITEMS[item]?.kin?.drake || null);
+const isFood = (item) => (careOf(item)?.sat || 0) > 0;
 // 지금 포만감으로 맞추고, 배부른 동안 쌓인 유대를 돌려줌. keeper: 둥지에 남은 약초꾼 어른이 돌봐 주는지
 // R: 포만감 규칙 (인간 HG, 새끼 드래곤 DF). floor: 이 아래로 떨어지지 않음 (돌봐 주는 어른·스스로 사냥)
 function satUpdate(k, now, keeper, R = HG, floor = keeper ? HG.keeperFloor : 0) {
@@ -567,7 +570,7 @@ function tick(d, kin, now = Date.now()) {
           const hides = n * (hasT(k, 'hunter') ? 2 : 1); // 사냥 본능: 한 장씩 더
           out.items.push({ id: 'beast_hide', qty: hides });
           if (fangs) out.items.push({ id: 'sharp_fang', qty: fangs });
-          out.lines.push(`${ga(k)} 혼자 사냥해서 짐승 가죽 ${hides}장${fangs ? `과 송곳니 ${fangs}개` : ''}를 물어 왔다.`);
+          out.lines.push(`${ga(k)} 혼자 사냥해서 짐승 가죽 ${hides}장${fangs ? `과 송곳니 ${fangs}개를` : '을'} 물어 왔다.`);
         }
       }
       if (a >= R.independentDay && !k.data.readyTold) {
@@ -819,7 +822,7 @@ function repay(d, k, item, fav, now) {
 }
 function feedDrake(d, kin, k, item, have, now) {
   if (k.data.errand) return { error: `${ga(k)} 심부름을 떠나 있다.` };
-  const f = DF.items[item];
+  const f = drakeFoodOf(item);
   if (!f) return { error: `${k.name}${josa(k.name, '은', '는')} 그건 먹지 않는다. 생선이나 고기를 주자.` };
   if (have(item) < 1) return { error: '가지고 있지 않다.' };
   const left = (k.data.lastFeed || 0) + DF.cooldown - now;
@@ -1029,7 +1032,7 @@ function care(d, kin, id, item, have, now = Date.now(), opt = {}) {
   if (k && isRunaway(k)) return { error: `${k.name}${josa(k.name, '은', '는')} 지금 둥지에 없다. 먼저 찾아오자.` };
   if (k && k.type === 'drake' && k.status === 'home') return feedDrake(d, kin, k, item, have, now);
   if (!k || k.type !== 'human' || k.status !== 'home') return { error: '돌볼 수 있는 식구가 아니다.' };
-  const c = KIN.care[item];
+  const c = careOf(item);
   if (!c) return { error: '그 물건으로는 돌볼 수 없다.' };
   if (have(item) < 1) return { error: '가지고 있지 않다.' };
   const careLeft = k.data.lastCare + H.careCooldown - now;

@@ -5,7 +5,7 @@
 
 const {
   REGIONS, ITEMS, REGION_LOOT, CREATURES, SCENES, SCENES_HUMAN, RULES, RECIPES, SLOTS, STANCES, SHOPS, REP_TIERS, repTier, TRADE, NEST, hoardTier, RAID, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, ELEMENTS,
-  HOARD_TIERS, CRAFT, SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, SKILLS, FISHING, RUIN, FACILITY, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG, BOSSES, RAIDBOSS, ACHIEVEMENTS, KEEPSAKES,
+  HOARD_TIERS, CRAFT, SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, SKILLS, FISHING, RUIN, FACILITY, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG, BOSSES, RAIDBOSS, ACHIEVEMENTS, KEEPSAKES, TALENTS,
   FREE, FESTIVAL, DAY,
 } = require('./game-data');
 
@@ -273,6 +273,7 @@ const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const shuffle = (arr) => arr.map((v) => [Math.random(), v]).sort((x, y) => x[0] - y[0]).map((x) => x[1]);
 
 // 받침에 따라 조사 고르기
+const numJosa = (n, a, b) => ('013678'.includes(String(n).replace(/[^0-9]/g, '').slice(-1)) ? a : b); // 숫자 뒤 조사: 끝자리를 읽은 소리에 받침이 있으면 a (영·일·삼·육·칠·팔, 0으로 끝나면 십·백·천)
 function josa(word, a, b) {
   const c = word.charCodeAt(word.length - 1) - 0xac00;
   if (c < 0 || c > 11171) return `${a}(${b})`;
@@ -1136,7 +1137,7 @@ function experiment(d, ids, have, opts = {}) {
   const hit = RECIPES.find((r) => key(r) === mine);
   // 성질 없는 재료(숨은 제작법에만 쓰이는 꿀 고약 등)를 넣었는데 제작법과 맞지 않으면: 기력을 쓰고, 넣은 재료 중 하나가 무작위로 터져 사라짐
   // (예전에는 아무것도 잃지 않아 꿀 고약에 재료를 하나씩 붙여 공짜로 숨은 제작법을 찾을 수 있었음)
-  if (!hit && !opts.gift && ids.some((id) => !FREE.tags[id])) {
+  if (!hit && !opts.gift && !opts.meal && ids.some((id) => !FREE.tags[id])) {
     const en = CRAFT.experiment.en;
     if (d.en < en) return { error: `기력이 모자란다. (${en} 필요)` };
     if (d.en >= enCap(d)) d.en_at = Date.now();
@@ -1149,7 +1150,7 @@ function experiment(d, ids, have, opts = {}) {
       `(${ln} −1, 기력 −${en})`] };
   }
   // 숨은 제작법과 맞지 않으면(또는 선물로 빚기면): 재료의 성질로 직접 빚음 (자유 제작)
-  if (!hit || opts.gift) return freeCraft(d, ids, have, opts);
+  if (!hit || opts.gift || opts.meal) return freeCraft(d, ids, have, opts); // 선물·식구 요리로 빚기는 숨은 제작법을 찾지 않음
   const en = CRAFT.experiment.en;
   if (d.en < en) return { error: `기력이 모자란다. (${en} 필요)` };
   if (d.en >= enCap(d)) d.en_at = Date.now();
@@ -1175,7 +1176,7 @@ function freeCraft(d, ids, have, opts = {}) {
   // 성질이 없는 물건(회복약·요리·물고기 등)은 섞어 빚을 수 없음 (숨은 제작법에 맞을 때만 쓰임)
   const plain = ids.find((id) => !FREE.tags[id]);
   if (plain) return { error: `${ITEMS[plain].name}에는 성질이 없어 섞어 빚을 수 없다.` };
-  const r = opts.gift ? FREE_R.resolveGift(ids) : FREE_R.resolve(ids, statsOf(d).wisdom, greatChance(d, null));
+  const r = opts.gift ? FREE_R.resolveGift(ids) : opts.meal ? FREE_R.resolveMeal(ids) : FREE_R.resolve(ids, statsOf(d).wisdom, greatChance(d, null));
   const [b0, per] = FREE.en[r.kind || 'food'];
   const en = r.kind ? b0 + per * ids.length : CRAFT.experiment.en;
   if (d.en < en) return { error: `기력이 모자란다. (${en} 필요)` };
@@ -1200,8 +1201,9 @@ function freeCraft(d, ids, have, opts = {}) {
   if (r.mw) lines.push('불길까지 완벽하게 맞아 걸작이 되었다.');
   lines.push(...(hooks.creation ? hooks.creation(d, r, made.id) : []));
   if (r.kind === 'gift') lines.push('보물 상자에 간직하거나, 누군가에게 선물할 수 있다.');
-  freeNote(d, { at: Date.now(), mats: ids, id: made.id, kind: r.kind, slot: r.slot || null, top: r.top, aura: r.aura, quality: r.quality, mw: !!r.mw, gift: r.kind === 'gift' });
-  return { title: r.quality === 'great' ? '실험 · 빼어난 물건' : r.quality === 'good' ? '실험 · 좋은 물건' : '실험', lines, items, made: [{ id: made.id, qty: 1 }], free: { id: made.id, isNew: made.isNew, mats: ids, gift: r.kind === 'gift' } };
+  if (r.kind === 'meal') lines.push(`둥지 식구에게 건넬 수 있다. (유대 +${r.kin.bond} · 배 +${r.kin.sat}${r.kin.talent ? ` · ${TALENTS[r.kin.talent]?.name || ''} 쪽` : ''})`);
+  freeNote(d, { at: Date.now(), mats: ids, id: made.id, kind: r.kind, slot: r.slot || null, top: r.top, aura: r.aura, quality: r.quality, mw: !!r.mw, gift: r.kind === 'gift', meal: r.kind === 'meal' });
+  return { title: r.quality === 'great' ? '실험 · 빼어난 물건' : r.quality === 'good' ? '실험 · 좋은 물건' : '실험', lines, items, made: [{ id: made.id, qty: 1 }], free: { id: made.id, isNew: made.isNew, mats: ids, gift: r.kind === 'gift', meal: r.kind === 'meal' } };
 }
 // 바랜 제작서: 읽으면 아직 모르는 숨겨진 제작법 하나를 바로 알게 됨 (예전에 반쯤 읽어 실마리만 얻은 것이 있으면 그것부터)
 function readRecipeScroll(d) {
@@ -1227,7 +1229,7 @@ function enhanceGear(d, id, have) {
   const g = gearOf(d);
   const lv = g[id]?.plus || 0;
   const step = CRAFT.enhance[lv];
-  if (!step) return { error: `더는 강화할 수 없다. (+${CRAFT.enhance.length}이 끝)` };
+  if (!step) return { error: `더는 강화할 수 없다. (+${CRAFT.enhance.length}${numJosa(CRAFT.enhance.length, '이', '가')} 끝)` };
   if (d.gold < step.gold) return { error: `금화가 모자란다. (${step.gold}닢 필요)` };
   for (const [x, n] of Object.entries(step.items)) if (have(x) < n) return { error: `${ITEMS[x].name}${josa(ITEMS[x].name, '이', '가')} 모자란다. (${n}개 필요)` };
   d.gold -= step.gold;

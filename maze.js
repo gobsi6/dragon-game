@@ -362,7 +362,7 @@ module.exports = function setupMaze({ io, db, online, logic, sendMe, system, dea
         news(`${ga(p.name)} 지하 회랑에서 ${eul(ITEMS[id].name)} 찾았다.`);
       }
       db.saveState(p, items);
-      if (p.id !== d.id) { sendMe(e.socket, p); e.socket.emit('notice', { title: '지하 회랑', lines: [`${boss ? '수호자' : '파수꾼'}가 무너졌다. 경험치 +${xp}${up ? ' · 레벨이 올랐다!' : ''}`, ...items.map((it) => `${eul(ITEMS[it.id].name)} 찾았다!`)] }); }
+      if (p.id !== d.id) { sendMe(e.socket, p); e.socket.emit('notice', { title: '지하 회랑', lines: [`${boss ? '수호자가' : '파수꾼이'} 무너졌다. 경험치 +${xp}${up ? ' · 레벨이 올랐다!' : ''}`, ...items.map((it) => `${eul(ITEMS[it.id].name)} 찾았다!`)] }); }
       else lines.push(`경험치 +${xp}${up ? ' · 레벨이 올랐다!' : ''}`, ...items.map((it) => `${eul(ITEMS[it.id].name)} 찾았다!`));
     }
     return lines;

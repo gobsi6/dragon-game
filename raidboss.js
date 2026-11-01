@@ -6,6 +6,7 @@
 // - 안전판: 한 주 동안 아무도 못 잡으면 다음 주 체력을 RAIDBOSS.nerf.step씩 (최대 nerf.max) 낮춤. 누가 잡으면 다음 주 원래대로
 // - GM은 혼자서도 시험으로 들어갈 수 있음 (보상·기록 없음)
 // 상태는 world 표의 'raidboss'에 저장 (주간 보상 횟수, 안전판, 첫 처치와 가장 빠른 기록)
+const numJosa = (n, a, b) => ('013678'.includes(String(n).replace(/[^0-9]/g, '').slice(-1)) ? a : b); // 숫자 뒤 조사: 끝자리를 읽은 소리에 받침이 있으면 a (영·일·삼·육·칠·팔, 0으로 끝나면 십·백·천)
 const { RAIDBOSS, REGIONS, ITEMS, SKILLS, STATUS, BREATHS, isTestDragon } = require('./game-data');
 
 const DAY = 86400000;
@@ -90,7 +91,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     const B = R.bosses[key];
     if (!B) return '그런 레이드는 없다.';
     if (isTestDragon(d)) return '시험용 드래곤은 다른 드래곤과 어울릴 수 없다.';
-    if (d.level < R.minLevel) return `레벨 ${R.minLevel}이 되어야 함께할 수 있다.`;
+    if (d.level < R.minLevel) return `레벨 ${R.minLevel}${numJosa(R.minLevel, '이', '가')} 되어야 함께할 수 있다.`;
     if (!gm && !qualified(d, key)) return '아직 균열 아래로 내려갈 때가 아니다.'; // 무엇이 모자란지는 밝히지 않음 (GM 시험은 자격 없이)
     if (relax) { if (!logic.isRuin(d.region)) return '멸망한 대륙에 가야 시험할 수 있다.'; }
     else {
@@ -103,7 +104,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     if (d.rest_at) return '둥지에서 쉬는 중이다. 먼저 깨어나야 한다.';
     if (arena.inBattle(d.id)) return '이미 싸우는 중이다.';
     logic.regen(d);
-    if (d.hp < R.minHp) return `체력이 ${R.minHp}은 있어야 맞설 수 있다. 조금 쉬어야 한다.`;
+    if (d.hp < R.minHp) return `체력이 ${R.minHp}${numJosa(R.minHp, '은', '는')} 있어야 맞설 수 있다. 조금 쉬어야 한다.`;
     return null;
   }
 
@@ -463,7 +464,8 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
       }
       if ((el === 'ice' || el === 'water') && fg.fire > 0) {
         fg.fire -= 1;
-        lines.push(fg.fire ? `${p.breath === 'white' ? '눈보라' : '물살'}가 불길을 잡았다. (밀밭의 불길 ${fg.fire}단계)` : `${p.breath === 'white' ? '눈보라' : '물살'}가 밀밭의 불길을 모두 껐다.`);
+        const wv = p.breath === 'white' ? '눈보라가' : '물살이'; // 이름 뒤 조사를 받침에 맞게 (예전에는 '물살가')
+        lines.push(fg.fire ? `${wv} 불길을 잡았다. (밀밭의 불길 ${fg.fire}단계)` : `${wv} 밀밭의 불길을 모두 껐다.`);
       }
       if (p.breath === 'purple' && earsBefore > 0 && p.ears === earsBefore) earsOff(p, 1, lines); // 자수정 숨결의 씻어 내기
     }
@@ -546,7 +548,8 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
       for (const p of livePlayers(fg)) p.hp = Math.max(0, p.hp - Math.max(1, Math.round(p.hpMax * pct)));
       lines.push(`밀밭의 불길이 일렁인다. 모두 최대 체력의 ${Math.round(pct * 100)}%만큼 데었다.`);
       // 새로 번지지 않은 채 B.fire.fade턴이 지나면 저절로 한 단계 잦아듦 (그다음 단계도 다시 그만큼 지나야)
-      if (B.fire.fade && fg.turn - (fg.fireAt || 0) >= B.fire.fade) {
+      if (fg.fireAt == null) fg.fireAt = fg.turn; // 이 기능 전에 시작된 싸움(서버를 다시 켠 뒤 이어진 싸움 등): 지금부터 셈
+      if (B.fire.fade && fg.turn - fg.fireAt >= B.fire.fade) {
         fg.fire -= 1; fg.fireAt = fg.turn;
         lines.push(fg.fire ? `탈 것이 줄어든 불길이 조금 잦아들었다. (밀밭의 불길 ${fg.fire}단계)` : '밀밭의 불길이 스스로 사그라들었다.');
       }

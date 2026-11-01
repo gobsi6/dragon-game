@@ -274,6 +274,7 @@ function josa(word, withBatchim, without) {
 const BIO = { genderMax: 12, descMax: 300 };
 const GENDER_OLD = { 수컷: '남성', 암컷: '여성' }; // 예전 값
 const genderOf = (g) => GENDER_OLD[g] || g || '';
+const numJosa = (n, a, b) => ('013678'.includes(String(n).replace(/[^0-9]/g, '').slice(-1)) ? a : b); // 숫자 뒤 조사: 끝자리를 읽은 소리에 받침이 있으면 a (영·일·삼·육·칠·팔, 0으로 끝나면 십·백·천)
 function bioOf(d) {
   if (typeof d.bio === 'string' || !d.bio) { try { d.bio = JSON.parse(d.bio || '{}'); } catch { d.bio = {}; } }
   return { gender: genderOf(d.bio.gender), desc: d.bio.desc || '', img: d.has_bio_img ? d.bio_img_ver : 0 }; // img: 특징 그림 버전 (0이면 없음. 주소 /bio-img/<id>?v=)
@@ -1191,7 +1192,9 @@ logic.hooks.registerCustom = (d, ids, r) => {
   const base = { name: r.name, rarity: r.rarity, value: r.value, desc: `${mats}${josa(mats, '을', '를')} 섞어 빚었다.` };
   const def = r.kind === 'gear'
     ? { ...base, type: 'equip', slot: r.slot, ...r.def }
-    : { ...base, type: 'use', use: r.use }; // 먹는 것 · 선물(보물 상자에 간직)
+    : r.kind === 'meal'
+      ? { ...base, cat: 'meal', kin: r.kin } // 식구 요리: 드래곤은 먹지 않고 식구에게 건넴 (game-life.js careOf)
+      : { ...base, type: 'use', use: r.use }; // 먹는 것 · 선물(보물 상자에 간직)
   def.custom = { by: d.id, byName: d.name, sig, mats: ids, kind: r.kind, quality: r.quality, mw: !!r.mw, at: Date.now() };
   customSave(id, def);
   return { id, isNew: true };
@@ -1204,6 +1207,7 @@ function customEff(it) {
   const u = it.use || {};
   if (it.type === 'equip') return [`${SLOT_NAMES[it.slot] || ''} 장신구`, ...Object.entries(it.bonus || {}).map(([k, v]) => `${STATS.find((s) => s.key === k)?.name || k} +${v}`), it.elem ? `${ELEMENTS[it.elem] || it.elem} 속성` : '', it.mindWard ? '정신을 지킴' : ''].filter(Boolean).join(' · ');
   if (u.keep) return `보물 상자에 간직할 선물 · 가치 ${it.value}`;
+  if (it.kin) return `식구 요리 · 유대 +${it.kin.bond} · 배 +${it.kin.sat}${it.kin.talent ? ` · ${TALENTS[it.kin.talent]?.name || ''} 쪽` : ''}`;
   return [u.hp ? `체력 +${u.hp}` : '', u.en ? `기력 +${u.en}` : '', u.mind ? `정신 +${u.mind}` : '', u.buff ? '사나움' : ''].filter(Boolean).join(' · ');
 }
 // 예전에 남은 칸: 효과·성질 합이 없으면 그 물건에서 채움 (물건이 남아 있을 때)
@@ -1557,7 +1561,7 @@ function onConnect(socket) {
     if (cross) {
       if (logic.isRuin(to) && d.level < RUIN.minLevel) return ack({ error: `바다 건너의 땅은 너무 위험하다. 레벨 ${RUIN.minLevel}부터 건널 수 있다.` });
       logic.regen(d, Date.now());
-      if (d.ap < RUIN.crossAp) return ack({ error: `바다를 건너려면 행동력 ${RUIN.crossAp}이 필요하다.` });
+      if (d.ap < RUIN.crossAp) return ack({ error: `바다를 건너려면 행동력 ${RUIN.crossAp}${numJosa(RUIN.crossAp, '이', '가')} 필요하다.` });
     }
 
     const now = Date.now();
@@ -1653,9 +1657,9 @@ function onConnect(socket) {
     if (mats.length < 2 || mats.length > 3) return ack({ error: '재료 2~3가지 조합만 남길 수 있다.' });
     const l = (c.myRecipes ||= []);
     const k = mats.slice().sort().join('+');
-    if (l.some((m) => m.mats.slice().sort().join('+') === k && !!m.gift === (p?.gift === true))) return ack({ error: '이미 남긴 제작법이다.' });
+    if (l.some((m) => m.mats.slice().sort().join('+') === k && !!m.gift === (p?.gift === true) && !!m.meal === (p?.meal === true))) return ack({ error: '이미 남긴 제작법이다.' });
     if (l.length >= freeMax(d)) return ack({ error: `내 제작법은 ${freeMax(d)}개까지 남길 수 있다. 안 쓰는 것을 먼저 지우자.${freeMax(d) < FREE_CFG.mineLib ? ' (둥지에 서고가 있으면 더 남길 수 있다)' : ''}` });
-    l.push({ mats, id: str(p?.id) && ITEMS[str(p.id)] ? str(p.id) : null, gift: p?.gift === true, at: Date.now() });
+    l.push({ mats, id: str(p?.id) && ITEMS[str(p.id)] ? str(p.id) : null, gift: p?.gift === true, meal: p?.meal === true, at: Date.now() });
     db.saveState(d);
     ack({ ok: true, mine: l, mineMax: freeMax(d) });
   });
@@ -2038,13 +2042,13 @@ function onConnect(socket) {
 // 직접 만든 선물(보물 상자에 간직할 수 있는 것) 개수를 셈: 상자에 넣을 때 '직접 만든 것'으로 적고, 소지품에서 받은 선물과 나눠 보여 줌
   const countMade = (d, res) => { if (res.error) return res; const c = logic.combatJson(d); for (const m of res.made || []) if (m.qty > 0 && ITEMS[m.id]?.use?.keep) { c.madeKeep ||= {}; c.madeKeep[m.id] = (c.madeKeep[m.id] || 0) + m.qty; } return res; };
   itemAction('craft', (d, p, have) => countMade(d, logic.craftMany(d, str(p.recipe), have, p.focus, p.qty))); // qty: 한꺼번에 만들 개수 (장신구는 하나씩)
-  itemAction('craft:experiment', (d, p, have) => countMade(d, logic.experiment(d, p.items, have, { gift: p.gift === true }))); // gift: 선물로 빚기
+  itemAction('craft:experiment', (d, p, have) => countMade(d, logic.experiment(d, p.items, have, { gift: p.gift === true, meal: p.meal === true && p.gift !== true }))); // gift: 선물로 빚기 · meal: 식구 요리로 빚기
   // 자유 제작: 내 제작법으로 다시 빚기 (저장한 재료 조합으로 실험)
   itemAction('craft:mine', (d, p, have) => {
     const l = logic.combatJson(d).myRecipes || [];
     const m = l[Number(p.idx)];
     if (!m) return { error: '그런 제작법이 없다.' };
-    return countMade(d, logic.experiment(d, m.mats, have, { gift: !!m.gift }));
+    return countMade(d, logic.experiment(d, m.mats, have, { gift: !!m.gift, meal: !!m.meal }));
   });
   itemAction('gear:enhance', (d, p, have) => logic.enhanceGear(d, str(p.item), have));
   itemAction('gear:engrave', (d, p, have) => logic.engraveGear(d, str(p.item), str(p.elem), have));

@@ -903,6 +903,24 @@ const FISHING = {
       '소금 장수의 딸이 오늘 열 살이 되었다. 이걸 읽는 누군가도 축하해 주면 좋겠다.',
       '약속 장소는 등대 아래. 비가 오면 그다음 날. 기다릴게.',
       '글자가 번져 거의 읽을 수 없다. 끝에 작은 발자국 그림 하나만 또렷하다.',
+      // 웃긴 쪽지
+      '이 편지는 북쪽 설원에서부터 시작되어 대륙을 한 바퀴 돌며 받는 드래곤마다 행운을 가져다주었습니다. 이 편지를 7일 안에 일곱 마리의 드래곤에게 보내지 않으면 보물더미의 금화가 한 닢씩 사라집니다. 이것은 사실입니다.',
+      '엄마한테 혼나서 가출함. 저녁 먹을 때 돌아갈 예정.',
+      '이 병을 주운 분께. 혹시 제 장화 한 짝 못 보셨나요? 왼쪽입니다.',
+      '드래곤 키우는 법. 하나, 먹이를 준다. 둘, 도망간다. 셋, 다시 먹이를 준다.',
+      // 따뜻한 쪽지
+      '오늘 처음으로 바다를 봤다. 생각보다 훨씬 넓고, 생각보다 훨씬 짰다.',
+      '다음에 태어나면 갈매기가 되고 싶다. 고등어를 마음껏 먹을 수 있으니까.',
+      '할머니, 생신 축하드려요. 바다 건너까지 닿기를.',
+      '이걸 주운 당신이 오늘 하루 조금 덜 외로웠으면 좋겠다.',
+      '우리 둥지에 새 알이 생겼다! 누구한테든 자랑하고 싶어서 바다에 띄운다.',
+      // 수수께끼 같은 쪽지
+      '등대지기의 일지 마지막 장. 오늘도 바다 밑에서 노랫소리가 들렸다. 나만 듣는 걸까.',
+      '우리는 아직 여기 있다. 잿빛 땅 너머에서.',
+      '아주 오래된 쪽지라 반쯤 바스러졌다. \'…용과 사람이 함께…\'라는 구절만 겨우 읽힌다.',
+      // 다른 쪽지에 답한 쪽지
+      '지난번에 편지 띄운 사람! 개 이름이 정말 \'구름\'이더라. 쓰다듬고 왔다.',
+      '청새치 놓친 아저씨, 그거 제가 잡았어요. 미안해요. 맛있었어요.',
     ],
   },
   quality: { perfect: { uncommon: 2.5, rare: 4, common: 0.6 }, good: { uncommon: 1.5, rare: 2 }, ok: { rare: 0.5 }, auto: { uncommon: 0.8, rare: 0.4 } },
@@ -1324,6 +1342,10 @@ const FREE = {
     silver_chain: {bind: 2, shine: 2},
     void_silk: {bind: 3, light: 3},
     king_scale: {hard: 3, shine: 3},
+    // 레이드 조각 (2단계 재료: 자유 제작 능력치 합의 끝 10, 한 능력치 7)
+    morven_shard: {sharp: 3, lore: 2},
+    heiron_crest: {hard: 3, light: 2},
+    rift_scale: {hard: 3, shine: 3},
     // 실험 재료: 순수한 엮음(목·부적 장신구), 두 효능 조합(날개+지혜, 비늘+지혜, 발톱+위엄, 날개+위엄), 먹을거리, 불 기운
     tough_sinew: {bind: 3},
     dry_vine: {bind: 2},
@@ -1341,6 +1363,7 @@ const FREE = {
     fish_salmon: {food: 2, life: 2},
     fish_eel: {food: 2, vigor: 2},
     fish_marlin: {food: 3, vigor: 3},
+    sea_scale: {hard: 2, shine: 2, soul: 1}, // 바다 용의 비늘 (귀한 재료)
     fish_rockfish: {food: 1, hard: 1},
     fish_jack: {food: 1, vigor: 1},
     fish_filefish: {food: 1, bind: 1},
@@ -1436,12 +1459,14 @@ const FREE = {
   gearRate: 0.65,                                   // 장신구 능력치 점수 = 효능 세기 합 × 이만큼 (올림)
   statCap: 5, statCapLucky: [6, 6, 7],              // 장신구 한 능력치의 상한 (보통 · 좋음·빼어남·걸작일 때는 재료 단계 0·1·2마다). 걸작이면 여기에 +1. 넘는 점수는 두 번째 효능으로, 없으면 버려짐
   plainTopSum: 8,                                   // 장신구 능력치 합의 끝 (아래 재료가 없을 때). 재료가 있으면 그 단계만큼 더해짐 (8 · 9 · 10)
-  ruinMats: { faded_crest: 1, carnem_steel: 1, ashen_core: 1, void_silk: 1, king_scale: 2, ashen_tablet: 1, anchor_chain: 1, archivist_cord: 1, knight_blade: 1, royal_chronicle: 1, abyss_fang: 1 }, // 멸망한 대륙에 들어가야만 얻는 재료: 기본 상한과 끝에 이만큼 더함 (여럿이면 가장 큰 것)
+  ruinMats: { faded_crest: 1, carnem_steel: 1, ashen_core: 1, void_silk: 1, king_scale: 2, morven_shard: 2, heiron_crest: 2, rift_scale: 2, ashen_tablet: 1, anchor_chain: 1, archivist_cord: 1, knight_blade: 1, royal_chronicle: 1, abyss_fang: 1 }, // 멸망한 대륙에 들어가야만 얻는 재료: 기본 상한과 끝에 이만큼 더함 (여럿이면 가장 큰 것)
                                                     // 1단계 → 끝 9 · 2단계 → 끝 10, 한 능력치 7 (왕룡의 금빛 비늘: 멸망한 대륙 강적만 아주 드물게). 본토 오염된 땅에서도 나오는 검게 물든 비늘·오염 결정과 끼워 넣기만 하는 재료는 뺌
   luck: { good: 0.24, great: 0.06 },                // 먹을거리·선물의 좋음 · 빼어남 확률
   gearLuck: { good: 0.2, great: 0.05 },             // 장신구의 좋음(+1) · 빼어남(+2) 확률. 걸작(+1)까지 겹치면 +3
   luckMax: 3,                                       // 장신구 기본 상한 위로 운이 더할 수 있는 끝 (빼어남 2 + 걸작 1)
-  en: { food: [4, 2], gear: [8, 2], gift: [4, 2] },  // 선물로 빚기도 먹는 것과 같음               // 기력: 기본 + 재료 하나당
+  // 식구 요리로 빚기: 먹을거리 → 배, 생기·기운·맑음 → 유대 (운이 좋으면 더). 상한은 정식 식구 요리의 가장 좋은 것과 같음
+  meal: { bondBase: 3, bondPer: 2, bondCap: 18, satPer: 15, satMin: 15, satCap: 100, drakeBond: 0.85 },
+  en: { food: [4, 2], gear: [8, 2], gift: [4, 2], meal: [4, 2] },  // 선물로 빚기도 먹는 것과 같음               // 기력: 기본 + 재료 하나당
   valueMul: 1.2,                                    // 값 = 넣은 재료값 합 × 이만큼 (좋음 1.5배 · 빼어남 2배)
   shopMatValue: 0.5,                                // 상점에서 살 수 있는 재료는 값을 이만큼만 셈 (사서 빚어 되팔아 돈을 불리지 못하게)
   chestMax: 300,                                    // 보물 상자에 간직할 수 있는 수

@@ -1132,6 +1132,7 @@
     if (c < 0 || c > 11171) return `${a}(${b})`;
     return c % 28 ? a : b;
   }
+  const numJosa = (n, a, b) => ('013678'.includes(String(n).replace(/[^0-9]/g, '').slice(-1)) ? a : b); // 숫자 뒤 조사: 끝자리를 읽은 소리에 받침이 있으면 a (영·일·삼·육·칠·팔, 0으로 끝나면 십·백·천)
   function ro(word) {
     const c = word.charCodeAt(word.length - 1) - 0xac00;
     if (c < 0 || c > 11171) return '(으)로';
@@ -2497,6 +2498,7 @@
     return w;
   }
   function effectText(it) {
+    if (it.kin) return `식구 요리 · 유대 +${it.kin.bond}, 배 +${it.kin.sat}${it.kin.talent ? ` · ${S.talents?.[it.kin.talent]?.name || ''} 쪽` : ''}`; // 자유 제작으로 빚은 식구 요리
     if (it.type === 'use') {
       const u = it.use, out = [];
       if (u.buff && !(u.hp || u.en || u.mind)) { const B = S.buffs?.[u.buff]; return B ? `${S.buffs.minutes || 60}분 동안 ${B.name}: ${B.desc} (사냥·강적 전투)` : ''; }
@@ -3987,12 +3989,14 @@
             if (confirm(`${v.name}${josa(v.name, '이', '가')} 용기사의 자리를 내려놓고 둥지에 남는다. ${S.talents[v.talent].name}의 재주를 쓰고 둥지 일도 맡을 수 있게 된다. 다시 용기사로 삼을 수는 없다. 그렇게 할까?`)) nestAct('kin:path', { id: v.id, path: 'stay' }, true);
           });
         }
-        const owned = Object.keys(R.care).filter((id) => (invCache[id] || 0) > 0);
+        // 정해 둔 것 + 자유 제작으로 빚은 식구 요리 (S.items[id].kin)
+        const careOf = (id) => R.care[id] || (S.items[id]?.kin ? { bond: S.items[id].kin.bond, sat: S.items[id].kin.sat, talent: S.items[id].kin.talent || null } : null);
+        const owned = [...Object.keys(R.care), ...Object.keys(invCache).filter((id) => S.items[id]?.kin && !R.care[id])].filter((id) => (invCache[id] || 0) > 0);
         label(v.careIn > 0 ? `돌보기: ${dur(v.careIn)} 뒤에 다시 할 수 있다` : '돌보기: 무엇을 건네느냐에 따라 재주가 달라진다');
         if (!owned.length) label('건넬 물건이 없다. 꿀·약초는 약초꾼, 광석은 대장장이, 생선·가죽·송곳니는 파수꾼 쪽.');
         // 먹을 것(배가 차는 것)과 건넬 물건을 나눠 보여 줌
-        const careBtn = (id) => countBtn(btn(S.items[id].name, () => nestAct(partner ? 'kin:pcare' : 'kin:care', { id: v.id, item: id }), v.careIn > 0, `${R.care[id].talent ? `${S.talents[R.care[id].talent].name} 쪽, ` : ''}유대 +${R.care[id].bond}${R.care[id].sat ? `, 배 +${R.care[id].sat}` : ''}`), invCache[id]);
-        const foods = owned.filter((id) => (R.care[id].sat || 0) > 0), things = owned.filter((id) => !((R.care[id].sat || 0) > 0));
+        const careBtn = (id) => countBtn(btn(S.items[id].name, () => nestAct(partner ? 'kin:pcare' : 'kin:care', { id: v.id, item: id }), v.careIn > 0, `${careOf(id).talent ? `${S.talents[careOf(id).talent].name} 쪽, ` : ''}유대 +${careOf(id).bond}${careOf(id).sat ? `, 배 +${careOf(id).sat}` : ''}`), invCache[id]);
+        const foods = owned.filter((id) => (careOf(id).sat || 0) > 0), things = owned.filter((id) => !((careOf(id).sat || 0) > 0));
         // 둘 다 있으면 왼쪽에 '음식'·'물건' 작은 제목을 두고 줄을 나눔
         const grp = (t, ids) => {
           const g = document.createElement('div'); g.className = 'kin-grp';
@@ -4054,12 +4058,13 @@
         // 먹이 주기: 생선과 고기, 새끼 드래곤 먹이 요리
         const DFd = R.drakeFood;
         if (DFd) {
-          const foods = Object.keys(DFd.items).filter((id) => (invCache[id] || 0) > 0);
+          const dfOf = (id) => DFd.items[id] || S.items[id]?.kin?.drake || null; // 자유 제작으로 빚은 식구 요리도
+          const foods = [...Object.keys(DFd.items), ...Object.keys(invCache).filter((id) => S.items[id]?.kin?.drake && !DFd.items[id])].filter((id) => (invCache[id] || 0) > 0);
           label(v.selfFeed ? '먹이 주기: 이제 스스로 사냥해 배를 채우지만, 주면 기뻐한다'
             : v.feedIn > 0 ? `먹이 주기: ${dur(v.feedIn)} 뒤에 다시 줄 수 있다` : '먹이 주기: 배부르면 가르칠 때 더 잘 따른다');
           if (!foods.length) label('줄 먹이가 없다. 낚은 생선이나 고깃덩이 미끼, 새끼 드래곤 먹이 요리를 주자.');
           for (const id of foods) {
-            countBtn(btn(S.items[id].name, () => nestAct(partner ? 'kin:pcare' : 'kin:care', { id: v.id, item: id }), v.feedIn > 0, `유대 +${DFd.items[id].bond}, 배 +${DFd.items[id].sat}`), invCache[id]);
+            countBtn(btn(S.items[id].name, () => nestAct(partner ? 'kin:pcare' : 'kin:care', { id: v.id, item: id }), v.feedIn > 0, `유대 +${dfOf(id).bond}, 배 +${dfOf(id).sat}`), invCache[id]);
           }
         }
         const R2 = R.drake;
@@ -4221,7 +4226,7 @@
     const txt = (t) => { if (!t) return null; const sp = document.createElement('span'); sp.textContent = t; return sp; };
     const traits = take('traits');
     if (traits.length) { const w = document.createElement('div'); w.className = 'kv-traits'; w.append(...traits); add('성격', w); }
-    add('요즘', txt(v.hint));
+    add('요즘', txt((v.hint || '').replace(/^요즘\s*/, ''))); // 힌트가 '요즘 ~'으로 시작하므로 이름표와 겹치지 않게
     const pers = take('pers')[0];
     if (pers) add('성향', txt(pers.textContent));
     if (v.looks?.length) add('모습', txt(v.looks.join(' · ')));
@@ -4430,7 +4435,7 @@
       const t = document.createElement('span'); t.className = 'cm-nm'; t.textContent = it.name;
       const q = document.createElement('small'); q.textContent = cnt ? `×${cnt}` : '다 썼다'; t.appendChild(q);
       r.appendChild(t);
-      const forHuman = !!R.care?.[id], forDrake = !!R.drakeFood?.items?.[id];
+      const forHuman = !!R.care?.[id] || !!it.kin, forDrake = !!R.drakeFood?.items?.[id] || !!it.kin?.drake; // 자유 제작으로 빚은 식구 요리도
       if (cnt && n.here && (forHuman || forDrake)) {
         // 줄 수 있는 식구: 이 음식을 먹는 쪽(아이·새끼), 집에 있고, 지금 돌볼 수 있는 아이
         const can = n.kin.home.filter((v) => v.status !== 'egg' && !v.onExp && !v.runaway && ((forHuman && v.type === 'human' && !(v.careIn > 0)) || (forDrake && v.type === 'drake' && !(v.feedIn > 0))));
@@ -4718,7 +4723,7 @@
             note.textContent = me.restAt ? '지금 둥지에서 쉬고 있다.' : '둥지에서 쉬면 회복이 빨라진다. 쉬는 동안에는 채팅과 제작, 보물더미 정리만 할 수 있다.';
             row.appendChild(me.restAt ? btn('깨어나기', () => nestAct('rest:stop'), true) : btn('둥지에서 쉬기', () => nestAct('rest:start'), true, !!me.exp));
           } else {
-            note.textContent = S.regions[S.region]?.realm === 'ruin' ? '다른 대륙에 있을 땐 둥지로 돌아가려면 대륙을 넘어야 한다.' : S.nestRules.homeFlightAp > 0 ? `어디서든 둥지로 곧장 날아갈 수 있다. 행동력 ${S.nestRules.homeFlightAp}이 든다.` : '어디서든 둥지로 곧장 날아갈 수 있다. 행동력은 들지 않는다.';
+            note.textContent = S.regions[S.region]?.realm === 'ruin' ? '다른 대륙에 있을 땐 둥지로 돌아가려면 대륙을 넘어야 한다.' : S.nestRules.homeFlightAp > 0 ? `어디서든 둥지로 곧장 날아갈 수 있다. 행동력 ${S.nestRules.homeFlightAp}${numJosa(S.nestRules.homeFlightAp, '이', '가')} 든다.` : '어디서든 둥지로 곧장 날아갈 수 있다. 행동력은 들지 않는다.';
             // 반려의 둥지에 와 있으면 그곳에서도 쉴 수 있음
             const pn = me.partnerNest;
             if (pn && pn.region === S.region) row.appendChild(me.restAt ? btn('깨어나기', () => nestAct('rest:stop'), true) : btn(`반려 ${pn.name}의 둥지에서 쉬기`, () => nestAct('rest:start'), true, !!me.exp));
@@ -5859,7 +5864,7 @@
           if (it) { const say = document.createElement('span'); say.className = 'mc-say'; const ef = it.type ? effectText(it) : ''; say.textContent = ef ? `${ef} · ${it.desc}` : it.desc; c.appendChild(say); }
           const foot = document.createElement('div'); foot.className = 'mc-foot';
           const when = o.weekly ? '이번 주' : '오늘';
-          const lf = document.createElement('span'); lf.className = 'prog'; lf.textContent = o.locked || (o.left > 0 ? `${when} ${o.left}번 남음` : `${when}은 끝`);
+          const lf = document.createElement('span'); lf.className = 'prog'; lf.textContent = o.locked || (o.left > 0 ? `${when} ${o.left}번 남음` : `${when}${josa(when, '은', '는')} 끝`);
           const sp = document.createElement('span'); sp.className = 'sp';
           const lack = o.give.some((x) => x.have < x.n) || (o.gold && S.me.gold < o.gold);
           foot.append(mobChips(o.give, o.gold, c, foot), sp, lf, mobBtn('바꾸기', true, !!o.locked || o.left <= 0 || lack, () => mobAct('mob:trade', { mob: m.id, i: o.i }))); // 재료를 누르면 얻는 곳이 카드 아래에 펼쳐짐
@@ -6023,7 +6028,7 @@
   // ── 제작 ──
   // 제작 창: 만들기 / 실험 / 다듬기(강화·각인)
   let craftMode = 'make', mixPick = [];
-  let FREE_LAST = null, FREE_DATA = null, FREE_STALE = false, FREE_LOADING = false, mixTag = '', mixGift = false; // mixTag: 성질로 거르기 · mixGift: 선물로 빚기 // 자유 제작: 마지막 결과, 노트·내 제작법·도감
+  let FREE_LAST = null, FREE_DATA = null, FREE_STALE = false, FREE_LOADING = false, mixTag = '', mixGift = false, mixMeal = false; // mixMeal: 식구 요리로 빚기 (선물로 빚기와 함께 켜지지 않음) // mixTag: 성질로 거르기 · mixGift: 선물로 빚기 // 자유 제작: 마지막 결과, 노트·내 제작법·도감
   const freeTagLine = (id) => { const t = S.free?.tags?.[id]; if (!t) return ''; return Object.entries(t).map(([k, n]) => `${S.free.names[k]}${n}`).join(' · '); };
   const ELEM_NAME = { fire: '화염', ice: '얼음', lightning: '번개', earth: '대지', poison: '독', mist: '안개', acid: '산', water: '물', spirit: '정화' };
   // 제작 재료를 누르면, 그 재료를 얻는 곳을 재료 줄 아래에 펼침 (한 번 더 누르면 접힘)
@@ -6345,7 +6350,7 @@
         row.append(ni, di, ok); c.appendChild(row);
       }
       const keep = el('button', 'btn', '이 조합을 내 제작법으로 남기기'); keep.type = 'button';
-      keep.addEventListener('click', () => socket.emit('craft:keep', { mats: FREE_LAST.mats, id: FREE_LAST.id, gift: !!FREE_LAST.gift }, (res) => { if (res.error) return toast(res.error); toast('내 제작법에 남겼다.'); FREE_DATA = { ...(FREE_DATA || {}), mine: res.mine, mineMax: res.mineMax }; renderCraft(); }));
+      keep.addEventListener('click', () => socket.emit('craft:keep', { mats: FREE_LAST.mats, id: FREE_LAST.id, gift: !!FREE_LAST.gift, meal: !!FREE_LAST.meal }, (res) => { if (res.error) return toast(res.error); toast('내 제작법에 남겼다.'); FREE_DATA = { ...(FREE_DATA || {}), mine: res.mine, mineMax: res.mineMax }; renderCraft(); }));
       c.appendChild(keep);
       box.appendChild(c);
     }
@@ -6358,7 +6363,7 @@
     if (!mine.length) box.appendChild(el('p', 'note', '마음에 드는 물건을 빚으면 그 조합을 여기에 남겨 두고 다시 빚을 수 있다.'));
     mine.forEach((m, i) => {
       const r = el('div', 'fx-row'); r.dataset.anchor = `mine-${i}`;
-      const t = el('div', 'fx-t'); t.appendChild(el('b', '', `${m.id && S.items[m.id] ? S.items[m.id].name : '이름 없는 조합'}${m.gift ? ' (선물)' : ''}`));
+      const t = el('div', 'fx-t'); t.appendChild(el('b', '', `${m.id && S.items[m.id] ? S.items[m.id].name : '이름 없는 조합'}${m.gift ? ' (선물)' : m.meal ? ' (식구 요리)' : ''}`));
       const mi = m.id && S.items[m.id] && !S.items[m.id].gone ? S.items[m.id] : null; // 남길 때 빚은 물건의 효과 (다시 빚으면 운에 따라 조금 달라질 수 있음)
       if (mi) { const ef = effectText(mi); if (ef) t.appendChild(el('span', 'fx-ef', ef)); } t.appendChild(el('small', '', m.mats.map((x) => `${nm(x)} ${invCache[x] || 0}`).join(' · ')));
       const go = el('button', 'btn primary', '다시 빚기'); go.type = 'button'; go.disabled = m.mats.some((x) => !(invCache[x] > 0)) || !!S.me.exp;
@@ -6445,20 +6450,25 @@
       const order = Object.keys(S.free?.names || {});
       const txt = order.filter((k) => sum[k]).map((k) => `${S.free.names[k]} ${sum[k]}`).join(' · ');
       const food = sum.food || 0, bind = sum.bind || 0;
-      const kind = mixGift ? '보물 상자에 간직할 선물이 된다' : !food && !bind ? '바탕이 없어 어설픈 덩어리가 될 것 같다' : food === bind ? '먹을거리와 엮음이 맞서 어설퍼질 것 같다' : food > bind ? '먹는 것이 될 것 같다' : '장신구가 될 것 같다';
+      const kind = mixGift ? '보물 상자에 간직할 선물이 된다' : mixMeal ? (food ? '식구에게 건넬 요리가 된다' : '먹을거리가 없어 요리가 되지 못할 것 같다') : !food && !bind ? '바탕이 없어 어설픈 덩어리가 될 것 같다' : food === bind ? '먹을거리와 엮음이 맞서 어설퍼질 것 같다' : food > bind ? '먹는 것이 될 것 같다' : '장신구가 될 것 같다';
       const pv = el('p', 'xa-sum'); pv.append(el('b', '', '성질 합'), ` ${txt || '없음'} · ${kind}`); f.appendChild(pv);
-      if (mixGift) estEn = 4 + 2 * mixPick.length;
+      if (mixGift || mixMeal) estEn = 4 + 2 * mixPick.length;
       else if (food !== bind) estEn = (food > bind ? 4 : 8) + 2 * mixPick.length;
     }
     // 선물로 빚기: 능력치·회복 없이 보물 상자에 간직할 물건
     const gl = el('label', 'xa-gift'); const gc = el('input'); gc.type = 'checkbox'; gc.checked = mixGift;
-    gc.addEventListener('change', () => { mixGift = gc.checked; renderCraft(); });
+    gc.addEventListener('change', () => { mixGift = gc.checked; if (mixGift) mixMeal = false; renderCraft(); });
     gl.append(gc, el('span', '', '선물로 빚기'), el('small', '', '능력치 대신 보물 상자에 간직할 선물이 된다'));
     f.appendChild(gl);
+    // 식구 요리로 빚기: 둥지 식구(아이·새끼 드래곤)에게 건넬 요리. 먹을거리는 배, 생기·기운·맑음은 유대, 가장 센 성질이 재주가 기우는 쪽
+    const ml = el('label', 'xa-gift'); const mc = el('input'); mc.type = 'checkbox'; mc.checked = mixMeal;
+    mc.addEventListener('change', () => { mixMeal = mc.checked; if (mixMeal) mixGift = false; renderCraft(); });
+    ml.append(mc, el('span', '', '식구 요리로 빚기'), el('small', '', '둥지 식구에게 건넬 요리가 된다 (먹을거리 → 배, 생기·기운·맑음 → 유대)'));
+    f.appendChild(ml);
     const go = el('button', 'btn primary xa-go', `섞어 보기 · 기력 ${estEn}`);
     go.type = 'button';
     go.disabled = mixPick.length < 2 || S.me.en < estEn || !!S.me.exp;
-    go.addEventListener('click', () => { const ids = mixPick.slice(); mixPick = []; itemAct('craft:experiment', { items: ids, gift: mixGift }); });
+    go.addEventListener('click', () => { const ids = mixPick.slice(); mixPick = []; itemAct('craft:experiment', { items: ids, gift: mixGift, meal: mixMeal && !mixGift }); });
     f.appendChild(go);
     f.appendChild(el('p', 'xa-note', S.me.en < EN ? `기력이 모자라다. (기력 ${S.me.en} / ${EN})` : '재료의 성질로 새 물건을 빚는다. 숨겨진 제작법과 맞으면 그 제작법을 알게 된다. 넣은 재료는 하나씩 사라진다.'));
     box.appendChild(f);
@@ -10836,7 +10846,7 @@
         b.addEventListener('click', () => calmRampage(r));
       } else {
         b.className = 'btn';
-        b.textContent = `${where}로 가야 한다`;
+        b.textContent = `${where}${ro(where)} 가야 한다`;
         b.disabled = true;
       }
       row.appendChild(b);
@@ -12219,7 +12229,7 @@
     r = gmRow(s, '레벨 맞추기');
     const lvIn = gNum(r, '레벨', 25);
     lvIn.min = 1; lvIn.max = 25;
-    gBtn(r, '맞추기', () => { if (confirm(`이 드래곤의 레벨을 ${lvIn.value}로 맞출까? (시험용. 올리면 능력치 포인트·스킬도 함께 생긴다)`)) gmDo('level', { value: Math.round(+lvIn.value) }); });
+    gBtn(r, '맞추기', () => { if (confirm(`이 드래곤의 레벨을 ${lvIn.value}${'036'.includes(String(lvIn.value).slice(-1)) ? '으로' : '로'} 맞출까? (시험용. 올리면 능력치 포인트·스킬도 함께 생긴다)`)) gmDo('level', { value: Math.round(+lvIn.value) }); });
     r = gmRow(s, '능력치 포인트');
     const ptsIn = gNum(r, '포인트', 1);
     gBtn(r, '주기', () => gmDo('statPts', { n: Math.abs(+ptsIn.value) }));

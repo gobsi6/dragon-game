@@ -11,6 +11,7 @@ const crypto = require('crypto');
 const str = (v) => (typeof v === 'string' ? v.trim() : '');
 const int = (v) => (Number.isFinite(Number(v)) ? Math.trunc(Number(v)) : NaN);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const numJosa = (n, a, b) => ('013678'.includes(String(n).replace(/[^0-9]/g, '').slice(-1)) ? a : b); // 숫자 뒤 조사: 끝자리를 읽은 소리에 받침이 있으면 a (영·일·삼·육·칠·팔, 0으로 끝나면 십·백·천)
 function josa(word, a, b) {
   const c = word.charCodeAt(word.length - 1);
   if (c < 0xac00 || c > 0xd7a3) return `${a}(${b})`;
@@ -134,7 +135,7 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
       const n = int(p.n);
       if (!(n > 0) || n > 1e6) return { error: '경험치 숫자를 확인하자.' };
       const up = logic.gainXp(d, n);
-      return { log: `경험치 +${n}${up ? ` (레벨 +${up})` : ''}`, tell: `경험치 ${n}을 얻었다.${up ? ` 레벨이 올랐다! Lv. ${d.level}` : ''}` };
+      return { log: `경험치 +${n}${up ? ` (레벨 +${up})` : ''}`, tell: `경험치 ${n}${numJosa(n, '을', '를')} 얻었다.${up ? ` 레벨이 올랐다! Lv. ${d.level}` : ''}` };
     },
     // 레벨을 바로 맞춤 (시험용). 올릴 때는 경험치를 주는 것과 같고(능력치 포인트·스킬·행동력이 함께 늘어남),
     // 내릴 때는 레벨만큼 최대 체력·기력과 아직 나누지 않은 능력치 포인트를 거둬들임 (이미 나눈 능력치는 그대로)
@@ -143,7 +144,7 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
       const max = RULES.levelMax || 25;
       if (!(to >= 1 && to <= max)) return { error: `레벨은 1부터 ${max}까지다.` };
       const from = d.level;
-      if (to === from) return { error: `이미 레벨 ${to}이다.` };
+      if (to === from) return { error: `이미 레벨 ${to}${numJosa(to, '이다', '다')}.` };
       if (to > from) {
         let need = -d.xp;
         for (let l = from; l < to; l++) need += logic.xpNeed(l);
@@ -179,7 +180,7 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
       const before = d.stat_pts || 0;
       d.stat_pts = Math.max(0, before + n);
       const real = d.stat_pts - before;
-      return { log: `능력치 포인트 ${real > 0 ? '+' : ''}${real}`, tell: real > 0 ? `능력치 포인트 ${real}을 받았다. 드래곤 기록에서 나눌 수 있다.` : null };
+      return { log: `능력치 포인트 ${real > 0 ? '+' : ''}${real}`, tell: real > 0 ? `능력치 포인트 ${real}${numJosa(real, '을', '를')} 받았다. 드래곤 기록에서 나눌 수 있다.` : null };
     },
     fame(d, kin, now, p) {
       const v = int(p.value);
