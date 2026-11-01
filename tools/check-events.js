@@ -49,7 +49,14 @@ function household() {
     human('새벽', 14, { data: { mate: { name: '하람', at: NOW - 4 * DAY, home: '미르', ref: mateRef }, firstLove: '하람', loveRef: mateRef } }),
     human('가온', 12), // 짝이 없는 어른
     human('다온', 20),
-    drake('솔바람', 2, 'blue'), drake('재희', 6, 'gold'), drake('라엘', 13, 'green'), drake('별', 19, 'white', { data: { mate: { name: '바람', kind: 'white', at: NOW - 4 * DAY } } }),
+    // 라엘: 다른 둥지(미르)의 드래곤 단짝 하늬가 있음 (마음에 둔 용) · 짝을 청했다가 사양받음 (엇갈린 마음)
+    drake('솔바람', 2, 'blue'), drake('재희', 6, 'gold'), drake('라엘', 13, 'green', { data: { friends: { '2:98': { name: '하늬', type: 'drake', n: 99, owner: '미르', ownerId: 2, at: NOW } }, heartbreak: { why: 'declined', name: '하늬', home: '미르' } } }),
+    drake('별', 19, 'white', { data: { mate: { name: '바람', kind: 'white', at: NOW - 4 * DAY } } }),
+    drake('마루', 14, 'red'), // 짝도 마음에 둔 용도 없는 젊은 용 (둥지 위를 맴도는 낯선 용)
+    // 보라: 서로 마음에 둔 다른 둥지의 용(단풍)이 다 자라 짝 없이 있음 (구애 비행을 앞두고)
+    drake('보라', 19, 'purple', { data: { firstLove: '단풍', loveRef: { owner: 2, id: 97, name: '단풍', ownerName: '미르' } } }),
+    // 구름: 다른 둥지의 용(하늬)과 짝 (맡기러 온 알: 어느 둥지에서 품을지)
+    drake('구름', 20, 'gold', { data: { firstLove: '하늬', loveRef: { owner: 2, id: 98, name: '하늬', ownerName: '미르' }, sex: 'm', mate: { name: '하늬', kind: 'blue', at: NOW - 4 * DAY, home: '미르', sex: 'f', ref: { owner: 2, id: 98 } } } }),
     Object.assign(life.newEgg('purple', NOW - DAY), { id: nid++, data: { kind: 'purple', found: NOW - DAY, incubateAt: NOW - DAY / 2 } }),
     drake('여울', 25, 'silver', { status: 'independent', data: { ended: NOW - 5 * DAY } }),
     human('누리', 26, { status: 'dead', data: { ended: NOW - 1.5 * DAY, mate: { name: '한결' }, kids: ['단비'] } }),
@@ -76,12 +83,19 @@ const ADOPTED = (() => { const k = human('나비', 3, { data: { adoptedAt: NOW -
 logic.hooks.ties = () => ({ mentor: { id: 2, name: '미르' }, students: [], heart: { id: 2, name: '미르', bond: 'lover' },
   nemesis: [{ id: 2, name: '미르', nest: 'plains' }], friends: [{ id: 2, name: '미르' }],
   departed: [{ id: 3, name: '옛벗', words: '잘 지내라', heir: false }], adoptedOut: [ADOPTED] });
+// 다른 둥지와 맺어지기 (kinlove.js) 흉내: 새끼 드래곤의 마음에 둔 용은 늘 서로 마음에 둔 사이로, 다 자라 짝 없이 있는 것으로
+logic.hooks.kinLove = {
+  refOf: (k) => k.data.loveRef || null,
+  status: (owner, k) => (k.type === 'drake' && k.data.loveRef && !k.data.loveRef.ended && !k.data.loveRef.declined
+    ? { name: k.data.loveRef.name, ownerName: k.data.loveRef.ownerName || '미르', mutual: true, otherLove: 'us', mateUs: !!k.data.mate?.ref, adult: true, late: true, free: !k.data.mate, pending: false } : null),
+  lovesBack: () => true, babyShared() {}, eggShared() {},
+};
 logic.hooks.hoard = () => [{ item: 'silver_ring', qty: 2 }, { item: 'gold_ore', qty: 3 }];
 logic.hooks.bossTrace = () => ({ name: '잿빛 군주', won: true });
 const HAVE = () => 5; // 소지품: 무엇이든 5개씩 있는 것으로 (have(물건) → 개수)
 
 // ── 문장 검사 ──
-const NAMES = ['하루', '하린', '도담', '솔', '보람', '이안', '새벽', '가온', '다온', '솔바람', '재희', '라엘', '별', '여울', '누리', '가람', '라온', '하람', '나래', '봄', '아르카', '미르'];
+const NAMES = ['하루', '하린', '도담', '솔', '보람', '이안', '새벽', '가온', '다온', '솔바람', '재희', '라엘', '별', '여울', '누리', '가람', '라온', '하람', '나래', '봄', '아르카', '미르', '보라', '구름', '하늬', '단풍', '마루'];
 const PAIRS = [['이', '가'], ['을', '를'], ['은', '는'], ['과', '와'], ['이라고', '라고'], ['이다', '다'], ['이야', '야'], ['이랑', '랑']];
 const batchim = (w) => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c <= 11171 && c % 28 !== 0; };
 function textIssues(s) {
@@ -110,7 +124,7 @@ function textIssues(s) {
 // ── 나이·모습 살펴보기 (--deep): 틀렸다고 단정하지 않고 '살펴볼 곳'으로만 알려 줌 ──
 // 가짜 둥지 식구의 나이 (household()와 맞출 것)
 const STAGE = { 하루: '아기', 하린: '아이', 도담: '소년', 솔: '청소년', 보람: '청소년', 이안: '어른', 새벽: '어른', 가온: '어른', 다온: '노년', 가람: '어른',
-  솔바람: '해츨링', 재희: '어린 용', 라엘: '젊은 용', 별: '다 자란 용', 여울: '다 자란 용' };
+  솔바람: '해츨링', 재희: '어린 용', 라엘: '젊은 용', 별: '다 자란 용', 여울: '다 자란 용', 보라: '다 자란 용', 구름: '다 자란 용', 마루: '젊은 용' };
 const HUMAN = new Set(['하루', '하린', '도담', '솔', '보람', '이안', '새벽', '가온', '다온', '가람']);
 const RULES = [
   // [누구에게, 낱말, 까닭]

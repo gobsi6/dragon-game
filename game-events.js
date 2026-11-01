@@ -51,8 +51,10 @@ const heartEnd = (k, c) => { k.data.heartDone = c.now; k.data.heartbreak = null;
 const heartDiary = (h, k, t) => { if (h.diary) h.diary(k, t); };
 // 첫사랑: 함께한 날들에 상대 이름을 남김 (owner가 있으면 다른 둥지의 아이, 없으면 마을 아이). loveDiary: 이미 남겼다는 표시 (예전 기록 채우기와 겹치지 않게)
 const loveDiary = (h, k, name, owner) => { heartDiary(h, k, owner ? `${owner}의 둥지에 사는 ${name}${h.josa(name, '을', '를')} 좋아하게 되었다.` : `마을에 사는 ${name}${h.josa(name, '을', '를')} 좋아하게 되었다.`); k.data.loveDiary = true; };
+// 새끼 드래곤: 젊은 용·다 자란 용이고 아직 짝이 없을 때 ('엇갈린 마음')
 const heartOf = (c, x) => {
-  if (x.type !== 'human' || x.data.heartDone || !['청소년', '어른', '노년'].includes(c.stage(x))) return null;
+  if (x.data.heartDone) return null;
+  if (x.type === 'human' ? !['청소년', '어른', '노년'].includes(c.stage(x)) : (x.data.mate || !['젊은 용', '다 자란 용'].includes(c.stage(x)))) return null;
   if (x.data.heartbreak) return x.data.heartbreak;
   const s = loveOf(c, x);
   if (!s || s.mateUs) return null;
@@ -71,6 +73,18 @@ const babyTell = (h, c, k, baby, found = false) => {
   const kl = require('./game-logic').hooks.kinLove;
   if (kl) kl.babyShared(r, baby, c.now, found ? `짝 ${k.name}${c.josa(k.name, '과', '와')} 함께 길 잃은 아이 ${baby}${c.josa(baby, '을', '를')} 데려왔다. 아이는 짝의 둥지에서 자란다.` : null);
 }; // 짝 쪽 기록에도 자녀를 남겨 두 둥지에서 겹쳐 생기지 않게
+// 새끼 드래곤이 다른 둥지의 용을 마음에 두고 있음: 서로 마음에 둔 사이이거나, 상대가 아직 마음을 정하지 않았을 때 (상대가 다 자란 용이 되면 더 기다리지 않음)
+// 이러는 동안에는 '둥지 위를 맴도는 낯선 용'이 뜨지 않음 (엇갈리면 '엇갈린 마음' 뒤에 다시 뜸)
+const loveHolds = (c, x) => { const s = loveOf(c, x); return !!s && !s.gone && s.free && !s.mateUs && (s.mutual || (s.otherLove === 'none' && !s.late)); };
+// 다른 둥지에 드래곤 단짝이 있는 젊은 용 (마음에 둘 상대: 가장 많이 만난 단짝)
+const drakeCrush = (x) => Object.entries(x.data.friends || {}).filter(([, f]) => f.type === 'drake' && f.n >= KIN_PLAY.friendAt && f.ownerId).sort(([, p], [, q]) => q.n - p.n)[0] || null;
+const canLoveDrake = (c, x) => c.stage(x) === '젊은 용' && !x.data.firstLove && !x.data.mate && !x.data.onExp && !!drakeCrush(x);
+// 서로 마음에 둔 다른 둥지의 용이 젊은 용 이상이고 짝 없이 있으면: 보호자에게 짝을 청해 달라고 함 (마음을 둔 지 하루 뒤부터)
+const drakeCourtReady = (c, x) => {
+  if (!grownDrake(c, x) || !canMate(c, x) || x.data.onExp || c.now - (x.data.loveAt || 0) < DAYMS) return false;
+  const s = loveOf(c, x); return !!s && !s.gone && s.mutual && s.adult && s.free && !s.pending;
+};
+const eggTaken = (c, v) => (v.ref && c.kAny(v.id)?.data.eggBrought ? `${v.home}의 둥지에서 먼저 알 일을 정한 모양이다. 두 용은 고개를 끄덕이고 돌아갔다.` : null);
 const loveWaits = (c, x) => { const s = loveOf(c, x); return !!s && !s.gone && s.mutual && s.free && (!s.adult || s.pending); };
 // 다른 둥지 아이와 맺어진 짝: 성별이 같으면 아이 이벤트 없음, 아이 수·마지막 아이는 두 둥지가 함께 셈 (kinlove.js)
 const sameSexMate = (x) => !!x.data.mate?.ref && (!x.data.mate.sex || x.data.mate.sex === x.data.sex);
@@ -1807,9 +1821,10 @@ module.exports = [
     title: '둥지 위를 맴도는 낯선 용',
     when: ['wake', 'explore'],
     weight: 3,
-    cond: (c) => c.drakes.some((x) => grownDrake(c, x) && canMate(c, x)),
+    // 다른 둥지의 용을 마음에 두고 있거나, 다른 둥지에 드래곤 단짝이 있어 '마음에 둔 용'이 먼저 뜰 차례이면 뜨지 않음
+    cond: (c) => c.drakes.some((x) => grownDrake(c, x) && canMate(c, x) && !loveHolds(c, x) && !canLoveDrake(c, x)),
     setup: (c) => {
-      const k = c.pick(c.drakes.filter((x) => grownDrake(c, x) && canMate(c, x)));
+      const k = c.pick(c.drakes.filter((x) => grownDrake(c, x) && canMate(c, x) && !loveHolds(c, x) && !canLoveDrake(c, x)));
       return { id: k.id, name: freshOf(DRAKE_NAMES, c), kind: c.pick(PLAY_KINDS) };
     },
     text: (c, v) => {
@@ -1857,27 +1872,150 @@ module.exports = [
       } },
     ],
   },
+  // ── 다른 둥지의 용과 맺어지기 (kinlove.js): 젊은 용 때 단짝을 마음에 둠 → 다 자라면 짝을 청함 → 두 보호자가 허락하면 짝 ──
+  {
+    id: 'drake_love',
+    title: '마음에 둔 용',
+    when: ['wake', 'explore'],
+    weight: 3,
+    // 새끼마다 한 번: 세 선택지 모두 firstLove를 남기므로 다시 뜨지 않음
+    cond: (c) => c.drakes.some((x) => canLoveDrake(c, x)),
+    setup: (c) => {
+      const k = c.pick(c.drakes.filter((x) => canLoveDrake(c, x)));
+      const [key, f] = drakeCrush(k), kid = Number(String(key).split(':')[1]); // 단짝 기록의 열쇠: '둥지 주인 id:식구 id'
+      const ref = { owner: f.ownerId, id: kid, name: f.name, ownerName: f.owner };
+      const kl = require('./game-logic').hooks.kinLove;
+      return { id: k.id, other: f.name, owner: f.owner, oid: f.ownerId, ref, back: !!(kl && kid && kl.lovesBack(c.d.id, k.id, ref)) }; // back: 그 용도 이미 이 용을 마음에 둠
+    },
+    text: (c, v) => {
+      const k = c.k(v.id);
+      return [`요즘 ${k.name}${c.josa(k.name, '이', '가')} ${v.owner}의 둥지 쪽 하늘을 몇 번이고 맴돌다 돌아온다.`,
+        `보물더미 한구석에는 가장 반짝이는 돌 하나가 따로 놓여 있다. 단짝 ${v.other}에게 건넬 것인 모양이다. 눈치챈 걸 알자 ${k.name}${c.josa(k.name, '은', '는')} 고개를 홱 돌렸다.`];
+    },
+    choices: [
+      { label: '마음 가는 대로 하라고 한다', tone: 'trust', run: (h, c, v) => {
+        const k = c.k(v.id); k.data.firstLove = v.other; k.data.loveRef = v.ref; k.data.loveAt = c.now;
+        h.bond(k, 8);
+        h.diary(k, `${v.owner}의 둥지에 사는 단짝 ${v.other}에게 마음을 두게 되었다.`);
+        h.say(`${h.name(k)} 반짝이는 돌을 물고 ${v.owner}의 둥지 쪽으로 곧장 날아갔다. 돌아올 때는 꼬리 끝까지 들떠 있었다. (유대 +8)`);
+        if (v.back) h.say(`알고 보니 ${v.other}${h.josa(v.other, '도', '도')} ${k.name}에게 마음을 두고 있었다. 두 용은 서로를 마음에 둔 사이다.`);
+        h.notify(v.oid, `${c.me}의 둥지에 사는 ${k.name}${h.josa(k.name, '이', '가')} 당신의 둥지 ${v.other}에게 마음을 둔 것 같다. ${c.me}${h.josa(c.me, '은', '는')} 두 용을 지켜보기로 했다.${v.back ? ' 두 용은 서로를 마음에 둔 사이다.' : ''}`, '둥지 소식');
+      } },
+      { label: '그 둥지를 직접 찾아가 본다', tone: 'warm', run: (h, c, v) => {
+        const k = c.k(v.id); k.data.firstLove = v.other; k.data.loveRef = v.ref; k.data.loveAt = c.now;
+        h.bond(k, 3); h.fame(1);
+        h.diary(k, `${v.owner}의 둥지에 사는 단짝 ${v.other}에게 마음을 두게 되었다.`);
+        h.say(`직접 ${v.owner}의 둥지를 찾아갔다. ${v.other}${h.josa(v.other, '은', '는')} 날개를 단정히 접고 예를 갖춰 인사했다. 제법 의젓한 용이다. (유대 +3, 명성 +1)`);
+        if (v.back) h.say(`돌아오는 길에 들으니, ${v.other}${h.josa(v.other, '도', '도')} ${k.name}에게 마음을 두고 있었다고 한다. 두 용은 서로를 마음에 둔 사이다.`);
+        h.notify(v.oid, `${c.me}${h.josa(c.me, '이', '가')} 당신의 둥지를 찾아와 ${v.other}${h.josa(v.other, '을', '를')} 보고 갔다. ${c.me}의 둥지 ${k.name}${h.josa(k.name, '이', '가')} ${v.other}에게 마음을 둔 것 같다.`, '둥지 소식');
+      } },
+      { label: '아직 이르다고 한다', tone: 'strict', run: (h, c, v) => {
+        const k = c.k(v.id); k.data.firstLove = '-'; h.bond(k, -8);
+        h.say(`${h.name(k)} 꼬리를 늘어뜨린 채 등을 돌렸다. 따로 놓아 둔 반짝이는 돌은 보물더미 깊숙이 묻혔다. (유대 −8)`);
+      } },
+    ],
+  },
+  {
+    id: 'drake_love_court',
+    title: '구애 비행을 앞두고',
+    when: ['wake'],
+    weight: 4,
+    cond: (c) => c.drakes.some((x) => drakeCourtReady(c, x)),
+    setup: (c) => {
+      const k = c.pick(c.drakes.filter((x) => drakeCourtReady(c, x)));
+      const s = loveOf(c, k);
+      return { id: k.id, partner: s.name, home: s.ownerName };
+    },
+    text: (c, v) => {
+      const k = c.k(v.id);
+      return [`${k.name}${c.josa(k.name, '이', '가')} 둥지 꼭대기 바위에 올라 ${v.home}의 둥지 쪽을 오래 바라본다. 어릴 적부터 함께 날던 단짝, ${v.partner}의 이야기다.`,
+        `발톱 사이에는 오래 아껴 온 반짝이는 돌이 쥐여 있다. "${v.partner}에게 이걸 건네고 싶어요. ${v.home}께도 허락을 받아 주세요."`];
+    },
+    choices: [
+      { label: '축복하고 짝을 청한다', run: (h, c, v) => {
+        const k = c.k(v.id); h.bond(k, 5); h.mind(5); h.loveAsk(k);
+        h.say(`날개를 펼쳐 ${k.name}${h.josa(k.name, '을', '를')} 축복하고, ${v.home}의 둥지에 두 용이 짝을 맺기를 청하는 편지를 띄웠다. ${v.home}${h.josa(v.home, '이', '가')} 허락하면 두 용이 구애 비행을 하고 짝이 된다. (유대 +5, 정신 +5)`);
+      } },
+      { label: '아직 이르다고 한다', run: (h, c, v) => {
+        const k = c.k(v.id); k.data.mateNo = c.now; h.bond(k, -5);
+        h.say(`${h.name(k)} 말없이 돌을 내려놓았다. 그래도 저녁마다 ${v.home}의 둥지 쪽 하늘을 맴도는 날갯짓은 멈추지 않을 것 같다. (유대 −5)`);
+      } },
+    ],
+  },
+  {
+    id: 'drake_heartbreak',
+    title: '엇갈린 마음',
+    when: ['wake', 'explore'],
+    weight: 6,
+    cond: (c) => c.drakes.some((x) => !x.data.onExp && heartOf(c, x)),
+    setup: (c) => { const k = c.pick(c.drakes.filter((x) => !x.data.onExp && heartOf(c, x))); return { id: k.id, ...heartOf(c, k) }; },
+    text: (c, v) => {
+      const k = c.k(v.id), n = v.name || '그 용';
+      const why = {
+        declined: `${v.home ? `${v.home}의 둥지에서` : '상대 둥지에서'} 짝을 맺자는 청을 사양한다는 답이 온 날이다.`,
+        mated: `${n}${c.josa(n, '이', '가')} 다른 용과 짝이 되었다는 소식을 들은 모양이다.`,
+        else: `${n}에게는 따로 마음에 둔 상대가 있다는 걸 알게 된 모양이다.`,
+        gone: `${n}${c.josa(n, '이', '가')} 먼 하늘로 떠나 다시는 만날 수 없게 되었다고 한다.`,
+      }[v.why] || '';
+      return [`${k.name}${c.josa(k.name, '이', '가')} 둥지 가장자리에 웅크린 채 하늘만 올려다보고 있다. ${why}`, '아무렇지 않은 척 날개를 고르지만, 따로 모아 두었던 반짝이는 돌은 보이지 않는다.'];
+    },
+    choices: [
+      { label: '곁에 앉아 날개를 덮어 준다', tone: 'warm', run: (h, c, v) => {
+        const k = c.k(v.id); heartEnd(k, c); h.bond(k, 8);
+        h.say(`말없이 곁에 내려앉아 날개를 덮어 주었다. 한참 뒤에야 ${h.name(k)} ${v.name || '그 용'}의 이야기를 띄엄띄엄 꺼냈다. 다 털어놓고 나서야 조금 숨을 골랐다. (유대 +8)`);
+        heartDiary(h, k, `마음에 둔 용과 엇갈린 날, ${c.callOf(k)}${c.josa(c.callOf(k), '이', '가')} 곁에서 밤새 날개를 덮어 주었다.`);
+      } },
+      { label: '함께 높이 날아오른다', tone: 'trust', run: (h, c, v) => {
+        const k = c.k(v.id); heartEnd(k, c); h.bond(k, 6); h.mind(5);
+        h.say(`둘이 나란히 구름을 뚫고 날아올랐다. 찬 바람 속에서 ${h.name(k)} 길게 포효했다. 내려올 즈음에는 날갯짓이 한결 가벼워져 있었다. (유대 +6, 정신 +5)`);
+        heartDiary(h, k, `마음에 둔 용과 엇갈린 날, ${c.callOf(k)}${c.josa(c.callOf(k), '과', '와')} 구름 위까지 날아올라 길게 포효했다.`);
+      } },
+      { label: '혼자 있게 둔다', tone: 'free', run: (h, c, v) => {
+        const k = c.k(v.id); heartEnd(k, c); h.bond(k, 2);
+        h.say(`조용히 자리를 비켜 주었다. 다음 날 아침, ${h.name(k)} 먼저 다가와 머리를 한 번 비비고는 평소처럼 사냥을 나갔다. (유대 +2)`);
+        heartDiary(h, k, '마음에 둔 용을 가슴에 묻었다. 용의 삶은 기니, 언젠가 다른 하늘에서 또 다른 인연을 만날 것이다.');
+      } },
+    ],
+  },
   {
     id: 'mate_egg',
     title: '맡기러 온 알',
     when: ['wake'],
     weight: 4,
-    cond: (c) => !c.full && [...c.drakes, ...c.gone].some((x) => bringsEgg(c, x)),
+    // 다른 둥지의 짝(mate.ref)이면 둥지가 꽉 차 있어도 뜸 (짝의 둥지에 맡길 수 있으므로)
+    cond: (c) => [...c.drakes, ...c.gone].some((x) => bringsEgg(c, x) && (!c.full || !!x.data.mate.ref)),
     setup: (c) => {
-      const k = c.pick([...c.drakes, ...c.gone].filter((x) => bringsEgg(c, x)));
-      return { id: k.id, kind: c.pick([k.data.kind, k.data.mate.kind || k.data.kind]) };
+      const k = c.pick([...c.drakes, ...c.gone].filter((x) => bringsEgg(c, x) && (!c.full || !!x.data.mate.ref)));
+      return { id: k.id, kind: c.pick([k.data.kind, k.data.mate.kind || k.data.kind]), ref: !!k.data.mate.ref, home: k.data.mate.home || '', found: sameSexMate(k) };
     },
     text: (c, v) => {
       const k = c.kAny(v.id); const m = k.data.mate.name;
+      if (v.ref) return [v.found // 성별이 같은 짝: 주인 잃은 알을 함께 찾아옴
+        ? `${k.name}${c.josa(k.name, '이', '가')} 짝 ${m}${c.josa(m, '과', '와')} 함께 둥지로 날아왔다. 둘 사이에 주인을 잃고 식어 가던 ${KINDS[v.kind].name}의 알 하나가 들려 있다. 둘이 함께 찾아 데려온 알이라고 한다.`
+        : `${k.name}${c.josa(k.name, '이', '가')} 짝 ${m}${c.josa(m, '과', '와')} 함께 둥지로 날아왔다. 둘 사이에 따뜻한 ${KINDS[v.kind].name}의 알 하나가 들려 있다.`,
+      `이 알을 어느 둥지에서 품을지, ${v.home}${c.josa(v.home, '과', '와')}도 의논해야 한다.`];
       return [`${k.name}${c.josa(k.name, '이', '가')} ${m}${c.josa(m, '과', '와')} 함께 둥지로 날아왔다. 발톱 사이에 따뜻한 ${KINDS[v.kind].name}의 알 하나가 들려 있다.`, '"우리 아이를… 당신의 둥지에서 키워 주실래요?"'];
     },
     choices: [
-      { label: '알을 맡아 품는다', run: (h, c, v) => {
+      // eggTaken: 짝의 둥지에서 같은 알 일을 먼저 정했으면 (두 둥지에 이벤트가 함께 떠 있었을 때) 아무것도 바꾸지 않고 지나감
+      { label: (c, v) => (v.ref ? '우리 둥지에서 품는다' : '알을 맡아 품는다'), need: (c, v) => (!eggTaken(c, v) && c.full ? '둥지에 빈자리가 없다.' : null), run: (h, c, v) => {
+        if (eggTaken(c, v)) return h.say(eggTaken(c, v));
         const k = c.kAny(v.id); k.data.eggBrought = c.now;
         h.egg(v.kind); h.fame(2); h.bond(k, 6);
+        if (v.ref) { // 짝 쪽 둥지에도 알 일을 정했다고 알림 (두 둥지에서 겹쳐 뜨지 않게)
+          const r = k.data.mate.ref, kl = require('./game-logic').hooks.kinLove;
+          if (kl) kl.eggShared(r, c.now, `짝 ${k.name}${c.josa(k.name, '과', '와')}의 ${KINDS[v.kind].name}의 알은 ${c.me}의 둥지에서 품게 되었다.`);
+          h.notify(r.owner, `${c.me}의 둥지 ${k.name}${c.josa(k.name, '과', '와')} 당신의 둥지 ${k.data.mate.name} 사이의 ${KINDS[v.kind].name}의 알을 ${c.me}의 둥지에서 품기로 했다.`, '둥지 소식');
+        }
         h.say(`알을 받아 둥지 가장 따뜻한 곳에 두었다. 이제 손주를 품게 되었다. (명성 +2)`);
       } },
-      { label: '둘이 직접 키우라고 돌려보낸다', run: (h, c, v) => {
+      { label: (c, v) => `${v.home}의 둥지에서 품게 한다`, show: (c, v) => !!v.ref, run: (h, c, v) => {
+        if (eggTaken(c, v)) return h.say(eggTaken(c, v));
+        const k = c.kAny(v.id); k.data.eggBrought = c.now; h.bond(k, 4);
+        h.babyAsk(k, 'egg', v.kind, v.found);
+        h.say(`${v.home}에게 ${KINDS[v.kind].name}의 알을 맡아 품어 달라는 청을 보냈다. 받아들이면 알은 ${v.home}의 둥지에서 깨어나고, 사양하면 이 둥지에서 품는다. (유대 +4)`);
+      } },
+      { label: '둘이 직접 키우라고 돌려보낸다', show: (c, v) => !v.ref, run: (h, c, v) => {
         const k = c.kAny(v.id); k.data.eggBrought = c.now;
         h.mind(6);
         h.say(`"너희 둥지에서 키우렴." ${k.name}${h.josa(k.name, '은', '는')} 고개를 끄덕이고, 알을 품에 안은 채 날아갔다. (정신 +6)`);

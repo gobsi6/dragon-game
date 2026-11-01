@@ -325,6 +325,15 @@ function bornKid(kin, d, parents, name, found, town, now = Date.now()) {
 function newEgg(kind, now) {
   return { id: null, type: 'drake', status: 'egg', name: pick(DRAKE_NAMES), data: { kind, found: now, incubateAt: null } };
 }
+// 새끼 드래곤 짝 사이의 알을 둥지에 들임 (다른 둥지에 맡길 때 kinlove.js에서 씀). 둥지에 빈자리가 없으면 null
+function layEgg(kin, d, kind, parents, now = Date.now()) {
+  if (homeKin(kin, logic.maxKinOf(d)).full) return null;
+  const k = newEgg(KINDS[kind] ? kind : 'red', now);
+  k.name = freshName(kin, DRAKE_NAMES);
+  k.data.parents = parents.filter(Boolean);
+  kin.push(k);
+  return k;
+}
 function hatch(k, at) {
   const base = KINDS[k.data.kind].stats;
   k.status = 'home';
@@ -686,6 +695,7 @@ function view(k, now, d) {
   if (k.type === 'human' && k.status === 'home') v.canWork = FW.adultStages.includes(stageOf(k, now).name) || FW.apprenticeStages.includes(stageOf(k, now).name);
   // 짝과 자녀 (식구 이벤트로 생김)
   if (k.data.mate) v.mate = { name: k.data.mate.name, kind: k.data.mate.kind || null, home: k.data.mate.home || null }; // home: 다른 둥지 아이와 맺어졌으면 그 둥지 주인
+  else if (k.type === 'drake' && k.data.loveRef && !k.data.loveRef.declined && !k.data.loveRef.ended) v.love = k.data.loveRef.name; // 마음에 둔 다른 둥지의 용 (독립시킬 때 알림)
   if (k.data.kids?.length) v.kids = k.data.kids.slice();
   if (k.data.family) v.family = REGIONS[k.data.family]?.name || ''; // 마을에 가정을 꾸려 떠남 (그 마을 이름)
   if (k.data.sex) {
@@ -1659,7 +1669,7 @@ function chooseEvent(d, kin, have, idx, now = Date.now()) {
     born: (k, name, found) => { if (!bornKid(kin, d, [k.name, k.data.mate?.name], name, found, k.data.town || nearestTown(c.region), now)) out.lines.push('둥지에 빈자리가 없어 아이를 들이지 못했다.'); },
     // 다른 둥지의 짝: 아이를 그 둥지에서 키우게 하거나(raise), 마을에 가정을 꾸리게 하자는(village) 청 (kinlove.js)
     babyAsk: (k, kind, baby, found) => { if (k?.data.mate?.ref) out.babies.push({ kind, id: k.id, name: k.name, mate: k.data.mate.name, ref: k.data.mate.ref, baby, found: !!found, town: k.data.town || nearestTown(c.region) }); },
-    loveAsk: (k) => { if (k?.data.loveRef) out.loves.push({ id: k.id, name: k.name, ref: k.data.loveRef }); }, // 다른 둥지 첫사랑에게 혼인 청 (kinlove.js)
+    loveAsk: (k) => { if (k?.data.loveRef) out.loves.push({ id: k.id, name: k.name, ref: k.data.loveRef, drake: k.type === 'drake' }); }, // 다른 둥지 첫사랑에게 혼인 청 · 새끼 드래곤은 짝을 청함 (kinlove.js)
     // 보물더미에서 꺼내거나 넣음 (꺼낼 때는 지금 있는 만큼만)
     hoardTake: (id, qty = 1) => {
       const have = (c.hoard.find((x) => x.item === id)?.qty || 0) + out.hoardItems.filter((x) => x.id === id).reduce((a, x) => a + x.qty, 0);
@@ -1793,6 +1803,7 @@ function festOuting(d, kin, fest, nightOpen, now = Date.now()) {
 
 module.exports = {
   bornKid, // 짝 사이의 아이를 아기 식구로 (kinlove.js에서도 씀)
+  layEgg, // 새끼 드래곤 짝 사이의 알을 둥지에 (kinlove.js)
   loveDiaryFix, // 예전 첫사랑 기록 채우기 (서버를 켤 때 한 번)
   festKids, festWent, festOuting, setNightCheck, // 왕도 축제에 식구들 데려가기 (낮 한 번 · 야시장 밤 한 번)
   touch, // 교감

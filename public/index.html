@@ -3693,7 +3693,7 @@
     const bits = [];
     if (v.mate) bits.push(`짝 ${v.mate.name}${v.mate.kind ? `(${kindName(v.mate.kind)})` : ''}${v.mate.home ? ` · ${v.mate.home}의 둥지` : ''}`);
     const lo = (NEST_LAST?.nest?.loves?.out || []).find((o) => o.kin === v.id); // 보낸 혼인 청
-    if (lo) bits.push(`${lo.to.ownerName}의 둥지에 ${lo.to.name}${josa(lo.to.name, '과', '와')}의 혼인을 청해 두었다 (${dur(lo.until - Date.now())} 남음)`);
+    if (lo) bits.push(`${lo.to.ownerName}의 둥지에 ${lo.to.name}${josa(lo.to.name, '과', '와')}의 ${lo.drake ? '짝을' : '혼인을'} 청해 두었다 (${dur(lo.until - Date.now())} 남음)`);
     if (v.kids?.length) bits.push(`자녀 ${v.kids.join(', ')}`);
     return bits.join(' · ');
   }
@@ -3975,7 +3975,7 @@
         if (v.canRelease && !partner) {
           label('독립');
           btn('둥지를 떠나보낸다', () => {
-            if (confirm(`${v.name}${josa(v.name, '을', '를')} 독립시킬까? 강하게, 정 깊게 키웠을수록 용족 명성이 크게 오른다.`)) nestAct('kin:release', { id: v.id }, true);
+            if (confirm(`${v.name}${josa(v.name, '을', '를')} 독립시킬까? 강하게, 정 깊게 키웠을수록 용족 명성이 크게 오른다.${v.love ? `\n마음에 둔 ${v.love}${josa(v.love, '과', '와')} 짝을 맺기 전에 독립하면 그 인연은 이어지지 않는다.` : ''}`)) nestAct('kin:release', { id: v.id }, true);
           }).classList.add('primary');
         }
       }
@@ -4609,10 +4609,13 @@
         // 받은 혼인 청: 다른 둥지의 첫사랑이 내 둥지 아이와 맺어지기를 바람
         for (const o of n.loves?.in || []) {
           const oc = add('<div class="adopt-card love-card"><b></b><p></p><div class="row"></div></div>').firstChild;
-          oc.querySelector('b').textContent = `${o.from.ownerName}${josa(o.from.ownerName, '이', '가')} 혼인을 청해 왔다`;
-          oc.querySelector('p').textContent = `${o.from.ownerName}의 둥지 ${o.from.name}${josa(o.from.name, '과', '와')} 내 둥지 ${o.to.name}${josa(o.to.name, '이', '가')} 서로의 첫사랑이다. 허락하면 두 아이가 맺어지고, 각자의 둥지에 살며 서로 오간다. ${dur(o.until - Date.now())} 안에 정하지 않으면 청은 사라진다.`;
+          // drake: 새끼 드래곤끼리 짝을 맺자는 청
+          oc.querySelector('b').textContent = `${o.from.ownerName}${josa(o.from.ownerName, '이', '가')} ${o.drake ? '짝을' : '혼인을'} 청해 왔다`;
+          oc.querySelector('p').textContent = o.drake
+            ? `${o.from.ownerName}의 둥지 ${o.from.name}${josa(o.from.name, '과', '와')} 내 둥지 ${o.to.name}${josa(o.to.name, '이', '가')} 서로를 마음에 둔 사이다. 허락하면 두 용이 구애 비행을 하고 짝이 되며, 각자의 둥지에 살며 서로 오간다. ${dur(o.until - Date.now())} 안에 정하지 않으면 청은 사라진다.`
+            : `${o.from.ownerName}의 둥지 ${o.from.name}${josa(o.from.name, '과', '와')} 내 둥지 ${o.to.name}${josa(o.to.name, '이', '가')} 서로의 첫사랑이다. 허락하면 두 아이가 맺어지고, 각자의 둥지에 살며 서로 오간다. ${dur(o.until - Date.now())} 안에 정하지 않으면 청은 사라진다.`;
           const ans = (yes) => {
-            if (!yes && !confirm(`${o.from.ownerName}의 혼인 청을 사양할까? ${o.from.name}${josa(o.from.name, '은', '는')} 첫사랑을 마음에 묻게 된다.`)) return;
+            if (!yes && !confirm(o.drake ? `${o.from.ownerName}의 청을 사양할까? ${o.from.name}${josa(o.from.name, '은', '는')} 마음에 둔 용을 가슴에 묻게 된다.` : `${o.from.ownerName}의 혼인 청을 사양할까? ${o.from.name}${josa(o.from.name, '은', '는')} 첫사랑을 마음에 묻게 된다.`)) return;
             socket.emit('kinlove:answer', { id: o.id, yes }, (res) => { if (res.error) return toast(res.error); toast(res.lines.join(' ')); openNest(); });
           };
           oc.querySelector('.row').append(btn('허락한다', () => ans(true), true), btn('정중히 사양한다', () => ans(false)));
@@ -4622,9 +4625,11 @@
         const babyWord = (o) => (o.found ? '데려온 아이' : '태어난 아이');
         for (const o of n.loves?.babyIn || []) {
           const oc = add('<div class="adopt-card love-card"><b></b><p></p><div class="row"></div></div>').firstChild;
-          const full = o.kind === 'raise' && (!n.region || n.kin.home.length >= (n.maxKin || S.kinRules.maxKin));
-          oc.querySelector('b').textContent = `${o.from.ownerName}${josa(o.from.ownerName, '이', '가')} ${o.baby}의 일로 청을 보냈다`;
-          oc.querySelector('p').textContent = `${o.from.ownerName}의 둥지 ${o.from.name}${josa(o.from.name, '과', '와')} 내 둥지 ${o.to.name} 사이에 ${babyWord(o)} ${o.baby}${josa(o.baby, '을', '를')} `
+          const full = (o.kind === 'raise' || o.kind === 'egg') && (!n.region || n.kin.home.length >= (n.maxKin || S.kinRules.maxKin));
+          oc.querySelector('b').textContent = o.kind === 'egg' ? `${o.from.ownerName}${josa(o.from.ownerName, '이', '가')} ${o.baby}${josa(o.baby, '을', '를')} 맡아 달라고 한다` : `${o.from.ownerName}${josa(o.from.ownerName, '이', '가')} ${o.baby}의 일로 청을 보냈다`;
+          oc.querySelector('p').textContent = o.kind === 'egg' // 새끼 드래곤 짝 사이의 알
+            ? `${o.from.ownerName}의 둥지 ${o.from.name}${josa(o.from.name, '과', '와')} 내 둥지 ${o.to.name} 사이의 ${o.baby}${josa(o.baby, '을', '를')} 이 둥지에서 품어 주기를 바란다. 받아들이면 알이 둥지에 들어온다.${full ? ` 지금은 둥지에 빈자리가 없다. (식구 ${n.kin.home.length}/${n.maxKin || S.kinRules.maxKin})` : ''} 사양하면 알은 ${o.from.ownerName}의 둥지에서 품는다. ${dur(o.until - Date.now())} 안에 정하지 않으면 청은 사라진다.`
+            : `${o.from.ownerName}의 둥지 ${o.from.name}${josa(o.from.name, '과', '와')} 내 둥지 ${o.to.name} 사이에 ${babyWord(o)} ${o.baby}${josa(o.baby, '을', '를')} `
             + (o.kind === 'raise'
               ? `이 둥지에서 키워 주기를 바란다. 받아들이면 ${o.baby}${josa(o.baby, '이', '가')} 아기 식구로 들어온다.${full ? ` 지금은 둥지에 빈자리가 없다. (식구 ${n.kin.home.length}/${n.maxKin || S.kinRules.maxKin})` : ''}`
               : `두고, 두 사람이 아이와 함께 마을로 내려가 가정을 꾸리기를 바란다. 받아들이면 ${o.to.name}도 둥지를 떠난다.`)
@@ -4639,7 +4644,9 @@
         for (const o of n.loves?.babyOut || []) {
           const oc = add('<div class="adopt-card love-card"><b></b><p></p><div class="row"></div></div>').firstChild;
           oc.querySelector('b').textContent = `${o.to.ownerName}의 답을 기다리는 중`;
-          oc.querySelector('p').textContent = `${babyWord(o)} ${o.baby}${josa(o.baby, '을', '를')} ${o.kind === 'raise' ? `${o.to.ownerName}의 둥지에서 키워 달라고` : '두 사람과 함께 마을로 보내 가정을 꾸리게 하자고'} 청했다. ${dur(o.until - Date.now())} 안에 답이 없으면 아이는 이 둥지에서 자란다.`;
+          oc.querySelector('p').textContent = o.kind === 'egg'
+            ? `${o.baby}${josa(o.baby, '을', '를')} ${o.to.ownerName}의 둥지에서 품어 달라고 청했다. ${dur(o.until - Date.now())} 안에 답이 없으면 알은 이 둥지에서 품는다.`
+            : `${babyWord(o)} ${o.baby}${josa(o.baby, '을', '를')} ${o.kind === 'raise' ? `${o.to.ownerName}의 둥지에서 키워 달라고` : '두 사람과 함께 마을로 보내 가정을 꾸리게 하자고'} 청했다. ${dur(o.until - Date.now())} 안에 답이 없으면 아이는 이 둥지에서 자란다.`;
           oc.querySelector('.row').append(btn('의논하기', () => { $('nest-dlg').close(); openTp(o.to.owner); }));
         }
 
@@ -13225,13 +13232,13 @@
     socket.on('kin:offer:gone', () => { if ($('nest-dlg').open) openNest(); });
     socket.on('kinlove:got', (o) => { // 다른 둥지에서 혼인 청이 옴
       SFX.play('notice');
-      toast(`${o.from}${josa(o.from, '이', '가')} ${o.a}${josa(o.a, '과', '와')} ${o.b}의 혼인을 청해 왔다.`, { label: '둥지 보기', run: () => { hideToast(); openNest(); }, ttl: 15000 });
+      toast(`${o.from}${josa(o.from, '이', '가')} ${o.a}${josa(o.a, '과', '와')} ${o.b}의 ${o.drake ? '짝을' : '혼인을'} 청해 왔다.`, { label: '둥지 보기', run: () => { hideToast(); openNest(); }, ttl: 15000 });
       if ($('nest-dlg').open) openNest();
     });
     socket.on('kinlove:gone', () => { if ($('nest-dlg').open) openNest(); });
     socket.on('kinbaby:got', (o) => { // 짝 사이의 아이를 두고 다른 둥지에서 청이 옴
       SFX.play('notice');
-      toast(`${o.from}${josa(o.from, '이', '가')} ${o.baby}의 일로 청을 보냈다.`, { label: '둥지 보기', run: () => { hideToast(); openNest(); }, ttl: 15000 });
+      toast(o.kind === 'egg' ? `${o.from}${josa(o.from, '이', '가')} ${o.baby}${josa(o.baby, '을', '를')} 맡아 달라는 청을 보냈다.` : `${o.from}${josa(o.from, '이', '가')} ${o.baby}의 일로 청을 보냈다.`, { label: '둥지 보기', run: () => { hideToast(); openNest(); }, ttl: 15000 });
       if ($('nest-dlg').open) openNest();
     });
     socket.on('weather', onWeather);
