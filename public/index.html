@@ -9495,7 +9495,8 @@
   const slKey = () => `dragon-slate-seen:${S.me?.id || 0}`;
   const slSeen = () => Math.max(SEEN.num('slate'), (() => { try { return Number(localStorage.getItem(slKey())) || 0; } catch { return 0; } })()); // 서버(드래곤마다)와 이 기기 중 큰 쪽
   const slSetSeen = (t) => { try { localStorage.setItem(slKey(), String(t)); } catch {} if (t > SEEN.num('slate')) SEEN.set('slate', t); };
-  const SL = { latest: 0, replyAt: 0, peeked: false, page: 'list', cur: null, draft: null, prevSeen: 0, rules: { title: 40, body: 1000, comment: 100 }, gm: false, posts: [] };
+  const SL_PER = 10; // 석판 목록 한 쪽에 보이는 글 수
+  const SL = { latest: 0, replyAt: 0, peeked: false, page: 'list', listPage: 0, cur: null, draft: null, prevSeen: 0, rules: { title: 40, body: 1000, comment: 100 }, gm: false, posts: [] };
   function renderSlateDot() {
     const on = Math.max(SL.latest, SL.replyAt) > slSeen() && !$('slate-dlg').open; // 새 글이나, 내 글에 달린 새 답
     const d = $('slate-dot');
@@ -9566,7 +9567,7 @@
   }
   function openSlate() {
     SL.prevSeen = slSeen();
-    SL.page = 'list';
+    SL.page = 'list'; SL.listPage = 0; // 석판을 새로 열면 첫 쪽부터
     loadSlate(() => { openPanel('slate-dlg'); slSetSeen(Math.max(SL.latest, Date.now())); renderSlateDot(); });
   }
   function loadSlate(done) {
@@ -9643,8 +9644,11 @@
   }
   function slList(box) {
     const list = slEl('div', 'sl-list');
-    const ps = SL.posts;
-    if (!ps.length) list.appendChild(slEl('div', 'sl-empty', "아직 아무것도 새겨지지 않았다. '새기기'로 처음 글을 남겨 보자."));
+    // 쪽 나누기: 한 쪽에 SL_PER개. 글을 보고 돌아와도 보던 쪽 그대로 (글이 줄어 쪽이 사라졌으면 마지막 쪽)
+    const pages = Math.max(1, Math.ceil(SL.posts.length / SL_PER));
+    SL.listPage = Math.min(Math.max(0, SL.listPage || 0), pages - 1);
+    const ps = SL.posts.slice(SL.listPage * SL_PER, (SL.listPage + 1) * SL_PER);
+    if (!SL.posts.length) list.appendChild(slEl('div', 'sl-empty', "아직 아무것도 새겨지지 않았다. '새기기'로 처음 글을 남겨 보자."));
     for (const p of ps) {
       const fresh = p.at > SL.prevSeen && p.who.id !== S.me?.id;
       const c = slEl('button', `sl-card${p.pinned ? ' pin' : ''}${!p.pinned && Date.now() - p.last > 3 * 86400000 ? ' old' : ''}`); c.type = 'button';
@@ -9656,6 +9660,30 @@
       list.appendChild(c);
     }
     box.appendChild(list);
+    if (pages > 1) box.appendChild(slPager(pages));
+  }
+  // 석판 목록 아래 쪽 단추: ‹ 1 2 3 … › (쪽이 많으면 처음·끝과 지금 쪽 둘레만)
+  function slPager(pages) {
+    const nav = slEl('nav', 'sl-pager'); nav.setAttribute('aria-label', '석판 쪽');
+    const go = (i) => { SL.listPage = i; drawSlate(); const b = $('slate-body'); b.scrollTop = 0; b.querySelector('.sl-list')?.scrollIntoView({ block: 'nearest' }); };
+    const btn = (text, i, opts = {}) => {
+      const b = slEl('button', `sl-pg${opts.on ? ' on' : ''}`, text); b.type = 'button';
+      if (opts.label) b.setAttribute('aria-label', opts.label);
+      if (opts.on) b.setAttribute('aria-current', 'page');
+      if (i == null || opts.on) b.disabled = true; else b.addEventListener('click', () => go(i));
+      nav.appendChild(b);
+    };
+    const cur = SL.listPage;
+    btn('‹', cur > 0 ? cur - 1 : null, { label: '앞 쪽' });
+    let last = -1;
+    for (let i = 0; i < pages; i++) {
+      if (i !== 0 && i !== pages - 1 && Math.abs(i - cur) > 1) continue;
+      if (i - last > 1) nav.appendChild(slEl('span', 'sl-pg-gap', '…'));
+      btn(String(i + 1), i, { on: i === cur, label: `${i + 1}쪽` });
+      last = i;
+    }
+    btn('›', cur < pages - 1 ? cur + 1 : null, { label: '다음 쪽' });
+    return nav;
   }
   // 답 입력칸에 그림 한 장: 입력칸 안 오른쪽 끝의 작은 그림 단추 (따로 줄을 차지하지 않음). 붙이면 입력칸 위에 작은 미리보기
   // 돌려줌: { id() 붙인 그림 번호, busy() 올리는 중인지, clear() 비우기 }

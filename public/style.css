@@ -353,6 +353,14 @@ dialog.frame:not(.as-panel) > .bl { bottom: 2px; left: 2px; } dialog.frame:not(.
 .sl-new { width: 6px; height: 6px; border-radius: 50%; background: #A63E4B; flex: none; }
 .sl-empty { padding: 24px 14px; text-align: center; font-size: 13px; color: var(--muted); }
 .sl-list { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+/* 석판 목록 쪽 나누기 */
+.sl-pager { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; margin: 14px 0 4px; }
+.sl-pg { min-width: 32px; min-height: 32px; padding: 0 8px; border: 1px solid #D3D1C9; border-radius: 3px; background: #FBFAF7; font: 500 13px/1 var(--sans); color: var(--ink-2); cursor: pointer; }
+.sl-pg:hover:not(:disabled) { border-color: #A9B4BD; }
+.sl-pg:focus-visible { outline: 2px solid var(--steel); outline-offset: 2px; }
+.sl-pg.on { border-color: var(--steel); background: var(--steel); color: #fff; cursor: default; }
+.sl-pg:disabled:not(.on) { opacity: .4; cursor: default; }
+.sl-pg-gap { padding: 0 2px; font-size: 13px; color: var(--muted); }
 /* 아래 '새기기': 글이 많아 길어져도 화면 아래(하단 메뉴 위)에 붙어 늘 보이게 */
 .sl-foot { position: sticky; bottom: calc(var(--dock-h, 56px) + 8px); z-index: 2; margin-top: 14px; }
 .sl-foot .btn { gap: 7px; min-height: 42px; box-shadow: 0 4px 14px rgba(31, 35, 38, .14), inset 0 0 0 1px var(--steel-l); }

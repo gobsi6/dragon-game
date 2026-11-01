@@ -786,7 +786,7 @@ function feedDrake(d, kin, k, item, have, now) {
     : (big ? '먹는 내내 꼬리 끝이 느긋하게 흔들렸다. 만족스러운 모양이다.' : '꼬리를 흔들며 오물오물 씹어 먹는다.')}`];
   if (fav) {
     if (!k.data.favKnown) { k.data.favKnown = true; lines.push(`${ga(k)} 눈을 반짝이며 콧김을 내뿜었다. ${k.name}${josa(k.name, '은', '는')} ${name}${josa(name, '을', '를')} 가장 좋아하는 것 같다!`); }
-    else lines.push(`가장 좋아하는 ${name}이다. ${big ? `${ga(k)} 한 입 한 입 아껴 가며 음미한다.` : `${ga(k)} 날개를 파닥이며 좋아한다.`}`);
+    else lines.push(`가장 좋아하는 ${name}${josa(name, '이다', '다')}. ${big ? `${ga(k)} 한 입 한 입 아껴 가며 음미한다.` : `${ga(k)} 날개를 파닥이며 좋아한다.`}`);
   }
   if (drakeFull(k)) lines.push('배가 든든하니 가르칠 때 더 잘 따를 것이다.');
   lines.push(`유대 +${gain} · ${satWord(k.data.sat)}`);
@@ -1017,7 +1017,7 @@ function care(d, kin, id, item, have, now = Date.now(), opt = {}) {
   if (hungry && !food) lines.push(`${ga(k)} 배가 고파서인지 금방 내려놓고 둥지 입구만 바라본다.`);
   if (fav) {
     if (!k.data.favKnown) { k.data.favKnown = true; lines.push(`${ga(k)} 눈을 반짝였다. ${k.name}${josa(k.name, '은', '는')} ${name}${josa(name, '을', '를')} 가장 좋아하는 것 같다!`); }
-    else lines.push(`가장 좋아하는 ${name}이다. ${ga(k)} 몸을 흔들며 좋아한다.`);
+    else lines.push(`가장 좋아하는 ${name}${josa(name, '이다', '다')}. ${ga(k)} 몸을 흔들며 좋아한다.`);
   }
   if (cried) lines.push(`울보 ${k.name}${josa(k.name, '이', '가')} 왈칵 울음을 터뜨리며 품에 안겼다.`);
   if (hasT(k, 'glutton') && food) lines.push(`먹보 ${k.name}${josa(k.name, '은', '는')} 눈 깜짝할 새 먹어 치우고 입맛을 다신다.`);

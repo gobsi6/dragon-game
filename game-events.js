@@ -1743,7 +1743,7 @@ module.exports = [
       const k = c.k(v.id);
       if (v.mutual) return [`${k.name}${c.josa(k.name, '이', '가')} 쭈뼛거리며 둥지 앞에 섰다. 어릴 적부터 ${v.home}의 둥지에 놀러 갈 때마다 함께 뛰놀던 단짝, ${v.partner}의 이야기다.`, `"${v.partner}${c.josa(v.partner, '과', '와')} 함께하고 싶어요. ${v.home}께도 허락을 받아 주세요."`];
       return v.love
-        ? [`${k.name}${c.josa(k.name, '이', '가')} ${v.partner}의 손을 꼭 잡고 둥지 앞에 섰다. 강가에서 몰래 만나던 바로 그 ${v.partner}다.`, '"이제는 함께 살고 싶어요. 허락해 주세요."']
+        ? [`${k.name}${c.josa(k.name, '이', '가')} ${v.partner}의 손을 꼭 잡고 둥지 앞에 섰다. 강가에서 몰래 만나던 바로 그 ${v.partner}${c.josa(v.partner, '이다', '다')}.`, '"이제는 함께 살고 싶어요. 허락해 주세요."']
         : [`${k.name}${c.josa(k.name, '이', '가')} 마을에서 만난 ${v.partner}${c.josa(v.partner, '과', '와')} 함께 둥지 앞에 섰다. ${v.partner}${c.josa(v.partner, '은', '는')} 드래곤을 올려다보면서도 물러서지 않았다.`, '"이 사람과 함께 살고 싶어요."'];
     },
     choices: [

@@ -1023,7 +1023,7 @@ const ruin = (() => {
   const save = () => db.worldSet('ruin', st);
   let goalAt = 0, goalV = RUIN.goalMin; // 목표는 1분씩 캐시 (저장 공간을 자주 두드리지 않게)
   const goal = (now = Date.now()) => {
-    if (RUIN.goalFixed) return RUIN.goalFixed; // 고정 목표 (8만)
+    if (RUIN.goalFixed) return RUIN.goalFixed; // 고정 목표 (game-data.js의 RUIN.goalFixed)
     if (now - goalAt > 60000) {
       const n = db.activeSince(now - RUIN.activeDays * 24 * 3600000).filter((x) => x.level >= RUIN.minLevel).length;
       goalV = Math.max(RUIN.goalMin, n * RUIN.goalPer);
