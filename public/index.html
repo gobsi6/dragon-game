@@ -4079,11 +4079,13 @@
           }
         }
         const R2 = R.drake;
-        const full = v.trains >= v.trainLimit;
         const sum = S.stats.reduce((a, x) => a + (v.stats[x.key] || 0), 0);
+        const full = v.trains >= v.trainLimit || (v.statCap && sum >= v.statCap); // 횟수를 다 썼거나 이번 단계에서 배울 만큼 다 배움
         const cnt = ` · 가르친 횟수 ${v.trains}/${v.trainLimit}${v.statCap ? ` · 능력치 합 ${sum}/${v.statCap}` : ''}`;
         label(full ? `이번 단계에서는 더 가르칠 수 없다. 조금 더 자라야 한다.${cnt}`
           : v.trainIn > 0 ? `가르치기: ${dur(v.trainIn)} 뒤에 다시 할 수 있다${cnt}`
+          : S.me.ap < R2.trainAp ? `가르치기: 행동력이 모자란다 (행동력 ${R2.trainAp} 필요)${cnt}`
+          : S.me.en < R2.trainEn ? `가르치기: 기력이 모자란다 (기력 ${R2.trainEn} 필요)${cnt}`
           : `가르치기 (행동력 ${R2.trainAp}, 기력 ${R2.trainEn})${cnt}`);
         const tired = full || v.trainIn > 0 || S.me.ap < R2.trainAp || S.me.en < R2.trainEn;
         for (const x of S.stats) { const b = btn(x.name, () => nestAct(partner ? 'kin:ptrain' : 'kin:train', { id: v.id, stat: x.key }), tired); const c = document.createElement('small'); c.className = 'cnt'; c.textContent = String(v.stats[x.key] ?? ''); b.append(' ', c); }
@@ -4282,9 +4284,16 @@
       if (v.companion) add('곁에 둠', 'warm');
       if (v.errand) add('심부름 중', 'wait');
       else if (v.canRelease && !partner) add('독립할 수 있음', 'ok');
-      else if (v.trains >= v.trainLimit) add('더 자라야 가르침', 'wait');
-      else if (v.trainIn > 0) add(`가르치기 ${dur(v.trainIn)} 뒤`, 'wait');
-      else add('가르칠 수 있음', 'ok');
+      else {
+        // 가르치기 단추가 눌리는지와 똑같이 따짐 (횟수·능력치 합·쉬는 시간·내 행동력과 기력)
+        const R2 = S.kinRules?.drake || {};
+        const sum = (S.stats || []).reduce((a, x) => a + (v.stats?.[x.key] || 0), 0);
+        if (v.trains >= v.trainLimit || (v.statCap && sum >= v.statCap)) add('더 자라야 가르침', 'wait');
+        else if (v.trainIn > 0) add(`가르치기 ${dur(v.trainIn)} 뒤`, 'wait');
+        else if (!partner && S.me && S.me.ap < (R2.trainAp || 0)) add('행동력이 모자람', 'wait');
+        else if (!partner && S.me && S.me.en < (R2.trainEn || 0)) add('기력이 모자람', 'wait');
+        else add('가르칠 수 있음', 'ok');
+      }
     }
     return out.slice(0, 3);
   }
