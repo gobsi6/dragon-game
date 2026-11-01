@@ -1058,6 +1058,20 @@ const KIN = {
     gold_ore: { bond: 7, talent: 'smith' }, obsidian: { bond: 6, talent: 'smith' },
     salted_fish: { bond: 6, talent: 'guard', sat: 30 }, beast_hide: { bond: 4, talent: 'guard' }, sharp_fang: { bond: 5, talent: 'guard' },
   },
+  // 일감: 재주가 정해진 어른 인간 식구에게 재주에 맞는 재료를 건네면, 그걸로 만든 것을 돌려줌 (돌보기와 같이 유대도 오름)
+  // 재료 id → { talent: 그 재주일 때만, out: 만들어 주는 것, n: 개수 }. bonus: 솜씨가 좋아 하나 더 만들 확률
+  work: {
+    bonus: 0.2,
+    items: {
+      glow_moss:  { talent: 'herbalist', out: 'herbal_ointment', n: 1 }, // 약초꾼: 이끼를 빻아 연고로
+      gold_ore:   { talent: 'smith',     out: 'rune_stone',      n: 2 }, // 대장장이: 광석을 다듬어 룬 돌로 (강화 재료)
+      bog_iron:   { talent: 'smith',     out: 'rune_stone',      n: 2 },
+      obsidian:   { talent: 'smith',     out: 'rune_stone',      n: 2 },
+      red_clay:   { talent: 'smith',     out: 'rune_stone',      n: 1 },
+      beast_hide: { talent: 'guard',     out: 'tough_sinew',     n: 1 }, // 파수꾼: 가죽을 손질해 힘줄로
+      sharp_fang: { talent: 'guard',     out: 'bait_meat',       n: 3 }, // 파수꾼: 송곳니로 사냥해 와서 미끼 고기로
+    },
+  },
   // 보답: 좋은 음식(식구 요리·정성 들인 요리·가장 좋아하는 음식·가끔 이상 물고기)을 먹으면 드물게 그 자리에서 보답함 (game-life.js repay)
   // chance: 기본 확률 · fav/bond/glutton: 더해지는 확률 · cooldownH: 한 식구가 보답한 뒤 다시 보답할 수 있을 때까지
   // 무엇을 주는지는 단계마다: keep(보물 상자 추억) · treat(드래곤이 먹는 것을 대접) · talent(재주대로) · hunt(잡아 온 것) · loot(그 지역 재료) · gold([최소, 최대])

@@ -1482,6 +1482,7 @@ dialog.trip-dlg {
 .xa-mat.plain .xa-tags { font-size: 10.5px; color: var(--muted); }
 .xa-gift { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 8px 0 0; font-size: 13px; color: var(--ink-2); cursor: pointer; }
 .xa-gift span { font-weight: 600; color: #6E4A12; } .xa-gift small { font-size: 11.5px; color: var(--muted); }
+.xa-gift + .xa-gift { margin-top: -6px; } /* 선물로 빚기 · 식구 요리로 빚기를 붙여서 한 묶음처럼 (화로 칸의 간격 10px에서 6px을 당겨 4px만 띄움) */
 .xa-sum { margin: 6px 0 0; font-size: 12px; color: var(--ink-2); } .xa-sum b { color: var(--steel-d); margin-right: 4px; }
 .fx-card { margin: 10px 0; padding: 10px 12px; border: 1px solid #CFE0D4; border-radius: 3px; background: #EEF6F0; display: flex; flex-direction: column; gap: 6px; }
 .fx-h { display: flex; align-items: center; gap: 6px; } .fx-h b { font: 700 15px var(--serif); }

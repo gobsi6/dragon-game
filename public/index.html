@@ -3995,8 +3995,14 @@
         label(v.careIn > 0 ? `돌보기: ${dur(v.careIn)} 뒤에 다시 할 수 있다` : '돌보기: 무엇을 건네느냐에 따라 재주가 달라진다');
         if (!owned.length) label('건넬 물건이 없다. 꿀·약초는 약초꾼, 광석은 대장장이, 생선·가죽·송곳니는 파수꾼 쪽.');
         // 먹을 것(배가 차는 것)과 건넬 물건을 나눠 보여 줌
-        const careBtn = (id) => countBtn(btn(S.items[id].name, () => nestAct(partner ? 'kin:pcare' : 'kin:care', { id: v.id, item: id }), v.careIn > 0, `${careOf(id).talent ? `${S.talents[careOf(id).talent].name} 쪽, ` : ''}유대 +${careOf(id).bond}${careOf(id).sat ? `, 배 +${careOf(id).sat}` : ''}`), invCache[id]);
-        const foods = owned.filter((id) => (careOf(id).sat || 0) > 0), things = owned.filter((id) => !((careOf(id).sat || 0) > 0));
+        // 일감: 재주가 정해진 어른에게 재주에 맞는 재료를 건네면 그걸로 만든 것을 돌려줌 (R.work)
+        const workOf = (id) => { const w = R.work?.items?.[id]; return w && v.talent && w.talent === v.talent && S.items[w.out] ? w : null; };
+        const careBtn = (id) => countBtn(btn(S.items[id].name, () => nestAct(partner ? 'kin:pcare' : 'kin:care', { id: v.id, item: id }), v.careIn > 0,
+          workOf(id) ? `일감: ${S.items[workOf(id).out].name} ${workOf(id).n}개를 만들어 준다, 유대 +${careOf(id).bond}`
+            : `${careOf(id).talent && !v.talent ? `${S.talents[careOf(id).talent].name} 쪽, ` : ''}유대 +${careOf(id).bond}${careOf(id).sat ? `, 배 +${careOf(id).sat}` : ''}`), invCache[id]);
+        const foods = owned.filter((id) => (careOf(id).sat || 0) > 0);
+        const jobs = owned.filter((id) => !((careOf(id).sat || 0) > 0) && workOf(id));
+        const things = owned.filter((id) => !((careOf(id).sat || 0) > 0) && !workOf(id));
         // 둘 다 있으면 왼쪽에 '음식'·'물건' 작은 제목을 두고 줄을 나눔
         const grp = (t, ids) => {
           const g = document.createElement('div'); g.className = 'kin-grp';
@@ -4005,8 +4011,9 @@
           g.append(l, row); acts.appendChild(g);
           for (const id of ids) row.appendChild(careBtn(id));
         };
-        if (foods.length && things.length) { grp('음식', foods); grp('물건', things); }
-        else (foods.length ? foods : things).forEach(careBtn);
+        const groups = [['음식', foods], ['일감', jobs], ['물건', things]].filter(([, l]) => l.length);
+        if (groups.length > 1 || jobs.length) for (const [t, l] of groups) grp(t, l); // 일감은 하나뿐이어도 제목을 붙여 알아보게
+        else (groups[0]?.[1] || []).forEach(careBtn);
       }
     }
 

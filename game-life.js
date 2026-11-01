@@ -1066,22 +1066,50 @@ function care(d, kin, id, item, have, now = Date.now(), opt = {}) {
   k.data.lastCare = now;
   k.data.decayed = 0;
   const name = ITEMS[item].name;
-  const react = {
+  // 일감: 재주가 정해진 어른에게 그 재주에 맞는 재료 (아래에서 만든 것을 돌려줌)
+  const wk = KIN.work?.items?.[item];
+  const job = !!(wk && k.data.talent && wk.talent === k.data.talent && ITEMS[wk.out]);
+  const grownUp = !!k.data.talent; // 재주가 정해졌으면 어른: 아이 같은 반응 대신
+  const react = (grownUp ? {
+    herbalist: '냄새를 맡아 보고는 고개를 끄덕인다.',
+    smith: '손바닥에 올려 무게를 가늠해 본다.',
+    guard: '이리저리 살펴보고는 허리춤에 챙긴다.',
+  } : {
     herbalist: '킁킁 냄새를 맡아 보고는 신기한 듯 만지작거린다.',
     smith: '반짝이는 걸 쥐고 이리저리 두드려 본다.',
     guard: '꼭 쥐고 드래곤 흉내를 내며 으르렁거린다.',
-  }[c.talent];
-  const lines = [`${k.name}에게 ${name}${josa(name, '을', '를')} 건넸다. ${c.eat || (hungry && food ? '배가 고팠는지 허겁지겁 먹는다.' : react)}`];
-  if (hungry && !food) lines.push(`${ga(k)} 배가 고파서인지 금방 내려놓고 둥지 입구만 바라본다.`);
+  })[c.talent] || '고맙다며 받아 든다.';
+  // 음식 반응: KIN.care의 eat은 아이 말투라, 어른·노년에게는 그 나이에 맞는 말로
+  const stN = stageOf(k, now).name;
+  const ADULT_EAT = stN === '노년'
+    ? ['천천히 오래 씹으며 고맙다고 고개를 숙인다.', '"이 나이에도 챙겨 주시니 송구하네요." 하며 남김없이 먹는다.', '옛날 생각이 난다며 웃더니 그릇을 깨끗이 비운다.']
+    : ['고맙다며 받아 들고 천천히 맛을 음미한다.', '한 입 먹고는 "역시 이 맛이에요." 하며 웃는다.', '어릴 적 생각이 난다며 웃더니 남김없이 먹는다.', '일하느라 출출했는지 반가워하며 맛있게 먹는다.'];
+  const eat = food && ['어른', '노년'].includes(stN) ? pick(ADULT_EAT) : c.eat;
+  const lines = [job ? `${k.name}에게 ${name}${josa(name, '을', '를')} 건넸다.` : `${k.name}에게 ${name}${josa(name, '을', '를')} 건넸다. ${(hungry && food && ['어른', '노년'].includes(stN)) ? '배가 고팠는지 반가워하며 단숨에 먹는다.' : eat || (hungry && food ? '배가 고팠는지 허겁지겁 먹는다.' : react)}`];
+  if (hungry && !food && !job) lines.push(`${ga(k)} 배가 고파서인지 금방 내려놓고 둥지 입구만 바라본다.`);
   if (fav) {
     if (!k.data.favKnown) { k.data.favKnown = true; lines.push(`${ga(k)} 눈을 반짝였다. ${k.name}${josa(k.name, '은', '는')} ${name}${josa(name, '을', '를')} 가장 좋아하는 것 같다!`); }
-    else lines.push(`가장 좋아하는 ${name}${josa(name, '이다', '다')}. ${ga(k)} 몸을 흔들며 좋아한다.`);
+    else lines.push(`가장 좋아하는 ${name}${josa(name, '이다', '다')}. ${['어른', '노년'].includes(stN) ? `${ga(k)} 얼굴 가득 웃음을 띤다.` : `${ga(k)} 몸을 흔들며 좋아한다.`}`);
   }
   if (cried) lines.push(`울보 ${k.name}${josa(k.name, '이', '가')} 왈칵 울음을 터뜨리며 품에 안겼다.`);
   if (hasT(k, 'glutton') && food) lines.push(`먹보 ${k.name}${josa(k.name, '은', '는')} 눈 깜짝할 새 먹어 치우고 입맛을 다신다.`);
   else if (hasT(k, 'picky') && food && !fav) lines.push(`편식하는 ${k.name}${josa(k.name, '이', '가')} 깨작깨작 먹는 시늉만 한다.`);
   else if (hasT(k, 'shy')) lines.push(k.data.bond - gain < 40 ? `수줍은 ${k.name}${josa(k.name, '은', '는')} 받아 들고 슬그머니 등을 돌린다.` : `${k.name}${josa(k.name, '이', '가')} 이제는 수줍게 웃으며 다가온다.`);
   const items = [{ id: item, qty: -1 }];
+  // 일감: 재주가 정해진 어른에게 그 재주에 맞는 재료를 건네면, 그걸로 만든 것을 돌려줌
+  if (job) {
+    const n = wk.n + (Math.random() < (KIN.work.bonus || 0) ? 1 : 0);
+    const on = ITEMS[wk.out].name;
+    items.push({ id: wk.out, qty: n });
+    const did = {
+      herbalist: `${name}${josa(name, '을', '를')} 받아 들더니 절구를 꺼냈다. 한참 빻고 개어 ${on}${josa(on, '을', '를')} 만들어 건넸다.`,
+      smith: `${name}${josa(name, '을', '를')} 들고 대장간으로 향했다. 망치 소리가 그치자 ${on} ${n}개를 들고 돌아왔다.`,
+      guard: wk.out === 'bait_meat'
+        ? `${name}${josa(name, '을', '를')} 창끝에 매어 사냥을 나가더니, 해 질 녘에 ${on} ${n}개를 들고 돌아왔다.`
+        : `${name}${josa(name, '을', '를')} 펼쳐 놓고 꼼꼼히 손질해 ${on} ${n}개를 뽑아냈다.`,
+    }[k.data.talent];
+    lines.push(`${ga(k)} ${did} (${on} +${n})${n > wk.n ? ' 솜씨가 좋아 하나 더 만들었다.' : ''}`);
+  }
   if (sulk) {
     const got = pick(TR.pranksterItems);
     items.push({ id: got, qty: 1 });
