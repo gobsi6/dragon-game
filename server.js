@@ -36,7 +36,8 @@ const ITEM_SOURCES = (() => {
   add('corrupt_crystal', '오염된 사냥감·강적을 쓰러뜨리면 (가끔)'); add('corrupt_crystal', '오염된 곳에서 탐사·채집 (드물게)');
   for (const [r, ids] of Object.entries(SHOPS)) for (const id of ids) add(id, `${rn(r)} 시장${TRADE.dailyBuy?.[id] ? ` (하루 ${TRADE.dailyBuy[id]}개)` : ''}`);
   for (const [r, ids] of Object.entries(SHOPS_SPECIAL || {})) for (const id of ids) add(id, `${rn(r)} 시장 (우호·평판이 높을 때)`);
-  for (const f of FISHING.fish) add(f.id, `${rn(FISHING.region)} 낚시${f.tier === 'rare' ? ' (드물게)' : f.tier === 'uncommon' ? ' (가끔)' : ''}`);
+  for (const f of FISHING.fish) add(f.id, `${rn(FISHING.region)} 낚시${f.tier === 'rare' ? ' (드물게)' : f.tier === 'uncommon' ? ' (가끔)' : ''}${f.hint ? ` · ${f.hint}에 잘 묾` : ''}`);
+  for (const j of FISHING.junk?.items || []) add(j.id, `${rn(FISHING.region)} 낚시 (가끔 물고기 대신 걸려 올라옴)`);
   add('bait_shrimp', `${rn(FISHING.region)} 채집`); add('salt_crystal', `${rn(FISHING.region)} 채집`);
   add('bait_worm', `${rn(FISHING.region)} 위협 (적대)`); add('fish_mackerel', `${rn(FISHING.region)} 위협 (적대)`);
   for (const m of Object.values(mobs.MOBS)) for (const t of m.trades || []) for (const id of Object.keys(t.get || {})) add(id, `${m.name}(${rn(m.region)})와 교환`);
@@ -355,6 +356,26 @@ app.post('/api/slate-img', express.raw({ type: ['image/webp', 'image/jpeg', 'ima
   const r = slate.uploadImg(d, type, req.body, req.query.w, req.query.h);
   res.status(r.error ? 400 : 200).json(r);
 });
+// 특징 그림 올리기: 석판 그림과 같은 방식(파일 그대로 HTTP로). 크기가 넘을 때의 안내(아래 app.use)를 받도록 그 앞에 둠. 한 장만 두므로 올리면 먼저 것은 바뀜
+const BIO_IMG = { max: 700 * 1024, gap: 3000 };
+const bioImgAt = new Map();
+app.post('/api/bio-img', express.raw({ type: ['image/webp', 'image/jpeg', 'image/png'], limit: '760kb' }), (req, res) => {
+  const token = str((req.get('authorization') || '').replace(/^Bearer\s+/i, ''));
+  const user = token ? db.getSessionUser(token) : null;
+  if (!user) return res.status(401).json({ error: '다시 로그인해야 한다.' });
+  const d = db.getDragonByUser(user.id);
+  if (!d) return res.status(400).json({ error: '먼저 드래곤을 만들어야 한다.' });
+  const type = String(req.get('content-type') || '').split(';')[0].trim();
+  if (!['image/webp', 'image/jpeg', 'image/png'].includes(type) || !Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: '그림 파일을 읽지 못했다. 다른 그림으로 해 보자.' });
+  if (req.body.length > BIO_IMG.max) return res.status(400).json({ error: '그림이 너무 크다.' });
+  const now = Date.now();
+  if (now - (bioImgAt.get(d.id) || 0) < BIO_IMG.gap) return res.status(400).json({ error: '조금 천천히 올리자.' });
+  bioImgAt.set(d.id, now);
+  const ver = db.setBioImg(d.id, req.body, type);
+  const e = online.get(d.id); // 접속해 있으면 화면의 드래곤 기록도 바로 새로
+  if (e) { e.dragon.bio_img_ver = ver; e.dragon.has_bio_img = 1; sendMe(e.socket, e.dragon); }
+  res.json({ ok: true, ver });
+});
 app.use((err, req, res, next) => { // 받는 크기를 넘으면 (express.raw의 limit)
   if (err && err.type === 'entity.too.large') return res.status(413).json({ error: '그림이 너무 크다.' });
   next(err);
@@ -441,26 +462,6 @@ app.get('/bio-img/:id', (req, res) => {
   res.set('Cache-Control', 'public, max-age=31536000, immutable');
   res.set('X-Content-Type-Options', 'nosniff');
   res.send(row.bio_img);
-});
-// 특징 그림 올리기: 석판 그림과 같은 방식(파일 그대로 HTTP로). 한 장만 두므로 올리면 먼저 것은 바뀜
-const BIO_IMG = { max: 700 * 1024, gap: 3000 };
-const bioImgAt = new Map();
-app.post('/api/bio-img', express.raw({ type: ['image/webp', 'image/jpeg', 'image/png'], limit: '760kb' }), (req, res) => {
-  const token = str((req.get('authorization') || '').replace(/^Bearer\s+/i, ''));
-  const user = token ? db.getSessionUser(token) : null;
-  if (!user) return res.status(401).json({ error: '다시 로그인해야 한다.' });
-  const d = db.getDragonByUser(user.id);
-  if (!d) return res.status(400).json({ error: '먼저 드래곤을 만들어야 한다.' });
-  const type = String(req.get('content-type') || '').split(';')[0].trim();
-  if (!['image/webp', 'image/jpeg', 'image/png'].includes(type) || !Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: '그림 파일을 읽지 못했다. 다른 그림으로 해 보자.' });
-  if (req.body.length > BIO_IMG.max) return res.status(400).json({ error: '그림이 너무 크다.' });
-  const now = Date.now();
-  if (now - (bioImgAt.get(d.id) || 0) < BIO_IMG.gap) return res.status(400).json({ error: '조금 천천히 올리자.' });
-  bioImgAt.set(d.id, now);
-  const ver = db.setBioImg(d.id, req.body, type);
-  const e = online.get(d.id); // 접속해 있으면 화면의 드래곤 기록도 바로 새로
-  if (e) { e.dragon.bio_img_ver = ver; e.dragon.has_bio_img = 1; sendMe(e.socket, e.dragon); }
-  res.json({ ok: true, ver });
 });
 
 app.post('/api/logout', (req, res) => {

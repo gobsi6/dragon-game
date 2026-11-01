@@ -6,7 +6,7 @@
 // 모든 함수는 식구 목록 kin을 직접 바꿉니다. 새 식구는 id가 null이고, 저장은 server.js가 합니다.
 
 const {
-  ITEMS, KINDS, REGIONS, SHOPS, STATS, REGION_LOOT, PLACES, FACILITY, RECIPES, DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, EVENT_RULES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, KIN_GROW, KIN_PLAY, KIN_TOUCH, KIN_BOND, KIN_FEST, FESTIVAL,
+  KEEPSAKES, ITEMS, KINDS, REGIONS, SHOPS, STATS, REGION_LOOT, PLACES, FACILITY, RECIPES, DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, EVENT_RULES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, KIN_GROW, KIN_PLAY, KIN_TOUCH, KIN_BOND, KIN_FEST, FESTIVAL,
 } = require('./game-data');
 const logic = require('./game-logic');
 const EVENTS = require('./game-events');
@@ -765,6 +765,58 @@ function views(kin, now, d) {
 // ── 식구 돌보기 ────────────────────────────────────
 // opt.away: 반려의 둥지에서 그 집 식구를 돌봄 (둥지에 있는지는 서버가 따로 확인)
 // 새끼 드래곤에게 먹이 주기 (돌보기와 같은 길로 들어옴)
+// ── 보답: 좋은 음식을 먹으면 드물게 그 자리에서 고마움을 갚음 (KIN.repay) ──
+// 좋은 음식: 식구 요리·정성 들인 요리(cat meal), 가장 좋아하는 음식, 가끔·드물게 낚이는 물고기
+const RP = KIN.repay;
+const goodFood = (item, fav) => fav || ITEMS[item]?.cat === 'meal' || (ITEMS[item]?.cat === 'fish' && ITEMS[item].rarity !== 'common');
+function repay(d, k, item, fav, now) {
+  if (!RP || !goodFood(item, fav)) return null;
+  if (k.data.repayAt && now - k.data.repayAt < RP.cooldownH * 3600000) return null;
+  const p = RP.chance + (fav ? RP.fav : 0) + ((k.data.bond || 0) >= RP.bondAt ? RP.bond : 0) + (hasT(k, 'glutton') ? RP.glutton : 0);
+  if (Math.random() >= p) return null;
+  const st = stageOf(k, now).name;
+  const T = (k.type === 'drake' ? RP.drake : RP.human)[st];
+  if (!T) return null;
+  const nm = k.name, sh = hasT(k, 'shy') && k.type === 'human'; // 수줍은 아이는 말없이 두고 감
+  // 고를 수 있는 보답들 (상자가 가득 차 추억을 못 넣으면 다른 것으로)
+  const opts = [];
+  if (T.keep && d.nest) opts.push('keep');
+  if (T.treat) opts.push('treat');
+  if (T.talent && T.talent[k.data.talent]) opts.push('talent');
+  if (T.hunt) opts.push('hunt');
+  if (T.loot && REGION_LOOT[d.region]) opts.push('loot');
+  if (T.gold) opts.push('gold');
+  while (opts.length) {
+    const kind = opts.splice(Math.floor(Math.random() * opts.length), 1)[0];
+    if (kind === 'keep') {
+      const kp = pick(T.keep), kn = KEEPSAKES[kp]?.name;
+      if (!kn || !logic.chestAdd(d, kp, nm, '', now)) continue;
+      k.data.repayAt = now;
+      return { lines: [sh
+        ? `다 먹고 나니 ${nm}${josa(nm, '이', '가')} 어느새 사라졌다. 자리에 ${kn} 하나가 슬그머니 놓여 있다. (보물 상자에 간직했다)`
+        : k.type === 'drake'
+          ? `${ga(k)} 어디선가 ${kn}${josa(kn, '을', '를')} 물어 와 발치에 툭 내려놓았다. 보답인 모양이다. (보물 상자에 간직했다)`
+          : `${ga(k)} 쪼르르 달려와 ${kn}${josa(kn, '을', '를')} 내밀었다. "맛있는 거 줘서 고마워요!" (보물 상자에 간직했다)`], items: [] };
+    }
+    if (kind === 'gold') {
+      const g = randInt(T.gold[0], T.gold[1]);
+      d.gold += g; k.data.repayAt = now;
+      return { lines: [k.type === 'drake'
+        ? `${ga(k)} 둥지를 박차고 날아갔다 오더니 반짝이는 금화 ${g}닢을 내려놓았다. 어디서 났는지는 묻지 않기로 했다. (금화 +${g})`
+        : sh ? `${nm}${josa(nm, '이', '가')} 눈도 못 마주치고 금화 ${g}닢을 쥐여 주고는 도망치듯 나갔다. (금화 +${g})`
+          : `${ga(k)} 그동안 일해서 모은 금화 ${g}닢을 쥐여 주었다. "늘 받기만 했잖아요." (금화 +${g})`], items: [] };
+    }
+    let id = null, line = '';
+    if (kind === 'treat') { id = pick(T.treat); const n = ITEMS[id].name; line = sh ? `잠시 뒤 둥지 입구에 ${n}${josa(n, '이', '가')} 슬그머니 놓여 있었다. ${nm}의 솜씨다.` : `${ga(k)} 부엌에서 한참 달그락거리더니 ${n}${josa(n, '을', '를')} 들고 왔다. "이번엔 제가 대접할게요!"`; }
+    if (kind === 'talent') { id = pick(T.talent[k.data.talent]); const n = ITEMS[id].name; line = { herbalist: `${ga(k)} 고맙다며 손수 만든 ${n}${josa(n, '을', '를')} 건넸다.`, smith: `${ga(k)} 일터에서 챙겨 온 ${n}${josa(n, '을', '를')} 내밀었다. "쓸 데가 있을 거예요."`, guard: `${ga(k)} 사냥에서 얻은 ${n}${josa(n, '을', '를')} 내려놓았다. "오늘 잡은 것 중에 제일 좋은 거예요."` }[k.data.talent]; }
+    if (kind === 'hunt') { id = pick(T.hunt); const n = ITEMS[id].name; line = `${ga(k)} 쏜살같이 날아갔다 오더니 직접 사냥해 온 ${n}${josa(n, '을', '를')} 내려놓았다. 자랑스러운 듯 가슴을 편다.`; }
+    if (kind === 'loot') { const L = REGION_LOOT[d.region]; id = pick(Math.random() < 0.8 ? L.common : (L.uncommon?.length ? L.uncommon : L.common)); if (!id) continue; const n = ITEMS[id].name; line = `${ga(k)} 하늘을 크게 한 바퀴 돌고 와서 ${n}${josa(n, '을', '를')} 내려놓았다. 먹은 만큼 갚겠다는 듯하다.`; }
+    if (!id || !ITEMS[id]) continue;
+    k.data.repayAt = now;
+    return { lines: [`${line} (${ITEMS[id].name} +1)`], items: [{ id, qty: 1 }] };
+  }
+  return null;
+}
 function feedDrake(d, kin, k, item, have, now) {
   if (k.data.errand) return { error: `${ga(k)} 심부름을 떠나 있다.` };
   const f = DF.items[item];
@@ -790,7 +842,10 @@ function feedDrake(d, kin, k, item, have, now) {
   }
   if (drakeFull(k)) lines.push('배가 든든하니 가르칠 때 더 잘 따를 것이다.');
   lines.push(`유대 +${gain} · ${satWord(k.data.sat)}`);
-  return { title: k.name, lines, items: [{ id: item, qty: -1 }] };
+  const items = [{ id: item, qty: -1 }];
+  const rp = repay(d, k, item, fav, now); // 보답 (드물게)
+  if (rp) { lines.push(...rp.lines); items.push(...rp.items); }
+  return { title: k.name, lines, items };
 }
 // ── 교감: 쓰다듬기·안아 주기·놀아 주기·이야기·등에 태우기/함께 날기 ──────────
 // 물건·행동력 없이 하루 몇 번. 단계와 성격마다 좋아하는 것이 다르고, 기분에 따라 반응이 달라짐.
@@ -1037,6 +1092,8 @@ function care(d, kin, id, item, have, now = Date.now(), opt = {}) {
     lines.push(`장난꾸러기 ${k.name}${josa(k.name, '이', '가')} 키득거리며 주머니에서 ${gn}${josa(gn, '을', '를')} 꺼내 쥐여 주었다.`);
   }
   lines.push(food ? `유대 +${gain} · ${satWord(k.data.sat)}` : `유대 +${gain}`, ...logic.traitCount(d, 'care'));
+  const rp = food ? repay(d, k, item, fav, now) : null; // 보답 (드물게)
+  if (rp) { lines.push(...rp.lines); items.push(...rp.items); }
   return { title: k.name, lines, items };
 }
 

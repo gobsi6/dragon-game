@@ -458,7 +458,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     if (did && a.id === 'breath' && p.breath) {
       const el = BREATHS[p.breath]?.element;
       if (el === 'fire' && (foe.raid === 'lord' || foe.raid === 'crow') && fg.fire < B.fire.max) {
-        fg.fire += 1;
+        fg.fire += 1; fg.fireAt = fg.turn; // 잦아들기는 마지막으로 번진 턴부터 다시 셈
         lines.push(`불길이 마른 밀밭으로 번졌다! (밀밭의 불길 ${fg.fire}단계)`);
       }
       if ((el === 'ice' || el === 'water') && fg.fire > 0) {
@@ -545,6 +545,11 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
       const pct = B.fire.per * fg.fire;
       for (const p of livePlayers(fg)) p.hp = Math.max(0, p.hp - Math.max(1, Math.round(p.hpMax * pct)));
       lines.push(`밀밭의 불길이 일렁인다. 모두 최대 체력의 ${Math.round(pct * 100)}%만큼 데었다.`);
+      // 새로 번지지 않은 채 B.fire.fade턴이 지나면 저절로 한 단계 잦아듦 (그다음 단계도 다시 그만큼 지나야)
+      if (B.fire.fade && fg.turn - (fg.fireAt || 0) >= B.fire.fade) {
+        fg.fire -= 1; fg.fireAt = fg.turn;
+        lines.push(fg.fire ? `탈 것이 줄어든 불길이 조금 잦아들었다. (밀밭의 불길 ${fg.fire}단계)` : '밀밭의 불길이 스스로 사그라들었다.');
+      }
     }
     downs(fg, lines);
     phases(fg, lines);

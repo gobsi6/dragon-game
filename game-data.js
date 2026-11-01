@@ -360,6 +360,45 @@ const ITEMS = {
   fish_eel:      { name: '번개 장어',     rarity: 'uncommon', cat: 'fish', value: 18, desc: '건드리면 찌릿한 장어. 뇌우가 치는 날에만 물가로 올라온다.' },
   fish_marlin:   { name: '푸른 청새치',   rarity: 'rare',     cat: 'fish', value: 45, desc: '창처럼 긴 주둥이를 가진 큰 물고기. 어부들이 평생 한 번 볼까 말까 하다.' },
   sea_scale:     { name: '바다 용의 비늘', rarity: 'rare',     cat: 'fish', value: 70, desc: '낚싯줄에 걸려 올라온 커다란 비늘. 깊은 바다에 무언가가 산다.' },
+  // 낚시로 늘어난 물고기 (계절·날씨마다 잘 무는 것이 다름: FISHING.fish의 sx·wx)
+  fish_mullet:   { name: '숭어',           rarity: 'common',   cat: 'fish', value: 5,  desc: '봄이면 물 위로 펄쩍펄쩍 뛰어오르는 생선. 살이 단단하고 담백하다.' },
+  fish_gizzard:  { name: '전어',           rarity: 'common',   cat: 'fish', value: 5,  desc: '가을이 오면 기름이 오르는 작은 생선. 구우면 온 마을에 냄새가 퍼진다.' },
+  fish_rockfish: { name: '우럭',           rarity: 'common',   cat: 'fish', value: 5,  desc: '바위 그늘에 숨어 사는 거무스름한 생선. 입이 크고 살이 쫄깃하다.' },
+  fish_jack:     { name: '전갱이',         rarity: 'common',   cat: 'fish', value: 4,  desc: '등이 푸르고 꼬리 쪽에 단단한 비늘 줄이 난 생선. 고등어와 함께 바닷가 밥상에 가장 자주 오른다.' },
+  fish_filefish: { name: '쥐치',           rarity: 'common',   cat: 'fish', value: 4,  desc: '가죽이 거칠거칠한 납작한 생선. 껍질을 벗기면 살이 달다.' },
+  fish_greenling:{ name: '노래미',         rarity: 'common',   cat: 'fish', value: 5,  desc: '해초 사이를 누비는 얼룩덜룩한 생선. 낚아 올리면 꼬리를 힘차게 퍼덕인다.' },
+  fish_hairtail: { name: '은빛 갈치',      rarity: 'uncommon', cat: 'fish', value: 13, desc: '칼처럼 길고 은빛으로 번쩍이는 생선. 철을 가리지 않고 가끔 걸려 올라온다.' },
+  fish_anchovy:  { name: '멸치 한 줌',     rarity: 'common',   cat: 'fish', value: 3,  desc: '그물처럼 몰려다니는 작은 은빛 물고기들. 한 번에 한 줌씩 걸려 올라온다.' },
+  fish_octopus:  { name: '바위 문어',      rarity: 'uncommon', cat: 'fish', value: 15, desc: '바위틈에 숨어 있다가 낚싯줄을 휘감은 문어. 빨판이 손가락에 쩍쩍 달라붙는다.' },
+  fish_crab:     { name: '무쇠 집게 게',   rarity: 'uncommon', cat: 'fish', value: 14, desc: '등딱지가 쇠처럼 단단한 게. 집게에 물리면 드래곤도 움찔한다.' },
+  fish_cod:      { name: '눈송이 대구',    rarity: 'uncommon', cat: 'fish', value: 17, desc: '눈 오는 날 얕은 물로 올라오는 하얀 대구. 끓이면 국물이 뽀얗게 우러난다.' },
+  fish_flyingfish:{ name: '바람 날치',     rarity: 'uncommon', cat: 'fish', value: 16, desc: '바람이 거센 날 지느러미를 펼치고 파도 위를 나는 물고기. 날개 같은 지느러미가 얇고 질기다.' },
+  fish_puffer:   { name: '가시 복어',      rarity: 'uncommon', cat: 'fish', value: 15, desc: '건드리면 가시를 세우고 부풀어 오르는 복어. 몸에 독이 있어 그냥 먹이로 줄 수는 없다.' },
+  fish_bream:    { name: '금빛 도미',      rarity: 'rare',     cat: 'fish', value: 50, desc: '비늘이 해처럼 반짝이는 도미. 잔칫상에 오르면 그 집에 복이 든다고 한다.' },
+  fish_moonray:  { name: '달빛 가오리',    rarity: 'rare',     cat: 'fish', value: 55, desc: '안개 낀 바다 밑을 소리 없이 미끄러지는 가오리. 등에 달빛 같은 무늬가 어른거린다.' },
+  fish_jelly:    { name: '오로라 해파리',  rarity: 'rare',     cat: 'fish', value: 80, desc: '오로라가 뜬 밤에만 떠오르는 해파리. 하늘의 빛을 흉내 내듯 몸속이 일렁인다.' },
+  fish_ashfin:   { name: '잿빛 심해어',    rarity: 'rare',     cat: 'fish', value: 60, desc: '잿비가 내리는 날 바다 건너에서 떠밀려 온 물고기. 비늘에 재가 엉겨 있지만 눈은 맑다.' },
+  // 낚시 잡동사니 (가끔 물고기 대신 걸려 올라옴: FISHING.junk)
+  old_boot:      { name: '낡은 장화',      rarity: 'common',   value: 1,  desc: '바닷물을 잔뜩 머금은 어부의 장화. 한 짝뿐이다.' },
+  driftwood:     { name: '떠내려온 나무',  rarity: 'common',   value: 2,  desc: '파도에 깎여 반들반들해진 나뭇조각. 어디서 온 걸까.' },
+  tangled_net:   { name: '엉킨 그물',      rarity: 'common',   value: 2,  desc: '누군가 잃어버린 그물 한 자락. 풀면 아직 쓸 만하다.' },
+  rusty_hook:    { name: '녹슨 낚싯바늘',  rarity: 'common',   value: 1,  desc: '다른 낚시꾼이 놓친 바늘. 끝은 아직 날카롭다.' },
+  sea_glass:     { name: '바다 유리',      rarity: 'common',   value: 4,  desc: '깨진 병이 파도에 닳아 조약돌처럼 된 유리 조각. 빛에 비추면 푸르게 빛난다.' },
+  bottle_letter: { name: '병 속 편지',     rarity: 'uncommon', value: 6,  desc: '마개를 꼭 막은 유리병. 안에 둘둘 만 쪽지가 들어 있다.' },
+  // 새 물고기로 만드는 것
+  mixed_grill:   { name: '모둠 생선구이',  rarity: 'common',   cat: 'meal', value: 12, desc: '우럭과 노래미를 소금 뿌려 함께 구운 한 접시. 바닷가 집집마다 저녁상에 오른다. (파수꾼 쪽)' },
+  hairtail_braise:{ name: '갈치 조림',     rarity: 'uncommon', type: 'use', use: { hp: 40, en: 15 }, value: 20, desc: '은빛 갈치를 연근과 함께 졸였다. 짭조름한 국물에 기운이 돈다.' },
+  gizzard_grill: { name: '전어 구이',      rarity: 'common',   cat: 'meal', value: 12, desc: '소금을 뿌려 구운 전어. 집 나간 아이도 돌아온다는 냄새가 난다. (파수꾼 쪽)' },
+  mullet_soup:   { name: '숭어 맑은국',    rarity: 'common',   cat: 'meal', value: 10, desc: '숭어와 들풀 씨앗을 넣고 맑게 끓인 국. 봄 바다 맛이 난다. (약초꾼 쪽)' },
+  octopus_skewer:{ name: '문어 꼬치',      rarity: 'uncommon', cat: 'meal', value: 18, desc: '바위 문어 다리를 숯불에 구워 꿴 꼬치. 새끼 드래곤이 다리 하나씩 물고 뜯는다.' },
+  bream_feast:   { name: '금빛 도미 잔칫상', rarity: 'rare',   cat: 'meal', value: 60, desc: '금빛 도미를 통째로 올린 상. 둥지에 큰 경사가 난 날에나 차린다.' },
+  cod_stew:      { name: '대구탕',         rarity: 'uncommon', type: 'use', use: { hp: 45, en: 20 }, value: 22, desc: '눈송이 대구와 연근을 넣고 뽀얗게 끓인 탕. 몸이 녹고 기운이 돈다.' },
+  ashfin_broth:  { name: '잿빛 심해어 국', rarity: 'rare',     type: 'use', use: { hp: 30, mind: 35 }, value: 45, desc: '잿빛 심해어를 빛나는 이끼와 끓인 국. 마시면 흐려진 마음이 맑게 가라앉는다.' },
+  crab_broth:    { name: '게딱지 탕',      rarity: 'uncommon', type: 'use', use: { buff: 'iron' },   value: 20, desc: '무쇠 집게 게를 통째로 우린 진한 탕. 먹고 나면 비늘이 게딱지처럼 단단해진다.' },
+  flyfish_jerky: { name: '날치 육포',      rarity: 'uncommon', type: 'use', use: { buff: 'swift' },  value: 20, desc: '바람 날치를 바닷바람에 말린 육포. 씹을수록 날갯짓이 가벼워진다.' },
+  puffer_brew:   { name: '복어 독술',      rarity: 'uncommon', type: 'use', use: { buff: 'frenzy' }, value: 24, desc: '가시 복어의 독을 진한 술에 조금 풀었다. 한 모금이면 눈앞이 붉게 끓어오른다.' },
+  jelly_circlet: { name: '오로라 해파리 관', rarity: 'rare', type: 'equip', slot: 'head', bonus: { wisdom: 2, majesty: 2 }, value: 120, desc: '오로라 해파리를 진주 둘레에 굳혀 만든 관. 어두운 곳에서 머리 위로 빛이 일렁인다.' },
+  moonray_mantle:{ name: '달빛 가오리 날개덮개', rarity: 'rare', type: 'equip', slot: 'wing', bonus: { wing: 2, wisdom: 2 }, value: 120, desc: '달빛 가오리의 지느러미로 지은 날개덮개. 날갯짓 소리가 안개처럼 사라진다.' },
   salmon_grill:  { name: '연어 구이',     rarity: 'uncommon', cat: 'meal', value: 16, desc: '소금을 뿌려 구운 은비늘 연어. 한 입만 먹어도 든든하다. (파수꾼 쪽)' },
   // ── 만든 물건: 식구 요리 (cat: meal. 인간 식구에게 건네면 배가 부르고 유대가 오름. 둥지 식구 칸에서 건넴) ──
   // 새끼 드래곤 먹이 (cat: meal)
@@ -449,6 +488,8 @@ const ITEMS = {
   flower_crown: { name: '들꽃 화관',      rarity: 'common',   value: 8,  type: 'use', use: { crown: 1440, mind: 5 }, desc: '들꽃을 엮어 만든 화관. 머리에 얹으면 꽃향기에 정신이 조금 맑아지고(+5), 하루 동안 이름 옆에 작은 꽃이 핀다. 누군가에게 선물해도 좋다.' },
   shell_chime:  { name: '조개 풍경',      rarity: 'common',   type: 'use', use: { keep: 'shell_chime' }, desc: '조개껍데기를 꿰어 단 풍경. 보물 상자에 간직하거나 누군가에게 선물할 수 있다.' },
   amber_star:   { name: '호박 별 장식',   rarity: 'uncommon', type: 'use', use: { keep: 'amber_star' },  desc: '호박을 별 모양으로 깎아 금실로 감쌌다. 보물 상자에 간직하거나 누군가에게 선물할 수 있다.' },
+  sea_glass_mobile: { name: '바다 유리 모빌', rarity: 'common', type: 'use', use: { keep: 'sea_glass_mobile' }, desc: '바다 유리 조각을 떠내려온 나무에 매달았다. 보물 상자에 간직하거나 누군가에게 선물할 수 있다.' },
+  memory_bottle: { name: '바다 유리 추억병', rarity: 'uncommon', type: 'use', use: { keep: 'memory_bottle' }, desc: '병 속 편지를 바다 유리 조각과 함께 다시 담았다. 보물 상자에 간직하거나 누군가에게 선물할 수 있다.' },
   music_box:    { name: '은사슬 오르골',  rarity: 'rare',     type: 'use', use: { keep: 'music_box' },   desc: '은사슬 태엽의 작은 오르골. 보물 상자에 간직하거나 누군가에게 선물할 수 있다.' },
   bouquet_wild: { name: '들꽃 꽃다발',    rarity: 'common',   value: 8,  type: 'use', use: { keep: 'bouquet_wild', mind: 10 }, desc: '평원의 들꽃과 해안의 갯메꽃을 묶은 꽃다발. 향을 맡으면 정신이 맑아진다(+10). 선물로 보내거나, 둥지의 보물 상자에 넣어 간직할 수도 있다.' },
   festival_garland: { name: '축제 꽃장식', rarity: 'uncommon', value: 10, type: 'use', use: { keep: 'festival_garland' }, desc: '왕도 축제에서 처음 춤을 춘 드래곤에게 마을 사람들이 걸어 준 꽃장식. 리본 끝에 작은 방울이 달려 있다. 둥지의 보물 상자에 넣어 간직할 수 있다.' },
@@ -550,6 +591,8 @@ const RECIPES = [
   { out: 'shell_chime', needs: { sea_shell: 3, spider_silk: 1 }, en: 3, wis: 2 },               // 선물: 보물 상자에 간직
   { out: 'amber_star',  needs: { amber: 1, gold_ore: 1, silk_scrap: 1 }, en: 5, wis: 7 },
   { out: 'music_box',   needs: { silver_chain: 2, deep_pearl: 1, brass_button: 2 }, en: 8, wis: 12 },
+  { out: 'sea_glass_mobile', needs: { sea_glass: 3, driftwood: 1 }, en: 3, wis: 1 },            // 선물: 바다 유리 (낚시 잡동사니)
+  { out: 'memory_bottle',    needs: { bottle_letter: 1, sea_glass: 2 }, en: 4, wis: 3 },
   { out: 'bouquet_wild', needs: { wild_flower: 2, sea_bindweed: 1 }, en: 2, wis: 0 },
   { out: 'bouquet_four', needs: { wild_flower: 1, moss_flower: 1, sea_bindweed: 1, snow_flower: 1 }, en: 3, wis: 1 },
   { out: 'ember_snack',   needs: { bait_meat: 1, volcanic_ash: 1 },                      en: 3,  wis: 0 },
@@ -574,6 +617,20 @@ const RECIPES = [
   { out: 'bait_meat',     needs: { beast_hide: 1 },                                     en: 2,  wis: 0 },
   { out: 'bait_lure',     needs: { brass_button: 1, sea_shell: 1 },                     en: 4,  wis: 0 },
   { out: 'salmon_grill',  needs: { fish_salmon: 1, salt_crystal: 1 },                   en: 4,  wis: 0 },
+  // 늘어난 물고기·잡동사니로 만드는 것
+  { out: 'gizzard_grill',   needs: { fish_gizzard: 2, salt_crystal: 1 },                 en: 3,  wis: 0 },
+  { out: 'mixed_grill',     needs: { fish_rockfish: 1, fish_greenling: 1, salt_crystal: 1 }, en: 3, wis: 0 },
+  { out: 'hairtail_braise', needs: { fish_hairtail: 1, lotus_root: 1, salt_crystal: 1 }, en: 4,  wis: 2 },
+  { out: 'mullet_soup',     needs: { fish_mullet: 1, grass_seed: 2 },                    en: 3,  wis: 0 },
+  { out: 'octopus_skewer',  needs: { fish_octopus: 1, salt_crystal: 1, red_clay: 1 },    en: 4,  wis: 0 },
+  { out: 'bream_feast',     needs: { fish_bream: 1, wild_honey: 1, grass_seed: 3 },      en: 8,  wis: 4 },
+  { out: 'cod_stew',        needs: { fish_cod: 1, lotus_root: 1, salt_crystal: 1 },      en: 4,  wis: 2 },
+  { out: 'ashfin_broth',    needs: { fish_ashfin: 1, glow_moss: 1, salt_crystal: 1 },    en: 6,  wis: 10 },
+  { out: 'crab_broth',      needs: { fish_crab: 2, salt_crystal: 1 },                    en: 4,  wis: 3 },
+  { out: 'flyfish_jerky',   needs: { fish_flyingfish: 2, salt_crystal: 1 },              en: 4,  wis: 3 },
+  { out: 'puffer_brew',     needs: { fish_puffer: 1, strong_wine: 1 },                   en: 5,  wis: 6 },
+  { out: 'jelly_circlet',   needs: { fish_jelly: 1, deep_pearl: 1, silver_chain: 1 },    en: 14, wis: 13 },
+  { out: 'moonray_mantle',  needs: { fish_moonray: 2, silk_scrap: 2, deep_pearl: 1 },    en: 14, wis: 13 },
   // 식구 요리
   { out: 'honey_cake',    needs: { wild_honey: 1, grass_seed: 2 },                     en: 3,  wis: 0 },
   { out: 'moss_soup',     needs: { glow_moss: 1, grass_seed: 1 },                      en: 3,  wis: 0 },
@@ -800,17 +857,57 @@ const FISHING = {
   window: 1400,                          // 입질 뒤 이 안에 당겨야 함 (ms, 늦으면 놓침)
   perfect: 450, good: 800,               // 입질 뒤 이 안에 당기면 '완벽'·'좋음'
   // 잡히는 것: 기본 무게. tier가 높을수록 잘 당기거나 좋은 미끼일 때 잘 나옴. wx: 그 날씨에 무게 ×
+  // sx: 그 계절에 무게 × (spring·summer·autumn·winter) · hint: 도감에서 아직 못 낚은 칸과 '얻는 곳'에 보이는 실마리
+  // 물고기가 늘어 전체 무게가 커진 만큼, 예전 물고기(연어·장어·청새치·비늘)의 무게를 1.4배로 올려 예전과 비슷한 확률로 맞춤
   fish: [
-    { id: 'fish_mackerel', w: 50, tier: 'common' },
-    { id: 'fish_flounder', w: 30, tier: 'common' },
-    { id: 'fish_salmon',   w: 10, tier: 'uncommon', wx: { rain: 2.5, fog: 1.5 } },
-    { id: 'fish_eel',      w: 0.5, tier: 'uncommon', wx: { storm: 24 } },
-    { id: 'fish_marlin',   w: 2,  tier: 'rare', wx: { clear: 1.5, heat: 1.5 } },
-    { id: 'sea_scale',     w: 1,  tier: 'rare', wx: { fog: 2, storm: 1.5, aurora: 2 } },
+    // 늘 낚이는 것 (계절·날씨와 상관없이). 가짓수가 늘어 고등어·가자미 무게를 줄여 흔한 것 전체의 몫은 조금만 늘게
+    { id: 'fish_mackerel', w: 36, tier: 'common' },
+    { id: 'fish_flounder', w: 22, tier: 'common' },
+    { id: 'fish_rockfish', w: 12, tier: 'common' },
+    { id: 'fish_jack',     w: 12, tier: 'common' },
+    { id: 'fish_filefish', w: 10, tier: 'common' },
+    { id: 'fish_greenling', w: 10, tier: 'common' },
+    { id: 'fish_hairtail', w: 4,  tier: 'uncommon' },
+    { id: 'fish_mullet',   w: 12, tier: 'common', sx: { spring: 3.5 }, hint: '봄' },
+    { id: 'fish_gizzard',  w: 12, tier: 'common', sx: { autumn: 3.5 }, hint: '가을' },
+    { id: 'fish_anchovy',  w: 18, tier: 'common', sx: { summer: 2 }, hint: '여름' },
+    { id: 'fish_salmon',   w: 14, tier: 'uncommon', wx: { rain: 2.5, fog: 1.5 }, hint: '비·안개' },
+    { id: 'fish_eel',      w: 0.7, tier: 'uncommon', wx: { storm: 24 }, hint: '뇌우' },
+    { id: 'fish_octopus',  w: 5,  tier: 'uncommon', wx: { rain: 1.5 }, hint: '비' },
+    { id: 'fish_crab',     w: 5,  tier: 'uncommon', sx: { autumn: 1.8 }, hint: '가을' },
+    { id: 'fish_cod',      w: 2,  tier: 'uncommon', sx: { winter: 3 }, wx: { snow: 4 }, hint: '겨울·눈' },
+    { id: 'fish_flyingfish', w: 1, tier: 'uncommon', wx: { wind: 10 }, hint: '강풍' },
+    { id: 'fish_puffer',   w: 3,  tier: 'uncommon', sx: { summer: 2 }, hint: '여름' },
+    { id: 'fish_marlin',   w: 2.8,  tier: 'rare', wx: { clear: 1.5, heat: 1.5 }, hint: '맑음·불볕더위' },
+    { id: 'sea_scale',     w: 1.4,  tier: 'rare', wx: { fog: 2, storm: 1.5, aurora: 2 }, hint: '안개·뇌우·오로라' },
+    { id: 'fish_bream',    w: 1,  tier: 'rare', sx: { summer: 1.5 }, wx: { clear: 2 }, hint: '맑음·여름' },
+    { id: 'fish_moonray',  w: 0.6, tier: 'rare', wx: { fog: 3.5 }, hint: '안개' },
+    { id: 'fish_jelly',    w: 0.1, tier: 'rare', wx: { aurora: 40 }, hint: '오로라' },
+    { id: 'fish_ashfin',   w: 0.15, tier: 'rare', wx: { ash: 25 }, hint: '잿비' },
   ],
+  // 잡동사니: 물고기 대신 가끔 걸려 올라옴 (늦게 당기거나 그냥 건질수록 잘). 병 속 편지에는 letters 중 한 줄이 적혀 있음
+  junk: {
+    chance: { perfect: 0, good: 0.03, ok: 0.1, auto: 0.1 },
+    items: [
+      { id: 'old_boot', w: 25 }, { id: 'driftwood', w: 25 }, { id: 'tangled_net', w: 15 },
+      { id: 'rusty_hook', w: 15 }, { id: 'sea_glass', w: 15 }, { id: 'bottle_letter', w: 6 },
+    ],
+    letters: [
+      '이 편지를 줍는 이에게. 해안 마을 세 번째 집의 개 이름은 \'구름\'이다. 지나가거든 쓰다듬어 주길.',
+      '엄마, 나 드래곤 등에 타 봤어! 바람이 정말 차가웠어. 다음엔 엄마도 같이 타자.',
+      '어부 할아버지가 그러셨다. 바다 용의 비늘은 폭풍이 지나간 다음 날 아침에 떠오른다고.',
+      '청새치를 또 놓쳤다. 이 편지가 녀석에게 닿기를. 다음엔 꼭 잡는다.',
+      '오로라가 뜨는 밤엔 바다도 빛난다. 해파리들이 하늘을 흉내 내는 거라고들 한다.',
+      '그날 우리 배를 밀어 준 커다란 날개를 잊지 않겠다. 고맙다는 말을 못 해서 바다에 띄운다.',
+      '바다 건너 잿빛 땅에서 불빛을 보았다. 누가 아직 그곳에 사는 걸까.',
+      '소금 장수의 딸이 오늘 열 살이 되었다. 이걸 읽는 누군가도 축하해 주면 좋겠다.',
+      '약속 장소는 등대 아래. 비가 오면 그다음 날. 기다릴게.',
+      '글자가 번져 거의 읽을 수 없다. 끝에 작은 발자국 그림 하나만 또렷하다.',
+    ],
+  },
   quality: { perfect: { uncommon: 2.5, rare: 4, common: 0.6 }, good: { uncommon: 1.5, rare: 2 }, ok: { rare: 0.5 }, auto: { uncommon: 0.8, rare: 0.4 } },
   bait: { bait_worm: {}, bait_shrimp: { common: 1.2 }, bait_meat: { uncommon: 1.6, rare: 1.5 }, bait_lure: { uncommon: 2, rare: 3 } },
-  xp: { common: 2, uncommon: 5, rare: 12 },
+  xp: { common: 2, uncommon: 5, rare: 12, junk: 1 },
   gatherBait: 0.45, gatherSalt: 0.55,     // 해안에서 채집할 때 미끼·소금이 함께 나올 확률 (소금 0.35 → 0.6 → 0.5 → 0.6 → 0.55: 해안 시장에서 하루 5개를 살 수 있게 되어 조금 낮춤)
   coastTribute: { bait: [3, 5], fish: [1, 3], failBait: [1, 2] }, // 적대가 해안을 위협할 때: 성공하면 미끼·생선, 실패해도 미끼 조금
 };
@@ -918,11 +1015,49 @@ const KIN = {
     fish_flounder: { bond: 4,  talent: 'guard',     sat: 25, eat: '납작한 가자미를 보고 한참 웃더니, 구워 주자 맛있게 먹는다.' },
     fish_salmon:   { bond: 7,  talent: 'guard',     sat: 40, eat: '은빛 비늘을 하나 떼어 간직하고는 연어를 맛있게 먹는다.' },
     fish_marlin:   { bond: 12, talent: 'guard',     sat: 70, eat: '자기 키보다 긴 청새치를 보고 입이 떡 벌어진다. 구워 주자 동네방네 자랑하며 먹는다.' },
+    fish_rockfish: { bond: 3,  talent: 'guard',     sat: 20, eat: '큰 입을 벌린 우럭을 따라 입을 쩍 벌려 보더니, 구워 주자 맛있게 먹는다.' },
+    fish_jack:     { bond: 3,  talent: 'guard',     sat: 20, eat: '꼬리 쪽 딱딱한 비늘을 손톱으로 톡톡 건드려 보더니, 구워 주자 살만 쏙쏙 발라 먹는다.' },
+    fish_filefish: { bond: 3,  talent: 'guard',     sat: 20, eat: '거칠거칠한 껍질을 신기하게 만져 보고는, 벗겨 구워 주자 달다며 좋아한다.' },
+    fish_greenling:{ bond: 3,  talent: 'guard',     sat: 20, eat: '얼룩무늬를 손가락으로 따라 그려 보다가, 구워 주자 호호 불며 먹는다.' },
+    fish_hairtail: { bond: 6,  talent: 'guard',     sat: 35, eat: '은빛 갈치를 칼처럼 휘둘러 보다가 혼이 나고는, 구워 주자 얌전히 발라 먹는다.' },
+    mixed_grill:   { bond: 9,  talent: 'guard',     sat: 55, eat: '한 접시에 여러 생선이 올라 있자 하나씩 맛을 보며 제일 맛있는 걸 고른다.' },
+    fish_mullet:   { bond: 3,  talent: 'guard',     sat: 20, eat: '구운 숭어를 받아 들고 뼈를 하나하나 발라 가며 먹는다.' },
+    fish_gizzard:  { bond: 4,  talent: 'guard',     sat: 20, eat: '전어 굽는 냄새에 어디선가 달려와 머리까지 아작아작 씹어 먹는다.' },
+    fish_anchovy:  { bond: 2,  talent: 'guard',     sat: 15, eat: '바삭하게 볶은 멸치를 한 줌 쥐고 과자처럼 집어 먹는다.' },
+    fish_octopus:  { bond: 6,  talent: 'guard',     sat: 35, eat: '문어 빨판이 손가락에 달라붙자 깔깔 웃다가, 데쳐 주자 쫄깃쫄깃 씹어 먹는다.' },
+    fish_crab:     { bond: 5,  talent: 'smith',     sat: 25, eat: '단단한 게딱지를 돌로 톡톡 깨 가며 살을 파먹는다. 껍데기는 장난감이 되었다.' },
+    fish_cod:      { bond: 7,  talent: 'herbalist', sat: 40, eat: '뽀얗게 끓인 대구 국물을 후후 불어 마시고는 볼이 발그레해진다.' },
+    fish_flyingfish:{ bond: 6, talent: 'guard',     sat: 30, eat: '날치 지느러미를 펼쳐 보며 "나도 날 수 있을까?" 하고 묻는다. 구워 주자 맛있게 먹는다.' },
+    fish_bream:    { bond: 12, talent: null,        sat: 60, eat: '금빛 비늘에 눈이 휘둥그레진다. 한 점 한 점 아껴 가며 먹는다.' },
+    fish_ashfin:   { bond: 8,  talent: 'herbalist', sat: 40, eat: '처음엔 잿빛 비늘을 무서워하더니, 끓여 주자 국물까지 다 마신다. "이상하게 마음이 편해."' },
+    gizzard_grill: { bond: 10, talent: 'guard',     sat: 55, eat: '전어 구이를 손에 쥐고 놓지 않는다. "가을 냄새가 나!"' },
+    mullet_soup:   { bond: 9,  talent: 'herbalist', sat: 50, eat: '맑은 국물을 한 숟가락씩 떠먹다가 그릇째 들고 마신다.' },
+    octopus_skewer:{ bond: 11, talent: 'guard',     sat: 60, eat: '꼬치에 꿴 문어 다리를 하나씩 빼 먹으며 손가락을 쪽쪽 빤다.' },
+    bream_feast:   { bond: 18, talent: null,        sat: 100, eat: '금빛 도미가 올라온 상을 보고 박수를 친다. 오늘은 둥지의 큰 잔칫날이다!' },
     salmon_grill:  { bond: 12, talent: 'guard',     sat: 70, eat: '연어 구이 냄새에 달려와 뼈까지 발라 먹는다. "바다 맛이 나!"' },
     feast_plate:   { bond: 14, talent: null,        sat: 100, eat: '눈이 휘둥그레져서 한 접시씩 맛을 본다. 오늘은 잔칫날이다!' },
     red_clay: { bond: 3, talent: 'smith' }, bog_iron: { bond: 5, talent: 'smith' },
     gold_ore: { bond: 7, talent: 'smith' }, obsidian: { bond: 6, talent: 'smith' },
     salted_fish: { bond: 6, talent: 'guard', sat: 30 }, beast_hide: { bond: 4, talent: 'guard' }, sharp_fang: { bond: 5, talent: 'guard' },
+  },
+  // 보답: 좋은 음식(식구 요리·정성 들인 요리·가장 좋아하는 음식·가끔 이상 물고기)을 먹으면 드물게 그 자리에서 보답함 (game-life.js repay)
+  // chance: 기본 확률 · fav/bond/glutton: 더해지는 확률 · cooldownH: 한 식구가 보답한 뒤 다시 보답할 수 있을 때까지
+  // 무엇을 주는지는 단계마다: keep(보물 상자 추억) · treat(드래곤이 먹는 것을 대접) · talent(재주대로) · hunt(잡아 온 것) · loot(그 지역 재료) · gold([최소, 최대])
+  repay: {
+    chance: 0.07, fav: 0.05, bond: 0.03, bondAt: 70, glutton: 0.03, cooldownH: 20,
+    human: {
+      '아이':   { keep: ['kid_drawing', 'flower_ring', 'clover', 'clay_dragon', 'pressed_flower', 'paper_bird'] },
+      '소년':   { keep: ['kid_letter', 'pebble_neck', 'wood_dragon', 'paper_kite'], treat: ['honey_cake', 'ember_tea', 'bindweed_drink'] },
+      '청소년': { keep: ['kid_letter', 'woven_band', 'wood_flute', 'knit_scarf'], treat: ['ember_tea', 'mist_tea', 'bindweed_drink', 'snow_tea'] },
+      '어른':   { talent: { herbalist: ['honey_salve', 'herbal_ointment'], smith: ['gold_ore', 'rune_stone', 'bog_iron'], guard: ['beast_hide', 'sharp_fang', 'tough_sinew'] }, gold: [20, 45] },
+      '노년':   { keep: ['knit_scarf', 'herb_sachet', 'kid_letter'], gold: [20, 45] },
+    },
+    drake: {
+      '해츨링':     { keep: ['shiny_pebble', 'conch_shell', 'warm_stone', 'acorns'] },
+      '어린 용':    { hunt: ['bait_meat', 'beast_hide', 'sharp_fang'], keep: ['bird_feather', 'old_coin', 'storm_stone'] },
+      '젊은 용':    { loot: true, hunt: ['beast_hide', 'sharp_fang', 'tough_sinew'], gold: [25, 55] },
+      '다 자란 용': { loot: true, gold: [30, 70] },
+    },
   },
   tripTalent: 2,                      // 원정에 한 번 따라갈 때마다 파수꾼 쪽으로
   // 유대가 조금씩 옅어짐: 마지막으로 유대가 오른 뒤 idleH시간이 지나면 everyH시간마다 1씩 줄어듦 (floor까지만. 그 아래는 오래 돌보지 않을 때의 규칙만)
@@ -960,6 +1095,13 @@ const KIN = {
       fish_mackerel: { bond: 3, sat: 25 }, fish_flounder: { bond: 3, sat: 25 }, fish_salmon: { bond: 6, sat: 45 }, fish_eel: { bond: 6, sat: 40 }, fish_marlin: { bond: 12, sat: 90 },
       bait_meat: { bond: 4, sat: 30 }, salted_fish: { bond: 4, sat: 30 },
       roast_meat: { bond: 8, sat: 60 }, ember_snack: { bond: 7, sat: 45 }, fish_skewer: { bond: 8, sat: 55 }, dragon_feast: { bond: 14, sat: 100 },
+      // 늘어난 물고기 (가시 복어는 독이 있어 빼고, 오로라 해파리·달빛 가오리는 먹이가 아니라 재료)
+      fish_mullet: { bond: 3, sat: 25 }, fish_gizzard: { bond: 3, sat: 25 }, fish_anchovy: { bond: 2, sat: 15 },
+      fish_rockfish: { bond: 3, sat: 25 }, fish_jack: { bond: 3, sat: 20 }, fish_filefish: { bond: 3, sat: 20 }, fish_greenling: { bond: 3, sat: 25 }, fish_hairtail: { bond: 5, sat: 40 },
+      mixed_grill: { bond: 8, sat: 55 },
+      fish_octopus: { bond: 6, sat: 40 }, fish_crab: { bond: 5, sat: 30 }, fish_cod: { bond: 6, sat: 45 }, fish_flyingfish: { bond: 5, sat: 35 },
+      fish_bream: { bond: 12, sat: 90 }, fish_ashfin: { bond: 8, sat: 60 },
+      gizzard_grill: { bond: 8, sat: 55 }, octopus_skewer: { bond: 10, sat: 65 }, bream_feast: { bond: 16, sat: 100 },
     },
     // 종류마다 가장 좋아하는 먹이 (먹여 보면 알게 됨)
     kindFav: { red: 'roast_meat', gold: 'roast_meat', bronze: 'ember_snack', volcano: 'ember_snack', black: 'bait_meat', blue: 'fish_skewer', silver: 'fish_skewer', white: 'fish_skewer', green: 'fish_salmon', purple: 'fish_eel' },
@@ -987,7 +1129,7 @@ const KIN = {
 const TALENTS = {
   herbalist: { name: '약초꾼',   desc: '둥지에 남으면 하루에 한 번 꿀 고약을 만들어 둔다.' },
   smith:     { name: '대장장이', desc: '둥지에 남으면 제작에 드는 기력이 30% 줄어든다.' },
-  guard:     { name: '파수꾼',   desc: '둥지에 남으면 기사단 습격과 구출 시도가 절반으로 준다.' },
+  guard:     { name: '파수꾼',   desc: '둥지에 남으면 기사단 습격이 절반으로 줄고, 어린 식구를 되찾으러 오는 기사단도 절반으로 준다.' },
 };
 // ── 식구의 타고난 모습 ─────────────────────────────
 // 인간 아이는 데려올 때, 새끼 드래곤은 알에서 깨어날 때 정해짐. 성별·생김새는 보는 재미, 성격은 키우는 방식에 조금씩 영향을 줌
@@ -1199,6 +1341,29 @@ const FREE = {
     fish_salmon: {food: 2, life: 2},
     fish_eel: {food: 2, vigor: 2},
     fish_marlin: {food: 3, vigor: 3},
+    fish_rockfish: {food: 1, hard: 1},
+    fish_jack: {food: 1, vigor: 1},
+    fish_filefish: {food: 1, bind: 1},
+    fish_greenling: {food: 1, life: 1},
+    fish_hairtail: {food: 2, sharp: 1, shine: 1},
+    fish_mullet: {food: 1, life: 1},
+    fish_gizzard: {food: 1, vigor: 1},
+    fish_anchovy: {food: 1, clear: 1},
+    fish_octopus: {food: 2, bind: 1},
+    fish_crab: {food: 1, hard: 2},
+    fish_cod: {food: 2, frost: 1},
+    fish_flyingfish: {food: 1, light: 2},
+    fish_puffer: {venom: 2, sharp: 1},
+    fish_bream: {food: 3, shine: 2},
+    fish_moonray: {light: 2, shine: 2},
+    fish_jelly: {shine: 3, clear: 2},
+    fish_ashfin: {food: 2, soul: 2},
+    // 낚시 잡동사니 (병 속 편지는 성질 없음)
+    old_boot: {bind: 1},
+    driftwood: {bind: 1, life: 1},
+    tangled_net: {bind: 2},
+    rusty_hook: {sharp: 1},
+    sea_glass: {shine: 2},
     living_bark: {bind: 2, life: 2},
     wyvern_membrane: {bind: 3, light: 3},
     hydra_blood: {life: 2},
@@ -2150,7 +2315,7 @@ const RAIDBOSS = {
       shadow: { name: '모르벤의 그림자', type: 'spirit', weak: ['spirit', 'fire'], resist: ['ice'], atk: 0.8 }, // 독 저항은 뺌
       crow:   { name: '검은 허수아비', type: 'construct', weak: ['fire', 'poison'], resist: ['mist'], atk: 0.5, def: 0.6, sides: ['왼편', '오른편'] },
       gaze:  { every: 3, power: 3.5 },                    // 1단계: 세 턴마다 '고개 돌리기' (예고 다음 턴에 한 드래곤에게 낫질 ×3.5)
-      fire:  { per: 0.04, max: 3 },                       // 불 숨결로 허수아비를 치면 밀밭에 불길 (단계마다 턴 끝에 최대 체력의 4%). 얼음·물 숨결이 한 단계씩 끔
+      fire:  { per: 0.04, max: 3, fade: 2 },              // 불 숨결로 허수아비를 치면 밀밭에 불길 (단계마다 턴 끝에 최대 체력의 4%). 얼음·물 숨결이 한 단계씩 끔. fade: 새로 번지지 않은 채 이만큼 턴이 지나면 저절로 한 단계씩 잦아듦
       song:  { every: 4, pct: 0.36, cut: 0.5 },           // 2단계: 네 턴마다 '추수의 노래' (모두 최대 체력의 36%, 포효로 끊으면 그 절반)
       ears:  { every: 2, n: 2, max: 3, mind: 8, cleanseWis: 15 }, // 2단계부터 두 턴마다 두 드래곤에게 검은 이삭. 3개가 다 여물면 다음 턴에 '수확'(즉사, 정신 −8, 동료가 일으킬 수 있음) — 그 전에 치유로 씻으면 삶. 치유 한 번에 1 + 지혜 15마다 1개씩 씻음
       summon: { at: [2, 7, 12], n: 2, hp: 0.055, shield: 0.5 }, // 2단계의 이 턴마다 허수아비 둘 (하나당 모르벤 체력의 5.5%). 서 있는 동안 모르벤이 받는 피해 절반
@@ -2284,6 +2449,8 @@ const KEEPSAKES = {
   // 제작으로 만드는 선물 (보물 상자에 간직. 받은 것이면 '○○에게 받은')
   shell_chime:   { name: '조개 풍경',         value: 12, fmt: 'from', desc: '조개껍데기를 거미줄 실에 꿰어 단 풍경. 바람이 불면 자그락자그락 바다 소리가 난다.' },
   amber_star:    { name: '호박 별 장식',      value: 30, fmt: 'from', desc: '호박을 별 모양으로 깎아 금실로 감쌌다. 안에 갇힌 작은 벌레가 별빛처럼 보인다.' },
+  sea_glass_mobile: { name: '바다 유리 모빌',  value: 14, fmt: 'from', desc: '푸른 바다 유리 조각들이 떠내려온 나무 끝에서 흔들린다. 햇빛이 들면 상자 안이 물속처럼 일렁인다.' },
+  memory_bottle: { name: '바다 유리 추억병',  value: 28, fmt: 'from', desc: '바다에서 건진 편지와 유리 조각을 다시 담은 병. 누군가 띄운 마음이 이제 이곳에 머문다.' },
   music_box:     { name: '은사슬 오르골',     value: 60, fmt: 'from', desc: '은사슬을 감아 태엽 삼은 작은 오르골. 뚜껑을 열면 진주가 돌며 낯익은 노래가 흐른다.' },
   town_drawing:  { name: '마을 집 그림',      value: 6,  fmt: 'of',   say: false, desc: '마을 집 창가에서 건네받은 그림. 지붕 위에 커다란 드래곤 한 마리가 앉아 있고, 그 아래 사람들이 손을 흔든다.' }, // 마을에서 다시 만난 식구 (kin_in_town)
   kid_drawing:   { name: '그림',              value: 8,  fmt: 'of',   say: false, desc: '삐뚤빼뚤한 선으로 그린 그림. 크레용 자국이 손끝에 묻어난다.' },
@@ -2560,6 +2727,8 @@ const ACHIEVEMENTS = [
   // 엉뚱한 업적 — kills: [사냥감 키, 쓰러뜨린 수] / fishN: [물고기 id, 낚은 수] / bossKills: 한 재앙을 쓰러뜨린 수
   //   goldAt: 지닌 금화 / goldZero: 이 레벨 이상에서 금화 0닢 / mindLow: 정신이 이 값 이하 (광폭화 아닐 때) / fameAt: 용족 명성이 이 값 이하 / hourKST: 한국 시각 이 시에 접속·행동
   { id: 'q_mackerel', name: '고등어 박사',       desc: '고등어를 100마리 낚기',                  cond: { fishN: ['fish_mackerel', 100] } },
+  { id: 'q_letters',  name: '바다가 보낸 편지',  desc: '병 속 편지를 10통 건지기',               cond: { fishN: ['bottle_letter', 10] } },
+  { id: 'q_boots',    name: '짝을 찾는 장화',    desc: '낡은 장화를 20짝 건지기',                cond: { fishN: ['old_boot', 20] } },
   { id: 'q_bison',    name: '들소의 천적',       desc: '들소 떼를 100마리 쓰러뜨리기',           cond: { kills: ['plains_field', 100] } },
   { id: 'q_wolfking', name: '외눈 늑대왕의 숙적', desc: '외눈 늑대왕을 10번 쓰러뜨리기',         cond: { kills: ['plains_hill!', 10] } },
   { id: 'q_regular',  name: '재앙의 단골손님',   desc: '같은 대륙의 재앙을 10번 쓰러뜨리기',     cond: { bossKills: 10 } },
@@ -2571,6 +2740,7 @@ const ACHIEVEMENTS = [
   { id: 'h_shame',  hidden: true, name: '평판 따윈',       desc: "용족 명성이 '수치'까지 떨어지기",         cond: { fameAt: -60 } },
   { id: 'q_rumor',  name: '귀가 밝은 용',      desc: '떠돌이 야바위꾼에게서 소문 20가지 듣기',  cond: { count: ['rumor', 20] } },
   { id: 'h_eel',    hidden: true, name: '번개를 낚다',     desc: '번개 장어를 낚기',                        cond: { item: 'fish_eel' } },
+  { id: 'h_jelly',  hidden: true, name: '하늘을 건진 밤',   desc: '오로라 해파리를 낚기',                    cond: { item: 'fish_jelly' } },
 ];
 
 module.exports = {

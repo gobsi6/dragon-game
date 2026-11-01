@@ -873,6 +873,33 @@ dialog.frame:not(.as-panel) > .bl { bottom: 2px; left: 2px; } dialog.frame:not(.
 .kin-body > .kin-acts { padding: 8px 0; border-top: 1px dashed var(--line-in); border-bottom: 1px dashed var(--line-in); }
 .kin-body > .kin-acts .lbl { margin-top: 4px; font-weight: 600; color: var(--ink-2); } /* 건네기·먹이·가르치기 같은 칸 제목 */
 .kin-body > .kin-acts .lbl:first-child { margin-top: 0; }
+.kin-body > .kin-acts .lbl.sub { margin-top: 2px; font-weight: 500; font-size: 11px; color: var(--muted); } /* 돌보기 안의 '음식'·'물건' 작은 제목 */
+/* 돌보기: '음식'·'물건'을 왼쪽 작은 제목으로 두고 줄을 나눔 */
+.kin-grp { width: 100%; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 6px; align-items: start; }
+.kin-grp-l { padding-top: 5px; font-size: 11px; color: var(--muted); }
+.kin-grp-r { display: flex; flex-wrap: wrap; gap: 6px; }
+.kin-acts .btn .cnt { font-size: 11px; color: var(--muted); }
+/* 식구 카드 안의 단추: 안쪽 테두리 없이 낮게 (폰에서는 누르기 편하게 조금 크게) */
+.kin-card .kin-acts .btn, .kin-card .kt-btn { min-height: 28px; box-shadow: none; border-color: #A9ADA8; }
+.kin-card .kt-btn.asked { box-shadow: none; }
+@media (max-width: 520px) { .kin-card .kin-acts .btn, .kin-card .kt-btn { min-height: 32px; padding: 0 12px; } .kin-grp-l { padding-top: 7px; } }
+/* 성격 · 모습 · 가족 (접히는 칸) */
+.kin-info { border: 1px solid #E4E6E2; border-radius: 3px; background: #F9F9F7; font-size: 12.5px; }
+.kin-info > summary { display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 10px; cursor: pointer; color: var(--steel-d); font-weight: 600; list-style: none; }
+.kin-info > summary::-webkit-details-marker { display: none; }
+.kin-info > summary::before { content: ''; flex: none; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); transition: transform .15s; }
+.kin-info[open] > summary::before { transform: rotate(45deg); }
+.kin-info > summary small { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 400; color: var(--muted); }
+.kin-kv { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 6px 10px; padding: 4px 10px 10px; align-items: start; color: var(--ink-2); line-height: 1.55; }
+.kin-kv .k { padding-top: 1px; font-size: 11.5px; color: var(--muted); }
+.kin-kv .kv-traits { display: flex; flex-direction: column; gap: 6px; }
+/* 식구 바로가기 */
+.kin-jump { display: flex; flex-wrap: wrap; gap: 6px; }
+.kin-jump-b { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 10px; border: 1px solid var(--line-in); border-radius: 15px; background: var(--surface-2); color: var(--ink); font-size: 12.5px; }
+.kin-jump-b:hover { border-color: var(--steel-l); }
+.kin-jump-b i { width: 7px; height: 7px; border-radius: 50%; background: #9A9C98; }
+.kin-jump-b.ok i { background: #2B5240; } .kin-jump-b.warn i { background: #8A3D52; } .kin-jump-b.warm i { background: #9A7A3A; }
+.kin-card { scroll-margin-top: 12px; }
 .kin-body .kin-look .kin-sex { display: none; } /* 성별은 요약 줄에 있음 */
 .kin-id .nm .kin-chip { white-space: nowrap; }
 .kin-pills.m { display: none; }
@@ -2007,6 +2034,7 @@ button.trait.bad.on { background: #FBF1F2; box-shadow: inset 0 0 0 1px #A63E4B; 
 .char-bio { margin: 0; font: 400 14px/1.7 var(--serif); color: var(--ink-2); white-space: pre-line; }
 /* 드래곤 특징 속 그림·링크 */
 .bio-img-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.bio-img-row .btn { min-height: 32px; padding: 0 12px; font-size: 13px; } /* 그림 올리기·바꾸기·삭제: 보통 단추보다 작게 (모양은 같음) */
 .bio-img-row img { display: block; width: auto; max-width: 160px; max-height: 120px; object-fit: contain; border: 1px solid #D3D1C9; border-radius: 3px; }
 .bio-photo img { max-height: 420px; }
 .bio-img { display: block; width: fit-content; max-width: 100%; margin: 6px 0; border: 0; background: none; }

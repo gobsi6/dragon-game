@@ -1285,7 +1285,9 @@ const dayIdx = (now = Date.now()) => Math.floor((now + 9 * 3600000) / 86400000);
 const ORDER_SKIP = (() => {
   const inRuin = new Set(), inOther = new Set();
   for (const [r, t] of Object.entries(REGION_LOOT)) for (const arr of Object.values(t)) for (const id of arr) (r.startsWith('ruin_') ? inRuin : inOther).add(id);
-  return new Set([...[...inRuin].filter((id) => !inOther.has(id)), 'rival_scale']);
+  // 낚시: 드물게 낚이거나 특정 날씨에만 잘 낚이는 물고기(잿빛 심해어·바람 날치 등)와 병 속 편지가 드는 물건도 의뢰하지 않음
+  const rareFish = (FISHING.fish || []).filter((f) => f.tier === 'rare' || (f.wx && f.w < 2)).map((f) => f.id);
+  return new Set([...[...inRuin].filter((id) => !inOther.has(id)), 'rival_scale', ...rareFish, 'bottle_letter']);
 })();
 // 의뢰 물건 대신 낼 수 있는 더 좋은 것: 장신구는 걸작, 요리는 정성 들인 것 (보상 CRAFT.orders.bonus배)
 const ORDER_ALT = (() => {
@@ -1784,9 +1786,9 @@ function fishCheck(d) {
 const isBait = (id) => ITEMS[id]?.cat === 'bait';
 // 무엇이 낚일지: quality = perfect | good | ok | auto
 function fishRoll(d, bait, quality) {
-  const wx = weatherIdAt(d.region);
+  const wx = weatherIdAt(d.region), sx = seasonAt().id; // 날씨(wx)와 계절(sx)마다 잘 무는 물고기가 다름
   const q = FG.quality[quality] || {}, b = FG.bait[bait] || {};
-  const list = FG.fish.map((f) => ({ f, w: f.w * (q[f.tier] ?? 1) * (b[f.tier] ?? 1) * (f.wx?.[wx] ?? 1) }));
+  const list = FG.fish.map((f) => ({ f, w: f.w * (q[f.tier] ?? 1) * (b[f.tier] ?? 1) * (f.wx?.[wx] ?? 1) * (f.sx?.[sx] ?? 1) }));
   let r = Math.random() * list.reduce((a, x) => a + x.w, 0);
   return (list.find((x) => (r -= x.w) < 0) || list[0]).f;
 }
@@ -1797,7 +1799,28 @@ const QUALITY_LINE = {
   auto: '느긋하게 기다리다 줄을 건졌다.',
 };
 // 낚아 올림: 결과 { title, lines, items, xp }
+// 잡동사니: 물고기 대신 걸려 올라옴 (늦게 당기거나 그냥 건질수록 잘). 병 속 편지는 쪽지 한 줄을 보여 줌
+const JUNK_LINE = {
+  old_boot: '묵직해서 기대했는데… 바닷물을 가득 머금은 낡은 장화 한 짝이 올라왔다.',
+  driftwood: '줄이 팽팽해서 큰 놈인 줄 알았는데, 반들반들한 나뭇조각이 걸려 있었다.',
+  tangled_net: '바늘이 무언가에 엉켰다. 끌어 올려 보니 누군가 잃어버린 그물 한 자락이다.',
+  rusty_hook: '내 바늘에 다른 낚시꾼의 녹슨 바늘이 걸려 올라왔다. 이 바다에도 놓친 이야기가 많다.',
+  sea_glass: '바늘 끝에 푸른 유리 조각이 반짝인다. 파도에 닳아 조약돌처럼 매끈하다.',
+  bottle_letter: '마개를 꼭 막은 유리병이 걸려 올라왔다. 안에 둘둘 만 쪽지가 들어 있다.',
+};
+function junkLand(d, quality) {
+  const J = FG.junk;
+  let r = Math.random() * J.items.reduce((a, x) => a + x.w, 0);
+  const id = (J.items.find((x) => (r -= x.w) < 0) || J.items[0]).id;
+  dexFish(d, id); // 건진 수 (업적: 병 속 편지·낡은 장화)
+  const lines = [JUNK_LINE[id] || `${ITEMS[id].name}${josa(ITEMS[id].name, '이', '가')} 걸려 올라왔다.`];
+  if (id === 'bottle_letter' && J.letters?.length) lines.push(`쪽지에는 이렇게 적혀 있다. "${J.letters[Math.floor(Math.random() * J.letters.length)]}"`);
+  const xp = xpOf(d, FG.xp.junk || 1);
+  const levelUp = gainXp(d, xp);
+  return { title: '낚시', lines, items: [{ id, qty: 1 }], xp, levelUp, catch: { id, tier: 'junk', quality } };
+}
 function fishLand(d, bait, quality) {
+  if (FG.junk && Math.random() < (FG.junk.chance?.[quality] || 0)) return junkLand(d, quality);
   const f = fishRoll(d, bait, quality);
   dexFish(d, f.id); // 도감: 낚은 수
   const it = ITEMS[f.id];
@@ -2340,7 +2363,7 @@ function dexView(d) {
   const fish = FISHING.fish.map((f) => {
     const it = ITEMS[f.id];
     const at = x.i[f.id];
-    return at != null ? { seen: true, id: f.id, name: it.name, rarity: it.rarity, desc: it.desc, sub: `낚은 수 ${x.f[f.id] || 0}`, at, fresh: isNew(at) } : { seen: false, id: f.id, rarity: it.rarity, where: dexRegionName(FISHING.region) };
+    return at != null ? { seen: true, id: f.id, name: it.name, rarity: it.rarity, desc: it.desc, sub: `낚은 수 ${x.f[f.id] || 0}`, at, fresh: isNew(at) } : { seen: false, id: f.id, rarity: it.rarity, where: `${dexRegionName(FISHING.region)}${f.hint ? ` · ${f.hint}` : ''}` }; // hint: 잘 무는 계절·날씨
   });
   // 물건 (물고기와 정성 들인 요리는 뺌)
   const fishIds = new Set(FISHING.fish.map((f) => f.id));
