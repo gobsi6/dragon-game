@@ -3992,8 +3992,8 @@
         // 정해 둔 것 + 자유 제작으로 빚은 식구 요리 (S.items[id].kin)
         const careOf = (id) => R.care[id] || (S.items[id]?.kin ? { bond: S.items[id].kin.bond, sat: S.items[id].kin.sat, talent: S.items[id].kin.talent || null } : null);
         const owned = [...Object.keys(R.care), ...Object.keys(invCache).filter((id) => S.items[id]?.kin && !R.care[id])].filter((id) => (invCache[id] || 0) > 0);
-        label(v.careIn > 0 ? `돌보기: ${dur(v.careIn)} 뒤에 다시 할 수 있다` : '돌보기: 무엇을 건네느냐에 따라 재주가 달라진다');
-        if (!owned.length) label('건넬 물건이 없다. 꿀·약초는 약초꾼, 광석은 대장장이, 생선·가죽·송곳니는 파수꾼 쪽.');
+        const grown = !!v.talent; // 재주가 정해진 어른: 재주가 더 기울지 않으니 '물건' 줄은 빼고 음식과 일감만
+        label(v.careIn > 0 ? `돌보기: ${dur(v.careIn)} 뒤에 다시 할 수 있다` : grown ? '돌보기: 음식을 건네거나, 재주에 맞는 재료로 일감을 맡긴다' : '돌보기: 무엇을 건네느냐에 따라 재주가 달라진다');
         // 먹을 것(배가 차는 것)과 건넬 물건을 나눠 보여 줌
         // 일감: 재주가 정해진 어른에게 재주에 맞는 재료를 건네면 그걸로 만든 것을 돌려줌 (R.work)
         const workOf = (id) => { const w = R.work?.items?.[id]; return w && v.talent && w.talent === v.talent && S.items[w.out] ? w : null; };
@@ -4002,7 +4002,10 @@
             : `${careOf(id).talent && !v.talent ? `${S.talents[careOf(id).talent].name} 쪽, ` : ''}유대 +${careOf(id).bond}${careOf(id).sat ? `, 배 +${careOf(id).sat}` : ''}`), invCache[id]);
         const foods = owned.filter((id) => (careOf(id).sat || 0) > 0);
         const jobs = owned.filter((id) => !((careOf(id).sat || 0) > 0) && workOf(id));
-        const things = owned.filter((id) => !((careOf(id).sat || 0) > 0) && !workOf(id));
+        const things = grown ? [] : owned.filter((id) => !((careOf(id).sat || 0) > 0) && !workOf(id));
+        if (!foods.length && !jobs.length && !things.length) label(grown
+          ? `건넬 음식이나 일감 재료가 없다. ${{ herbalist: '빛나는 이끼', smith: '금광석·늪철·흑요석·붉은 점토', guard: '짐승 가죽·날카로운 송곳니' }[v.talent] || '재주에 맞는 재료'}를 건네면 무언가 만들어 준다.`
+          : '건넬 물건이 없다. 꿀·약초는 약초꾼, 광석은 대장장이, 생선·가죽·송곳니는 파수꾼 쪽.');
         // 둘 다 있으면 왼쪽에 '음식'·'물건' 작은 제목을 두고 줄을 나눔
         const grp = (t, ids) => {
           const g = document.createElement('div'); g.className = 'kin-grp';
