@@ -1053,6 +1053,13 @@ function choosePath(d, kin, id, path, town, now = Date.now()) {
   const err = atNest(d);
   if (err) return { error: err };
   const k = findKin(kin, id);
+  // 용기사가 둘 이상이면 효과는 한 사람분만 적용되므로, 한 사람을 둥지로 내려와 남게 할 수 있음 (재주 효과·둥지 일을 하게 됨)
+  if (k && k.type === 'human' && k.status === 'home' && k.data.path === 'knight' && path === 'stay') {
+    if (!kin.some((x) => x !== k && x.type === 'human' && x.status === 'home' && x.data.path === 'knight')) return { error: '용기사가 한 사람뿐이면 내려오게 할 수 없다.' };
+    k.data.path = 'stay';
+    diary(k, '용기사의 자리를 내려놓고 둥지에 남기로 했다.', now);
+    return { title: k.name, lines: [`${ga(k)} 등에서 내려와 둥지에 남기로 했다. 등에는 다른 용기사가 남아 있다.`, TALENTS[k.data.talent].desc] };
+  }
   if (!k || k.type !== 'human' || !k.data.talent || k.data.path) return { error: '지금은 정할 수 없다.' };
   if (path === 'stay') {
     k.data.path = 'stay';

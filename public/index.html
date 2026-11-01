@@ -3894,8 +3894,12 @@
       if (canAct && v.choosePath && !partner) {
         label('갈 길 정하기');
         btn('둥지에 남긴다', () => nestAct('kin:path', { id: v.id, path: 'stay' }, true));
-        btn(`용기사로 삼는다${v.bond < R.human.knightBond ? ` (유대 ${R.human.knightBond} 필요)` : ''}`,
-          () => nestAct('kin:path', { id: v.id, path: 'knight' }, true), v.bond < R.human.knightBond);
+        btn(`용기사로 삼는다${v.bond < R.human.knightBond ? ` (유대 ${R.human.knightBond} 필요)` : ''}`, () => {
+          // 용기사의 효과는 겹치지 않음: 이미 용기사가 있으면 한 번 더 물음
+          const other = (NEST_LAST?.nest?.kin?.home || []).find((x) => x.id !== v.id && x.type === 'human' && x.path === 'knight');
+          if (other && !confirm(`이미 ${other.name}${josa(other.name, '이', '가')} 용기사다. 용기사의 효과는 겹치지 않고 한 사람분만 적용된다. 그래도 ${v.name}${josa(v.name, '을', '를')} 용기사로 삼을까?`)) return;
+          nestAct('kin:path', { id: v.id, path: 'knight' }, true);
+        }, v.bond < R.human.knightBond);
         for (const town of S.shops) {
           const tn = S.regions[town].name;
           btn(`${tn}${ro(tn)} 돌려보낸다`, () => {
@@ -3903,6 +3907,13 @@
           });
         }
       } else if (canAct && !v.onExp && !v.choosePath) {
+        // 용기사가 둘 이상이면: 한 사람을 둥지로 내려와 남게 할 수 있음 (효과는 한 사람분만 적용되므로)
+        if (!partner && v.path === 'knight' && (NEST_LAST?.nest?.kin?.home || []).some((x) => x.id !== v.id && x.type === 'human' && x.path === 'knight')) {
+          label('용기사가 둘 이상이다. 용기사의 효과는 한 사람분만 적용된다.');
+          btn('둥지로 내려와 남게 한다', () => {
+            if (confirm(`${v.name}${josa(v.name, '이', '가')} 용기사의 자리를 내려놓고 둥지에 남는다. ${S.talents[v.talent].name}의 재주를 쓰고 둥지 일도 맡을 수 있게 된다. 다시 용기사로 삼을 수는 없다. 그렇게 할까?`)) nestAct('kin:path', { id: v.id, path: 'stay' }, true);
+          });
+        }
         const owned = Object.keys(R.care).filter((id) => (invCache[id] || 0) > 0);
         label(v.careIn > 0 ? `돌보기: ${dur(v.careIn)} 뒤에 다시 할 수 있다` : '돌보기: 무엇을 건네느냐에 따라 재주가 달라진다');
         if (!owned.length) label('건넬 물건이 없다. 꿀·약초는 약초꾼, 광석은 대장장이, 생선·가죽·송곳니는 파수꾼 쪽.');
