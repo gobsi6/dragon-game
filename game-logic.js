@@ -1134,6 +1134,20 @@ function experiment(d, ids, have, opts = {}) {
   const key = (r) => Object.keys(r.needs).sort().join('|');
   const mine = ids.slice().sort().join('|');
   const hit = RECIPES.find((r) => key(r) === mine);
+  // 성질 없는 재료(숨은 제작법에만 쓰이는 꿀 고약 등)를 넣었는데 제작법과 맞지 않으면: 기력을 쓰고, 넣은 재료 중 하나가 무작위로 터져 사라짐
+  // (예전에는 아무것도 잃지 않아 꿀 고약에 재료를 하나씩 붙여 공짜로 숨은 제작법을 찾을 수 있었음)
+  if (!hit && !opts.gift && ids.some((id) => !FREE.tags[id])) {
+    const en = CRAFT.experiment.en;
+    if (d.en < en) return { error: `기력이 모자란다. (${en} 필요)` };
+    if (d.en >= enCap(d)) d.en_at = Date.now();
+    d.en -= en;
+    const lost = ids[Math.floor(Math.random() * ids.length)];
+    const names = ids.map((x) => ITEMS[x].name).join(', '), ln = ITEMS[lost].name;
+    return { title: '실험', items: [{ id: lost, qty: -1 }], lines: [
+      `${names}${josa(names, '을', '를')} 화로에 넣고 섞어 보았다.`,
+      `재료들이 서로 엉기지 못하고 들끓더니, ${ln}${josa(ln, '이', '가')} 펑 하고 터져 사라졌다. 맞는 짝이 아닌 모양이다.`,
+      `(${ln} −1, 기력 −${en})`] };
+  }
   // 숨은 제작법과 맞지 않으면(또는 선물로 빚기면): 재료의 성질로 직접 빚음 (자유 제작)
   if (!hit || opts.gift) return freeCraft(d, ids, have, opts);
   const en = CRAFT.experiment.en;

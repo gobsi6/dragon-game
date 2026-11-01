@@ -76,6 +76,10 @@ const addCol = (name, def) => {
 addCol('avatar', 'BLOB');
 addCol('avatar_type', 'TEXT');
 addCol('avatar_ver', 'INTEGER NOT NULL DEFAULT 0');
+// 특징 그림: 드래곤 기록(특징)에 붙이는 그림 한 장 (프로필 그림과는 따로)
+addCol('bio_img', 'BLOB');
+addCol('bio_img_type', 'TEXT');
+addCol('bio_img_ver', 'INTEGER NOT NULL DEFAULT 0');
 addCol('level', 'INTEGER NOT NULL DEFAULT 1');
 addCol('xp', 'INTEGER NOT NULL DEFAULT 0');
 addCol('hp', 'INTEGER NOT NULL DEFAULT 100');
@@ -316,7 +320,7 @@ db.exec(`
 const DRAGON_FIELDS = `id, name, kind, region, avatar_ver, level, xp, hp, hp_max, en, en_max,
   ap, ap_max, gold, claw, scale, wing, wisdom, majesty, stance,
   ap_at, hp_at, en_at, exp_start, exp_end, exp_region, equip, rep, stance_at, nest, rest_at, hoard_gold, fame, pending_event, traits, combat, last_seen, stat_pts, mind, mind_at, berserk, place, fallen, scars, dead_at, bio, titles, exp_info, chron, nest_info, heir, ev_recent, created_at,
-  (avatar IS NOT NULL) AS has_avatar`;
+  (avatar IS NOT NULL) AS has_avatar, bio_img_ver, (bio_img IS NOT NULL) AS has_bio_img`;
 
 // 석판: 모두가 글을 새겨 남기는 게시판. 쓴 드래곤이 사라져도 글은 남도록 이름·종류를 함께 적어 둠
 db.exec(`
@@ -392,6 +396,10 @@ const q = {
   clearAvatar:  db.prepare('UPDATE dragons SET avatar = NULL, avatar_type = NULL, avatar_ver = avatar_ver + 1 WHERE id = ?'),
   avatarVer:    db.prepare('SELECT avatar_ver FROM dragons WHERE id = ?'),
   getAvatar:    db.prepare('SELECT avatar, avatar_type FROM dragons WHERE id = ?'),
+  setBioImg:    db.prepare('UPDATE dragons SET bio_img = ?, bio_img_type = ?, bio_img_ver = bio_img_ver + 1 WHERE id = ?'),
+  clearBioImg:  db.prepare('UPDATE dragons SET bio_img = NULL, bio_img_type = NULL, bio_img_ver = bio_img_ver + 1 WHERE id = ?'),
+  bioImgVer:    db.prepare('SELECT bio_img_ver FROM dragons WHERE id = ?'),
+  getBioImg:    db.prepare('SELECT bio_img, bio_img_type FROM dragons WHERE id = ?'),
   saveState:    db.prepare(`UPDATE dragons SET level = @level, xp = @xp, hp = @hp, hp_max = @hp_max,
                               en = @en, en_max = @en_max, ap = @ap, gold = @gold, ap_at = @ap_at, hp_at = @hp_at,
                               en_at = @en_at, exp_start = @exp_start, exp_end = @exp_end, exp_region = @exp_region,
@@ -734,6 +742,10 @@ module.exports = {
     return q.avatarVer.get(dragonId).avatar_ver;
   },
   getAvatar: (dragonId) => q.getAvatar.get(dragonId),
+  // 특징 그림 (한 장). 돌려줌: 새 버전 번호 (주소의 ?v=에 붙여 바뀐 그림이 새로 받아지게)
+  setBioImg: (dragonId, buf, type) => { q.setBioImg.run(buf, type, dragonId); return q.bioImgVer.get(dragonId).bio_img_ver; },
+  clearBioImg: (dragonId) => { q.clearBioImg.run(dragonId); return q.bioImgVer.get(dragonId).bio_img_ver; },
+  getBioImg: (dragonId) => q.getBioImg.get(dragonId),
   saveState: db.transaction((d, items = [], hoardItems = []) => saveStateRaw(d, items, hoardItems)),
   // 교환: 두 드래곤의 상태와 물건을 한 번에 저장 (중간에 실패하면 둘 다 되돌림)
   saveMany: db.transaction((list) => { for (const [d, items] of list) saveStateRaw(d, items, []); }),

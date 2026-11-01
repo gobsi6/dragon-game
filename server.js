@@ -73,12 +73,13 @@ app.set('trust proxy', 1);
 app.disable('x-powered-by');
 // 보안 머리말: 다른 사이트가 이 게임을 몰래 틀 안에 띄우지 못하게(클릭 가로채기), 파일 종류를 속이지 못하게,
 // 화면이 불러올 수 있는 곳을 이 서버와 구글 글꼴로만 (스크립트를 끼워 넣어도 바깥으로 정보를 보내기 어렵게)
+// 그림만은 임구르(i.imgur.com)도 허용: 드래곤 특징에 적은 임구르 그림을 바로 보여 주려고 (다른 사이트 그림은 막아, 보는 사람의 접속 정보가 아무 데나 새지 않게)
 const CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com data:",
-  "img-src 'self' data: blob:",
+  "img-src 'self' data: blob: https://i.imgur.com",
   "connect-src 'self' ws: wss:",
   "object-src 'none'",
   "base-uri 'self'",
@@ -274,7 +275,7 @@ const GENDER_OLD = { 수컷: '남성', 암컷: '여성' }; // 예전 값
 const genderOf = (g) => GENDER_OLD[g] || g || '';
 function bioOf(d) {
   if (typeof d.bio === 'string' || !d.bio) { try { d.bio = JSON.parse(d.bio || '{}'); } catch { d.bio = {}; } }
-  return { gender: genderOf(d.bio.gender), desc: d.bio.desc || '' };
+  return { gender: genderOf(d.bio.gender), desc: d.bio.desc || '', img: d.has_bio_img ? d.bio_img_ver : 0 }; // img: 특징 그림 버전 (0이면 없음. 주소 /bio-img/<id>?v=)
 }
 
 // ── 계정 (REST) ────────────────────────────────────
@@ -430,6 +431,36 @@ app.get('/avatar/:id', (req, res) => {
   res.set('Cache-Control', 'public, max-age=31536000, immutable');
   res.set('X-Content-Type-Options', 'nosniff');
   res.send(row.avatar);
+});
+
+// 특징 그림 (한 장). 프로필 그림처럼 ?v=버전으로 바뀐 그림이 새로 받아짐
+app.get('/bio-img/:id', (req, res) => {
+  const row = db.getBioImg(Number(req.params.id));
+  if (!row || !row.bio_img) return res.status(404).end();
+  res.set('Content-Type', row.bio_img_type);
+  res.set('Cache-Control', 'public, max-age=31536000, immutable');
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.send(row.bio_img);
+});
+// 특징 그림 올리기: 석판 그림과 같은 방식(파일 그대로 HTTP로). 한 장만 두므로 올리면 먼저 것은 바뀜
+const BIO_IMG = { max: 700 * 1024, gap: 3000 };
+const bioImgAt = new Map();
+app.post('/api/bio-img', express.raw({ type: ['image/webp', 'image/jpeg', 'image/png'], limit: '760kb' }), (req, res) => {
+  const token = str((req.get('authorization') || '').replace(/^Bearer\s+/i, ''));
+  const user = token ? db.getSessionUser(token) : null;
+  if (!user) return res.status(401).json({ error: '다시 로그인해야 한다.' });
+  const d = db.getDragonByUser(user.id);
+  if (!d) return res.status(400).json({ error: '먼저 드래곤을 만들어야 한다.' });
+  const type = String(req.get('content-type') || '').split(';')[0].trim();
+  if (!['image/webp', 'image/jpeg', 'image/png'].includes(type) || !Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: '그림 파일을 읽지 못했다. 다른 그림으로 해 보자.' });
+  if (req.body.length > BIO_IMG.max) return res.status(400).json({ error: '그림이 너무 크다.' });
+  const now = Date.now();
+  if (now - (bioImgAt.get(d.id) || 0) < BIO_IMG.gap) return res.status(400).json({ error: '조금 천천히 올리자.' });
+  bioImgAt.set(d.id, now);
+  const ver = db.setBioImg(d.id, req.body, type);
+  const e = online.get(d.id); // 접속해 있으면 화면의 드래곤 기록도 바로 새로
+  if (e) { e.dragon.bio_img_ver = ver; e.dragon.has_bio_img = 1; sendMe(e.socket, e.dragon); }
+  res.json({ ok: true, ver });
 });
 
 app.post('/api/logout', (req, res) => {
@@ -1426,7 +1457,8 @@ function onConnect(socket) {
     fameTiers: FAME_TIERS,
     traits: TRAITS, traitEarn: TRAIT_EARN, traitCounts: TRAIT_COUNTS,
     mobs: mobs.listForClient(),
-    free: { tags: FREE_CFG.tags, names: FREE_CFG.tagNames, groups: FREE_CFG.tagGroup, mine: FREE_CFG.mine, mineLib: FREE_CFG.mineLib }, // 자유 제작: 재료의 성질
+    free: { tags: FREE_CFG.tags, names: FREE_CFG.tagNames, groups: FREE_CFG.tagGroup, mine: FREE_CFG.mine, mineLib: FREE_CFG.mineLib, // 자유 제작: 재료의 성질
+      plainHidden: [...new Set(RECIPES.filter((r) => r.hidden).flatMap((r) => Object.keys(r.needs)).filter((id) => !FREE_CFG.tags[id]))] }, // 성질이 없어도 숨은 제작법에 쓰여 화로 목록에 남기는 것 (지금은 꿀 고약)
     craftRules: { enhance: CRAFT.enhance, forgeRate: CRAFT.forgeRate, engrave: CRAFT.engrave, experimentEn: CRAFT.experiment.en, forge: CRAFT.forge, hidden: RECIPES.filter((r) => r.hidden).map((r) => r.out) },
     statPerLevel: require('./game-data').STAT_POINTS.perLevel,
     places: PLACES, regionPlaces: REGION_PLACES, placeRules: PLACE_RULES,
@@ -2547,6 +2579,16 @@ function onConnect(socket) {
     const d = entry.dragon;
     d.bio = { gender, desc };
     db.setBio(d.id, d.bio);
+    sendMe(socket, d);
+    ack({ ok: true });
+  });
+  // 특징 그림 지우기 (올리기는 /api/bio-img)
+  socket.on('bio:img:delete', (payload, ack) => {
+    if (typeof ack !== 'function') ack = () => {};
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+    const d = entry.dragon;
+    if (d.has_bio_img) { d.bio_img_ver = db.clearBioImg(d.id); d.has_bio_img = 0; }
     sendMe(socket, d);
     ack({ ok: true });
   });

@@ -276,7 +276,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       // 먼 여행을 떠났으면 그때와 남긴 말, 의지를 이어받았으면 누구에게서
       departed: (() => { if (!d.dead_at) return null; let f = d.fallen; if (typeof f === 'string') { try { f = JSON.parse(f); } catch { f = null; } } return f?.departed ? { at: f.at, words: f.words || '' } : null; })(),
       heir: (() => { try { const h = d.heir ? JSON.parse(d.heir) : null; return h ? { name: h.name, kind: h.kind, kindName: KINDS[h.kind]?.name || '', level: h.level } : null; } catch { return null; } })(),
-      bio: (() => { try { const b = typeof d.bio === 'string' ? JSON.parse(d.bio || '{}') : (d.bio || {}); const g = b.gender || ''; return { gender: ({ 수컷: '남성', 암컷: '여성' })[g] || g, desc: b.desc || '' }; } catch { return { gender: '', desc: '' }; } })(),
+      bio: (() => { try { const b = typeof d.bio === 'string' ? JSON.parse(d.bio || '{}') : (d.bio || {}); const g = b.gender || ''; return { gender: ({ 수컷: '남성', 암컷: '여성' })[g] || g, desc: b.desc || '', img: d.has_bio_img ? d.bio_img_ver : 0 }; } catch { return { gender: '', desc: '', img: d.has_bio_img ? d.bio_img_ver : 0 }; } })(), // img: 특징 그림 버전 (/bio-img/<id>?v=)
       online: !!e,
       away: !!d.exp_end, resting: !!d.rest_at,
       // 동료와 자기 자신에게만, 그리고 같은 지역이면 보이는 정보
