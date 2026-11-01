@@ -187,6 +187,7 @@ const ITEMS = {
   deep_pearl:   { name: '심해 진주',        rarity: 'rare',     desc: '깊은 바다에서 올라온 커다란 진주다.' },
   red_clay:     { name: '붉은 점토',        rarity: 'common',   desc: '햇볕에 구우면 단단해진다.' },
   gold_ore:     { name: '금광석',           rarity: 'uncommon', desc: '바위틈에서 캐낸 금빛 돌이다.' },
+  silver_ore:   { name: '은광석',           rarity: 'uncommon', value: 12, desc: '설원의 얼음 낀 바위 밑에서 캐낸 은빛 돌. 녹이면 가는 사슬도 뽑을 수 있다.' },
   sun_stone:    { name: '태양석',           rarity: 'rare',     desc: '한낮의 열기를 품고 있다.' },
   volcanic_ash: { name: '화산재',           rarity: 'common',   desc: '손가락 사이로 곱게 흘러내린다.' },
   obsidian:     { name: '흑요석',           rarity: 'uncommon', desc: '깨진 면이 칼날처럼 날카롭다.' },
@@ -1055,7 +1056,8 @@ const KIN = {
     salmon_grill:  { bond: 12, talent: 'guard',     sat: 70, eat: '연어 구이 냄새에 달려와 뼈까지 발라 먹는다. "바다 맛이 나!"' },
     feast_plate:   { bond: 14, talent: null,        sat: 100, eat: '눈이 휘둥그레져서 한 접시씩 맛을 본다. 오늘은 잔칫날이다!' },
     red_clay: { bond: 3, talent: 'smith' }, bog_iron: { bond: 5, talent: 'smith' },
-    gold_ore: { bond: 7, talent: 'smith' }, obsidian: { bond: 6, talent: 'smith' },
+    gold_ore: { bond: 7, talent: 'smith' }, obsidian: { bond: 6, talent: 'smith' }, silver_ore: { bond: 7, talent: 'smith' },
+    wolf_pelt: { bond: 3, talent: 'guard' }, // 늑대 털가죽: 파수꾼 쪽 (어른 파수꾼의 일감 재료)
     salted_fish: { bond: 6, talent: 'guard', sat: 30 }, beast_hide: { bond: 4, talent: 'guard' }, sharp_fang: { bond: 5, talent: 'guard' },
   },
   // 일감: 재주가 정해진 어른 인간 식구에게 재주에 맞는 재료를 건네면, 그걸로 만든 것을 돌려줌 (돌보기와 같이 유대도 오름)
@@ -1063,13 +1065,14 @@ const KIN = {
   work: {
     bonus: 0.2,
     items: {
-      glow_moss:  { talent: 'herbalist', out: 'herbal_ointment', n: 1 }, // 약초꾼: 이끼를 빻아 연고로
+      glow_moss:  { talent: 'herbalist', out: 'herbal_ointment', n: 1 }, // 약초꾼: 이끼를 빻아 연고로 (시장 물건)
+      silver_ore: { talent: 'smith',     out: 'silver_chain',    n: 2 }, // 대장장이: 은광석을 녹여 은 사슬로 (시장 물건)
       gold_ore:   { talent: 'smith',     out: 'rune_stone',      n: 2 }, // 대장장이: 광석을 다듬어 룬 돌로 (강화 재료)
       bog_iron:   { talent: 'smith',     out: 'rune_stone',      n: 2 },
       obsidian:   { talent: 'smith',     out: 'rune_stone',      n: 2 },
       red_clay:   { talent: 'smith',     out: 'rune_stone',      n: 1 },
-      beast_hide: { talent: 'guard',     out: 'tough_sinew',     n: 1 }, // 파수꾼: 가죽을 손질해 힘줄로
-      sharp_fang: { talent: 'guard',     out: 'bait_meat',       n: 3 }, // 파수꾼: 송곳니로 사냥해 와서 미끼 고기로
+      beast_hide: { talent: 'guard',     out: 'bait_meat',       n: 2 }, // 파수꾼: 가죽에 붙은 고기를 발라 미끼로 (정식 제작과 같은 재료)
+      wolf_pelt:  { talent: 'guard',     out: 'tough_sinew',     n: 1 }, // 파수꾼: 흔한 늑대 털가죽을 손질해 질긴 힘줄로 (낮은 등급 → 높은 등급)
     },
   },
   // 보답: 좋은 음식(식구 요리·정성 들인 요리·가장 좋아하는 음식·가끔 이상 물고기)을 먹으면 드물게 그 자리에서 보답함 (game-life.js repay)
@@ -1444,6 +1447,7 @@ const FREE = {
     sea_shell: {shine: 1},
     amber: {shine: 2},
     gold_ore: {shine: 2},
+    silver_ore: {hard: 1, shine: 2},
     rival_scale: {shine: 2},
     bog_pearl: {shine: 3},
     deep_pearl: {shine: 3},
@@ -1546,6 +1550,8 @@ const DRAKE_NAMES = [
   '미라스', '오닉스', '페일', '다르크', '소린', '알테어', '리겔', '베가', '노바', '아케르', '제피르', '라그나',
   '벨로스', '키르', '하젤', '에녹',
 ];
+// 둥지 위를 맴도는 낯선 용(새끼의 짝 후보)의 이름: 새끼 이름(DRAKE_NAMES)과 따로 두어, 다른 둥지 새끼와 이름이 겹치지 않게
+const MATE_DRAKE_NAMES = ['아우렐', '벨라스', '카엘룸', '시리온', '모르가나', '이스카', '루시엔', '타리아', '세바르', '노에르', '베일린', '이렌', '아스트라', '칼리스', '드레아', '실렌', '에스텔', '라이르', '하엘', '텔루스', '오라스', '키엘', '마렌', '솔베인', '루나리', '그라벨', '페리안', '아이온', '셀레네', '볼카르', '이리스', '엘다', '카샤', '미르텔', '아델', '제넬', '보레아', '칸타르', '에셀', '나이라', '헬리온', '바이스', '티르', '아라벨', '실비안', '코르벤', '유리엘', '하이렌', '라시엘', '베르탄', '제논', '마르실', '프리엔', '카디스', '엔릴', '라벨린', '이시르', '오벨', '세이르'];
 
 // 이벤트: 행동마다 일어날 확률 (시험 단계라 넉넉하게)
 const EVENT_RULES = {
@@ -1610,7 +1616,7 @@ const REGION_LOOT = {
   ruin_rift:    { common: ['ashen_dust'], uncommon: ['void_silk', 'blackened_scale'], rare: ['corrupt_crystal', 'corrupt_crystal', 'abyss_fang'] },
   plains:  { common: ['grass_seed', 'wild_flower'], uncommon: ['wild_honey'],   rare: ['silver_clover'] },
   capital: { common: ['brass_button'], uncommon: ['silk_scrap'],   rare: ['lost_seal'] },
-  snow:    { common: ['ice_shard'],    uncommon: ['frost_lichen', 'snow_flower', 'frost_thorn'], rare: ['eternal_ice'] },
+  snow:    { common: ['ice_shard'],    uncommon: ['frost_lichen', 'snow_flower', 'frost_thorn', 'silver_ore'], rare: ['eternal_ice'] },
   ruins:   { common: ['rune_stone'],   uncommon: ['old_scroll', 'owl_quill'], rare: ['ancient_relic'] },
   forest:  { common: ['poison_herb', 'forest_mushroom', 'dry_vine'], uncommon: ['glow_moss', 'moss_flower'], rare: ['heartwood'] },
   swamp:   { common: ['black_reed', 'lotus_root'], uncommon: ['bog_iron'], rare: ['bog_pearl'] },
@@ -2788,6 +2794,6 @@ module.exports = {
   isTestDragon: (d) => !!d && !!KINDS[d.kind]?.test,                // GM 시험용 투명 드래곤인가
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, FESTIVAL, NIGHT_MARKET, KIN_FEST, TITLES, TITLE_COUNT_NAMES, ACHIEVEMENTS, YABAWI, KEEPSAKES,
   PURIFY, CRAFT, SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, FISHING, RUIN, FACILITY, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
-  DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, KIN_GROW, KIN_PLAY, KIN_TOUCH, KIN_BOND, FREE, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
+  DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, MATE_DRAKE_NAMES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, KIN_GROW, KIN_PLAY, KIN_TOUCH, KIN_BOND, FREE, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
   COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, RAIDBOSS, DEPART, BONDS, MARKS, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG,
 };

@@ -25,7 +25,7 @@
 //           nearestTown() name(식구 → '미르가') josa(말, 받침, 없음)
 //           mind(n) buff(강화 id, 분) notify(드래곤 id, 글, 제목) hoardTake(id, n)(보물더미에서, 있는 만큼만) hoardGive(id, n)
 
-const { ITEMS, KINDS, REGIONS, PLACES, REGION_LOOT, KIN, KIN_GROW, KIN_PLAY, STATS, HUMAN_NAMES, DRAKE_NAMES, PLAY_KINDS } = require('./game-data');
+const { ITEMS, KINDS, REGIONS, PLACES, REGION_LOOT, KIN, KIN_GROW, KIN_PLAY, STATS, HUMAN_NAMES, DRAKE_NAMES, MATE_DRAKE_NAMES, PLAY_KINDS } = require('./game-data');
 
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 // '옛 둥지를 그리워하는 아이': 입양 온 아이가 한 번 그리워한 뒤 다시 그리워하기까지의 간격
@@ -173,6 +173,13 @@ const kidLike = (c, x) => (x.type === 'human' ? ['아이', '소년', '청소년'
 const kids = (c) => c.grown.filter((x) => kidLike(c, x));
 // 이름 고르기: 둥지 식구(와 ex)와 겹치지 않는 이름 (다 겹치면 그냥 하나)
 const freshOf = (list, c, ...ex) => { const used = new Set([...(c ? c.home.map((x) => x.name) : []), ...ex]); return c.pick(list.filter((n) => !used.has(n))) || c.pick(list); };
+// 낯선 용(짝 후보)의 이름: 짝 후보 이름 목록에서, 이 둥지 식구·식구들의 짝·이 새끼에게 전에 찾아왔던 용의 이름은 빼고
+const freshSuitor = (k, c) => {
+  const used = [...(k.data.suitors || []), ...c.home.flatMap((x) => [x.name, x.data.mate?.name]).filter(Boolean)];
+  return freshOf(MATE_DRAKE_NAMES, c, ...used);
+};
+// 찾아온 용의 이름을 기억 (짝이 되든 돌려보내든). 최근 12마리까지
+const noteSuitor = (k, name) => { const l = (k.data.suitors ||= []); if (!l.includes(name)) l.push(name); if (l.length > 12) l.splice(0, l.length - 12); };
 const freshKid = (k, c) => { const used = new Set([k.name, ...(k.data.kids || []), ...(c ? c.home.map((x) => x.name) : [])]); /* 둥지 식구와 겹치는 이름은 빼고 */ return pick(HUMAN_NAMES.filter((n) => !used.has(n))) || pick(HUMAN_NAMES); };
 
 // 먼 둥지에서 온 안부: 입양 보낸 뒤 LETTER_DAYS일 동안만 (예전에 보내 입양 날짜가 없으면 아직 어릴 때만)
@@ -1825,7 +1832,7 @@ module.exports = [
     cond: (c) => c.drakes.some((x) => grownDrake(c, x) && canMate(c, x) && !loveHolds(c, x) && !canLoveDrake(c, x)),
     setup: (c) => {
       const k = c.pick(c.drakes.filter((x) => grownDrake(c, x) && canMate(c, x) && !loveHolds(c, x) && !canLoveDrake(c, x)));
-      return { id: k.id, name: freshOf(DRAKE_NAMES, c), kind: c.pick(PLAY_KINDS) };
+      return { id: k.id, name: freshSuitor(k, c), kind: c.pick(PLAY_KINDS) };
     },
     text: (c, v) => {
       const k = c.k(v.id); const kn = KINDS[v.kind].name;
@@ -1835,26 +1842,26 @@ module.exports = [
     },
     choices: [
       { label: '함께 날아 보라고 한다', run: (h, c, v) => {
-        const k = c.k(v.id); k.data.mate = { name: v.name, kind: v.kind, at: c.now };
+        const k = c.k(v.id); noteSuitor(k, v.name); k.data.mate = { name: v.name, kind: v.kind, at: c.now };
         h.bond(k, 8);
         h.diary(k, `${v.name}${h.josa(v.name, '과', '와')} 구름 위까지 함께 날아오르는 구애 비행을 하고 짝이 되었다.`);
         h.say(`${h.name(k)} 단숨에 날아올랐다. 두 용은 구름 위까지 나란히 솟구쳤다가, 날개를 맞댄 채 한참을 떨어지듯 미끄러져 내려왔다. 드래곤의 오래된 구애 비행이다. (유대 +8)`);
       } },
       { label: '보물을 주고받게 한다 (금화 30)', need: (c) => (c.d.gold < 30 ? '금화가 모자란다.' : null), run: (h, c, v) => {
-        const k = c.k(v.id); k.data.mate = { name: v.name, kind: v.kind, at: c.now };
+        const k = c.k(v.id); noteSuitor(k, v.name); k.data.mate = { name: v.name, kind: v.kind, at: c.now };
         h.gold(-30); h.bond(k, 10); h.mind(6);
         if (c.nest) h.keep('court_gift', v.name, `${k.name}에게 건넨 돌.`);
         h.diary(k, `${v.name}${h.josa(v.name, '과', '와')} 보물을 주고받고 짝이 되었다.`);
         h.say(`보물더미에서 가장 반짝이는 금화 몇 닢을 골라 ${h.name(k)} ${v.name}에게 건네게 했다. ${v.name}${h.josa(v.name, '이', '가')} 가져온 돌은 둥지 가장자리에 소중히 놓였다. (유대 +10, 정신 +6, 구애의 선물)`);
       } },
       { label: '실력을 겨뤄 보게 한다', run: (h, c, v) => {
-        const k = c.k(v.id); k.data.mate = { name: v.name, kind: v.kind, at: c.now };
+        const k = c.k(v.id); noteSuitor(k, v.name); k.data.mate = { name: v.name, kind: v.kind, at: c.now };
         const s = c.pick(['claw', 'wing', 'scale']); h.train(k, s); h.fame(1);
         h.diary(k, `${v.name}${h.josa(v.name, '과', '와')} 공중에서 실력을 겨룬 끝에 짝이 되었다.`);
         h.say(`두 용이 공중에서 한참을 겨뤘다. 지친 둘은 나란히 바위에 내려앉았다. 서로가 마음에 든 모양이다. (${STATS.find((x) => x.key === s).name} +1, 명성 +1)`);
       } },
       { label: '직접 마주 서서 그 용을 시험한다', run: (h, c, v) => {
-        const k = c.k(v.id);
+        const k = c.k(v.id); noteSuitor(k, v.name);
         const p = Math.max(0.25, Math.min(0.85, 0.5 + ((c.stats.majesty || 0) - 12) * 0.03)); // 보호자의 위엄이 높을수록 상대가 예를 갖춤
         if (Math.random() < p) {
           k.data.mate = { name: v.name, kind: v.kind, at: c.now };
@@ -1867,7 +1874,7 @@ module.exports = [
         }
       } },
       { label: '둥지에서 쫓아낸다', run: (h, c, v) => {
-        const k = c.k(v.id); k.data.mateNo = c.now; h.bond(k, -6);
+        const k = c.k(v.id); noteSuitor(k, v.name); k.data.mateNo = c.now; h.bond(k, -6);
         h.say(`포효 한 번에 ${v.name}${h.josa(v.name, '은', '는')} 멀리 날아갔다. 둥지 가장자리에 반짝이는 돌만 남았다. ${h.name(k)} 한동안 하늘만 바라보았다. (유대 −6)`);
       } },
     ],

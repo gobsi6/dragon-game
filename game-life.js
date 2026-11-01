@@ -1103,10 +1103,12 @@ function care(d, kin, id, item, have, now = Date.now(), opt = {}) {
     items.push({ id: wk.out, qty: n });
     const did = {
       herbalist: `${name}${josa(name, '을', '를')} 받아 들더니 절구를 꺼냈다. 한참 빻고 개어 ${on}${josa(on, '을', '를')} 만들어 건넸다.`,
-      smith: `${name}${josa(name, '을', '를')} 들고 대장간으로 향했다. 망치 소리가 그치자 ${on} ${n}개를 들고 돌아왔다.`,
+      smith: wk.out === 'silver_chain'
+        ? `${name}${josa(name, '을', '를')} 들고 대장간으로 향했다. 녹인 은을 가늘게 뽑아 고리를 하나하나 엮더니, ${on} ${n}개를 들고 돌아왔다.`
+        : `${name}${josa(name, '을', '를')} 들고 대장간으로 향했다. 망치 소리가 그치자 ${on} ${n}개를 들고 돌아왔다.`,
       guard: wk.out === 'bait_meat'
-        ? `${name}${josa(name, '을', '를')} 창끝에 매어 사냥을 나가더니, 해 질 녘에 ${on} ${n}개를 들고 돌아왔다.`
-        : `${name}${josa(name, '을', '를')} 펼쳐 놓고 꼼꼼히 손질해 ${on} ${n}개를 뽑아냈다.`,
+        ? `${name}${josa(name, '을', '를')} 펼쳐 놓고 붙은 살점을 꼼꼼히 발라 ${on} ${n}개를 만들었다.`
+        : `${name}${josa(name, '을', '를')} 무두질하며 꼼꼼히 손질하더니, ${on} ${n}개를 뽑아냈다.`,
     }[k.data.talent];
     lines.push(`${ga(k)} ${did} (${on} +${n})${n > wk.n ? ' 솜씨가 좋아 하나 더 만들었다.' : ''}`);
   }
