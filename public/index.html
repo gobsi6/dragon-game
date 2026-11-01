@@ -3695,7 +3695,8 @@
           ? { returned: v.family != null ? `${v.family || '마을'}에 가정을 꾸렸다` : '마을로 돌아갔다', dead: `${v.age}일을 살고 떠났다` }[v.status]
           : v.status === 'cold' ? `${kindName(v.kind)}의 알 · 식어 버렸다`
           : `${kindName(v.kind)} · 독립 · ${{ friendly: '우호', hermit: '은둔', hostile: '적대' }[v.personality] || ''} 성격`;
-        const fam = familyText(v);
+        // 지난 식구: 떠난 모습 뒤에 짝과 자녀만
+        const fam = [v.mate ? `짝: ${v.mate.name}` : '', v.kids?.length ? `자녀: ${v.kids.join(', ')}` : ''].filter(Boolean).join(' · ');
         row.querySelector('span').textContent = [what, fam].filter(Boolean).join(' · ');
         list.appendChild(row);
         const dy = kinDiary(v); if (dy) list.appendChild(dy); // 떠난 뒤에도 남는 함께한 날들
@@ -4254,9 +4255,10 @@
     d.open = KIN_INFO_OPEN.has(key);
     d.addEventListener('toggle', () => { if (d.open) KIN_INFO_OPEN.add(key); else KIN_INFO_OPEN.delete(key); });
     const sm = document.createElement('summary');
-    sm.append('성격 · 모습 · 가족');
-    // 접혀 있어도 짧게: 짝·자녀가 있으면 그것, 없으면 성격 이름들
-    const brief = [v.mate ? `짝 ${v.mate.name}` : '', v.kids?.length ? `자녀 ${v.kids.join(', ')}` : ''].filter(Boolean).join(' · ') || (v.traits || []).map((t) => t.name).join(' · ');
+    const ttl = document.createElement('span'); ttl.className = 'ttl'; ttl.textContent = '성격 · 모습 · 가족'; // 좁은 화면에서도 한 줄로 (옆의 요약이 줄어듦)
+    sm.appendChild(ttl);
+    // 접혀 있어도 짧게: 둥지에 있는 식구는 성격 이름만 (짝·자녀는 펼치면 보임). 폰에서는 요약을 숨김 (style.css)
+    const brief = (v.traits || []).map((t) => t.name).join(' · ');
     if (brief) { const b = document.createElement('small'); b.textContent = brief; sm.appendChild(b); }
     const kv = document.createElement('div');
     kv.className = 'kin-kv';

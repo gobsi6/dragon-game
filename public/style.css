@@ -885,7 +885,9 @@ dialog.frame:not(.as-panel) > .bl { bottom: 2px; left: 2px; } dialog.frame:not(.
 .kin-info > summary::-webkit-details-marker { display: none; }
 .kin-info > summary::before { content: ''; flex: none; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); transition: transform .15s; }
 .kin-info[open] > summary::before { transform: rotate(45deg); }
-.kin-info > summary small { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 400; color: var(--muted); }
+.kin-info > summary .ttl { flex: none; white-space: nowrap; } /* 제목은 줄바꿈 없이 */
+@media (max-width: 520px) { .kin-info > summary small { display: none; } } /* 폰에서는 옆의 요약(성격 이름)을 숨김 */
+.kin-info > summary small { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 400; color: var(--muted); }
 .kin-kv { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 6px 10px; padding: 4px 10px 10px; align-items: start; color: var(--ink-2); line-height: 1.55; }
 .kin-kv .k { padding-top: 1px; font-size: 11.5px; color: var(--muted); }
 .kin-kv .kv-traits { display: flex; flex-direction: column; gap: 6px; }
