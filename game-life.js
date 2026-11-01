@@ -750,7 +750,9 @@ function view(k, now, d) {
     v.mood = md ? { key: md, name: MOODS[md] } : null;
     v.touch = { n: t.day === kstDay(now) ? t.n : 0, cap: TC.cap };
     const away = k.data.onExp || k.data.runaway || (k.type === 'drake' && k.data.errand); // 가출·심부름·원정 중에는 교감할 수 없음
-    v.touchActs = away ? [] : Object.entries(TC.acts).filter(([, a]) => !a.for || a.for === k.type).map(([id, a]) => ({ id, name: a.name }));
+    v.touchActs = away ? [] : Object.entries(TC.acts).filter(([id]) => actFor(k, id, now)).map(([id, a]) => ({ id, name: a.name }));
+    // 자라기 전에 조르던 교감이 아직 남아 있으면 그 단추도 보여 줌 (받아 줄 수 있게)
+    if (!away && k.data.ask && k.data.ask.until > now && TC.acts[k.data.ask.act] && !v.touchActs.some((a) => a.id === k.data.ask.act)) v.touchActs.push({ id: k.data.ask.act, name: TC.acts[k.data.ask.act].name });
     if (k.data.ask && k.data.ask.until > now) v.ask = { act: k.data.ask.act, name: TC.acts[k.data.ask.act].name, line: ASK_LINE[k.data.ask.act], left: k.data.ask.until - now };
   }
   diaryStart(k);
@@ -854,6 +856,8 @@ function feedDrake(d, kin, k, item, have, now) {
 // 물건·행동력 없이 하루 몇 번. 단계와 성격마다 좋아하는 것이 다르고, 기분에 따라 반응이 달라짐.
 // 하루 KIN_TOUCH.cap번을 넘기면 유대는 오르지 않고 과보호가 쌓여 '응석받이/어리광쟁이' 또는 '새침한'으로 자람
 const TC = KIN_TOUCH;
+// 이 식구가 지금 단계에서 할 수 있는 교감인지 (종류·단계)
+const actFor = (k, act, now = Date.now()) => { const A = TC.acts[act]; return !!A && (!A.for || A.for === k.type) && (!A.stages || A.stages.includes(stageOf(k, now).name)); };
 const kstDay = (now) => new Date(now + 9 * 3600000).toISOString().slice(0, 10);
 const kstHour = (now) => new Date(now + 9 * 3600000).getUTCHours();
 const isNight = (now) => { const h = kstHour(now); const [a, b] = TC.night; return a > b ? h >= a || h < b : h >= a && h < b; };
@@ -891,8 +895,12 @@ function overdoKey(k) {
   if (soft !== firm) return soft > firm ? 'pamper' : 'smother';
   return k.id % 2 ? 'pamper' : 'smother';
 }
-const TOUCH_FIRST = { pat: '처음 머리를 쓰다듬어 주었다.', hug: '처음 꼭 안아 주었다.', play: '처음 함께 놀아 주었다.', story: '처음 이야기를 들려주었다.', ride: '처음 등에 태워 주었다.', fly: '처음 함께 하늘을 날았다.' };
-const ASK_LINE = { pat: '머리를 쓰다듬어 달라고 슬그머니 다가온다', hug: '안아 달라고 팔을 뻗는다', play: '놀아 달라고 자꾸 잡아당긴다', story: '이야기를 해 달라고 조른다', ride: '등에 태워 달라고 조른다', fly: '함께 날자고 날개를 퍼덕인다' };
+const TOUCH_FIRST = { pat: '처음 머리를 쓰다듬어 주었다.', hug: '처음 꼭 안아 주었다.', play: '처음 함께 놀아 주었다.', story: '처음 이야기를 들려주었다.', ride: '처음 등에 태워 주었다.', fly: '처음 함께 하늘을 날았다.',
+  train: '처음 함께 몸을 풀며 훈련했다.', worry: '처음 고민을 털어놓았다.', talk: '처음 마주 앉아 이야기를 나누었다.', walk: '처음 함께 둥지 둘레를 걸었다.', help: '처음 일을 함께 거들었다.',
+  oldtale: '처음 옛이야기를 들려주었다.', sun: '처음 나란히 볕을 쬐었다.', hand: '처음 손을 꼭 잡아 주었다.', spar: '처음 발톱을 세우고 힘을 겨루었다.', rest: '처음 말없이 나란히 쉬었다.' };
+const ASK_LINE = { pat: '머리를 쓰다듬어 달라고 슬그머니 다가온다', hug: '안아 달라고 팔을 뻗는다', play: '놀아 달라고 자꾸 잡아당긴다', story: '이야기를 해 달라고 조른다', ride: '등에 태워 달라고 조른다', fly: '함께 날자고 날개를 퍼덕인다',
+  train: '같이 몸을 풀자며 찾아온다', worry: '할 말이 있다며 곁에서 머뭇거린다', talk: '의논할 일이 있다며 찾아온다', walk: '바람 쐬러 나가자고 한다', help: '손이 모자란다며 도움을 청한다',
+  oldtale: '옛날이야기를 들려주겠다며 부른다', sun: '볕이 좋다며 곁으로 부른다', hand: '말없이 손을 내민다', spar: '발톱을 세우고 겨뤄 보자며 덤빈다', rest: '말없이 곁에 와 몸을 기댄다' };
 // 반응 문장: [행동][좋음·보통·싫음] (n: 이름, g: 이름+이/가, e: 이름+은/는)
 const TOUCH_LINES = {
   pat: { like: ['{g} 눈을 가늘게 뜨고 손길에 머리를 비빈다.', '{g} 기분 좋은 듯 {purr}'], ok: ['{g} 가만히 쓰다듬어지다가 씩 웃는다.'], dislike: ['{e} "이제 애 아니거든!" 하고 고개를 홱 돌린다.', '{e} 머리를 피하며 투덜거린다.'] },
@@ -901,6 +909,20 @@ const TOUCH_LINES = {
   story: { like: ['{g} 눈을 반짝이며 다음 이야기를 조른다.', '{g} 이야기 끝까지 숨죽여 듣는다.'], ok: ['{g} 이야기를 듣다가 고개를 끄덕인다.'], dislike: ['{e} 듣는 둥 마는 둥 하품을 한다.'] },
   ride: { like: ['{g} 등 위에서 두 팔을 활짝 펴고 소리친다.', '{g} 등에 매달려 신나게 웃는다.'], ok: ['{g} 등에 올라 둥지 둘레를 한 바퀴 돌았다.'], dislike: ['{e} 등에 오르기 싫다며 고개를 젓는다.'] },
   fly: { like: ['{g} 날개를 나란히 펴고 신나게 바람을 가른다.', '{g} 구름 사이를 빙글빙글 돌며 좋아한다.'], ok: ['{g} 뒤따라 둥지 위를 몇 바퀴 날았다.'], dislike: ['{e} 날개를 접고 따라오지 않는다.'] },
+  // 청소년
+  train: { like: ['{g} 땀을 뻘뻘 흘리면서도 한 번만 더 하자고 한다.', '{g} 꼬리를 피해 구르며 깔깔 웃는다. "다음엔 꼭 피할 거예요!"'], ok: ['{g} 함께 둥지 둘레를 뛰고 몸을 풀었다.'], dislike: ['{e} 숨을 몰아쉬며 오늘은 그만하자고 한다.'] },
+  worry: { like: ['{g} 한참 망설이다 속에 담아 둔 이야기를 꺼낸다. 다 털어놓고 나서야 표정이 풀린다.', '{g} 고민을 털어놓더니 "들어 줘서 고마워요." 하고 작게 웃는다.'], ok: ['{g} 요즘 있었던 일을 띄엄띄엄 이야기한다.'], dislike: ['{e} "별일 없어요." 하고 말을 돌린다.'] },
+  // 어른
+  talk: { like: ['{g} 요즘 일과 마을 소식을 이것저것 이야기한다. 어느새 해가 기울었다.', '{g} 앞으로 하고 싶은 일을 이야기하며 눈을 빛낸다.'], ok: ['{g} 마주 앉아 이런저런 이야기를 나누었다.'], dislike: ['{e} 바쁜지 짧게 대답하고 일어난다.'] },
+  walk: { like: ['{g} 둥지 둘레를 천천히 걸으며 요즘 마을 이야기를 들려준다.', '{g} 바람이 좋다며 기지개를 켜고 한참을 함께 걷는다.'], ok: ['{g} 둥지 둘레를 한 바퀴 함께 걸었다.'], dislike: ['{e} 오늘은 피곤하다며 금방 돌아간다.'] },
+  help: { like: ['{g} 함께 일을 마치고는 "덕분에 금방 끝났어요." 하며 웃는다.', '{g} 손발이 척척 맞는다며 신이 나서 일한다.'], ok: ['{g} 함께 둥지 일을 거들었다.'], dislike: ['{e} 혼자 하는 게 편하다며 손사래를 친다.'] },
+  // 노년
+  oldtale: { like: ['{g} 어릴 적 둥지에 처음 왔던 날 이야기를 들려준다. 몇 번을 들어도 그때마다 조금씩 다르다.', '{g} 옛이야기를 하다 말고 "그때 참 좋았지요." 하며 웃는다.'], ok: ['{g} 젊었을 적 이야기를 들려주었다.'], dislike: ['{e} 이야기를 하다가 깜박 졸았다.'] },
+  sun: { like: ['{g} 따뜻한 볕 아래 눈을 감고 "이런 날이 제일 좋아요." 하고 중얼거린다.', '{g} 나란히 앉아 볕을 쬐다가 어깨에 기대어 꾸벅 존다.'], ok: ['{g} 함께 둥지 앞에서 볕을 쬐었다.'], dislike: ['{e} 볕이 따갑다며 그늘로 들어간다.'] },
+  hand: { like: ['{g} 주름진 손으로 꼭 마주 잡고 한참을 놓지 않는다.', '{g} 손을 잡은 채 "고마웠어요, 늘." 하고 나직이 말한다.'], ok: ['{g} 잠시 손을 맞잡고 앉아 있었다.'], dislike: ['{e} 쑥스럽다며 손을 빼낸다.'] },
+  // 자란 새끼 드래곤
+  spar: { like: ['{g} 발톱을 세우고 덤벼들다 나뒹굴고는 다시 일어나 으르렁거린다. 지칠 줄을 모른다.', '{g} 꼬리로 한 방 먹이고는 의기양양하게 가슴을 편다.'], ok: ['{g} 한참 엎치락뒤치락 힘을 겨루었다.'], dislike: ['{e} 귀찮다는 듯 날개로 밀어낸다.'] },
+  rest: { like: ['{g} 말없이 옆구리에 몸을 기대고 눈을 감는다. 숨소리가 고르게 맞춰진다.', '{g} 나란히 엎드려 해 지는 하늘을 함께 바라본다.'], ok: ['{g} 곁에 엎드려 한동안 쉬었다.'], dislike: ['{e} 혼자 있고 싶은지 둥지 끝으로 가 버린다.'] },
 };
 const fillLine = (t, k) => t.replace('{g}', ga(k)).replace('{e}', `${k.name}${josa(k.name, '은', '는')}`).replace('{n}', k.name).replace('{purr}', k.type === 'drake' ? '가르릉 소리를 낸다.' : '눈을 감고 배시시 웃는다.'); // 사람 아이는 가르릉거리지 않음
 const pickLine = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -913,7 +935,8 @@ function touch(d, kin, id, act, now = Date.now()) {
   if (isRunaway(k)) return { error: `${k.name}${josa(k.name, '은', '는')} 지금 둥지에 없다. 먼저 찾아오자.` };
   if (k.data.onExp) return { error: `${k.name}${josa(k.name, '은', '는')} 원정에 따라가 있다.` };
   if (k.type === 'drake' && k.data.errand) return { error: `${k.name}${josa(k.name, '은', '는')} 심부름을 떠나 있다.` };
-  if (!A || (A.for && A.for !== k.type)) return { error: '할 수 없는 교감이다.' };
+  // 단계에 맞지 않는 교감은 못 함. 다만 자라기 전에 조르던 것은 받아 줌 (업데이트 전에 걸려 있던 조르기 포함)
+  if (!A || (!actFor(k, act, now) && !(k.data.ask && k.data.ask.act === act && (!A.for || A.for === k.type)))) return { error: '할 수 없는 교감이다.' };
   const t = touchOf(k, now);
   const lines = [];
   // 아이가 조르던 것을 해 주는 건 오늘 횟수가 다 찼어도 받아 줌 (과보호로 치지 않음)
@@ -1016,8 +1039,9 @@ function touchTick(k, now, out) {
     k.data.askCheck = now;
     if (hrs > 0 && Math.random() < 1 - Math.pow(1 - TC.ask.chance, hrs)) {
       const L = TC.likes[stageOf(k, now).name] || { like: ['hug'] };
-      const acts = (L.like.length ? L.like : ['pat']).filter((a) => !TC.acts[a].for || TC.acts[a].for === k.type);
-      const act = acts[Math.floor(Math.random() * acts.length)] || 'pat';
+      const acts = (L.like.length ? L.like : ['pat']).filter((a) => actFor(k, a, now));
+      const all = Object.keys(TC.acts).filter((a) => actFor(k, a, now));
+      const act = acts[Math.floor(Math.random() * acts.length)] || all[0] || 'pat';
       k.data.ask = { act, at: now, until: now + TC.ask.waitMin * 60000 };
       k.data.askAt = now;
       out.lines.push(`${ga(k)} ${ASK_LINE[act]}.`);

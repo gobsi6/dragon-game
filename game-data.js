@@ -1507,29 +1507,44 @@ const KIN_TOUCH = {
   night: [22, 6],                           // 이 시각(한국 시간) 사이에는 졸림
   ask: { chance: 0.1, everyH: 6, waitMin: 90, bond: 4, missH: 6 }, // 아이가 먼저 조름: 한 시간마다 확률, 최소 간격, 기다려 주는 시간, 받아 주면 더 오르는 유대, 놓치면 서운한 시간
   spoiledLoss: 2,                           // 응석받이·어리광쟁이: 하루 넘게 교감이 없으면 줄어드는 유대
+  // stages: 이 단계에서만 보이는 교감 (자란 식구는 나이에 맞는 교감으로 바뀜). 없으면 그 종류의 모든 단계
   acts: {
-    pat:   { name: '쓰다듬기' },
-    hug:   { name: '안아 주기' },
-    play:  { name: '놀아 주기' },
-    story: { name: '이야기 들려주기' },
-    ride:  { name: '등에 태워 주기', for: 'human' },
-    fly:   { name: '함께 날기', for: 'drake' },
+    pat:     { name: '쓰다듬기',         stages: ['아기', '아이', '소년', '해츨링', '어린 용', '젊은 용'] },
+    hug:     { name: '안아 주기',        stages: ['아기', '아이', '소년', '해츨링', '어린 용'] },
+    play:    { name: '놀아 주기',        stages: ['아기', '아이', '소년', '해츨링', '어린 용'] },
+    story:   { name: '이야기 들려주기',  stages: ['아기', '아이', '소년'] },
+    ride:    { name: '등에 태워 주기',   for: 'human' },
+    fly:     { name: '함께 날기',        for: 'drake' },
+    // 청소년
+    train:   { name: '함께 훈련하기',    for: 'human', stages: ['청소년'] },
+    worry:   { name: '고민 들어 주기',   for: 'human', stages: ['청소년'] },
+    // 어른
+    talk:    { name: '이야기 나누기',    stages: ['어른', '다 자란 용'] },
+    walk:    { name: '함께 산책하기',    for: 'human', stages: ['어른'] },
+    help:    { name: '일 거들어 주기',   for: 'human', stages: ['어른'] },
+    // 노년
+    oldtale: { name: '옛이야기 듣기',    for: 'human', stages: ['노년'] },
+    sun:     { name: '볕 쬐며 쉬기',     for: 'human', stages: ['노년'] },
+    hand:    { name: '손잡아 주기',      for: 'human', stages: ['노년'] },
+    // 자란 새끼 드래곤
+    spar:    { name: '힘 겨루기',        for: 'drake', stages: ['젊은 용'] },
+    rest:    { name: '나란히 쉬기',      for: 'drake', stages: ['다 자란 용'] },
   },
   likes: {
     '아기':     { like: ['hug', 'pat'], dislike: [] },
     '아이':     { like: ['play', 'ride', 'hug'], dislike: [] },
     '소년':     { like: ['play', 'ride', 'story'], dislike: [] },
-    '청소년':   { like: ['story', 'ride'], dislike: ['hug', 'pat'] },
-    '어른':     { like: ['story'], dislike: ['pat'] },
-    '노년':     { like: ['story', 'hug'], dislike: [] },
+    '청소년':   { like: ['worry', 'ride'], dislike: [] },
+    '어른':     { like: ['talk', 'walk'], dislike: [] },
+    '노년':     { like: ['oldtale', 'hand'], dislike: [] },
     '해츨링':   { like: ['pat', 'hug'], dislike: [] },
     '어린 용':  { like: ['pat', 'play'], dislike: [] },
-    '젊은 용':  { like: ['fly', 'play'], dislike: ['hug'] },
-    '다 자란 용': { like: ['fly', 'story'], dislike: ['pat', 'hug'] },
+    '젊은 용':  { like: ['fly', 'spar'], dislike: [] },
+    '다 자란 용': { like: ['fly', 'rest'], dislike: [] },
   },
-  // 타고난 성격이 더 좋아하는 것 (단계보다 앞섬)
-  traitLikes: { prankster: ['play'], brave: ['play', 'ride'], bookworm: ['story'], chatterbox: ['story'], lookout: ['ride'], waterbaby: ['play'],
-    bold: ['play'], wild: ['play'], dreamy: ['story'], stargazer: ['story'], swift: ['fly'], windrider: ['fly'], clingy: ['hug'], lonely: ['hug'] },
+  // 타고난 성격이 더 좋아하는 것 (단계보다 앞섬). 자란 뒤의 교감도 성격에 맞게 이어짐
+  traitLikes: { prankster: ['play', 'train'], brave: ['play', 'ride', 'train', 'walk'], bookworm: ['story', 'worry', 'talk', 'oldtale'], chatterbox: ['story', 'worry', 'talk'], lookout: ['ride', 'walk'], waterbaby: ['play', 'walk'],
+    bold: ['play', 'train', 'spar'], wild: ['play', 'spar'], dreamy: ['story', 'oldtale', 'sun'], stargazer: ['story', 'sun', 'talk'], swift: ['fly'], windrider: ['fly'], clingy: ['hug', 'hand', 'rest'], lonely: ['hug', 'hand', 'rest'] },
 };
 
 // 인간 식구 이름 (새 아이·손주를 지을 때 둥지 식구와 겹치는 이름은 빼고 고름)
