@@ -2703,6 +2703,14 @@ html { scrollbar-gutter: stable; }
 .region-card { padding: 20px 24px 16px; display: flex; flex-direction: column; gap: 16px; }
 .region-card .quote { max-width: none; margin-top: 11px; background: var(--surface-2); padding: 8px 14px 8px 16px; font-size: 13.5px; line-height: 1.7; }
 .region-card .actions { padding-top: 14px; border-top: 1px solid var(--line-in); }
+/* 원정 중: 원정 진행 창을 위로, '지금 머무는 곳'은 이름 한 줄로 접음 (둥지 도둑·일이 생겼다 알림은 그대로 보임) */
+.center.exp-on > #expcard { order: -1; }
+.region-card.exp-fold { padding-top: 12px; padding-bottom: 12px; gap: 10px; }
+.region-card.exp-fold > :not(.where):not(#raid-bar):not(#event-bar):not(.c) { display: none; }
+.region-card.exp-fold .where > :not(.k):not(.title) { display: none; }
+.rc-fold-b { margin-left: auto; min-height: 28px; padding: 0 10px; border: 1px solid var(--line-soft); border-radius: 3px; background: var(--surface-2); color: var(--ink-2); font-size: 12.5px; cursor: pointer; }
+.rc-fold-b:hover { border-color: var(--steel); color: var(--steel-d); }
+.rc-fold-b:focus-visible { outline: 2px solid var(--steel); outline-offset: 2px; }
 .where .k { font-size: 12px; color: var(--muted); letter-spacing: .08em; }
 .where .title { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .where h1 { margin: 0; font: 900 31px/1.2 var(--serif); }

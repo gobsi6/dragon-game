@@ -187,7 +187,7 @@
         <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
         <div class="where">
           <span class="k">지금 머무는 곳</span>
-          <div class="title"><h1 id="region-name"></h1><span class="tag" id="region-tag"></span></div>
+          <div class="title"><h1 id="region-name"></h1><span class="tag" id="region-tag"></span><button class="rc-fold-b" type="button" id="rc-fold-b" hidden aria-expanded="false">펼치기</button></div>
           <div class="at" id="region-at"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg><span id="region-at-t"></span></div>
           <p class="quote" id="region-desc"></p>
           <div class="wx" id="wx" hidden></div>
@@ -2340,10 +2340,20 @@
   // 원정 중에는 남은 시간이 초 단위라 1초마다, 그 밖에는 30초마다 ('쉬는 중' 분 글씨 등)
   let stTick = 0;
   setInterval(() => { stTick = (stTick + 1) % 30; if ((S.me?.exp && !$('st-tag').hidden) || !stTick) renderStatusTag(); }, 1000);
+  // 원정을 떠나 있는 동안은 '지금 머무는 곳' 창을 접고 원정 진행만 위에 보여 줌 (접힌 창의 '펼치기'로 다시 볼 수 있음)
+  let rcUnfold = false;
+  $('rc-fold-b').addEventListener('click', () => { rcUnfold = !rcUnfold; renderExpedition(); });
   function renderExpedition() {
     renderStatusTag();
     const e = S.me?.exp;
     $('expcard').hidden = !e;
+    if (!e) rcUnfold = false; // 다음 원정 때는 다시 접힌 채로
+    const rc = $('region-name').closest('.region-card'), fold = !!e && !rcUnfold;
+    rc.classList.toggle('exp-fold', fold);
+    rc.closest('.center')?.classList.toggle('exp-on', !!e);
+    $('rc-fold-b').hidden = !e;
+    $('rc-fold-b').textContent = fold ? '펼치기' : '접기';
+    $('rc-fold-b').setAttribute('aria-expanded', String(!fold));
     if (!e) return;
     const now = Date.now();
     const done = now >= e.end;
