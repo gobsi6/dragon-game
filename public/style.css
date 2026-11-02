@@ -2705,6 +2705,8 @@ html { scrollbar-gutter: stable; }
 .region-card .actions { padding-top: 14px; border-top: 1px solid var(--line-in); }
 /* 원정 중: 원정 진행 창을 위로, '지금 머무는 곳'은 이름 한 줄로 접음 (둥지 도둑·일이 생겼다 알림은 그대로 보임) */
 .center.exp-on > #expcard { order: -1; }
+.center.rest-on > #restcard { order: -1; }
+.restcard .rest-full { margin: 0; padding: 7px 10px; border-left: 3px solid #3A6B50; background: #E8F1EB; color: #2B5240; font-size: 13.5px; font-weight: 600; } /* 쉬는 동안 모두 찼다는 한 줄 */ /* 둥지에서 쉬는 동안은 쉬기 카드를 맨 위로 */
 .region-card.exp-fold { padding-top: 10px; padding-bottom: 15px; gap: 10px; } /* 위 작은 글씨는 가볍고 아래 큰 이름은 무거워 보이므로, 아래를 조금 더 띄워 가운데로 보이게 */
 .region-card.exp-fold .where .title { align-items: center; }
 .region-card.exp-fold .where .k { display: block; line-height: 1.3; margin-bottom: 2px; }
@@ -3016,7 +3018,7 @@ html { scrollbar-gutter: stable; }
   body.pf-sheet main.main > .profile > .pf-body > .orn-h { padding-right: 40px; } /* 닫기 단추와 겹치지 않게 */
   body.pf-sheet .pf-x { display: flex; align-items: center; justify-content: center; position: absolute; z-index: 2; top: 10px; right: 10px; width: 36px; height: 36px; padding: 0; background: var(--surface); border: 1px solid var(--line-in); border-radius: 3px; color: var(--steel-d); cursor: pointer; }
   body.pf-sheet .pf-backdrop { display: block; position: fixed; inset: 0; z-index: 44; background: rgba(20, 30, 40, .3); }
-  body.pf-sheet { overflow: hidden; } /* 뒤의 화면이 같이 스크롤되지 않게 */
+  html:has(body.pf-sheet) { overflow: hidden; } /* 뒤의 화면이 같이 스크롤되지 않게 (body에 걸면 위쪽 바가 사라짐) */
 }
 @media (max-width: 860px) and (prefers-reduced-motion: reduce) { body.pf-sheet main.main > .profile { animation: none; } }
 @media (max-width: 520px) { /* 상단 1줄에 기록 버튼 자리 하나 더 */
@@ -3467,7 +3469,7 @@ button.rm-step { cursor: pointer; }
   body.here-sheet .here-list { max-height: none; }
   body.here-sheet .here-x { display: flex; align-items: center; justify-content: center; position: absolute; z-index: 2; top: 10px; right: 10px; width: 36px; height: 36px; padding: 0; background: var(--surface); border: 1px solid var(--line-in); border-radius: 3px; color: var(--steel-d); cursor: pointer; }
   body.here-sheet .here-backdrop { display: block; position: fixed; inset: 0; z-index: 44; background: rgba(20, 30, 40, .3); }
-  body.here-sheet { overflow: hidden; }
+  html:has(body.here-sheet) { overflow: hidden; }
 }
 @media (max-width: 520px) { .top .here-open { margin-left: auto; width: auto; min-width: 38px; padding: 0 6px; gap: 0; } }
 @media (max-width: 860px) and (prefers-reduced-motion: reduce) { body.here-sheet .side { animation: none; } }
@@ -3529,7 +3531,7 @@ button.rm-step { cursor: pointer; }
 }
 /* svh: 주소창이 보일 때의 작은 화면 높이 기준이라, 주소창이 나타나도 창 위쪽이 화면 밖으로 밀리지 않음 */
 .dlg { max-height: calc(100svh - var(--dock-h, 56px) - 32px); }
-html:has(dialog.dlg:modal), html:has(dialog.dlg:modal) body { overflow: hidden; overscroll-behavior: none; }
+html:has(dialog.dlg:modal) { overflow: hidden; overscroll-behavior: none; } /* 뒤 화면이 같이 스크롤되지 않게. body에는 걸지 않음: body가 스크롤 상자가 되면 위쪽 바(sticky)가 문서 맨 위로 붙어 화면 밖으로 사라짐 */
 
 /* ── 폰 소지품: 착용 장신구 요약 (부위마다 그림 · 부위 이름표 · 장신구 이름, 등급 빛깔로 구분) ── */
 .gear-sum { display: none; }

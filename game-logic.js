@@ -429,7 +429,10 @@ function regen(d, now = Date.now()) {
   const shelter = (v) => (d.rest_at ? Math.max(1, v) : v);
   const rr = d.rest_at ? wx.restRegen * (1 + FACILITY.list.spa.rest * facPower(host, 'spa')) : 1; // 온천: 쉴 때 더 빨리 (쉬는 둥지의 온천)
   m = { ap: m.ap * shelter(wx.apRegen) * rr, hp: m.hp * shelter(wx.hpRegen) * rr, en: m.en * shelter(wx.enRegen) * rr };
-  tick('ap', apCap(d), 'ap_at', RULES.apEvery / (m.ap * tm.apRegen));
+  const apEvery = RULES.apEvery / (m.ap * tm.apRegen);
+  // 지금 행동력이 한 칸 차는 데 걸리는 시간 (둥지에서 쉬기·날씨·특성까지 반영). 화면의 '+1 남은 시간'이 이 값으로 셈. 저장하지 않음
+  Object.defineProperty(d, '_apEvery', { value: Math.round(apEvery), writable: true, configurable: true, enumerable: false });
+  tick('ap', apCap(d), 'ap_at', apEvery);
   if (isFallen(d)) d.hp_at = now; // 쓰러져 있는 동안은 체력이 차지 않음
   else tick('hp', hpCap(d), 'hp_at', RULES.hpEvery / (m.hp * tm.hpRegen));
   tick('en', enCap(d), 'en_at', RULES.enEvery / (m.en * tm.enRegen));

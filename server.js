@@ -540,6 +540,7 @@ const meOf = (d) => ({
   presets: logic.presetsView(d),            // 장비 프리셋 (장신구 + 칭호, 5칸)
   stance: d.stance, stanceName: STANCES[d.stance] || '',
   apAt: d.ap_at,
+  apEvery: d._apEvery || RULES.apEvery, // 지금 행동력 한 칸이 차는 간격 (쉬기·날씨·특성 반영). 위쪽 바의 '+1 남은 시간'
   enAt: d.en_at,
   rep: Object.fromEntries(Object.keys(SHOPS).map((r) => {
     const v = logic.repOf(d)[r] || 0;

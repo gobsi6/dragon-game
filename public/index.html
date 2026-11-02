@@ -278,6 +278,7 @@
         <span class="k">둥지에서 쉬는 중</span>
         <h2 id="rest-where"></h2>
         <div class="clock" id="rest-clock"></div>
+        <p class="rest-full" id="rest-full" hidden>체력·기력·정신·행동력이 모두 찼다. 이제 깨어나도 된다.</p>
         <p class="note" id="rest-note" style="margin: 0; font-size: 13px; color: var(--muted)"></p>
         <div class="row"><button class="btn primary" type="button" id="rest-stop">깨어나기</button><button class="btn" type="button" id="rest-nest">보물더미 보기</button></div>
       </section>
@@ -1101,6 +1102,7 @@
       drop: () => tone(320, 0.18, { to: 120, type: 'triangle', gain: 0.08 }),
       notice: () => { tone(880, 0.09, { gain: 0.05 }); tone(1174, 0.16, { gain: 0.05, at: 0.08 }); },
       win: () => [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.16, { type: 'triangle', gain: 0.07, at: i * 0.09 })),
+      rested: () => { [587, 740, 880].forEach((f, i) => tone(f, 0.22, { gain: 0.06, at: i * 0.16 })); tone(1175, 0.7, { gain: 0.05, at: 0.5 }); }, // 둥지에서 쉬다 다 찼을 때: 느린 종소리
       lose: () => [392, 330, 262].forEach((f, i) => tone(f, 0.22, { type: 'triangle', gain: 0.07, at: i * 0.13 })),
       error: () => tone(180, 0.12, { type: 'square', gain: 0.03 }),
     };
@@ -2348,19 +2350,25 @@
   setInterval(() => { stTick = (stTick + 1) % 30; if ((S.me?.exp && !$('st-tag').hidden) || !stTick) renderStatusTag(); }, 1000);
   // 원정을 떠나 있는 동안은 '지금 머무는 곳' 창을 접고 원정 진행만 위에 보여 줌 (접힌 창의 '펼치기'로 다시 볼 수 있음)
   let rcUnfold = false;
-  $('rc-fold-b').addEventListener('click', () => { rcUnfold = !rcUnfold; renderExpedition(); });
+  $('rc-fold-b').addEventListener('click', () => { rcUnfold = !rcUnfold; renderRcFold(); });
+  // 원정 중이거나 둥지에서 쉬는 중이면 '지금 머무는 곳'을 한 줄로 접고, 원정·쉬기 카드를 맨 위로 (접힌 줄을 누르면 다시 펼침)
+  function renderRcFold() {
+    const e = !!S.me?.exp, rest = !!S.me?.restAt && !e, on = e || rest;
+    if (!on) rcUnfold = false; // 다음 원정·쉬기 때는 다시 접힌 채로
+    const rc = $('region-name').closest('.region-card'), fold = on && !rcUnfold;
+    rc.classList.toggle('exp-fold', fold);
+    rc.closest('.center')?.classList.toggle('exp-on', e);
+    rc.closest('.center')?.classList.toggle('rest-on', rest);
+    $('rc-fold-b').hidden = !on;
+    $('rc-fold-b').setAttribute('aria-label', fold ? '지금 머무는 곳 펼치기' : '지금 머무는 곳 접기');
+    $('rc-fold-b').title = fold ? '펼치기' : '접기';
+    $('rc-fold-b').setAttribute('aria-expanded', String(!fold));
+  }
   function renderExpedition() {
     renderStatusTag();
     const e = S.me?.exp;
     $('expcard').hidden = !e;
-    if (!e) rcUnfold = false; // 다음 원정 때는 다시 접힌 채로
-    const rc = $('region-name').closest('.region-card'), fold = !!e && !rcUnfold;
-    rc.classList.toggle('exp-fold', fold);
-    rc.closest('.center')?.classList.toggle('exp-on', !!e);
-    $('rc-fold-b').hidden = !e;
-    $('rc-fold-b').setAttribute('aria-label', fold ? '지금 머무는 곳 펼치기' : '지금 머무는 곳 접기');
-    $('rc-fold-b').title = fold ? '펼치기' : '접기';
-    $('rc-fold-b').setAttribute('aria-expanded', String(!fold));
+    renderRcFold();
     if (!e) return;
     const now = Date.now();
     const done = now >= e.end;
@@ -2476,13 +2484,18 @@
     if (!me || !S.rules || $('game').hidden) return;
     const now = Date.now();
     if (me.ap < me.apMax) {
-      const left = me.apAt + S.rules.apEvery - now;
+      const left = me.apAt + (me.apEvery || S.rules.apEvery) - now; // 쉬는 중·날씨·특성에 따라 달라지는 실제 간격 (서버가 알려 줌)
       $('ap-next').textContent = `+1 ${fmt(left)}`;
       if (left <= 0 && now - syncAsked > 5000) { syncAsked = now; socket.emit('me:sync'); }
     } else {
       $('ap-next').textContent = '';
     }
-    if (me.restAt) renderRest();
+    if (me.restAt) {
+      renderRest();
+      // 쉬는 동안은 1분마다 서버에서 새 값을 받아 '모두 찼는지'를 봄 (체력·기력·정신은 서버에서 차오름)
+      const full = me.hp >= me.hpMax && me.en >= me.enMax && (me.mind ?? 0) >= (me.mindMax ?? 100) && me.ap >= me.apMax;
+      if (!full && now - syncAsked > 60000) { syncAsked = now; socket.emit('me:sync'); }
+    }
     if (me.exp) {
       renderExpedition();
       if (now >= me.exp.end && notifiedFor !== me.exp.end) { notifiedFor = me.exp.end; arrived(); }
@@ -3320,7 +3333,7 @@
       setTimeout(() => { // 창이 뜬 뒤에
         const row = document.querySelector(`#craft-list .recipe[data-out="${out}"]`);
         if (!row) return;
-        row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        S.topHold = Date.now() + 1000; row.scrollIntoView({ block: 'center', behavior: 'smooth' });
         row.classList.remove('flash'); void row.offsetWidth; row.classList.add('flash');
       }, 350);
     });
@@ -3571,6 +3584,7 @@
     const on = !!me?.restAt;
     renderStatusTag();
     $('restcard').hidden = !on;
+    renderRcFold(); // 쉬는 동안은 '지금 머무는 곳'을 접고 쉬기 카드를 맨 위로
     if (!on) return;
     const r = me.stance === 'hermit' ? S.stanceRules.hermit.rest : S.nestRules.rest;
     // 반려의 둥지에서 쉬는 중이면 그 둥지로 (내 둥지가 아닌 곳에서 쉬고 있음)
@@ -3583,6 +3597,21 @@
     const need = cm * 60000 - (Date.now() - me.restAt); // 쉰 횟수로 세기까지 남은 시간
     const count = need > 0 ? ` ${cm}분 이상 쉬고 깨어나야 쉰 횟수로 센다. (${fmt(need)} 남음)` : ` ${cm}분을 넘겼다. 이제 깨어나면 쉰 횟수로 센다.`;
     $('rest-note').textContent = `쉬는 동안 체력·기력은 ${x(r.hp)}배, 행동력은 ${x(r.ap)}배 빨리 찬다. 브라우저를 닫아도 계속 쉰다.${count}`;
+    // 체력·기력·정신·행동력이 모두 차면: 카드에 한 줄, 그리고 한 번만 종소리·알림 (쉴 때마다 한 번. 다시 열어도 또 울리지 않게 기억)
+    const full = me.hp >= me.hpMax && me.en >= me.enMax && (me.mind ?? 0) >= (me.mindMax ?? 100) && me.ap >= me.apMax;
+    $('rest-full').hidden = !full;
+    if (full) {
+      const key = `rest-full-${me.id}`;
+      let told = null; try { told = localStorage.getItem(key); } catch {}
+      if (told !== String(me.restAt)) {
+        try { localStorage.setItem(key, String(me.restAt)); } catch {}
+        SFX.play('rested');
+        toast('둥지에서 쉬는 동안 체력·기력·정신·행동력이 모두 찼다.');
+        if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+          try { new Notification('용의 대륙', { body: `${me.name}${josa(me.name, '이', '가')} 둥지에서 푹 쉬었다. 모두 다 찼다.` }); } catch {}
+        }
+      }
+    }
   }
   $('rest-stop').addEventListener('click', () => nestAct('rest:stop'));
   $('rest-nest').addEventListener('click', openNest);
@@ -3694,7 +3723,7 @@
         b.className = `kin-jump-b ${cls || ''}`;
         const dot = document.createElement('i'); dot.setAttribute('aria-hidden', 'true');
         b.append(dot, t ? `${v.name} · ${t}` : v.name);
-        b.addEventListener('click', () => card.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }));
+        b.addEventListener('click', () => { S.topHold = Date.now() + 1000; card.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); });
         nav.appendChild(b);
       }
       wrap.appendChild(nav);
@@ -4241,7 +4270,7 @@
   function revealBox(el) {
     const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const tall = el.getBoundingClientRect().height > window.innerHeight * 0.8;
-    el.scrollIntoView({ block: tall ? 'start' : 'nearest', behavior: smooth ? 'smooth' : 'auto' });
+    S.topHold = Date.now() + 1000; el.scrollIntoView({ block: tall ? 'start' : 'nearest', behavior: smooth ? 'smooth' : 'auto' });
   }
   // ── 접히는 식구 카드: 한 줄 요약(얼굴·이름·유대·배·지금 상태)만 보이고, 누르면 아래로 펼쳐짐 ──
   // 이름 바꾸기·입양 보내기는 오른쪽 위 ⋯ 메뉴로. 펼친 식구는 둥지 창을 다시 그려도 펼친 채로
@@ -10322,7 +10351,8 @@
     dlg.show();
     document.querySelector('.center').classList.add('paneled');
     const top = document.querySelector('.center').getBoundingClientRect().top;
-    if (top < 0 || window.innerWidth <= 860) document.querySelector('.center').scrollIntoView({ block: 'start', behavior: 'smooth' });
+    // 펼친 화면으로 부드럽게 내려가는 동안은 위쪽 바를 숨기지 않음 (스크롤 처리기가 '아래로 내림'으로 알고 숨기던 것)
+    if (top < 0 || window.innerWidth <= 860) { S.topHold = Date.now() + 1000; document.querySelector('.center').scrollIntoView({ block: 'start', behavior: 'smooth' }); }
   }
   for (const id of PANELS) {
     $(id).addEventListener('close', () => {
@@ -13873,6 +13903,7 @@
   window.addEventListener('scroll', () => {
     const y = window.scrollY;
     if (window.innerWidth > 860) { head.classList.remove('hide'); lastY = y; return; }
+    if (Date.now() < (S.topHold || 0)) { head.classList.remove('hide'); lastY = y; return; } // 창을 열며 화면이 스스로 움직이는 동안은 그대로 보여 줌
     if (Math.abs(y - lastY) < 6) return;
     head.classList.toggle('hide', y > lastY && y > head.offsetHeight);
     lastY = y;
@@ -14065,7 +14096,7 @@
     }
   }
   setInterval(() => { if (S.raidBoss?.list.some((x) => x.lobby)) renderRaidBar(); }, 30000);
-  $('maze-bar-go').addEventListener('click', () => { if (mzInside()) { $('maze-card').scrollIntoView({ behavior: 'smooth', block: 'start' }); renderMazeCard(); } else openMazeDlg(); });
+  $('maze-bar-go').addEventListener('click', () => { if (mzInside()) { S.topHold = Date.now() + 1000; $('maze-card').scrollIntoView({ behavior: 'smooth', block: 'start' }); renderMazeCard(); } else openMazeDlg(); });
 
   // ── 회랑 창: 깊이 눈금 + 지도를 눌러 들어갈 곳 고르기 ──
   function openMazeDlg(fi) {
