@@ -314,7 +314,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     const t = [];
     if (p.ears) t.push({ t: `검은 이삭 ${p.ears}`, bad: true });
     if (p.reaped) t.push({ t: '거두어짐', bad: true });
-    if (p.erosion) t.push({ t: `잿빛 침식 ${p.erosion}`, bad: true });
+    if (p.erosion) t.push({ t: `잿빛 침식 ${p.erosion}/${fg?.B?.erosion?.max || ''}`.replace(/\/$/, ''), bad: true }); // 몇 겹이면 먹히는지 보이게
     if (p.consumed) t.push({ t: '잿빛에 먹힘', bad: true });
     if (p.away) t.push({ t: `균열 끝 · ${p.away}턴`, bad: true });
     return t;
@@ -922,7 +922,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
       // 마지막 숨 늦추기 (위엄)
       if (fg.phase === 3 && fg.last?.n > 0) {
         const L = B.last;
-        if (Math.random() < clamp(L.roarBase + ((p.maj || 0) - B.maj) * L.roarPer + (p.roarK || 0), 0.2, 0.95)) {
+        if (Math.random() < clamp(L.roarBase + ((p.maj || 0) - (L.roarRef ?? B.maj)) * L.roarPer + (p.roarK || 0), L.roarMin ?? 0.2, L.roarMax ?? 0.95)) {
           fg.last.n -= 1;
           fg.roarDelays[p.id] = (fg.roarDelays[p.id] || 0) + 1;
           lines.push(`${p.name}의 포효에 모이던 마지막 숨이 흐트러졌다. (${fg.last.n}/${L.charge})`);
@@ -1009,7 +1009,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     }
     if (!heavy && ps().length) bossStrike(fg, h, pick(ps()), 1, lines, `${ga(h.name)} 발톱을 휘둘러`);
     // 잿빛 침식이 스며듦
-    const er = ps().slice().sort(() => Math.random() - 0.5).slice(0, B.erosion.n);
+    const er = ps().slice().sort(() => Math.random() - 0.5).slice(0, fg.phase >= 2 && B.erosion.nLate ? B.erosion.nLate : B.erosion.n); // 2단계부터 더 많이
     for (const p of er) {
       p.erosion = Math.min(B.erosion.max, (p.erosion || 0) + 1);
       if (p.erosion >= B.erosion.max && !p.consumed) { p.consumed = true; lines.push(`${p.name}의 눈빛이 잿빛으로 흐려진다…`); }
