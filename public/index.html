@@ -9840,7 +9840,17 @@
       const t = slEl('div', 't'); if (p.pinned) t.appendChild(slTag(p)); if (p.poll) t.appendChild(slEl('span', 'sl-pollb', p.poll === 'secret' ? '비밀 투표' : '투표')); t.appendChild(slEl('b', '', p.title)); if (fresh) { const n = slEl('i', 'sl-new'); n.title = '새 글'; t.appendChild(n); }
       if (p.mine && p.lastC > SL.prevSeen && p.lastBy && p.lastBy !== S.me?.id) t.appendChild(slEl('span', 'sl-newreply', '새 답')); // 내 글에 지난번 뒤로 남이 단 답
       const m = slEl('div', 'm'); m.append(slWho(p.who), slEl('span', '', slAgo(p.at)), slCm(p.n));
-      c.append(t, slEl('p', 'p', p.preview.replace(/\s*\n\s*/g, ' ')), m);
+      c.append(t, slEl('p', 'p', p.preview.replace(/\s*\n\s*/g, ' ')));
+      // 투표 글: 본문 밑에 내 참여 상태 한 줄 (진행 중이면 골랐는지, 마감이면 결과 상태)
+      const st = p.pollSt;
+      if (st) {
+        const v = slEl('div', 'sl-vt');
+        const n = st.n != null ? ` · ${st.n}마리 참여` : '';
+        if (st.closed) v.append(slEl('b', 'end', '마감'), slEl('span', '', p.poll === 'secret' ? (st.revealed ? '결과 공개됨' : '결과 공개 전') : `${st.n ?? 0}마리 참여`));
+        else v.append(slEl('b', st.voted ? 'done' : 'todo', st.voted ? '골랐다' : '아직 안 골랐다'), slEl('span', '', `진행 중${n}`));
+        c.appendChild(v);
+      }
+      c.appendChild(m);
       c.addEventListener('click', () => slGo('post', p.id));
       list.appendChild(c);
     }
@@ -10216,7 +10226,7 @@
           if (d.poll.options.length > PR.min) { const x = slEl('button', 'btn', '빼기'); x.type = 'button'; x.addEventListener('click', () => { d.poll.options.splice(i, 1); drawEd(); }); r.appendChild(x); }
           ed.appendChild(r);
         });
-        if (d.poll.options.length < PR.max) { const more = slEl('button', 'btn', `선택지 더하기 (${d.poll.options.length} / ${PR.max})`); more.type = 'button'; more.addEventListener('click', () => { d.poll.options.push(''); drawEd(); ed.querySelectorAll('.sl-pollopt input')[d.poll.options.length - 1]?.focus(); }); ed.appendChild(more); }
+        if (d.poll.options.length < PR.max) { const more = slEl('button', 'btn sl-polladd', `선택지 더하기 (${d.poll.options.length} / ${PR.max})`); more.type = 'button'; more.addEventListener('click', () => { d.poll.options.push(''); drawEd(); ed.querySelectorAll('.sl-pollopt input')[d.poll.options.length - 1]?.focus(); }); ed.appendChild(more); }
         // 여러 개 고르기 (글쓴이가 원할 때만)
         const ml = slEl('label', 'sl-polltg sl-pollmulti'); const mc = slEl('input'); mc.type = 'checkbox'; mc.checked = !!d.poll.multi;
         mc.addEventListener('change', () => { d.poll.multi = mc.checked; });
@@ -11771,10 +11781,14 @@
     set.addEventListener('click', openSettings);
     me.appendChild(set);
     body.appendChild(me);
+    // 규칙은 접어 두고 필요할 때만 펼침
+    const rules = document.createElement('details'); rules.className = 'arena-rules';
+    rules.appendChild(Object.assign(document.createElement('summary'), { textContent: '결투 규칙 보기' }));
     const n = document.createElement('p');
     n.className = 'note';
     n.textContent = '결투에서는 다치지 않는다. 둘 다 접속해 있으면 직접 턴을 골라 싸우고, 상대가 자동 결투를 허용했다면 접속하지 않았어도 스킬 구성대로 싸운다. 이기면 용족 명성과 경험치가 오른다. 내기 결투는 둘 다 접속해 있고 레벨 차이가 5 이하일 때, 서로 금화나 물건을 걸고 겨뤄 진 쪽이 건 것을 이긴 쪽이 가져간다.';
-    body.appendChild(n);
+    rules.appendChild(n);
+    body.appendChild(rules);
     const box = document.createElement('div');
     for (const x of res.list) {
       const r = document.createElement('div');
@@ -11788,7 +11802,6 @@
       if (x.rel === 'friend') t.querySelector('b').insertAdjacentHTML('beforeend', ' <span class="relb friend">동료</span>');
       t.querySelector('small').innerHTML = `<span class="dot${x.online ? ' on' : ''}"></span>`;
       t.querySelector('small').append(`${x.online ? '접속 중' : ago(x.lastSeen)} · ${S.kinds[x.kind]?.name || ''} · Lv. ${x.level} · ${x.w}승 ${x.l}패`);
-      if (x.live && x.auto) { const w = document.createElement('span'); w.className = 'why'; w.textContent = x.live === x.auto ? x.live : `${x.live} ${x.auto}`; t.appendChild(w); }
       r.appendChild(t);
       const a = document.createElement('div');
       a.className = 'acts';
@@ -11805,7 +11818,11 @@
       const gapWhy = Math.abs((S.me?.level || 0) - x.level) > BET_UI.gap ? `레벨 차이가 ${BET_UI.gap}보다 크면 내기를 걸 수 없다.` : null;
       btn('내기 결투', expWhy || x.live || gapWhy, () => openBetChallenge(x));
       btn('자동 결투', expWhy || x.auto, () => challenge(x, 'auto'));
-      r.appendChild(a);
+      // 셋 다 누를 수 없으면 흐린 단추 대신 까닭 한 줄만 (하나라도 되면 단추를 그대로 두어 안 되는 까닭은 마우스를 올려 봄)
+      if (![...a.children].some((b) => !b.disabled)) {
+        const why = [...new Set([expWhy, x.live, x.auto].filter(Boolean))].join(' ');
+        const w = document.createElement('span'); w.className = 'why'; w.textContent = `지금은 겨룰 수 없다. ${why}`; t.appendChild(w);
+      } else r.appendChild(a);
       r.addEventListener('click', (e) => { if (!e.target.closest('button')) openProfile(x.id); });
       box.appendChild(r);
     }

@@ -3820,3 +3820,47 @@ html:has(dialog.dlg:modal), html:has(dialog.dlg:modal) body { overflow: hidden; 
 .sl-polldays .lbl { font-size: 12.5px; color: var(--muted); }
 .sl-pollmulti { font-weight: 500; }
 .sl-pollb.multi { background: #F4EFE3; color: #5C4A2A; }
+
+/* ── 단추 크기 통일 ──────────────────────────────────────────────
+   주 단추 (.btn 기본, 42px): 창의 중심 행동 · 닫기 · 새기기 같은 것
+   보조 단추 (32px, 12.5px): 본문 안의 부가 행동 (투표하기, 그림 넣기, 선택지 더하기, 줄마다 붙은 행동 묶음)
+   작은 단추 (28px, 12px): 목록 한 줄 안의 자잘한 행동 (마감하기·결과 공개, 가방 칸의 행동, 장비 칸)
+   칩 (30px, 12.5px): 거르기·빠른 고르기
+   높이와 글씨 크기만 맞춤. 안쪽 여백·모서리 같은 모양은 자리마다 정해 둔 그대로 (드래곤 기록의 칭호·스킬·회복처럼 각지게 만든 것은 그대로) */
+:root { --btn-sm-h: 32px; --btn-sm-fs: 12.5px; --btn-xs-h: 28px; --btn-xs-fs: 12px; --chip-h: 30px; --chip-fs: 12.5px; }
+.btn.sl-poll-go, .sl-addimg, .btn.sl-polladd, .sl-cedit .btn,
+.gearw .gw-acts .btn, .pf-acts .btn, .gm-r .btn, .gold-move .btn, .kin-adopt-list .btn,
+.nm-mine .r .btn, .nm-put .btn, .update-bar .btn, .toast .btn, .bio-img-row .btn, .gr-row .btn, .pts-row .btn,
+.duel-row .btn, .boss-card .btn, .mob-bar .btn, .chest-act .btn, .mob-card .mc-foot .btn, .rampage .btn,
+.cm-row .btn, .fr-row .acts .btn, .tt .btn, .kin-acts .btn, .event-bar .btn,
+.wx.fest .fr .btn, .wx.fest .fk .btn, .wx.fest .nm-row .btn, .fac-board .btn.small, .fac-board .btn.link {
+  min-height: var(--btn-sm-h); font-size: var(--btn-sm-fs);
+}
+.sl-poll-own .btn, .inv .it .acts .btn, .inv-gear .slot .btn, .fx-cr-row .btn, .fx-row .btn, .fac-board .fac-head .btn.fac-rm {
+  min-height: var(--btn-xs-h); font-size: var(--btn-xs-fs);
+}
+.chipbtn, .yaba-quick .chipbtn, #rec .tt-filter .chipbtn { min-height: var(--chip-h); font-size: var(--chip-fs); }
+#rec .tt-filter .chipbtn { line-height: var(--chip-h); }
+.sl-poll-own .btn { padding: 0 10px; border-radius: 0; } /* 마감하기·결과 공개: 둥근 알약 대신 투표하기와 같은 네모 */
+.btn.sl-polladd { align-self: flex-start; padding: 0 12px; } /* 선택지 더하기: 줄을 꽉 채우지 않고 */
+/* 석판 글쓰기의 투표 칸: 선택지·마감·방식을 본문보다 작게 */
+.sl-pollopt .input { min-height: 38px; font-size: 14px; }
+.sl-polldays .input, .sl-polldays select { width: auto; min-height: 34px; font-size: 13px; }
+.sl-pollkind button { min-height: 0; padding: 7px 10px; }
+.sl-pollkind button b { font-size: 13.5px; }
+/* 알약(양끝이 둥근) 모양이던 누르는 것들은 다른 단추처럼 네모(모서리 3px)로. 누르지 않는 꼬리표·금화 표시·말풍선은 그대로 */
+.chipbtn, .fish-baits button, .kin-jump-b, .log-older, .bp-chip, .xa-f, .kin-trait, .gift-box .gp-tag { border-radius: 3px; }
+/* 결투장: 규칙은 접어 둠 */
+.arena-rules { margin: 2px 0 4px; }
+.arena-rules > summary { cursor: pointer; min-height: 28px; display: list-item; line-height: 28px; font-size: 12.5px; font-weight: 600; color: var(--steel-d); }
+.arena-rules > .note { margin: 2px 0 6px; }
+/* 석판 목록: 투표 글의 내 참여 상태 */
+.sl-card .sl-vt { display: flex; align-items: center; gap: 8px; margin: 2px 0 8px; font-size: 11.5px; color: var(--muted); }
+.sl-card .sl-vt b { padding: 0 7px; line-height: 19px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+.sl-card .sl-vt b.todo { background: #FBF1E4; color: #7A4E12; }
+.sl-card .sl-vt b.done { background: #EEF2F6; color: var(--steel-d); }
+.sl-card .sl-vt b.end { background: #EFEFEC; color: var(--ink-2); }
+/* 폰의 접힌 드래곤 카드: 잘려 보이던 종류 이름('레드…')은 빼고 레벨만 */
+@media (max-width: 860px) {
+  .profile.folded .nameplate .sub > :not(.lv) { display: none; }
+}

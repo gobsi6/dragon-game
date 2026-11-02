@@ -85,9 +85,16 @@ module.exports = function setupSlate({ io, db, entryOf }) {
     });
     const mine = (row, d) => row && (row.dragon_id === d.id || isGm());
 
+    // 목록의 투표 글: 내가 골랐는지, 마감·공개 여부, 참여 수(공개 투표와 GM에게만)
+    const pollSt = (r, d) => {
+      const pl = pollOf(r.id);
+      if (!pl) return null;
+      const n = pl.kind === 'public' || isGm() ? new Set(db.slate.voters(r.id).map((v) => v.dragon_id)).size : null;
+      return { closed: !!pl.closed_at, revealed: !!pl.revealed_at, voted: db.slate.myVote(r.id, d.id) != null, n };
+    };
     on('slate:list', (d) => { const pk = db.slate.pollKinds(); return {
       ok: true, rules: RULES, gm: isGm(),
-      posts: db.slate.list(RULES.list).map((r) => ({ id: r.id, poll: pk.get(r.id) || null, head: r.head, title: r.title, preview: r.preview, at: r.at, edited: !!r.edited_at, pinned: !!r.pinned, n: r.n, last: Math.max(r.at, r.last_c || 0),
+      posts: db.slate.list(RULES.list).map((r) => ({ id: r.id, poll: pk.get(r.id) || null, pollSt: pk.has(r.id) ? pollSt(r, d) : null, head: r.head, title: r.title, preview: r.preview, at: r.at, edited: !!r.edited_at, pinned: !!r.pinned, n: r.n, last: Math.max(r.at, r.last_c || 0),
         lastC: r.last_c || 0, lastBy: r.last_by || null, mine: r.dragon_id === d.id, who: who(r) })),
     }; });
     // 접속할 때 한 번: 가장 새 글, 내 글에 달린 가장 새 답의 때 (아이콘 점)
