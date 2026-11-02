@@ -9841,13 +9841,19 @@
       if (p.mine && p.lastC > SL.prevSeen && p.lastBy && p.lastBy !== S.me?.id) t.appendChild(slEl('span', 'sl-newreply', '새 답')); // 내 글에 지난번 뒤로 남이 단 답
       const m = slEl('div', 'm'); m.append(slWho(p.who), slEl('span', '', slAgo(p.at)), slCm(p.n));
       c.append(t, slEl('p', 'p', p.preview.replace(/\s*\n\s*/g, ' ')));
-      // 투표 글: 본문 밑에 내 참여 상태 한 줄 (진행 중이면 골랐는지, 마감이면 결과 상태)
+      // 투표 글: 본문 밑에 내 참여 상태 한 줄
       const st = p.pollSt;
       if (st) {
         const v = slEl('div', 'sl-vt');
-        const n = st.n != null ? ` · ${st.n}마리 참여` : '';
-        if (st.closed) v.append(slEl('b', 'end', '마감'), slEl('span', '', p.poll === 'secret' ? (st.revealed ? '결과 공개됨' : '결과 공개 전') : `${st.n ?? 0}마리 참여`));
-        else v.append(slEl('b', st.voted ? 'done' : 'todo', st.voted ? '골랐다' : '아직 안 골랐다'), slEl('span', '', `진행 중${n}`));
+        // 진행 중 꼬리표 하나로: 안 골랐으면 주황 '진행 중', 골랐으면 파랑 '진행 중 ✓' (마감은 회색). 화면 읽기·마우스엔 '아직 안 고름'·'고름'
+        if (st.closed) v.append(slEl('b', 'end', '마감'));
+        else {
+          const tg = slEl('b', st.voted ? 'done' : 'todo', '진행 중');
+          if (st.voted) { const ck = slEl('span', 'ck', '✓'); ck.setAttribute('aria-hidden', 'true'); tg.appendChild(ck); }
+          const why = st.voted ? '진행 중 · 고름' : '진행 중 · 아직 안 고름';
+          tg.title = why; tg.setAttribute('aria-label', why);
+          v.appendChild(tg);
+        }
         c.appendChild(v);
       }
       c.appendChild(m);

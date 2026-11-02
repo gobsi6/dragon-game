@@ -3849,17 +3849,18 @@ html:has(dialog.dlg:modal), html:has(dialog.dlg:modal) body { overflow: hidden; 
 .sl-pollkind button { min-height: 0; padding: 7px 10px; }
 .sl-pollkind button b { font-size: 13.5px; }
 /* 알약(양끝이 둥근) 모양이던 누르는 것들은 다른 단추처럼 네모(모서리 3px)로. 누르지 않는 꼬리표·금화 표시·말풍선은 그대로 */
-.chipbtn, .fish-baits button, .kin-jump-b, .log-older, .bp-chip, .xa-f, .kin-trait, .gift-box .gp-tag { border-radius: 3px; }
+.chipbtn, .fish-baits button, .log-older, .bp-chip, .xa-f, .kin-trait, .gift-box .gp-tag { border-radius: 3px; } /* 둥지 식구 바로가기(.kin-jump-b)는 둥근 모서리 그대로 */
 /* 결투장: 규칙은 접어 둠 */
 .arena-rules { margin: 2px 0 4px; }
 .arena-rules > summary { cursor: pointer; min-height: 28px; display: list-item; line-height: 28px; font-size: 12.5px; font-weight: 600; color: var(--steel-d); }
 .arena-rules > .note { margin: 2px 0 6px; }
 /* 석판 목록: 투표 글의 내 참여 상태 */
-.sl-card .sl-vt { display: flex; align-items: center; gap: 8px; margin: 2px 0 8px; font-size: 11.5px; color: var(--muted); }
+.sl-card .sl-vt { display: flex; align-items: center; gap: 8px; margin: -3px 0 -1px; font-size: 11.5px; color: var(--muted); }
 .sl-card .sl-vt b { padding: 0 7px; line-height: 19px; border-radius: 10px; font-size: 11px; font-weight: 600; }
 .sl-card .sl-vt b.todo { background: #FBF1E4; color: #7A4E12; }
-.sl-card .sl-vt b.done { background: #EEF2F6; color: var(--steel-d); }
+.sl-card .sl-vt b.done { background: #E8F1EB; color: #2B5240; } /* 고름: 초록 (레이드의 '골랐다'와 같은 숲빛) */
 .sl-card .sl-vt b.end { background: #EFEFEC; color: var(--ink-2); }
+.sl-card .sl-vt b .ck { margin-left: 4px; font-weight: 700; }
 /* 폰의 접힌 드래곤 카드: 잘려 보이던 종류 이름('레드…')은 빼고 레벨만 */
 @media (max-width: 860px) {
   .profile.folded .nameplate .sub > :not(.lv) { display: none; }
