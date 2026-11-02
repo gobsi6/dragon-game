@@ -3127,6 +3127,14 @@
       const gs = invSrc[id];
       if (gs) for (const [k, cls, w] of [['got', 'src-got', '받은 선물'], ['made', 'src-made', '직접 만듦']]) if (gs[k]) { const t = document.createElement('span'); t.className = `src-tag ${cls}`; t.textContent = gs[k] === qty ? w : `${w} ${gs[k]}`; row.querySelector('b').appendChild(t); }
       if (gmod?.elem) { const t = document.createElement('span'); t.className = 'gw-el'; t.textContent = `${ELEM_NAME[gmod.elem]} 각인`; row.querySelector('b').appendChild(t); }
+      // 이름 뒤의 꼬리표(분류·등급·개수·빚은 이·각인 등)를 한 묶음으로: 폰에서는 이름 아래 한 줄로 모아 가지런히 줄바꿈 (넓은 화면은 그대로 이름 옆)
+      {
+        const nb = row.querySelector('b'), nm = nb.querySelector('.nm'), tg = document.createElement('span');
+        tg.className = 'it-tags';
+        const it0 = nm.querySelector('.itags'); if (it0) tg.appendChild(it0);
+        for (const el of [...nb.children]) if (el !== nm) tg.appendChild(el);
+        nb.appendChild(tg);
+      }
       row.querySelector('small').textContent = it.desc;
       if (it.cat === 'trophy') {
         const eff = document.createElement('span');
