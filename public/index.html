@@ -11801,6 +11801,7 @@
       if (x.rel === 'friend') t.querySelector('b').insertAdjacentHTML('beforeend', ' <span class="relb friend">동료</span>');
       t.querySelector('small').innerHTML = `<span class="dot${x.online ? ' on' : ''}"></span>`;
       t.querySelector('small').append(`${x.online ? '접속 중' : ago(x.lastSeen)} · ${S.kinds[x.kind]?.name || ''} · Lv. ${x.level} · ${x.w}승 ${x.l}패`);
+      if (x.live && x.auto) { const w = document.createElement('span'); w.className = 'why'; w.textContent = x.live === x.auto ? x.live : `${x.live} ${x.auto}`; t.appendChild(w); }
       r.appendChild(t);
       const a = document.createElement('div');
       a.className = 'acts';
@@ -11817,11 +11818,7 @@
       const gapWhy = Math.abs((S.me?.level || 0) - x.level) > BET_UI.gap ? `레벨 차이가 ${BET_UI.gap}보다 크면 내기를 걸 수 없다.` : null;
       btn('내기 결투', expWhy || x.live || gapWhy, () => openBetChallenge(x));
       btn('자동 결투', expWhy || x.auto, () => challenge(x, 'auto'));
-      // 셋 다 누를 수 없으면 흐린 단추 대신 까닭 한 줄만 (하나라도 되면 단추를 그대로 두어 안 되는 까닭은 마우스를 올려 봄)
-      if (![...a.children].some((b) => !b.disabled)) {
-        const why = [...new Set([expWhy, x.live, x.auto].filter(Boolean))].join(' ');
-        const w = document.createElement('span'); w.className = 'why'; w.textContent = `지금은 겨룰 수 없다. ${why}`; t.appendChild(w);
-      } else r.appendChild(a);
+      r.appendChild(a);
       r.addEventListener('click', (e) => { if (!e.target.closest('button')) openProfile(x.id); });
       box.appendChild(r);
     }
