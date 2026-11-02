@@ -314,7 +314,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     const t = [];
     if (p.ears) t.push({ t: `검은 이삭 ${p.ears}`, bad: true });
     if (p.reaped) t.push({ t: '거두어짐', bad: true });
-    if (p.erosion) t.push({ t: `잿빛 침식 ${p.erosion}/${fg?.B?.erosion?.max || ''}`.replace(/\/$/, ''), bad: true }); // 몇 겹이면 먹히는지 보이게
+    if (p.erosion) t.push({ t: `잿빛 침식 ${p.erosion}`, bad: true }); // 쌓인 겹 수만 (1·2·3)
     if (p.consumed) t.push({ t: '잿빛에 먹힘', bad: true });
     if (p.away) t.push({ t: `균열 끝 · ${p.away}턴`, bad: true });
     return t;
@@ -381,7 +381,9 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
     // 비늘이 아무리 두꺼워도 레이드 보스의 공격은 최대 체력에 비례한 몫이 더 들어감 (만렙 드래곤에게도 아프게)
     // 거기에도 방어·비늘 세우기·돌 비늘·받는 피해 줄이기는 똑같이 통함. 부하(기사·허수아비)는 공격 세기만큼만
     const red = (recv.guarding ? 0.5 : 1) * ((recv.st.harden || 0) > 0 ? 0.5 : 1) * ((recv.st.stone || 0) > 0 ? 0.7 : 1) * (recv.taken || 1);
-    const extra = Math.round(recv.hpMax * R.hitPct * k * Math.min(1, att.atk / fg.B.atk) * red);
+    // 보통은 공격 세기 비율이 1을 넘지 않게(부하는 약하게), 균열에서 불씨가 꺼진 보스는 그 배율만큼 이 몫도 커짐
+    const atkK = att === fg.boss && fg.emberLost && fg.B.emberHit ? fg.B.emberHit.lost : Math.min(1, att.atk / fg.B.atk);
+    const extra = Math.round(recv.hpMax * R.hitPct * k * atkK * red);
     const dmg = hit.dmg + extra, note = hit.note;
     recv.hp = Math.max(0, recv.hp - dmg);
     lines.push(`${verb} ${recv.name}에게 ${dmg}의 피해를 입혔다.${note}`);
@@ -930,7 +932,7 @@ module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, 
       }
     }
     // 마지막 숨: 모으는 동안 큰 피해를 주면 흩어짐
-    if (fg.phase === 3 && fg.last && fg.last.n > 0 && bossHp > fg.boss.hp) {
+    if (B.last.cut && fg.phase === 3 && fg.last && fg.last.n > 0 && bossHp > fg.boss.hp) { // cut이 0이면 피해로는 흩어지지 않음 (포효로만 늦춤)
       fg.last.dealt += bossHp - fg.boss.hp;
       if (fg.last.dealt >= fg.boss.hpMax * B.last.cut) { fg.last.n = 0; fg.last.dealt = 0; lines.push('거센 공격에 고룡이 휘청인다. 모으던 마지막 숨이 흩어졌다!'); }
     }
