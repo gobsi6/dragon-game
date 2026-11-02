@@ -3806,6 +3806,8 @@ html:has(dialog.dlg:modal), html:has(dialog.dlg:modal) body { overflow: hidden; 
 .sl-poll-rs .r .o { color: var(--muted); }
 .sl-pollw { display: flex; flex-direction: column; gap: 8px; padding: 10px 0; border-top: 1px dashed var(--line-in); }
 .sl-polltg { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; }
+.sl-form .sl-pollw .sl-polltg { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; font-size: 12.5px; font-weight: 500; color: var(--muted); } /* '투표 붙이기'·'여러 개 고르기': 작고 흐린 글씨로, 눈에 튀지 않게 */
+.sl-pollw .sl-polltg input { width: 14px; height: 14px; margin: 0; accent-color: var(--steel); }
 .sl-polled { display: flex; flex-direction: column; gap: 6px; }
 .sl-polled[hidden] { display: none; }
 .sl-pollkind { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
