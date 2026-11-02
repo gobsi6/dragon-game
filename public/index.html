@@ -3972,6 +3972,8 @@
       }
     }
 
+    // 동료의 둥지에 맡길 아기 (둥지가 넘쳐 있는 동안)
+    if (v.entrust && !partner) meta('<b>맡길 곳 찾는 중</b> · 둥지에 자리가 없어 동료의 둥지에 맡기려는 아기다. ⋯ 메뉴의 입양 보내기로 맡길 동료를 고르자. 그동안은 새 식구를 들일 수 없다.', 'talent').dataset.sec = 'about';
     if (v.type === 'human' && v.status === 'home') {
       const [p1, p2] = v.parents || [];
       const origin = { abandoned: '성문 곁 바구니에서 데려왔다.', lost: '홀로 남은 것을 몰래 데려왔다.', tribute: '인간들이 공물로 바쳤다.',
@@ -4294,6 +4296,7 @@
     else if (v.runaway) add('가출 중', 'warn');
     else if (v.onExp) add('원정에 따라감', 'wait');
     else if (v.type === 'human') {
+      if (v.entrust && !partner) add('맡길 곳 찾는 중', 'warn');
       if (v.choosePath && !partner) add('갈 길 정하기', 'ok');
       else if (v.careIn > 0) add(`돌보기 ${dur(v.careIn)} 뒤`, 'wait');
       else add('돌볼 수 있음', 'ok');
@@ -11126,7 +11129,7 @@
     const p = v.pick;
     if (!p) return null;
     const sk = p.type === 'skill' ? (v.me.skills || []).find((x) => x.id === p.id) : null;
-    const name = { attack: '할퀴기', guard: '방어', cover: '막아서기', flee: '물러나기', flank: '우회' }[p.type] || sk?.name || '스킬';
+    const name = { attack: '할퀴기', guard: '방어', cover: '막아서기', flee: '물러나기', flank: '우회', kindle: '숨 불어넣기' }[p.type] || sk?.name || '스킬';
     const usesAlly = p.type === 'cover' || (p.type === 'skill' && p.id === 'mend');
     let tgt = '';
     if (usesAlly) tgt = p.ally ? (v.allies || []).find((a) => a.id === p.ally)?.name || '' : p.type === 'skill' ? '나' : '';
@@ -11389,21 +11392,47 @@
           b.addEventListener('click', () => btAct(act));
           acts.appendChild(b);
         };
+        // 균열: 서는 자리 (불씨 곁 · 균열 가장자리). 행동과 따로, 바꾸지 않으면 그대로 남음
+        if (v.kind === 'raid' && v.script === 'rift' && v.me.pos) {
+          const row = document.createElement('div');
+          row.className = 'bt-pos';
+          row.setAttribute('role', 'group');
+          row.setAttribute('aria-label', '서는 자리');
+          for (const [k, l] of [['near', '불씨 곁'], ['edge', '균열 가장자리']]) {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'btn';
+            b.textContent = l;
+            b.setAttribute('aria-pressed', String(v.me.pos === k));
+            b.addEventListener('click', () => {
+              if (v.me.pos === k) return;
+              socket.emit('raidboss:pos', { pos: k }, (res) => {
+                if (res.error) return toast(res.error);
+                BT.view = res.view;
+                if (!res.view.waiting) BT.waiting = false; // 불씨 곁을 떠나 골라 둔 행동이 물려졌으면 다시 고르게
+                renderBattle();
+              });
+            });
+            row.appendChild(b);
+          }
+          acts.appendChild(row);
+        }
         add('할퀴기', frozen ? '이번 턴은 움직일 수 없다' : v.me.attackCombo ? `연계! ${v.me.attackCombo}` : '기본 공격', { type: 'attack' }, { primary: true, combo: !!v.me.attackCombo });
         const pal = v.kind === 'raid' && BT.ally ? (v.allies || []).find((a) => a.id === BT.ally) : null; // 고른 동료
         for (const sk of v.me.skills || []) {
           const why = sk.cd > 0 ? `${sk.cd}턴 뒤` : v.me.en < sk.en ? '기력 부족' : '';
           const def = sk.id === 'breath' ? S.combat.breaths[S.me.kind] : S.combat.skills[sk.id];
           const cb = !why && sk.combo;
-          const healPal = sk.id === 'mend' && pal && !pal.left;
+          const healPal = sk.id === 'mend' && pal && !pal.left && pal.id !== 'ember'; // 불씨는 치유로 밝힐 수 없음
           add(sk.name, why || (healPal ? (pal.down ? `${pal.name} 일으키기` : `${pal.name}에게`) : cb ? `연계! ${sk.combo}` : `기력 ${sk.en}`), { type: 'skill', id: sk.id }, { disabled: !!why, title: [def?.desc, ...comboHints(sk.id)].filter(Boolean).join('\n'), combo: !!cb && !healPal });
         }
         const bigHit = v.intent && ['heavy', 'multi', 'debuff'].includes(v.intent.kind);
         add('방어', v.kind === 'raid' ? '피해 절반, 기력 +3' : bigHit ? '특기 피해 ¼ · 반격' : '피해 절반, 기력 +3', { type: 'guard' }, { suggest: bigHit && v.kind !== 'raid' });
         if (v.kind === 'raid') {
-          const coverOk = pal && !pal.down && !pal.left;
+          const coverOk = pal && !pal.down && !pal.left && !(pal.id === 'ember' && v.me.pos === 'edge'); // 불씨는 곁에서만 막아섬
           add('막아서기', coverOk ? `${pal.name} 대신 맞는다` : '동료 카드를 먼저 고른다', { type: 'cover' }, { disabled: !coverOk });
           if (v.script === 'knights') add('우회', '날개로 대열 옆을 찌른다', { type: 'flank' });
+          if (v.script === 'rift') add('숨 불어넣기', v.me.pos === 'edge' ? '불씨 곁에서만' : '공격 대신 불씨를 밝힌다', { type: 'kindle' }, { disabled: v.me.pos === 'edge' }); // 균열: 불씨가 밝을수록 아스테르가 무뎌짐
         }
         add(v.kind === 'duel' ? '항복' : '물러나기', v.kind === 'duel' ? '결투를 포기한다' : v.kind === 'raid' ? '이번 레이드의 몫 없이 빠진다' : v.boss ? '입힌 피해는 남는다' : v.foes ? '쓰러뜨린 만큼만 얻는다' : '전리품 없이 피한다', { type: 'flee' });
         // 사냥: 나머지는 예전처럼 알아서 (기력을 조금 남기고, 체력이 낮아지면 물러남)
@@ -13519,6 +13548,13 @@
     socket.on('rampage:end', onRampageEnd);
     socket.on('battle:start', (s2) => { if ($('arena-dlg').open) $('arena-dlg').close(); openBattle(s2.view, { lines: s2.lines, title: s2.title }); });
     socket.on('raidboss:chat', (m) => { if (BT?.view.kind === 'raid') { (BT.view.chat ||= []).push(m); btChatAdd(m); } });
+    socket.on('raidboss:allypos', (p) => { // 균열: 동료가 자리를 옮김
+      const a = BT?.view.kind === 'raid' && BT.view.allies?.find((x) => x.id === p.id);
+      if (!a) return;
+      a.tags = (a.tags || []).filter((t) => t.t !== '불씨 곁' && t.t !== '가장자리');
+      a.tags.push({ t: p.pos === 'edge' ? '가장자리' : '불씨 곁' });
+      renderBattle();
+    });
     socket.on('raidboss:wait', (p) => { if (BT?.view.kind !== 'raid') return; for (const a of BT.view.allies || []) a.chose = !!p.chosen[a.id]; renderBattle(); });
     socket.on('raidboss', (v) => { S.raidBoss = v; renderRaidBar(); });
     socket.on('battle:update', onBattleUpdate);
@@ -13849,7 +13885,7 @@
     const used = me.raidBoss?.used?.[R.key] || 0;
     const W = R.weekly || V.weekly; // 레이드마다 주간 보상 횟수 (균열은 2회)
     const locked = !!me.raidBoss?.locked?.[R.key] && !S.isGm; // 아직 자격이 없음 (무엇이 모자란지는 밝히지 않음)
-    $('rb-bar-t').textContent = `${R.place} · ${R.name}${gmTest(R) ? ' (GM 시험 · 아직 닫힘)' : ''}`;
+    $('rb-bar-t').textContent = `${R.place} · ${R.name}${gmTest(R) ? (R.closed ? ' (GM 시험 · 잠시 닫음)' : ' (GM 시험 · 아직 닫힘)') : ''}`;
     const sub = [];
     if (lb) {
       const left = Math.max(1, Math.ceil((lb.until - Date.now()) / 60000));

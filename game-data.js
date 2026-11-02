@@ -1900,7 +1900,7 @@ const TITLES = [
   { id: 'yb_gambler', name: '홀짝의 귀재', cond: { count: 'yabawi', at: 30 }, mod: { huntGold: 1.05 }, eff: '사냥 금화 +5%' },
 ];
 // 칭호 조건을 사람이 읽는 글로
-const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: `둥지에서 {n}번 쉬기 (한 번에 ${NEST.restCountMin}분 이상)`, craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격', raidwin_morven: '레이드에서 이삭지기 모르벤을 {n}번 쓰러뜨리기', raidguard: '레이드에서 막아서기로 동료를 {n}번 지키기', raidhelp: '보상을 다 받은 주에 레이드를 {n}번 도와 이기기', ruinpts: '에레보스 정화도에 {n}만큼 기여하기', raidwin_heiron: '레이드에서 마지막 기사단장 헤이른을 {n}번 쓰러뜨리기', raidflank: '레이드에서 우회로 방패벽을 {n}번 깨기', raidduel: '레이드에서 일기토를 {n}번 끝까지 버티기', raidwin_rift: '레이드에서 균열을 지킨 자 아스테르를 {n}번 쓰러뜨리기', riftember: '불씨를 지킨 채 아스테르 쓰러뜨리기', riftroar: '아스테르의 마지막 숨을 포효로 {n}번 늦추기', riftfirst: '서버에서 처음 아스테르를 쓰러뜨리기', heir: '먼 여행을 떠난 드래곤의 의지를 잇기', teach: '제자를 {n}번 가르치기', surpass: '스승의 레벨을 따라잡기', sendoff: '다 자란 식구를 {n}번 떠나보내기', corrupt: '오염된 땅에서 {n}번 행동하기', purify: '오염된 땅을 {n}번 정화하기', firstcraft: '숨겨진 제작법을 대륙에서 처음 찾아내기', masterwork: '대성공 {n}번', mobquest: '모브 드래곤의 의뢰 {n}번 마치기', mobstory: '모브 드래곤의 이야기 {n}개를 끝까지 듣기', yabawimeet: '떠돌이 야바위꾼을 {n}번 만나기 (나타날 때마다 한 번)', yabawi: '야바위꾼과 홀짝 {n}판', dance: '왕도 축제에서 {n}번 춤추기', ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map((n) => [`mazef${n}`, `지하 회랑 제 ${n}층의 봉인이 풀린 날 수호자를 치거나 기둥을 밝히기`])), mazecity: '지하 회랑 일곱 층을 모두 밝힌 날 함께하기' };
+const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: `둥지에서 {n}번 쉬기 (한 번에 ${NEST.restCountMin}분 이상)`, craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격', raidwin_morven: '레이드에서 이삭지기 모르벤을 {n}번 쓰러뜨리기', raidguard: '레이드에서 막아서기로 동료를 {n}번 지키기', raidhelp: '보상을 다 받은 주에 레이드를 {n}번 도와 이기기', ruinpts: '에레보스 정화도에 {n}만큼 기여하기', raidwin_heiron: '레이드에서 마지막 기사단장 헤이른을 {n}번 쓰러뜨리기', raidflank: '레이드에서 우회로 방패벽을 {n}번 깨기', raidduel: '레이드에서 일기토를 {n}번 끝까지 버티기', raidwin_rift: '레이드에서 균열을 지킨 자 아스테르를 {n}번 쓰러뜨리기', riftember: '불씨를 밝게(●●● 이상) 지킨 채 아스테르 쓰러뜨리기', riftroar: '아스테르의 마지막 숨을 포효로 {n}번 늦추기', riftfirst: '서버에서 처음 아스테르를 쓰러뜨리기', heir: '먼 여행을 떠난 드래곤의 의지를 잇기', teach: '제자를 {n}번 가르치기', surpass: '스승의 레벨을 따라잡기', sendoff: '다 자란 식구를 {n}번 떠나보내기', corrupt: '오염된 땅에서 {n}번 행동하기', purify: '오염된 땅을 {n}번 정화하기', firstcraft: '숨겨진 제작법을 대륙에서 처음 찾아내기', masterwork: '대성공 {n}번', mobquest: '모브 드래곤의 의뢰 {n}번 마치기', mobstory: '모브 드래곤의 이야기 {n}개를 끝까지 듣기', yabawimeet: '떠돌이 야바위꾼을 {n}번 만나기 (나타날 때마다 한 번)', yabawi: '야바위꾼과 홀짝 {n}판', dance: '왕도 축제에서 {n}번 춤추기', ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map((n) => [`mazef${n}`, `지하 회랑 제 ${n}층의 봉인이 풀린 날 수호자를 치거나 기둥을 밝히기`])), mazecity: '지하 회랑 일곱 층을 모두 밝힌 날 함께하기' };
 
 // ── 장소와 사냥터 난이도 ───────────────────────────
 // 야생 지역마다 장소가 넷. 입구는 쉽고 안쪽일수록 사냥터 난이도가 높다 (셋째까지 Lv.1~12, 넷째는 고레벨 구역 Lv.13~24).
@@ -2432,22 +2432,26 @@ const RAIDBOSS = {
       weekly: 2, maxTurns: 22,                                   // 주 2회 보상, 22턴
       needs: ['morven1', 'heiron1'],                             // 입장 자격: 모르벤·헤이른을 각각 한 번 이상 쓰러뜨림 (칭호로 셈)
       boss:   { name: '균열을 지킨 자 아스테르', short: '아스테르', type: 'dragon', weak: ['spirit', 'ice'], resist: ['lightning'] },
-      ember:  { name: '꺼지지 않은 불씨', type: 'spirit', weak: [], resist: [], def: 0.6, spd: 1, hp: 300 }, // 2단계부터 드러남. 지켜야 할 대상 (체력은 고정 300)
+      // 꺼지지 않은 불씨: 처음부터 있음. 밝기 0~max (체력 칸에 밝기로 보임). 밝을수록 아스테르의 공격이 무뎌짐 (mult[밝기]: 보스 공격 배율)
+      // 숨 불어넣기(공격 대신)로 +kindle (지혜가 높으면 가끔 하나 더: (지혜 − kindleRef) × kindlePer, 최대 kindleMax), 턴 끝마다 −decay, 불씨를 노리는 공격에 −hit (막아서면 −coverHit). 꺼져도(0) 다시 불어넣을 수 있음
+      ember:  { name: '꺼지지 않은 불씨', type: 'spirit', weak: [], resist: [], def: 0.6, spd: 1, max: 5, start: 3, decay: 1, kindle: 1, kindleRef: 20, kindlePer: 0.02, kindleMax: 0.5, hit: 2, coverHit: 1, mult: [1.8, 1.6, 1.4, 1.2, 1.0, 0.8], keep: 3 }, // keep: 이 밝기 이상으로 이기면 '불씨를 지킨 채' 칭호 셈
       phase2: 0.7, phase3: 0.35,                                 // 보스 체력이 이 비율 아래로 떨어지면 다음 단계
       erosion: { n: 1, nLate: 2, max: 3, cleanseWis: 20 },       // 잿빛 침식: 턴마다 n명(2단계부터 nLate명)에게 1겹. 3겹이면 '잿빛에 먹힘'(내 차례를 잃고 보스 차례에 동료를 공격). 치유로 1 + 지혜 20마다 1겹 씻음, 포효로 깨움 (4겹·지혜 15였을 때 너무 쉽게 풀려 조임)
-      abyss:  { every: 5, pct: 0.25, gust: { wing: 30, per: 0.04, fail: 1.3 } }, // 심연의 숨 (1·2단계): 모두 최대 체력 35%. 날개 돌풍이 흩트리면 모두 절반 (50% + (날개 − 30) × 4%), 실패하면 돌풍을 쓴 쪽 ×1.3
-      bolt:   { every: 3, n: 2, power: 1.3, majBase: 20, majPer: 0.03, majMax: 0.75 }, // 번개 숨결 (모든 단계): 두 드래곤에게 ×2 + 마비. 떨쳐 낼 확률 = (위엄 − 20) × 3% (최대 75%)
-      emberHit: { every: 3, power: 2.5, lost: 1.8 },             // 2·3단계: 세 턴마다 불씨를 노림 (×2.5). 불씨가 꺼지면 보스 공격 ×1.8 끝까지 (최대 체력 비례 몫에도 그대로 곱함)
-      push:   { every: 5, wing: 30, per: 0.04, away: 2, back: 0.5 }, // 2·3단계: 다섯 턴마다 한 드래곤을 가장자리로. 버틸 확률 50% + (날개 − 30) × 4%. 못 버티면 2턴 빠졌다가 체력 50% 이하로 돌아옴
+      // every: [최소, 최대] 턴 — 그 사이에서 매번 새로 정함 (예고 문장으로만 알 수 있음). 큰 기믹(심연·번개·불씨 공격)은 한 턴에 하나만, 겹치면 다음 턴으로 미룸
+      // 서는 자리: 'near'(불씨 곁) · 'edge'(균열 가장자리). 숨 불어넣기·불씨 막아서기는 곁에서만, 심연을 흩트리는 돌풍·밀려난 동료 끌어올리기는 가장자리에서만
+      abyss:  { every: [4, 6], pct: { near: 0.15, edge: 0.35 }, gust: { wing: 30, per: 0.04, fail: 1.3 } }, // 심연의 숨 (1·2단계): 모두 최대 체력 35%. 날개 돌풍이 흩트리면 모두 절반 (50% + (날개 − 30) × 4%), 실패하면 돌풍을 쓴 쪽 ×1.3
+      // 극성: 금빛(gold)은 노린 드래곤이 방어하면 흘려보냄(마비 없음), 잿빛(ash)은 동료가 막아서야 함. 틀리면 피해 ×wrong. 처음 노리는 건 불씨 곁에 선 드래곤 중에서
+      bolt:   { every: [2, 4], n: 1, power: 1.3, wrong: 2, chainK: 0.5, majBase: 20, majPer: 0.03, majMax: 0.75 }, // 번개 숨결 (모든 단계): 한 드래곤에게 + 마비, 그 턴에 같은 행동을 한 동료에게 옮겨 붙음(피해 ×chainK, 마비는 똑같이 판정. 숨 불어넣기는 옮겨 붙지 않음). 떨쳐 낼 확률 = (위엄 − 20) × 3% (최대 75%)
+      emberHit: { every: [2, 4], coverPower: 1.2 },               // 2·3단계: 불씨를 노림 (밝기 −ember.hit). 막아서면 막아선 드래곤이 ×coverPower로 맞고 밝기 −ember.coverHit
+      push:   { every: [4, 6], wing: 30, per: 0.04, away: 2, back: 0.5 }, // 2·3단계: 다섯 턴마다 한 드래곤을 가장자리로. 버틸 확률 50% + (날개 − 30) × 4%. 못 버티면 2턴 빠졌다가 체력 50% 이하로 돌아옴
       last:   { charge: 5, pct: 0.9, cut: 0, roarBase: 0.55, roarPer: 0.03, roarRef: 28, roarMin: 0.3, roarMax: 0.9 }, // 3단계: 마지막 숨 (5칸 차면 모두 최대 체력 90%). 포효로만 늦출 수 있음 (성공마다 1칸). cut: 모으는 동안 보스 체력을 이만큼 깎으면 흩어짐 — 0이면 끔
       // 포효 확률: roarBase + (위엄 − roarRef) × roarPer, roarMin~roarMax (예전엔 보스 위엄 38 기준이라 위엄 25~30이 대부분인 서버에서 거의 20%였음 → 위엄 28이면 55%, 25면 46%, 35면 76%)
-      hesitate: { every: 4 },                                     // 3단계: 불씨가 살아 있으면 네 턴마다 보스가 한 번 망설임 (행동 멈춤)
       firstTitle: 'riftfirst',                                   // 서버에서 처음 쓰러뜨린 넷만 받는 칭호 (전시용)
       rare: { gear: ['raid_rift_eye', 'raid_rift_feather'], treasure: 'tr_star_stone' },
       reward: { gold: [400, 600], shard: 'rift_scale', shards: 2, firstShard: 6, purifyShard: 25, purify: 80, journal: 'rift_memory', journalChance: 0.2, keepsake: 'warm_claw', fame: 5 },
       intro: '균열 가장자리, 바닥이 보이지 않는 어둠 위로 거대한 금빛 발톱 하나가 바위를 움켜쥔다. 잿빛으로 물든 비늘 사이로 낮은 숨소리가 새어 나온다. "…아무도… 이 아래로는…"',
       lines: {
-        phase2: ['고룡의 가슴 비늘이 갈라지며 그 안에서 작은 불씨가 깜빡인다.', '"…아직… 꺼지지 않았다." 심연의 숨이 불씨를 덮으려 일렁인다.'],
+        phase2: ['고룡이 몸을 일으키자 가슴 비늘 틈의 불씨가 크게 흔들린다.', '"…아직… 꺼지지 않았다." 심연의 숨이 불씨를 덮으려 일렁이기 시작한다.'],
         phase3: ['고룡이 균열 끝에 몸을 걸치고 고개를 젖힌다. 심연 깊은 곳의 숨이 그 목으로 빨려 올라간다.', '마지막 숨을 모으기 시작했다.'],
         win: ['고룡의 금빛 비늘이 하나둘 잿빛을 털어 낸다. 가슴의 불씨가 잠깐 환하게 타오른다.', '"…왕은… 문을 닫았느냐." 대답을 듣기도 전에, 고룡은 미소 짓듯 눈을 감고 균열 아래로 천천히 가라앉는다.'],
         time: ['심연의 숨이 균열 위를 가득 메웠다. 고룡의 눈에서 금빛이 사라진다.', '드래곤들은 더 버티지 못하고 균열 가장자리에서 물러났다.'],

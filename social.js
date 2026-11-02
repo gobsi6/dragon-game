@@ -758,6 +758,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       const mine = db.kinLoad(d.id);
       const m = mine.find((x) => x.id === k.id);
       if (m) {
+        delete m.data.entrust; // 맡길 곳을 찾던 아기: 이제 이 둥지의 식구
         m.data.adoptedFrom = f.name;
         m.data.adoptedFromId = f.id;
         m.data.adoptedAt = now; // 먼 둥지에서 온 안부: 입양 뒤 며칠 동안만 (game-events.js LETTER_DAYS)

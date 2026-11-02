@@ -114,6 +114,12 @@ const birthChoices = (found) => [
       ? `${v.baby}${h.josa(v.baby, '이', '가')} 둥지 식구가 되었다. 아이는 처음엔 머뭇거리다가, ${h.name(k)} 내민 손을 꼭 잡았다. (유대 +8, 명성 +1)`
       : `'${v.baby}'${h.josa(v.baby, '이라고', '라고')} 불러 주었다. ${h.name(k)} 눈물을 글썽이며 아이를 둥지에 눕혔다. 새 식구가 생겼다. (유대 +8, 명성 +1)`);
   } },
+  // 둥지가 가득할 때: 믿을 만한 동료의 둥지에 맡김. 아기는 맡길 곳이 정해질 때까지 잠시 자리를 넘겨 둥지에서 지내고, 둥지 창의 입양 보내기로 동료를 고름
+  { label: '동료의 둥지에 맡긴다', show: (c) => !!c.full, run: (h, c, v) => {
+    const k = c.k(v.id); kidAdd(c, k, v.baby); babyTell(h, c, k, v.baby, found);
+    h.bornOver(k, v.baby, found); h.bond(k, 3);
+    h.say(`둥지에 자리가 없어, ${v.baby}${h.josa(v.baby, '을', '를')} 믿을 만한 동료의 둥지에 맡기기로 했다. 둥지 창의 식구 카드에서 입양 보내기로 맡길 동료를 고르자. 맡길 곳이 정해질 때까지 아기는 둥지에서 지내고, 그동안은 새 식구를 들일 수 없다. (유대 +3)`);
+  } },
   { label: (c, v) => `${bHome(c, v)}의 둥지에서 키우게 한다`, show: (c, v) => bRef(c, v), run: (h, c, v) => {
     const k = c.k(v.id); kidAdd(c, k, v.baby); h.bond(k, 4);
     h.babyAsk(k, 'raise', v.baby, found);

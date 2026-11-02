@@ -3758,3 +3758,10 @@ html:has(dialog.dlg:modal), html:has(dialog.dlg:modal) body { overflow: hidden; 
 .auth-forgot { display: block; margin: 10px auto 0; font-size: 13px; }
 #pwreq-form .note { font-size: 13px; color: var(--muted); margin: 0 0 12px; line-height: 1.6; }
 #pwreq-msg.ok { color: var(--steel-d); }
+
+/* 균열 레이드: 서는 자리 (불씨 곁 · 균열 가장자리) */
+.bt-pos { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-bottom: 2px; }
+.bt-pos .btn { border-radius: 0; min-height: 38px; }
+.bt-pos .btn:first-child { border-radius: 3px 0 0 3px; }
+.bt-pos .btn:last-child { border-radius: 0 3px 3px 0; margin-left: -1px; }
+.bt-pos .btn[aria-pressed="true"] { background: var(--steel); border-color: var(--steel-d); color: #F4F7FA; box-shadow: none; font-weight: 600; position: relative; z-index: 1; }
