@@ -375,6 +375,64 @@ db.exec(`
 `);
 // 답에 붙은 그림: post_id(그 글)와 함께 comment_id(그 답)를 적어 둠. 글이 지워지면 글과 함께, 답이 지워지면 따로 지움
 if (!db.prepare('PRAGMA table_info(slate_images)').all().some((c) => c.name === 'comment_id')) db.exec('ALTER TABLE slate_images ADD COLUMN comment_id INTEGER');
+// 석판 투표: 글 하나에 투표 하나. kind = public(공개: 누가 무엇을 골랐는지 보임) / secret(비밀: 표 수만, GM이 공개해야 보임)
+// 한 드래곤 한 표 (마감 전까지 바꿀 수 있음). 비밀 투표의 사유는 GM에게만 (누가 썼는지 함께)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS slate_polls (
+    post_id     INTEGER PRIMARY KEY REFERENCES slate_posts(id) ON DELETE CASCADE,
+    kind        TEXT NOT NULL,
+    options     TEXT NOT NULL,              -- JSON 글자 배열
+    closes_at   INTEGER,                    -- 저절로 마감되는 때 (없으면 글쓴이·GM이 닫을 때까지)
+    closed_at   INTEGER,
+    revealed_at INTEGER,                    -- 비밀 투표: GM이 결과를 공개한 때
+    at          INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS slate_votes (
+    post_id   INTEGER NOT NULL REFERENCES slate_posts(id) ON DELETE CASCADE,
+    dragon_id INTEGER NOT NULL,
+    opt       INTEGER NOT NULL,
+    at        INTEGER NOT NULL,
+    PRIMARY KEY (post_id, dragon_id)
+  );
+  CREATE TABLE IF NOT EXISTS slate_reasons (
+    id        INTEGER PRIMARY KEY,
+    post_id   INTEGER NOT NULL REFERENCES slate_posts(id) ON DELETE CASCADE,
+    dragon_id INTEGER,
+    name      TEXT NOT NULL,
+    opt       INTEGER NOT NULL,
+    text      TEXT NOT NULL,
+    at        INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS slate_reasons_post ON slate_reasons(post_id, at);
+  -- 표: 여러 개 고르기(최대 slate_polls.pick개)를 위해 선택지마다 한 줄. 예전 slate_votes(한 드래곤 한 줄)는 처음 켤 때 옮겨 담음
+  CREATE TABLE IF NOT EXISTS slate_ballots (
+    post_id   INTEGER NOT NULL REFERENCES slate_posts(id) ON DELETE CASCADE,
+    dragon_id INTEGER NOT NULL,
+    opt       INTEGER NOT NULL,
+    at        INTEGER NOT NULL,
+    PRIMARY KEY (post_id, dragon_id, opt)
+  );
+`);
+if (!db.prepare('PRAGMA table_info(slate_polls)').all().some((c) => c.name === 'pick')) db.exec('ALTER TABLE slate_polls ADD COLUMN pick INTEGER NOT NULL DEFAULT 1'); // 한 드래곤이 고를 수 있는 수 (1 또는 3)
+if (!db.prepare('PRAGMA table_info(slate_reasons)').all().some((c) => c.name === 'opts')) db.exec('ALTER TABLE slate_reasons ADD COLUMN opts TEXT'); // 여러 개 골랐을 때 고른 선택지들 (JSON)
+db.exec('INSERT OR IGNORE INTO slate_ballots (post_id, dragon_id, opt, at) SELECT post_id, dragon_id, opt, at FROM slate_votes; DELETE FROM slate_votes;');
+const qp = {
+  get: db.prepare('SELECT * FROM slate_polls WHERE post_id = ?'),
+  add: db.prepare('INSERT INTO slate_polls (post_id, kind, options, closes_at, at, pick) VALUES (?, ?, ?, ?, ?, ?)'),
+  close: db.prepare('UPDATE slate_polls SET closed_at = ? WHERE post_id = ? AND closed_at IS NULL'),
+  reveal: db.prepare('UPDATE slate_polls SET revealed_at = ? WHERE post_id = ? AND revealed_at IS NULL'),
+  kinds: db.prepare('SELECT post_id, kind FROM slate_polls'),
+  unvote: db.prepare('DELETE FROM slate_ballots WHERE post_id = ? AND dragon_id = ?'),
+  vote: db.prepare('INSERT OR IGNORE INTO slate_ballots (post_id, dragon_id, opt, at) VALUES (?, ?, ?, ?)'),
+  myVote: db.prepare('SELECT opt FROM slate_ballots WHERE post_id = ? AND dragon_id = ? ORDER BY opt'),
+  counts: db.prepare('SELECT opt, COUNT(*) AS n FROM slate_ballots WHERE post_id = ? GROUP BY opt'),
+  people: db.prepare('SELECT COUNT(DISTINCT dragon_id) AS n FROM slate_ballots WHERE post_id = ?'),
+  voters: db.prepare('SELECT v.opt, v.dragon_id, d.name FROM slate_ballots v LEFT JOIN dragons d ON d.id = v.dragon_id WHERE v.post_id = ? ORDER BY v.at'),
+  reasonDel: db.prepare('DELETE FROM slate_reasons WHERE post_id = ? AND dragon_id = ?'),
+  reasonAdd: db.prepare('INSERT INTO slate_reasons (post_id, dragon_id, name, opt, opts, text, at) VALUES (?, ?, ?, ?, ?, ?, ?)'),
+  reasons: db.prepare('SELECT dragon_id, name, opt, opts, text, at FROM slate_reasons WHERE post_id = ? ORDER BY at, opt'),
+  myReasons: db.prepare('SELECT opt, text FROM slate_reasons WHERE post_id = ? AND dragon_id = ?'),
+};
 
 const q = {
   countUsers:   db.prepare('SELECT COUNT(*) AS n FROM users'),
@@ -900,6 +958,22 @@ module.exports = {
     imgSince: (dragonId, since) => q.slateImgDay.get(dragonId, since).n,
     imgPrune: (before) => q.slateImgOld.run(before).changes, // 글에 붙지 않고 남은 그림 정리
     countSince: (dragonId, since) => q.slateDayN.get(dragonId, since).n,
+    // 투표
+    poll: (postId) => { const r = qp.get.get(postId); if (!r) return null; let options = []; try { options = JSON.parse(r.options); } catch {} return { ...r, options }; },
+    pollAdd: (postId, kind, options, closesAt, pick = 1) => qp.add.run(postId, kind, JSON.stringify(options), closesAt || null, Date.now(), pick),
+    pollClose: (postId, at = Date.now()) => qp.close.run(at, postId).changes > 0,
+    pollReveal: (postId) => qp.reveal.run(Date.now(), postId).changes > 0,
+    pollKinds: () => new Map(qp.kinds.all().map((r) => [r.post_id, r.kind])),
+    // 고른 것들로 바꿈 (opts: 선택지 번호 배열)
+    vote: db.transaction((postId, dragonId, opts) => { qp.unvote.run(postId, dragonId); const at = Date.now(); for (const o of opts) qp.vote.run(postId, dragonId, o, at); }),
+    myVote: (postId, dragonId) => { const r = qp.myVote.all(postId, dragonId).map((x) => x.opt); return r.length ? r : null; },
+    counts: (postId) => qp.counts.all(postId),
+    people: (postId) => qp.people.get(postId).n, // 투표한 드래곤 수
+    voters: (postId) => qp.voters.all(postId),
+    // 고른 까닭: 선택지마다 한 줄 (map: { 선택지 번호: 글 }). 다시 투표하면 그 드래곤의 까닭을 모두 새로
+    reasonSet: db.transaction((postId, d, map) => { qp.reasonDel.run(postId, d.id); const at = Date.now(); for (const [o, text] of Object.entries(map || {})) if (text) qp.reasonAdd.run(postId, d.id, d.name, Number(o), JSON.stringify([Number(o)]), text, at); }),
+    myReasons: (postId, dragonId) => Object.fromEntries(qp.myReasons.all(postId, dragonId).map((r) => [r.opt, r.text])),
+    reasons: (postId) => qp.reasons.all(postId).map((r) => { let opts = [r.opt]; try { if (r.opts) opts = JSON.parse(r.opts); } catch {} return { ...r, opts }; }),
   },
   worldGet: (k, def = null) => { const r = q.worldGet.get(k); if (!r) return def; try { return JSON.parse(r.v); } catch { return def; } },
   worldSet: (k, v) => q.worldSet.run(k, JSON.stringify(v)),

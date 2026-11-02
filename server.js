@@ -550,6 +550,7 @@ const meOf = (d) => ({
   restAt: d.rest_at || null,
   hoardGold: d.hoard_gold || 0,
   nestTier: d.nest ? logic.nestInfo(d).tier : 0,
+  restTier: d.rest_at ? (() => { const h = logic.restHostOf(d); return h.nest ? logic.nestInfo(h).tier : 0; })() : null, // 쉬는 둥지의 크기 (반려의 둥지면 그 둥지)
   maxKin: logic.maxKinOf(d),
   raid: logic.raidView(d),                 // 보물 도둑 (쫓을 수 있는 동안)
   kinOffersIn: db.offersToCount(d.id) + kinLove.inCount(d.id), // 받은 식구 입양 제안 수 + 혼인 청·아이를 두고 받은 청
@@ -1311,6 +1312,12 @@ logic.hooks.together = (d) => {
   const id = heartId(d.id);
   const e = id && online.get(id);
   return e && online.has(d.id) && e.dragon.region === d.region && !e.dragon.exp_end && !d.exp_end ? e.dragon.name : null;
+};
+// 반려의 둥지에서 쉬는 중이면 그 둥지의 주인 (쉬기 회복을 그 둥지의 크기·보물더미·온천으로)
+logic.hooks.restHost = (d) => {
+  const pn = logic.hooks.partnerNest(d);
+  if (!pn || pn.region !== d.region) return null;
+  return online.get(pn.id)?.dragon || db.getDragon(pn.id) || null;
 };
 logic.hooks.partnerNest = (d) => {
   const id = db.relByBond(d.id, 'partner')[0];
