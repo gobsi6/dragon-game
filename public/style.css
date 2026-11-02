@@ -3569,6 +3569,17 @@ html:has(dialog.dlg:modal), html:has(dialog.dlg:modal) body { overflow: hidden; 
 /* 회복 가방: 열면 그림·능력치를 접고 그 자리에 */
 .profile.bag-open .portrait, .profile.bag-open .pf-body > .attrs { display: none !important; }
 .profile.bag-open .nameplate { margin-top: 0; }
+/* 이름판의 작은 얼굴: 넓은 화면에서 회복 가방을 열어 큰 그림이 접혔을 때만, 이름판 왼쪽에 동그랗게 (폰은 원래 동그란 그림이 있어 그대로) */
+.np-face { display: none; }
+@media (min-width: 861px) {
+  .profile.bag-open .nameplate { display: grid; grid-template-columns: 56px minmax(0, 1fr); column-gap: 12px; row-gap: 3px; align-items: center; text-align: left; margin: 0; padding: 10px 14px 11px 12px; } /* 큰 그림이 접혔으니 양옆 들여쓰기 없이 칸 너비를 다 씀 */
+  .profile.bag-open .nameplate > :not(.np-face) { grid-column: 2; }
+  .profile.bag-open .np-face { display: grid; place-items: center; grid-column: 1; grid-row: 1 / span 3; width: 56px; height: 56px; border-radius: 50%; overflow: hidden; background: radial-gradient(circle at 50% 42%, #FFFFFF 0%, #ECEDEA 55%, #DFE1DE 100%); color: var(--muted); box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px #CDCFCB; }
+  .profile.bag-open .np-face img { width: 100%; height: 100%; object-fit: cover; }
+  .profile.bag-open .nameplate .nrow { justify-content: flex-start; }
+  .profile.bag-open .nameplate .n { font-size: 21px; }
+  .profile.bag-open .nameplate .xp { margin-top: 3px; }
+}
 .pf-bag { display: flex; flex-direction: column; gap: 6px; padding: 8px; background: #FCFCFB; border: 1px solid #C9CFD5; border-radius: 4px; }
 .pf-bag[hidden] { display: none; }
 .bag-tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-bottom: 1px solid var(--line-in); }

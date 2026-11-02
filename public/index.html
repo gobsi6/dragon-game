@@ -140,6 +140,7 @@
           <button type="button" data-a="delete">그림 지우기</button>
         </div>
         <div class="nameplate">
+          <span class="np-face" id="np-face" aria-hidden="true"></span><!-- 넓은 화면에서 회복 가방을 열어 큰 그림이 접혔을 때만 보이는 작은 얼굴 -->
           <div class="nrow"><span class="ttl" id="me-title" hidden></span><span class="n" id="me-name"></span></div>
           <div class="sub"><span class="lv" id="me-lv"></span><span id="me-kind"></span></div>
           <div class="xp"><div class="bar"><i id="xp-bar"></i></div><div class="t"><span>경험</span><span id="xp-t"></span></div></div>
@@ -1549,6 +1550,11 @@
       if (img) img.remove();
       $('portrait-ph').innerHTML = emblem(me.kind, 128);
     }
+    // 이름판의 작은 얼굴 (회복 가방을 열어 큰 그림이 접힌 넓은 화면에서만 보임): 같은 그림, 없으면 종족 문장
+    const nf = $('np-face');
+    if (url) { let fi = nf.querySelector('img'); if (!fi) { nf.replaceChildren(); fi = document.createElement('img'); fi.alt = ''; nf.appendChild(fi); } if (fi.getAttribute('src') !== url) fi.src = url; }
+    else if (nf.dataset.kind !== me.kind || nf.querySelector('img')) { nf.innerHTML = emblem(me.kind, 40); }
+    nf.dataset.kind = url ? '' : me.kind;
   }
 
   // ── 프로필 그림: 고르기 → 자르기 → 384×384로 보냄 ──
