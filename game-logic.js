@@ -267,6 +267,23 @@ function clampVitals(d) {
   d.hp = Math.min(d.hp, hpCap(d));
   d.en = Math.min(d.en, enCap(d));
 }
+// 장신구를 갈아입을 때 체력·기력을 '비율'로 지킴: 최대치가 줄었다 늘어도 잃지 않게.
+// 반올림으로 조금씩 새거나 불어나지 않도록, 바로 앞 갈아입기에서 쓴 정확한 비율을 combat.vit에 기억해 두고
+// 그 뒤로 체력·기력이 그대로면(회복·전투 등으로 바뀌지 않았으면) 그 비율을 다시 씀
+function keepVitals(d, run) {
+  const c = combatJson(d), m = c.vit || {};
+  const h0 = hpCap(d), e0 = enCap(d);
+  const hr = m.hp === d.hp && m.hc === h0 && Number.isFinite(m.hr) ? m.hr : Math.max(0, Math.min(1, d.hp / h0));
+  const er = m.en === d.en && m.ec === e0 && Number.isFinite(m.er) ? m.er : Math.max(0, Math.min(1, d.en / e0));
+  const res = run();
+  if (!res || res.error) return res;
+  const h1 = hpCap(d), e1 = enCap(d);
+  if (h1 !== h0) d.hp = d.hp > 0 ? Math.max(1, Math.min(h1, Math.round(hr * h1))) : 0;
+  if (e1 !== e0) d.en = Math.max(0, Math.min(e1, Math.round(er * e1)));
+  clampVitals(d);
+  c.vit = { hp: d.hp, hc: h1, hr, en: d.en, ec: e1, er };
+  return res;
+}
 // 사냥·강적·재앙·추격·진정에 나설 수 없을 만큼 기운이 없는지 (RULES.huntMinHp보다 낮으면)
 const lowHp = (d) => d.hp < RULES.huntMinHp;
 
@@ -1514,7 +1531,7 @@ function useItem(d, id, have, opts = {}) {
 }
 
 // ── 장신구 착용 ────────────────────────────────────
-function equip(d, id, have, plain = false) {
+function equipRaw(d, id, have, plain = false) {
   if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
   const it = ITEMS[id];
   if (!it || it.type !== 'equip') return { error: '착용할 수 없는 물건이다.' };
@@ -1534,7 +1551,7 @@ function equip(d, id, have, plain = false) {
   return { ok: true, items };
 }
 
-function unequip(d, slot) {
+function unequipRaw(d, slot) {
   if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
   if (!SLOTS.some((x) => x.key === slot)) return { error: '없는 자리다.' };
   const eq = equipOf(d);
@@ -1546,6 +1563,11 @@ function unequip(d, slot) {
   clampVitals(d);
   return { ok: true, items };
 }
+
+// 바깥에서 부르는 것은 체력·기력 비율을 지키는 쪽 (프리셋 갈아입기는 안에서 Raw를 씀)
+const equip = (d, id, have, plain = false) => keepVitals(d, () => equipRaw(d, id, have, plain));
+const unequip = (d, slot) => keepVitals(d, () => unequipRaw(d, slot));
+const presetUse = (d, i, have) => keepVitals(d, () => presetUseRaw(d, i, have));
 
 // ── 장비 프리셋: 장신구 여섯 자리 + 칭호를 이름 붙여 저장해 두고 한 번에 갈아입음 (combat JSON의 presets, 5칸) ──
 const PRESET_N = 5;
@@ -1596,7 +1618,7 @@ function presetClear(d, i) {
   return { ok: true, lines: [`'${n}'${josa(n, '을', '를')} 비웠다.`] };
 }
 // 갈아입기: 자리마다 차례로 벗고 참. 가진 것이 없으면 그 자리는 그대로 두고 알림
-function presetUse(d, i, have) {
+function presetUseRaw(d, i, have) {
   if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
   const p = presetsOf(d)[i];
   if (!p) return { error: '비어 있는 칸이다.' };
@@ -1608,10 +1630,10 @@ function presetUse(d, i, have) {
   for (const sl of SLOTS) {
     const want = p.eq[sl.key] || null, cur = eq[sl.key] || null;
     const wantPlain = !!p.plain?.[sl.key];
-    if (!want) { if (cur) add(unequip(d, sl.key).items); continue; }
+    if (!want) { if (cur) add(unequipRaw(d, sl.key).items); continue; }
     if (want === cur && !(g[cur] && (gearAt(d, cur) !== 'eq') !== wantPlain)) continue; // 이미 그대로
     if (!ITEMS[want] || (want !== cur && haveNow(want) < 1)) { miss.push(ITEMS[want]?.name || '사라진 장신구'); continue; }
-    const r = equip(d, want, haveNow, wantPlain);
+    const r = equipRaw(d, want, haveNow, wantPlain);
     if (r.error) miss.push(ITEMS[want].name);
     else add(r.items);
   }
