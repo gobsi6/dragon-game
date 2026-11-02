@@ -3765,7 +3765,7 @@ html:has(dialog.dlg:modal), html:has(dialog.dlg:modal) body { overflow: hidden; 
 .bt-allies .bt-mini.boss .bar i { background: linear-gradient(90deg, #A87A1C, #E0B85A); }
 
 /* 석판 투표 */
-.sl-pollb { flex: none; margin-right: 6px; padding: 0 7px; font-size: 11px; line-height: 19px; border-radius: 10px; background: #EEF2F6; color: var(--steel-d); font-weight: 600; }
+.sl-pollb { flex: none; padding: 0 5px; font-size: 10.5px; line-height: 18px; letter-spacing: -.02em; border-radius: 9px; background: #EEF2F6; color: var(--steel-d); font-weight: 600; }
 .sl-poll { margin-top: 14px; padding: 12px 14px; border: 1px solid var(--line-in); border-radius: 4px; background: var(--surface-2); display: flex; flex-direction: column; gap: 0; }
 /* 시안 B: 얇은 줄로만 나눈 목록 · 결과는 가는 막대와 굵은 숫자 · 둥근 단추 */
 .sl-poll-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; padding-bottom: 8px; border-bottom: 1px solid var(--line-in); }
@@ -3854,13 +3854,12 @@ html:has(dialog.dlg:modal), html:has(dialog.dlg:modal) body { overflow: hidden; 
 .arena-rules { margin: 2px 0 4px; }
 .arena-rules > summary { cursor: pointer; min-height: 28px; display: list-item; line-height: 28px; font-size: 12.5px; font-weight: 600; color: var(--steel-d); }
 .arena-rules > .note { margin: 2px 0 6px; }
-/* 석판 목록: 투표 글의 내 참여 상태 */
-.sl-card .sl-vt { display: flex; align-items: center; gap: 8px; margin: -3px 0 -1px; font-size: 11.5px; color: var(--muted); }
-.sl-card .sl-vt b { padding: 0 7px; line-height: 19px; border-radius: 10px; font-size: 11px; font-weight: 600; }
-.sl-card .sl-vt b.todo { background: #FBF1E4; color: #7A4E12; }
-.sl-card .sl-vt b.done { background: #E8F1EB; color: #2B5240; } /* 고름: 초록 (레이드의 '골랐다'와 같은 숲빛) */
-.sl-card .sl-vt b.end { background: #EFEFEC; color: var(--ink-2); }
-.sl-card .sl-vt b .ck { margin-left: 4px; font-weight: 700; }
+/* 석판 목록: 투표 글 제목 옆의 진행 상태 */
+.sl-card .t .sl-st { flex: none; padding: 0 6px; font-size: 10.5px; line-height: 18px; border-radius: 9px; font-weight: 600; white-space: nowrap; }
+.sl-card .t .sl-st.todo { background: #FBF1E4; color: #7A4E12; }
+.sl-card .t .sl-st.done { background: #E8F1EB; color: #2B5240; } /* 고름: 초록 (레이드의 '골랐다'와 같은 숲빛) */
+.sl-card .t .sl-st.end { background: #EFEFEC; color: var(--ink-2); }
+.sl-card .t .sl-st .ck { margin-left: 3px; font-weight: 700; }
 /* 폰의 접힌 드래곤 카드: 잘려 보이던 종류 이름('레드…')은 빼고 레벨만 */
 @media (max-width: 860px) {
   .profile.folded .nameplate .sub > :not(.lv) { display: none; }

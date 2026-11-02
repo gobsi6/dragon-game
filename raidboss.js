@@ -481,7 +481,7 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
   // 쓰러진 쪽 알리기
   function downs(fg, lines) {
     for (const f of [...fg.players, ...fg.foes]) {
-      if (f.hp <= 0 && !f.down && !f.left) { f.down = true; if (!f.taken) lines.push(`${ga(f.name)} ${f.raid === 'banner' ? '꺾였다' : '쓰러졌다'}.`); } // 균열 아래로 끌려간 드래곤은 그 줄로 이미 알림
+      if (f.hp <= 0 && !f.down && !f.left) { f.down = true; if (!f.pulled) lines.push(`${ga(f.name)} ${f.raid === 'banner' ? '꺾였다' : '쓰러졌다'}.`); } // 균열 아래로 끌려간 드래곤은 그 줄로 이미 알림
       if (f.hp > 0 && f.down) f.down = false;
     }
   }
@@ -939,10 +939,19 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
     // 심연의 손아귀: 1·2단계는 다른 큰 기믹과 겹치지 않게 미루고, 3단계는 일부러 겹침
     if (fg.phase >= 2 && fg.calm === 0 && D.grip != null && D.grip <= nt) {
       if (fg.phase < 3 && plans.length) D.grip = nt + 1;
-      else { plans.push({ type: 'grip', on: pick(ps).id }); D.grip = nt + rtGap(B.grip.every); }
+      else {
+        // 같은 턴 번개의 대상은 피함 (금빛 번개를 맞을 드래곤을 막아서면 번개를 못 흘리니, 둘이 겹치면 답이 없어짐)
+        const bolted = new Set((plans.find((x) => x.type === 'bolt')?.bolts || []).map((x) => x.on));
+        const cands = ps.filter((p) => !bolted.has(p.id));
+        plans.push({ type: 'grip', on: pick(cands.length ? cands : ps).id }); D.grip = nt + rtGap(B.grip.every);
+      }
     }
-    // 가라앉는 동안: 턴마다 한 명이 같이 끌려 들어감
-    if (fg.sink) plans.push({ type: 'drag', on: pick(ps).id });
+    // 가라앉는 동안: 턴마다 한 명이 같이 끌려 들어감 (번개·손아귀의 대상은 피함)
+    if (fg.sink) {
+      const busy = new Set(plans.flatMap((x) => x.type === 'bolt' ? x.bolts.map((y) => y.on) : x.type === 'grip' ? [x.on] : []));
+      const cands = ps.filter((p) => !busy.has(p.id));
+      plans.push({ type: 'drag', on: pick(cands.length ? cands : ps).id });
+    }
     fg.plans = plans.map((x) => ({ ...x, at: nt }));
   }
   function rtIntent(fg) {
