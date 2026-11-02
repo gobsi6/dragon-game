@@ -84,7 +84,7 @@ function fromDragon(d, context) {
     vsCorrupt: gm?.vsCorrupt || 1,
     healMult: (ti.heal || 1) * (gm?.heal || 1), // 칭호·희귀 장비(거둔 이삭의 관)
     coverK: gm?.cover || 1, raidAtk: gm?.raidAtk || 1, flankK: gm?.flank || 0,
-    lingerK: gm?.linger || 0, ccResist: ti.ccResist || 0, roarK: ti.roar || 0, // 균열 레이드 보상: 상태 이상 한 턴 더(장비), 마비·얼어붙음 떨쳐 내기·포효(칭호) // 레이드 희귀 장비: 막아서기 피해, 레이드 보스에게 주는 피해, 우회 확률
+    lingerK: gm?.linger || 0, ccResist: ti.ccResist || 0, roarK: ti.roar || 0, gustK: ti.gust || 0, // 균열 레이드 보상: 상태 이상 한 턴 더(장비), 마비·얼어붙음 떨쳐 내기·포효(칭호) // 레이드 희귀 장비: 막아서기 피해, 레이드 보스에게 주는 피해, 우회 확률
     engrave: logic.engraveOf(d), // 장신구에 새긴 속성: 그 속성 공격 피해 배율
     buff: bf?.id || null,
     element: BREATHS[d.kind]?.element || null,
@@ -330,6 +330,12 @@ function resisted(def, lines, k) {
 }
 // 위압: 드래곤의 위엄이 상대(드래곤·사냥감·강적·도둑)보다 높으면 그만큼 상대가 거는 상태 이상을 떨쳐 냄 (떨쳐 냈으면 true)
 function pressed(att, def, lines, k) {
+  // 레이드 보스 가운데 위엄이 높은 쪽(press: 떨쳐 낼 확률)은 드래곤이 거는 상태 이상을 위엄으로 눌러 버림 (균열의 아스테르)
+  if (def.creature && def.press && att && !att.creature) {
+    if (Math.random() >= def.press) return false;
+    lines.push(`${ga(def)} 위엄으로 ${att.name}${josa(att.name, '을', '를')} 눌러 ${STATUS[k]}에 빠지지 않았다.`);
+    return true;
+  }
   const P = COMBAT.majPress;
   if (!P || !att || def.creature) return false; // 떨쳐 내는 건 드래곤뿐
   const p = Math.min(P.max, Math.max(0, ((def.maj || 0) - (att.maj || 0)) * P.per));

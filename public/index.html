@@ -3573,9 +3573,11 @@
     $('restcard').hidden = !on;
     if (!on) return;
     const r = me.stance === 'hermit' ? S.stanceRules.hermit.rest : S.nestRules.rest;
-    $('rest-where').textContent = `${S.regions[me.nest].name}의 둥지`;
+    // 반려의 둥지에서 쉬는 중이면 그 둥지로 (내 둥지가 아닌 곳에서 쉬고 있음)
+    const pn = me.partnerNest;
+    $('rest-where').textContent = me.region !== me.nest && pn && pn.region === me.region ? `반려 ${pn.name}의 둥지 · ${S.regions[pn.region]?.name || ''}` : `${S.regions[me.nest]?.name || ''}의 둥지`;
     $('rest-clock').textContent = fmt(Date.now() - me.restAt);
-    const tr = S.nestRules.tiers?.[me.nestTier || 0]?.rest || 1;
+    const tr = S.nestRules.tiers?.[(me.restTier ?? me.nestTier) || 0]?.rest || 1; // 쉬는 둥지의 크기 (반려의 둥지면 그 둥지)
     const x = (v) => +(v * tr).toFixed(2);
     const cm = S.nestRules.restCountMin ?? 10;
     const need = cm * 60000 - (Date.now() - me.restAt); // 쉰 횟수로 세기까지 남은 시간
@@ -4103,9 +4105,7 @@
         const cnt = ` · 가르친 횟수 ${v.trains}/${v.trainLimit}${v.statCap ? ` · 능력치 합 ${sum}/${v.statCap}` : ''}`;
         label(full ? `이번 단계에서는 더 가르칠 수 없다. 조금 더 자라야 한다.${cnt}`
           : v.trainIn > 0 ? `가르치기: ${dur(v.trainIn)} 뒤에 다시 할 수 있다${cnt}`
-          : S.me.ap < R2.trainAp ? `가르치기: 행동력이 모자란다 (행동력 ${R2.trainAp} 필요)${cnt}`
-          : S.me.en < R2.trainEn ? `가르치기: 기력이 모자란다 (기력 ${R2.trainEn} 필요)${cnt}`
-          : `가르치기 (행동력 ${R2.trainAp}, 기력 ${R2.trainEn})${cnt}`);
+          : `가르치기 (행동력 ${R2.trainAp}, 기력 ${R2.trainEn})${S.me.ap < R2.trainAp ? ' · 행동력이 모자라다' : S.me.en < R2.trainEn ? ' · 기력이 모자라다' : ''}${cnt}`);
         const tired = full || v.trainIn > 0 || S.me.ap < R2.trainAp || S.me.en < R2.trainEn;
         for (const x of S.stats) { const b = btn(x.name, () => nestAct(partner ? 'kin:ptrain' : 'kin:train', { id: v.id, stat: x.key }), tired); const c = document.createElement('small'); c.className = 'cnt'; c.textContent = String(v.stats[x.key] ?? ''); b.append(' ', c); }
         st.dataset.taught = '1'; // 가르치기 단추에 능력치가 보이므로 따로 둔 능력치 줄은 숨김
@@ -4310,9 +4310,7 @@
         const sum = (S.stats || []).reduce((a, x) => a + (v.stats?.[x.key] || 0), 0);
         if (v.trains >= v.trainLimit || (v.statCap && sum >= v.statCap)) add('더 자라야 가르침', 'wait');
         else if (v.trainIn > 0) add(`가르치기 ${dur(v.trainIn)} 뒤`, 'wait');
-        else if (!partner && S.me && S.me.ap < (R2.trainAp || 0)) add('행동력이 모자람', 'wait');
-        else if (!partner && S.me && S.me.en < (R2.trainEn || 0)) add('기력이 모자람', 'wait');
-        else add('가르칠 수 있음', 'ok');
+        else add('가르칠 수 있음', 'ok'); // 새끼 쪽 사정만 봄. 내 행동력·기력이 모자란 건 카드의 가르치기 줄에 적음
       }
     }
     return out.slice(0, 3);
@@ -8737,6 +8735,7 @@
       row.querySelector('.e').textContent = t.eff;
       const c = row.querySelector('.c');
       if (t.have) c.textContent = `${t.cond} · 이룸`;
+      else if (t.hidden) c.textContent = t.cond; // 레이드를 깨기 전에는 조건이 보이지 않음
       else {
         c.textContent = `${t.cond} · ${t.cur} / ${t.at}`;
         const bar = document.createElement('span');
@@ -9838,7 +9837,7 @@
     for (const p of ps) {
       const fresh = p.at > SL.prevSeen && p.who.id !== S.me?.id;
       const c = slEl('button', `sl-card${p.pinned ? ' pin' : ''}${!p.pinned && Date.now() - p.last > 3 * 86400000 ? ' old' : ''}`); c.type = 'button';
-      const t = slEl('div', 't'); if (p.pinned) t.appendChild(slTag(p)); t.appendChild(slEl('b', '', p.title)); if (fresh) { const n = slEl('i', 'sl-new'); n.title = '새 글'; t.appendChild(n); }
+      const t = slEl('div', 't'); if (p.pinned) t.appendChild(slTag(p)); if (p.poll) t.appendChild(slEl('span', 'sl-pollb', p.poll === 'secret' ? '비밀 투표' : '투표')); t.appendChild(slEl('b', '', p.title)); if (fresh) { const n = slEl('i', 'sl-new'); n.title = '새 글'; t.appendChild(n); }
       if (p.mine && p.lastC > SL.prevSeen && p.lastBy && p.lastBy !== S.me?.id) t.appendChild(slEl('span', 'sl-newreply', '새 답')); // 내 글에 지난번 뒤로 남이 단 답
       const m = slEl('div', 'm'); m.append(slWho(p.who), slEl('span', '', slAgo(p.at)), slCm(p.n));
       c.append(t, slEl('p', 'p', p.preview.replace(/\s*\n\s*/g, ' ')), m);
@@ -9940,6 +9939,7 @@
       }
       a.appendChild(g);
     }
+    if (p.poll) a.appendChild(slPoll(p));
     box.appendChild(a);
     const cs = slEl('section', 'sl-cms');
     cs.appendChild(slEl('h4', '', `남긴 답 ${SL.comments.length}`));
@@ -10023,6 +10023,112 @@
     gi = slCinImg(f, i, 'main'); // 입력칸 안 오른쪽 끝에 그림 단추
     box.appendChild(cs);
   }
+  // ── 석판 투표 ──
+  // 공개 투표: 내가 투표했거나 마감되면 결과(표 수 · 고른 드래곤)가 보임 / 비밀 투표: GM이 공개한 뒤에 결과만 (사유는 GM에게만)
+  function slPoll(p) {
+    const v = p.poll;
+    const max = v.pick || 1; // 고를 수 있는 수 (여러 개 고르기면 3)
+    const myArr = Array.isArray(v.my) ? v.my : v.my != null ? [v.my] : [];
+    const secret = v.kind === 'secret';
+    const w = slEl('section', `sl-poll${v.closed ? ' closed' : ''}`);
+    w.setAttribute('aria-label', '투표');
+    // 머리: 방식 · 고를 수 있는 수 / 마감
+    const h = slEl('div', 'sl-poll-h');
+    h.appendChild(slEl('b', '', `${secret ? '비밀 투표' : '투표'}${max > 1 ? ` · ${max}개까지 고르기` : ''}`));
+    h.appendChild(slEl('span', '', v.closed ? '마감됨' : v.closesAt ? `${slLeft(v.closesAt)} 뒤 마감` : '글쓴이가 마감할 때까지'));
+    w.appendChild(h);
+    if (secret) w.appendChild(slEl('p', 'sl-poll-n', v.revealed ? '결과가 공개되었다. 누가 무엇을 골랐는지는 보이지 않고, 고른 까닭은 이름 없이 보인다.' : '누가 무엇을 골랐는지는 보이지 않는다. 결과와 고른 까닭은 GM이 공개한 뒤에 이름 없이 보인다.'));
+    // 고르던 것·적던 까닭은 다시 그려도 남게 (다른 드래곤의 표로 글이 새로 그려질 때 등). 투표하면 지움
+    SL.pollDraft ||= {};
+    const dr = SL.pollDraft[p.id] ||= { dirty: false };
+    if (!dr.dirty || v.closed) { dr.pick = myArr.slice(); dr.memo = { ...(v.myReasons || {}) }; dr.dirty = false; } // 손대지 않았으면 서버에 저장된 내 표로
+    let pick = dr.pick;
+    const memo = dr.memo; // 비밀 투표: 고른 선택지마다 적는 까닭
+    const showRes = v.show && v.counts;
+    const list = slEl('div', 'sl-poll-list');
+    const foot = slEl('div', 'sl-poll-f');
+    // 결과가 보이면 표 많은 순 (같으면 적은 순서), 순위 숫자를 붙이고 1위는 금빛 막대
+    const order = v.options.map((_, i) => i);
+    const rankOf = {};
+    if (showRes) {
+      order.sort((a, b) => (v.counts[b] || 0) - (v.counts[a] || 0) || a - b);
+      for (const i of order) rankOf[i] = 1 + order.filter((j) => (v.counts[j] || 0) > (v.counts[i] || 0)).length;
+    }
+    const topN = showRes ? Math.max(...v.counts) : 0;
+    list.classList.toggle('ranked', !!showRes);
+    list.classList.toggle('open', !v.closed);
+    const draw = () => {
+      list.replaceChildren();
+      order.forEach((i) => {
+        const t = v.options[i];
+        const on = pick.includes(i);
+        const row = slEl('div', `sl-poll-row${on ? ' on' : ''}${on && !v.closed ? ' memo' : ''}${showRes && topN > 0 && (v.counts[i] || 0) === topN ? ' first' : ''}`); // memo: 밑에 고른 까닭 칸이 펼쳐진 줄 · first: 1위 (top은 상단바 이름이라 피함)
+        const b = slEl('button', 'sl-poll-o'); b.type = 'button';
+        b.setAttribute('aria-pressed', String(on));
+        b.disabled = v.closed;
+        const top = slEl('span', 'r');
+        if (!v.closed) top.appendChild(slEl('span', 'mark', max > 1 ? (on ? '☑' : '☐') : on ? '●' : '○'));
+        if (showRes) top.appendChild(slEl('span', 'rank', String(rankOf[i])));
+        top.appendChild(slEl('span', 't', t));
+        if (showRes) top.appendChild(slEl('span', 'n', String(v.counts[i] || 0)));
+        b.appendChild(top);
+        if (showRes) {
+          const bar = slEl('span', 'bar'); const fill = slEl('i'); fill.style.width = `${v.total ? ((v.counts[i] || 0) / v.total) * 100 : 0}%`; bar.appendChild(fill); b.appendChild(bar);
+          if (v.voters?.[i]?.length) b.appendChild(slEl('span', 'who', v.voters[i].join(', ')));
+        }
+        // 고른 까닭: 결과가 보이면 선택지 밑에 (비밀 투표는 GM이 아니면 이름 없이)
+        const memos = showRes && v.memos?.[i]?.length ? v.memos[i] : null;
+        b.addEventListener('click', () => {
+          if (v.closed) return;
+          if (max === 1) pick = [i];
+          else if (pick.includes(i)) pick = pick.filter((x) => x !== i);
+          else if (pick.length >= max) return toast(`${max}개까지 고를 수 있다.`);
+          else pick = [...pick, i];
+          dr.pick = pick; dr.dirty = true;
+          draw();
+          if (pick.includes(i)) list.querySelector(`.sl-poll-memo[data-o="${i}"] textarea`)?.focus({ preventScroll: true });
+        });
+        row.appendChild(b);
+        if (memos && !(on && !v.closed)) { // 까닭을 적는 중인 줄에는 적는 칸만
+          const ms = slEl('ul', 'sl-poll-ms');
+          for (const x of memos) { const li = slEl('li', x.mine ? 'mine' : ''); if (x.name) li.appendChild(slEl('b', '', x.name)); li.appendChild(slText('span', x.text)); ms.appendChild(li); }
+          row.appendChild(ms);
+        }
+        // 고른 선택지 밑에 까닭을 적는 칸이 펼쳐짐 (적지 않아도 됨). 공개 투표는 이름과 함께, 비밀 투표는 이름 없이 결과와 함께 보임
+        if (on && !v.closed) {
+          const m = slEl('label', 'sl-poll-memo'); m.dataset.o = String(i);
+          const ta = slEl('textarea', 'input'); ta.rows = 2; ta.maxLength = SL.rules.poll?.reason || 200; ta.value = memo[i] || '';
+          ta.placeholder = secret ? '고른 까닭 (적지 않아도 된다 · 공개되면 이름 없이 보인다)' : '고른 까닭 (적지 않아도 된다 · 이름과 함께 보인다)';
+          ta.setAttribute('aria-label', `${t}를 고른 까닭`);
+          ta.addEventListener('input', () => { memo[i] = ta.value; dr.dirty = true; });
+          m.appendChild(ta); row.appendChild(m);
+        }
+        list.appendChild(row);
+      });
+      // 아래 줄: 고른 수 · 투표하기 / 참여 수 · 바꾸기
+      foot.replaceChildren();
+      if (!v.closed) {
+        foot.appendChild(slEl('span', 'k', showRes && myArr.length && pick.join() === myArr.join() ? `${v.total}명 참여` : max > 1 ? `${pick.length} / ${max}` : ''));
+        const go = slEl('button', 'btn primary sl-poll-go', myArr.length ? '고른 것 바꾸기' : '투표하기'); go.type = 'button';
+        go.addEventListener('click', () => {
+          if (!pick.length) return toast('먼저 하나를 고르자.');
+          go.disabled = true;
+          const reasons = Object.fromEntries(pick.map((o) => [o, memo[o] || '']));
+          slAct('slate:vote', { id: p.id, opts: pick, reasons }, () => { delete SL.pollDraft[p.id]; toast(myArr.length ? '고른 것을 바꾸었다.' : '투표했다.'); loadSlatePost(); });
+          setTimeout(() => { go.disabled = false; }, 800);
+        });
+        foot.appendChild(go);
+      } else foot.appendChild(slEl('span', 'k', showRes ? `${v.total}명 참여 · 마감됨` : '마감됨'));
+    };
+    draw();
+    w.append(list, foot);
+    const own = slEl('div', 'sl-poll-own');
+    if (v.canClose) { const c = slEl('button', 'btn', '마감하기'); c.type = 'button'; c.addEventListener('click', () => { if (confirm('투표를 마감할까? 마감하면 더 이상 고를 수 없다.')) slAct('slate:poll:close', { id: p.id }, () => loadSlatePost()); }); own.appendChild(c); }
+    if (v.canReveal) { const r = slEl('button', 'btn', '결과 공개 (GM)'); r.type = 'button'; r.addEventListener('click', () => { if (confirm('비밀 투표의 결과(선택지별 표 수)와 고른 까닭을 모두에게 공개할까? 까닭은 이름 없이 보이고, 누가 무엇을 골랐는지는 공개되지 않는다.')) slAct('slate:poll:reveal', { id: p.id }, () => loadSlatePost()); }); own.appendChild(r); }
+    if (own.children.length) w.appendChild(own);
+    return w;
+  }
+  const slLeft = (at) => { const ms = at - Date.now(); if (ms <= 0) return '곧'; const h = Math.ceil(ms / 3600000); return h >= 24 ? `${Math.floor(h / 24)}일 ${h % 24 ? `${h % 24}시간` : ''}`.trim() : `${h}시간`; };
   function slWrite(box) {
     const d = SL.draft;
     slBack(box, '그만두기', d.id ? 'post' : 'list');
@@ -10079,12 +10185,59 @@
     });
     iw.append(lbl, strip, add, file); f.appendChild(iw);
     drawThumbs();
+    // 투표 붙이기 (새로 새길 때만. 붙인 투표는 나중에 고칠 수 없음)
+    if (!d.id) {
+      const PR = SL.rules.poll || { min: 2, max: 30, opt: 40, days: [1, 3, 7], multi: 3 };
+      d.poll ||= null;
+      const pw = slEl('div', 'sl-pollw');
+      const tg = slEl('label', 'sl-polltg'); const cb = slEl('input'); cb.type = 'checkbox'; cb.checked = !!d.poll;
+      tg.append(cb, slEl('span', '', '투표 붙이기'));
+      const ed = slEl('div', 'sl-polled');
+      const drawEd = () => {
+        ed.replaceChildren(); ed.hidden = !d.poll;
+        if (!d.poll) return;
+        // 투표 방식은 GM에게만 고르게 (비밀 투표는 GM 전용). 다른 드래곤은 늘 공개 투표
+        if (!S.isGm) d.poll.kind = 'public';
+        else {
+          const kind = slEl('div', 'sl-pollkind'); kind.setAttribute('role', 'group'); kind.setAttribute('aria-label', '투표 방식');
+          for (const [k, l, s] of [['public', '공개 투표', '누가 무엇을 골랐는지 보인다'], ['secret', '비밀 투표 (GM)', '표 수와 까닭은 공개한 뒤에 이름 없이']]) {
+            const b = slEl('button', ''); b.type = 'button'; b.setAttribute('aria-pressed', String(d.poll.kind === k));
+            b.append(slEl('b', '', l), slEl('small', '', s));
+            b.addEventListener('click', () => { d.poll.kind = k; drawEd(); });
+            kind.appendChild(b);
+          }
+          ed.appendChild(kind);
+        }
+        d.poll.options.forEach((t, i) => {
+          const r = slEl('div', 'sl-pollopt');
+          const inp = slEl('input', 'input'); inp.maxLength = PR.opt; inp.value = t; inp.placeholder = `선택지 ${i + 1}`;
+          inp.addEventListener('input', () => { d.poll.options[i] = inp.value; });
+          r.appendChild(inp);
+          if (d.poll.options.length > PR.min) { const x = slEl('button', 'btn', '빼기'); x.type = 'button'; x.addEventListener('click', () => { d.poll.options.splice(i, 1); drawEd(); }); r.appendChild(x); }
+          ed.appendChild(r);
+        });
+        if (d.poll.options.length < PR.max) { const more = slEl('button', 'btn', `선택지 더하기 (${d.poll.options.length} / ${PR.max})`); more.type = 'button'; more.addEventListener('click', () => { d.poll.options.push(''); drawEd(); ed.querySelectorAll('.sl-pollopt input')[d.poll.options.length - 1]?.focus(); }); ed.appendChild(more); }
+        // 여러 개 고르기 (글쓴이가 원할 때만)
+        const ml = slEl('label', 'sl-polltg sl-pollmulti'); const mc = slEl('input'); mc.type = 'checkbox'; mc.checked = !!d.poll.multi;
+        mc.addEventListener('change', () => { d.poll.multi = mc.checked; });
+        ml.append(mc, slEl('span', '', `여러 개 고르기 (한 드래곤이 ${PR.multi || 3}개까지)`)); ed.appendChild(ml);
+        const dl = slEl('label', 'sl-polldays'); dl.appendChild(slEl('span', 'lbl', '마감'));
+        const sel = slEl('select', 'input');
+        for (const [v2, l] of [[0, '글쓴이가 마감할 때까지'], ...PR.days.map((n) => [n, `${n}일 뒤`])]) { const o = slEl('option', '', l); o.value = String(v2); sel.appendChild(o); }
+        sel.value = String(d.poll.days); sel.addEventListener('change', () => { d.poll.days = Number(sel.value); });
+        dl.appendChild(sel); ed.appendChild(dl);
+      };
+      cb.addEventListener('change', () => { d.poll = cb.checked ? { kind: 'public', options: ['', ''], days: 3 } : null; drawEd(); });
+      pw.append(tg, ed); f.appendChild(pw);
+      drawEd();
+    }
     const go = slEl('button', 'btn primary', d.id ? '고친 대로 새기기' : '석판에 새기기'); go.type = 'button';
     go.addEventListener('click', () => {
       if (!d.title.trim() || !d.body.trim()) return toast('제목과 내용을 모두 적어야 새길 수 있다.');
       if (d.imgs?.some((x) => x.busy)) return toast('그림을 올리는 중이다. 잠시만 기다리자.');
+      if (d.poll && d.poll.options.filter((x) => x.trim()).length < 2) return toast('투표 선택지를 두 개 이상 적자.');
       go.disabled = true;
-      socket.emit(d.id ? 'slate:edit' : 'slate:post', { id: d.id, head: d.head, title: d.title, body: d.body, imgs: (d.imgs || []).map((x) => x.id) }, (res) => {
+      socket.emit(d.id ? 'slate:edit' : 'slate:post', { id: d.id, head: d.head, title: d.title, body: d.body, imgs: (d.imgs || []).map((x) => x.id), poll: !d.id && d.poll ? { kind: d.poll.kind, options: d.poll.options.map((x) => x.trim()).filter(Boolean), days: d.poll.days, multi: !!d.poll.multi } : undefined }, (res) => {
         go.disabled = false;
         if (res.error) { SFX.play('error'); return toast(res.error); }
         SFX.play('craft');
@@ -11129,7 +11282,7 @@
     const p = v.pick;
     if (!p) return null;
     const sk = p.type === 'skill' ? (v.me.skills || []).find((x) => x.id === p.id) : null;
-    const name = { attack: '할퀴기', guard: '방어', cover: '막아서기', flee: '물러나기', flank: '우회', kindle: '숨 불어넣기' }[p.type] || sk?.name || '스킬';
+    const name = { attack: '할퀴기', guard: '방어', cover: '막아서기', flee: '물러나기', flank: '우회', kindle: '기억 깨우기' }[p.type] || sk?.name || '스킬';
     const usesAlly = p.type === 'cover' || (p.type === 'skill' && p.id === 'mend');
     let tgt = '';
     if (usesAlly) tgt = p.ally ? (v.allies || []).find((a) => a.id === p.ally)?.name || '' : p.type === 'skill' ? '나' : '';
@@ -11161,9 +11314,10 @@
       c.disabled = a.left || v.over || BT.replay;
       c.innerHTML = '<span class="nm"><b></b><em></em></span><span class="num"></span><span class="bar hp"><i></i></span><span class="sts"></span>';
       c.querySelector('b').textContent = a.name;
-      const ember = a.id === 'ember'; // 균열: 지켜야 할 불씨 (행동을 고르지 않음)
-      c.querySelector('em').textContent = ember ? (a.left ? '꺼짐' : '') : a.left ? '물러남' : a.down ? '쓰러짐' : v.over ? '' : a.chose ? '골랐다' : '고르는 중';
-      c.querySelector('em').classList.toggle('ok', !ember && !a.left && !a.down && !!a.chose && !v.over);
+      const boss = a.id === 'boss'; // 균열: 가라앉는 고룡 (막아서기로 붙잡는 대상. 행동을 고르지 않음)
+      c.classList.toggle('boss', boss);
+      c.querySelector('em').textContent = boss ? '' : a.left ? '물러남' : (a.tags || []).some((g) => g.t === '균열 아래로') ? '끌려감' : a.down ? '쓰러짐' : v.over ? '' : a.chose ? '골랐다' : '고르는 중';
+      c.querySelector('em').classList.toggle('ok', !boss && !a.left && !a.down && !!a.chose && !v.over);
       c.querySelector('.num').textContent = `${Math.max(0, a.hp)} / ${a.hpMax}`;
       c.querySelector('.bar i').style.width = `${Math.max(0, Math.min(100, (a.hp / a.hpMax) * 100))}%`;
       const sts = c.querySelector('.sts');
@@ -11349,7 +11503,7 @@
     acts.hidden = v.over || BT.replay;
     if (!v.over && !BT.replay) {
       const tg = (t) => (v.me.tags || []).some((g) => g.t === t || g.t.startsWith(t));
-      const rbStop = v.kind === 'raid' ? (v.me.down ? '쓰러져 있다. 동료가 치유로 일으켜 주기를 기다린다.' : tg('거두어짐') ? '검은 이삭에 거두어져 이번 턴은 움직일 수 없다.' : tg('잿빛에 먹힘') ? '잿빛에 먹혀 이번 턴은 몸이 말을 듣지 않는다. 동료가 포효나 치유로 깨워 주기를 기다린다.' : tg('균열 끝') ? '균열 끝에 매달려 있다. 곧 올라와 싸움에 돌아간다.' : '') : '';
+      const rbStop = v.kind === 'raid' ? (v.me.down ? '쓰러져 있다. 동료가 치유로 일으켜 주기를 기다린다.' : tg('거두어짐') ? '검은 이삭에 거두어져 이번 턴은 움직일 수 없다.' : tg('잿빛에 먹힘') ? '잿빛에 먹혀 이번 턴은 몸이 말을 듣지 않는다. 동료가 포효나 치유로 깨워 주기를 기다린다.' : '') : '';
       if (BT.waiting || rbStop) {
         const w = document.createElement('div');
         w.className = 'wait';
@@ -11392,47 +11546,22 @@
           b.addEventListener('click', () => btAct(act));
           acts.appendChild(b);
         };
-        // 균열: 서는 자리 (불씨 곁 · 균열 가장자리). 행동과 따로, 바꾸지 않으면 그대로 남음
-        if (v.kind === 'raid' && v.script === 'rift' && v.me.pos) {
-          const row = document.createElement('div');
-          row.className = 'bt-pos';
-          row.setAttribute('role', 'group');
-          row.setAttribute('aria-label', '서는 자리');
-          for (const [k, l] of [['near', '불씨 곁'], ['edge', '균열 가장자리']]) {
-            const b = document.createElement('button');
-            b.type = 'button';
-            b.className = 'btn';
-            b.textContent = l;
-            b.setAttribute('aria-pressed', String(v.me.pos === k));
-            b.addEventListener('click', () => {
-              if (v.me.pos === k) return;
-              socket.emit('raidboss:pos', { pos: k }, (res) => {
-                if (res.error) return toast(res.error);
-                BT.view = res.view;
-                if (!res.view.waiting) BT.waiting = false; // 불씨 곁을 떠나 골라 둔 행동이 물려졌으면 다시 고르게
-                renderBattle();
-              });
-            });
-            row.appendChild(b);
-          }
-          acts.appendChild(row);
-        }
         add('할퀴기', frozen ? '이번 턴은 움직일 수 없다' : v.me.attackCombo ? `연계! ${v.me.attackCombo}` : '기본 공격', { type: 'attack' }, { primary: true, combo: !!v.me.attackCombo });
         const pal = v.kind === 'raid' && BT.ally ? (v.allies || []).find((a) => a.id === BT.ally) : null; // 고른 동료
         for (const sk of v.me.skills || []) {
           const why = sk.cd > 0 ? `${sk.cd}턴 뒤` : v.me.en < sk.en ? '기력 부족' : '';
           const def = sk.id === 'breath' ? S.combat.breaths[S.me.kind] : S.combat.skills[sk.id];
           const cb = !why && sk.combo;
-          const healPal = sk.id === 'mend' && pal && !pal.left && pal.id !== 'ember'; // 불씨는 치유로 밝힐 수 없음
+          const healPal = sk.id === 'mend' && pal && !pal.left && pal.id !== 'boss' && !(pal.tags || []).some((g) => g.t === '균열 아래로'); // 가라앉는 고룡·끌려간 동료는 치유 대상이 아님
           add(sk.name, why || (healPal ? (pal.down ? `${pal.name} 일으키기` : `${pal.name}에게`) : cb ? `연계! ${sk.combo}` : `기력 ${sk.en}`), { type: 'skill', id: sk.id }, { disabled: !!why, title: [def?.desc, ...comboHints(sk.id)].filter(Boolean).join('\n'), combo: !!cb && !healPal });
         }
         const bigHit = v.intent && ['heavy', 'multi', 'debuff'].includes(v.intent.kind);
         add('방어', v.kind === 'raid' ? '피해 절반, 기력 +3' : bigHit ? '특기 피해 ¼ · 반격' : '피해 절반, 기력 +3', { type: 'guard' }, { suggest: bigHit && v.kind !== 'raid' });
         if (v.kind === 'raid') {
-          const coverOk = pal && !pal.down && !pal.left && !(pal.id === 'ember' && v.me.pos === 'edge'); // 불씨는 곁에서만 막아섬
-          add('막아서기', coverOk ? `${pal.name} 대신 맞는다` : '동료 카드를 먼저 고른다', { type: 'cover' }, { disabled: !coverOk });
+          const coverOk = pal && !pal.down && !pal.left; // 균열: 가라앉는 고룡 카드도 막아서기(붙잡기) 대상
+          add('막아서기', coverOk ? (pal.id === 'boss' ? '고룡을 붙잡는다' : `${pal.name} 대신 맞는다`) : '동료 카드를 먼저 고른다', { type: 'cover' }, { disabled: !coverOk });
           if (v.script === 'knights') add('우회', '날개로 대열 옆을 찌른다', { type: 'flank' });
-          if (v.script === 'rift') add('숨 불어넣기', v.me.pos === 'edge' ? '불씨 곁에서만' : '공격 대신 불씨를 밝힌다', { type: 'kindle' }, { disabled: v.me.pos === 'edge' }); // 균열: 불씨가 밝을수록 아스테르가 무뎌짐
+          if (v.script === 'rift') add('기억 깨우기', '금빛으로 한 칸', { type: 'kindle' }); // 균열: 고룡을 금빛 쪽으로 기울임
         }
         add(v.kind === 'duel' ? '항복' : '물러나기', v.kind === 'duel' ? '결투를 포기한다' : v.kind === 'raid' ? '이번 레이드의 몫 없이 빠진다' : v.boss ? '입힌 피해는 남는다' : v.foes ? '쓰러뜨린 만큼만 얻는다' : '전리품 없이 피한다', { type: 'flee' });
         // 사냥: 나머지는 예전처럼 알아서 (기력을 조금 남기고, 체력이 낮아지면 물러남)
@@ -13440,7 +13569,11 @@
       if ($('slate-dlg').open) {
         slSetSeen(Math.max(SL.latest, slSeen()));
         if (SL.page === 'list') loadSlate();
-        else if (SL.page === 'post' && x.id === SL.cur) { if (x.gone) { toast('보던 글이 지워졌다.'); slGo('list'); } else if (x.by !== S.me?.id) loadSlatePost(); }
+        else if (SL.page === 'post' && x.id === SL.cur) {
+          if (x.gone) { toast('보던 글이 지워졌다.'); slGo('list'); }
+          else if (x.vote && !x.state && SL.pollDraft?.[x.id]?.dirty) {} // 다른 드래곤의 표: 내가 고르거나 까닭을 적는 중이면 다시 그리지 않음 (투표하면 새로 그려짐)
+          else if (x.by !== S.me?.id) loadSlatePost();
+        }
       }
       renderSlateDot();
     });
@@ -13548,13 +13681,6 @@
     socket.on('rampage:end', onRampageEnd);
     socket.on('battle:start', (s2) => { if ($('arena-dlg').open) $('arena-dlg').close(); openBattle(s2.view, { lines: s2.lines, title: s2.title }); });
     socket.on('raidboss:chat', (m) => { if (BT?.view.kind === 'raid') { (BT.view.chat ||= []).push(m); btChatAdd(m); } });
-    socket.on('raidboss:allypos', (p) => { // 균열: 동료가 자리를 옮김
-      const a = BT?.view.kind === 'raid' && BT.view.allies?.find((x) => x.id === p.id);
-      if (!a) return;
-      a.tags = (a.tags || []).filter((t) => t.t !== '불씨 곁' && t.t !== '가장자리');
-      a.tags.push({ t: p.pos === 'edge' ? '가장자리' : '불씨 곁' });
-      renderBattle();
-    });
     socket.on('raidboss:wait', (p) => { if (BT?.view.kind !== 'raid') return; for (const a of BT.view.allies || []) a.chose = !!p.chosen[a.id]; renderBattle(); });
     socket.on('raidboss', (v) => { S.raidBoss = v; renderRaidBar(); });
     socket.on('battle:update', onBattleUpdate);

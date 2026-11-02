@@ -152,8 +152,10 @@ function titleProgress(d, t) {
   }
   return [0, 1];
 }
-function titleCondText(t) {
+function titleCondText(t, d) {
   const c = t.cond;
+  // 레이드 전용 칭호: 그 레이드를 한 번 깨기 전에는 조건을 감춤 (조건문으로 기믹을 짐작하지 않게)
+  if (t.hide && d && !(traitsOf(d).counts[t.hide] > 0) && !titlesOf(d).have.includes(t.id)) return `${REGIONS[RAIDBOSS.bosses[t.hide.replace('raidwin_', '')]?.region]?.name || '레이드'}에서 알게 된다`;
   if (c.count) {
     const [k, r] = c.count.split(':');
     const text = (TITLE_COUNT_NAMES[k] || `${k} {n}번`).replace('{n}', c.at);
@@ -198,7 +200,8 @@ function titlesView(d) {
     on: t.on || null,
     list: TITLES.map((ti) => {
       const [cur, at] = titleProgress(d, ti);
-      return { id: ti.id, name: ti.name, eff: ti.eff, cond: titleCondText(ti), have: t.have.includes(ti.id), cur: Math.min(cur, at), at };
+      const hidden = !!ti.hide && !t.have.includes(ti.id) && !(traitsOf(d).counts[ti.hide] > 0);
+      return { id: ti.id, name: ti.name, eff: ti.eff, cond: titleCondText(ti, d), have: t.have.includes(ti.id), cur: hidden ? 0 : Math.min(cur, at), at, hidden };
     }),
   };
 }
@@ -413,16 +416,18 @@ function regen(d, now = Date.now()) {
   };
   // 둥지에서 쉬면 더 빨리 참 (은둔은 더욱). 우호는 인간 마을에서 치료사 덕에 체력이 빨리 참
   let m = { ap: 1, hp: 1, en: 1 };
+  // 쉬는 둥지: 내 둥지, 또는 반려의 둥지에서 쉬면 그 둥지 (둥지 크기·보물더미·온천을 그 둥지 것으로)
+  const host = d.rest_at ? restHostOf(d) : d;
   if (d.rest_at) {
     const base = d.stance === 'hermit' ? SR.hermit.rest : NEST.rest;
-    const r = nestTier(d).rest; // 넓힌 둥지일수록 더 빨리
+    const r = nestTier(host).rest; // 넓힌 둥지일수록 더 빨리
     m = { ap: base.ap * r, hp: base.hp * r, en: base.en * r };
   } else if (d.stance === 'friendly' && isTown(d.region)) m = { ap: 1, hp: SR.friendly.townHpRegen, en: 1 };
   const tm = traitMods(d); // 특성: 회복 빠르기
   // 계절과 날씨. 둥지에서 쉬는 동안에는 궂은 날씨를 피함 (느려지는 효과는 없고, 겨울에는 둥지 온기로 더 빨라짐)
   const wx = weatherFx(d.region, now);
   const shelter = (v) => (d.rest_at ? Math.max(1, v) : v);
-  const rr = d.rest_at ? wx.restRegen * (1 + FACILITY.list.spa.rest * facPower(d, 'spa')) : 1; // 온천: 쉴 때 더 빨리
+  const rr = d.rest_at ? wx.restRegen * (1 + FACILITY.list.spa.rest * facPower(host, 'spa')) : 1; // 온천: 쉴 때 더 빨리 (쉬는 둥지의 온천)
   m = { ap: m.ap * shelter(wx.apRegen) * rr, hp: m.hp * shelter(wx.hpRegen) * rr, en: m.en * shelter(wx.enRegen) * rr };
   tick('ap', apCap(d), 'ap_at', RULES.apEvery / (m.ap * tm.apRegen));
   if (isFallen(d)) d.hp_at = now; // 쓰러져 있는 동안은 체력이 차지 않음
@@ -431,7 +436,7 @@ function regen(d, now = Date.now()) {
   // 정신: 광폭화 중에는 차지 않음. 둥지에서 쉬면 빨리, 은둔이면 조금 더 빨리
   if (d.mind == null) d.mind = MIND.max;
   if (berserkOf(d)) d.mind_at = now;
-  else tick('mind', MIND.max, 'mind_at', MIND.regenEvery / ((d.rest_at ? MIND.restMult * (hoardTier(nestInfo(d).value || 0)?.mind || 1) * (1 + FACILITY.list.spa.mind * facPower(d, 'spa')) : 1) * (d.stance === 'hermit' ? MIND.hermitMult : 1) * shelter(wx.mindRegen) * (hooks.together?.(d) ? BOND_RULES.together.mind : 1)));
+  else tick('mind', MIND.max, 'mind_at', MIND.regenEvery / ((d.rest_at ? MIND.restMult * (hoardTier(nestInfo(host).value || 0)?.mind || 1) * (1 + FACILITY.list.spa.mind * facPower(host, 'spa')) : 1) * (d.stance === 'hermit' ? MIND.hermitMult : 1) * shelter(wx.mindRegen) * (hooks.together?.(d) ? BOND_RULES.together.mind : 1)));
 }
 
 // ── 장소 ───────────────────────────────────────────
@@ -2025,6 +2030,11 @@ function nestInfo(d) {
   return n;
 }
 const nestTier = (d) => NEST.tiers[d.nest ? nestInfo(d).tier : 0];
+// 지금 쉬고 있는 둥지의 주인: 내 둥지에 있으면 나, 반려의 둥지에서 쉬면 반려 (server.js hooks.restHost). 못 찾으면 나
+function restHostOf(d) {
+  if (!d.rest_at || (d.nest && d.region === d.nest)) return d;
+  try { return hooks.restHost?.(d) || d; } catch { return d; }
+}
 // 둥지 한 줄 요약 (내 둥지 창·프로필·동료 목록): 단계, 보물더미 단계(금액은 빼고), 지은 시설, 식구 (home: life.summary의 home)
 function nestLine(d, home) {
   if (!d.nest) return null;
@@ -2493,7 +2503,7 @@ const achHasNew = (d) => { const t = combatJson(d).achSeenAt || 0; return Object
 // 다른 모듈(서버)이 채워 주는 것: hoard(드래곤 id) → 보물더미 물건, bossTrace(지역) → 최근 재앙의 흔적
 const hooks = {};
 
-module.exports = {
+module.exports = { restHostOf,
   migrateMasterwork,
   hooks, BOND_TOGETHER: BOND_RULES.together,
   seasonAt, weatherOf, weatherIdAt, weatherFx, fxText, fxProse, weatherDebug, SLOT_MS,
