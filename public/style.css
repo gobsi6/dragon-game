@@ -3889,7 +3889,8 @@ html:has(dialog.dlg:modal) { overflow: hidden; overscroll-behavior: none; } /* �
 .inv .it .it-tags { display: contents; }
 .inv .it .it-tags > .itags { margin-left: 0; }
 @media (max-width: 640px) {
-  .inv .it > b { flex-direction: column; align-items: stretch; gap: 5px; } /* 마름모는 따로 왼쪽에 붙어 있어 이름·꼬리표 모두 같은 선에서 시작 */
+  .inv .it > b:has(> .it-tags) { flex-direction: column; align-items: flex-start; gap: 5px; } /* 마름모는 따로 왼쪽에 붙어 있어 이름·꼬리표 모두 같은 선에서 시작. 꼬리표 묶음이 있는 소지품 줄만 (둥지 지키기 같은 다른 줄은 그대로) */
+  .inv .it > b:has(> .it-tags) > .nm { align-self: stretch; }
   .inv .it b > .nm { min-width: 0; }
   .inv .it b > .it-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
   .inv .it b > .it-tags > * { margin: 0; }
