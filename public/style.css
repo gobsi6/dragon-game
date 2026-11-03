@@ -3288,7 +3288,8 @@ button.rm-step { cursor: pointer; }
 .rm-pickmap { position: relative; border: 1px solid var(--line-in); border-radius: 3px; overflow: hidden; background: #ADA99F; }
 .rm-pickmap svg { display: block; width: 100%; height: auto; }
 /* 지도 크게 보기: 지도만 키우고 점은 크기 그대로 (키울수록 점 사이가 벌어져 길이 드러남) */
-.rm-pickmap { touch-action: pan-y; }
+.rm-pickmap { touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+body.mz-drag, body.mz-drag * { user-select: none !important; -webkit-user-select: none !important; cursor: grabbing !important; } /* 지도를 끄는 동안 글자가 선택되지 않게 */
 .rm-pickmap.zoomed { touch-action: none; cursor: grab; }
 .rm-pickmap.zoomed:active { cursor: grabbing; }
 .rm-zoom { position: relative; transform-origin: 0 0; --z: 1; }
@@ -3299,7 +3300,8 @@ button.rm-step { cursor: pointer; }
 .rm-zhead .rm-h3 { min-width: 0; }
 .rm-zhint { margin: 4px 0 0; font-size: 11.5px; line-height: 1.45; color: var(--muted); }
 .rm-zui { flex: none; display: flex; gap: 4px; }
-.rm-zui button { width: 26px; height: 26px; padding: 0; border: 1px solid var(--line); border-radius: 3px; background: var(--surface-2); color: var(--ink); font: 600 15px/1 var(--sans); cursor: pointer; }
+.rm-zui { gap: 3px; }
+.rm-zui button { width: 22px; height: 22px; padding: 0; border: 1px solid var(--line-in); border-radius: 3px; background: var(--surface-2); color: var(--ink-2); font: 600 12.5px/1 var(--sans); cursor: pointer; }
 .rm-pin { position: absolute; transform: translate(-50%, -50%); width: 28px; height: 28px; border-radius: 50%; padding: 0; border: 2px solid #fff; background: #B07A2A; color: #fff; font: 600 11px/1 var(--sans); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
 .rm-pin::after { content: ''; position: absolute; inset: -9px; }
 .rm-pin.gate { background: var(--steel); }

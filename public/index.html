@@ -14339,11 +14339,12 @@
     const pts = new Map(); let pan = null, pinch = null;
     host.addEventListener('pointerdown', (e) => {
       const map = e.target.closest('.rm-pickmap'); if (!map || !MZ.zoom || e.target.closest('.rm-zui')) return;
+      if (e.pointerType === 'mouse') e.preventDefault(); // 끌기를 시작할 때 글자가 선택되지 않게
       pts.set(e.pointerId, [e.clientX, e.clientY]);
       if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), z: MZ.zoom.z }; pan = null; }
       else if (pts.size === 1) pan = { x: e.clientX, y: e.clientY, ox: MZ.zoom.x, oy: MZ.zoom.y, moved: false };
     });
-    host.addEventListener('pointermove', (e) => {
+    addEventListener('pointermove', (e) => { // 지도 밖으로 나가도 계속 옮겨지게 문서 전체에서 받음
       if (!pts.has(e.pointerId)) return;
       pts.set(e.pointerId, [e.clientX, e.clientY]);
       const map = host.querySelector('.rm-pickmap'); if (!map) return;
@@ -14355,12 +14356,14 @@
       } else if (pan && MZ.zoom.z > 1) {
         const dx = e.clientX - pan.x, dy = e.clientY - pan.y;
         if (!pan.moved && Math.hypot(dx, dy) < 5) return;
+        if (!pan.moved) { try { map.setPointerCapture(e.pointerId); } catch {} document.body.classList.add('mz-drag'); } // 지도 밖으로 나가도 계속 끌리고, 글자가 선택되지 않게
         pan.moved = true; MZ.zoomDragged = true;
         MZ.zoom.x = pan.ox + dx; MZ.zoom.y = pan.oy + dy; mzZoomApply();
       }
     });
-    const up = (e) => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; if (!pts.size) { pan = null; setTimeout(() => { MZ.zoomDragged = false; }, 0); } };
-    host.addEventListener('pointerup', up); host.addEventListener('pointercancel', up);
+    const up = (e) => { if (!pts.has(e.pointerId)) return; pts.delete(e.pointerId); if (pts.size < 2) pinch = null; if (!pts.size) { pan = null; document.body.classList.remove('mz-drag'); setTimeout(() => { MZ.zoomDragged = false; }, 0); } };
+    // 지도 밖(창 밖 포함)에서 손을 떼도 끝나게: 문서 전체에서 받음
+    addEventListener('pointerup', up); addEventListener('pointercancel', up);
     addEventListener('resize', () => mzZoomApply());
   }
   // 지도 점·층 버튼 누르기: 창 몸통에 한 번만 붙임

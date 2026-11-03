@@ -524,6 +524,7 @@ const ITEMS = {
   herbal_ointment:{ name: '약초상 연고',    rarity: 'common',   type: 'use', use: { hp: 50 }, value: 18, desc: '왕도 약초상이 파는 쓴 냄새의 연고다.' },
   strong_wine:  { name: '진한 포도주',      rarity: 'common',   type: 'use', use: { en: 40 }, value: 20, desc: '한 통을 비우면 기운이 끓어오른다.' },
   salted_fish:  { name: '절인 생선',        rarity: 'common',   type: 'use', use: { ap: 2 },  value: 25, desc: '어촌에서 말린 짭짤한 생선이다.' },
+  chicken_meat: { name: '닭고기',           rarity: 'common',   value: 8,  desc: '왕도 시장 정육점에서 끈으로 묶어 내주는 통통한 닭고기. 사람 아이도 새끼 드래곤도 잘 먹는다.' }, // 시장에서 파는 고기 (식구 먹이)
   silver_chain: { name: '은 사슬',          rarity: 'uncommon', value: 15, desc: '인간 대장장이가 엮은 가는 사슬이다.' },
   travel_map:   { name: '여행자의 지도',    rarity: 'uncommon', type: 'equip', slot: 'charm', bonus: {}, expRare: 0.04, value: 60, desc: '인간들이 그린 대륙 지도다. 생각보다 정확하다.' },
   sea_compass:  { name: '항해사의 나침반',  rarity: 'uncommon', type: 'equip', slot: 'charm', bonus: { wing: 1 }, expRare: 0.03, value: 70, desc: '바늘이 언제나 북쪽을 가리킨다.' },
@@ -755,7 +756,7 @@ for (const it of Object.values(ITEMS)) if (it.value == null) it.value = RARITY_V
 // ── 인간 마을 ──────────────────────────────────────
 // 시장이 있는 지역과 파는 물건
 const SHOPS = {
-  capital: ['herbal_ointment', 'strong_wine', 'silver_chain', 'travel_map', 'holy_water'],
+  capital: ['herbal_ointment', 'strong_wine', 'silver_chain', 'travel_map', 'holy_water', 'chicken_meat'],
   coast:   ['herbal_ointment', 'salted_fish', 'bait_worm', 'silver_chain', 'sea_compass', 'salt_crystal'],
 };
 
@@ -980,7 +981,7 @@ const RUIN = {
 
 const TRADE = {
   // 시장에서 하루(한국 날짜)에 살 수 있는 개수. 적지 않은 물건은 제한 없음
-  dailyBuy: { salted_fish: 5, holy_water: 5, herbal_ointment: 10, strong_wine: 10, bait_worm: 10, salt_crystal: 5 },
+  dailyBuy: { salted_fish: 5, holy_water: 5, herbal_ointment: 10, strong_wine: 10, bait_worm: 10, salt_crystal: 5, chicken_meat: 10 },
   stanceCooldown: 12 * 60 * 60 * 1000, // 성향을 바꾼 뒤 다시 바꾸기까지 (12시간)
   refuseBelow: -40,                 // 평판이 이보다 낮으면 상인이 거래를 거절
   intimidateCost: 2,                // 위협하기에 드는 행동력
@@ -1052,6 +1053,7 @@ const KIN = {
     fish_octopus:  { bond: 6,  talent: 'guard',     sat: 35, eat: '문어 빨판이 손가락에 달라붙자 깔깔 웃다가, 데쳐 주자 쫄깃쫄깃 씹어 먹는다.' },
     fish_crab:     { bond: 5,  talent: 'smith',     sat: 25, eat: '단단한 게딱지를 돌로 톡톡 깨 가며 살을 파먹는다. 껍데기는 장난감이 되었다.' },
     fish_cod:      { bond: 7,  talent: 'herbalist', sat: 40, eat: '뽀얗게 끓인 대구 국물을 후후 불어 마시고는 볼이 발그레해진다.' },
+    chicken_meat:  { bond: 4,  talent: 'guard',     sat: 30, eat: '닭다리를 구워 주자 두 손으로 붙잡고 뜯는다. 기름 묻은 손을 옷에 쓱 닦았다.' },
     fish_flyingfish:{ bond: 6, talent: 'guard',     sat: 30, eat: '날치 지느러미를 펼쳐 보며 "나도 날 수 있을까?" 하고 묻는다. 구워 주자 맛있게 먹는다.' },
     fish_bream:    { bond: 12, talent: null,        sat: 60, eat: '금빛 비늘에 눈이 휘둥그레진다. 한 점 한 점 아껴 가며 먹는다.' },
     fish_ashfin:   { bond: 8,  talent: 'herbalist', sat: 40, eat: '처음엔 잿빛 비늘을 무서워하더니, 끓여 주자 국물까지 다 마신다. "이상하게 마음이 편해."' },
@@ -1136,7 +1138,7 @@ const KIN = {
       fish_mackerel: { bond: 3, sat: 25 }, fish_flounder: { bond: 3, sat: 25 }, fish_salmon: { bond: 6, sat: 45 }, fish_eel: { bond: 6, sat: 40 }, fish_marlin: { bond: 12, sat: 90 },
       bait_meat: { bond: 4, sat: 30 }, salted_fish: { bond: 4, sat: 30 },
       roast_meat: { bond: 8, sat: 60 }, ember_snack: { bond: 7, sat: 45 }, fish_skewer: { bond: 8, sat: 55 }, dragon_feast: { bond: 14, sat: 100 },
-      wyvern_meat: { bond: 6, sat: 40 }, wyvern_steak: { bond: 12, sat: 80 }, // 와이번 고기
+      wyvern_meat: { bond: 6, sat: 40 }, wyvern_steak: { bond: 12, sat: 80 }, chicken_meat: { bond: 3, sat: 25 }, // 와이번 고기 · 시장 닭고기
       // 늘어난 물고기 (가시 복어는 독이 있어 빼고, 오로라 해파리·달빛 가오리는 먹이가 아니라 재료)
       fish_mullet: { bond: 3, sat: 25 }, fish_gizzard: { bond: 3, sat: 25 }, fish_anchovy: { bond: 2, sat: 15 },
       fish_rockfish: { bond: 3, sat: 25 }, fish_jack: { bond: 3, sat: 20 }, fish_filefish: { bond: 3, sat: 20 }, fish_greenling: { bond: 3, sat: 25 }, fish_hairtail: { bond: 5, sat: 40 },
@@ -1355,6 +1357,7 @@ const FREE = {
     salt_crystal: {food: 1},
     wild_honey: {food: 2, life: 2, vigor: 2},
     wyvern_meat: {food: 3, vigor: 2},
+    chicken_meat: {food: 2, life: 1},
     moss_flower: {food: 2, clear: 2},
     snow_flower: {food: 2, clear: 2, frost: 2},
     glow_moss: {food: 2, clear: 2},
