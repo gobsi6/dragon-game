@@ -398,7 +398,7 @@ const ITEMS = {
   ashfin_broth:  { name: '잿빛 심해어 국', rarity: 'rare',     type: 'use', use: { hp: 30, mind: 35 }, value: 45, desc: '잿빛 심해어를 빛나는 이끼와 끓인 국. 마시면 흐려진 마음이 맑게 가라앉는다.' },
   crab_broth:    { name: '게딱지 탕',      rarity: 'uncommon', type: 'use', use: { buff: 'iron' },   value: 20, desc: '무쇠 집게 게를 통째로 우린 진한 탕. 먹고 나면 비늘이 게딱지처럼 단단해진다.' },
   flyfish_jerky: { name: '날치 육포',      rarity: 'uncommon', type: 'use', use: { buff: 'swift' },  value: 20, desc: '바람 날치를 바닷바람에 말린 육포. 씹을수록 날갯짓이 가벼워진다.' },
-  wyvern_skewer: { name: '와이번 꼬치',    rarity: 'uncommon', type: 'use', use: { hp: 40, en: 20, buff: 'swift' }, value: 30, desc: '와이번 고기에 꿀을 발라 구운 꼬치. 한입 베어 물면 날개 밑으로 찬 바람이 지나간다.' },
+  wyvern_skewer: { name: '와이번 꼬치',    rarity: 'uncommon', type: 'use', use: { hp: 60, en: 30 }, value: 30, desc: '와이번 고기에 꿀을 발라 구운 꼬치. 두툼한 살이 배 속을 든든하게 채운다.' }, // 강화 없이 회복만 (강화 음식과 구분)
   puffer_brew:   { name: '복어 독술',      rarity: 'uncommon', type: 'use', use: { buff: 'frenzy' }, value: 24, desc: '가시 복어의 독을 진한 술에 조금 풀었다. 한 모금이면 눈앞이 붉게 끓어오른다.' },
   jelly_circlet: { name: '오로라 해파리 관', rarity: 'rare', type: 'equip', slot: 'head', bonus: { wisdom: 2, majesty: 2 }, value: 120, desc: '오로라 해파리를 진주 둘레에 굳혀 만든 관. 어두운 곳에서 머리 위로 빛이 일렁인다.' },
   moonray_mantle:{ name: '달빛 가오리 날개덮개', rarity: 'rare', type: 'equip', slot: 'wing', bonus: { wing: 2, wisdom: 2 }, value: 120, desc: '달빛 가오리의 지느러미로 지은 날개덮개. 날갯짓 소리가 안개처럼 사라진다.' },
@@ -421,6 +421,7 @@ const ITEMS = {
   wind_mead:    { name: '바람 꿀술',        rarity: 'common',   type: 'use', use: { buff: 'swift' }, desc: '마시면 날개가 깃털처럼 가벼워진다.' },
   sage_tea:     { name: '현자의 차',        rarity: 'uncommon', type: 'use', use: { buff: 'focus' }, desc: '머리가 맑아져 숨결과 치유가 한층 강해진다.' },
   hunt_incense: { name: '사냥꾼의 향',      rarity: 'uncommon', type: 'use', use: { buff: 'lucky' }, desc: '망령의 재를 태운 연기가 사냥감의 숨은 보물을 드러낸다.' },
+  rainbow_charm: { name: '무지갯빛 깃 장식', rarity: 'rare', type: 'use', use: { buff: 'rainbow' }, value: 70, desc: '무지개새 깃털을 비단으로 묶어 뿔에 건다. 고개를 돌릴 때마다 빛깔이 바뀌어 사냥감의 눈을 어지럽힌다.' },
 
   // ── 만든 물건: 장신구 (slot: 착용 자리, bonus: 능력치, expRare: 원정 귀한 물건 확률) ──
   frost_plume:  { name: '서리 깃장식',      rarity: 'uncommon', type: 'equip', slot: 'head',  bonus: { wing: 2 },             desc: '얼음 결정을 엮은 머리 장식이다.' },
@@ -573,6 +574,7 @@ const BUFFS = {
   swift: { name: '날렵함', desc: '날개(속도) +4',      spd: 4 },
   focus: { name: '집중',   desc: '숨결·치유 +20%',     mag: 1.2 },
   lucky: { name: '행운',   desc: '사냥 전리품 확률 +25%', drop: 0.25 },
+  rainbow: { name: '무지갯빛', desc: '공격 +8%, 받는 피해 −8%, 날개(속도) +2', atk: 1.08, taken: 0.92, spd: 2 }, // 무지개새 깃털: 하나하나는 약하지만 고르게
   festive: { name: '축제의 흥', desc: '공격 +10%, 받는 피해 −10%, 전리품 확률 +10%', atk: 1.1, taken: 0.9, drop: 0.1 }, // 왕도 축제에서 춤추면
 };
 
@@ -635,6 +637,7 @@ const RECIPES = [
   { out: 'flyfish_jerky',   needs: { fish_flyingfish: 2, salt_crystal: 1 },              en: 4,  wis: 3 },
   { out: 'wyvern_skewer',   needs: { wyvern_meat: 1, wild_honey: 1 },                   en: 4,  wis: 3 },  // 와이번 고기
   { out: 'wyvern_steak',    needs: { wyvern_meat: 2, red_clay: 1 },                     en: 4,  wis: 2 },
+  { out: 'rainbow_charm',   needs: { rainbow_feather: 1, silk_scrap: 1, gold_ore: 1 },  en: 6,  wis: 10 }, // 무지개새 깃털 강화
   { out: 'puffer_brew',     needs: { fish_puffer: 1, strong_wine: 1 },                   en: 5,  wis: 6 },
   { out: 'jelly_circlet',   needs: { fish_jelly: 1, deep_pearl: 1, silver_chain: 1 },    en: 14, wis: 13 },
   { out: 'moonray_mantle',  needs: { fish_moonray: 2, silk_scrap: 2, deep_pearl: 1 },    en: 14, wis: 13 },
@@ -2022,7 +2025,7 @@ for (const ids of Object.values(REGION_PLACES)) ids.sort((a, b) => PLACES[a].lev
 const PLACE_RULES = {
   tooHard: 3,          // 내 레벨 + 이만큼보다 어려운 장소에는 들어갈 수 없음
   moveCooldown: 1200,  // 장소를 옮기는 간격 (ms)
-  lootPerLevel: { uncommon: 0.012, rare: 0.005 }, // 깊은 장소일수록 귀한 재료가 잘 나옴 (사냥터 Lv.1당)
+  lootPerLevel: { uncommon: 0.005, rare: 0.002 }, // 깊은 장소일수록 귀한 재료가 조금 더 잘 나옴 (채집·탐사, 사냥터 Lv.1당). 장소보다 지혜가 더 중요하게 작게 둠
   sinewChance: 0.08,   // 사냥감을 쓰러뜨릴 때마다 질긴 힘줄이 나올 확률 (어디서든, 무리에 섞인 어린 것은 빼고)
   dropChance: { common: 0.6, uncommon: 0.45, rare: 0.3 }, // 사냥에 이기면 그 장소의 전리품이 나올 확률 (강적은 2개 확정)
   drop2Chance: 0.35,   // 두 번째 전리품(식재료, PLACE_DROPS2)이 나올 확률 (사냥감마다)
