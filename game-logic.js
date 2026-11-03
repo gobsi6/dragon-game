@@ -1532,6 +1532,9 @@ function useItem(d, id, have, opts = {}) {
     lines.push(`${mins}분 동안 ${B.name} 상태가 된다. (사냥·강적 전투에서 ${B.desc})`);
     if (old && old.id !== u.buff) lines.push(`먼저 있던 ${old.name}의 효과는 사라졌다.`);
     if (u.mindCost) lines.push(...loseMind(d, u.mindCost)); // 광기의 묘약: 정신이 깎임
+    // 강화와 함께 회복도 있는 음식 (와이번 꼬치 등): 가득 차 있지 않은 만큼 함께 회복
+    if (u.hp && d.hp < hpCap(d)) { const before = d.hp; d.hp = Math.min(hpCap(d), d.hp + u.hp); lines.push(`체력이 ${d.hp - before} 회복되었다.`); }
+    if (u.en && d.en < enCap(d)) { const before = d.en; d.en = Math.min(enCap(d), d.en + u.en); lines.push(`기력이 ${d.en - before} 회복되었다.`); }
     return { title: it.name, lines, items: [{ id, qty: -1 }] };
   }
   // 여러 효과가 있는 물건(체력·기력·행동력·정신)은 하나라도 쓸모가 있으면 씀. 이미 가득 찬 효과는 건너뜀
