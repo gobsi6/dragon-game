@@ -3,7 +3,7 @@
 //
 // 접속 중인 드래곤은 서버가 들고 있는 그 객체를 고쳐야 함
 // (DB만 고치면 그 드래곤이 다음에 저장할 때 옛 값으로 덮어씀)
-const { REGIONS, ITEMS, STANCES, KINDS, KIN, DAY, TRAITS, STATS, NEST, RULES, STAT_POINTS } = require('./game-data');
+const { REGIONS, ITEMS, STANCES, KINDS, KIN, DAY, TRAITS, STATS, NEST, RULES, STAT_POINTS, TITLES } = require('./game-data');
 const EVENTS = require('./game-events');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
@@ -99,6 +99,14 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
 
   // 동작 하나하나. p: 화면에서 보낸 값
   const OPS = {
+    // 이벤트 칭호 주기·빼기
+    title(d, kin, now, p) {
+      const id = str(p.title);
+      const r = logic.eventTitle(d, id, p.give !== false);
+      if (r.error) return r;
+      const nm = TITLES.find((t) => t.id === id)?.name || id; // 받는 쪽 알림에는 칭호 이름만
+      return { log: `이벤트 칭호 '${nm}' ${p.give !== false ? '줌' : '뺌'}`, tell: p.give !== false ? `칭호 '${nm}'${josa(nm, '을', '를')} 받았다.` : null };
+    },
     gold(d, kin, now, p) {
       const n = int(p.n);
       if (!n || Math.abs(n) > 1e7) return { error: '금화 숫자를 확인하자.' };
@@ -378,6 +386,7 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
     on('gm:meta', () => ({
       ok: true,
       events: EVENTS.map((e) => ({ id: e.id, title: e.title, when: e.when })),
+      eventTitles: TITLES.filter((t) => t.event).map((t) => ({ id: t.id, name: t.crownText ? `${t.name} (${t.crownText})` : t.name })), // 이름이 같은 칭호는 순위로 구분 // 이벤트 칭호 (GM이 줌)
       origins: ORIGINS,
       log: db.gmLogList(40),
     }));

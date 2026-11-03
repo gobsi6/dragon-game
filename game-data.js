@@ -1839,6 +1839,11 @@ const EXP_RULES = { forkFrom: 0.35, forkTo: 0.6, stanceTone: { hostile: ['bold',
 //      { duelLoss: n }(결투에서 진 수, 항복·자동 결투 포함. 전적에 이미 있는 패배도 셈)
 //      endure(사냥·강적에서 전투당 한 번, 쓰러질 피해를 체력 1로 버팀. 값은 맞기 직전 체력이 최대의 이 비율 이상일 때만, 0이면 조건 없음), endureHeal(버틸 때 최대 체력의 이만큼 되찾음)
 const TITLES = [
+  // 이벤트 칭호: 조건으로 얻지 않고 GM이 줌 (event). 효과는 없고, 달고 있으면 이름 옆에 금빛 왕관 (crown)과 작은 글씨 (crownText)
+  { id: 'ev_wed_yes', name: '결혼하고 싶은 용', cond: { event: true }, mod: {}, eff: '효과 없음 · 달고 있으면 이름 옆에 금빛 왕관', event: true, crown: 'gold', crownText: '1위' },
+  { id: 'ev_wed_no',  name: '결혼하기 싫은 용', cond: { event: true }, mod: {}, eff: '효과 없음 · 달고 있으면 이름 옆에 금빛 왕관', event: true, crown: 'gold', crownText: '1위' },
+  { id: 'ev_wed_yes2', name: '결혼하고 싶은 용', cond: { event: true }, mod: {}, eff: '효과 없음 · 달고 있으면 이름 옆에 은빛 왕관', event: true, crown: 'silver', crownText: '2위' },
+  { id: 'ev_wed_no2',  name: '결혼하기 싫은 용', cond: { event: true }, mod: {}, eff: '효과 없음 · 달고 있으면 이름 옆에 은빛 왕관', event: true, crown: 'silver', crownText: '2위' },
   // 사냥
   { id: 'hunter1',   name: '풋내기 사냥꾼',     cond: { count: 'huntwin', at: 10 },  mod: { huntGold: 1.1 },  eff: '사냥 금화 +10%' },
   { id: 'hunter2',   name: '노련한 사냥꾼',     cond: { count: 'huntwin', at: 100 }, mod: { atk: 1.04 },      eff: '사냥 공격 +4%' },

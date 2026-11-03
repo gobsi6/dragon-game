@@ -7890,7 +7890,12 @@
     t.className = 't';
     t.innerHTML = `<div class="nrow"><b id="profile-name"></b></div><span></span><div class="chips2"></div>`;
     t.querySelector('b').textContent = p.name;
-    t.querySelector('span').textContent = `${p.kindName} · Lv. ${p.level}`;
+    t.querySelector(':scope > span').textContent = `${p.kindName} · Lv. ${p.level}`;
+    if (p.title?.crown === 'gold' || p.title?.crown === 'silver') { // 이벤트 칭호: 프로필 이름을 금빛·은빛으로, 이름 옆에 왕관
+      const nb = t.querySelector('b'); nb.classList.add(`${p.title.crown}-name`);
+      const cr = document.createElement('span'); cr.className = `crown-fl crown-${p.title.crown}`; cr.textContent = '♛'; cr.title = `'${p.title.name}' 칭호를 달고 있다`; nb.after(cr);
+      if (p.title.crownText) { const ct = document.createElement('span'); ct.className = 'crown-rank'; ct.textContent = p.title.crownText; cr.after(ct); }
+    }
     if (p.title) { const tt = document.createElement('span'); tt.className = 'ttl'; tt.textContent = p.title.name; tt.title = p.title.eff; t.querySelector('.nrow').prepend(tt); }
     const chips = t.querySelector('.chips2');
     const chip = (text, cls) => { const c = document.createElement('span'); c.className = cls; c.textContent = text; chips.appendChild(c); };
@@ -12686,6 +12691,16 @@
     const kd = S.kinds[d.kind];
     s.appendChild(gEl('small', 'note', `지금: ${kd?.name || d.kind} · ${kd ? `${S.combat.breaths[d.kind]?.name || ''}` : ''}`));
 
+    // 이벤트 칭호: 효과 없이 이름 옆에 금빛 왕관. 주면 바로 달아 줌
+    if (GM.meta?.eventTitles?.length) {
+      s = gmSection(body, '이벤트 칭호', '조건 없이 GM이 주는 칭호. 받으면 바로 달리고, 달고 있는 동안 이름 옆에 금빛 왕관이 붙는다.');
+      r = gmRow(s, '칭호');
+      const has = new Set((d.titles?.list || []).filter((x) => x.have).map((x) => x.id));
+      const evSel = gSelect(r, '이벤트 칭호', GM.meta.eventTitles.map((t) => [t.id, `${t.name}${has.has(t.id) ? ' (가짐)' : ''}`]), GM.meta.eventTitles[0].id);
+      gBtn(r, '주기', () => gmDo('title', { title: evSel.value, give: true }, '칭호를 줬다.'));
+      gBtn(r, '빼기', () => gmDo('title', { title: evSel.value, give: false }, '칭호를 뺐다.'));
+    }
+
     // 금화·경험치·물건
     s = gmSection(body, '금화 · 경험치 · 물건');
     r = gmRow(s, '금화');
@@ -13360,8 +13375,10 @@
       const nmT = document.createElement('span');
       nmT.className = 'n';
       nmT.textContent = d.name;
+      if (d.tcrown === 'gold' || d.tcrown === 'silver') nmT.classList.add(`${d.tcrown}-name`); // 이벤트 칭호: 이름도 금빛·은빛
       b.appendChild(nmT);
       if (d.crown) { const fl = document.createElement('span'); fl.className = 'crown-fl'; fl.textContent = '✿'; fl.title = '들꽃 화관을 쓰고 있다'; b.appendChild(fl); }
+      if (d.tcrown === 'gold' || d.tcrown === 'silver') { const cr = document.createElement('span'); cr.className = `crown-fl crown-${d.tcrown}`; cr.textContent = '♛'; cr.title = d.title ? `'${d.title}' 칭호를 달고 있다` : '왕관'; b.appendChild(cr); if (d.tcrownText) { const ct = document.createElement('span'); ct.className = 'crown-rank'; ct.textContent = d.tcrownText; b.appendChild(ct); } } // 이벤트 칭호의 금빛 왕관과 옆 작은 글씨 (예: 1위)
       const rel = S.rel?.[d.id];
       if (rel) {
         const t = document.createElement('span');

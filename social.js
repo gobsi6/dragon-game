@@ -271,7 +271,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       kin: (kin?.home || []).map((k) => ({ name: k.name, type: k.type, stage: k.stage })),
       equip: Object.entries(equip).map(([slot, item]) => ({ slot, item })),
       traits: logic.traitsOf(d).list,
-      title: (() => { const t = logic.titleOn(d); return t ? { name: t.name, eff: t.eff } : null; })(),
+      title: (() => { const t = logic.titleOn(d); return t ? { name: t.name, eff: t.eff, crown: t.crown || null, crownText: t.crownText || null } : null; })(), // crown: 이벤트 칭호 (프로필 이름을 금빛으로)
       dead: !!d.dead_at,
       // 먼 여행을 떠났으면 그때와 남긴 말, 의지를 이어받았으면 누구에게서
       departed: (() => { if (!d.dead_at) return null; let f = d.fallen; if (typeof f === 'string') { try { f = JSON.parse(f); } catch { f = null; } } return f?.departed ? { at: f.at, words: f.words || '' } : null; })(),

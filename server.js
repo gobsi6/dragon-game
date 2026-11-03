@@ -484,6 +484,8 @@ const publicDragon = (d) => ({
   place: logic.placeOf(d),
   title: logic.titleName(d),
   crown: logic.crownOn(d), // 들꽃 화관을 쓰고 있음 (이름 옆에 꽃)
+  tcrown: logic.titleCrown(d), // 단 칭호의 왕관 (이벤트 칭호: 'gold' → 이름 옆에 금빛 왕관)
+  tcrownText: logic.titleCrownText(d), // 왕관 옆 작은 글씨
 });
 
 // 꽃다발 같은 물건을 보물 상자에 넣을 때: 받은 선물 장부에서 아직 상자에 넣지 않은 가장 최근 것을 찾아 보낸 이·쪽지를 돌려줌

@@ -126,6 +126,8 @@ function titlesOf(d) {
 }
 const titleOn = (d) => TITLE_BY_ID[titlesOf(d).on] || null;
 const titleName = (d) => titleOn(d)?.name || null;
+const titleCrown = (d) => titleOn(d)?.crown || null; // 단 칭호의 왕관 (이벤트 칭호: 'gold')
+const titleCrownText = (d) => titleOn(d)?.crownText || null; // 왕관 옆 작은 글씨 (예: '1위')
 // 단 칭호의 효과. 지역 칭호는 그 지역에 있을 때만 공격·받는 피해가 바뀜
 function titleMods(d) {
   const t = titleOn(d);
@@ -193,6 +195,22 @@ function checkTitles(d) {
   if (got.length && !t.on) t.on = got[got.length - 1].id;
   return got;
 }
+// 이벤트 칭호 주기·빼기 (GM). give: true면 주고 바로 달아 줌
+function eventTitle(d, id, give) {
+  const ti = TITLE_BY_ID[id];
+  if (!ti || !ti.event) return { error: '이벤트 칭호가 아니다.' };
+  const t = titlesOf(d);
+  if (give) {
+    if (t.have.includes(id)) return { error: '이미 가진 칭호다.' };
+    t.have.push(id); t.on = id;
+    chron(d, 'mark', `칭호 '${ti.name}'${josa(ti.name, '을', '를')} 받았다.`);
+    return { ok: true };
+  }
+  if (!t.have.includes(id)) return { error: '갖고 있지 않은 칭호다.' };
+  t.have = t.have.filter((x) => x !== id);
+  if (t.on === id) t.on = null;
+  return { ok: true };
+}
 function setTitle(d, id) {
   const t = titlesOf(d);
   if (!id) { t.on = null; return { ok: true, lines: ['칭호를 떼었다.'] }; }
@@ -208,9 +226,10 @@ function titlesView(d) {
     on: t.on || null,
     list: TITLES.map((ti) => {
       const [cur, at] = titleProgress(d, ti);
+      if (ti.event && !t.have.includes(ti.id)) return null; // 이벤트 칭호는 받은 뒤에만 목록에 보임
       const hidden = !!ti.hide && !t.have.includes(ti.id) && !(traitsOf(d).counts[ti.hide] > 0);
-      return { id: ti.id, name: ti.name, eff: ti.eff, cond: titleCondText(ti, d), have: t.have.includes(ti.id), cur: hidden ? 0 : Math.min(cur, at), at, hidden };
-    }),
+      return { id: ti.id, name: ti.name, eff: ti.eff, cond: ti.event ? `이벤트로 받은 칭호${ti.crownText ? ` · ${ti.crownText}` : ''}` : titleCondText(ti, d), have: t.have.includes(ti.id), cur: ti.event ? 1 : hidden ? 0 : Math.min(cur, at), at, hidden, crown: ti.crown || null };
+    }).filter(Boolean),
   };
 }
 
@@ -2662,11 +2681,11 @@ module.exports = { restHostOf,
   corruptedRegion, corruptUntil, corruptPeriod, isCorrupted, corruptMul, isRuin, berserkOf, loseMind, nearestTown,
   placeOf, goPlace, isFallen, chron, chronOf,
   titlesOf, titleOn, titleName, titleMods, checkTitles, setTitle, titlesView,
-  combatJson, dayIdx, gearMods, clampVitals, planExpedition, planView, facOf, facSlots, facPower, buildFacility, removeFacility, // 모브 드래곤(game-mobs.js)이 씀
+  eventTitle, combatJson, dayIdx, gearMods, clampVitals, planExpedition, planView, facOf, facSlots, facPower, buildFacility, removeFacility, // 모브 드래곤(game-mobs.js)이 씀
   xpNeed, atMaxLevel,
   dexOf, dexMeet, dexWin, dexItems, dexBackfill, dexView, dexSeen, dexHasNew, // 도감
   checkAch, achView, achSeen, achHasNew, // 업적
-  chestOf, chestAdd, chestValue, chestView, chestMigrate, chestTake, crownOn, // 보물 상자 · 화관
+  chestOf, chestAdd, chestValue, chestView, chestMigrate, chestTake, crownOn, titleCrown, titleCrownText, // 보물 상자 · 화관 · 칭호 왕관
   nestLine, // 둥지 한 줄 요약
   gearAt, gearOn, // 강화된 한 개가 어디 있는지
 };

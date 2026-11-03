@@ -3966,3 +3966,17 @@ html:has(dialog.dlg:modal) { overflow: hidden; overscroll-behavior: none; } /* �
 .mk-row .ctl:has(.ord-rw) .mk-go { min-width: 0; padding: 0 12px; }
 /* 사기·팔기 단추: 아이콘을 뺀 만큼 좁게 (96px → 76px). 숫자가 바뀌어도 폭이 덜 출렁이게 최소 너비는 남김 */
 .mk-go { min-width: 76px; padding: 0 11px; font-variant-numeric: tabular-nums; }
+/* 이벤트 칭호를 달면 이름 옆 금빛 왕관 (들꽃 화관 자리와 같은 규칙) */
+.crown-fl.crown-gold, .who .nm .crown-fl.crown-gold { color: #C9A227; font-size: 13.5px; text-shadow: 0 0 1px rgba(122, 90, 22, .35); }
+/* 이벤트 칭호: 이름을 짙은 금빛으로 ('이곳의 드래곤' 목록·프로필 창 제목). 밝은 바탕에서도 읽히게 왕관보다 한 단계 짙게 */
+.gold-name, .who .nm .n.gold-name, #profile-name.gold-name { color: #8F6A12 !important; }
+/* 왕관 옆 작은 글씨 (예: 1위): 왕관과 같은 금색 */
+.crown-rank, .who .nm .crown-rank { margin-left: 1px; color: #C9A227; font: 700 10.5px/1 var(--sans); letter-spacing: -.01em; vertical-align: 1px; white-space: nowrap; }
+.here-list .who .nm b .crown-rank { margin-left: -4px; } /* 줄의 간격을 덜어 왕관에 붙게 */
+/* 프로필 제목: 왕관과 '1위'를 이름에 바짝 붙임 (줄 간격을 덜어 냄) */
+.pf-head .t .nrow .crown-gold, .pf-head .t .nrow .crown-silver { margin-left: -4px; }
+.pf-head .t .nrow .crown-rank { margin-left: -7px; }
+/* 2위 이벤트 칭호: 금빛과 같은 모양, 은빛 (왕관·글씨는 밝은 은색, 이름은 한 단계 짙게) */
+.crown-fl.crown-silver, .who .nm .crown-fl.crown-silver { color: #9AA4AE; font-size: 13.5px; text-shadow: 0 0 1px rgba(60, 70, 80, .35); }
+.crown-silver + .crown-rank, .who .nm .crown-silver + .crown-rank { color: #8E98A2; }
+.silver-name, .who .nm .n.silver-name, #profile-name.silver-name { color: #5F6A75 !important; }
