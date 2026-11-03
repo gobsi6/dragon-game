@@ -343,6 +343,16 @@ function pressed(att, def, lines, k) {
   lines.push(`${ga(def)} 위엄으로 ${att.name}${josa(att.name, '을', '를')} 눌러 ${STATUS[k]}에 빠지지 않았다.`);
   return true;
 }
+// 상대가 움직일 때 효과가 나는 상태 이상: 상대가 이번 턴에 이미 움직였으면 한 턴 더 (applyDebuff)
+const ON_FOE_TURN = ['freeze', 'stun', 'weaken'];
+// 상대의 공격을 받을 때 효과가 나는 자기 상태 (막는 것·빈틈): 이번 턴에 상대가 모두 이미 움직였으면 한 턴 더
+// 안 그러면 늦게 움직인 쪽은 '두 턴 동안'이 상대 공격 한 번만 막게 됨 (비늘 세우기·돌 비늘·안개·하늘 낙하 뒤 빈틈)
+const ON_FOE_HIT = ['harden', 'stone', 'evade', 'exposed'];
+function setSelf(b, f, self) {
+  const opp = b && (f === b.a ? foesOf(b) : [b.a]).filter((o) => o && o.hp > 0);
+  const late = !!opp && opp.length > 0 && f.turnNow != null && opp.every((o) => o.acted === f.turnNow);
+  for (const [k, n] of Object.entries(self)) f.st[k] = n + (late && ON_FOE_HIT.includes(k) ? 1 : 0);
+}
 function applyDebuff(att, def, debuff, chance, element, lines) {
   if (!debuff) return;
   if (chance != null && Math.random() >= chance) return;
@@ -357,6 +367,9 @@ function applyDebuff(att, def, debuff, chance, element, lines) {
   const resist = !def.creature && MR ? Math.min(MR.max, (def.maj || 0) * MR.per) : 0;
   for (let [k, n] of Object.entries(debuff)) {
     if ((k === 'freeze' || k === 'stun') && resisted(def, lines, k)) continue;
+    // 상대가 이번 턴에 이미 움직였으면 한 턴 더: 안 그러면 이번 턴 끝에 한 턴이 그냥 줄어 상대 차례를 그만큼 덜 막음
+    // (얼어붙음·마비는 한 턴도 못 빼앗고, 움츠러듦은 세 번이 아니라 두 번만 꺾음. 물살 휩쓸기 연계와 같은 처리)
+    if (ON_FOE_TURN.includes(k) && att && att.turnNow != null && def.acted === att.turnNow) n += 1;
     if (resist && (k === 'burn' || k === 'poison' || k === 'bleed') && n > 1 && Math.random() < resist) n -= 1;
     // 지혜: 드래곤이 거는 상태 이상이 확률로 한 턴 더 감 (확률 = 지혜 × per, 최대 max. 얼어붙음·마비는 빼고)
     const WL = COMBAT.wisLinger;
@@ -418,7 +431,7 @@ function perform(b, f, foe, act, lines) {
   }
   if (act.type === 'special') {
     const s = f.special;
-    if (s.self) { for (const [k, n] of Object.entries(s.self)) f.st[k] = n; lines.push(`${ga(f)} ${s.name}${josa(s.name, '으로', '로')} 몸을 단단히 했다.`); return; }
+    if (s.self) { setSelf(b, f, s.self); lines.push(`${ga(f)} ${s.name}${josa(s.name, '으로', '로')} 몸을 단단히 했다.`); return; }
     let dealt = 0;
     for (let i = 0; i < (s.hits || 1); i++) dealt += hit(f, foe, s.power, { element: s.element, special: true }, lines, `${ga(f)} ${s.name}!`);
     if (dealt) applyDebuff(f, foe, s.debuff, s.chance, s.element, lines);
@@ -432,7 +445,7 @@ function perform(b, f, foe, act, lines) {
       f.en -= s.en;
       (f.used ||= []).push(s.name);
       f.cd[act.id] = s.cd + 1; // 이번 턴 끝에 하나 줄어듦
-      if (s.self) for (const [k, n] of Object.entries(s.self)) f.st[k] = n;
+      if (s.self) setSelf(b, f, s.self);
       if (s.enGain) { const before = f.en; f.en = Math.min(f.enMax, f.en + Math.round(s.enGain * wisK(f))); lines.push(`${ga(f)} 숨을 깊이 골랐다. 기력을 ${Math.round(f.en - before)} 되찾았다.`); }
       if (s.heal) {
         const h = healAmount(f, s);

@@ -396,6 +396,8 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
     const c = oCombat;
     const res = { live: null, auto: null };
     if (logic.berserkOf(o)) res.live = res.auto = '광폭화 중이다.';
+    else if (o.exp_end) res.live = res.auto = '원정 중이다. 결투를 받을 수 없다.'; // 원정을 떠난 동안은 직접·자동 결투 모두 못 받음
+    else if (logic.isFallen(o)) res.live = res.auto = '쓰러져 있다. 결투를 받을 수 없다.';
     else if (!c.duelOn) res.live = res.auto = '결투를 받지 않는다.';
     else {
       if (!on) res.live = '접속해 있지 않다.';
