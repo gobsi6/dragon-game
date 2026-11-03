@@ -421,7 +421,7 @@ const ITEMS = {
   wind_mead:    { name: '바람 꿀술',        rarity: 'common',   type: 'use', use: { buff: 'swift' }, desc: '마시면 날개가 깃털처럼 가벼워진다.' },
   sage_tea:     { name: '현자의 차',        rarity: 'uncommon', type: 'use', use: { buff: 'focus' }, desc: '머리가 맑아져 숨결과 치유가 한층 강해진다.' },
   hunt_incense: { name: '사냥꾼의 향',      rarity: 'uncommon', type: 'use', use: { buff: 'lucky' }, desc: '망령의 재를 태운 연기가 사냥감의 숨은 보물을 드러낸다.' },
-  rainbow_charm: { name: '무지갯빛 깃 장식', rarity: 'rare', type: 'use', use: { buff: 'rainbow' }, value: 70, desc: '무지개새 깃털을 비단으로 묶어 뿔에 건다. 고개를 돌릴 때마다 빛깔이 바뀌어 사냥감의 눈을 어지럽힌다.' },
+  rainbow_charm: { name: '무지갯빛 가루', rarity: 'rare', type: 'use', use: { buff: 'rainbow' }, value: 70, desc: '무지개새 깃털을 곱게 빻아 금가루와 섞고 비단 주머니에 담았다. 비늘에 뿌리면 고개를 돌릴 때마다 빛깔이 바뀌어 사냥감의 눈을 어지럽힌다.' },
 
   // ── 만든 물건: 장신구 (slot: 착용 자리, bonus: 능력치, expRare: 원정 귀한 물건 확률) ──
   frost_plume:  { name: '서리 깃장식',      rarity: 'uncommon', type: 'equip', slot: 'head',  bonus: { wing: 2 },             desc: '얼음 결정을 엮은 머리 장식이다.' },
