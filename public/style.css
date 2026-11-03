@@ -3946,7 +3946,7 @@ html:has(dialog.dlg:modal) { overflow: hidden; overscroll-behavior: none; } /* �
 #sp-rows .arow .sp-num { width: 40px; min-height: 28px; padding: 0; border: 1px solid var(--line-in); border-radius: 3px; background: var(--surface-2); font: 600 13px/1 var(--sans); color: var(--forest); text-align: center; font-variant-numeric: tabular-nums; -moz-appearance: textfield; appearance: textfield; }
 #sp-rows .arow .sp-num::-webkit-outer-spin-button, #sp-rows .arow .sp-num::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 /* 판매 잠금 자물쇠: 평소엔 흐린 작은 자물쇠, 걸면 '잠금' 꼬리표처럼 */
-.sell-lock { display: inline-flex; align-items: center; gap: 3px; min-height: 0; padding: 1px 5px; margin-left: 4px; border: 1px solid transparent; border-radius: 3px; background: none; color: var(--muted); opacity: .55; font: 600 10.5px/1.4 var(--sans); cursor: pointer; vertical-align: middle; }
+.sell-lock { display: inline-flex; align-items: center; gap: 3px; min-height: 0; padding: 1px 2px; margin-left: -4px; /* 개수(×1) 바로 옆에 붙게: 줄의 틈(7px)을 거의 지움 */ border: 1px solid transparent; border-radius: 3px; background: none; color: var(--muted); opacity: .55; font: 600 10.5px/1.4 var(--sans); cursor: pointer; vertical-align: middle; }
 .sell-lock:hover { opacity: 1; border-color: var(--line-in); }
-.sell-lock.on { opacity: 1; color: #7A4E12; background: #FBF1E4; border-color: #E8D3B4; }
+.sell-lock.on { opacity: 1; color: #7A4E12; background: #FBF1E4; border-color: #E8D3B4; padding: 1px 5px; margin-left: -2px; }
 .mk-list .locked .mk-go { display: none; }
