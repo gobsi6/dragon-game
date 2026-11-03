@@ -14,7 +14,7 @@
   --steel-l: #9DB3C6;
   --forest: #3A6B50;
 
-  --k-black: #6E5E92;  --t-black: #2F3138;
+  --k-black: #6E5E92;  --t-black: #312A3E;
   --k-gold: #B8913A;   --t-gold: #8A6A1C;
   --k-white: #6F9BBC;  --t-white: #4F6472;
   --k-green: #5E8A55;  --t-green: #3E6A4E;
@@ -25,8 +25,8 @@
   --k-bronze: #A3723F; --t-bronze: #7A3F25;
   /* 이야기 창 이름표: 채도를 낮춘 보석빛(흑연·고금·진주·숲·석류·백랍·사파이어·자수정·적동)으로 차분하게, 색상은 서로 멀리.
      화이트만 진주빛 밝은 바탕에 짙은 글씨 */
-  --n-white: #FFFFFF;  --nf-white: #1F4A5E; /* 화이트: 흰 바탕에 짙은 청록 글씨 */
-  --n-gold: #B29146;   /* 골드 이름표만 밝은 금빛 (식구 카드 글씨는 읽히도록 --t-gold 짙은 금 그대로) */
+  --n-white: #8DA3B6;  /* 화이트: 옅은 회청색 바탕에 흰 글씨 */
+  --n-gold: #A08038;   /* 골드 이름표만 밝은 금빛 (식구 카드 글씨는 읽히도록 --t-gold 짙은 금 그대로) */
   --k-clear: #A9B3B9;  --t-clear: #5B666E; /* 투명 드래곤 (GM 시험용) */
   --k-orsha: #7A6E84; /* 생존자 오르샤: 잿빛 보라 바탕에 모닥불 */
 
@@ -2812,9 +2812,8 @@ html { scrollbar-gutter: stable; }
 .log .msg { display: flex; flex-direction: column; gap: 1px; padding: 5px 8px 6px; border: 1px solid var(--line-in); border-radius: 4px; background: var(--surface-2); overflow-wrap: anywhere; }
 .log .msg.mine { background: #F2F5F8; border-color: #D3DDE6; }
 .log .mh { display: flex; align-items: center; gap: 6px; margin-bottom: 1px; }
-.log .mh .nm { padding: 1.5px 8px 2px; border: 0; border-radius: 4px; background: var(--nb, var(--t)); background-image: linear-gradient(180deg, rgba(255, 255, 255, .10), rgba(255, 255, 255, 0) 60%); color: var(--nf, #fff); text-shadow: 0 1px 1px rgba(0, 0, 0, .22); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .10), 0 1px 1.5px rgba(31, 35, 38, .10); font: 700 11.5px/1.5 var(--serif); letter-spacing: .02em; cursor: pointer; }
+.log .mh .nm { padding: 1px 7px 1.5px; border: 0; border-radius: 3px; background: var(--nb, var(--t)); color: var(--nf, #fff); font: 700 11.5px/1.5 var(--serif); letter-spacing: .01em; cursor: pointer; }
 .log .mh .nm:hover { filter: brightness(1.15); }
-.log .msg[style*="--n-white"] .mh .nm { text-shadow: none; } /* 밝은 바탕(화이트)은 글씨 그림자 없이 */
 .log .mh .nm:focus-visible { outline: 2px solid var(--t); outline-offset: 2px; }
 .log .mh time { font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
 /* 이름 머리줄: 줄임 없이 다 보여 줌. 한 줄에 다 들어가지 않으면 칭호·이름·시각이 통째로 다음 줄로 넘어감 (이름 칩 안에서는 꺾이지 않음) */
