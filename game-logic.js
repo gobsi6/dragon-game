@@ -144,7 +144,13 @@ function titleProgress(d, t) {
     if (typeof cb === 'string') { try { cb = JSON.parse(cb || '{}'); } catch { cb = {}; } }
     return [cb?.w || 0, c.duel];
   }
+  if (c.duelLoss) {
+    let cb = d.combat;
+    if (typeof cb === 'string') { try { cb = JSON.parse(cb || '{}'); } catch { cb = {}; } }
+    return [cb?.l || 0, c.duelLoss];
+  }
   if (c.hoard) return [d.nest ? nestInfo(d).value || 0 : 0, c.hoard];
+  if (c.fish) return [fishCaught(d, c.tier), c.fish];
   if (c.scars) {
     let sc = d.scars;
     if (typeof sc === 'string') { try { sc = JSON.parse(sc || '[]'); } catch { sc = []; } }
@@ -163,8 +169,10 @@ function titleCondText(t, d) {
   }
   if (c.level) return `레벨 ${c.level}`;
   if (c.duel) return `결투에서 ${c.duel}번 이기기`;
+  if (c.duelLoss) return `결투에서 ${c.duelLoss}번 지기 (항복 포함)`;
   if (c.scars) return `상흔 ${c.scars}개를 안고 살아남기`;
   if (c.hoard) return `보물더미 가치 ${c.hoard.toLocaleString()} 모으기`;
+  if (c.fish) return `해안에서 ${c.tier === 'rare' ? '귀한 물고기' : '물고기'} ${c.fish}마리 낚기`;
   return '';
 }
 // 새로 이룬 칭호를 얻음. 얻은 칭호 이름 목록을 돌려줌 (처음 얻으면 바로 달아 줌)
@@ -663,6 +671,13 @@ function gainXp(d, xp) {
   if (up) {
     chron(d, 'mark', `레벨 ${d.level}${[2, 4, 5, 9].includes(d.level % 10) ? '가' : '이'} 되었다.`);
     d.stat_pts = (d.stat_pts || 0) + STAT_POINTS.perLevel * up; // 나눌 능력치 포인트
+    // 이어받은 의지: 남은 포인트를 레벨 every마다 1점씩 (combat.heirDrip = { left, every }. 예전에 한꺼번에 받은 드래곤에게는 없음)
+    const dr = combatJson(d).heirDrip;
+    if (dr && dr.left > 0) {
+      let got = 0;
+      for (let L = lvBefore + 1; L <= d.level && dr.left > 0; L++) if (L % (dr.every || 2) === 0) { got += 1; dr.left -= 1; }
+      if (got) { d.stat_pts += got; chron(d, 'mark', `이어받은 의지가 깨어났다. 능력치 포인트 +${got}${dr.left > 0 ? ` (남은 의지 ${dr.left}점)` : ' (의지를 모두 이어받았다)'}`); }
+    }
     for (const s of Object.values(SKILLS)) {
       if (s.lv > lvBefore && s.lv <= d.level) chron(d, 'mark', `새 스킬 '${s.name}'${josa(s.name, '을', '를')} 배웠다.`);
     }
@@ -1044,7 +1059,11 @@ function finishExpedition(d, now = Date.now(), companions = 0) {
 
 // ── 제작 ───────────────────────────────────────────
 // 둥지의 대장장이가 있으면 기력이 30% 덜 듦
-const craftEn = (d, r) => Math.ceil(r.en * (d.perks?.smith ? 0.7 : 1) * (titleMods(d).craftEn || 1) * (atForge(d) ? CRAFT.forge.en - FACILITY.list.forge.en * (forgeP(d) - 1) : 1) - 1e-9);
+// 요리: 강화 음식(쓰면 사나움 등)과 식구 요리 (칭호 '둥지의 요리사'·'용족의 미식가'가 셈)
+const isCook = (id) => { const it = ITEMS[id]; return !!it && ((it.type === 'use' && !!it.use?.buff) || it.cat === 'meal'); };
+const craftEnBase = (d, r) => Math.ceil(r.en * (d.perks?.smith ? 0.7 : 1) * (titleMods(d).craftEn || 1) * (atForge(d) ? CRAFT.forge.en - FACILITY.list.forge.en * (forgeP(d) - 1) : 1) - 1e-9);
+// 칭호 '둥지의 요리사': 요리는 기력이 적어(3~4) 올림하면 줄지 않으니, 요리에만 내림으로 (최소 1)
+const craftEn = (d, r) => { const en = craftEnBase(d, r), k = isCook(r.out) ? titleMods(d).cookEn || 1 : 1; return k < 1 ? Math.max(1, Math.floor(en * k + 1e-9)) : en; };
 // ── 제작 확장: 걸작·강화·각인(장신구별 기록), 숨겨진 제작법, 공방 ──
 // 전투 설정(combat JSON)에 { gear: { 아이템id: { plus, mw, elem } }, recipes: [찾아낸 제작법], orders: { day, done } }
 const gearOf = (d) => {
@@ -1118,6 +1137,7 @@ function craft(d, outId, have, focus = null) {
   else lines.push(`${name}${josa(name, '을', '를')} 만들었다.`);
   items.push({ id: madeId, qty });
   traitCount(d, 'craft'); // 칭호: 제작 횟수
+  if (isCook(r.out)) traitCount(d, 'cook'); // 칭호: 요리 횟수
   let xp = 4 + Math.floor(r.en / 2) + (great ? 4 : 0);
   xp = xpOf(d, xp);
   const levelUp = gainXp(d, xp);
@@ -1226,6 +1246,7 @@ function freeCraft(d, ids, have, opts = {}) {
   if (r.mw) lines.push('불길까지 완벽하게 맞아 걸작이 되었다.');
   lines.push(...(hooks.creation ? hooks.creation(d, r, made.id) : []));
   if (r.kind === 'gift') lines.push('보물 상자에 간직하거나, 누군가에게 선물할 수 있다.');
+  if (r.kind === 'meal') traitCount(d, 'cook'); // 칭호: 자유 제작으로 빚은 식구 요리도 요리로 셈
   if (r.kind === 'meal') lines.push(`둥지 식구에게 건넬 수 있다. (유대 +${r.kin.bond} · 배 +${r.kin.sat}${r.kin.talent ? ` · ${TALENTS[r.kin.talent]?.name || ''} 쪽` : ''})`);
   freeNote(d, { at: Date.now(), mats: ids, id: made.id, kind: r.kind, slot: r.slot || null, top: r.top, aura: r.aura, quality: r.quality, mw: !!r.mw, gift: r.kind === 'gift', meal: r.kind === 'meal' });
   return { title: r.quality === 'great' ? '실험 · 빼어난 물건' : r.quality === 'good' ? '실험 · 좋은 물건' : '실험', lines, items, made: [{ id: made.id, qty: 1 }], free: { id: made.id, isNew: made.isNew, mats: ids, gift: r.kind === 'gift', meal: r.kind === 'meal' } };
@@ -1493,7 +1514,7 @@ function useItem(d, id, have, opts = {}) {
   if (u.buff) {
     const B = BUFFS[u.buff];
     const old = buffOf(d);
-    const mins = u.minutes || BUFFS.minutes; // 부엌에서 아이가 만든 것은 더 오래감
+    const mins = Math.round((u.minutes || BUFFS.minutes) * (titleMods(d).buffMin || 1)); // 부엌에서 아이가 만든 것은 더 오래감 · 칭호 '용족의 미식가'
     combatJson(d).buff = { id: u.buff, until: Date.now() + mins * 60000 };
     lines.push(`${mins}분 동안 ${B.name} 상태가 된다. (사냥·강적 전투에서 ${B.desc})`);
     if (old && old.id !== u.buff) lines.push(`먼저 있던 ${old.name}의 효과는 사라졌다.`);
@@ -1820,7 +1841,8 @@ const isBait = (id) => ITEMS[id]?.cat === 'bait';
 function fishRoll(d, bait, quality) {
   const wx = weatherIdAt(d.region), sx = seasonAt().id; // 날씨(wx)와 계절(sx)마다 잘 무는 물고기가 다름
   const q = FG.quality[quality] || {}, b = FG.bait[bait] || {};
-  const list = FG.fish.map((f) => ({ f, w: f.w * (q[f.tier] ?? 1) * (b[f.tier] ?? 1) * (f.wx?.[wx] ?? 1) * (f.sx?.[sx] ?? 1) }));
+  const fr = titleMods(d).fishRare || 1; // 칭호 '바다를 읽는 용': 드문·귀한 물고기가 더 잘 묾
+  const list = FG.fish.map((f) => ({ f, w: f.w * (q[f.tier] ?? 1) * (b[f.tier] ?? 1) * (f.wx?.[wx] ?? 1) * (f.sx?.[sx] ?? 1) * (f.tier === 'common' ? 1 : fr) }));
   let r = Math.random() * list.reduce((a, x) => a + x.w, 0);
   return (list.find((x) => (r -= x.w) < 0) || list[0]).f;
 }
@@ -1852,7 +1874,7 @@ function junkLand(d, quality) {
   return { title: '낚시', lines, items: [{ id, qty: 1 }], xp, levelUp, catch: { id, tier: 'junk', quality } };
 }
 function fishLand(d, bait, quality) {
-  if (FG.junk && Math.random() < (FG.junk.chance?.[quality] || 0)) return junkLand(d, quality);
+  if (FG.junk && Math.random() < (FG.junk.chance?.[quality] || 0) * (titleMods(d).fishJunk || 1)) return junkLand(d, quality); // 칭호 '갯바위 낚시꾼': 잡동사니가 덜 걸림
   const f = fishRoll(d, bait, quality);
   dexFish(d, f.id); // 도감: 낚은 수
   const it = ITEMS[f.id];
@@ -1884,7 +1906,8 @@ function fishReel(d, cast, now = Date.now()) {
   const dt = now - cast.bite;
   if (dt < 0) return { title: '낚시', lines: ['너무 일찍 당겼다. 물고기가 놀라 달아나고, 미끼만 사라졌다.'], items: [], missed: 'early' };
   if (dt > FG.window) return { title: '낚시', lines: ['찌가 잠잠해졌다. 물고기가 미끼만 떼어 먹고 달아났다.'], items: [], missed: 'late' };
-  return fishLand(d, cast.bait, dt <= FG.perfect ? 'perfect' : dt <= FG.good ? 'good' : 'ok');
+  const tk = titleMods(d).fishTiming || 1; // 칭호 '전설을 낚은 자': '완벽'·'좋음'을 더 넉넉하게 (놓치는 시간 FG.window는 그대로)
+  return fishLand(d, cast.bait, dt <= Math.min(FG.window, FG.perfect * tk) ? 'perfect' : dt <= Math.min(FG.window, FG.good * tk) ? 'good' : 'ok');
 }
 
 // ── 위협하기 (적대 성향만) ──────────────────────────
@@ -2313,6 +2336,8 @@ function dexItems(d, items, now = Date.now()) {
   }
 }
 const dexFish = (d, id) => { const f = dexOf(d).f; f[id] = (f[id] || 0) + 1; };
+// 낚은 물고기 수 (잡동사니 빼고, tier를 주면 그 등급만): 칭호 조건
+const fishCaught = (d, tier = null) => { const f = dexOf(d).f; return FISHING.fish.reduce((a, x) => a + (!tier || x.tier === tier ? f[x.id] || 0 : 0), 0); };
 // 도감이 생기기 전의 기록을 한 번에 옮겨 옴: 가진 물건, 장소별 사냥 승리, 지나온 이야기의 강적·재앙
 // owned: 소지품·보물더미의 물건 id 목록
 function dexBackfill(d, owned = []) {
@@ -2539,7 +2564,7 @@ module.exports = { restHostOf,
   presetsView, presetSave, presetRename, presetClear, presetUse, // 장비 프리셋
   repOf, setStance, marketInfo, buy, sell, intimidate,
   buildNest, flyHome, startRest, stopRest, hoardMove, hoardValue,
-  actionCost, townArrows, festivalNow, hasBounty, addRep, addFame, craftEn, gainXp, spendStats,
+  actionCost, townArrows, festivalNow, hasBounty, addRep, addFame, craftEn, isCook, gainXp, spendStats,
   traitsOf, traitMods, hasTrait, chooseTraits, traitCount,
   check, spendAp, rollItem, bundle, itemLabel, xpOf, isTown, lowHp, // 전투(game-combat.js)가 씀
   corruptedRegion, corruptUntil, corruptPeriod, isCorrupted, isRuin, berserkOf, loseMind, nearestTown,

@@ -42,6 +42,8 @@ function stageOf(k, now) {
   let i = 0;
   const a = ageOf(k, now);
   list.forEach((s, j) => { if (a >= s.from) i = j; });
+  // 한 번 지난 단계로는 되돌아가지 않음 (단계 나이를 바꿨을 때, 이미 노년이 된 사람이 다시 어른으로 보이지 않게)
+  if (k.type === 'human' && Number.isInteger(k.data.stage) && k.data.stage > i && k.data.stage < list.length) i = k.data.stage;
   return { i, name: list[i].name, next: list[i + 1] ? list[i + 1].from : null };
 }
 // 함께 사는 식구들: 인간, 깨어난 새끼, 알
@@ -1405,6 +1407,7 @@ function cook(d, kin, recipe, have, now = Date.now()) {
     if (others.length) lines.push(`다정한 ${k.name}${josa(k.name, '은', '는')} 만든 것을 조금씩 덜어 다른 아이들과 나눠 먹었다.`);
   }
   addBond(k, 1);
+  logic.traitCount(d, 'cook'); // 칭호: 부엌에 맡긴 요리도 요리로 셈
   lines.push(`${name}${qty > 1 ? ` ${qty}개` : ''}${josa(qty > 1 ? '개' : name, '을', '를')} 받았다. (오늘 ${cookLeft(d, now)}번 더)`);
   return { title: '부엌', lines, items: [...Object.entries(r.needs).map(([x, q]) => ({ id: x, qty: -q })), { id: out, qty }] };
 }

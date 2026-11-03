@@ -530,6 +530,7 @@ const meOf = (d) => ({
   yabawiNow: yabawi.nowInfo(), // 대륙 어딘가에 야바위꾼이 나와 있으면 { hint, until } (지역 카드의 알림 줄)
   nightMarket: nightMarket.status(d), // 축제 중이면 { open, until, next, here, mine } (왕도 야시장)
   craftMult: logic.titleMods(d).craftEn || 1,
+  cookMult: logic.titleMods(d).cookEn || 1, // 칭호 '둥지의 요리사': 요리 제작 기력
   mob: mobs.summary(d),                     // 맡은 모브 드래곤 의뢰와 진행도
   craft: logic.craftView(d),                // 찾아낸 제작법, 대성공 확률, 공방, 장신구 강화·각인
   buff: (() => { const b = logic.buffOf(d); return b ? { id: b.id, until: b.until } : null; })(),
@@ -556,6 +557,7 @@ const meOf = (d) => ({
   raid: logic.raidView(d),                 // 보물 도둑 (쫓을 수 있는 동안)
   kinOffersIn: db.offersToCount(d.id) + kinLove.inCount(d.id), // 받은 식구 입양 제안 수 + 혼인 청·아이를 두고 받은 청
   heir: (() => { try { return d.heir ? JSON.parse(d.heir) : null; } catch { return null; } })(), // 이어받은 의지
+  heirLeft: logic.combatJson(d).heirDrip?.left || 0, // 이어받은 의지 중 아직 받지 않은 능력치 포인트 (레벨 2마다 1점)
   love: (() => { const id = heartId(d.id); if (!id) return null; const o = online.get(id)?.dragon || db.getDragon(id); return o ? { id, name: o.name, bond: db.relBond(d.id, id), together: !!logic.hooks.together(d) } : null; })(),
   partnerNest: logic.hooks.partnerNest(d),
   fame: { value: d.fame || 0, name: fameTier(d.fame || 0).name, majesty: fameTier(d.fame || 0).majesty },
@@ -1535,9 +1537,10 @@ function onConnect(socket) {
     // 먼 여행을 떠난 드래곤의 의지: 능력치 포인트와 칭호
     const legacy = db.legacyGet(user.id);
     if (legacy) {
-      created.stat_pts = (created.stat_pts || 0) + (legacy.pts || 0);
+      // 능력치 포인트는 한꺼번에 주지 않고 레벨 DEPART.dripEvery마다 1점씩 (game-logic.js gainXp)
+      if (legacy.pts > 0) logic.combatJson(created).heirDrip = { left: legacy.pts, every: DEPART.dripEvery || 2 };
       logic.traitCount(created, 'heir');
-      logic.chron(created, 'mark', `먼 여행을 떠난 ${legacy.name}(레벨 ${legacy.level} ${KINDS[legacy.kind]?.name || ''})의 의지를 이어받았다. 능력치 포인트 +${legacy.pts}`);
+      logic.chron(created, 'mark', `먼 여행을 떠난 ${legacy.name}(레벨 ${legacy.level} ${KINDS[legacy.kind]?.name || ''})의 의지를 이어받았다. 레벨 ${DEPART.dripEvery || 2}마다 능력치 포인트 1점씩, 모두 ${legacy.pts}점`);
       created.heir = JSON.stringify(legacy);
       db.setHeir(created.id, legacy);
       db.legacySet(user.id, null);

@@ -340,7 +340,7 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
       foes: multi ? fg.foes.map((f, i) => ({ ...fv(f), i, intent: null })) : null,
       target: multi ? fg.targets[id] : null,
       intent,
-      allies: [...fg.players.filter((p) => p.id !== id).map((p) => ({ ...K.fighterView(p, false), tags: tagsOf(p, fg), left: !!p.left, chose: !!fg.pending[p.id] || !alive(p) || !!p.reaped || !!p.consumed })),
+      allies: [...fg.players.filter((p) => p.id !== id).map((p) => ({ ...K.fighterView(p, false), tags: tagsOf(p, fg), left: !!p.left, chose: !!fg.pending[p.id] || !alive(p) || !!p.reaped || !!p.consumed || held(p) })),
         ...(fg.sink ? [{ name: fg.B.boss.short, id: 'boss', hp: Math.min(fg.sink.got, fg.B.sink.need), hpMax: fg.B.sink.need, st: {}, tags: [{ t: '붙잡기' }], chose: true, left: false, down: false }] : [])], // 균열: 가라앉는 고룡 (막아서기 대상 = 붙잡기. 체력 칸은 끌어올린 칸)
       fire: fg.fire, phase: fg.phase, script: fg.B.script || 'morven', duelOn: fg.duel && fg.turn + 1 >= fg.duel.from ? fg.duel.on : null,
       deadline: fg.deadline,
@@ -362,7 +362,9 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
     fg.timer = setTimeout(() => resolve(fg), wait + 300);
     fg.timer.unref?.();
   }
-  const needs = (fg) => livePlayers(fg).filter((p) => !p.reaped && !p.consumed);
+  // 이번 턴에 몸이 묶임 (얼어붙음·마비): 행동을 고를 수 없고, 서버도 기다리지 않음 (고를 동료가 다 고르면 바로 넘어감)
+  const held = (p) => (p.st?.freeze || 0) > 0 || (p.st?.stun || 0) > 0;
+  const needs = (fg) => livePlayers(fg).filter((p) => !p.reaped && !p.consumed && !held(p));
   // 자동으로 고르기: 예고된 큰 공격은 막고, 위험하면 치유, 아니면 평소처럼
   function autoPick(fg, p) {
     const foe = targetOf(fg, p);
@@ -404,6 +406,7 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
     const B = fg.B;
     if (p.reaped) { lines.push(`${ga(p.name)} 거두어져 움직이지 못했다.`); return; }
     if (SC(fg).override?.(fg, p, a, lines)) return; // 보스마다 내 차례를 빼앗는 일 (균열: 잿빛에 먹힘, 붙잡기)
+    if (held(p)) { lines.push(`${ga(p.name)} ${(p.st.freeze || 0) > 0 ? '얼어붙어' : '마비되어'} 움직이지 못했다.`); return; } // 얼어붙음·마비: 막아서기·물러나기도 못 함 (번개 턴에 발톱으로 친 것으로도 치지 않음)
     (fg.actsNow ||= {})[p.id] = a.type === 'skill' ? `skill:${a.id}` : a.type; // 이번 턴에 무엇을 했는지 (균열: 번개 턴에 발톱으로 치면 튐)
     if (a.type === 'kindle') { if (SC(fg).kindle?.(fg, p, lines)) return; a = { type: 'guard' }; } // 균열: 기억 깨우기 (다른 레이드면 방어로)
     if (a.type === 'flee') {
@@ -1368,6 +1371,7 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
       if (!alive(me2)) return { error: me2.left ? '이미 물러났다.' : '쓰러져 있다. 동료가 일으켜 주기를 기다리자.' };
       if (me2.reaped) return { error: '거두어져 이번 턴은 움직일 수 없다.' };
       if (me2.consumed) return { error: '잿빛에 먹혀 이번 턴은 몸이 말을 듣지 않는다.' };
+      if (held(me2)) return { error: `${(me2.st.freeze || 0) > 0 ? '얼어붙어' : '마비되어'} 이번 턴은 움직일 수 없다.` };
       if (fg.pending[d.id]) return { error: '이미 골랐다. 동료를 기다리는 중이다.' };
       const type = str(p.type);
       if (!ACTS.includes(type)) return { error: '알 수 없는 행동이다.' };
@@ -1389,7 +1393,7 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
       if (why2) return { error: why2 };
       fg.pending[d.id] = a;
       if (needs(fg).every((x) => fg.pending[x.id])) { setImmediate(() => resolve(fg)); return { ok: true, waiting: true }; }
-      const chosen = Object.fromEntries(fg.players.map((x) => [x.id, !!fg.pending[x.id] || !alive(x) || !!x.reaped || !!x.consumed]));
+      const chosen = Object.fromEntries(fg.players.map((x) => [x.id, !!fg.pending[x.id] || !alive(x) || !!x.reaped || !!x.consumed || held(x)]));
       for (const x of fg.players) if (x.id !== d.id) emitTo(x.id, 'raidboss:wait', { chosen });
       return { ok: true, waiting: true, view: viewFor(fg, d.id) }; // 고른 행동(pick)이 화면에 보이게
     });
@@ -1429,7 +1433,7 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
       if (!fg || fg.over) return { error: '레이드 중이 아니다.' };
       if (!fg.pending[d.id]) return { ok: true, view: viewFor(fg, d.id) };
       delete fg.pending[d.id];
-      const chosen = Object.fromEntries(fg.players.map((x) => [x.id, !!fg.pending[x.id] || !alive(x) || !!x.reaped || !!x.consumed]));
+      const chosen = Object.fromEntries(fg.players.map((x) => [x.id, !!fg.pending[x.id] || !alive(x) || !!x.reaped || !!x.consumed || held(x)]));
       for (const x of fg.players) if (x.id !== d.id) emitTo(x.id, 'raidboss:wait', { chosen });
       return { ok: true, view: viewFor(fg, d.id) };
     });

@@ -84,7 +84,7 @@ function fromDragon(d, context) {
     vsCorrupt: gm?.vsCorrupt || 1,
     healMult: (ti.heal || 1) * (gm?.heal || 1), // 칭호·희귀 장비(거둔 이삭의 관)
     coverK: gm?.cover || 1, raidAtk: gm?.raidAtk || 1, flankK: gm?.flank || 0,
-    lingerK: gm?.linger || 0, ccResist: ti.ccResist || 0, roarK: ti.roar || 0, gustK: ti.gust || 0, // 균열 레이드 보상: 상태 이상 한 턴 더(장비), 마비·얼어붙음 떨쳐 내기·포효(칭호) // 레이드 희귀 장비: 막아서기 피해, 레이드 보스에게 주는 피해, 우회 확률
+    lingerK: gm?.linger || 0, ccResist: ti.ccResist || 0, roarK: ti.roar || 0, gustK: ti.gust || 0, critK: ti.crit || 0, // critK: 칭호 '결투장의 전설' (결투에는 칭호 효과가 없어 0) // 균열 레이드 보상: 상태 이상 한 턴 더(장비), 마비·얼어붙음 떨쳐 내기·포효(칭호) // 레이드 희귀 장비: 막아서기 피해, 레이드 보스에게 주는 피해, 우회 확률
     engrave: logic.engraveOf(d), // 장신구에 새긴 속성: 그 속성 공격 피해 배율
     buff: bf?.id || null,
     element: BREATHS[d.kind]?.element || null,
@@ -285,7 +285,7 @@ function damage(att, def, power, opt = {}) {
   if (element && def.weak.includes(element)) { raw *= 1.5; note = ' 약점을 찔렀다!'; }
   if (element && def.resist.includes(element)) { raw *= COMBAT.resist.dmg; note = ' 잘 통하지 않는다.'; } // 저항: 피해가 줄어듦
   const WC = att.duel || def.duel ? COMBAT.wingDuel.crit : COMBAT.wingCrit;
-  const crit = !magic && (opt.crit || Math.random() < WC.base + Math.max(0, spdOf(att) - spdOf(def)) * WC.per); // 날개(속도)가 높을수록 급소 (결투는 따로)
+  const crit = !magic && (opt.crit || Math.random() < WC.base + Math.max(0, spdOf(att) - spdOf(def)) * WC.per + (att.critK || 0)); // 날개(속도)가 높을수록 급소 (결투는 따로) · 칭호 '결투장의 전설'
   if (crit) { raw *= 1.5; note += ' 급소를 찔렀다!'; }
   if (def.guarding) raw *= opt.special ? 0.25 : 0.5; // 예고된 특기를 방어하면 4분의 1
   if (has(def, 'harden')) raw *= 0.5;
@@ -371,13 +371,28 @@ function applyDebuff(att, def, debuff, chance, element, lines) {
     lines.push(`${ga(def)} ${STATUS[k]} 상태가 되었다.${longer ? ' (지혜로 한 턴 더)' : ''}`);
   }
 }
+// 칭호 '불굴의 의지'·'꺾이지 않는 마음': 쓰러질 피해를 받으면 전투당 한 번 체력 1로 버팀 (사냥·강적에서만: hunt()가 f.endure를 붙임)
+// f.endure = 맞기 직전 체력이 최대의 이 비율 이상일 때만 (0이면 조건 없음), f.endureHeal = 버틸 때 되찾는 최대 체력 비율
+// 받을 피해(dmg)를 돌려줌. 버텼으면 체력 1이 남도록 줄이고, after에 남길 문장을 넣음
+function endureHit(f, dmg, after) {
+  if (f.endure == null || f.endured || f.hp <= 0 || dmg < f.hp || f.hp < f.hpMax * f.endure) return dmg;
+  f.endured = true;
+  const kept = f.hp - 1;
+  after.push(`${ga(f)} 쓰러지지 않았다! 꺾이지 않는 의지로 버텨 섰다. (체력 1)`);
+  if (f.endureHeal > 0) after.push(() => { const h = Math.max(1, Math.round(f.hpMax * f.endureHeal)); const b = f.hp; f.hp = Math.min(f.hpMax, f.hp + h); return `다시 일어서며 체력을 ${f.hp - b} 되찾았다.`; });
+  return kept;
+}
+const endureLines = (after, lines) => { for (const x of after) lines.push(typeof x === 'function' ? x() : x); };
 function hit(att, def, power, opt, lines, verb) {
   if (dodged(att, def, lines)) return 0;
   let extra = '';
   if (has(att, 'opening')) { power *= 1.5; att.st.opening = 0; extra = ' 틈을 찔렀다!'; } // 방어로 얻은 반격 기회
   const { dmg, note } = damage(att, def, power, opt);
-  def.hp = Math.max(0, def.hp - dmg);
+  const after = [];
+  const taken = endureHit(def, dmg, after);
+  def.hp = Math.max(0, def.hp - taken);
   lines.push(`${verb} ${dmg}의 피해를 입혔다.${extra}${note}`);
+  endureLines(after, lines);
   if (opt.special && def.guarding && def.hp > 0 && !def.creature) {
     def.st.opening = 2;
     lines.push(`${ga(def)} 공격을 받아 내고 틈을 보았다! (다음 공격 ×1.5)`);
@@ -509,8 +524,10 @@ function endOfTurn(f, lines) {
   for (const [k, label] of [['burn', '불길'], ['poison', '독'], ['bleed', '상처']]) {
     if (has(f, k) && f.hp > 0) {
       const n = f.st[`${k}Dmg`] || 3;
-      f.hp = Math.max(0, f.hp - n);
+      const after = [];
+      f.hp = Math.max(0, f.hp - endureHit(f, n, after)); // 지속 피해로 쓰러질 때도 버팀
       lines.push(`${ga(f)} ${label}에 ${n}의 피해를 입었다.`);
+      endureLines(after, lines);
     }
   }
   // 얼어붙음·마비가 풀리는 턴: 다음 턴까지 '얼음 금'·'휘청임'이 남아 연계를 이을 수 있음
@@ -719,8 +736,9 @@ function hunt(d) {
 
   const corrupted = logic.isCorrupted(d.region);
   const chance = corrupted ? (logic.isRuin(d.region) ? RUIN.eliteChance : MIND.eliteChance) : COMBAT.eliteChance;
-  const eliteRoll = debug.forceElite ?? (d.level >= COMBAT.eliteFrom && Math.random() < chance);
+  const eliteRoll = debug.forceElite ?? (d.level >= COMBAT.eliteFrom && Math.random() < chance * (logic.titleMods(d).eliteFind || 1)); // 칭호 '강적을 부르는 자'
   const me = fromDragon(d, 'hunt');
+  { const ti = logic.titleMods(d); if (ti.endure != null) { me.endure = ti.endure; me.endureHeal = ti.endureHeal || 0; } } // 칭호 '불굴의 의지'·'꺾이지 않는 마음' (사냥·강적만)
   if (eliteRoll) {
     const foe = fromCreature(place, true, corrupted);
     me.atk *= (logic.titleMods(d).eliteAtk || 1) * logic.gearMods(d).eliteAtk; // 칭호: 강적 사냥꾼, 희귀 장비

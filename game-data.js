@@ -981,17 +981,17 @@ const TRADE = {
 };
 
 // ── 둥지 식구: 인간 아이와 새끼 드래곤 ─────────────
-// 나이와 기간은 '일' 단위 (실제 시간). 어린 시절은 짧게, 도움을 주는 어른·노년은 2주
+// 나이와 기간은 '일' 단위 (실제 시간). 어린 시절은 짧게, 도움을 주는 어른·노년은 2주 (어른 9일 + 노년 5일)
 const DAY = 24 * 60 * 60 * 1000;
 const KIN = {
   maxKin: 2,                          // 둥지에 함께 살 수 있는 식구 수 (인간·알·새끼 드래곤 상관없이). 둥지를 넓히면 늘어남 (NEST.tiers)
   human: {
     stages: [
       { name: '아기', from: 0 }, { name: '아이', from: 1 }, { name: '소년', from: 2 },
-      { name: '청소년', from: 4 }, { name: '어른', from: 11 }, { name: '노년', from: 18 },
+      { name: '청소년', from: 4 }, { name: '어른', from: 11 }, { name: '노년', from: 20 }, // 노년 5일 (예전 18일부터 7일 → 어른을 이틀 늘림)
     ],
     adultDay: 11,                     // 이날 재주가 정해지고 갈 길을 고름
-    lifespan: 25,                     // 이날이 지나면 세상을 떠남 (어른 1주 + 노년 1주)
+    lifespan: 25,                     // 이날이 지나면 세상을 떠남 (어른 9일 + 노년 5일)
     expeditionFrom: 2,                // 이 나이(소년)부터 원정에 따라감
     startBond: 20,
     careCooldown: 3 * 60 * 60 * 1000, // 돌보기 간격 (3시간)
@@ -1812,6 +1812,12 @@ const EXP_RULES = { forkFrom: 0.35, forkTo: 0.6, stanceTone: { hostile: ['bold',
 // cond: { count: 셈 이름, at } (특성 횟수와 같은 곳에 셈) / { level } / { duel: 결투 승리 } / { scars: 상흔 수 } / { hoard: 보물더미 가치 }
 // mod: atk·taken(사냥·강적 전투 공격·받는 피해 배율, region이 있으면 그 지역에서만), eliteAtk(강적 공격), xp(경험치), huntGold(사냥 금화),
 //      drop(사냥 전리품 확률 +), craftEn(제작 기력 배율), mindWard(깎이는 정신 배율), heal(치유 배율), helpHp(일으켜 줄 때 체력 +), expRare(원정 귀한 물건 +)
+//      eliteFind(사냥하다 강적을 만날 확률 배율), fishJunk(낚시 잡동사니 확률 배율), fishRare(드문·귀한 물고기가 무는 정도 배율), fishTiming('완벽'·'좋음' 판정 시간 배율),
+//      cookEn(요리 제작 기력 배율: 강화 음식·식구 요리), buffMin(강화 음식 지속 시간 배율)
+// cond에 { fish: n }(낚은 물고기 수, tier를 주면 그 등급만. 도감의 낚은 수로 셈이라 칭호가 생기기 전에 낚은 것도 들어감)
+//      crit(사냥·강적 급소 확률 +, 날개 차이로 정해지는 확률 위에 더함)
+//      { duelLoss: n }(결투에서 진 수, 항복·자동 결투 포함. 전적에 이미 있는 패배도 셈)
+//      endure(사냥·강적에서 전투당 한 번, 쓰러질 피해를 체력 1로 버팀. 값은 맞기 직전 체력이 최대의 이 비율 이상일 때만, 0이면 조건 없음), endureHeal(버틸 때 최대 체력의 이만큼 되찾음)
 const TITLES = [
   // 사냥
   { id: 'hunter1',   name: '풋내기 사냥꾼',     cond: { count: 'huntwin', at: 10 },  mod: { huntGold: 1.1 },  eff: '사냥 금화 +10%' },
@@ -1831,6 +1837,14 @@ const TITLES = [
   // 강적
   { id: 'elite1',    name: '강적 사냥꾼',       cond: { count: 'elite', at: 5 },     mod: { eliteAtk: 1.06 }, eff: '강적과 싸울 때 공격 +6%' },
   { id: 'elite2',    name: '전설을 쓰러뜨린 자', cond: { count: 'elite', at: 30 },   mod: { eliteAtk: 1.1, drop: 0.05 }, eff: '강적과 싸울 때 공격 +10%, 전리품 +5%' },
+  { id: 'elite3',    name: '강적을 부르는 자',   cond: { count: 'elite', at: 50 },   mod: { eliteFind: 1.3 }, eff: '사냥하다 강적을 만날 확률 ×1.3' },
+  // 낚시 (해안): 도감에 남은 낚은 수로 셈 (잡동사니는 빼고)
+  { id: 'fish1',     name: '갯바위 낚시꾼',     cond: { fish: 50 },                  mod: { fishJunk: 0.6 },  eff: '낚시에서 잡동사니가 걸릴 확률 −40%' },
+  { id: 'fish2',     name: '바다를 읽는 용',     cond: { fish: 300 },                 mod: { fishRare: 1.2 },  eff: '드문·귀한 물고기가 더 잘 문다 (+20%)' },
+  { id: 'fish3',     name: '전설을 낚은 자',     cond: { fish: 10, tier: 'rare' },    mod: { fishTiming: 1.3 }, eff: "낚시 '완벽'·'좋음' 판정 시간 +30%" },
+  // 요리: 제작한 강화 음식·식구 요리, 둥지 부엌에 맡긴 요리
+  { id: 'cook1',     name: '둥지의 요리사',     cond: { count: 'cook', at: 30 },     mod: { cookEn: 0.8 },    eff: '요리(강화 음식·식구 요리) 제작 기력 −20%' },
+  { id: 'cook2',     name: '용족의 미식가',     cond: { count: 'cook', at: 150 },    mod: { buffMin: 1.25 },  eff: '강화 음식 지속 시간 +25%' },
   // 모으기·떠돌기
   { id: 'gatherer',  name: '약초를 아는 발톱', cond: { count: 'gather', at: 60 },   mod: { heal: 1.15 },     eff: '치유 +15%' },
   { id: 'gatherer2', name: '부지런한 발톱', cond: { count: 'gather', at: 200 }, mod: { gatherExtra: 0.1 }, eff: '채집에서 물건을 하나 더 찾을 확률 +10%' },
@@ -1848,6 +1862,9 @@ const TITLES = [
   // 결투장
   { id: 'duel1',     name: '결투장의 신예',    cond: { duel: 10 },                  mod: { atk: 1.03 },      eff: '사냥 공격 +3%' },
   { id: 'duel2',     name: '결투장의 왕',      cond: { duel: 50 },                  mod: { atk: 1.05, eliteAtk: 1.03 }, eff: '사냥 공격 +5%, 강적 공격 +3%' },
+  { id: 'duel3',     name: '결투장의 전설',    cond: { duel: 100 },                 mod: { atk: 1.05, crit: 0.05 }, eff: '사냥 공격 +5%, 급소 확률 +5%p' },
+  { id: 'unbowed',   name: '불굴의 의지',      cond: { duelLoss: 50 },              mod: { endure: 0.3 }, eff: '사냥·강적에서 전투당 한 번, 쓰러질 피해를 체력 1로 버틴다 (맞기 직전 체력이 최대의 30% 이상일 때)' },
+  { id: 'unbroken',  name: '꺾이지 않는 마음', cond: { duelLoss: 100 },             mod: { endure: 0, endureHeal: 0.15 }, eff: '사냥·강적에서 전투당 한 번, 쓰러질 피해를 버티고 최대 체력 15%를 되찾는다' },
   // 서로 돕기·정신
   { id: 'rescuer',   name: '손을 내미는 자',   cond: { count: 'rescue', at: 3 },    mod: { helpHp: 0.15 },   eff: '일으켜 줄 때 체력 +15%' },
   { id: 'mender',    name: '치유의 손길',      cond: { count: 'healother', at: 15 }, mod: { heal: 1.1, helpHp: 0.05 }, eff: '치유 +10%, 일으켜 줄 때 체력 +5%' },
@@ -1901,7 +1918,7 @@ const TITLES = [
   { id: 'yb_gambler', name: '홀짝의 귀재', cond: { count: 'yabawi', at: 30 }, mod: { huntGold: 1.05 }, eff: '사냥 금화 +5%' },
 ];
 // 칭호 조건을 사람이 읽는 글로
-const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: `둥지에서 {n}번 쉬기 (한 번에 ${NEST.restCountMin}분 이상)`, craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격', raidwin_morven: '레이드에서 이삭지기 모르벤을 {n}번 쓰러뜨리기', raidguard: '레이드에서 막아서기로 동료를 {n}번 지키기', raidhelp: '보상을 다 받은 주에 레이드를 {n}번 도와 이기기', ruinpts: '에레보스 정화도에 {n}만큼 기여하기', raidwin_heiron: '레이드에서 마지막 기사단장 헤이른을 {n}번 쓰러뜨리기', raidflank: '레이드에서 우회로 방패벽을 {n}번 깨기', raidduel: '레이드에서 일기토를 {n}번 끝까지 버티기', raidwin_rift: '레이드에서 균열을 지킨 자 아스테르를 {n}번 쓰러뜨리기', riftgold: '아스테르를 금빛 2 이상인 채로 쓰러뜨리기', riftlift: '가라앉는 아스테르를 {n}칸 끌어올리기', riftsave: '심연의 손아귀에 잡힌 동료를 {n}번 구하기', riftfirst: '서버에서 처음 아스테르를 쓰러뜨리기', heir: '먼 여행을 떠난 드래곤의 의지를 잇기', teach: '제자를 {n}번 가르치기', surpass: '스승의 레벨을 따라잡기', sendoff: '다 자란 식구를 {n}번 떠나보내기', corrupt: '오염된 땅에서 {n}번 행동하기', purify: '오염된 땅을 {n}번 정화하기', firstcraft: '숨겨진 제작법을 대륙에서 처음 찾아내기', masterwork: '대성공 {n}번', mobquest: '모브 드래곤의 의뢰 {n}번 마치기', mobstory: '모브 드래곤의 이야기 {n}개를 끝까지 듣기', yabawimeet: '떠돌이 야바위꾼을 {n}번 만나기 (나타날 때마다 한 번)', yabawi: '야바위꾼과 홀짝 {n}판', dance: '왕도 축제에서 {n}번 춤추기', ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map((n) => [`mazef${n}`, `지하 회랑 제 ${n}층의 봉인이 풀린 날 수호자를 치거나 기둥을 밝히기`])), mazecity: '지하 회랑 일곱 층을 모두 밝힌 날 함께하기' };
+const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: `둥지에서 {n}번 쉬기 (한 번에 ${NEST.restCountMin}분 이상)`, craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격', raidwin_morven: '레이드에서 이삭지기 모르벤을 {n}번 쓰러뜨리기', raidguard: '레이드에서 막아서기로 동료를 {n}번 지키기', raidhelp: '보상을 다 받은 주에 레이드를 {n}번 도와 이기기', ruinpts: '에레보스 정화도에 {n}만큼 기여하기', raidwin_heiron: '레이드에서 마지막 기사단장 헤이른을 {n}번 쓰러뜨리기', raidflank: '레이드에서 우회로 방패벽을 {n}번 깨기', raidduel: '레이드에서 일기토를 {n}번 끝까지 버티기', raidwin_rift: '레이드에서 균열을 지킨 자 아스테르를 {n}번 쓰러뜨리기', riftgold: '아스테르를 금빛 2 이상인 채로 쓰러뜨리기', riftlift: '가라앉는 아스테르를 {n}칸 끌어올리기', riftsave: '심연의 손아귀에 잡힌 동료를 {n}번 구하기', riftfirst: '서버에서 처음 아스테르를 쓰러뜨리기', heir: '먼 여행을 떠난 드래곤의 의지를 잇기', teach: '제자를 {n}번 가르치기', surpass: '스승의 레벨을 따라잡기', sendoff: '다 자란 식구를 {n}번 떠나보내기', corrupt: '오염된 땅에서 {n}번 행동하기', purify: '오염된 땅을 {n}번 정화하기', firstcraft: '숨겨진 제작법을 대륙에서 처음 찾아내기', masterwork: '대성공 {n}번', mobquest: '모브 드래곤의 의뢰 {n}번 마치기', mobstory: '모브 드래곤의 이야기 {n}개를 끝까지 듣기', yabawimeet: '떠돌이 야바위꾼을 {n}번 만나기 (나타날 때마다 한 번)', yabawi: '야바위꾼과 홀짝 {n}판', dance: '왕도 축제에서 {n}번 춤추기', ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map((n) => [`mazef${n}`, `지하 회랑 제 ${n}층의 봉인이 풀린 날 수호자를 치거나 기둥을 밝히기`])), mazecity: '지하 회랑 일곱 층을 모두 밝힌 날 함께하기', cook: '요리 {n}번 하기 (강화 음식·식구 요리 만들기, 부엌에 맡기기)' };
 
 // ── 장소와 사냥터 난이도 ───────────────────────────
 // 야생 지역마다 장소가 넷. 입구는 쉽고 안쪽일수록 사냥터 난이도가 높다 (셋째까지 Lv.1~12, 넷째는 고레벨 구역 Lv.13~24).
@@ -2229,7 +2246,7 @@ const BOND_RULES = {
 // ── 먼 여행: 지금 드래곤이 대륙을 떠나고, 같은 계정으로 새 드래곤을 만듦 ──
 // minLevel 이상이면 새 드래곤에게 의지를 이어 줌: 능력치 포인트(레벨 × perLevel, 최대 max)와 칭호 '의지를 이은 자'
 // 재산(금화·물건·보물더미)과 둥지, 식구는 함께 떠남 (남기고 싶은 식구는 먼저 동료에게 입양 보내기)
-const DEPART = { minLevel: 5, perLevel: 0.5, max: 10, wordsMax: 100 };
+const DEPART = { minLevel: 5, perLevel: 0.5, max: 10, wordsMax: 100, dripEvery: 2 }; // dripEvery: 이어받은 포인트는 한꺼번에 주지 않고, 새 드래곤이 이 레벨마다(2·4·6…) 1점씩 (초반에 몰려 강해지지 않게)
 
 // ── 계절과 날씨 ────────────────────────────────────
 // 계절은 대륙 전체에 같이 흐르고(SEASON_RULES.days일마다 바뀜), 날씨는 지역마다 SEASON_RULES.weatherHours시간마다 바뀐다.
