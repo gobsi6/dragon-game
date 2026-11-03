@@ -322,9 +322,13 @@ function dodged(att, def, lines) {
 }
 // 상태 이상 걸기 (저항하는 속성이면 통하지 않음)
 // 위엄: 드래곤이 얼어붙음·마비를 기세로 떨쳐 냄 (떨쳐 냈으면 true)
-function resisted(def, lines, k) {
-  const MR = COMBAT.majResist;
-  if (def.creature || !MR || Math.random() >= Math.min(MR.max, (def.maj || 0) * MR.per) + (['freeze', 'stun'].includes(k) ? def.ccResist || 0 : 0)) return false; // 칭호 '마지막 숨을 끊은 자': 마비·얼어붙음 떨쳐 내기
+// 확률 = (내 위엄 − from) × per − (건 쪽이 위엄으로 앞선 만큼) × lead (0 ~ max), 여기에 칭호의 떨쳐 내기를 더함
+function resisted(def, lines, k, att = null) {
+  const C = COMBAT.ccShake;
+  if (def.creature || !C) return false;
+  const lead = att ? Math.max(0, (att.maj || 0) - (def.maj || 0)) : 0;
+  const p = Math.min(C.max, Math.max(0, ((def.maj || 0) - C.from) * C.per - lead * C.lead)) + (['freeze', 'stun'].includes(k) ? def.ccResist || 0 : 0); // 칭호 '고룡을 붙든 자': 마비·얼어붙음 떨쳐 내기
+  if (!(p > 0) || Math.random() >= p) return false;
   lines.push(`${ga(def)} 기세로 버텨 내 ${STATUS[k]}에 빠지지 않았다.`);
   return true;
 }
@@ -366,7 +370,7 @@ function applyDebuff(att, def, debuff, chance, element, lines) {
   const MR = COMBAT.majResist;
   const resist = !def.creature && MR ? Math.min(MR.max, (def.maj || 0) * MR.per) : 0;
   for (let [k, n] of Object.entries(debuff)) {
-    if ((k === 'freeze' || k === 'stun') && resisted(def, lines, k)) continue;
+    if ((k === 'freeze' || k === 'stun') && resisted(def, lines, k, att)) continue;
     // 상대가 이번 턴에 이미 움직였으면 한 턴 더: 안 그러면 이번 턴 끝에 한 턴이 그냥 줄어 상대 차례를 그만큼 덜 막음
     // (얼어붙음·마비는 한 턴도 못 빼앗고, 움츠러듦은 세 번이 아니라 두 번만 꺾음. 물살 휩쓸기 연계와 같은 처리)
     if (ON_FOE_TURN.includes(k) && att && att.turnNow != null && def.acted === att.turnNow) n += 1;
@@ -514,7 +518,7 @@ function perform(b, f, foe, act, lines) {
 function comboAfter(f, foe, cb, lines) {
   if (cb.key === 'shatter') { foe.st.freeze = 0; foe.st.brittle = 0; lines.push(`${foe.name}의 몸을 덮은 얼음이 산산조각 났다!`); }
   if (cb.key === 'vital') { foe.st.dazed = 0; }
-  if (cb.key === 'surge' && foe.hp > 0 && (resisted(foe, lines, 'stun') || pressed(f, foe, lines, 'stun'))) { foe.st.soak = 0; }
+  if (cb.key === 'surge' && foe.hp > 0 && (resisted(foe, lines, 'stun', f) || pressed(f, foe, lines, 'stun'))) { foe.st.soak = 0; }
   else if (cb.key === 'surge' && foe.hp > 0) { foe.st.stun = Math.max(foe.st.stun || 0, foe.acted === f.turnNow ? 2 : 1); foe.st.soak = 0; lines.push(`${ga(foe)} 젖은 몸으로 미끄러져 넘어졌다! (한 턴 마비)`); }
   if (cb.key === 'wildfire' && foe.hp > 0) {
     const n = foe.st.burnDmg || 3;
