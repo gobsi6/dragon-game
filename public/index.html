@@ -5412,9 +5412,7 @@
       if (document.activeElement !== num || Number(num.value) !== n) num.value = n;
       minus.disabled = n <= 1;
       plus.disabled = n >= max;
-      go.replaceChildren();
-      const c = document.createElement('i'); c.className = 'coin'; c.setAttribute('aria-hidden', 'true');
-      go.append(c, `${(unit * n).toLocaleString()}닢 ${label}`);
+      go.textContent = `${(unit * n).toLocaleString()}닢 ${label}`; // 동그란 금화 아이콘 없이 글자만
       go.disabled = canAfford ? !canAfford(unit * n) : false;
       go.title = go.disabled ? `금화가 ${(unit * n - S.me.gold).toLocaleString()}닢 모자란다.` : '';
       row.classList.toggle('on', n > 1);
@@ -10855,7 +10853,22 @@
               const i = document.createElement('input'); i.className = 'input'; i.type = 'number'; i.min = 1; i.max = max; i.step = 1; i.value = val; i.inputMode = 'numeric';
               l.appendChild(i); put.appendChild(l); return i;
             };
-            const qi = mkIn('개수', 1, Math.min(x.qty, m.rules.qtyMax));
+            row.querySelector('b').appendChild(lockBtn(x.id, () => openNightMarket())); // 판매 잠금 (여기서도 걸고 풂)
+            if (x.lock) { // 잠긴 물건: 흐리게, 올리기 대신 안내 (시장 팔기와 같게)
+              row.classList.add('locked');
+              const l = document.createElement('span'); l.className = 'lock'; l.textContent = '판매 잠금 · 자물쇠를 눌러 풀 수 있다';
+              row.querySelector('.ctl').appendChild(l);
+              list.appendChild(row);
+              continue;
+            }
+            const qMax = Math.min(x.qty, m.rules.qtyMax);
+            const qi = mkIn('개수', 1, qMax);
+            if (qMax > 1) { // '최대': 개수 칸 오른쪽에 붙여 가진 만큼(노점 한도 안) 채움 (시장의 [− n + | 최대]와 같은 느낌)
+              const mx = document.createElement('button'); mx.type = 'button'; mx.className = 'mk-max nm-max'; mx.textContent = '최대';
+              mx.setAttribute('aria-label', '가진 만큼 모두');
+              mx.addEventListener('click', () => { qi.value = qMax; });
+              qi.parentElement.classList.add('nm-qty'); qi.after(mx);
+            }
             const pi = mkIn('개당', listed ? listed.price : Math.max(1, x.value || 1), m.rules.priceMax);
             const go = document.createElement('button'); go.type = 'button'; go.className = 'btn primary'; go.textContent = listed ? '더 올리기' : '올리기';
             go.disabled = full && !listed;

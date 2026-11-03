@@ -3957,3 +3957,10 @@ html:has(dialog.dlg:modal) { overflow: hidden; overscroll-behavior: none; } /* �
 .mk-step .mk-max { width: auto; padding: 0 10px; border-left: 1px solid #DDE0DC; background: #F1F4F6; font: 600 12px/1 var(--sans); color: var(--steel-d); white-space: nowrap; }
 .mk-step .mk-max:hover { background: #E6ECF1; }
 .mk-go { min-height: 32px; height: 32px; box-sizing: border-box; }
+/* 야시장 내 노점 올리기: 개수 칸 오른쪽에 붙은 '최대' */
+.nm-put .nm-qty .input { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.nm-put .nm-max { min-height: 34px; height: 34px; margin-left: -4px; padding: 0 10px; border: 1px solid #C9CCC8; border-left: 1px solid #DDE0DC; border-radius: 0 3px 3px 0; background: #F1F4F6; font: 600 12px/1 var(--sans); color: var(--steel-d); white-space: nowrap; cursor: pointer; }
+.nm-put .nm-max:hover { background: #E6ECF1; }
+.nm-pick.locked .ctl .lock, .mk-row.locked .ctl .lock { font-size: 12px; color: var(--muted); }
+/* 제작 의뢰: 납품하기·만들기 단추는 글자 너비만큼 (사기·팔기 단추의 최소 너비 96px를 쓰지 않음) */
+.mk-row .ctl:has(.ord-rw) .mk-go { min-width: 0; padding: 0 12px; }

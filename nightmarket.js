@@ -51,7 +51,8 @@ module.exports = function setupNightMarket({ io, db, online, logic, sendMe }) {
     if (!it || it.cat === 'treasure') return 0;
     const worn = Object.values(logic.equipOf(d)).includes(id) ? 1 : 0;
     const enh = !worn && logic.gearOf(d)[id] && logic.gearAt(d, id) === 'inv' ? 1 : 0; // 강화·각인한 장신구는 그 한 개를 남김 (기록이 사라지지 않게)
-    return Math.max(0, db.itemCount(d.id, id) - worn - enh);
+    const kept = logic.keptFor ? logic.keptFor(d, id) : 0; // 프리셋에 넣어 둔 몫은 남김 (시장 팔기와 같게)
+    return Math.max(0, db.itemCount(d.id, id) - worn - enh - kept);
   }
   const itemText = (id, qty) => `${ITEMS[id].name}${qty > 1 ? ` ${qty}개` : ''}`;
   const live = (id) => online.get(id) || null;
@@ -93,7 +94,7 @@ module.exports = function setupNightMarket({ io, db, online, logic, sendMe }) {
       .filter(([id, x]) => Number(id) !== d.id && x.items.length)
       .sort((a, b2) => (b2[1].at || 0) - (a[1].at || 0))
       .map(([id, x]) => ({ id: Number(id), name: x.name, kind: x.kind, sign: x.sign, items: x.items.filter((y) => ITEMS[y.id]) }));
-    const inv = db.inventory(d.id).filter((x) => spare(d, x.item) > 0).map((x) => ({ id: x.item, qty: spare(d, x.item), value: ITEMS[x.item].value || 0 }));
+    const inv = db.inventory(d.id).filter((x) => spare(d, x.item) > 0).map((x) => ({ id: x.item, qty: spare(d, x.item), value: ITEMS[x.item].value || 0, lock: !!logic.sellLocked?.(d, x.item) })); // lock: 판매 잠금 (흐리게 보이고 올릴 수 없음)
     return {
       until: s.until, greet: pick(NM.greet), npc, stalls,
       mine, inv, rules: NM.stall,
