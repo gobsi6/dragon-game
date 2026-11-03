@@ -3950,3 +3950,10 @@ html:has(dialog.dlg:modal) { overflow: hidden; overscroll-behavior: none; } /* �
 .sell-lock:hover { opacity: 1; border-color: var(--line-in); }
 .sell-lock.on { opacity: 1; color: #7A4E12; background: #FBF1E4; border-color: #E8D3B4; padding: 1px 5px; margin-left: -2px; }
 .mk-list .locked .mk-go { display: none; }
+/* 시장 개수 고르기: [− n + | 최대] 한 덩어리, 팔기·사기 단추와 같은 32px 높이 */
+.mk-step { height: 32px; box-sizing: border-box; overflow: hidden; }
+.mk-step button { min-height: 0; height: 100%; width: 30px; font-size: 15px; }
+.mk-step .mk-num { height: 100%; width: 34px; border-left: 1px solid #EEF0EE; border-right: 1px solid #EEF0EE; }
+.mk-step .mk-max { width: auto; padding: 0 10px; border-left: 1px solid #DDE0DC; background: #F1F4F6; font: 600 12px/1 var(--sans); color: var(--steel-d); white-space: nowrap; }
+.mk-step .mk-max:hover { background: #E6ECF1; }
+.mk-go { min-height: 32px; height: 32px; box-sizing: border-box; }

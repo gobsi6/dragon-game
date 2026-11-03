@@ -5425,17 +5425,13 @@
     num.addEventListener('change', () => { mkQty.set(key, Math.floor(Number(num.value)) || 1); num.value = ''; draw(); });
     num.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); num.blur(); } });
     go.addEventListener('click', () => onGo(mkQty.get(key) || 1));
-    if (label === '팔기' && max > 1) {
-      const all = document.createElement('button');
-      all.type = 'button'; all.className = 'mk-all'; all.textContent = '전부';
-      all.addEventListener('click', () => { mkQty.set(key, max); draw(); });
-      ctl.append(all);
-    }
-    if (label === '사기' && max > 1) { // 살 수 있는 만큼 한꺼번에 (하루 한도·가진 금화 안에서)
+    // '최대': 개수 칸 오른쪽 끝 한 칸으로 붙임 [− n + | 최대]. 팔기는 가진 만큼, 사기는 하루 한도·가진 금화 안에서 살 수 있는 만큼
+    if (max > 1) {
       const most = document.createElement('button');
-      most.type = 'button'; most.className = 'mk-all'; most.textContent = '최대';
-      most.addEventListener('click', () => { mkQty.set(key, Math.max(1, Math.min(max, Math.floor(S.me.gold / Math.max(1, unit))))); draw(); });
-      ctl.append(most);
+      most.type = 'button'; most.className = 'mk-max'; most.textContent = '최대';
+      most.setAttribute('aria-label', label === '사기' ? '살 수 있는 만큼' : '가진 만큼 모두');
+      most.addEventListener('click', () => { mkQty.set(key, label === '사기' ? Math.max(1, Math.min(max, Math.floor(S.me.gold / Math.max(1, unit)))) : max); draw(); });
+      step.append(most);
     }
     ctl.append(step, go);
     draw();
