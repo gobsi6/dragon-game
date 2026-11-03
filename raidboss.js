@@ -449,7 +449,9 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
     const earsBefore = p.ears;
     const bossHp = fg.boss.hp;
     // 희귀 장비(금 간 투구): 레이드 적에게 주는 피해. 이 행동 동안만 적들이 그만큼 더 다침 (치유량에는 영향 없음)
-    const rk = p.raidAtk || 1, t0 = rk !== 1 ? fg.foes.map((f) => f.taken) : null;
+    // 균열: 잿빛 침식이 스민 만큼 보스에게 주는 피해가 조금 오름 (B.erosion.atkPer, atkMax겹까지). 먹혔을 때 동료를 치는 공격(보스 차례)에는 들지 않음
+    const E = B.erosion, ek = E?.atkPer && p.erosion > 0 ? 1 + E.atkPer * Math.min(p.erosion, E.atkMax ?? E.max) : 1;
+    const rk = (p.raidAtk || 1) * ek, t0 = rk !== 1 ? fg.foes.map((f) => f.taken) : null;
     if (t0) for (const f of fg.foes) f.taken *= rk;
     try { K.perform(b, p, foe, a, lines); } finally { if (t0) fg.foes.forEach((f, i) => { f.taken = t0[i]; }); }
     const did = a.type === 'skill' && (p.used || []).length > usedN; // 스킬을 실제로 썼는지 (얼어붙었거나 기력이 모자라면 아님)
