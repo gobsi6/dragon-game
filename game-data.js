@@ -235,17 +235,17 @@ const ITEMS = {
   // 레이드 장신구 (모르벤의 낫 조각으로 빚음). 둘 다 능력치 합 10: 여럿을 고르게 올리는 것과 하나를 높게 올리는 것
   harvest_sickle:   { name: '이삭지기의 금빛 낫', rarity: 'rare', type: 'equip', slot: 'claw', bonus: { claw: 4, majesty: 3, wisdom: 3 }, value: 160, desc: '모르벤의 낫 조각을 녹여 발톱 끝에 덧씌웠다. 휘두를 때마다 마른 밀 향이 난다.' },
   // 레이드 희귀 장비 (레이드 보스가 아주 드물게 떨어뜨림. gear: 사냥·레이드에서만 듣는 특별한 효과)
-  raid_harvest_crown: { name: '거둔 이삭의 관',           rarity: 'rare', type: 'equip', slot: 'head', bonus: { wisdom: 4, majesty: 3 }, gear: { heal: 1.15 }, value: 140, desc: '모르벤이 마지막으로 거둔 이삭을 엮은 관. 치유로 되찾는 체력 +15%.' },
-  raid_scarecrow_cloak: { name: '허수아비 군주의 넝마 망토', rarity: 'rare', type: 'equip', slot: 'wing', bonus: { scale: 4, wing: 3 }, gear: { cover: 0.8 }, value: 140, desc: '군주가 걸치고 있던 넝마. 몇 번을 베여도 찢어지지 않는다. 막아서기로 대신 맞을 때 받는 피해 −20%.' },
-  raid_heiron_helm:   { name: '헤이른의 금 간 투구',       rarity: 'rare', type: 'equip', slot: 'head', bonus: { scale: 4, majesty: 3 }, gear: { raidAtk: 1.1 }, value: 140, desc: '이천 년 동안 성문을 지킨 투구. 금이 간 자리로 바람이 들어온다. 레이드 보스에게 주는 피해 +10%.' },
-  raid_banner_wing:   { name: '기사단 깃발의 날개덮개',    rarity: 'rare', type: 'equip', slot: 'wing', bonus: { wing: 5, claw: 2 }, gear: { flank: 0.15 }, value: 140, desc: '꺾인 깃발 천으로 날개 끝을 감쌌다. 펼치면 대열이 흔들린다. 우회 성공 확률 +15%.' },
-  raid_rift_eye:      { name: '심연을 본 눈',             rarity: 'rare', type: 'equip', slot: 'head', bonus: { wisdom: 5, majesty: 4 }, gear: { linger: 0.15 }, value: 180, desc: '고룡이 이천 년 동안 균열 아래를 내려다본 눈빛이 굳은 보석. 들여다보면 바닥이 보일 것만 같다. 내가 건 상태 이상이 한 턴 더 갈 확률 +15%.' },
-  raid_rift_feather:  { name: '고룡의 마지막 날개깃',      rarity: 'rare', type: 'equip', slot: 'wing', bonus: { wing: 6, scale: 3 }, gear: { taken: 0.94 }, value: 180, desc: '대륙이 갈라지던 날 균열 위를 덮었던 날개의 깃. 아직 금빛이 바래지 않았다. 받는 피해 −6%.' },
+  raid_harvest_crown: { name: '거둔 이삭의 관',           rarity: 'rare', type: 'equip', raidGear: true, slot: 'head', bonus: { wisdom: 4, majesty: 3 }, gear: { heal: 1.15 }, value: 140, desc: '모르벤이 마지막으로 거둔 이삭을 엮은 관. 치유로 되찾는 체력 +15%.' },
+  raid_scarecrow_cloak: { name: '허수아비 군주의 넝마 망토', rarity: 'rare', type: 'equip', raidGear: true, slot: 'wing', bonus: { scale: 4, wing: 3 }, gear: { cover: 0.8 }, value: 140, desc: '군주가 걸치고 있던 넝마. 몇 번을 베여도 찢어지지 않는다. 막아서기로 대신 맞을 때 받는 피해 −20%.' },
+  raid_heiron_helm:   { name: '헤이른의 금 간 투구',       rarity: 'rare', type: 'equip', raidGear: true, slot: 'head', bonus: { scale: 4, majesty: 3 }, gear: { raidAtk: 1.1 }, value: 140, desc: '이천 년 동안 성문을 지킨 투구. 금이 간 자리로 바람이 들어온다. 레이드 보스에게 주는 피해 +10%.' },
+  raid_banner_wing:   { name: '기사단 깃발의 날개덮개',    rarity: 'rare', type: 'equip', raidGear: true, slot: 'wing', bonus: { wing: 5, claw: 2 }, gear: { flank: 0.15 }, value: 140, desc: '꺾인 깃발 천으로 날개 끝을 감쌌다. 펼치면 대열이 흔들린다. 우회 성공 확률 +15%.' },
+  raid_rift_eye:      { name: '심연을 본 눈',             rarity: 'rare', type: 'equip', raidGear: true, slot: 'head', bonus: { wisdom: 5, majesty: 4 }, gear: { linger: 0.15 }, value: 180, desc: '고룡이 이천 년 동안 균열 아래를 내려다본 눈빛이 굳은 보석. 들여다보면 바닥이 보일 것만 같다. 내가 건 상태 이상이 한 턴 더 갈 확률 +15%.' },
+  raid_rift_feather:  { name: '고룡의 마지막 날개깃',      rarity: 'rare', type: 'equip', raidGear: true, slot: 'wing', bonus: { wing: 6, scale: 3 }, gear: { taken: 0.94 }, value: 180, desc: '대륙이 갈라지던 날 균열 위를 덮었던 날개의 깃. 아직 금빛이 바래지 않았다. 받는 피해 −6%.' },
   knight_tail_shield: { name: '성문 기사단의 꼬리 방패', rarity: 'rare', type: 'equip', slot: 'tail', bonus: { wing: 4, scale: 3, claw: 3 }, value: 160, desc: '헤이른의 방패를 잘라 꼬리 끝에 맞췄다. 휘두르면 대열을 갈랐던 바람 소리가 난다.' },
   charge_banner_charm: { name: '돌격 깃발 장식', rarity: 'rare', type: 'equip', slot: 'charm', bonus: { wing: 8, claw: 2 }, value: 160, desc: '기사단 깃발의 술을 엮어 만든 장식. 날개를 펼치면 깃발처럼 펄럭인다.' },
   // 균열 레이드 전용 장신구 (능력치 합 12, 지금 가장 좋은 장신구. gear: 사냥·레이드에서만 듣는 효과)
-  rift_claw:        { name: '균열을 지킨 발톱',   rarity: 'rare', type: 'equip', slot: 'claw', bonus: { claw: 6, majesty: 3, wing: 3 }, gear: { raidAtk: 1.05 }, value: 220, desc: '고룡의 비늘을 겹겹이 녹여 붙인 발톱 덮개. 균열 위에서 끝까지 버틴 발톱처럼 식지 않는다. 레이드 보스에게 주는 피해 +5%.' },
-  rift_ember_pendant: { name: '꺼지지 않은 불씨', rarity: 'rare', type: 'equip', slot: 'neck', bonus: { wisdom: 4, scale: 4, majesty: 4 }, gear: { heal: 1.1 }, value: 220, desc: '고룡의 가슴에서 꺼지지 않던 불씨를 비늘 속에 옮겨 담았다. 걸고 있으면 숨이 따뜻해진다. 치유 +10%.' },
+  rift_claw:        { name: '균열을 지킨 발톱',   rarity: 'rare', type: 'equip', raidGear: true, slot: 'claw', bonus: { claw: 6, majesty: 3, wing: 3 }, gear: { raidAtk: 1.05 }, value: 220, desc: '고룡의 비늘을 겹겹이 녹여 붙인 발톱 덮개. 균열 위에서 끝까지 버틴 발톱처럼 식지 않는다. 레이드 보스에게 주는 피해 +5%.' },
+  rift_ember_pendant: { name: '꺼지지 않은 불씨', rarity: 'rare', type: 'equip', raidGear: true, slot: 'neck', bonus: { wisdom: 4, scale: 4, majesty: 4 }, gear: { heal: 1.1 }, value: 220, desc: '고룡의 가슴에서 꺼지지 않던 불씨를 비늘 속에 옮겨 담았다. 걸고 있으면 숨이 따뜻해진다. 치유 +10%.' },
   harvest_pendant:  { name: '추수 축복의 목걸이', rarity: 'rare', type: 'equip', slot: 'neck', bonus: { wisdom: 8, scale: 2 }, value: 160, desc: '모르벤이 밀밭에 걸던 축복을 낫 조각에 새겨 다시 깨웠다. 목에 걸면 손끝이 따뜻해진다.' },
   // ── 실험 재료 (자유 제작에서 비어 있던 성질 조합을 채움. 정식 제작법에는 쓰이지 않음) ──
   tough_sinew:     { name: '질긴 힘줄',          rarity: 'uncommon', value: 12, desc: '사냥감의 다리에서 뽑아낸 힘줄. 말리면 어떤 끈보다 질기다.' },
@@ -547,7 +547,7 @@ const ITEMS = {
   morgana_seed:   { name: '고목 씨앗 목걸이', rarity: 'rare', type: 'equip', slot: 'neck',  bonus: { scale: 2, wisdom: 1 }, value: 150, desc: '되살아난 고목의 씨앗을 꿴 목걸이. 은은한 숲 냄새가 난다.' },
   skrag_claw:     { name: '늪 그림자 발톱',   rarity: 'rare', type: 'equip', slot: 'claw',  bonus: { claw: 3 }, value: 150, desc: '스크라그가 오래 쓰던 검은 발톱덮개. 늪의 진흙 냄새가 배어 있다.' },
   aurel_ring:     { name: '금빛 꼬리고리',    rarity: 'rare', type: 'equip', slot: 'tail',  bonus: { majesty: 2, scale: 1 }, value: 150, desc: '아우렐이 아끼던 금고리. 꼬리를 흔들 때마다 맑은 소리가 난다.' },
-  ignar_heart:    { name: '꺼지지 않는 불씨', rarity: 'rare', type: 'equip', slot: 'charm', bonus: { claw: 1, scale: 1, wing: 1 }, value: 150, desc: '이그나르가 사흘 밤낮 두드려 만든 부적. 손에 쥐면 늘 따뜻하다.' },
+  ignar_heart:    { name: '화로의 심장', rarity: 'rare', type: 'equip', slot: 'charm', bonus: { claw: 1, scale: 1, wing: 1 }, value: 150, desc: '이그나르가 사흘 밤낮 두드려 만든 부적. 손에 쥐면 늘 따뜻하다.' },
 };
 
 // 물건 기준 값. value가 없으면 귀한 정도로, 만든 물건은 재료 값으로 정함
@@ -863,6 +863,9 @@ const FACILITY = {
 // ── 낚시: 해안 절벽에서만. 미끼 하나로 한 번 던짐 (행동력은 들지 않음) ──
 const FISHING = {
   region: 'coast',
+  // 줄 걸어 두기: 원정처럼 해안에 묶여 기다림. minutes 중에 고르고, 미끼는 per분마다 하나 (15초: 5분 20개 · 10분 40개 · 30분 120개, 손으로 던지는 것의 3분의 1 속도)
+  // 하나마다 그 시각의 날씨·계절로 굴리고, '던지기'로 입질에 맞춰 '좋음'으로 당긴 것과 같은 확률 (quality: 그냥 건지기가 아님). 낚시 칭호 효과도 그대로
+  line: { minutes: [5, 10, 30], per: 0.25, quality: 'good' },
   biteMin: 1500, biteMax: 4500,          // 던진 뒤 입질이 오기까지 (ms)
   window: 1400,                          // 입질 뒤 이 안에 당겨야 함 (ms, 늦으면 놓침)
   perfect: 450, good: 800,               // 입질 뒤 이 안에 당기면 '완벽'·'좋음'
@@ -988,6 +991,9 @@ const TRADE = {
   stanceCooldown: 12 * 60 * 60 * 1000, // 성향을 바꾼 뒤 다시 바꾸기까지 (12시간)
   refuseBelow: -40,                 // 평판이 이보다 낮으면 상인이 거래를 거절
   intimidateCost: 2,                // 위협하기에 드는 행동력
+  // 위협하기에 성공했을 때 받는 공물: 금화 = (gold 범위 + 위엄 × majK + 레벨 × lvK) × 적대 배수 × 특성,
+  // item 확률로 그 마을 시장 물건(itemTwo 확률로 2개), special 확률로 우호 성향만 사는 귀한 물건까지, 왕도는 닭고기를 우리째 (chicken)
+  intimidate: { gold: [140, 220], majK: 2, lvK: 2, item: 0.75, itemTwo: 0.3, special: 0.08, chicken: [2, 4] }, // 금화 = (gold + 위엄×majK + 레벨×lvK) × 1.5: 위엄 30·레벨 25면 평균 430쯤
 };
 
 // ── 둥지 식구: 인간 아이와 새끼 드래곤 ─────────────
@@ -2264,9 +2270,10 @@ const BOND_RULES = {
 };
 
 // ── 먼 여행: 지금 드래곤이 대륙을 떠나고, 같은 계정으로 새 드래곤을 만듦 ──
-// minLevel 이상이면 새 드래곤에게 의지를 이어 줌: 능력치 포인트(레벨 × perLevel, 최대 max)와 칭호 '의지를 이은 자'
+// minLevel 이상이면 새 드래곤에게 의지를 이어 줌: 능력치 포인트(레벨 계단 tiers)와 칭호 '의지를 이은 자'
+const departPts = (lv) => (DEPART.tiers.find(([at]) => lv >= at) || [0, 0])[1];
 // 재산(금화·물건·보물더미)과 둥지, 식구는 함께 떠남 (남기고 싶은 식구는 먼저 동료에게 입양 보내기)
-const DEPART = { minLevel: 5, perLevel: 0.5, max: 10, wordsMax: 100, dripEvery: 2 }; // dripEvery: 이어받은 포인트는 한꺼번에 주지 않고, 새 드래곤이 이 레벨마다(2·4·6…) 1점씩 (초반에 몰려 강해지지 않게)
+const DEPART = { minLevel: 5, tiers: [[25, 8], [20, 5], [15, 3], [10, 2], [5, 1]], wordsMax: 100, dripEvery: 2 }; // tiers: [이 레벨부터, 이어 줄 포인트] (위에서부터 맞는 첫 칸). 오래 키울수록 더, 만렙에 가장 크게. // dripEvery: 이어받은 포인트는 한꺼번에 주지 않고, 새 드래곤이 이 레벨마다(2·4·6…) 1점씩 (초반에 몰려 강해지지 않게)
 
 // ── 계절과 날씨 ────────────────────────────────────
 // 계절은 대륙 전체에 같이 흐르고(SEASON_RULES.days일마다 바뀜), 날씨는 지역마다 SEASON_RULES.weatherHours시간마다 바뀐다.
@@ -2873,5 +2880,5 @@ module.exports = {
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, FESTIVAL, NIGHT_MARKET, KIN_FEST, TITLES, TITLE_COUNT_NAMES, ACHIEVEMENTS, YABAWI, KEEPSAKES,
   PURIFY, CRAFT, SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, FISHING, RUIN, FACILITY, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
   DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, MATE_DRAKE_NAMES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, KIN_GROW, KIN_PLAY, KIN_TOUCH, KIN_BOND, FREE, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
-  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, RAIDBOSS, DEPART, BONDS, MARKS, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG,
+  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, RAIDBOSS, DEPART, departPts, BONDS, MARKS, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG,
 };

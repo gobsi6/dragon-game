@@ -224,7 +224,7 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
     for (const id of ids) {
       const d = load(id);
       logic.regen(d);
-      const f = combat.fromDragon(d, 'hunt');
+      const f = combat.fromDragon(d, 'raid'); // 레이드 장신구의 특별한 효과는 여기서만
       f.ally = null; // 곁에 둔 새끼는 레이드에 따라오지 않음
       f.atk *= (logic.titleMods(d).eliteAtk || 1) * logic.gearMods(d).eliteAtk; // 레이드 보스도 강적: '강적과 싸울 때 공격' 칭호·희귀 장비가 듦 (강적 전투와 같은 방식)
       f.hp = Math.min(f.hp, f.hpMax); f.hp0 = f.hp;

@@ -547,11 +547,13 @@ function nearestTown(region) {
 }
 // 장신구가 막아 주는 정도 (정화의 부적)
 // 희귀 장비의 특별한 효과 (사냥·강적에서만): vsCorrupt·eliteAtk·taken은 곱하고, shard는 더함
-function gearMods(d) {
+// raid: 레이드 전투인지. 레이드 장신구(raidGear, 걸작 포함)의 특별한 효과는 레이드에서만 (사냥·강적·재앙에서는 능력치만)
+function gearMods(d, raid = false) {
   const m = { vsCorrupt: 1, eliteAtk: 1, taken: 1, shard: 0, heal: 1, cover: 1, raidAtk: 1, flank: 0, linger: 0 };
   for (const id of Object.values(equipOf(d))) {
-    const g = ITEMS[id]?.gear;
+    const it = ITEMS[id], g = it?.gear;
     if (!g) continue;
+    if (!raid && (it.raidGear || ITEMS[it.mwOf]?.raidGear)) continue;
     for (const k of ['vsCorrupt', 'eliteAtk', 'taken', 'heal', 'cover', 'raidAtk']) if (g[k]) m[k] *= g[k]; // heal·cover·raidAtk: 레이드 희귀 장비
     if (g.shard) m.shard += g.shard;
     if (g.flank) m.flank += g.flank;
@@ -1786,7 +1788,9 @@ function marketInfo(d, invList) {
       ? (SHOPS_SPECIAL[d.region] || []).map((id) => ({ id, price: buyPrice(d, id), locked: !specialOpen(d), limit: TRADE.dailyBuy[id] || null, left: buyLeft(d, id) }))
       : [],
     specialFrom: repTier(SR.friendly.specialFrom),
-    sell: invList.filter((x) => ITEMS[x.item] && ITEMS[x.item].cat !== 'treasure').map((x) => ({ id: x.item, qty: x.qty, price: sellPrice(d, x.item) })),
+    // lock: 판매 잠금한 물건 (목록에는 보이되 팔 수 없음)
+    // 프리셋에 넣어 둔 몫(keptFor)은 빼고 보여 줌. 다 프리셋 몫이면 목록에서 빠짐
+    sell: invList.filter((x) => ITEMS[x.item] && ITEMS[x.item].cat !== 'treasure').map((x) => ({ id: x.item, qty: x.qty - keptFor(d, x.item), price: sellPrice(d, x.item), lock: sellLocked(d, x.item) })).filter((x) => x.qty > 0),
   };
 }
 
@@ -1813,7 +1817,7 @@ function buy(d, id, qty, have) {
   const special = (SHOPS_SPECIAL[d.region] || []).includes(id);
   if (!SHOPS[d.region].includes(id) && !special) return { error: '이 시장에서는 팔지 않는 물건이다.' };
   if (special && !specialOpen(d)) return { error: '이 물건은 마을과 더 친해져야 살 수 있다.' };
-  qty = Math.max(1, Math.min(20, Math.floor(qty) || 1));
+  qty = Math.max(1, Math.min(99, Math.floor(qty) || 1)); // 한 번에 99개까지 ('최대' 단추)
   const left = buyLeft(d, id);
   const name0 = ITEMS[id].name;
   if (left === 0) return { error: `${name0}${josa(name0, '은', '는')} 오늘 더 살 수 없다. (하루 ${TRADE.dailyBuy[id]}개까지)` };
@@ -1828,12 +1832,25 @@ function buy(d, id, qty, have) {
   return { title: '시장', lines, items: [{ id, qty }] };
 }
 
+// 프리셋에 넣어 둔 장신구: 그 프리셋으로 갈아입으려면 소지품에 남겨 둬야 하는 개수 (지금 차고 있는 몫은 뺌)
+// 시장 팔기·보물더미 쌓기 목록에서 이만큼은 빼고 보여 주고, 팔거나 쌓지 못하게 막음 (여분은 그대로 팔 수 있음)
+function keptFor(d, id) {
+  const worn = Object.values(equipOf(d)).filter((x) => x === id).length;
+  let need = 0;
+  for (const p of presetsOf(d)) if (p?.eq) need = Math.max(need, Object.values(p.eq).filter((x) => x === id).length);
+  return Math.max(0, need - worn);
+}
+const isWorn = (d, id) => Object.values(equipOf(d)).includes(id);
+// 판매 잠금: 소지품·시장에서 자물쇠를 건 물건은 팔 수 없음 (시장 팔기·야시장 노점)
+const sellLocked = (d, id) => (combatJson(d).favs?.lock || []).includes(id);
 function sell(d, id, qty, have) {
   const err = marketCheck(d);
   if (err) return err;
   if (!ITEMS[id]) return { error: '알 수 없는 물건이다.' };
+  if (sellLocked(d, id)) return { error: '판매 잠금을 건 물건이다. 자물쇠를 풀어야 팔 수 있다.' };
   if (ITEMS[id].cat === 'treasure') return { error: '보물은 팔 수 없다. 둥지의 보물더미에 쌓아 두자.' };
-  const n = have(id);
+  const n = have(id) - keptFor(d, id); // 프리셋 몫은 팔지 않음
+  if (n < 1 && have(id) > 0) return { error: '프리셋에 넣어 둔 장신구다. 프리셋에서 빼야 팔 수 있다.' };
   qty = Math.max(1, Math.min(n, Math.floor(qty) || 1));
   if (n < 1) return { error: '가지고 있지 않다.' };
   const gain = sellPrice(d, id) * qty;
@@ -1854,8 +1871,8 @@ function fishCheck(d) {
 }
 const isBait = (id) => ITEMS[id]?.cat === 'bait';
 // 무엇이 낚일지: quality = perfect | good | ok | auto
-function fishRoll(d, bait, quality) {
-  const wx = weatherIdAt(d.region), sx = seasonAt().id; // 날씨(wx)와 계절(sx)마다 잘 무는 물고기가 다름
+function fishRoll(d, bait, quality, at = Date.now()) {
+  const wx = weatherIdAt(d.region, at), sx = seasonAt(at).id; // 날씨(wx)와 계절(sx)마다 잘 무는 물고기가 다름 (at: 줄 걸어 두기는 물고기가 문 그 시각)
   const q = FG.quality[quality] || {}, b = FG.bait[bait] || {};
   const fr = titleMods(d).fishRare || 1; // 칭호 '바다를 읽는 용': 드문·귀한 물고기가 더 잘 묾
   const list = FG.fish.map((f) => ({ f, w: f.w * (q[f.tier] ?? 1) * (b[f.tier] ?? 1) * (f.wx?.[wx] ?? 1) * (f.sx?.[sx] ?? 1) * (f.tier === 'common' ? 1 : fr) }));
@@ -1889,9 +1906,9 @@ function junkLand(d, quality) {
   const levelUp = gainXp(d, xp);
   return { title: '낚시', lines, items: [{ id, qty: 1 }], xp, levelUp, catch: { id, tier: 'junk', quality } };
 }
-function fishLand(d, bait, quality) {
+function fishLand(d, bait, quality, at) {
   if (FG.junk && Math.random() < (FG.junk.chance?.[quality] || 0) * (titleMods(d).fishJunk || 1)) return junkLand(d, quality); // 칭호 '갯바위 낚시꾼': 잡동사니가 덜 걸림
-  const f = fishRoll(d, bait, quality);
+  const f = fishRoll(d, bait, quality, at);
   dexFish(d, f.id); // 도감: 낚은 수
   const it = ITEMS[f.id];
   const lines = [QUALITY_LINE[quality], `${it.name}${josa(it.name, '이', '가')} 걸려 올라왔다!`];
@@ -1913,6 +1930,51 @@ function fishCast(d, bait, have, auto) {
   }
   const biteIn = randInt(FG.biteMin, FG.biteMax);
   return { title: '낚시', lines: [`${ITEMS[bait].name}${josa(ITEMS[bait].name, '을', '를')} 꿰어 줄을 던졌다.`], items: [{ id: bait, qty: -1 }], fishing: { biteIn, window: FG.window } };
+}
+// ── 줄 걸어 두기: 원정처럼 해안에 묶여 기다렸다가 한꺼번에 거둠 (exp_end를 함께 써서 원정 중 막히는 일이 모두 똑같이 막힘) ──
+function startFishLine(d, minutes, bait, have, now = Date.now()) {
+  const err = fishCheck(d);
+  if (err) return err;
+  const L = FG.line;
+  if (!L.minutes.includes(minutes)) return { error: '고를 수 없는 시간이다.' };
+  if (!isBait(bait)) return { error: '미끼를 골라야 한다.' };
+  const n = Math.round(minutes / L.per);
+  const nm = ITEMS[bait].name;
+  if (have(bait) < n) return { error: `${nm}${josa(nm, '이', '가')} ${n}개 있어야 한다.` };
+  d.exp_start = now;
+  d.exp_end = now + minutes * 60000;
+  d.exp_region = d.region;
+  d.exp_info = { goal: 'fishline', line: { bait, n }, last: expInfo(d).last || null };
+  return { title: '줄 걸어 두기', lines: [`해안 바위에 ${nm} ${n}개를 꿰어 줄을 걸어 두었다. ${minutes}분 뒤에 거둬들인다.`], items: [{ id: bait, qty: -n }] };
+}
+function finishFishLine(d, now = Date.now()) {
+  const info = expInfo(d), L = info.line || {}, per = FG.line.per * 60000;
+  const doneMs = Math.max(0, Math.min(d.exp_end, now) - d.exp_start);
+  const early = now < d.exp_end;
+  const k = Math.min(L.n || 0, Math.floor(doneMs / per));
+  const got = {}, extra = [];
+  let xp = 0, levelUp = 0;
+  for (let i = 0; i < k; i++) {
+    const r = fishLand(d, L.bait, FG.line.quality, d.exp_start + (i + 1) * per); // 그 시각의 날씨·계절로
+    for (const it of r.items) got[it.id] = (got[it.id] || 0) + it.qty;
+    xp += r.xp || 0; levelUp += r.levelUp || 0;
+    if (r.catch?.tier === 'rare') extra.push(r.catch.id);
+  }
+  // 귀한 물고기는 종류마다 한 줄로 묶어서 (줄이 길게 늘어지지 않게)
+  const rareN = {};
+  for (const id of extra) rareN[id] = (rareN[id] || 0) + 1;
+  extra.length = 0;
+  for (const [id, n] of Object.entries(rareN)) { const nm = ITEMS[id].name, u = id.startsWith('fish_') ? '마리' : '개'; extra.push(`${nm}${n > 1 ? ` ${n}${u}` : ''}${josa(n > 1 ? u : nm, '이', '가')} 걸려 있었다!`); }
+  if (extra.length) extra.push('해안의 어부들이 몰려와 웅성거린다.');
+  const back = Math.max(0, (L.n || 0) - k);
+  const items = Object.entries(got).map(([id, qty]) => ({ id, qty }));
+  if (back > 0 && L.bait) items.push({ id: L.bait, qty: back });
+  const lines = [early ? '줄을 일찍 거둬들였다.' : '파도 소리를 들으며 기다리다 줄을 거둬들였다.'];
+  lines.push(k ? `${k}번 입질이 왔다.` : '아직 입질이 한 번도 오지 않았다.', ...extra);
+  if (back > 0) lines.push(`쓰지 않은 ${ITEMS[L.bait].name} ${back}개는 그대로 돌려받았다.`);
+  d.exp_start = null; d.exp_end = null; d.exp_region = null;
+  d.exp_info = { last: info.last || null };
+  return { title: '줄 걸어 두기', lines, items, xp, levelUp, minutes: Math.round(doneMs / 60000) };
 }
 // 당김: cast = { bait, bite(입질 시각) }
 function fishReel(d, cast, now = Date.now()) {
@@ -1944,14 +2006,27 @@ function intimidate(d) {
   let gold = 0;
   const lines = [];
   if (Math.random() < chance) {
-    gold = Math.round((randInt(15, 35) + st.majesty) * SR.hostile.intimidateGold * traitMods(d).intimidateGold);
+    const TI = TRADE.intimidate;
+    gold = Math.round((randInt(...TI.gold) + st.majesty * (TI.majK || 1) + d.level * (TI.lvK || 1)) * SR.hostile.intimidateGold * traitMods(d).intimidateGold);
     lines.push(`${where} 하늘을 낮게 돌며 포효하자, 인간들이 서둘러 공물을 내왔다.`);
-    if (Math.random() < 0.4) {
-      const id = pick(SHOPS[d.region]);
-      items = [{ id, qty: 1 }];
-      lines.push(`금화 ${gold}닢과 ${ITEMS[id].name}${josa(ITEMS[id].name, '을', '를')} 빼앗았다.`);
+    if (Math.random() < TI.item) {
+      const id = pick(SHOPS[d.region].filter((x) => x !== 'chicken_meat') );
+      const qty = Math.random() < TI.itemTwo ? 2 : 1;
+      items = [{ id, qty }];
+      lines.push(`금화 ${gold}닢과 ${ITEMS[id].name}${qty > 1 ? ` ${qty}개` : ''}${josa(qty > 1 ? '개' : ITEMS[id].name, '을', '를')} 빼앗았다.`);
     } else {
       lines.push(`금화 ${gold}닢을 빼앗았다.`);
+    }
+    const sp = SHOPS_SPECIAL[d.region];
+    if (sp?.length && Math.random() < TI.special) { // 우호 성향만 살 수 있는 귀한 물건을 바치기도 함
+      const id = pick(sp);
+      items.push({ id, qty: 1 });
+      lines.push(`겁에 질린 관리가 창고 깊숙이 두었던 ${ITEMS[id].name}까지 내밀었다.`);
+    }
+    if (d.region === 'capital' && TI.chicken) { // 왕도: 닭을 우리째
+      const n = randInt(...TI.chicken);
+      items.push({ id: 'chicken_meat', qty: n });
+      lines.push(`정육점 주인이 떨리는 손으로 닭고기 ${n}마리를 바구니째 내놓았다.`);
     }
     if (d.region === FISHING.region) { // 해안 어촌: 그물째 바침
       const N = FISHING.coastTribute, n = randInt(...N.bait), f = randInt(...N.fish);
@@ -2066,7 +2141,8 @@ function hoardMove(d, dir, what, qty, have, hoardHave) {
   const g = it.type === 'equip' ? gearOf(d)[what] : null;
   const gTag = g ? ` (${[g.plus ? `+${g.plus}` : '', g.elem ? `${ELEMENTS[g.elem] || g.elem} 각인` : ''].filter(Boolean).join(' · ') || '강화'})` : '';
   if (dir === 'put') {
-    if (have(what) < qty) return { error: '그만큼 가지고 있지 않다.' };
+    if (it.type === 'equip' && isWorn(d, what)) return { error: '착용 중인 장신구와 같은 물건은 보물더미에 쌓지 않는다. 벗은 뒤에 쌓자.' };
+    if (have(what) - keptFor(d, what) < qty) return { error: keptFor(d, what) && have(what) >= qty ? '프리셋에 넣어 둔 장신구다. 프리셋에서 빼야 쌓을 수 있다.' : '그만큼 가지고 있지 않다.' };
     const lines = [`${label}${josa(label, '을', '를')} 보물더미에 쌓았다.`];
     if (g && gearAt(d, what) === 'inv' && have(what) - qty < 1) { g.at = 'hoard'; lines.push(`강화한 ${it.name}${gTag}도 함께 쌓았다. 꺼내면 그대로다.`); }
     return { lines, items: [{ id: what, qty: -qty }], hoardItems: [{ id: what, qty }] };
@@ -2578,7 +2654,7 @@ module.exports = { restHostOf,
   craft, craftMany, experiment, freeCraft, enhanceGear, engraveGear, tidyGear, tidyHoardGear, engraveOf, gearOf, greatChance, craftView, ordersView, fillOrder, buildForge, atForge,
   useItem, equip, unequip, statsOf, bonusOf, hpCap, enCap, apCap, equipOf, buffOf, giveBuff,
   presetsView, presetSave, presetRename, presetClear, presetUse, // 장비 프리셋
-  repOf, setStance, marketInfo, buy, sell, intimidate,
+  repOf, setStance, marketInfo, buy, sell, sellLocked, keptFor, intimidate, startFishLine, finishFishLine,
   buildNest, flyHome, startRest, stopRest, hoardMove, hoardValue,
   actionCost, townArrows, festivalNow, hasBounty, addRep, addFame, craftEn, isCook, gainXp, spendStats,
   traitsOf, traitMods, hasTrait, chooseTraits, traitCount,

@@ -574,7 +574,7 @@ const meOf = (d) => ({
   raidBoss: raidBoss ? raidBoss.meView(d) : null, // 레이드: 이번 주 보상 횟수
   perks: d.perks || {},
   cost: { explore: logic.actionCost(d, 'explore'), gather: logic.actionCost(d, 'gather'), hunt: logic.actionCost(d, 'hunt') },
-  exp: d.exp_end ? { region: d.exp_region, start: d.exp_start, end: d.exp_end, goal: logic.expInfo(d).goal || 'gather', fork: logic.forkView(d), plan: logic.planView(d), went: logic.expInfo(d).went || [] } : null,
+  exp: d.exp_end ? { region: d.exp_region, start: d.exp_start, end: d.exp_end, goal: logic.expInfo(d).goal || 'gather', line: logic.expInfo(d).line || null, fork: logic.forkView(d), plan: logic.planView(d), went: logic.expInfo(d).went || [] } : null,
   expLast: d.exp_end ? null : (logic.expInfo(d).last || null), // 지난 원정 일지
 });
 
@@ -1573,7 +1573,7 @@ function onConnect(socket) {
     },
     mazeRules: maze.forClient(),
     ruinRules: { name: RUIN.name, crossAp: RUIN.crossAp, minLevel: RUIN.minLevel, gateTo: RUIN.gateTo, drain: RUIN.drain, cleanDrain: RUIN.cleanDrain ?? 1 },
-    fishing: { region: FISHING.region, window: FISHING.window },
+    fishing: { region: FISHING.region, window: FISHING.window, line: FISHING.line },
     bonds: require('./game-data').BONDS, marks: require('./game-data').MARKS, bondRules: require('./game-data').BOND_RULES,
     nestRules: NEST, hoardTiers: HOARD_TIERS,
     seasons: SEASONS.map((x) => ({ id: x.id, name: x.name, desc: x.desc, prose: logic.fxProse(x.fx), ...logic.fxText(x.fx) })),
@@ -1731,7 +1731,7 @@ function onConnect(socket) {
     const entry = entryOf(socket);
     if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
     const kind = str(payload?.kind);
-    if (!['items', 'recipes', 'titles'].includes(kind)) return ack({ error: '알 수 없는 즐겨찾기다.' });
+    if (!['items', 'recipes', 'titles', 'lock'].includes(kind)) return ack({ error: '알 수 없는 즐겨찾기다.' }); // lock: 판매 잠금한 물건
     const list = [...new Set((Array.isArray(payload?.list) ? payload.list : []).map((x) => str(x)).filter((x) => x && x.length <= 60))].slice(0, 300);
     const c = logic.combatJson(entry.dragon);
     c.favs = { ...(c.favs || {}), [kind]: list };
@@ -2065,6 +2065,13 @@ function onConnect(socket) {
     if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
     const d = entry.dragon;
     logic.regen(d);
+    if (logic.expInfo(d).goal === 'fishline') { // 줄 걸어 두기를 거둠
+      const res = logic.finishFishLine(d, Date.now());
+      db.saveState(d, res.items);
+      sendMe(socket, d);
+      broadcastPresence(d.region);
+      return ack({ ok: true, result: res });
+    }
     const kin = syncKin(socket, d);
     const expRegion = d.exp_region;
     const res = logic.finishExpedition(d, Date.now(), life.companions(kin));
@@ -2270,6 +2277,12 @@ function onConnect(socket) {
     return r;
   });
   itemAction('fish:reel', (d) => { const c = socket.data.fish; socket.data.fish = null; return logic.fishReel(d, c); });
+  // 줄 걸어 두기: 원정처럼 해안에 묶여 기다림 (거둘 때는 exp:finish)
+  itemAction('fish:line', (d, p, have) => {
+    const f = socket.data.fish;
+    if (f && Date.now() < f.bite + FISHING.window) return { error: '던져 둔 줄부터 거둬들이자.' };
+    return logic.startFishLine(d, Number(p.minutes), str(p.bait), have);
+  }, (d) => broadcastPresence(d.region));
   itemAction('traits:choose', (d, p) => logic.chooseTraits(d, str(p.good), str(p.bad)));
   itemAction('stats:spend', (d, p) => logic.spendStats(d, p.alloc));
   itemAction('title:set', (d, p) => logic.setTitle(d, str(p.id) || null), (d) => broadcastPresence(d.region));
@@ -2775,7 +2788,7 @@ function onConnect(socket) {
     const now = Date.now();
     const words = str(payload?.words).replace(/\s+/g, ' ').slice(0, DEPART.wordsMax);
     const legacy = d.level >= DEPART.minLevel
-      ? { name: d.name, kind: d.kind, level: d.level, pts: Math.min(DEPART.max, Math.floor(d.level * DEPART.perLevel)), at: now, words: str(payload?.words).replace(/\s+/g, ' ').slice(0, DEPART.wordsMax) }
+      ? { name: d.name, kind: d.kind, level: d.level, pts: require('./game-data').departPts(d.level), at: now, words: str(payload?.words).replace(/\s+/g, ' ').slice(0, DEPART.wordsMax) }
       : null;
     logic.regen(d, now);
     d.rest_at = null;

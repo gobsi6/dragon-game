@@ -1241,6 +1241,7 @@ dialog.trip-dlg {
 .rec-ribbons button[data-rt="chron"] { background-color: #5B7A5A; }
 .rec-ribbons button[data-rt="ach"] { background-color: #8E3F3F; }
 .rec-ribbons button[data-rt="dex"] { background-color: #2F4A63; }
+.rec-ribbons button[data-rt="raid"] { background-color: #7A5A2A; } /* 레이드 기록 (함께한 레이드가 있을 때만 보임) */
 .rec-ribbons button.on { opacity: 1; padding-bottom: 34px; }
 .rec-ribbons button:not(.on):hover { opacity: .9; padding-bottom: 27px; }
 .rec-ribbons button:focus-visible { outline: 2px solid var(--steel); outline-offset: 2px; }
@@ -3600,7 +3601,7 @@ html:has(dialog.dlg:modal) { overflow: hidden; overscroll-behavior: none; } /* �
   .profile.bag-open .np-face { display: grid; place-items: center; grid-column: 1; grid-row: 1 / span 3; width: 56px; height: 56px; border-radius: 50%; overflow: hidden; background: radial-gradient(circle at 50% 42%, #FFFFFF 0%, #ECEDEA 55%, #DFE1DE 100%); color: var(--muted); box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px #CDCFCB; }
   .profile.bag-open .np-face img { width: 100%; height: 100%; object-fit: cover; }
   /* 작은 얼굴 아래 상태 꼬리표 (원정·쉼 등): 폰의 동그란 그림처럼 아래 테두리에 걸침. 같은 칸에 겹쳐 둠 */
-  .profile.bag-open .nameplate > .np-st:not([hidden]) { display: inline-flex; grid-column: 1; grid-row: 1 / span 3; align-self: end; justify-self: center; position: relative; left: auto; top: auto; transform: translateY(calc(50% - 4px)); margin: 0; padding: 1px 6px 1px 5px; gap: 3px; font-size: 10.5px; background: var(--steel-d); box-shadow: 0 0 0 2px var(--surface); z-index: 2; }
+  .profile.bag-open .nameplate > .np-st:not([hidden]) { display: inline-flex; grid-column: 1; grid-row: 1 / span 3; align-self: center; justify-self: center; position: relative; left: auto; top: auto; transform: translateY(25px); /* 작은 얼굴(56px, 세로 가운데) 아래 테두리에 걸치게: 가운데에서 얼굴 반지름(28px)쯤 내림 */ margin: 0; padding: 1px 6px 1px 5px; gap: 3px; font-size: 10.5px; background: var(--steel-d); box-shadow: 0 0 0 2px var(--surface); z-index: 2; }
   .profile.bag-open .np-st.warn { background: #7A2E35; }
   .profile.bag-open .np-st svg { width: 11px; height: 11px; }
   .profile.bag-open .np-st.has-tm .w { display: none; } /* 좁아서 시간만 (아이콘으로 원정·쉼을 구분) */
@@ -3923,3 +3924,29 @@ html:has(dialog.dlg:modal) { overflow: hidden; overscroll-behavior: none; } /* �
   .inv .it b > .it-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
   .inv .it b > .it-tags > * { margin: 0; }
 }
+/* 레이드 결과 카드의 '레이드 기록 보기 ›': 본문 아래 오른쪽의 작은 글자 단추 (제목 줄을 좁히지 않게, 튀지 않게) */
+.result .rt-rec { display: block; margin: 2px 0 0 auto; padding: 2px 0; min-height: 0; border: 0; background: none; font: 500 11.5px/1.5 var(--sans); color: var(--muted); cursor: pointer; }
+.result .rt-rec[hidden] { display: none; }
+.result .rt-rec:hover { color: var(--steel-d); text-decoration: underline; }
+/* 낚시 창: 줄 걸어 두기 */
+.fish-line { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line-in); }
+.fish-line-h { margin: 0 0 6px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.fish-line-h b { font: 700 13.5px/1.4 var(--serif); color: var(--ink); }
+.fish-line-h span { font-size: 12px; color: var(--muted); }
+.fish-line-b { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.fish-line-b .btn { min-height: 0; padding: 6px 4px; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.fish-line-b .btn b { font-size: 13.5px; }
+.fish-line-b .btn small { font-size: 11px; color: var(--muted); }
+/* 시장: 개수를 직접 적는 칸 (− [n] +), 팔기 찾기 */
+.mk-step .mk-num { width: 34px; min-height: 30px; padding: 0; border: 0; background: transparent; text-align: center; font: 600 13px/1 var(--sans); font-variant-numeric: tabular-nums; color: var(--ink); -moz-appearance: textfield; appearance: textfield; }
+.mk-step .mk-num::-webkit-outer-spin-button, .mk-step .mk-num::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.mk-step .mk-num:focus { outline: 2px solid var(--steel-l); outline-offset: -2px; border-radius: 2px; }
+.mk-q { width: 100%; margin: 4px 0 8px; min-height: 36px; font-size: 13.5px; }
+/* 능력치 나누기: 더할 점수를 적는 칸 */
+#sp-rows .arow .sp-num { width: 40px; min-height: 28px; padding: 0; border: 1px solid var(--line-in); border-radius: 3px; background: var(--surface-2); font: 600 13px/1 var(--sans); color: var(--forest); text-align: center; font-variant-numeric: tabular-nums; -moz-appearance: textfield; appearance: textfield; }
+#sp-rows .arow .sp-num::-webkit-outer-spin-button, #sp-rows .arow .sp-num::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+/* 판매 잠금 자물쇠: 평소엔 흐린 작은 자물쇠, 걸면 '잠금' 꼬리표처럼 */
+.sell-lock { display: inline-flex; align-items: center; gap: 3px; min-height: 0; padding: 1px 5px; margin-left: 4px; border: 1px solid transparent; border-radius: 3px; background: none; color: var(--muted); opacity: .55; font: 600 10.5px/1.4 var(--sans); cursor: pointer; vertical-align: middle; }
+.sell-lock:hover { opacity: 1; border-color: var(--line-in); }
+.sell-lock.on { opacity: 1; color: #7A4E12; background: #FBF1E4; border-color: #E8D3B4; }
+.mk-list .locked .mk-go { display: none; }

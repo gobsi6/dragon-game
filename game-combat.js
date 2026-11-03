@@ -61,7 +61,7 @@ function setSettings(d, p) {
 function fromDragon(d, context) {
   const st = logic.statsOf(d);
   const tm = logic.traitMods(d);
-  const hunt = context === 'hunt';
+  const hunt = context === 'hunt' || context === 'raid'; // raid: 레이드 (사냥과 같고, 레이드 장신구의 특별한 효과까지)
   let atk = st.claw + d.level * 1.5;
   if (hunt) {
     atk += tm.huntClaw;                                          // 특성: 타고난 사냥꾼
@@ -75,7 +75,7 @@ function fromDragon(d, context) {
   const bf = hunt ? logic.buffOf(d) : null;
   const ti = hunt ? logic.titleMods(d) : {}; // 칭호 효과 (결투장에는 없음)
   const love = hunt && logic.hooks.together?.(d) ? logic.BOND_TOGETHER.taken : 1; // 연인·반려와 함께 있으면 받는 피해가 줌
-  const gm = hunt ? logic.gearMods(d) : null; // 희귀 장비의 특별한 효과 (결투장에는 없음)
+  const gm = hunt ? logic.gearMods(d, context === 'raid') : null; // 희귀 장비의 특별한 효과 (결투장에는 없음, 레이드 장신구 효과는 레이드에서만)
   return {
     id: d.id, name: d.name, kind: d.kind, creature: false, av: d.has_avatar ? d.avatar_ver : 0, // 프로필 그림 (결투·진정에서 상대에게 보임)
     hp: hunt ? d.hp : hpMax, hp0: hunt ? d.hp : hpMax, hpMax, en: hunt ? d.en : enMax, enMax, // hp0: 싸움을 시작할 때의 체력 (잃은 체력 계산)
