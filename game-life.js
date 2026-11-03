@@ -42,9 +42,17 @@ function stageOf(k, now) {
   let i = 0;
   const a = ageOf(k, now);
   list.forEach((s, j) => { if (a >= s.from) i = j; });
-  // 한 번 지난 단계로는 되돌아가지 않음 (단계 나이를 바꿨을 때, 이미 노년이 된 사람이 다시 어른으로 보이지 않게)
-  if (k.type === 'human' && Number.isInteger(k.data.stage) && k.data.stage > i && k.data.stage < list.length) i = k.data.stage;
+  // 단계는 늘 지금 나이로 셈 (단계 나이를 바꾸면 이미 지난 단계도 새 나이에 맞춰 다시 정해짐: 노년이 어른으로 돌아오는 것처럼. 기록은 humanStageFix가 맞춤)
   return { i, name: list[i].name, next: list[i + 1] ? list[i + 1].from : null };
+}
+// 단계 나이를 바꾼 뒤, 예전 나이로 이미 더 자란 단계에 올라가 있던 인간 식구를 지금 나이에 맞는 단계로 되돌림
+// (예: 노년이 18일 → 20일로 늦춰지면, 18~20일 사이에 노년이 된 사람은 다시 어른). 그때 남긴 '흰 서리' 일기는 지워서, 진짜 노년이 될 때 다시 남김
+function humanStageFix(k, st) {
+  if (k.type !== 'human' || !Number.isInteger(k.data.stage) || k.data.stage <= st.i) return false;
+  const elder = H.stages.findIndex((s) => s.name === '노년');
+  if (k.data.stage >= elder && st.i < elder && Array.isArray(k.data.diary)) k.data.diary = k.data.diary.filter((x) => x.t !== '머리에 흰 서리가 내렸다.');
+  k.data.stage = st.i;
+  return true;
 }
 // 함께 사는 식구들: 인간, 깨어난 새끼, 알
 function homeKin(kin, max = KIN.maxKin) {
@@ -488,6 +496,7 @@ function tick(d, kin, now = Date.now()) {
         out.lines.push(...logic.traitCount(d, 'neglect')); // 특성: 냉담
       }
       const st = stageOf(k, now);
+      humanStageFix(k, st);
       if (st.i > (k.data.stage || 0)) {
         k.data.stage = st.i;
         if (a < H.adultDay) { out.lines.push(`${ga(k)} 자라서 '${st.name}'${josa(st.name, '이', '가')} 되었다.`); diary(k, `'${st.name}'${josa(st.name, '이', '가')} 되었다.`, now); bondDip(k, st, out, now); }
