@@ -503,7 +503,7 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
       const hp = Math.max(fg.boss.hp, Math.round(fg.boss.hpMax * B.split.floor));
       fg.boss.hp = hp; fg.boss.splitHp = hp; // 되살아날 때는 갈라질 때의 체력을 기준으로
       fg.shadow = part(B, 'shadow', hp); fg.shadow.splitHp = hp;
-      fg.phase = 3; fg.phaseAt = fg.turn; fg.plan = null; fg.p3n = 0;
+      fg.phase = 3; fg.phaseAt = fg.turn; if (!(fg.plan && fg.plan.at === fg.turn)) fg.plan = null; fg.p3n = 0; // 이번 턴에 이미 예고한 노래·응시는 그대로 (3단계로 넘어가는 턴에 사라지던 문제)
       fg.foes = [fg.boss, fg.shadow, ...fg.crows.filter((c) => c.hp > 0)];
       for (const k of Object.keys(fg.targets)) fg.targets[k] = 0;
       lines.push(...B.lines.phase3);
@@ -781,7 +781,8 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
       lines.push(...B.lines.phase2);
     }
     if (fg.phase === 2 && fg.boss.hp > 0 && fg.boss.hp <= fg.boss.hpMax * B.duel.below) {
-      fg.phase = 3; fg.phaseAt = fg.turn; fg.plan = null;
+      // 이번 턴에 이미 예고한 돌격은 그대로 둠 (3단계로 넘어가는 턴에 예고만 하고 돌격이 사라지던 문제. 방어·돌풍을 쓴 드래곤이 헛수고하던 것)
+      fg.phase = 3; fg.phaseAt = fg.turn; if (!(fg.plan?.type === 'charge' && fg.plan.at === fg.turn)) fg.plan = null;
       lines.push(...B.lines.phase3);
     }
   }
