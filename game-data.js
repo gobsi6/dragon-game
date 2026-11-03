@@ -2495,8 +2495,8 @@ const RAIDBOSS = {
       // 마지막 숨 (3단계): 턴마다 한 칸씩 모아 max칸이 차면 모두에게 최대 체력 pct (방어·비늘 세우기는 절반씩). 쏟은 뒤 0부터 다시
       //   늦추기: 포효 성공(위엄 판정) −1, 날개 돌풍(날개 판정, 심연의 숨과 같은 확률) −1. 늦춘 횟수는 칭호 '고룡을 붙든 자'으로 셈
       last:   { max: 3, pct: 0.90 },                              // 다 차도록 못 막으면 모두 최대 체력 90% (방어·비늘 세우기는 절반씩)
-      // 기믹을 해내면 아스테르에게 최대 체력의 이만큼 피해: 금빛 번개 흘려보냄, 잿빛 번개 막아섬, 손아귀에서 구함, 심연의 숨 흩트림, 마지막 숨 늦춤, 기억이 돌아옴
-      punish: { gold: 0.02, ash: 0.02, grip: 0.03, abyss: 0.03, last: 0.02, memory: 0.08 },
+      // 기믹을 해내면 아스테르에게 최대 체력의 이만큼 피해: 손아귀에서 구함, 심연의 숨 흩트림, 마지막 숨 늦춤, 기억이 돌아옴 (번개는 0)
+      punish: { gold: 0, ash: 0, grip: 0.03, abyss: 0.02, last: 0.02, memory: 0.05 }, // 번개는 누구나 지키는 기믹이라 피해 없음. 어렵거나 드문 것만 (한 판에 15~20% 안팎)
       firstTitle: 'riftfirst',                                   // 서버에서 처음 쓰러뜨린 넷만 받는 칭호 (전시용)
       rare: { gear: ['raid_rift_eye', 'raid_rift_feather'], treasure: 'tr_star_stone' },
       reward: { gold: [400, 600], shard: 'rift_scale', shards: 2, firstShard: 6, purifyShard: 25, purify: 80, journal: 'rift_memory', journalChance: 0.2, keepsake: 'warm_claw', fame: 5 },
