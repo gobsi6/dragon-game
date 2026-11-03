@@ -141,6 +141,7 @@
         </div>
         <div class="nameplate">
           <span class="np-face" id="np-face" aria-hidden="true"></span><!-- 넓은 화면에서 회복 가방을 열어 큰 그림이 접혔을 때만 보이는 작은 얼굴 -->
+          <span class="st-tag np-st has-tm" id="np-st" hidden><svg viewBox="0 0 24 24" aria-hidden="true"></svg><span class="w"></span><small class="tm"></small></span><!-- 작은 얼굴 아래에 거는 상태 꼬리표 (폰의 동그란 그림처럼) -->
           <div class="nrow"><span class="ttl" id="me-title" hidden></span><span class="n" id="me-name"></span></div>
           <div class="sub"><span class="lv" id="me-lv"></span><span id="me-kind"></span></div>
           <div class="xp"><div class="bar"><i id="xp-bar"></i></div><div class="t"><span>경험</span><span id="xp-t"></span></div></div>
@@ -2336,14 +2337,19 @@
       : inMazeNow() ? ['maze', '회랑 탐사', '']
       : me.restAt ? ['rest', '쉬는 중', stTime(now - me.restAt)]
       : null;
-    tag.hidden = !st;
     $('portrait').classList.toggle('faded', !!me.fallen);
-    if (!st) return;
-    tag.classList.toggle('warn', !!st[3]);
-    tag.classList.toggle('has-tm', !!st[2]);
-    tag.querySelector('svg').innerHTML = ST_ICON[st[0]];
-    tag.querySelector('.w').textContent = st[1];
-    tag.querySelector('.tm').textContent = st[2];
+    $('np-face')?.classList.toggle('faded', !!me.fallen);
+    // 큰 그림의 꼬리표와, 회복 가방을 열어 큰 그림이 접혔을 때 작은 얼굴 아래에 거는 꼬리표를 똑같이
+    for (const t of [tag, $('np-st')]) {
+      if (!t) continue;
+      t.hidden = !st;
+      if (!st) continue;
+      t.classList.toggle('warn', !!st[3]);
+      t.classList.toggle('has-tm', !!st[2]);
+      t.querySelector('svg').innerHTML = ST_ICON[st[0]];
+      t.querySelector('.w').textContent = st[1];
+      t.querySelector('.tm').textContent = st[2];
+    }
   }
   // 원정 중에는 남은 시간이 초 단위라 1초마다, 그 밖에는 30초마다 ('쉬는 중' 분 글씨 등)
   let stTick = 0;
@@ -13371,6 +13377,8 @@
     p.dataset.last = m.at;
     p.dataset.at = m.at; // 이 묶음의 처음 시각 (지난 용언을 제자리에 끼워 넣을 때)
     p.style.setProperty('--t', `var(--t-${m.kind})`);
+    p.style.setProperty('--nb', `var(--n-${m.kind}, var(--t-${m.kind}))`); // 이름표 바탕 (골드·화이트는 밝은 바탕에 짙은 글씨)
+    p.style.setProperty('--nf', `var(--nf-${m.kind}, #fff)`);
     const head = document.createElement('div');
     head.className = 'mh';
     const nm = document.createElement('button');

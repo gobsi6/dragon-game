@@ -14,15 +14,19 @@
   --steel-l: #9DB3C6;
   --forest: #3A6B50;
 
-  --k-black: #6E5E92;  --t-black: #4A3D66;
-  --k-gold: #B8913A;   --t-gold: #7A5A16;
-  --k-white: #6F9BBC;  --t-white: #2C4F6B;
-  --k-green: #5E8A55;  --t-green: #3B5E33;
-  --k-red: #B5473F;    --t-red: #8A2E27;
-  --k-silver: #8C9AA6; --t-silver: #46525C;
-  --k-blue: #3F72A8;   --t-blue: #234A72;
-  --k-purple: #9459AE; --t-purple: #5E3570;
-  --k-bronze: #A3723F; --t-bronze: #6A4522;
+  --k-black: #6E5E92;  --t-black: #2F3138;
+  --k-gold: #B8913A;   --t-gold: #8A6A1C;
+  --k-white: #6F9BBC;  --t-white: #4F6472;
+  --k-green: #5E8A55;  --t-green: #3E6A4E;
+  --k-red: #B5473F;    --t-red: #9A3345;
+  --k-silver: #8C9AA6; --t-silver: #6C7580;
+  --k-blue: #3F72A8;   --t-blue: #34558E;
+  --k-purple: #9459AE; --t-purple: #6A4A8E;
+  --k-bronze: #A3723F; --t-bronze: #7A3F25;
+  /* 이야기 창 이름표: 채도를 낮춘 보석빛(흑연·고금·진주·숲·석류·백랍·사파이어·자수정·적동)으로 차분하게, 색상은 서로 멀리.
+     화이트만 진주빛 밝은 바탕에 짙은 글씨 */
+  --n-white: #FFFFFF;  --nf-white: #1F4A5E; /* 화이트: 흰 바탕에 짙은 청록 글씨 */
+  --n-gold: #B29146;   /* 골드 이름표만 밝은 금빛 (식구 카드 글씨는 읽히도록 --t-gold 짙은 금 그대로) */
   --k-clear: #A9B3B9;  --t-clear: #5B666E; /* 투명 드래곤 (GM 시험용) */
   --k-orsha: #7A6E84; /* 생존자 오르샤: 잿빛 보라 바탕에 모닥불 */
 
@@ -2808,8 +2812,9 @@ html { scrollbar-gutter: stable; }
 .log .msg { display: flex; flex-direction: column; gap: 1px; padding: 5px 8px 6px; border: 1px solid var(--line-in); border-radius: 4px; background: var(--surface-2); overflow-wrap: anywhere; }
 .log .msg.mine { background: #F2F5F8; border-color: #D3DDE6; }
 .log .mh { display: flex; align-items: center; gap: 6px; margin-bottom: 1px; }
-.log .mh .nm { padding: 1px 7px 1.5px; border: 0; border-radius: 3px; background: var(--t); color: #fff; font: 700 11.5px/1.5 var(--serif); letter-spacing: .01em; cursor: pointer; }
+.log .mh .nm { padding: 1.5px 8px 2px; border: 0; border-radius: 4px; background: var(--nb, var(--t)); background-image: linear-gradient(180deg, rgba(255, 255, 255, .10), rgba(255, 255, 255, 0) 60%); color: var(--nf, #fff); text-shadow: 0 1px 1px rgba(0, 0, 0, .22); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .10), 0 1px 1.5px rgba(31, 35, 38, .10); font: 700 11.5px/1.5 var(--serif); letter-spacing: .02em; cursor: pointer; }
 .log .mh .nm:hover { filter: brightness(1.15); }
+.log .msg[style*="--n-white"] .mh .nm { text-shadow: none; } /* 밝은 바탕(화이트)은 글씨 그림자 없이 */
 .log .mh .nm:focus-visible { outline: 2px solid var(--t); outline-offset: 2px; }
 .log .mh time { font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
 /* 이름 머리줄: 줄임 없이 다 보여 줌. 한 줄에 다 들어가지 않으면 칭호·이름·시각이 통째로 다음 줄로 넘어감 (이름 칩 안에서는 꺾이지 않음) */
@@ -3573,11 +3578,19 @@ html:has(dialog.dlg:modal) { overflow: hidden; overscroll-behavior: none; } /* �
 .profile.bag-open .nameplate { margin-top: 0; }
 /* 이름판의 작은 얼굴: 넓은 화면에서 회복 가방을 열어 큰 그림이 접혔을 때만, 이름판 왼쪽에 동그랗게 (폰은 원래 동그란 그림이 있어 그대로) */
 .np-face { display: none; }
+.np-st { display: none; }
 @media (min-width: 861px) {
   .profile.bag-open .nameplate { display: grid; grid-template-columns: 56px minmax(0, 1fr); column-gap: 12px; row-gap: 3px; align-items: center; text-align: left; margin: 0; padding: 10px 14px 11px 12px; } /* 큰 그림이 접혔으니 양옆 들여쓰기 없이 칸 너비를 다 씀 */
   .profile.bag-open .nameplate > :not(.np-face) { grid-column: 2; }
   .profile.bag-open .np-face { display: grid; place-items: center; grid-column: 1; grid-row: 1 / span 3; width: 56px; height: 56px; border-radius: 50%; overflow: hidden; background: radial-gradient(circle at 50% 42%, #FFFFFF 0%, #ECEDEA 55%, #DFE1DE 100%); color: var(--muted); box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px #CDCFCB; }
   .profile.bag-open .np-face img { width: 100%; height: 100%; object-fit: cover; }
+  /* 작은 얼굴 아래 상태 꼬리표 (원정·쉼 등): 폰의 동그란 그림처럼 아래 테두리에 걸침. 같은 칸에 겹쳐 둠 */
+  .profile.bag-open .nameplate > .np-st:not([hidden]) { display: inline-flex; grid-column: 1; grid-row: 1 / span 3; align-self: end; justify-self: center; position: relative; left: auto; top: auto; transform: translateY(calc(50% - 4px)); margin: 0; padding: 1px 6px 1px 5px; gap: 3px; font-size: 10.5px; background: var(--steel-d); box-shadow: 0 0 0 2px var(--surface); z-index: 2; }
+  .profile.bag-open .np-st.warn { background: #7A2E35; }
+  .profile.bag-open .np-st svg { width: 11px; height: 11px; }
+  .profile.bag-open .np-st.has-tm .w { display: none; } /* 좁아서 시간만 (아이콘으로 원정·쉼을 구분) */
+  .profile.bag-open .np-st .tm { font-size: 10.5px; opacity: 1; font-weight: 600; }
+  .profile.bag-open .np-face.faded img, .profile.bag-open .np-face.faded svg { filter: grayscale(.7) brightness(1.04); }
   .profile.bag-open .nameplate .nrow { justify-content: flex-start; }
   .profile.bag-open .nameplate .n { font-size: 21px; }
   .profile.bag-open .nameplate .xp { margin-top: 3px; }

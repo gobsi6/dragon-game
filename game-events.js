@@ -1326,6 +1326,11 @@ module.exports = [
         if (c.nest) h.keep('far_letter', v.name, v.type === 'human' ? ((LETTER_H[v.stage] || LETTER_H['아이']).say) : ''); else h.give('kin_letter');
         h.say(`${v.type === 'human' ? '편지를' : '비늘을'} ${c.nest ? '보물 상자에 넣고 잠갔다' : '품속 깊이 넣어 두었다'}. (정신 +5, 먼 둥지의 편지)`);
       } },
+      { label: '답장하지 않는다', run: (h, c, v) => { // 아무 일도 일어나지 않음 (정신·물건 없음, 상대 둥지에도 알리지 않음)
+        h.say(v.type === 'human'
+          ? `편지를 한 번 더 읽고 조용히 접어 두었다. 답장은 쓰지 않았다. ${v.name}${h.josa(v.name, '이', '가')} 새 둥지에 마음을 붙이도록 두는 편이 나을 것 같다.`
+          : `비늘을 한참 바라보다 바람에 다시 실어 보냈다. ${v.name}${h.josa(v.name, '은', '는')} 이제 ${v.owner}의 둥지에서 자랄 것이다.`);
+      } },
     ],
   },
   {

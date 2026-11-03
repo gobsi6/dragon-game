@@ -1010,7 +1010,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
   function onEnter(socket, d) {
     refreshRivals(d);
     const gifts = db.giftList(d.id);
-    if (gifts.length) socket.emit('gift:inbox', gifts); // 확인하지 않은 선물
+    if (gifts.length) socket.emit('gift:inbox', gifts.map((g) => ({ ...g, from: { ...g.from, av: avOf(g.from.id) } }))); // 확인하지 않은 선물 (보낸 드래곤의 프로필 그림 번호도 함께. 빠지면 그림 대신 문양만 보였음)
     const notes = db.notesTake(d.id);
     const tp = db.tpUnread(d.id);
     if (tp) notes.push(`잠든 사이 마음에 남겨진 텔레파시가 ${tp}개 있다.`);
