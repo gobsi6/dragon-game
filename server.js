@@ -518,7 +518,9 @@ const meOf = (d) => ({
   statPts: d.stat_pts || 0,                // 아직 나누지 않은 능력치 포인트
   mind: d.mind ?? MIND.max, mindMax: MIND.max, mindAt: d.mind_at || 0, mindEvery: MIND.regenEvery,
   berserkInfo: (() => { const b = logic.berserkOf(d); return b ? { until: b.until, region: b.region, hp: b.hp, hpMax: b.hpMax } : null; })(),
-  corrupt: { region: logic.isCorrupted(logic.corruptedRegion()) ? logic.corruptedRegion() : null, until: logic.corruptUntil(), purify: purify.view(d) },
+  corrupt: { region: !purify.purified() ? logic.corruptedRegion() : null, // 매일 옮겨 가는 오염만 (재앙의 오염은 아래 blight)
+              until: logic.corruptUntil(), purify: purify.view(d) },
+  blight: blight.view(d), // 재앙의 오염 (놓친 재앙이 휩쓸고 간 곳과 그 주변)
   marketFall: marketFall.view(d), // 무너진 시장 (GM 이벤트)
   ruin: ruin.view(d),
   fallen: logic.isFallen(d) ? death.view(d) : null,
@@ -806,7 +808,8 @@ function chatPage(region, before) {
 function livePins() {
   const out = [marketFall.state()?.pin, boss.pin()];
   const cp = db.worldGet('corruptPin');
-  if (cp && cp.region === logic.corruptedRegion() && logic.isCorrupted(cp.region)) out.push(cp);
+  if (cp && cp.region === logic.corruptedRegion() && !purify.purified()) out.push(cp);
+  out.push(blight.pin());
   return out.filter(Boolean);
 }
 function enterWorld(socket, dragon) {
@@ -960,6 +963,100 @@ const purify = (() => {
   return { add, view, purified: (now = Date.now()) => { const s = cur(now); return s.period === period(now) && s.done; }, debugSet: (n) => { const s = cur(); s.total = n; db.worldSet('purify', s); } };
 })();
 logic.hooks.purified = purify.purified;
+
+// ── 재앙의 오염: 놓친 대륙의 재앙이 떠나면 휩쓸고 간 곳(center)과 이어진 야생 지역(near)이 한동안 오염됨 (BOSS.blight) ──
+// 지역마다 따로 정화할 수 있음: 그곳에서 탐사·채집·사냥·강적·이벤트로 기여가 쌓이고, 목표에 닿으면 일찍 걷히며 기여한 드래곤 모두 보상
+// 상태는 world 표의 'boss_blight' { boss, at, pin, regions: { 지역id: { kind, until, total, goal, pts, names, done } } }
+const blight = (() => {
+  const { BOSS } = require('./game-data');
+  const B = BOSS.blight;
+  let st = db.worldGet('boss_blight') || { boss: '', at: 0, regions: {} };
+  const save = () => db.worldSet('boss_blight', st);
+  const live = (r, now = Date.now()) => !!r && r.until > now;                // 아직 기간 안 (정화되었어도)
+  const on = (region, now = Date.now()) => { const r = st.regions[region]; return live(r, now) && !r.done ? r : null; }; // 지금 오염됨
+  const wild = (id) => REGIONS[id] && !SHOPS[id] && !logic.isRuin(id);
+  const pushAll = () => { for (const e of online.values()) sendMe(e.socket, e.dragon); };
+  const KIND = { center: '짙은', near: '옅은' };
+  // 놓친 재앙이 떠날 때 (boss.js의 gone이 부름)
+  function start(region, bossName) {
+    if (!B || !wild(region)) return;
+    const now = Date.now();
+    const regions = {};
+    for (const [id, r] of Object.entries(st.regions)) if (live(r, now)) regions[id] = r; // 아직 남은 지난 오염은 그대로 둠
+    const put = (id, kind) => {
+      const prev = regions[id];
+      if (prev && !prev.done && prev.kind === 'center' && kind === 'near') return; // 짙은 오염을 옅게 덮지 않음
+      regions[id] = { kind, until: now + B[kind].hours * 3600000, total: 0, goal: B[kind].goal, pts: {}, names: {}, done: false };
+    };
+    put(region, 'center');
+    const near = REGIONS[region].links.filter(wild);
+    for (const id of near) put(id, 'near');
+    const rn = REGIONS[region].name;
+    const text = `[재앙의 오염] ${bossName}${josa(bossName, '이', '가')} 남긴 검은 기운이 ${rn}${near.length ? `과 그 주변(${near.map((id) => REGIONS[id].name).join(', ')})` : ''}에 퍼졌다! ${rn}${josa(rn, '은', '는')} ${B.center.hours}시간, 주변은 ${B.near.hours}시간 동안 오염된다. 그곳에서 힘을 모으면 일찍 정화할 수 있다.`;
+    io.emit('system', { text, at: Date.now() }); // 대륙 소식으로 기록됨
+    st = { boss: bossName, at: now, regions, pin: io.lastNews || null }; // 오염이 남아 있는 동안 이 알림은 이야기 창 기록에 늘 남김
+    save();
+    pushAll();
+  }
+  // 정화 기여 (돌려주는 것: 이 행동의 결과에 붙일 문장)
+  function add(d, kind, n = null) {
+    const r = on(d.region);
+    if (!r) return [];
+    const v = n ?? PURIFY.pts[kind] ?? 0;
+    if (!v) return [];
+    r.pts[d.id] = (r.pts[d.id] || 0) + v;
+    r.names[d.id] = d.name;
+    r.total += v;
+    const lines = [];
+    if (r.total >= r.goal) { lines.push('재앙이 남긴 검은 기운이 마침내 흩어졌다!'); const region = d.region; setImmediate(() => finish(region)); }
+    save();
+    return lines;
+  }
+  function finish(region) {
+    const r = on(region);
+    if (!r) return;
+    r.done = true;
+    r.doneAt = Date.now();
+    save();
+    const R = PURIFY.reward, k = B[r.kind]?.reward ?? 1;
+    const rn = REGIONS[region]?.name || '';
+    const ids = Object.keys(r.pts).map(Number).filter((id) => r.pts[id] >= PURIFY.minPts);
+    io.emit('system', { text: `[정화] ${st.boss || '재앙'}${josa(st.boss || '재앙', '이', '가')} ${rn}에 남긴 검은 기운이 걷혔다! ${ids.length}마리의 드래곤이 함께 정화했다.`, at: Date.now() });
+    for (const id of ids) {
+      const e = online.get(id);
+      const d = e ? e.dragon : db.getDragon(id);
+      if (!d || d.dead_at) continue;
+      const mine = r.pts[id];
+      const gold = Math.round(Math.min(R.goldMax, R.goldBase + mine * R.goldPer) * k);
+      const xp = logic.xpOf(d, Math.round(R.xp * k));
+      d.gold += gold;
+      const lines = [`${rn}에 남은 재앙의 기운을 함께 걷어 냈다. 나의 기여 ${mine} (전체 ${r.total})`, `금화 ${gold}닢을 받았다.`];
+      const f = logic.addFame(d, Math.max(1, Math.round(R.fame * k))); if (f) lines.push(f);
+      const up = logic.gainXp(d, xp); lines.push(`경험치 +${xp}${up ? ' · 레벨이 올랐다!' : ''}`);
+      lines.push(...logic.traitCount(d, 'purify'));
+      logic.chron(d, 'mark', `${rn}에 남은 재앙의 기운을 함께 정화했다.`);
+      db.saveState(d);
+      if (e) { sendMe(e.socket, d); e.socket.emit('notice', { title: '정화', lines }); } else for (const l of lines) db.noteAdd(id, l);
+    }
+    pushAll(); // 오염 표시가 사라지게
+  }
+  // 화면에 줄 모습: 기간이 남은 곳만 (정화된 곳도 기간 동안은 '정화됨'으로 보임)
+  const view = (d) => {
+    const now = Date.now();
+    return Object.entries(st.regions).filter(([, r]) => live(r, now)).map(([region, r]) => ({
+      region, kind: r.kind, strength: KIND[r.kind], until: r.until, total: r.total, goal: r.goal, mine: (d && r.pts[d.id]) || 0, people: Object.keys(r.pts).length, done: r.done, boss: st.boss,
+      drain: (B[r.kind]?.drain ?? 1) * (d && d.level < B.lowLevel ? B.lowDrain : 1), low: !!d && d.level < B.lowLevel, lowLevel: B.lowLevel, // 이 드래곤이 받는 정신 소모 배율 (매일 오염과 겹치면 화면에서 1로)
+    }));
+  };
+  // 이야기 창에 남길 알림: 아직 오염된 곳이 하나라도 있으면
+  const pin = () => (st.pin && Object.keys(st.regions).some((id) => on(id)) ? st.pin : null);
+  // 시험용(GM): 지금 바로 일으키기 / 모두 거두기
+  const clear = () => { st.regions = {}; st.pin = null; save(); pushAll(); };
+  return { start, add, view, pin, clear, of: (region, now) => { const r = on(region, now); return r ? { kind: r.kind } : null; } };
+})();
+logic.hooks.blight = blight.of;
+logic.hooks.bossBlight = blight.start; // boss.js: 놓친 재앙이 떠날 때
+logic.hooks.blightClear = blight.clear; // GM 시험용
 // ── 무너진 시장 (GM이 일으키는 단발 이벤트): 인간 마을 하나의 시장이 무너지고, 모두가 금화와 재료를 모아 다시 세움 ──
 // 다 세우면 각자 보탠 만큼(기여) 태양석·소금 결정을 줌 (다른 드래곤이 얼마나 보탰는지와 상관없음). 자원마다 목표가 있고, 진행은 자원별로 채운 비율의 평균
 // 기여: 자원마다 (보탠 양 ÷ 그 자원의 목표) × 100 (이벤트 전체 기여 = 100 × 자원 수)
@@ -1077,18 +1174,28 @@ const ruin = (() => {
   const openText = (r) => `[${RUIN.name}] 정화도 ${Math.round(r.unlock * 100)}%! 오염이 물러나며 ${r.name}${josa(r.name, '으로', '로')} 가는 길이 열렸다.`;
   // 예전 저장분: 열림 기록이 없으면 지금 정화도로 조용히 채움 (다시 알리지 않게)
   if (!Array.isArray(st.open)) { st.open = gated().filter((r) => pct() >= r.unlock).map((r) => r.id); save(); }
-  // 문턱을 새로 넘은 지역을 열고 모두에게 알림. 돌려주는 것: 이번에 새로 열린 지역들
+  // 정화 완료: 100%에 닿으면 st.done이 켜지고, 그 뒤로는 목표가 바뀌어도 꺼지지 않음 (기여는 계속 쌓여 칭호·순위에 반영)
+  const doneText = `[${RUIN.name}] 모두의 정화도 100%! 대륙을 덮던 검은 기운이 걷혔다. 이제 이 땅에서 정신이 덜 깎인다.`;
+  if (st.done == null) { st.done = pct() >= 1; if (st.done) st.doneAt = Date.now(); save(); } // 예전 저장분: 이미 100%였다면 조용히 완료로
+  // 문턱을 새로 넘은 지역을 열고 모두에게 알림. 돌려주는 것: 이번에 알린 문장들 (새로 열린 지역, 정화 완료)
   function settle() {
     const opened = gated().filter((r) => !st.open.includes(r.id) && pct() >= r.unlock);
+    const lines = [];
     for (const r of opened) {
       st.open.push(r.id);
       io.emit('system', { text: openText(r), at: Date.now() });
+      lines.push(openText(r));
     }
-    if (opened.length) {
-      save();
-      if (raidBoss) setTimeout(() => io.emit('raidboss', raidBoss.view()), 0); // 새로 열린 땅의 레이드도 바로 '열림'으로 (접속해 있던 드래곤들의 레이드 모습이 닫힘에 머물지 않게)
+    const cleared = !st.done && pct() >= 1;
+    if (cleared) {
+      st.done = true;
+      st.doneAt = Date.now();
+      io.emit('system', { text: doneText, at: Date.now() });
+      lines.push(doneText);
     }
-    return opened;
+    if (opened.length || cleared) save();
+    if (opened.length && raidBoss) setTimeout(() => io.emit('raidboss', raidBoss.view()), 0); // 새로 열린 땅의 레이드도 바로 '열림'으로 (접속해 있던 드래곤들의 레이드 모습이 닫힘에 머물지 않게)
+    return lines;
   }
   const unlocked = (region) => {
     if (!logic.isRuin(region) || !(REGIONS[region]?.unlock > 0)) return true;
@@ -1104,15 +1211,19 @@ const ruin = (() => {
     st.names[d.id] = d.name;
     st.total += v;
     logic.traitsOf(d).counts.ruinpts = st.pts[d.id]; // 칭호 판정용: 내 누적 기여 (정화도 칭호)
-    const lines = settle().map(openText); // 새로 열린 지역이 있으면 내 결과 창에도
+    const lines = settle(); // 새로 열린 지역·정화 완료가 있으면 내 결과 창에도
     save();
     return lines;
   }
   const top = (n = 5) => Object.entries(st.pts).sort((a, b) => b[1] - a[1]).slice(0, n).map(([id, p]) => ({ id: Number(id), name: st.names[id], pts: p }));
-  const view = (d) => { settle(); const nx = nextLock(); return { total: st.total, goal: goal(), pct: pct(), open: st.open.slice(), mine: st.pts[d.id] || 0, next: nx ? { name: nx.name, at: nx.unlock } : null }; };
-  return { add, view, top, unlocked, debugSet: (n) => { st.total = n; save(); goalAt = 0; settle(); } };
+  const view = (d) => { settle(); const nx = nextLock(); return { total: st.total, goal: goal(), pct: pct(), done: !!st.done, open: st.open.slice(), mine: st.pts[d.id] || 0, next: nx ? { name: nx.name, at: nx.unlock } : null }; };
+  const cleared = () => !!st.done;
+  // 시험용: 100% 아래로 내리면 완료도 풀어서 다시 시험할 수 있게
+  return { add, view, top, unlocked, cleared, debugSet: (n) => { st.total = n; goalAt = 0; if (pct() < 1) st.done = false; save(); settle(); } };
 })();
-logic.hooks.purify = (d, kind) => (logic.isRuin(d.region) ? ruin.add(d, kind) : purify.add(d, kind));
+logic.hooks.ruinCleared = ruin.cleared;
+// 정화 기여: 멸망한 대륙이면 그 땅의 정화도, 아니면 매일 오염의 정화와 재앙의 오염 정화 (둘이 겹친 곳이면 둘 다에 쌓임. 각자 자기 지역이 아니면 무시)
+logic.hooks.purify = (d, kind, n = null) => (logic.isRuin(d.region) ? ruin.add(d, kind, n) : [...purify.add(d, kind, n), ...blight.add(d, kind, n)]);
 // 레이드: 만렙 드래곤 넷이 모여 함께 맞서는 기믹 전투 (raidboss.js)
 // ── 보물더미 순위: 둥지가 있는 드래곤의 보물더미 가치 (금화 + 물건 + 보물 상자). 5분마다 새로 셈 ──
 let rankCache = { at: 0, list: [] };
@@ -1461,7 +1572,7 @@ function onConnect(socket) {
         fit: [F.talent ? `${TALENTS[F.talent].name} 재주` : null, ...F.traits.map((t) => KIN_TRAITS[t]?.name)].filter(Boolean).join(', ') }])),
     },
     mazeRules: maze.forClient(),
-    ruinRules: { name: RUIN.name, crossAp: RUIN.crossAp, minLevel: RUIN.minLevel, gateTo: RUIN.gateTo, drain: RUIN.drain },
+    ruinRules: { name: RUIN.name, crossAp: RUIN.crossAp, minLevel: RUIN.minLevel, gateTo: RUIN.gateTo, drain: RUIN.drain, cleanDrain: RUIN.cleanDrain ?? 1 },
     fishing: { region: FISHING.region, window: FISHING.window },
     bonds: require('./game-data').BONDS, marks: require('./game-data').MARKS, bondRules: require('./game-data').BOND_RULES,
     nestRules: NEST, hoardTiers: HOARD_TIERS,
@@ -1807,8 +1918,8 @@ function onConnect(socket) {
       if (type !== 'hunt') {
         if (Math.random() < MIND.crystal[type]) { res.items = [...(res.items || []), { id: 'corrupt_crystal', qty: 1 }]; res.lines.push('검붉게 빛나는 오염 결정을 주웠다.'); }
         if (Math.random() < (MIND.scale[type] || 0)) { res.items = [...(res.items || []), { id: 'blackened_scale', qty: 1 }]; res.lines.push('검게 물든 비늘 한 장이 바위틈에 박혀 있었다.'); }
-        res.lines.push(...logic.loseMind(d, MIND.drain[type]));
-        res.lines.push(...(logic.isRuin(d.region) ? ruin.add(d, type) : purify.add(d, type)));
+        res.lines.push(...logic.loseMind(d, MIND.drain[type] * logic.corruptMul(d)));
+        res.lines.push(...logic.hooks.purify(d, type));
         const sh = logic.isRuin(d.region) && RUIN.shard[type];
         if (sh && Math.random() < sh[0]) { res.items = [...(res.items || []), { id: 'purify_shard', qty: sh[1] }]; res.lines.push('잿빛 먼지 사이에서 맑게 빛나는 정화의 결정을 찾았다.'); }
       }
@@ -1959,7 +2070,7 @@ function onConnect(socket) {
     const res = logic.finishExpedition(d, Date.now(), life.companions(kin));
     if (res.error) return ack(res);
     if (expRegion && logic.isCorrupted(expRegion) && res.minutes >= 10) {
-      res.lines.push('오염된 땅을 오래 헤맨 탓에 머릿속이 무겁다.', ...logic.loseMind(d, MIND.drain.expedition * Math.floor(res.minutes / 10)));
+      res.lines.push('오염된 땅을 오래 헤맨 탓에 머릿속이 무겁다.', ...logic.loseMind(d, MIND.drain.expedition * Math.floor(res.minutes / 10) * logic.corruptMul(d, expRegion)));
     }
     res.lines.push(...life.expFinish(kin, res.minutes));
     if (res.minutes >= 10) res.lines.push(...logic.traitCount(d, 'expedition'));
@@ -2031,7 +2142,7 @@ function onConnect(socket) {
       for (const g of res.sends || []) social.eventGift(d, g.id, g.items, g.msg); // 이벤트로 보낸 선물
       for (const l of res.loves || []) kinLove.ask(d, l); // 다른 둥지 첫사랑에게 혼인 청
       for (const b of res.babies || []) kinLove.babyAsk(d, b); // 짝 사이의 아이를 두고 상대 둥지에 청
-      if (res.purify) res.lines = [...(res.lines || []), ...(logic.isRuin(d.region) ? ruin.add(d, 'event', res.purify) : purify.add(d, 'event', res.purify))]; // 이벤트로 쌓은 정화 기여 (멸망한 대륙이면 그 땅의 정화로)
+      if (res.purify) res.lines = [...(res.lines || []), ...logic.hooks.purify(d, 'event', res.purify)]; // 이벤트로 쌓은 정화 기여 (멸망한 대륙이면 그 땅의 정화로, 재앙의 오염이 있으면 그쪽에도)
       delete res.tells; delete res.sends; delete res.purify; delete res.loves; delete res.babies;
       // 지나온 이야기에 남길 선택·사건
       const cr = CHRON_ON[event];

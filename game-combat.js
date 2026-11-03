@@ -835,6 +835,8 @@ function huntReward(d, b, c) {
     if (!extra && Math.random() < (PLACE_RULES.sinewChance || 0)) ids.push('tough_sinew'); // 실험 재료: 질긴 힘줄 (어디서든)
     // 장소마다 다른 사냥 전리품 (강화 음식 '행운'이면 더 잘 나옴)
     if (drop && Math.random() < (PLACE_RULES.dropChance[ITEMS[drop].rarity] + (logic.buffOf(d)?.drop || 0) + (ti.drop || 0) + wx.drop) * (extra ? G.dropChance : 1)) ids.push(drop);
+    const drop2 = PLACES[b.place]?.drop2; // 두 번째 전리품 (식재료: 와이번 고기 등)
+    if (drop2 && Math.random() < ((PLACE_RULES.drop2Chance || 0) + (logic.buffOf(d)?.drop || 0) + (ti.drop || 0) + wx.drop) * (extra ? G.dropChance : 1)) ids.push(drop2);
     gold += randInt(0, 3) * c.level * (hostile ? STANCE_RULES.hostile.huntGold : 1) * (ti.huntGold || 1) * wx.huntGold * (extra ? G.gold : 1);
     xp += (12 + c.level * 6) * (extra ? G.xp : 1);
   }
@@ -883,7 +885,7 @@ function huntReward(d, b, c) {
   if (corrupt) {
     if (killed.length && Math.random() < MIND.crystal.hunt) { items = logic.bundle([...items.flatMap((x) => Array(x.qty).fill(x.id)), 'corrupt_crystal']); lines.push('쓰러진 몸에서 오염 결정이 굴러 나왔다.'); }
     if (killed.length) lines.push(`오염된 사냥감이라 경험치와 금화를 더 얻었다. (×${MIND.reward.xp})`);
-    lines.push(...logic.loseMind(d, me.mindLoss || 0, MIND.monsterMax));
+    lines.push(...logic.loseMind(d, (me.mindLoss || 0) * logic.corruptMul(d), MIND.monsterMax)); // 재앙의 오염: 옅으면 덜 깎임
     if (win && logic.hooks.purify) lines.push(...logic.hooks.purify(d, 'hunt'));
     if (win && logic.isRuin(d.region)) { // 멸망한 대륙: 정화의 결정과 귀한 것들
       const n = randInt(...RUIN.shard.hunt) + logic.gearMods(d).shard;
@@ -967,7 +969,7 @@ function eliteReward(d, b) {
         lines.push(`검은 기운이 걷히며 정화의 결정 ${n}개가 남았다.`);
       }
     }
-    lines.push(...logic.loseMind(d, me.mindLoss || 0, MIND.monsterMax));
+    lines.push(...logic.loseMind(d, (me.mindLoss || 0) * logic.corruptMul(d), MIND.monsterMax)); // 재앙의 오염: 옅으면 덜 깎임
   }
   xp = logic.xpOf(d, xp);
   const levelUp = logic.gainXp(d, xp);

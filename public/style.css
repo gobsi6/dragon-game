@@ -3287,6 +3287,16 @@ button.rm-step { cursor: pointer; }
 .rm-step.done .pc .bar i { background: var(--forest); }
 .rm-pickmap { position: relative; border: 1px solid var(--line-in); border-radius: 3px; overflow: hidden; background: #ADA99F; }
 .rm-pickmap svg { display: block; width: 100%; height: auto; }
+/* 지도 크게 보기: 지도만 키우고 점은 크기 그대로 (키울수록 점 사이가 벌어져 길이 드러남) */
+.rm-pickmap { touch-action: pan-y; }
+.rm-pickmap.zoomed { touch-action: none; cursor: grab; }
+.rm-pickmap.zoomed:active { cursor: grabbing; }
+.rm-zoom { position: relative; transform-origin: 0 0; --z: 1; }
+.rm-zoom .rm-pin { transform: translate(-50%, -50%) scale(calc(1 / var(--z))); }
+.rm-zoom .rm-pin.flag.on-pil { transform: translate(-50%, -50%) scale(calc(1 / var(--z))) translate(10px, -10px) scale(.7); }
+.rm-zui { position: absolute; right: 6px; top: 6px; z-index: 5; display: flex; flex-direction: column; gap: 4px; }
+.rm-zui button { width: 28px; height: 28px; padding: 0; border: 1px solid var(--line); border-radius: 3px; background: rgba(252,252,251,.92); color: var(--ink); font: 600 15px/1 var(--sans); cursor: pointer; }
+.rm-zhint { margin: 4px 0 0; font-size: 11.5px; color: var(--muted); }
 .rm-pin { position: absolute; transform: translate(-50%, -50%); width: 28px; height: 28px; border-radius: 50%; padding: 0; border: 2px solid #fff; background: #B07A2A; color: #fff; font: 600 11px/1 var(--sans); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
 .rm-pin::after { content: ''; position: absolute; inset: -9px; }
 .rm-pin.gate { background: var(--steel); }

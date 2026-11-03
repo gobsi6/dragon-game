@@ -904,6 +904,14 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
     if (fg.sink) { fg.sink.got += n; (fg.lifted ||= {})[by.id] = (fg.lifted[by.id] || 0) + n; lines.push(`${ga(by.name)} 고룡을 끌어올린다. (${Math.min(fg.sink.got, fg.B.sink.need)}/${fg.B.sink.need})`); }
     else fg.gold += n;
   }
+  // 기믹을 해내면 아스테르에게 피해 (최대 체력 비율, B.punish). 딜이 약한 드래곤도 기믹으로 깎을 수 있게
+  function rtPunish(fg, key, lines, text) {
+    const pct = fg.B.punish?.[key];
+    if (!pct || fg.boss.hp <= 0) return;
+    const dmg = Math.max(1, Math.round(fg.boss.hpMax * pct));
+    fg.boss.hp = Math.max(0, fg.boss.hp - dmg);
+    lines.push(`${text} ${fg.B.boss.short}에게 ${dmg}의 피해!`);
+  }
   function rtSetup(fg, total) {
     const B = fg.B;
     fg.boss = part(B, 'boss', total);
@@ -1015,12 +1023,12 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
       fg.gusted = true; // 심연의 손아귀에서 동료를 빼냄
       if (fg.phase >= 3 && B.last && fg.last > 0 && !fg.sink) { // 마지막 숨: 날개로 모이던 숨을 흩음
         const G = B.abyss.gust;
-        if (Math.random() < clamp(0.5 + ((p.spd || 0) - G.wing) * G.per + (p.gustK || 0), 0.1, 0.95)) { fg.last -= 1; fg.lifted[p.id] = (fg.lifted[p.id] || 0) + 1; lines.push(`${ga(p.name)} 날개 돌풍으로 모이던 마지막 숨을 흩었다. (${fg.last}/${B.last.max})`); }
+        if (Math.random() < clamp((G.base ?? 0.5) + ((p.spd || 0) - G.wing) * G.per + (p.gustK || 0), 0.1, 0.95)) { fg.last -= 1; fg.lifted[p.id] = (fg.lifted[p.id] || 0) + 1; lines.push(`${ga(p.name)} 날개 돌풍으로 모이던 마지막 숨을 흩었다. (${fg.last}/${B.last.max})`); rtPunish(fg, 'last', lines, '목에 걸린 숨이 고룡을 찔러'); }
         else lines.push(`${p.name}의 돌풍이 마지막 숨을 흩지 못했다.`);
       }
       if (rtNow(fg, 'abyss') && !fg.dispersed) {
         const G = B.abyss.gust;
-        if (Math.random() < clamp(0.5 + ((p.spd || 0) - G.wing) * G.per + (p.gustK || 0), 0.1, 0.95)) { fg.dispersed = true; lines.push(`${ga(p.name)} 날개 돌풍으로 모이던 심연의 숨을 흩트렸다!`); } // gustK: 칭호 '손아귀를 푼 자'
+        if (Math.random() < clamp((G.base ?? 0.5) + ((p.spd || 0) - G.wing) * G.per + (p.gustK || 0), 0.1, 0.95)) { fg.dispersed = true; lines.push(`${ga(p.name)} 날개 돌풍으로 모이던 심연의 숨을 흩트렸다!`); rtPunish(fg, 'abyss', lines, '흩어진 숨이 되돌아가'); } // gustK: 칭호 '손아귀를 푼 자'
         else { p.gustFail = true; lines.push(`${p.name}의 돌풍이 심연의 숨을 다 흩트리지 못했다.`); }
       }
     }
@@ -1028,7 +1036,7 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
       // 포효: 잿빛에 먹힌 동료를 깨움, 위엄 판정에 성공하면 금빛으로 +1
       for (const x of fg.players) if (x.consumed && x !== p) { x.consumed = false; x.erosion = 0; lines.push(`${p.name}의 포효에 ${ga(x.name)} 정신을 차렸다. 잿빛 침식이 걷혔다.`); }
       const S = B.scale;
-      if (Math.random() < clamp(S.roarBase + ((p.maj || 0) - S.roarRef) * S.roarPer + (p.roarK || 0), S.roarMin, S.roarMax)) { if (fg.phase >= 3 && B.last && fg.last > 0 && !fg.sink) { fg.last -= 1; fg.lifted[p.id] = (fg.lifted[p.id] || 0) + 1; lines.push(`${p.name}의 포효에 고룡이 움찔하며 모으던 숨을 놓쳤다. (마지막 숨 ${fg.last}/${B.last.max})`); } lines.push(`${p.name}의 포효가 균열 위에 울렸다. 고룡의 눈에 금빛이 스친다.`); rtGold(fg, 1, lines, p); }
+      if (Math.random() < clamp(S.roarBase + ((p.maj || 0) - S.roarRef) * S.roarPer + (p.roarK || 0), S.roarMin, S.roarMax)) { if (fg.phase >= 3 && B.last && fg.last > 0 && !fg.sink) { fg.last -= 1; fg.lifted[p.id] = (fg.lifted[p.id] || 0) + 1; lines.push(`${p.name}의 포효에 고룡이 움찔하며 모으던 숨을 놓쳤다. (마지막 숨 ${fg.last}/${B.last.max})`); rtPunish(fg, 'last', lines, '목에 걸린 숨이 고룡을 찔러'); } lines.push(`${p.name}의 포효가 균열 위에 울렸다. 고룡의 눈에 금빛이 스친다.`); rtGold(fg, 1, lines, p); }
       else lines.push(`${p.name}의 포효가 심연의 숨에 묻혔다.`);
     }
   }
@@ -1087,7 +1095,7 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
         else bossStrike(fg, h, t, power, lines, verb, { sure: true });
         t.guarding = g0;
         if (!opt.noStun && recv.hp < before && recv.hp > 0) {
-          const keep = clamp(((recv.maj || 0) - K2.majBase) * K2.majPer, 0, K2.majMax) + (recv.ccResist || 0);
+          const keep = clamp((K2.majFloor || 0) + ((recv.maj || 0) - K2.majBase) * K2.majPer, 0, K2.majMax) + (recv.ccResist || 0);
           if (Math.random() < keep) lines.push(`${ga(recv.name)} 위엄으로 번개를 떨쳐 내 마비되지 않았다.`);
           else { recv.st.stun = 2; lines.push(`${ga(recv.name)} 마비되었다!`); }
         }
@@ -1102,11 +1110,12 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
         lines.push(x.pol === 'ash' ? `${ga(h.name)} 잿빛 번개를 내리쳤다!` : `${ga(h.name)} 금빛 번개를 내리쳤다!`);
         if (x.pol === 'gold') {
           // 금빛: 노린 드래곤이 방어하면 흘려보냄 (피해 절반, 마비 없음). 막아서도 소용없고, 틀리면 그 자리에서 잿빛에 먹힘
-          if (t.guarding && !cv) { lines.push(`${ga(t.name)} 몸을 웅크려 금빛 번개를 흘려보냈다.`); zap(t, K2.power, '흘려보낸 번개가', { noStun: true }); }
+          if (t.guarding && !cv) { lines.push(`${ga(t.name)} 몸을 웅크려 금빛 번개를 흘려보냈다.`); zap(t, K2.power, '흘려보낸 번개가', { noStun: true }); rtPunish(fg, 'gold', lines, '흘려보낸 금빛 번개가 고룡의 비늘로 되튀어'); }
           else { if (cv) lines.push('금빛 번개는 막아설 수 없다!'); zap(t, K2.power, '번개가', { noCover: true, ignoreGuard: true, noStun: true }); rtConsume(fg, t, lines, '번개가 비늘 틈으로 잿빛을 밀어 넣었다.'); }
         } else if (cv) {
           // 잿빛: 동료가 막아서야 함. 막아선 쪽이 맞고 마비는 위엄으로 버팀
           const r = zap(t, K2.power, '잿빛 번개가'); hitIds.add(r.id);
+          rtPunish(fg, 'ash', lines, '막아선 비늘에 부딪힌 잿빛이 흩어지며');
         } else {
           lines.push(t.guarding ? '잿빛 번개는 혼자 막아 낼 수 없다!' : '아무도 막아서지 않았다!');
           zap(t, K2.power, '잿빛 번개가', { noCover: true, ignoreGuard: true, noStun: true }); rtConsume(fg, t, lines, '번개가 비늘 틈으로 잿빛을 밀어 넣었다.');
@@ -1120,6 +1129,7 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
         rtErode(fg, o, 1, lines, '침식이 끝까지 차올라');
       }
     }
+    if (h.hp <= 0) { downs(fg, lines); return; } // 기믹으로 들어간 피해에 쓰러졌으면 남은 공격은 없음
     const grip = rtNow(fg, 'grip');
     if (grip) {
       heavy = true;
@@ -1127,8 +1137,8 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
       if (t) {
         const cv = coverOf(fg, t);
         lines.push(`${ga(h.name)} 잿빛 발톱으로 ${eul(t.name)} 움켜쥐고 균열 아래로 끌어내린다!`);
-        if (fg.gusted) { const g = livePlayers(fg).find((p) => fg.actsNow?.[p.id] === 'skill:gust'); lines.push(`돌풍이 발톱을 흔들어 ${ga(t.name)} 손아귀에서 빠져나왔다!`); if (g) fg.saves[g.id] = (fg.saves[g.id] || 0) + 1; }
-        else if (cv) { lines.push(`${ga(cv.name)} ${t.name}의 꼬리를 붙잡아 끌어올렸다!`); fg.saves[cv.id] = (fg.saves[cv.id] || 0) + 1; fg.guards[cv.id] = (fg.guards[cv.id] || 0) + 1; cv.covering = null; bossStrike(fg, h, cv, 1, lines, '잿빛 발톱이', { sure: true }); }
+        if (fg.gusted) { const g = livePlayers(fg).find((p) => fg.actsNow?.[p.id] === 'skill:gust'); lines.push(`돌풍이 발톱을 흔들어 ${ga(t.name)} 손아귀에서 빠져나왔다!`); if (g) fg.saves[g.id] = (fg.saves[g.id] || 0) + 1; rtPunish(fg, 'grip', lines, '헛잡은 발톱이 바위에 꺾여'); }
+        else if (cv) { rtPunish(fg, 'grip', lines, '꼬리를 당겨 빼내자 헛잡은 발톱이 바위에 꺾여'); lines.push(`${ga(cv.name)} ${t.name}의 꼬리를 붙잡아 끌어올렸다!`); fg.saves[cv.id] = (fg.saves[cv.id] || 0) + 1; fg.guards[cv.id] = (fg.guards[cv.id] || 0) + 1; cv.covering = null; bossStrike(fg, h, cv, 1, lines, '잿빛 발톱이', { sure: true }); }
         else { t.pulled = true; t.hp = 0; t.covering = null; t.consumed = false; lines.push(`${ga(t.name)} 균열 아래로 끌려 내려갔다. 남은 싸움에는 돌아오지 못한다.`); }
       }
     }
@@ -1145,6 +1155,7 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
       lines.push(...B.lines.lastBreath, `${hits.join(', ')}의 피해.`);
       fg.last = 0;
     }
+    if (h.hp <= 0) { downs(fg, lines); return; }
     if (!heavy && ps().length) bossStrike(fg, h, pick(ps()), 1, lines, `${ga(h.name)} 발톱을 휘둘러`);
     // 잿빛 침식이 스며듦 (기울기에 따라 0~2명)
     const er = ps().slice().sort(() => Math.random() - 0.5).slice(0, B.scale.erode[rtIdx(fg)] ?? 0);
@@ -1175,14 +1186,18 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
       d -= hurt;
       if (fg.phase < 3) { if (fg.turn % S.pull === 0) d -= 1; } else d -= 1; // 심연의 끌어당김
       d -= Math.floor(fg.abyssGuards / S.guardPer);                        // 심연의 숨을 방어로 버틴 수
+      // 끝 칸(금빛 max·잿빛 max)에 닿으면 그 칸에 머묾 (그동안 끝 칸의 효과가 그대로 남). 이미 끝 칸에 있는데 한 번 더 같은 쪽으로 밀리면 사건이 일어남
+      const atEnd = fg.scale >= S.max ? 1 : fg.scale <= -S.max ? -1 : 0;
+      const over = (atEnd === 1 && d > 0) ? 1 : (atEnd === -1 && d < 0) ? -1 : 0;
       rtScale(fg, fg.scale + d);
-      if (fg.scale >= S.max) {
+      if (over === 1) {
         // 기억: 침식이 모두 씻기고 두 턴 동안 손아귀·심연이 쉼
         for (const p of fg.players) { p.erosion = 0; p.consumed = false; }
         fg.calm = B.memory.calm; rtScale(fg, B.memory.after);
         (fg.memories ||= 0); fg.memories += 1;
         lines.push(...B.lines.memory, '모두에게 스며든 잿빛 침식이 씻겨 나갔다.');
-      } else if (fg.scale <= -S.max) {
+        rtPunish(fg, 'memory', lines, '돌아온 금빛이 비늘 속 잿빛을 태워 내며');
+      } else if (over === -1) {
         // 심연 폭발 (모든 단계): 모두 다치고, 두 턴 동안 비늘이 열림. 3단계의 가라앉기는 마지막 숨으로 바꿔 없앰
         const red = (p) => ((p.st.harden || 0) > 0 ? 0.5 : 1) * ((p.st.stone || 0) > 0 ? 0.7 : 1) * (p.taken || 1);
         const hits = rps(fg).map((p) => { const n = Math.max(1, Math.round(p.hpMax * B.burst.pct * red(p))); p.hp = Math.max(0, p.hp - n); return `${p.name} ${n}`; });

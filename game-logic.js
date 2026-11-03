@@ -6,7 +6,7 @@
 const {
   REGIONS, ITEMS, REGION_LOOT, CREATURES, SCENES, SCENES_HUMAN, RULES, RECIPES, SLOTS, STANCES, SHOPS, REP_TIERS, repTier, TRADE, NEST, hoardTier, RAID, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, ELEMENTS,
   HOARD_TIERS, CRAFT, SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, SKILLS, FISHING, RUIN, FACILITY, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG, BOSSES, RAIDBOSS, ACHIEVEMENTS, KEEPSAKES, TALENTS,
-  FREE, FESTIVAL, DAY,
+  FREE, FESTIVAL, DAY, BOSS,
 } = require('./game-data');
 
 const SR = STANCE_RULES;
@@ -519,7 +519,19 @@ function corruptedRegion(now = Date.now()) {
 }
 const corruptUntil = (now = Date.now()) => { const c = clockOf(); return c.off + (Math.floor((now - c.off) / MIND.rotateMs) + 1) * MIND.rotateMs; };
 // 정화되었으면 다음 곳으로 옮겨 갈 때까지 오염이 걷혀 있음 (hooks.purified: 서버가 정화 상태를 알려 줌)
-const isCorrupted = (region, now = Date.now()) => isRuin(region) || (region === corruptedRegion(now) && !(hooks.purified && hooks.purified(now)));
+// 매일 옮겨 가는 오염 (정화되면 걷힘)
+const dailyCorrupted = (region, now = Date.now()) => region === corruptedRegion(now) && !(hooks.purified && hooks.purified(now));
+// 재앙의 오염: 놓친 재앙이 휩쓸고 간 곳과 그 주변 (hooks.blight: 서버가 { kind: 'center'|'near' } 또는 null을 알려 줌)
+const blightOf = (region, now = Date.now()) => (hooks.blight ? hooks.blight(region, now) : null);
+const isCorrupted = (region, now = Date.now()) => isRuin(region) || dailyCorrupted(region, now) || !!blightOf(region, now);
+// 오염된 땅에서 깎이는 정신에 곱할 값: 재앙의 오염만 있는 곳은 주변(near)이면 옅고, 낮은 레벨 드래곤은 덜 깎임. 매일 오염·멸망한 대륙과 겹치면 그대로(1)
+function corruptMul(d, region = d.region, now = Date.now()) {
+  if (isRuin(region) || dailyCorrupted(region, now)) return 1;
+  const b = blightOf(region, now);
+  const B = BOSS.blight;
+  if (!b || !B) return 1;
+  return (B[b.kind]?.drain ?? 1) * (d.level < B.lowLevel ? B.lowDrain : 1);
+}
 // 광폭화 상태 { at, until, region, hp, hpMax } (없으면 null)
 function berserkOf(d) {
   if (!d.berserk) return null;
@@ -557,7 +569,8 @@ function loseMind(d, n, max = Infinity) {
   if (!n || berserkOf(d)) return [];
   if (d.mind == null) d.mind = MIND.max;
   // 멸망한 대륙: 훨씬 빨리 닳음 (지역마다 다름). 같은 곳에 다른 드래곤이 있으면 덜 닳음
-  const ruin = isRuin(d.region) ? RUIN.drain * (REGIONS[d.region].drain ?? 1) * (hooks.companionsHere && hooks.companionsHere(d) ? RUIN.together : 1) : 1;
+  // 정화가 다 끝난 뒤(hooks.ruinCleared)에는 RUIN.cleanDrain만큼 덜 닳음
+  const ruin = isRuin(d.region) ? RUIN.drain * (REGIONS[d.region].drain ?? 1) * (hooks.companionsHere && hooks.companionsHere(d) ? RUIN.together : 1) * (hooks.ruinCleared && hooks.ruinCleared() ? (RUIN.cleanDrain ?? 1) : 1) : 1;
   // max: 깎이는 정신의 상한 (몬스터의 피해 기반 소모 등). 특성·장신구 보호는 상한을 자른 뒤에 곱해 여전히 효과가 있음
   const lost = Math.max(1, Math.round(Math.min(max, n * ruin) * traitMods(d).mindDrain * mindWard(d)));
   const before = d.mind;
@@ -2567,7 +2580,7 @@ module.exports = { restHostOf,
   actionCost, townArrows, festivalNow, hasBounty, addRep, addFame, craftEn, isCook, gainXp, spendStats,
   traitsOf, traitMods, hasTrait, chooseTraits, traitCount,
   check, spendAp, rollItem, bundle, itemLabel, xpOf, isTown, lowHp, // 전투(game-combat.js)가 씀
-  corruptedRegion, corruptUntil, corruptPeriod, isCorrupted, isRuin, berserkOf, loseMind, nearestTown,
+  corruptedRegion, corruptUntil, corruptPeriod, isCorrupted, corruptMul, isRuin, berserkOf, loseMind, nearestTown,
   placeOf, goPlace, isFallen, chron, chronOf,
   titlesOf, titleOn, titleName, titleMods, checkTitles, setTitle, titlesView,
   combatJson, dayIdx, gearMods, clampVitals, planExpedition, planView, facOf, facSlots, facPower, buildFacility, removeFacility, // 모브 드래곤(game-mobs.js)이 씀

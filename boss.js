@@ -157,8 +157,10 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
     save();
     learn();
     shout(`[대륙의 재앙] ${ga(T.name)} ${REGIONS[st.region].name}${josa(REGIONS[st.region].name, '을', '를')} 휩쓸고 어디론가 떠났다. 남은 체력 ${Math.round((st.hp / st.hpMax) * 100)}%.`);
-    // 놓친 대가: 휩쓸고 간 땅의 짐승들이 한동안 사나워짐 (GM이 떠나보낸 재앙은 제외)
-    if (!st.gm && BOSS.scar) {
+    // 놓친 대가 (GM이 떠나보낸 재앙은 제외): 재앙의 오염이 있으면 휩쓸고 간 곳과 그 주변이 오염됨 (server.js의 blight)
+    if (!st.gm && BOSS.blight && logic.hooks.bossBlight) {
+      logic.hooks.bossBlight(st.region, T.name);
+    } else if (!st.gm && BOSS.scar) { // 예전 방식: 휩쓸고 간 땅의 짐승들이 한동안 사나워짐
       scar = { region: st.region, name: T.name, until: Date.now() + BOSS.scar.hours * HOUR };
       db.worldSet('boss_scar', scar);
       shout(`[대륙의 재앙] ${T.name}${josa(T.name, '이', '가')} 휩쓸고 간 ${REGIONS[st.region].name}의 짐승들이 ${BOSS.scar.hours}시간 동안 사나워졌다. (사냥감·강적 공격 +${Math.round((BOSS.scar.atk - 1) * 100)}%)`);
@@ -288,6 +290,19 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
       st.gm = true; // GM이 떠나보낸 것은 체력 맞춤에 쓰지 않음
       gone();
       return { ok: true, gmlog: '재앙을 떠나보냈다.' };
+    });
+    // 재앙의 오염 시험: 재앙을 놓친 것처럼 바로 일으키기 / 모두 거두기
+    gm('gm:blight:start', (p) => {
+      const key = str(p.region) || Object.keys(BOSSES).filter((r) => REGIONS[r] && !SHOPS[r])[0];
+      if (!REGIONS[key] || SHOPS[key] || !BOSSES[key]) return { error: '재앙이 나타나는 야생 지역만 고를 수 있다.' };
+      if (!logic.hooks.bossBlight) return { error: '재앙의 오염이 꺼져 있다.' };
+      logic.hooks.bossBlight(key, BOSSES[key].name);
+      return { ok: true, gmlog: `재앙의 오염을 일으켰다: ${REGIONS[key].name}` };
+    });
+    gm('gm:blight:clear', () => {
+      if (!logic.hooks.blightClear) return { error: '재앙의 오염이 꺼져 있다.' };
+      logic.hooks.blightClear();
+      return { ok: true, gmlog: '재앙의 오염을 모두 거뒀다.' };
     });
     // 체력 맞춤 보기·고치기: { mult, ratio } 를 주면 그 값으로, reset이면 처음(1, 1)으로
     gm('gm:boss:tune', (p) => {

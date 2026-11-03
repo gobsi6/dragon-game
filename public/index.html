@@ -6866,11 +6866,14 @@
       const locked = lockedOf(r);
       const isOpen = here.links.includes(r.id) && !locked;
       const node = el('g', { class: `node${isOpen ? ' open' : ''}`, 'data-region': r.id });
-      // 오염된 땅: 보랏빛 얼룩
-      if (S.me?.corrupt?.region === r.id) {
+      // 오염된 땅: 보랏빛 얼룩 (재앙의 오염 중 주변의 옅은 오염은 연하게)
+      const dailyHere = S.me?.corrupt?.region === r.id;
+      const blHere = blightOn(r.id);
+      if (dailyHere || blHere) {
+        const faint = !dailyHere && blHere.kind === 'near';
         node.append(
-          el('circle', { cx: r.x, cy: r.y, r: 46, fill: 'rgba(90, 60, 140, 0.22)', stroke: '#6A4FA0', 'stroke-width': 2, 'stroke-dasharray': '4 5' }),
-          el('text', { x: r.x, y: r.y - 52, 'text-anchor': 'middle', 'font-size': 15, 'font-weight': 700, fill: '#4A3F78', 'font-family': 'IBM Plex Sans KR, sans-serif', 'paint-order': 'stroke', stroke: '#ECE7D3', 'stroke-width': 5 }, '오염'),
+          el('circle', { cx: r.x, cy: r.y, r: 46, fill: `rgba(90, 60, 140, ${faint ? 0.11 : 0.22})`, stroke: '#6A4FA0', 'stroke-width': 2, 'stroke-dasharray': '4 5', opacity: faint ? 0.7 : 1 }),
+          el('text', { x: r.x, y: r.y - 52, 'text-anchor': 'middle', 'font-size': 15, 'font-weight': 700, fill: '#4A3F78', 'font-family': 'IBM Plex Sans KR, sans-serif', 'paint-order': 'stroke', stroke: '#ECE7D3', 'stroke-width': 5 }, dailyHere ? '오염' : faint ? '옅은 오염' : '재앙의 오염'),
         );
       }
       // 대륙의 재앙이 있는 곳
@@ -9373,7 +9376,7 @@
     $('region-at-t').textContent = cur ? `${cur.name}에 머무는 중` : '';
     if (!ids) return;
     const selId = cur ? S.me.place : ids[0];
-    const corrupt = S.me?.corrupt?.region === S.region;
+    const corrupt = corruptOn(S.region); // 매일 옮겨 가는 오염 또는 재앙의 오염
 
     // ── 미니맵: 손으로 그린 듯한 지형 위에 장소 핀 ──
     const map = $('pl-map');
@@ -10841,18 +10844,28 @@
     box.hidden = false;
     box.classList.remove('clean');
     box.classList.add('ruin');
-    const mult = (S.ruinRules?.drain || 2) * (rr.drain ?? 1);
-    box.innerHTML = `<b>${S.ruinRules?.name || '멸망한 대륙'}.</b> 이 땅은 모두 오염되어 있다. 탐사·채집·사냥할 때마다 정신이 본 대륙의 오염된 땅보다 ${mult.toFixed(1).replace(/\.0$/, '')}배 빨리 깎인다. `
-      + '<span class="cn-gain">정신 보호 장신구를 차거나, 같은 곳에 다른 드래곤이 있으면 덜 깎인다. 무엇을 하든 정화의 결정이 나온다.</span>';
+    const done = !!R?.done; // 모두의 정화도 100%를 채운 뒤
+    const mult = (S.ruinRules?.drain || 2) * (rr.drain ?? 1) * (done ? (S.ruinRules?.cleanDrain ?? 1) : 1);
+    const multTxt = mult.toFixed(1).replace(/\.0$/, '');
+    box.innerHTML = done
+      ? `<b>${S.ruinRules?.name || '멸망한 대륙'}.</b> 드래곤들이 힘을 모아 대륙을 덮던 검은 기운을 걷어 냈다. 그래도 남은 기운 탓에 탐사·채집·사냥할 때마다 정신이 본 대륙의 오염된 땅의 ${multTxt}배쯤 깎인다. `
+        + '<span class="cn-gain">정신 보호 장신구를 차거나, 같은 곳에 다른 드래곤이 있으면 덜 깎인다. 무엇을 하든 정화의 결정이 나온다.</span>'
+      : `<b>${S.ruinRules?.name || '멸망한 대륙'}.</b> 이 땅은 모두 오염되어 있다. 탐사·채집·사냥할 때마다 정신이 본 대륙의 오염된 땅보다 ${multTxt}배 빨리 깎인다. `
+        + '<span class="cn-gain">정신 보호 장신구를 차거나, 같은 곳에 다른 드래곤이 있으면 덜 깎인다. 무엇을 하든 정화의 결정이 나온다.</span>';
     if (R) {
       const pr = document.createElement('div');
       pr.className = 'cn-purify';
       const pct = R.pct * 100;
       pr.innerHTML = '<div class="cn-l"><span></span><span></span></div><div class="cn-bar"><i></i></div><small></small>';
-      pr.querySelector('.cn-l span').textContent = `모두의 정화도 ${pct.toFixed(pct < 10 ? 2 : 1)}% (${R.total.toLocaleString()} / ${R.goal.toLocaleString()})`;
+      // 정화 완료 뒤: 백분율·목표 대신 쌓인 정화도를 그대로 보여 줌 (전체·내 기여 모두 계속 쌓임)
+      pr.querySelector('.cn-l span').textContent = done
+        ? `정화 완료 · 모두의 정화도 ${R.total.toLocaleString()}`
+        : `모두의 정화도 ${pct.toFixed(pct < 10 ? 2 : 1)}% (${R.total.toLocaleString()} / ${R.goal.toLocaleString()})`;
       pr.querySelector('.cn-l span + span').textContent = `내 기여 ${R.mine.toLocaleString()}`;
-      pr.querySelector('.cn-bar i').style.width = `${Math.min(100, pct)}%`;
-      pr.querySelector('small').textContent = R.next ? `정화도 ${Math.round(R.next.at * 100)}%에 ${R.next.name}${ro(R.next.name)} 가는 길이 열린다.` : '모든 땅으로 가는 길이 열렸다.';
+      pr.querySelector('.cn-bar i').style.width = `${done ? 100 : Math.min(100, pct)}%`;
+      pr.querySelector('small').textContent = done
+        ? '정화가 끝난 뒤에도 이 땅에서 활동하면 기여가 계속 쌓이고, 칭호와 순위에 반영된다.'
+        : R.next ? `정화도 ${Math.round(R.next.at * 100)}%에 ${R.next.name}${ro(R.next.name)} 가는 길이 열린다.` : '모든 땅으로 가는 길이 열렸다. 정화도 100%를 채우면 이 땅에서 정신이 덜 깎인다.';
       if (ruinTop?.length) {
         const t = document.createElement('div');
         t.className = 'ruin-top';
@@ -10956,41 +10969,69 @@
       $('mf-dlg').close(); showResult(res.result); // itemAction은 { ok, result }로 답함
     });
   });
+  // 재앙의 오염 (놓친 재앙이 남긴 검은 기운): 기간이 남은 곳 (정화된 곳 포함) / 아직 오염된 곳
+  function blightAt(rid) { return (S.me?.blight || []).find((b) => b.region === rid && b.until > Date.now()) || null; }
+  function blightOn(rid) { const b = blightAt(rid); return b && !b.done ? b : null; }
+  function corruptOn(rid) { return S.me?.corrupt?.region === rid || !!blightOn(rid); }
+  // 정화 진행 막대
+  function purifyBar(p, tip) {
+    const pr = document.createElement('div');
+    pr.className = 'cn-purify';
+    const pct = Math.min(100, Math.round((p.total / p.goal) * 100));
+    pr.innerHTML = '<div class="cn-l"><span></span><span></span></div><div class="cn-bar"><i></i></div>';
+    pr.querySelector('.cn-l span').textContent = `정화 ${p.total} / ${p.goal} · 함께하는 드래곤 ${p.people}`;
+    pr.querySelector('.cn-l span + span').textContent = `내 기여 ${p.mine}`;
+    pr.querySelector('.cn-bar i').style.width = `${pct}%`;
+    const t = document.createElement('small');
+    t.textContent = tip;
+    pr.appendChild(t);
+    return pr;
+  }
+  const hoursLeft = (until) => Math.max(1, Math.round((until - Date.now()) / 3600000));
   function renderCorrupt() {
     renderMarketFall();
     if (realmOf(S.region) === 'ruin') return renderRuin($('corrupt-note'));
     $('corrupt-note').classList.remove('ruin');
     const c = S.me?.corrupt;
-    const on = !!c && c.region === S.region;
+    const daily = !!c && c.region === S.region;     // 매일 옮겨 가는 오염
+    const bl = blightAt(S.region);                  // 재앙의 오염 (정화되었어도 기간 동안)
+    const blOn = !!bl && !bl.done;
+    const on = daily || blOn;
     const pu = c?.purify;
-    const clean = !on && pu && pu.done && pu.region === S.region; // 정화된 땅
+    const dailyClean = !!pu && pu.done && pu.region === S.region;
+    const clean = !on && (dailyClean || (bl && bl.done)); // 정화된 땅
     const box = $('corrupt-note');
     box.hidden = !on && !clean;
     box.classList.toggle('clean', !!clean);
     let tag = document.querySelector('.title .tag.corrupt');
     if (on && !tag) { tag = document.createElement('span'); tag.className = 'tag corrupt'; tag.textContent = '오염된 땅'; $('region-tag').after(tag); }
     if (!on && tag) tag.remove();
-    const h = c ? Math.max(1, Math.round((c.until - Date.now()) / 3600000)) : 0;
-    if (on) {
-      box.innerHTML = '<b>오염된 땅이다.</b> 탐사·채집할 때마다, 오염된 사냥감에게 맞을 때마다 정신이 깎인다. '
-        + '<span class="cn-gain">대신 사냥 경험치·금화 ×1.5, 오염 결정과 검게 물든 비늘이 나오고, 오염된 강적은 드물게 전설의 왕관을 떨어뜨린다.</span>';
-      box.append(` (약 ${h}시간 뒤 다른 곳으로 옮겨 간다)`);
-      if (pu) {
-        const pr = document.createElement('div');
-        pr.className = 'cn-purify';
-        const pct = Math.min(100, Math.round((pu.total / pu.goal) * 100));
-        pr.innerHTML = '<div class="cn-l"><span></span><span></span></div><div class="cn-bar"><i></i></div>';
-        pr.querySelector('.cn-l span').textContent = `정화 ${pu.total} / ${pu.goal} · 함께하는 드래곤 ${pu.people}`;
-        pr.querySelector('.cn-l span + span').textContent = `내 기여 ${pu.mine}`;
-        pr.querySelector('.cn-bar i').style.width = `${pct}%`;
-        const tip = document.createElement('small');
-        tip.textContent = '이곳에서 탐사·채집하거나 사냥·강적을 이기면 정화 기여가 쌓인다. 다 모이면 오염이 일찍 걷히고, 기여한 드래곤 모두 보상을 받는다.';
-        pr.appendChild(tip);
-        box.appendChild(pr);
+    const gain = '<span class="cn-gain">대신 사냥 경험치·금화 ×1.5, 오염 결정과 검게 물든 비늘이 나오고, 오염된 강적은 드물게 전설의 왕관을 떨어뜨린다.</span>';
+    const blTip = '이곳에서 탐사·채집하거나 사냥·강적을 이기면 정화 기여가 쌓인다. 다 모이면 재앙의 기운이 일찍 걷히고, 기여한 드래곤 모두 보상을 받는다.';
+    if (daily) {
+      box.innerHTML = '<b>오염된 땅이다.</b> 탐사·채집할 때마다, 오염된 사냥감에게 맞을 때마다 정신이 깎인다. ' + gain;
+      box.append(` (약 ${hoursLeft(c.until)}시간 뒤 다른 곳으로 옮겨 간다)`);
+      if (pu) box.appendChild(purifyBar(pu, '이곳에서 탐사·채집하거나 사냥·강적을 이기면 정화 기여가 쌓인다. 다 모이면 오염이 일찍 걷히고, 기여한 드래곤 모두 보상을 받는다.'));
+      if (blOn) { // 재앙의 오염도 겹침: 그쪽 정화도 따로 쌓임
+        const n = document.createElement('p');
+        n.className = 'cn-also';
+        n.style.margin = '8px 0 0';
+        n.textContent = `${bl.boss}${josa(bl.boss, '이', '가')} 남긴 검은 기운도 이곳에 겹쳐 있다. (약 ${hoursLeft(bl.until)}시간 뒤 걷힘)`;
+        box.append(n, purifyBar(bl, blTip));
       }
+    } else if (blOn) {
+      const where = bl.kind === 'center' ? '휩쓸고 간 자리' : '휩쓸고 간 곳의 주변';
+      const ease = bl.drain < 1 ? ` 다만 기운이 ${bl.kind === 'near' ? '옅어' : '덜 스며'} 정신은 보통 오염된 땅의 ${Math.round(bl.drain * 100)}%만 깎인다${bl.low ? ` (Lv${bl.lowLevel} 미만은 절반)` : ''}.` : '';
+      box.innerHTML = `<b>재앙이 남긴 검은 기운.</b> ${bl.boss}${josa(bl.boss, '이', '가')} ${where}가 ${bl.strength} 오염에 덮였다. 탐사·채집할 때마다, 오염된 사냥감에게 맞을 때마다 정신이 깎인다.${ease} ` + gain;
+      box.append(` (약 ${hoursLeft(bl.until)}시간 뒤 걷힌다)`);
+      box.appendChild(purifyBar(bl, blTip));
     } else if (clean) {
-      box.innerHTML = '<b>정화된 땅이다.</b> 드래곤들이 힘을 모아 검은 기운을 걷어 냈다. ';
-      box.append(`(약 ${h}시간 뒤 오염이 다른 곳에 다시 퍼진다)`);
+      if (bl && bl.done && !dailyClean) {
+        box.innerHTML = '<b>정화된 땅이다.</b> 드래곤들이 힘을 모아 재앙이 남긴 검은 기운을 걷어 냈다.';
+      } else {
+        box.innerHTML = '<b>정화된 땅이다.</b> 드래곤들이 힘을 모아 검은 기운을 걷어 냈다. ';
+        box.append(`(약 ${hoursLeft(c.until)}시간 뒤 오염이 다른 곳에 다시 퍼진다)`);
+      }
     }
   }
   // ── 대륙의 재앙 ──
@@ -11019,6 +11060,7 @@
     if (v.weak.length) m('약점', els(v.weak));
     if (v.resist.length) m('저항', els(v.resist));
     m('특기', v.special);
+    m('놓치면', '이곳과 주변 땅이 오염됨');
     if (v.top.length) m('선두', v.top.slice(0, 3).map((x) => `${x.name} ${x.share}%`).join(' · '));
     const mine = v.dmg?.[S.me?.id];
     box.querySelector('.mine').textContent = mine ? `내가 입힌 피해 ${mine.dmg.toLocaleString()} · ${mine.share}% · ${mine.rank}위` : `한 번 맞서면 ${v.turns}턴 동안 싸우고 물러난다. 모두의 상처가 쌓인다.`;
@@ -12885,6 +12927,20 @@
       gmCall('gm:corrupt', { region: cwhere.value }, (res) => { toast(`${S.regions[res.region].name}에 오염을 일으켰다.`); renderGm(); });
     }, 'primary');
 
+    // 재앙의 오염 (놓친 재앙이 남긴 검은 기운): 시험용으로 바로 일으키거나 거둠
+    const bls = (S.me?.blight || []).filter((b) => b.until > Date.now());
+    const bsec = gmSection(body, '재앙의 오염', bls.length
+      ? `지금: ${bls.map((b) => `${S.regions[b.region]?.name}(${b.strength}${b.done ? ', 정화됨' : ` · ${fmtLeft(b.until)} · 정화 ${b.total} / ${b.goal}`})`).join(', ')}`
+      : '지금은 없다. 재앙을 놓치면 휩쓸고 간 곳과 그 주변이 오염된다.');
+    const br1 = gmRow(bsec, '일으키기');
+    const bwild = Object.keys(S.regions).filter((id) => !S.shops.includes(id) && S.regions[id].realm !== 'ruin');
+    const bwhere = gSelect(br1, '지역', bwild.map((id) => [id, S.regions[id].name]), bwild[0]);
+    gBtn(br1, '재앙을 놓친 것처럼', () => {
+      if (!confirm('재앙을 놓친 것처럼 이 지역과 주변을 바로 오염시킬까? 모두에게 알림이 간다.')) return;
+      gmCall('gm:blight:start', { region: bwhere.value }, () => { toast('재앙의 오염을 일으켰다.'); renderGm(); });
+    }, 'primary');
+    if (bls.length) gBtn(br1, '모두 거두기', () => gmCall('gm:blight:clear', {}, () => { toast('재앙의 오염을 거뒀다.'); renderGm(); }), 'warn');
+
     // 대륙의 재앙
     const sec = gmSection(body, '대륙의 재앙', S.boss ? `지금: ${S.boss.name} (${S.regions[S.boss.region]?.name}) · 체력 ${S.boss.hp.toLocaleString()} / ${S.boss.hpMax.toLocaleString()} · 맞선 드래곤 ${S.boss.fighters}` : '지금은 없다. 비워 두면 최근 접속한 드래곤 수와 평균 레벨로 정한다.');
     if (!S.boss) {
@@ -14220,7 +14276,8 @@
       <div class="rm-cols">
         <section><h3 class="rm-h3">내려가는 길</h3><ol class="rm-depth"><span class="done-line" style="height:calc(${doneN} * 58px)"></span>${steps}</ol></section>
         <section><h3 class="rm-h3">제 ${fl.i + 1}층 · 어디서 들어갈까</h3>
-          <div class="rm-pickmap">${svg}${pins}</div>
+          <div class="rm-pickmap"><div class="rm-zoom">${svg}${pins}</div><div class="rm-zui" aria-label="지도 크기"><button type="button" data-z="in" aria-label="지도 크게">+</button><button type="button" data-z="out" aria-label="지도 작게">−</button><button type="button" data-z="reset" aria-label="지도 원래 크기로">⤢</button></div></div>
+          <p class="rm-zhint">지도 위에서 휠을 굴리거나 두 손가락으로 벌리면 크게 볼 수 있다. 크게 본 채로 끌면 옮겨진다.</p>
           <div class="rm-pl"><span><i style="background:var(--steel)"></i>입구</span><span><i style="background:#fff;border-radius:3px;box-shadow:0 0 0 2px #A63E4B"></i>수호자가 지키는 기둥</span><span><i style="background:#fff;border-radius:3px;box-shadow:0 0 0 1.5px #7E8389"></i>수호자가 쓰러진 기둥</span><span><i style="background:#D9A35A;border-radius:3px;box-shadow:0 0 0 1.5px #7A5A16"></i>밝힌 기둥</span><span><i style="background:#B07A2A"></i>찾은 화톳불</span><span><i style="background:#fff;box-shadow:0 0 0 1.5px #6A4522"></i>표식 (다른 드래곤이 남김)</span></div>
           <div class="rm-pick"><span class="ic">${pk.kind === 'fire' ? pk.name.replace('화톳불 ', '') : pk.kind === 'pillar' ? pk.name.replace('번 기둥', '') : '입'}</span><div><b>${pk.name}</b><small>${pk.key === v.best ? '아직 밝히지 않은 곳에 가장 가깝다' : '여기서 시작한다'} · 다른 점을 누르면 그곳에서 시작한다</small></div></div>
           ${mzPilInfo(v)}
@@ -14228,6 +14285,8 @@
       </div>
       <p class="note" style="margin:0">오늘 ${v.me.used}/${v.me.max}번 들어갔다. 지금 이 층에는 ${v.here}명이 있다.${why ? ` ${why}` : ''}</p>
       <div class="row"><button class="btn" type="button" id="maze-dlg-close">닫기</button><button class="btn primary" type="button" id="maze-dlg-go"${canGo ? '' : ' disabled'}>${pk.name}에서 내려간다</button></div>`;
+    if (!MZ.zoom || MZ.zoom.fi !== v.fi) MZ.zoom = { fi: v.fi, z: 1, x: 0, y: 0 }; // 층을 바꾸면 원래 크기로
+    mzZoomApply();
     body.querySelector('#maze-dlg-close').addEventListener('click', () => $('maze-dlg').close());
     body.querySelector('#maze-dlg-go').addEventListener('click', () => {
       mazeAct('maze:enter', { fi: v.fi, point: MZ.pick }, (res) => { $('maze-dlg').close(); SFX.play('coin'); showResult({ title: `지하 회랑 제 ${v.fi + 1}층`, lines: res.lines }); renderMazeBar(); });
@@ -14248,10 +14307,74 @@
     return `<div class="rm-pil-info"><b>${q.pi + 1}번 기둥</b><dl>${rows.map(([k, t]) => `<dt>${k}</dt><dd>${t}</dd>`).join('')}</dl>
       <p>봉인이 풀리는 순간 쓰러져 있는 수호자와 싸웠거나 기둥을 밝힌 드래곤이 모두 '개척자' 칭호를 받는다. 수호자가 다시 깨어나면 그 수호자와 싸운 기록은 새로 시작한다.</p></div>`;
   }
+  // ── 들어갈 곳 고르는 지도: 휠·두 손가락으로 크게 보기, 끌어서 옮기기 (화톳불·기둥 점이 길을 가릴 때) ──
+  // 점은 지도를 키워도 크기가 그대로라, 키울수록 점 사이가 벌어져 길이 드러남
+  const MZ_ZMAX = 4;
+  function mzZoomApply() {
+    const map = $('maze-dlg-body').querySelector('.rm-pickmap'), inner = map?.querySelector('.rm-zoom');
+    if (!inner || !MZ.zoom) return;
+    const Z = MZ.zoom, W = map.clientWidth, H = map.clientHeight;
+    Z.z = Math.min(MZ_ZMAX, Math.max(1, Z.z));
+    Z.x = Math.min(0, Math.max(W - W * Z.z, Z.x)); Z.y = Math.min(0, Math.max(H - H * Z.z, Z.y));
+    inner.style.setProperty('--z', Z.z);
+    inner.style.transform = `translate(${Z.x}px, ${Z.y}px) scale(${Z.z})`;
+    map.classList.toggle('zoomed', Z.z > 1.01);
+  }
+  function mzZoomAt(nz, cx, cy) { // (cx, cy): 지도 안에서 그 자리를 붙든 채로 키우고 줄임
+    const Z = MZ.zoom; if (!Z) return;
+    nz = Math.min(MZ_ZMAX, Math.max(1, nz));
+    Z.x = cx - (cx - Z.x) * (nz / Z.z); Z.y = cy - (cy - Z.y) * (nz / Z.z); Z.z = nz;
+    mzZoomApply();
+  }
+  {
+    const host = $('maze-dlg-body');
+    const local = (map, e) => { const r = map.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+    host.addEventListener('wheel', (e) => {
+      const map = e.target.closest('.rm-pickmap'); if (!map || !MZ.zoom) return;
+      if (e.deltaY > 0 && MZ.zoom.z <= 1) return; // 다 줄인 뒤로는 창이 그대로 스크롤되게
+      e.preventDefault();
+      const [cx, cy] = local(map, e);
+      mzZoomAt(MZ.zoom.z * (e.deltaY < 0 ? 1.25 : 0.8), cx, cy);
+    }, { passive: false });
+    const pts = new Map(); let pan = null, pinch = null;
+    host.addEventListener('pointerdown', (e) => {
+      const map = e.target.closest('.rm-pickmap'); if (!map || !MZ.zoom || e.target.closest('.rm-zui')) return;
+      pts.set(e.pointerId, [e.clientX, e.clientY]);
+      if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), z: MZ.zoom.z }; pan = null; }
+      else if (pts.size === 1) pan = { x: e.clientX, y: e.clientY, ox: MZ.zoom.x, oy: MZ.zoom.y, moved: false };
+    });
+    host.addEventListener('pointermove', (e) => {
+      if (!pts.has(e.pointerId)) return;
+      pts.set(e.pointerId, [e.clientX, e.clientY]);
+      const map = host.querySelector('.rm-pickmap'); if (!map) return;
+      if (pinch && pts.size === 2) {
+        const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+        const r = map.getBoundingClientRect();
+        mzZoomAt(pinch.z * (d / (pinch.d || 1)), (a[0] + b[0]) / 2 - r.left, (a[1] + b[1]) / 2 - r.top);
+        MZ.zoomDragged = true;
+      } else if (pan && MZ.zoom.z > 1) {
+        const dx = e.clientX - pan.x, dy = e.clientY - pan.y;
+        if (!pan.moved && Math.hypot(dx, dy) < 5) return;
+        pan.moved = true; MZ.zoomDragged = true;
+        MZ.zoom.x = pan.ox + dx; MZ.zoom.y = pan.oy + dy; mzZoomApply();
+      }
+    });
+    const up = (e) => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; if (!pts.size) { pan = null; setTimeout(() => { MZ.zoomDragged = false; }, 0); } };
+    host.addEventListener('pointerup', up); host.addEventListener('pointercancel', up);
+    addEventListener('resize', () => mzZoomApply());
+  }
   // 지도 점·층 버튼 누르기: 창 몸통에 한 번만 붙임
   // (예전에는 renderMazeDlg가 그릴 때마다 붙여서, 누를 때마다 처리기가 두 배로 늘어나 빠르게 누르면 멈췄음)
   $('maze-dlg-body').addEventListener('click', (e) => {
     if (!MZ.dlgView) return;
+    const zb = e.target.closest('.rm-zui button[data-z]'); // 지도 크게·작게·원래대로
+    if (zb && MZ.zoom) {
+      const map = zb.closest('.rm-pickmap'), W = map.clientWidth, H = map.clientHeight;
+      if (zb.dataset.z === 'reset') { MZ.zoom.z = 1; MZ.zoom.x = 0; MZ.zoom.y = 0; mzZoomApply(); }
+      else mzZoomAt(MZ.zoom.z * (zb.dataset.z === 'in' ? 1.5 : 1 / 1.5), W / 2, H / 2);
+      return;
+    }
+    if (MZ.zoomDragged) { MZ.zoomDragged = false; return; } // 지도를 끌어 옮긴 끝의 누름은 점 고르기로 치지 않음
     // 지도 점이 겹쳐 있어도 누른 자리에서 가장 가까운 점이 눌리게 (맨 위에 그려진 점이 아니라)
     let near = null;
     const map = e.target.closest('.rm-pickmap');

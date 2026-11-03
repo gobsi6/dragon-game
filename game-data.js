@@ -307,6 +307,7 @@ const ITEMS = {
   hydra_blood:    { name: '히드라의 피',       rarity: 'uncommon', cat: 'trophy', value: 18, desc: '잘린 목이 다시 자라게 하는 피. 상처에 닿으면 살이 차오른다.' },
   troll_tusk:     { name: '트롤 엄니',         rarity: 'uncommon', cat: 'trophy', desc: '얼음을 깨물던 커다란 엄니다.' },
   wyvern_membrane:{ name: '와이번 날개막',     rarity: 'rare',     cat: 'trophy', desc: '오로라 빛이 스며든 얇고 질긴 막이다.' },
+  wyvern_meat:   { name: '와이번 고기',      rarity: 'uncommon', value: 18, desc: '질기지만 씹을수록 단맛이 배어 나오는 와이번의 날개 밑 살. 높은 하늘의 찬 바람 냄새가 난다.' }, // 오로라 봉우리·불의 심장부의 두 번째 전리품
   stone_heart:    { name: '파수꾼의 돌심장',   rarity: 'uncommon', cat: 'trophy', desc: '쓰러진 파수꾼의 가슴에서 꺼낸, 아직 따뜻한 돌이다.' },
   cursed_steel:   { name: '저주받은 강철',     rarity: 'uncommon', cat: 'trophy', value: 14, desc: '해골 기사의 검에서 떼어 낸 쇳조각. 녹이 슬지 않는다.' },
   seal_core:      { name: '봉인의 핵',         rarity: 'rare',     cat: 'trophy', desc: '고대 골렘을 움직이던 룬이 새겨진 핵이다.' },
@@ -397,6 +398,7 @@ const ITEMS = {
   ashfin_broth:  { name: '잿빛 심해어 국', rarity: 'rare',     type: 'use', use: { hp: 30, mind: 35 }, value: 45, desc: '잿빛 심해어를 빛나는 이끼와 끓인 국. 마시면 흐려진 마음이 맑게 가라앉는다.' },
   crab_broth:    { name: '게딱지 탕',      rarity: 'uncommon', type: 'use', use: { buff: 'iron' },   value: 20, desc: '무쇠 집게 게를 통째로 우린 진한 탕. 먹고 나면 비늘이 게딱지처럼 단단해진다.' },
   flyfish_jerky: { name: '날치 육포',      rarity: 'uncommon', type: 'use', use: { buff: 'swift' },  value: 20, desc: '바람 날치를 바닷바람에 말린 육포. 씹을수록 날갯짓이 가벼워진다.' },
+  wyvern_skewer: { name: '와이번 꼬치',    rarity: 'uncommon', type: 'use', use: { hp: 40, en: 20, buff: 'swift' }, value: 30, desc: '와이번 고기에 꿀을 발라 구운 꼬치. 한입 베어 물면 날개 밑으로 찬 바람이 지나간다.' },
   puffer_brew:   { name: '복어 독술',      rarity: 'uncommon', type: 'use', use: { buff: 'frenzy' }, value: 24, desc: '가시 복어의 독을 진한 술에 조금 풀었다. 한 모금이면 눈앞이 붉게 끓어오른다.' },
   jelly_circlet: { name: '오로라 해파리 관', rarity: 'rare', type: 'equip', slot: 'head', bonus: { wisdom: 2, majesty: 2 }, value: 120, desc: '오로라 해파리를 진주 둘레에 굳혀 만든 관. 어두운 곳에서 머리 위로 빛이 일렁인다.' },
   moonray_mantle:{ name: '달빛 가오리 날개덮개', rarity: 'rare', type: 'equip', slot: 'wing', bonus: { wing: 2, wisdom: 2 }, value: 120, desc: '달빛 가오리의 지느러미로 지은 날개덮개. 날갯짓 소리가 안개처럼 사라진다.' },
@@ -404,6 +406,7 @@ const ITEMS = {
   // ── 만든 물건: 식구 요리 (cat: meal. 인간 식구에게 건네면 배가 부르고 유대가 오름. 둥지 식구 칸에서 건넴) ──
   // 새끼 드래곤 먹이 (cat: meal)
   roast_meat:     { name: '화덕 구운 고기', rarity: 'common', cat: 'meal', value: 9,  desc: '붉은 점토 화덕에 겉만 바삭하게 구운 고기. 새끼 드래곤이 가장 반긴다.' },
+  wyvern_steak:   { name: '와이번 스테이크', rarity: 'uncommon', cat: 'meal', value: 26, desc: '와이번 고기를 두툼하게 썰어 화덕에 구웠다. 새끼 드래곤이 꼬리를 흔들며 달려든다.' },
   ember_snack:    { name: '불씨 간식',      rarity: 'common', cat: 'meal', value: 8,  desc: '화산재를 묻혀 그을린 고기 조각. 씹으면 작은 불똥이 튄다.' },
   fish_skewer:    { name: '생선 꼬치',      rarity: 'common', cat: 'meal', value: 8,  desc: '소금을 뿌린 고등어를 통째로 꿴 꼬치. 새끼가 꼬리째 삼킨다.' },
   dragon_feast:   { name: '새끼 용의 잔칫상', rarity: 'uncommon', cat: 'meal', value: 22, desc: '고기와 연어와 꿀을 한가득 쌓은 상. 새끼 드래곤의 배가 빵빵해진다.' },
@@ -629,6 +632,8 @@ const RECIPES = [
   { out: 'ashfin_broth',    needs: { fish_ashfin: 1, glow_moss: 1, salt_crystal: 1 },    en: 6,  wis: 10 },
   { out: 'crab_broth',      needs: { fish_crab: 2, salt_crystal: 1 },                    en: 4,  wis: 3 },
   { out: 'flyfish_jerky',   needs: { fish_flyingfish: 2, salt_crystal: 1 },              en: 4,  wis: 3 },
+  { out: 'wyvern_skewer',   needs: { wyvern_meat: 1, wild_honey: 1 },                   en: 4,  wis: 3 },  // 와이번 고기
+  { out: 'wyvern_steak',    needs: { wyvern_meat: 2, red_clay: 1 },                     en: 4,  wis: 2 },
   { out: 'puffer_brew',     needs: { fish_puffer: 1, strong_wine: 1 },                   en: 5,  wis: 6 },
   { out: 'jelly_circlet',   needs: { fish_jelly: 1, deep_pearl: 1, silver_chain: 1 },    en: 14, wis: 13 },
   { out: 'moonray_mantle',  needs: { fish_moonray: 2, silk_scrap: 2, deep_pearl: 1 },    en: 14, wis: 13 },
@@ -937,6 +942,7 @@ const RUIN = {
   gateFrom: 'coast', gateTo: 'ruin_shore',
   crossAp: 3, minLevel: 20,                      // 바다를 건널 때 (오갈 때마다)
   drain: 2,                                      // 이 땅의 정신 소모 배율 (지역 drain을 곱함). 정신 보호 장신구가 줄여 줌
+  cleanDrain: 0.6,                               // 모두의 정화도가 100%를 채운 뒤: 이 땅의 정신 소모에 이만큼 더 곱함 (2 × 0.6 = 본 대륙 오염된 땅의 1.2배쯤)
   eliteChance: 0.15,                             // 이 땅에서 강적을 만날 확률 (본토의 오염된 땅 MIND.eliteChance보다 낮게)
   eliteHp: 0.25,                                 // 강적에게는 장소 체력 배율(hpMul)을 이만큼만 더함 (0이면 본토 강적과 같은 체력, 1이면 사냥감과 같은 배율)
   together: 0.7,                                 // 같은 지역에 다른 드래곤이 있으면 정신 소모 ×
@@ -1130,6 +1136,7 @@ const KIN = {
       fish_mackerel: { bond: 3, sat: 25 }, fish_flounder: { bond: 3, sat: 25 }, fish_salmon: { bond: 6, sat: 45 }, fish_eel: { bond: 6, sat: 40 }, fish_marlin: { bond: 12, sat: 90 },
       bait_meat: { bond: 4, sat: 30 }, salted_fish: { bond: 4, sat: 30 },
       roast_meat: { bond: 8, sat: 60 }, ember_snack: { bond: 7, sat: 45 }, fish_skewer: { bond: 8, sat: 55 }, dragon_feast: { bond: 14, sat: 100 },
+      wyvern_meat: { bond: 6, sat: 40 }, wyvern_steak: { bond: 12, sat: 80 }, // 와이번 고기
       // 늘어난 물고기 (가시 복어는 독이 있어 빼고, 오로라 해파리·달빛 가오리는 먹이가 아니라 재료)
       fish_mullet: { bond: 3, sat: 25 }, fish_gizzard: { bond: 3, sat: 25 }, fish_anchovy: { bond: 2, sat: 15 },
       fish_rockfish: { bond: 3, sat: 25 }, fish_jack: { bond: 3, sat: 20 }, fish_filefish: { bond: 3, sat: 20 }, fish_greenling: { bond: 3, sat: 25 }, fish_hairtail: { bond: 5, sat: 40 },
@@ -1347,6 +1354,7 @@ const FREE = {
     sea_bindweed: {food: 1},
     salt_crystal: {food: 1},
     wild_honey: {food: 2, life: 2, vigor: 2},
+    wyvern_meat: {food: 3, vigor: 2},
     moss_flower: {food: 2, clear: 2},
     snow_flower: {food: 2, clear: 2, frost: 2},
     glow_moss: {food: 2, clear: 2},
@@ -2001,7 +2009,9 @@ const PLACES = {
 };
 // 장소별 사냥 전리품
 const PLACE_DROPS = {'plains_keep': 'knight_crest', 'forest_root': 'shadow_spore', 'swamp_abyss': 'basilisk_eye', 'snow_glacier': 'frost_heart', 'canyon_temple': 'sphinx_mane', 'ruins_vault': 'crown_shard', 'volcano_core': 'elder_ember', 'plains_field': 'bison_horn', 'plains_hill': 'wolf_pelt', 'plains_war': 'ghost_ash', 'forest_edge': 'spider_silk', 'forest_valley': 'toad_gland', 'forest_heart': 'living_bark', 'swamp_reeds': 'croc_scale', 'swamp_village': 'ghost_ash', 'swamp_mire': 'hydra_blood', 'snow_field': 'wolf_pelt', 'snow_cave': 'troll_tusk', 'snow_peak': 'wyvern_membrane', 'ruins_hall': 'stone_heart', 'ruins_crypt': 'cursed_steel', 'ruins_altar': 'seal_core', 'canyon_path': 'scorpion_stinger', 'canyon_storm': 'sandworm_tooth', 'canyon_cliff': 'griffin_feather', 'volcano_slope': 'salamander_tail', 'volcano_cave': 'magma_core', 'volcano_crater': 'giant_ember'};
-for (const [id, p] of Object.entries(PLACES)) { p.id = id; p.drop = PLACE_DROPS[id] || (p.region.startsWith('ruin_') ? 'purify_shard' : undefined); }
+// 두 번째 전리품 (식재료): 사냥에 이기면 첫째 전리품과 따로 PLACE_RULES.drop2Chance 확률로. 뼈 와이번(말라붙은 강바닥)은 뼈만 남아 고기가 없음
+const PLACE_DROPS2 = { snow_peak: 'wyvern_meat', volcano_core: 'wyvern_meat' };
+for (const [id, p] of Object.entries(PLACES)) { p.id = id; p.drop = PLACE_DROPS[id] || (p.region.startsWith('ruin_') ? 'purify_shard' : undefined); p.drop2 = PLACE_DROPS2[id]; }
 // 지역별 장소 (입구 → 안쪽)
 const REGION_PLACES = {};
 for (const p of Object.values(PLACES)) (REGION_PLACES[p.region] ||= []).push(p.id);
@@ -2012,6 +2022,7 @@ const PLACE_RULES = {
   lootPerLevel: { uncommon: 0.012, rare: 0.005 }, // 깊은 장소일수록 귀한 재료가 잘 나옴 (사냥터 Lv.1당)
   sinewChance: 0.08,   // 사냥감을 쓰러뜨릴 때마다 질긴 힘줄이 나올 확률 (어디서든, 무리에 섞인 어린 것은 빼고)
   dropChance: { common: 0.6, uncommon: 0.45, rare: 0.3 }, // 사냥에 이기면 그 장소의 전리품이 나올 확률 (강적은 2개 확정)
+  drop2Chance: 0.35,   // 두 번째 전리품(식재료, PLACE_DROPS2)이 나올 확률 (사냥감마다)
 };
 
 // ── 쓰러짐과 죽음 ──────────────────────────────────
@@ -2345,7 +2356,14 @@ const BOSS = {
   gapHours: [10, 20],      // 재앙이 사라진 뒤 다음 재앙까지 (시간, 이 사이에서 무작위)
   lastsHours: 18,          // 나타난 뒤 이 시간 안에 쓰러뜨려야 함
   // 놓치면 남는 상처: 쓰러뜨리지 못하고 떠나면 휩쓸고 간 지역의 사냥감·강적이 hours시간 동안 사나워짐 (공격 × atk)
-  scar: { hours: 24, atk: 1.2 },
+  scar: { hours: 24, atk: 1.2 },  // (blight가 있으면 쓰지 않음)
+  // 재앙의 오염: 놓친 재앙이 떠나면 휩쓸고 간 지역(center)과 이어진 야생 지역(near)이 오염됨 (인간 마을·멸망한 대륙은 제외). 있으면 scar 대신
+  // hours: 오염이 남는 시간 / drain: 정신 소모 배율 (매일 옮겨 가는 오염과 겹치면 그쪽 세기) / goal: 정화로 일찍 걷어 내는 데 필요한 모두의 기여 / reward: 정화 보상 배율 (PURIFY.reward에 곱함)
+  blight: {
+    center: { hours: 24, drain: 1,   goal: 1500, reward: 1 },
+    near:   { hours: 12, drain: 0.5, goal: 600,  reward: 0.5 },
+    lowLevel: 10, lowDrain: 0.5,  // 이 레벨 미만 드래곤은 재앙의 오염에서 정신이 이만큼만 깎임
+  },
   ap: 3,                   // 한 번 맞서는 데 드는 행동력
   turns: 8,                // 한 번 맞서면 이만큼 싸우고 물러남
   activeDays: 2,           // 최근 이 기간에 접속한 드래곤 수로 체력을 정함
@@ -2448,7 +2466,7 @@ const RAIDBOSS = {
       region: 'ruin_rift', place: '균열 가장자리', name: '균열을 지킨 자 아스테르',
       desc: '잿빛의 날, 대륙이 갈라지던 순간까지 균열 앞에서 싸우다 심연에 삼켜진 카르넴의 골드 드래곤. 이천 년 동안 심연의 숨을 들이마셨지만, 가슴속 불씨는 아직 꺼지지 않았다.',
       // 엔드 레이드: 모르벤·헤이른보다 한 단계 위. 설계서 '심연의 균열: 아스테르의 저울'. 상위 팀이 열 판 중 네 판쯤을 20~22턴에 아슬하게 깨는 것이 목표 (실제 수치는 시험으로 다시 맞춤)
-      lv: 30, hp: 8700, atk: 45, def: 20, spd: 26, mag: 52, maj: 38, // 체력은 길게(22턴), 공격은 중간: 평소 피해는 견딜 만하고 기믹을 놓치면 사건이 일어나는 구조. 실제 엔진 자동 대전으로 맞춤 (자동 선택 넷은 거의 못 깸). 너무 어려우면 주마다 저절로 약해지는 안전판 RAIDBOSS.nerf
+      lv: 30, hp: 9500, atk: 45, def: 20, spd: 26, mag: 52, maj: 38, // 체력은 길게(22턴), 공격은 중간: 평소 피해는 견딜 만하고 기믹을 놓치면 사건이 일어나는 구조. 실제 엔진 자동 대전으로 맞춤 (자동 선택 넷은 거의 못 깸). 너무 어려우면 주마다 저절로 약해지는 안전판 RAIDBOSS.nerf
       hitPct: 0.04,                                              // 이 레이드만: 최대 체력 비례 몫 (공통 0.08의 절반)
       weekly: 2, maxTurns: 22,                                   // 주 2회 보상, 22턴
       needs: ['morven1', 'heiron1'],                             // 입장 자격: 모르벤·헤이른을 각각 한 번 이상 쓰러뜨림 (칭호로 셈)
@@ -2457,23 +2475,25 @@ const RAIDBOSS = {
       //   금빛으로: 기억 깨우기 +kindle (지혜가 높으면 가끔 하나 더: (지혜 − kindleRef) × kindlePer, 최대 kindleMax), 포효 성공 +1 (roarBase + (위엄 − roarRef) × roarPer, roarMin~roarMax)
       //   잿빛으로: 한 턴 합산 피해가 보스 최대 체력의 hurt(−1)·hurt2(−2), 심연의 끌어당김(1·2단계는 pull턴마다 −1, 3단계는 매 턴), 심연의 숨을 방어로 버틴 드래곤 guardPer명마다 −1
       //   atk·taken·erode: 눈금 −3…+3 순서로 아스테르 공격 배율, 아스테르가 받는 피해 배율, 턴마다 침식이 스미는 드래곤 수. keep: 이 눈금 이상인 채로 이기면 '금빛을 지킨 이' 칭호
-      scale:  { max: 3, start: 0, kindle: 1, kindleRef: 20, kindlePer: 0.02, kindleMax: 0.5, roarBase: 0.65, roarRef: 28, roarPer: 0.03, roarMin: 0.4, roarMax: 0.95, // 포효 성공 = 65% + (위엄 − 28) × 3% (40~95%)
+      scale:  { max: 3, start: 0, kindle: 1, kindleRef: 20, kindlePer: 0.02, kindleMax: 0.5, roarBase: 0.6, roarRef: 22, roarPer: 0.02, roarMin: 0.4, roarMax: 0.95, // 포효 성공 = 60% + (위엄 − 22) × 2% (40~95%). 밸런스형도 웬만큼 되게 바닥을 높이고 기울기를 줄임
                 hurt: 0.06, hurt2: 0.12, pull: 2, guardPer: 2, keep: 1,
                 atk: [1.9, 1.55, 1.3, 1.0, 0.9, 0.8, 0.7], taken: [1.3, 1.2, 1.1, 1.0, 0.95, 0.9, 0.8], erode: [2, 1, 1, 1, 0, 0, 0] }, // 잿빛 3 … 금빛 3 (일곱 칸)
-      memory: { calm: 2, after: 1 },                             // 금빛 끝: 기억이 돌아옴. 모두의 침식이 씻기고 calm턴 동안 손아귀·심연이 쉼, 그 뒤 눈금 after
-      burst:  { pct: 0.12, taken: 1.3, turns: 2, after: -1 },    // 잿빛 끝 (모든 단계): 심연 폭발. 모두 최대 체력 pct, 그 뒤 turns턴 동안 아스테르가 받는 피해 ×taken, 눈금 after
+      memory: { calm: 2, after: 2 },                             // 금빛 끝(금빛 3)에 머물다가 한 번 더 금빛으로 밀리면: 기억이 돌아옴. 모두의 침식이 씻기고 calm턴 동안 손아귀·심연이 쉼, 그 뒤 눈금 after
+      burst:  { pct: 0.12, taken: 1.3, turns: 2, after: -2 },    // 잿빛 끝(잿빛 3)에 머물다가 한 번 더 잿빛으로 밀리면 (모든 단계): 심연 폭발. 모두 최대 체력 pct, 그 뒤 turns턴 동안 아스테르가 받는 피해 ×taken, 눈금 after
       phase2: 0.65, phase3: 0.30,                                // 보스 체력이 이 비율 아래로 떨어지면 다음 단계
       erosion: { max: 3, cleanseWis: 20, consumedPower: 1.4, atkPer: 0.05, atkMax: 2 }, // 잿빛 침식: 3겹이면 '잿빛에 먹힘'(다음 차례를 잃고 보스 차례에 동료를 자기 공격력 ×consumedPower로 침). 치유로 1 + 지혜 20마다 1겹 씻음, 포효로 깨움, 기억 깨우기는 자기 것만 1겹
       //   atkPer·atkMax: 침식 한 겹마다 레이드 적에게 주는 피해 +atkPer (atkMax겹까지 = 최대 +10%). 먹혔을 때 동료를 치는 공격에는 들지 않음, 화면 표시 없음
       // every: [최소, 최대] 턴 — 그 사이에서 매번 새로 정함 (예고 문장으로만 알 수 있음). 번개·심연은 한 턴에 하나만, 겹치면 다음 턴으로 미룸
       // 번개 숨결 (모든 단계): 극성은 예고 때의 눈금으로 (0 이상 금빛, 아래 잿빛). 금빛은 노린 드래곤이 방어, 잿빛은 동료가 막아서기. 틀리면 그 자리에서 잿빛에 먹힘.
-      //   n[단계]: 노리는 수 (둘이면 둘째는 반대 극성). conduct: 번개 턴에 이 행동으로 아스테르를 친 드래곤에게 튐 (침식 +1). 마비를 떨쳐 낼 확률 = (위엄 − 20) × 3% (최대 75%)
-      bolt:   { every: [2, 4], n: [1, 2, 2], power: 1.3, conduct: ['attack', 'skill:tail', 'skill:headbutt', 'skill:rend', 'skill:devour', 'skill:flurry', 'skill:fury', 'skill:dive'], majBase: 20, majPer: 0.03, majMax: 0.75 },
-      abyss:  { every: [4, 6], pct: 0.12, gust: { wing: 30, per: 0.04, fail: 1.3 } }, // 심연의 숨 (1·2단계): 모두 최대 체력 12%. 날개 돌풍이 흩트리면 모두 절반 (50% + (날개 − 30) × 4%), 실패하면 쓴 쪽 ×1.3. 흩트리지 못하면 모두 침식 +1
+      //   n[단계]: 노리는 수 (둘이면 둘째는 반대 극성). conduct: 번개 턴에 이 행동으로 아스테르를 친 드래곤에게 튐 (침식 +1). 마비를 떨쳐 낼 확률 = 20% + (위엄 − 20) × 2% (최대 75%)
+      bolt:   { every: [2, 4], n: [1, 2, 2], power: 1.3, conduct: ['attack', 'skill:tail', 'skill:headbutt', 'skill:rend', 'skill:devour', 'skill:flurry', 'skill:fury', 'skill:dive'], majBase: 20, majFloor: 0.2, majPer: 0.02, majMax: 0.75 }, // 마비 떨쳐 내기 = 20% + (위엄 − 20) × 2% (0~75%)
+      abyss:  { every: [4, 6], pct: 0.12, gust: { base: 0.55, wing: 22, per: 0.025, fail: 1.3 } }, // 돌풍 판정 = 55% + (날개 − 22) × 2.5% (10~95%): 심연의 숨 흩트리기·마지막 숨 늦추기 // 심연의 숨 (1·2단계): 모두 최대 체력 12%. 날개 돌풍이 흩트리면 모두 절반 (55% + (날개 − 22) × 2.5%), 실패하면 쓴 쪽 ×1.3. 흩트리지 못하면 모두 침식 +1
       grip:   { every: [4, 6] },                                 // 심연의 손아귀 (2·3단계): 노린 드래곤은 스스로 못 빠져나옴. 다른 동료가 돌풍을 쓰거나 막아서면 구해짐(막아선 쪽이 할퀴기 한 번). 아무도 안 구하면 남은 싸움에서 빠짐. 1·2단계는 다른 큰 기믹과 같은 턴이면 한 턴 미룸, 3단계는 일부러 겹침
       // 마지막 숨 (3단계): 턴마다 한 칸씩 모아 max칸이 차면 모두에게 최대 체력 pct (방어·비늘 세우기는 절반씩). 쏟은 뒤 0부터 다시
       //   늦추기: 포효 성공(위엄 판정) −1, 날개 돌풍(날개 판정, 심연의 숨과 같은 확률) −1. 늦춘 횟수는 칭호 '고룡을 붙든 자'으로 셈
-      last:   { max: 5, pct: 0.90 },                              // 다 차도록 못 막으면 모두 최대 체력 90% (방어·비늘 세우기는 절반씩)
+      last:   { max: 3, pct: 0.90 },                              // 다 차도록 못 막으면 모두 최대 체력 90% (방어·비늘 세우기는 절반씩)
+      // 기믹을 해내면 아스테르에게 최대 체력의 이만큼 피해: 금빛 번개 흘려보냄, 잿빛 번개 막아섬, 손아귀에서 구함, 심연의 숨 흩트림, 마지막 숨 늦춤, 기억이 돌아옴
+      punish: { gold: 0.02, ash: 0.02, grip: 0.03, abyss: 0.03, last: 0.02, memory: 0.08 },
       firstTitle: 'riftfirst',                                   // 서버에서 처음 쓰러뜨린 넷만 받는 칭호 (전시용)
       rare: { gear: ['raid_rift_eye', 'raid_rift_feather'], treasure: 'tr_star_stone' },
       reward: { gold: [400, 600], shard: 'rift_scale', shards: 2, firstShard: 6, purifyShard: 25, purify: 80, journal: 'rift_memory', journalChance: 0.2, keepsake: 'warm_claw', fame: 5 },
