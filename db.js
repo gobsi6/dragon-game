@@ -182,6 +182,16 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS duels_from ON duels(from_id, id);
   CREATE INDEX IF NOT EXISTS duels_to ON duels(to_id, id);
+  CREATE TABLE IF NOT EXISTS raid_logs (       -- 레이드 기록 (다시 보기용). 함께 싸운 드래곤은 members에 ',1,2,3,' 꼴로
+    id       INTEGER PRIMARY KEY,
+    at       INTEGER NOT NULL,
+    boss     TEXT NOT NULL,                      -- 레이드 key (morven / heiron / rift …)
+    outcome  TEXT NOT NULL,                      -- win / time / wipe / left
+    turns    INTEGER NOT NULL,
+    test     INTEGER NOT NULL DEFAULT 0,         -- GM 시험이었는지
+    members  TEXT NOT NULL,
+    data     TEXT NOT NULL                       -- 턴 기록, 드래곤마다 본 마지막 모습과 결과
+  );
   CREATE TABLE IF NOT EXISTS rel_memos (       -- 상대에 대해 나만 보는 메모
     from_id INTEGER NOT NULL REFERENCES dragons(id) ON DELETE CASCADE,
     to_id   INTEGER NOT NULL REFERENCES dragons(id) ON DELETE CASCADE,
@@ -502,6 +512,10 @@ const q = {
                             FROM duels x JOIN dragons o ON o.id = CASE WHEN x.from_id = @me THEN x.to_id ELSE x.from_id END
                             WHERE x.from_id = @me OR x.to_id = @me ORDER BY x.id DESC LIMIT @n`),
   duelGet:      db.prepare('SELECT * FROM duels WHERE id = ?'),
+  raidLogAdd:   db.prepare('INSERT INTO raid_logs (at, boss, outcome, turns, test, members, data) VALUES (?, ?, ?, ?, ?, ?, ?)'),
+  raidLogList:  db.prepare("SELECT id, at, boss, outcome, turns, test, members FROM raid_logs WHERE members LIKE ? ORDER BY id DESC LIMIT ?"),
+  raidLogGet:   db.prepare('SELECT * FROM raid_logs WHERE id = ?'),
+  raidLogPrune: db.prepare('DELETE FROM raid_logs WHERE id <= (SELECT id FROM raid_logs ORDER BY id DESC LIMIT 1 OFFSET ?)'),
   duelUnseen:   db.prepare("SELECT COUNT(*) AS n FROM duels WHERE to_id = ? AND seen = 0"),
   duelSeenAll:  db.prepare('UPDATE duels SET seen = 1 WHERE to_id = ? AND seen = 0'),
   memoGet:      db.prepare('SELECT text, shared FROM rel_memos WHERE from_id = ? AND to_id = ?'),
@@ -820,6 +834,10 @@ module.exports = {
   },
   duelList: (me, n = 30) => q.duelList.all({ me, n }),
   duelGet: (id) => { const r = q.duelGet.get(id); if (r) { try { r.data = JSON.parse(r.data); } catch { r.data = {}; } } return r; },
+  // 레이드 기록: 끝난 레이드마다 하나. 가장 최근 것 200개만 남김
+  raidLogAdd: (r) => { const id = Number(q.raidLogAdd.run(Date.now(), r.boss, r.outcome, r.turns, r.test ? 1 : 0, `,${r.members.join(',')},`, JSON.stringify(r.data)).lastInsertRowid); q.raidLogPrune.run(200); return id; },
+  raidLogList: (me, n = 20) => q.raidLogList.all(`%,${me},%`, n).map((r) => ({ ...r, members: r.members.split(',').filter(Boolean).map(Number) })),
+  raidLogGet: (id) => { const r = q.raidLogGet.get(id); if (r) { r.members = r.members.split(',').filter(Boolean).map(Number); try { r.data = JSON.parse(r.data); } catch { r.data = {}; } } return r; },
   duelUnseen: (id) => q.duelUnseen.get(id).n,
   duelSeenAll: (id) => q.duelSeenAll.run(id),
   nestsAll: (exceptId) => q.nestsAll.all(exceptId),

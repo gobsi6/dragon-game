@@ -1254,6 +1254,7 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
       if (!st.best[fg.key] || fg.turn < st.best[fg.key].turns) st.best[fg.key] = { turns: fg.turn, names, at: now };
       save();
     }
+    const kept = { views: {}, results: {} }; // 다시 보기용: 드래곤마다 본 마지막 모습과 결과
     for (const p of fg.players) {
       const d = load(p.id);
       if (!d) continue;
@@ -1338,6 +1339,7 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
       db.saveState(d, items);
       const e = live(p.id);
       const v = viewFor(fg, p.id);
+      kept.views[p.id] = v; kept.results[p.id] = { head: res.head, lines: res.lines.slice(), win: res.win };
       if (e) {
         sendMe(e.socket, d);
         e.socket.emit('battle:end', { view: { ...v, log: lastLines }, result: res });
@@ -1345,6 +1347,11 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
       if (falls) fall(d, B.boss.name);
     }
     for (const r of new Set(fg.ids.map((id) => load(id)?.region).filter(Boolean))) presence?.(r);
+    // 레이드 기록 남기기 (결투장의 '레이드 기록'에서 다시 볼 수 있음)
+    try {
+      db.raidLogAdd({ boss: fg.key, outcome: fg.outcome || 'time', turns: fg.turn, test: !!fg.test, members: fg.players.map((p) => p.id),
+        data: { boss: B.boss.name, names: Object.fromEntries(fg.players.map((p) => [p.id, p.name])), log: fg.log.map((t) => ({ turn: t.turn, lines: t.lines })), ...kept } });
+    } catch (err) { console.error('[레이드 기록]', err); }
     push();
   }
   const ITEM_NAME = (id) => ITEMS[id]?.name || id;
@@ -1359,6 +1366,19 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
       try { ack(fn(d, p || {}) || { ok: true }); } catch (e) { console.error('[레이드]', ev, e); ack({ error: '처리하다 문제가 생겼다.' }); }
     });
     on('raidboss:get', () => ({ ok: true, view: view() }));
+    // 레이드 기록: 내가 함께한 지난 레이드 (최근 20개)
+    on('raidboss:logs', (d) => ({ ok: true, list: db.raidLogList(d.id, 20).map((r) => ({ id: r.id, at: r.at, key: r.boss, name: R.bosses[r.boss]?.boss?.name || r.boss, outcome: r.outcome, turns: r.turns, test: !!r.test, mates: r.members.filter((id) => id !== d.id).map((id) => load(id)?.name).filter(Boolean) })) }));
+    // 레이드 다시 보기: 내 쪽에서 본 모습으로
+    on('raidboss:replay', (d, p) => {
+      const r = db.raidLogGet(Number(p.id));
+      if (!r || !r.members.includes(d.id)) return { error: '그 레이드 기록은 없다.' };
+      const v = r.data.views?.[d.id] || Object.values(r.data.views || {})[0];
+      if (!v) return { error: '이 레이드는 다시 볼 기록이 없다.' };
+      const res = r.data.results?.[d.id] || {};
+      const head = { win: '쓰러뜨렸다!', time: '시간이 다해 물러났다.', wipe: '모두 쓰러졌다.', left: '모두 물러났다.' }[r.outcome] || '';
+      return { ok: true, view: v, log: r.data.log || [], title: `레이드 · ${r.data.boss || ''}${r.test ? ' (GM 시험)' : ''}`,
+        result: { title: '레이드 기록', lines: [res.head || head, ...(res.lines || [])].filter(Boolean), win: !!res.win } };
+    });
     on('raidboss:open', (d, p) => openLobby(d, str(p.key), !!socket.data.user?.is_gm));
     on('raidboss:join', (d, p) => joinLobby(d, str(p.key)));
     on('raidboss:leave', (d) => leaveLobby(d));

@@ -1417,6 +1417,7 @@ dialog.trip-dlg {
 .duel-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .duel-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 4px; border-top: 1px solid var(--line-in); }
 .duel-row.fresh { background: #FBF6E8; }
+.duel-row.raid-log { grid-template-columns: minmax(0, 1fr) auto; } /* 레이드 기록: 얼굴 그림 칸 없이 */
 .duel-row .ava { width: 34px; height: 34px; }
 .duel-row b { font: 700 14px/1.35 var(--serif); }
 .duel-row small { display: block; font-size: 12px; color: var(--muted); }

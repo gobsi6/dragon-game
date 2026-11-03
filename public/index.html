@@ -11745,15 +11745,63 @@
   // ── 결투장 ──
   // 결투장 목록과 결투 기록을 한꺼번에 받아 옴
   function openArena() {
-    let list = null, hist = null;
+    let list = null, hist = null, raids = null;
     const ready = () => {
-      if (!list || !hist) return;
+      if (!list || !hist || !raids) return;
       if (list.error) return toast(list.error);
-      renderArena(list, hist.error ? [] : hist.list);
+      renderArena(list, hist.error ? [] : hist.list, raids.error ? [] : raids.list || []);
       openPanel('arena-dlg');
     };
     socket.emit('arena:list', {}, (res) => { list = res; ready(); });
     socket.emit('arena:history', {}, (h) => { hist = h; ready(); });
+    socket.emit('raidboss:logs', {}, (r) => { raids = r || { list: [] }; ready(); });
+  }
+  // 레이드 기록: 함께한 지난 레이드. 눌러서 처음부터 다시 볼 수 있음 (내 쪽에서 본 모습으로)
+  function renderRaidLogs(body, list) {
+    if (!list.length) return; // 레이드를 한 번도 안 했으면 칸 자체를 보이지 않음
+    const head = document.createElement('div');
+    head.className = 'duel-h';
+    head.innerHTML = '<h3>레이드 기록</h3>';
+    body.appendChild(head);
+    const box = document.createElement('div');
+    const SHOW = 5;
+    const OUT = { win: ['승리', 'win'], time: ['시간 초과', 'lose'], wipe: ['전멸', 'lose'], left: ['물러남', 'lose'] };
+    list.forEach((x, i) => {
+      const r = document.createElement('div');
+      r.className = 'duel-row raid-log';
+      if (i >= SHOW) r.hidden = true;
+      const t = document.createElement('div');
+      t.innerHTML = '<b></b><small><span class="res"></span><span class="meta"></span></small>';
+      t.querySelector('b').textContent = `${x.name}${x.test ? ' (GM 시험)' : ''}`;
+      const [lab, cls] = OUT[x.outcome] || ['끝남', 'lose'];
+      const res = t.querySelector('.res');
+      res.className = `res ${cls}`;
+      res.textContent = lab;
+      t.querySelector('.meta').textContent = `${x.turns}턴 · ${ago(x.at)}${x.mates.length ? ` · ${x.mates.join(', ')}${josa(x.mates[x.mates.length - 1], '과', '와')} 함께` : ''}`;
+      r.appendChild(t);
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn';
+      b.textContent = '다시 보기';
+      b.addEventListener('click', () => {
+        socket.emit('raidboss:replay', { id: x.id }, (v) => {
+          if (v.error) return toast(v.error);
+          $('arena-dlg').close();
+          openBattle(v.view, { title: v.title, log: v.log, result: v.result, replay: true });
+        });
+      });
+      r.appendChild(b);
+      box.appendChild(r);
+    });
+    body.appendChild(box);
+    if (list.length > SHOW) {
+      const more = document.createElement('button');
+      more.type = 'button';
+      more.className = 'linkbtn duel-more';
+      more.textContent = `지난 레이드 ${list.length - SHOW}개 더 보기`;
+      more.addEventListener('click', () => { for (const r of box.children) r.hidden = false; more.remove(); });
+      body.appendChild(more);
+    }
   }
   // 결투 기록: 누가 걸었고 어떻게 끝났는지. 눌러서 다시 볼 수 있음
   function renderDuelHistory(body, list) {
@@ -11813,7 +11861,7 @@
       body.appendChild(more);
     }
   }
-  function renderArena(res, history = []) {
+  function renderArena(res, history = [], raidLogs = []) {
     const body = $('arena-body');
     body.replaceChildren();
     const me = document.createElement('div');
@@ -11873,6 +11921,7 @@
     h.textContent = '겨룰 드래곤';
     body.append(h, box);
     renderDuelHistory(body, history);
+    renderRaidLogs(body, raidLogs);
   }
   function challenge(x, mode) {
     socket.emit('arena:challenge', { id: x.id, mode }, (res) => {
