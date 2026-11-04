@@ -3980,3 +3980,8 @@ html:has(dialog.dlg:modal) { overflow: hidden; overscroll-behavior: none; } /* �
 .crown-fl.crown-silver, .who .nm .crown-fl.crown-silver { color: #9AA4AE; font-size: 13.5px; text-shadow: 0 0 1px rgba(60, 70, 80, .35); }
 .crown-silver + .crown-rank, .who .nm .crown-silver + .crown-rank { color: #8E98A2; }
 .silver-name, .who .nm .n.silver-name, #profile-name.silver-name { color: #5F6A75 !important; }
+/* 전투: 물러나기·항복은 공격·방어와 섞이지 않게 맨 아래 한 줄, 옅은 단추로 (자동 단추·안내 글 뒤) */
+.bt-acts .btn.flee { grid-column: 1 / -1; order: 99; min-height: 34px; flex-direction: row; justify-content: center; align-items: baseline; gap: 6px; background: #F6F7F5; border-color: #DDE0DC; box-shadow: none; color: #3C4A56; font-size: 12.5px; }
+.bt-acts .btn.flee small { font-size: 11px; color: #8A9096; }
+.bt-acts .btn.flee:hover { background: #EEF0EC; }
+.bt-acts .bt-note { order: 98; }

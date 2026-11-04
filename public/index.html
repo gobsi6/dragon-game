@@ -11760,7 +11760,7 @@
         const add = (label, sub, act, opts = {}) => {
           const b = document.createElement('button');
           b.type = 'button';
-          b.className = `btn${opts.primary ? ' primary' : ''}${opts.combo ? ' combo' : ''}${opts.suggest ? ' suggest' : ''}`;
+          b.className = `btn${opts.primary ? ' primary' : ''}${opts.combo ? ' combo' : ''}${opts.suggest ? ' suggest' : ''}${opts.flee ? ' flee' : ''}`;
           b.innerHTML = `<span></span><small></small>`;
           b.querySelector('span').textContent = label;
           b.querySelector('small').textContent = sub;
@@ -11786,7 +11786,7 @@
           if (v.script === 'knights') add('우회', '날개로 대열 옆을 찌른다', { type: 'flank' });
           if (v.script === 'rift') add('기억 깨우기', '금빛으로 한 칸', { type: 'kindle' }); // 균열: 고룡을 금빛 쪽으로 기울임
         }
-        add(v.kind === 'duel' ? '항복' : '물러나기', v.kind === 'duel' ? '결투를 포기한다' : v.kind === 'raid' ? '이번 레이드의 몫 없이 빠진다' : v.boss ? '입힌 피해는 남는다' : v.foes ? '쓰러뜨린 만큼만 얻는다' : '전리품 없이 피한다', { type: 'flee' });
+        add(v.kind === 'duel' ? '항복' : '물러나기', v.kind === 'duel' ? '결투를 포기한다' : v.kind === 'raid' ? '이번 레이드의 몫 없이 빠진다' : v.boss ? '입힌 피해는 남는다' : v.foes ? '쓰러뜨린 만큼만 얻는다' : '전리품 없이 피한다', { type: 'flee' }, { flee: true }); // 물러나기·항복: 맨 아래 옅은 단추로 따로
         // 사냥: 나머지는 예전처럼 알아서 (기력을 조금 남기고, 체력이 낮아지면 물러남)
         if (v.kind === 'hunt') {
           const b = document.createElement('button');
