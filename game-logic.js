@@ -1958,23 +1958,30 @@ function startFishLine(d, minutes, bait, have, now = Date.now()) {
   if (!L.minutes.includes(minutes)) return { error: '고를 수 없는 시간이다.' };
   if (!isBait(bait)) return { error: '미끼를 골라야 한다.' };
   const n = Math.round(minutes / L.per);
-  const nm = ITEMS[bait].name;
-  if (have(bait) < n) return { error: `${nm}${josa(nm, '이', '가')} ${n}개 있어야 한다.` };
+  // 고른 미끼부터 쓰고, 모자라면 다른 미끼로 채움 (많이 가진 것부터). 미끼마다 잘 무는 물고기는 그 미끼로 굴림
+  const order = [bait, ...Object.keys(ITEMS).filter((id) => isBait(id) && id !== bait).sort((a, b) => have(b) - have(a))];
+  const list = [];
+  let left = n;
+  for (const id of order) { if (left <= 0) break; const k = Math.min(have(id), left); if (k > 0) { list.push([id, k]); left -= k; } }
+  if (left > 0) return { error: `미끼가 모자란다. 모두 합쳐 ${n}개 있어야 한다.` };
   d.exp_start = now;
   d.exp_end = now + minutes * 60000;
   d.exp_region = d.region;
-  d.exp_info = { goal: 'fishline', line: { bait, n }, last: expInfo(d).last || null };
-  return { title: '줄 걸어 두기', lines: [`해안 바위에 ${nm} ${n}개를 꿰어 줄을 걸어 두었다. ${minutes}분 뒤에 거둬들인다.`], items: [{ id: bait, qty: -n }] };
+  d.exp_info = { goal: 'fishline', line: { bait, n, list }, last: expInfo(d).last || null };
+  const what = list.map(([id, k]) => `${ITEMS[id].name} ${k}개`).join(', ');
+  return { title: '줄 걸어 두기', lines: [`해안 바위에 ${what}${josa('개', '를', '를')} 꿰어 줄을 걸어 두었다. ${minutes}분 뒤에 거둬들인다.`], items: list.map(([id, k]) => ({ id, qty: -k })) };
 }
 function finishFishLine(d, now = Date.now()) {
   const info = expInfo(d), L = info.line || {}, per = FG.line.per * 60000;
   const doneMs = Math.max(0, Math.min(d.exp_end, now) - d.exp_start);
   const early = now < d.exp_end;
   const k = Math.min(L.n || 0, Math.floor(doneMs / per));
+  const list = L.list || (L.bait ? [[L.bait, L.n || 0]] : []); // 꿰어 둔 미끼 차례 (예전 줄은 한 가지)
+  const baitAt = (i) => { let c = 0; for (const [id, m] of list) { c += m; if (i < c) return id; } return L.bait; };
   const got = {}, extra = [];
   let xp = 0, levelUp = 0;
   for (let i = 0; i < k; i++) {
-    const r = fishLand(d, L.bait, FG.line.quality, d.exp_start + (i + 1) * per); // 그 시각의 날씨·계절로
+    const r = fishLand(d, baitAt(i), FG.line.quality, d.exp_start + (i + 1) * per); // 그 차례의 미끼로, 그 시각의 날씨·계절로
     for (const it of r.items) got[it.id] = (got[it.id] || 0) + it.qty;
     xp += r.xp || 0; levelUp += r.levelUp || 0;
     if (r.catch?.tier === 'rare') extra.push(r.catch.id);
@@ -1987,10 +1994,12 @@ function finishFishLine(d, now = Date.now()) {
   if (extra.length) extra.push('해안의 어부들이 몰려와 웅성거린다.');
   const back = Math.max(0, (L.n || 0) - k);
   const items = Object.entries(got).map(([id, qty]) => ({ id, qty }));
-  if (back > 0 && L.bait) items.push({ id: L.bait, qty: back });
+  const backBy = {}; // 쓰지 않은 미끼: 뒤 차례부터 남은 것 (종류마다)
+  for (let i = k; i < (L.n || 0); i++) { const id = baitAt(i); backBy[id] = (backBy[id] || 0) + 1; }
+  for (const [id, qty] of Object.entries(backBy)) items.push({ id, qty });
   const lines = [early ? '줄을 일찍 거둬들였다.' : '파도 소리를 들으며 기다리다 줄을 거둬들였다.'];
   lines.push(k ? `${k}번 입질이 왔다.` : '아직 입질이 한 번도 오지 않았다.', ...extra);
-  if (back > 0) lines.push(`쓰지 않은 ${ITEMS[L.bait].name} ${back}개는 그대로 돌려받았다.`);
+  if (back > 0) lines.push(`쓰지 않은 ${Object.entries(backBy).map(([id, q]) => `${ITEMS[id].name} ${q}개`).join(', ')}는 그대로 돌려받았다.`);
   d.exp_start = null; d.exp_end = null; d.exp_region = null;
   d.exp_info = { last: info.last || null };
   return { title: '줄 걸어 두기', lines, items, xp, levelUp, minutes: Math.round(doneMs / 60000) };

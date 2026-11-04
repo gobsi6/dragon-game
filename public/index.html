@@ -578,7 +578,7 @@
     <div class="fish-catch" id="fish-catch" hidden></div>
     <div class="fish-acts"><button class="btn" type="button" id="fish-auto">그냥 건지기</button><button class="btn primary" type="button" id="fish-main">던지기</button></div>
     <div class="fish-line" id="fish-line">
-      <p class="fish-line-h"><b>줄 걸어 두기</b><span>고른 미끼로, 원정처럼 바닷가에 머물며 기다린다</span></p>
+      <p class="fish-line-h"><b>줄 걸어 두기</b><span>고른 미끼부터 쓰고 모자라면 다른 미끼로 채운다. 원정처럼 바닷가에 머물며 기다린다</span></p>
       <div class="fish-line-b" id="fish-line-b"></div>
     </div>
     <div class="row"><button class="btn" type="button" id="fish-close">닫기</button></div>
@@ -2400,7 +2400,7 @@
     const line = e.goal === 'fishline'; // 줄 걸어 두기 (원정처럼 묶여 기다림)
     $('exp-k').textContent = line ? (done ? '줄을 거둘 때가 됐다' : '줄을 걸어 두었다') : done ? '원정에서 돌아왔다' : '원정 중';
     $('exp-where').textContent = line
-      ? `${S.regions[e.region].name} · ${S.items[e.line?.bait]?.name || '미끼'} ${e.line?.n || 0}개`
+      ? `${S.regions[e.region].name} · ${(e.line?.list || [[e.line?.bait, e.line?.n || 0]]).map(([id, k]) => `${S.items[id]?.name || '미끼'} ${k}개`).join(', ')}`
       : `${S.regions[e.region].name} · ${S.expGoals?.[e.goal]?.name || ''} 원정`;
     $('exp-trip').hidden = line;
     $('exp-claim').textContent = line ? '줄 거두기' : '결과 받기';
@@ -6125,6 +6125,7 @@
     if (!L || !box) return;
     box.replaceChildren();
     const have = FISH.bait ? invCache[FISH.bait] || 0 : 0;
+    const all = Object.entries(invCache).reduce((a, [id, q]) => a + (S.items[id]?.cat === 'bait' ? q : 0), 0); // 가진 미끼 모두 (고른 것이 모자라면 다른 미끼로 채움)
     for (const m of L.minutes) {
       const n = Math.round(m / L.per);
       const b = document.createElement('button');
@@ -6132,8 +6133,9 @@
       b.innerHTML = '<b></b><small></small>';
       b.querySelector('b').textContent = `${m}분`;
       b.querySelector('small').textContent = `미끼 ${n}개`;
-      b.disabled = busy || !FISH.bait || have < n;
-      if (FISH.bait && have < n) b.title = `${S.items[FISH.bait].name}${josa(S.items[FISH.bait].name, '이', '가')} ${n}개 있어야 한다.`;
+      b.disabled = busy || !FISH.bait || all < n;
+      if (FISH.bait && all < n) b.title = `미끼가 모자란다. 모두 합쳐 ${n}개 있어야 한다.`;
+      else if (FISH.bait && have < n) b.title = `${S.items[FISH.bait].name} ${have}개를 먼저 쓰고, 모자란 ${n - have}개는 다른 미끼로 채운다.`;
       b.addEventListener('click', () => {
         socket.emit('fish:line', { minutes: m, bait: FISH.bait }, (res) => {
           if (res.error) return toast(res.error);
