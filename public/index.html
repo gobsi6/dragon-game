@@ -2406,7 +2406,7 @@
     $('exp-claim').textContent = line ? '줄 거두기' : '결과 받기';
     $('exp-recall').textContent = line ? '일찍 거두기' : '일찍 불러들이기';
     renderFork(e);
-    $('exp-clock').textContent = done ? '도착' : fmt(e.end - now);
+    $('exp-clock').textContent = done ? (line ? '완료' : '도착') : fmt(e.end - now); // 줄 걸어 두기는 '완료', 원정은 '도착'
     $('exp-bar').style.width = `${Math.min(100, ((now - e.start) / (e.end - e.start)) * 100)}%`;
     $('exp-note').textContent = line
       ? (done ? '줄을 거두면 다시 움직일 수 있다.' : '줄을 걸어 둔 동안에는 바닷가를 떠날 수 없다. 채팅·석판은 할 수 있다.')

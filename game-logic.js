@@ -153,6 +153,7 @@ function titleProgress(d, t) {
   }
   if (c.hoard) return [d.nest ? nestInfo(d).value || 0 : 0, c.hoard];
   if (c.fish) return [fishCaught(d, c.tier), c.fish];
+  if (c.fishN) return [dexOf(d).f[c.fishN[0]] || 0, c.fishN[1]]; // 한 가지 물고기를 낚은 수 (도감 기록)
   if (c.scars) {
     let sc = d.scars;
     if (typeof sc === 'string') { try { sc = JSON.parse(sc || '[]'); } catch { sc = []; } }
@@ -169,6 +170,7 @@ function titleCondText(t, d) {
     const text = (TITLE_COUNT_NAMES[k] || `${k} {n}번`).replace('{n}', c.at);
     return r ? `${REGIONS[r].name}에서 ${text.replace('사냥에서 ', '사냥 ')}` : text;
   }
+  if (c.fishN) return `${ITEMS[c.fishN[0]]?.name || '물고기'}를 ${c.fishN[1]}마리 낚기`;
   if (c.level) return `레벨 ${c.level}`;
   if (c.duel) return `결투에서 ${c.duel}번 이기기`;
   if (c.duelLoss) return `결투에서 ${c.duelLoss}번 지기 (항복 포함)`;
@@ -1894,7 +1896,8 @@ function fishRoll(d, bait, quality, at = Date.now()) {
   const wx = weatherIdAt(d.region, at), sx = seasonAt(at).id; // 날씨(wx)와 계절(sx)마다 잘 무는 물고기가 다름 (at: 줄 걸어 두기는 물고기가 문 그 시각)
   const q = FG.quality[quality] || {}, b = FG.bait[bait] || {};
   const fr = titleMods(d).fishRare || 1; // 칭호 '바다를 읽는 용': 드문·귀한 물고기가 더 잘 묾
-  const list = FG.fish.map((f) => ({ f, w: f.w * (q[f.tier] ?? 1) * (b[f.tier] ?? 1) * (f.wx?.[wx] ?? 1) * (f.sx?.[sx] ?? 1) * (f.tier === 'common' ? 1 : fr) }));
+  const fm = titleMods(d).fishMackerel || 1; // 칭호 '고등어 박사': 고등어가 더 잘 묾
+  const list = FG.fish.map((f) => ({ f, w: f.w * (q[f.tier] ?? 1) * (b[f.tier] ?? 1) * (f.wx?.[wx] ?? 1) * (f.sx?.[sx] ?? 1) * (f.tier === 'common' ? 1 : fr) * (f.id === 'fish_mackerel' ? fm : 1) }));
   let r = Math.random() * list.reduce((a, x) => a + x.w, 0);
   return (list.find((x) => (r -= x.w) < 0) || list[0]).f;
 }

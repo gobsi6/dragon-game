@@ -1867,6 +1867,7 @@ const TITLES = [
   { id: 'fish1',     name: '갯바위 낚시꾼',     cond: { fish: 50 },                  mod: { fishJunk: 0.6 },  eff: '낚시에서 잡동사니가 걸릴 확률 −40%' },
   { id: 'fish2',     name: '바다를 읽는 용',     cond: { fish: 300 },                 mod: { fishRare: 1.2 },  eff: '드문·귀한 물고기가 더 잘 문다 (+20%)' },
   { id: 'fish3',     name: '전설을 낚은 자',     cond: { fish: 10, tier: 'rare' },    mod: { fishTiming: 1.3 }, eff: "낚시 '완벽'·'좋음' 판정 시간 +30%" },
+  { id: 'fish_mack', name: '고등어 박사',        cond: { fishN: ['fish_mackerel', 100] }, mod: { fishMackerel: 1.5 }, eff: '고등어가 1.5배 잘 문다' }, // 업적에서 칭호로 옮김
   // 요리: 제작한 강화 음식·식구 요리, 둥지 부엌에 맡긴 요리
   { id: 'cook1',     name: '둥지의 요리사',     cond: { count: 'cook', at: 30 },     mod: { cookEn: 0.8 },    eff: '요리(강화 음식·식구 요리) 제작 기력 −20%' },
   { id: 'cook2',     name: '용족의 미식가',     cond: { count: 'cook', at: 150 },    mod: { buffMin: 1.25 },  eff: '강화 음식 지속 시간 +25%' },
@@ -2861,7 +2862,6 @@ const ACHIEVEMENTS = [
   { id: 'h_story',   hidden: true, name: '한 마리의 이야기', desc: '모브 드래곤의 이야기를 끝까지 듣기',     cond: { count: ['mobstory', 1] } },
   // 엉뚱한 업적 — kills: [사냥감 키, 쓰러뜨린 수] / fishN: [물고기 id, 낚은 수] / bossKills: 한 재앙을 쓰러뜨린 수
   //   goldAt: 지닌 금화 / goldZero: 이 레벨 이상에서 금화 0닢 / mindLow: 정신이 이 값 이하 (광폭화 아닐 때) / fameAt: 용족 명성이 이 값 이하 / hourKST: 한국 시각 이 시에 접속·행동
-  { id: 'q_mackerel', name: '고등어 박사',       desc: '고등어를 100마리 낚기',                  cond: { fishN: ['fish_mackerel', 100] } },
   { id: 'q_letters',  name: '바다가 보낸 편지',  desc: '병 속 편지를 10통 건지기',               cond: { fishN: ['bottle_letter', 10] } },
   { id: 'q_boots',    name: '짝을 찾는 장화',    desc: '낡은 장화를 20짝 건지기',                cond: { fishN: ['old_boot', 20] } },
   { id: 'q_bison',    name: '들소의 천적',       desc: '들소 떼를 100마리 쓰러뜨리기',           cond: { kills: ['plains_field', 100] } },
@@ -2874,6 +2874,21 @@ const ACHIEVEMENTS = [
   { id: 'h_thread', hidden: true, name: '실 한 가닥',      desc: '정신이 5 이하로 남은 채 버티기',          cond: { mindLow: 5 } },
   { id: 'h_shame',  hidden: true, name: '평판 따윈',       desc: "용족 명성이 '수치'까지 떨어지기",         cond: { fameAt: -60 } },
   { id: 'q_rumor',  name: '귀가 밝은 용',      desc: '떠돌이 야바위꾼에게서 소문 20가지 듣기',  cond: { count: ['rumor', 20] } },
+  // 낚시
+  { id: 'q_anchovy', name: '멸치 부자',          desc: '멸치를 50줌 건지기',                     cond: { fishN: ['fish_anchovy', 50] } },
+  { id: 'q_puffer',  name: '가시에 찔린 주둥이', desc: '가시 복어를 30마리 낚기',                cond: { fishN: ['fish_puffer', 30] } },
+  { id: 'q_glass',   name: '파도의 조약돌',      desc: '바다 유리 조각을 30개 건지기',           cond: { fishN: ['sea_glass', 30] } },
+  { id: 'q_jelly',   name: '오로라를 건진 밤',   desc: '오로라 해파리를 5마리 낚기',             cond: { fishN: ['fish_jelly', 5] } },
+  // 사냥
+  { id: 'q_spider',  name: '거미줄 걷는 용',     desc: '거대 거미를 100마리 쓰러뜨리기',         cond: { kills: ['forest_edge', 100] } },
+  { id: 'q_scorpion', name: '사막의 전갈잡이',   desc: '사막 전갈을 100마리 쓰러뜨리기',         cond: { kills: ['canyon_path', 100] } },
+  { id: 'q_wyvern',  name: '와이번 사냥꾼',      desc: '서리 와이번을 50마리 쓰러뜨리기',        cond: { kills: ['snow_peak', 50] } },
+  { id: 'q_crab',    name: '껍질 깨는 용',       desc: '껍질 게를 100마리 쓰러뜨리기',           cond: { kills: ['ruin_flats', 100] } },
+  // 손과 마음
+  { id: 'q_cook',    name: '부엌을 지키는 용',   desc: '요리를 100번 하기',                      cond: { count: ['cook', 100] } },
+  { id: 'q_order',   name: '시장의 단골 장인',   desc: '제작 의뢰를 50번 납품하기',              cond: { count: ['order', 50] } },
+  { id: 'q_master',  name: '손끝의 기적',        desc: '걸작을 10번 빚어내기',                   cond: { count: ['masterwork', 10] } },
+  { id: 'q_healer',  name: '날개 아래 쉼터',     desc: '다른 드래곤을 50번 치유하기',            cond: { count: ['healother', 50] } },
   { id: 'h_eel',    hidden: true, name: '번개를 낚다',     desc: '번개 장어를 낚기',                        cond: { item: 'fish_eel' } },
   { id: 'h_jelly',  hidden: true, name: '하늘을 건진 밤',   desc: '오로라 해파리를 낚기',                    cond: { item: 'fish_jelly' } },
 ];
