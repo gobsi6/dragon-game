@@ -642,7 +642,7 @@
   <div class="orn-h"><h2 id="match-dlg-title">만남 주선하기</h2></div>
   <div class="body">
     <p class="note" id="match-dlg-note"></p>
-    <div class="kin-adopt-list match-list" id="match-list"></div>
+    <div class="match-list" id="match-list"></div>
     <div class="row"><button class="btn" type="button" id="match-close">닫기</button></div>
   </div>
 </dialog>
@@ -14135,6 +14135,7 @@
     socket.on('arena:bet-gone', closeBet);
     socket.on('arena:declined', (x) => { toast(`${x.name}에게 신청한 결투: ${x.reason}`); arenaRefresh(); });
     socket.on('presence', arenaRefresh); // 같은 지역 드래곤이 오가거나 상태가 바뀜 → 열어 둔 결투장도 새로
+    socket.on('arena:changed', arenaRefresh); // 어디서든 결투가 끝나거나 결투 설정이 바뀜 → 승패·받기 여부를 다시
     socket.on('gm:role', (r) => { setGmVisible(r.isGm); toast(r.isGm ? 'GM 권한을 받았다. 오른쪽 위 메뉴에서 GM 도구를 열 수 있다.' : 'GM 권한이 거두어졌다.'); });
     socket.on('gm:kicked', () => toast('GM이 접속을 끊었다. 새로고침하면 다시 들어올 수 있다.', { label: '다시 접속', run: () => { hideToast(); socket.connect(); } }));
     socket.on('trade:error', (e) => toast(e.error));

@@ -4009,3 +4009,8 @@ html:has(dialog.dlg:modal) { overflow: hidden; overscroll-behavior: none; } /* �
 #match-list .match-c { width: 100%; box-sizing: border-box; min-height: 44px; padding: 6px 12px; }
 #match-list .match-c { align-items: stretch; justify-content: flex-start; }
 #match-list .match-c span { width: 100%; align-items: flex-start; text-align: left; }
+/* 만남 주선하기 팝업: 가로로 넘치지 않고 세로로만 스크롤 (긴 이름·설명은 줄을 바꿈) */
+#match-dlg .body { overflow-x: hidden; }
+#match-list { display: flex; flex-direction: column; gap: 6px; max-height: 55vh; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+#match-list .match-c { display: flex; width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; white-space: normal; text-align: left; font-size: 13px; }
+#match-list .match-c b, #match-list .match-c small { white-space: normal; overflow-wrap: anywhere; word-break: keep-all; }

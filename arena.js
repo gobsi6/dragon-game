@@ -357,6 +357,7 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
       const e = live(d.id);
       if (e) sendMe(e.socket, d);
     }
+    io.emit('arena:changed'); // 결투장을 열어 둔 드래곤들이 바뀐 승패를 바로 다시 받아 오게 (받는 쪽에서 3초에 한 번까지로 묶음)
     return { winner: w, loser: l, lines };
   }
   function finishDuel(s) {
@@ -433,7 +434,7 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
     });
 
     // 설정과 스킬 구성
-    on('settings:set', (d, p) => { const r = combat.setSettings(d, p); db.saveState(d); sendMe(socket, d); return r; });
+    on('settings:set', (d, p) => { const r = combat.setSettings(d, p); db.saveState(d); sendMe(socket, d); io.emit('arena:changed'); return r; }); // 결투 받기·자동 결투 설정도 바로 보이게
     on('skills:set', (d, p) => { const r = combat.setSkills(d, p.list); if (r.error) return r; db.saveState(d); sendMe(socket, d); return r; });
 
     // 지금 싸우는 중인 전투 (창을 다시 열 때)
