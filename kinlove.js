@@ -258,11 +258,11 @@ module.exports = function setupKinLove({ db, online, sendMe, life, logic, news, 
       if (p) { logic.chron(p, 'mark', `${mine.name}${josa(mine.name, '이', '가')} ${home}의 둥지 ${other.name}${josa(other.name, '과', '와')} ${dk ? '짝이 되었다' : '맺어졌다'}.`, now); db.saveState(p); if (e) sendMe(e.socket, p); }
     }
     if (dk) {
-      news(`${F}의 둥지 ${a.name}${josa(a.name, '과', '와')} ${T}의 둥지 ${b.name}${josa(b.name, '이', '가')} 구애 비행을 하고 짝이 되었다. ${o.match ? '중매로 만난 사이였다고 한다.' : '어릴 적부터 함께 날던 단짝이었다고 한다.'}`);
+      news(`${F}의 둥지 ${a.name}${josa(a.name, '과', '와')} ${T}의 둥지 ${b.name}${josa(b.name, '이', '가')} 구애 비행을 하고 짝이 되었다.${o.match ? '' : ' 어릴 적부터 함께 날던 단짝이었다고 한다.'}`); // 중매로 이어진 사이는 덧붙이는 말 없이
       tell(o.from.owner, [`${T}${josa(T, '이', '가')} 짝을 허락했다. ${a.name}${josa(a.name, '과', '와')} ${b.name}${josa(b.name, '이', '가')} 구름 위까지 나란히 날아올랐다가, 날개를 맞댄 채 내려왔다. 두 용은 각자의 둥지에 살며 서로 오간다. (${a.name} 유대 +10)`], 'kinlove:gone');
       return { ok: true, lines: [`짝을 허락했다. ${b.name}${josa(b.name, '과', '와')} ${a.name}${josa(a.name, '이', '가')} 구름 위까지 나란히 날아올랐다가, 날개를 맞댄 채 내려왔다. 두 용은 각자의 둥지에 살며 서로 오간다. (${b.name} 유대 +10)`] };
     }
-    news(`${F}의 둥지 ${a.name}${josa(a.name, '과', '와')} ${T}의 둥지 ${b.name}${josa(b.name, '이', '가')} 맺어졌다. ${o.match ? '중매로 만난 사이였다고 한다.' : '서로의 첫사랑이었다고 한다.'}`);
+    news(`${F}의 둥지 ${a.name}${josa(a.name, '과', '와')} ${T}의 둥지 ${b.name}${josa(b.name, '이', '가')} 맺어졌다.${o.match ? '' : ' 서로의 첫사랑이었다고 한다.'}`); // 중매로 이어진 사이는 덧붙이는 말 없이
     tell(o.from.owner, [`${T}${josa(T, '이', '가')} 혼인을 허락했다. ${a.name}${josa(a.name, '과', '와')} ${b.name}${josa(b.name, '이', '가')} 맺어졌다. 두 아이는 각자의 둥지에 살며 서로 오간다. (${a.name} 유대 +10)`], 'kinlove:gone');
     return { ok: true, lines: [`혼인을 허락했다. ${b.name}${josa(b.name, '과', '와')} ${a.name}${josa(a.name, '이', '가')} 맺어졌다. 두 아이는 각자의 둥지에 살며 서로 오간다. (${b.name} 유대 +10)`] };
   }
