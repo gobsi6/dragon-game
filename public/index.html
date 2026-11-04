@@ -3995,6 +3995,22 @@
       mb.addEventListener('click', () => matchPicker(card, v));
       hb.appendChild(mb);
     }
+    // 혼인 청하기(드래곤 식구는 짝 청하기): 서로 마음을 주고받는 어른끼리면 사건을 기다리지 않고 바로 청함
+    if (v.propose && !partner) {
+      const pb = document.createElement('button');
+      pb.type = 'button'; pb.className = 'linkbtn'; pb.textContent = v.propose.drake ? '짝 청하기' : '혼인 청하기';
+      pb.title = `${v.propose.ownerName}의 둥지 ${v.propose.name}${josa(v.propose.name, '과', '와')} ${v.propose.drake ? '짝을 맺기를' : '혼인하기를'} 청한다. 상대 보호자가 허락하면 맺어진다.`;
+      pb.dataset.flag = 'propose';
+      pb.addEventListener('click', () => {
+        if (!confirm(`${v.name}${josa(v.name, '과', '와')} ${v.propose.ownerName}의 둥지 ${v.propose.name}의 ${v.propose.drake ? '짝을' : '혼인을'} 청할까? ${v.propose.ownerName}${josa(v.propose.ownerName, '이', '가')} 허락하면 맺어진다.`)) return;
+        socket.emit('kinlove:propose', { kin: v.id }, (r) => {
+          if (r.error) return toast(r.error);
+          toast(r.lines.join(' '));
+          if ($('nest-dlg').open) openNest();
+        });
+      });
+      hb.appendChild(pb);
+    }
     // 독립시키기: 독립할 수 있는 때가 되면 ⋯ 메뉴에
     if (v.canRelease && !partner) {
       const rb = document.createElement('button');

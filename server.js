@@ -2405,7 +2405,11 @@ function onConnect(socket) {
         gold: d.hoard_gold || 0, items, value: logic.hoardValue(d.hoard_gold || 0, items) + logic.chestValue(d),
         rank: d.nest ? hoardRank(d) : null, // 서버 보물더미 순위 (1~3위와 내 순위)
         chest: logic.chestView(d), // 보물 상자 (아이의 선물·받은 꽃다발)
-        kin: life.views(kin, Date.now(), d),
+        kin: (() => { // 식구 보기 + 혼인 청하기 메뉴를 띄울 수 있는지 (kinlove.js)
+          const v = life.views(kin, Date.now(), d);
+          for (const x of v.home || []) { const k = kin.find((y) => y.id === x.id); const c = k && kinLove.canPropose(d.id, k); if (c) x.propose = c; }
+          return v;
+        })(),
         tier: logic.nestInfo(d).tier, maxKin: logic.maxKinOf(d),
         wards: { trap: logic.nestInfo(d).wards.trap || 0, stone: logic.nestInfo(d).wards.stone || 0 },
         raid: logic.raidView(d),
@@ -2637,6 +2641,7 @@ function onConnect(socket) {
     ['kinmatch:ask', (d, p) => kinLove.matchAsk(d, p?.kin, p?.owner, p?.to)],
     ['kinmatch:answer', (d, p) => kinLove.matchAnswer(d, p?.id, !!p?.yes)],
     ['kinmatch:cancel', (d, p) => kinLove.matchCancel(d, p?.id)],
+    ['kinlove:propose', (d, p) => kinLove.propose(d, syncKin(socket, d), p?.kin)], // ⋯ 메뉴의 혼인 청하기·짝 청하기
   ]) {
     socket.on(ev, (payload, ack) => {
       if (typeof ack !== 'function') return;

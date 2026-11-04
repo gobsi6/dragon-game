@@ -283,6 +283,29 @@ module.exports = function setupKinLove({ db, online, sendMe, life, logic, news, 
     if (line) life.diary(k, line, now);
     kinChanged(ref.owner, kin);
   }
+  // 혼인 청하기(드래곤 식구는 짝 청하기) 메뉴: 사건을 기다리지 않고 보호자가 바로 청할 수 있는지. 되면 { name, ownerName, drake }
+  function canPropose(owner, k, now = Date.now()) {
+    if (!k || k.status !== 'home' || k.data.mate || !adult(k, now)) return null;
+    if (k.type !== 'human' && k.type !== 'drake') return null;
+    const s = status(owner, k);
+    if (!s || s.gone || !s.mutual || !s.adult || !s.free || s.pending) return null;
+    return { name: s.name, ownerName: s.ownerName, drake: k.type === 'drake' };
+  }
+  function propose(d, kin, kinId, now = Date.now()) {
+    sweep(now);
+    const k = kin.find((x) => x.id === Number(kinId));
+    const c = canPropose(d.id, k, now);
+    if (!c && k && (pendingOf(k.id) || (k.data.loveRef && pendingOf(k.data.loveRef.id)))) return { error: '이미 오가는 혼인 청이 있다. 상대 보호자의 답을 기다리자.' };
+    if (!c) return { error: '지금은 청할 수 없다. 두 사람이 서로 마음을 주고받는 사이이고, 둘 다 다 자라 짝이 없어야 한다.' };
+    ask(d, { id: k.id, name: k.name, ref: k.data.loveRef, drake: c.drake }, now);
+    life.addBond(k, 5);
+    life.diary(k, `${c.ownerName}의 둥지 ${c.name}${josa(c.name, '과', '와')} ${c.drake ? '짝을 맺기를' : '혼인하기를'} 청했다. 보호자가 축복해 주었다.`, now);
+    kinChanged(d.id, kin);
+    return { ok: true, lines: [c.drake
+      ? `날개를 펼쳐 ${k.name}${josa(k.name, '을', '를')} 축복하고, ${c.ownerName}의 둥지에 두 용이 짝을 맺기를 청하는 편지를 띄웠다. ${c.ownerName}${josa(c.ownerName, '이', '가')} 허락하면 두 용이 구애 비행을 하고 짝이 된다. (유대 +5)`
+      : `${k.name}${josa(k.name, '을', '를')} 축복하고, ${c.ownerName}에게 ${k.name}${josa(k.name, '과', '와')} ${c.name}의 혼인을 청했다. ${c.ownerName}${josa(c.ownerName, '이', '가')} 허락하면 두 사람이 맺어진다. (유대 +5)`] };
+  }
+
   // ── 중매 ──
   const kidKey = (owner, id) => `${owner}:${id}`;
   const pairKey = (a, b) => [a, b].sort().join('|');
@@ -448,5 +471,5 @@ module.exports = function setupKinLove({ db, online, sendMe, life, logic, news, 
 
   // 받은 청 수 (혼인 청 + 아이를 두고 받은 청): 아래 '둥지' 메뉴의 붉은 점에 씀
   const inCount = (id, now = Date.now()) => st.offers.filter((o) => o.to.owner === id && now < o.until).length + st.babies.filter((o) => o.to.owner === id && now < o.until).length + st.matches.filter((o) => o.to.owner === id && now < o.until).length;
-  return { status, lovesBack, ask, view, answer, refOf, babyShared, eggShared, babyAsk, babyAnswer, babySweep, inCount, matchCands, matchAsk, matchAnswer, matchCancel };
+  return { status, lovesBack, ask, view, answer, refOf, babyShared, eggShared, babyAsk, babyAnswer, babySweep, inCount, matchCands, matchAsk, matchAnswer, matchCancel, canPropose, propose };
 };
