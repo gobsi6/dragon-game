@@ -12011,7 +12011,7 @@
     BT = null;
     if (still) { setTimeout(resumeBattle, 0); return; }
     if (r) showResult({ ...r, log: null, done: true });
-    if (ARENA_BACK) { ARENA_BACK = false; openArena(); } // 결투장에서 연 결투·다시 보기: 닫으면 결투장으로 돌아옴 (메인으로 튕기지 않게)
+    if (ARENA_BACK) { ARENA_BACK = false; openArena($('arena-dlg').open); } // 결투장에서 연 결투·다시 보기: 닫으면 결투장이 그대로 보이고, 방금 승패로 새로 그림 (닫혀 있었으면 다시 엶)
     if (r && $('nest-dlg').open) openNest(); // 도둑을 쫓고 돌아오면 둥지 화면을 새로
   });
   $('bt-close').addEventListener('click', () => $('battle-dlg').close());
@@ -12150,7 +12150,7 @@
         socket.emit('arena:replay', { id: x.id }, (v) => {
           if (v.error) return toast(v.error);
           if (!v.view) return toast('이 결투는 다시 볼 기록이 없다.');
-          ARENA_BACK = true; $('arena-dlg').close(); // 다시 보기를 닫으면 결투장으로 돌아옴
+          ARENA_BACK = true; // 결투장은 닫지 않고 그 위에 전투 창을 띄움 (닫으면 결투장이 그대로 보임)
           openBattle(v.view, { title: v.title, log: v.log, result: v.result, replay: true });
         });
       });
@@ -12232,7 +12232,7 @@
     socket.emit('arena:challenge', { id: x.id, mode }, (res) => {
       if (res.error) return toast(res.error);
       if (res.auto) {
-        ARENA_BACK = true; $('arena-dlg').close(); // 자동 결투를 다 보고 닫으면 결투장으로 돌아옴
+        ARENA_BACK = true; // 결투장은 닫지 않고 그 위에 전투 창을 띄움
         openBattle(res.view, { title: `자동 결투 · ${x.name}`, log: res.log, result: res.result, replay: true });
         return;
       }
@@ -14120,7 +14120,7 @@
     socket.on('rescue:risen', (l) => { S.risen = l || []; renderRescues(); });
     socket.on('rescued', (r) => { if ($('fall-dlg').open) $('fall-dlg').close(); showResult({ title: '구조', lines: r.lines }); });
     socket.on('rampage:end', onRampageEnd);
-    socket.on('battle:start', (s2) => { if ($('arena-dlg').open) { ARENA_BACK = true; $('arena-dlg').close(); } openBattle(s2.view, { lines: s2.lines, title: s2.title }); }); // 결투장에서 시작한 결투는 끝나고 닫으면 결투장으로
+    socket.on('battle:start', (s2) => { if ($('arena-dlg').open) ARENA_BACK = true; openBattle(s2.view, { lines: s2.lines, title: s2.title }); }); // 결투장에서 시작한 결투는 끝나고 닫으면 결투장으로
     socket.on('raidboss:chat', (m) => { if (BT?.view.kind === 'raid') { (BT.view.chat ||= []).push(m); btChatAdd(m); } });
     socket.on('raidboss:wait', (p) => { if (BT?.view.kind !== 'raid') return; for (const a of BT.view.allies || []) a.chose = !!p.chosen[a.id]; renderBattle(); });
     socket.on('raidboss', (v) => { S.raidBoss = v; renderRaidBar(); });
