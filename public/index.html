@@ -1197,7 +1197,13 @@
   }
   // 알림이 들어가 있던 창이 닫히면, 떠 있는 알림은 그다음 창(또는 화면)으로 옮겨 계속 보이게
   document.addEventListener('close', (e) => { const t = $('toast'); if (e.target.tagName === 'DIALOG' && e.target.contains(t) && !t.hidden) setTimeout(toastOnTop, 0); }, true);
+  // 줄 걸어 두기 중이면 서버의 '원정' 문구를 낚시에 맞게 바꿔 보여 줌 (원정과 같은 막힘을 쓰기 때문)
+  const awayFix = (t) => (S.me?.exp?.goal === 'fishline' && typeof t === 'string'
+    ? t.replace('원정을 떠나 있는 동안', '줄을 걸어 둔 동안').replace('이미 원정을 떠나 있다', '줄을 걸어 두고 낚시 중이다')
+    : t);
+  const awayMsg = (rest) => `${S.me?.exp?.goal === 'fishline' ? '줄을 걸어 둔 동안에는' : '원정을 떠나 있는 동안에는'} ${rest}`;
   function toast(text, action) {
+    text = awayFix(text);
     clearTimeout(toastTimer);
     $('toast-text').textContent = text;
     const b = $('toast-btn'), b2 = $('toast-btn2'), tm = $('toast-time');
@@ -1714,7 +1720,7 @@
     $('actions').hidden = away;
     $('routes').classList.toggle('locked', away);
     $('routes-hint').innerHTML = away
-      ? (me.exp ? '원정을 떠나 있는 동안에는 날아갈 수 없다.' : '둥지에서 쉬는 동안에는 날아갈 수 없다.')
+      ? (me.exp ? awayMsg('날아갈 수 없다.') : '둥지에서 쉬는 동안에는 날아갈 수 없다.')
       : '지도에서 <i></i>표시를 눌러 날아간다.';
     const town = S.region && S.shops.includes(S.region);
     for (const b of document.querySelectorAll('[data-act]')) {
@@ -2987,7 +2993,7 @@
         b.type = 'button';
         b.className = 'btn';
         b.textContent = '벗기';
-        if (S.me?.exp) { b.disabled = true; b.title = '원정을 떠나 있는 동안에는 할 수 없다.'; } // 원정 중에는 장신구를 바꿀 수 없음
+        if (S.me?.exp) { b.disabled = true; b.title = awayMsg('할 수 없다.'); } // 원정 중에는 장신구를 바꿀 수 없음
         b.addEventListener('click', () => itemAct('unequip', { slot: sl.key }));
         d.appendChild(b);
       }
@@ -3210,7 +3216,7 @@
           b.type = 'button';
           b.className = 'btn';
           b.textContent = it.type === 'use' ? (it.use?.keep && !it.use?.mind ? '상자에 넣기' : it.use?.crown ? '머리에 얹기' : '사용') : '착용';
-          if (S.me?.exp) { b.disabled = true; b.title = '원정을 떠나 있는 동안에는 할 수 없다.'; } // 원정 중에는 쓰거나 차거나 할 수 없음
+          if (S.me?.exp) { b.disabled = true; b.title = awayMsg('할 수 없다.'); } // 원정 중에는 쓰거나 차거나 할 수 없음
           b.addEventListener('click', () => itemAct(it.type === 'use' ? 'item:use' : 'equip', kind === 'plain' ? { item: id, plain: true } : { item: id })); // 보통 것 줄: 강화되지 않은 것을 참
           acts.appendChild(b);
           // 꽃다발: 써서 정신을 맑히거나, 보물 상자에 넣어 간직하거나
@@ -3218,7 +3224,7 @@
             const k2 = document.createElement('button');
             k2.type = 'button'; k2.className = 'btn'; k2.textContent = '상자에 넣기';
             k2.title = '둥지의 보물 상자에 넣어 간직한다 (둥지에서 다시 꺼낼 수 있다)';
-            if (S.me?.exp) { k2.disabled = true; k2.title = '원정을 떠나 있는 동안에는 할 수 없다.'; }
+            if (S.me?.exp) { k2.disabled = true; k2.title = awayMsg('할 수 없다.'); }
             k2.addEventListener('click', () => itemAct('item:use', { item: id, keep: true }));
             acts.appendChild(k2);
           }
@@ -3923,7 +3929,7 @@
               : v.path ? '갈 길을 정한 식구는 입양 보낼 수 없다.'
                 : v.talent ? '재주가 정해진 아이는 입양 보낼 수 없다. 재주가 정해지기 전에만 보낼 수 있다.'
                   : null;
-      const why2 = why || (!canAct ? (S.me.exp ? '원정을 떠나 있는 동안에는 입양 보낼 수 없다.' : '둥지에 있을 때만 입양 보낼 수 있다.') : null);
+      const why2 = why || (!canAct ? (S.me.exp ? awayMsg('입양 보낼 수 없다.') : '둥지에 있을 때만 입양 보낼 수 있다.') : null);
       const ad = document.createElement('button');
       ad.type = 'button';
       ad.className = `linkbtn${why2 ? ' off' : ''}`;
@@ -6780,7 +6786,7 @@
       const eb = document.createElement('button');
       eb.type = 'button'; eb.className = 'btn';
       eb.textContent = g.elem ? '각인 바꾸기' : '각인';
-      if (S.me?.exp) { eb.disabled = true; eb.title = '원정을 떠나 있는 동안에는 할 수 없다.'; } // 강화처럼 원정 중에는 막힘
+      if (S.me?.exp) { eb.disabled = true; eb.title = awayMsg('할 수 없다.'); } // 강화처럼 원정 중에는 막힘
       eb.addEventListener('click', () => {
         const open = row.querySelector('.gw-elems');
         if (open) { open.remove(); return; }
@@ -7899,7 +7905,7 @@
     if (p.title) { const tt = document.createElement('span'); tt.className = 'ttl'; tt.textContent = p.title.name; tt.title = p.title.eff; t.querySelector('.nrow').prepend(tt); }
     const chips = t.querySelector('.chips2');
     const chip = (text, cls) => { const c = document.createElement('span'); c.className = cls; c.textContent = text; chips.appendChild(c); };
-    chip(p.away ? '원정 중' : p.resting ? '둥지에서 쉬는 중' : p.online ? '접속 중' : '접속 안 함', `st-chip${p.online && !p.away ? ' on' : ''}`);
+    chip(p.away ? (p.fishing ? '낚시 중' : '원정 중') : p.resting ? '둥지에서 쉬는 중' : p.online ? '접속 중' : '접속 안 함', `st-chip${p.online && !p.away ? ' on' : ''}`);
     if (p.self) chip('나', 'relb pending');
     else if (p.rel.mine === 'friend') chip(bondName(p.rel.bond), `relb ${bondCls(p.rel.bond)}`);
     else if (p.rel.mine) chip({ rival: '라이벌', wary: '경계', nemesis: '원수' }[p.rel.mine], `relb ${p.rel.mine}`);
@@ -8402,7 +8408,7 @@
     };
     const btn = (a, text, fn, primary) => { const b = document.createElement('button'); b.type = 'button'; b.className = `btn${primary ? ' primary' : ''}`; b.textContent = text; b.addEventListener('click', fn); a.appendChild(b); };
     const kindLv = (x) => `${S.kinds[x.kind]?.name || ''} · Lv. ${x.level}`;
-    const where = (x) => `<span class="dot${x.online ? ' on' : ''}"></span>${x.online ? (x.away ? '원정 중' : S.regions[x.region]?.name || '') : '접속 안 함'} · ${kindLv(x)}`;
+    const where = (x) => `<span class="dot${x.online ? ' on' : ''}"></span>${x.online ? (x.away ? (x.fishing ? '낚시 중' : '원정 중') : S.regions[x.region]?.name || '') : '접속 안 함'} · ${kindLv(x)}`;
     const askText = (x) => `${S.bonds?.[x.bond]?.ask || '관계를 청했다'} · ${kindLv(x)}`;
     section('받은 관계 요청', l.incoming, askText, (x, a) => {
       btn(a, '받아들이기', () => { const mk = ['rivals', 'nemesis', 'wary'].find((k) => (l[k] || []).some((y) => y.id === x.id)); if (markWarn(x.name, mk && { rivals: 'rival', nemesis: 'nemesis', wary: 'wary' }[mk], '받아들일까')) socialAct('rel:accept', { id: x.id }); }, true);
@@ -11360,10 +11366,12 @@
     spirit:    ['정령',   '<path d="M5 19.5c0-8.5 5-13.5 14-14.5-1 9-6 14.5-14 14.5z"/><path d="M5 19.5l8.5-8.5M10 14.5h3.5M12 12.5V9"/>'],
     thief:     ['도둑',   '<path d="M12 3.2c-3.5 0-6 3-6 7.3V20.5h12V10.5c0-4.3-2.5-7.3-6-7.3z"/><path d="M9.3 11.2c.8-1.7 4.6-1.7 5.4 0 0 1.9-1.1 3.2-2.7 3.2s-2.7-1.3-2.7-3.2z"/>'],
     human:     ['인간',   '<circle cx="12" cy="7" r="3.2"/><path d="M5.5 20.5c0-4 2.9-7.2 6.5-7.2s6.5 3.2 6.5 7.2"/><path d="M9.5 16.5h5"/>'],
+    dragon:    ['고룡',   ''], // 균열의 아스테르: 아래에서 얼굴 그림을 채움 (레이드 모집 줄과 같은 그림)
     drake:     ['드래곤', '<path d="M6 19c0-6 2.6-10.6 6.5-12.2l-.6-3.3 3 2.4c2.5.4 4.4 2.2 5.1 4.6l-3.2-.4c-.4 2.3-2 4-4.3 4.8 1.5 1.2 2.4 2.7 2.4 4.1"/><path d="M14.6 8.6h.01"/><path d="M6 19h11"/>'],
   };
   const CRE_COLORS = { plains: '#7A6A2E', forest: '#3B5E33', swamp: '#3E5C57', snow: '#3F6A88', ruins: '#5E5868', canyon: '#9A5228', volcano: '#8A3A22', ruin_shore: '#5E5868', ruin_plain: '#5A5266', ruin_capital: '#544B60', ruin_rift: '#463E52' };
   function creEl(type, region, elite, name) {
+    if (type === 'dragon' && !CRE_TYPES.dragon[1]) CRE_TYPES.dragon[1] = DRAGON_FACE;
     const c = document.createElement('span');
     c.className = `cre${elite ? ' elite' : ''}`;
     c.style.setProperty('--cre-c', CRE_COLORS[region] || '#4E5358');
@@ -11912,10 +11920,17 @@
 
   // ── 결투장 ──
   // 결투장 목록과 결투 기록을 한꺼번에 받아 옴
-  function openArena() {
+  function openArena(refresh = false) {
     let list = null, hist = null;
     const ready = () => {
       if (!list || !hist) return;
+      if (refresh) { // 열어 둔 결투장을 새로 그림: 보던 자리(스크롤)는 그대로
+        if (!$('arena-dlg').open || list.error) return;
+        const dlg = $('arena-dlg'), sc = dlg.querySelector('.body'), keep = [dlg.scrollTop, sc?.scrollTop || 0];
+        renderArena(list, hist.error ? [] : hist.list);
+        dlg.scrollTop = keep[0]; if (sc) sc.scrollTop = keep[1];
+        return;
+      }
       if (list.error) return toast(list.error);
       renderArena(list, hist.error ? [] : hist.list);
       openPanel('arena-dlg');
@@ -11923,6 +11938,21 @@
     socket.emit('arena:list', {}, (res) => { list = res; ready(); });
     socket.emit('arena:history', {}, (h) => { hist = h; ready(); });
   }
+  // 결투장을 열어 둔 동안: 새로고침하지 않아도 바뀐 것(접속·원정·쉬는 중, 결투 허용, 새 결투 기록)이 바로 보이게
+  // 10초마다, 그리고 무언가 바뀌었을 소식(같은 지역 드래곤 변화·결투가 끝남·신청이 거절됨)이 오면 곧바로 다시 받아 옴
+  // 안전장치: 한 사람이 다시 받아 오는 건 3초에 한 번까지 (소식이 잦아도 모아서 한 번), 게임 탭이 가려져 있으면 쉬었다가 돌아오면 한 번
+  let arenaTick = null, arenaSoon = null, arenaLast = 0;
+  const ARENA_GAP = 3000;
+  const arenaRefresh = () => {
+    if (!$('arena-dlg')?.open || document.hidden) return;
+    if (document.activeElement && $('arena-dlg').contains(document.activeElement) && document.activeElement.matches('input, textarea, select')) return; // 무언가 적는 중이면 건드리지 않음
+    if (arenaSoon) return; // 이미 곧 받아 올 차례가 잡혀 있음
+    const wait = Math.max(300, ARENA_GAP - (Date.now() - arenaLast));
+    arenaSoon = setTimeout(() => { arenaSoon = null; arenaLast = Date.now(); openArena(true); }, wait);
+  };
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) arenaRefresh(); }); // 탭으로 돌아오면 한 번
+  $('arena-dlg').addEventListener('close', () => { clearInterval(arenaTick); arenaTick = null; });
+  new MutationObserver(() => { if ($('arena-dlg').open && !arenaTick) arenaTick = setInterval(arenaRefresh, 10000); }).observe($('arena-dlg'), { attributes: true, attributeFilter: ['open'] });
   // 레이드 기록 (상태 › 기록 › 레이드): 함께한 지난 레이드. 눌러서 처음부터 다시 볼 수 있음 (내 쪽에서 본 모습으로)
   function renderRaidLogs(list) {
     const body = $('raidlog-list');
@@ -12077,7 +12107,7 @@
         b.addEventListener('click', fn);
         a.appendChild(b);
       };
-      const expWhy = S.me?.exp ? '원정을 떠나 있는 동안에는 결투할 수 없다.' : null;
+      const expWhy = S.me?.exp ? awayMsg('결투할 수 없다.') : null;
       btn('결투 신청', expWhy || x.live, () => challenge(x, 'live'), true);
       // 내기 결투: 실시간 결투로만, 레벨 차이 BET_UI.gap 이하
       const gapWhy = Math.abs((S.me?.level || 0) - x.level) > BET_UI.gap ? `레벨 차이가 ${BET_UI.gap}보다 크면 내기를 걸 수 없다.` : null;
@@ -12104,7 +12134,7 @@
       toast(`${x.name}에게 결투를 신청했다. 답을 기다린다.`);
     });
   }
-  $('dock-arena').addEventListener('click', openArena);
+  $('dock-arena').addEventListener('click', () => openArena());
   $('arena-close').addEventListener('click', () => $('arena-dlg').close());
 
   // 결투 신청을 받았을 때
@@ -13404,7 +13434,7 @@
       if (d.away) {
         const a = document.createElement('span');
         a.className = 'away';
-        a.textContent = '원정 중';
+        a.textContent = d.fishing ? '낚시 중' : '원정 중';
         row.appendChild(a);
       }
       if (d.raid) {
@@ -13991,7 +14021,7 @@
     socket.on('raidboss', (v) => { S.raidBoss = v; renderRaidBar(); });
     socket.on('battle:update', onBattleUpdate);
     socket.on('battle:ready', () => { if (BT) { BT.foeReady = true; if (BT.waiting) renderBattle(); } });
-    socket.on('battle:end', onBattleEnd);
+    socket.on('battle:end', (x) => { onBattleEnd(x); arenaRefresh(); }); // 결투가 끝나면 결투 기록도 바로
     socket.on('arena:invite', onInvite);
     socket.on('arena:invite-gone', closeInvite);
     socket.on('arena:bet-confirm', onBetConfirm);
@@ -14000,7 +14030,8 @@
     socket.on('fest:declined', (x) => { toast(`${x.name}: ${x.reason}`); loadFest(); });
     socket.on('fest:changed', loadFest);
     socket.on('arena:bet-gone', closeBet);
-    socket.on('arena:declined', (x) => toast(`${x.name}에게 신청한 결투: ${x.reason}`));
+    socket.on('arena:declined', (x) => { toast(`${x.name}에게 신청한 결투: ${x.reason}`); arenaRefresh(); });
+    socket.on('presence', arenaRefresh); // 같은 지역 드래곤이 오가거나 상태가 바뀜 → 열어 둔 결투장도 새로
     socket.on('gm:role', (r) => { setGmVisible(r.isGm); toast(r.isGm ? 'GM 권한을 받았다. 오른쪽 위 메뉴에서 GM 도구를 열 수 있다.' : 'GM 권한이 거두어졌다.'); });
     socket.on('gm:kicked', () => toast('GM이 접속을 끊었다. 새로고침하면 다시 들어올 수 있다.', { label: '다시 접속', run: () => { hideToast(); socket.connect(); } }));
     socket.on('trade:error', (e) => toast(e.error));
@@ -14304,12 +14335,22 @@
   }
   // ── 레이드 모집 줄: 그 레이드가 있는 지역에서만. 모집이 없으면 열기, 있으면 함께 가기·빠지기·들어가기 ──
   S.raidBoss = null;
+  // 고룡(아스테르) 얼굴: 반쪽을 그리고 좌우로 뒤집어 붙임 (곧은 두 뿔, 불꽃 같은 볏, 늘어진 수염)
+  const DRAGON_HALF = '<path fill="currentColor" stroke="none" d="M11.4 8.2L10.7 1.6 10.4 8.4Z"/><path fill="currentColor" stroke="none" d="M12 8.2H9.3C8.6 8.2 8.3 8.8 8.5 9.4L10.5 16.2C10.7 16.9 10.5 17.5 10.2 18 10 18.9 10.7 19.9 12 20.2Z"/><path fill="currentColor" stroke="none" d="M9.6 9.2C8.3 8.3 7.6 6.8 7.8 4.8 8.2 6.2 8.8 6.9 9.7 7.3 9.5 5.9 9.8 4.6 10.4 3.6 10.3 5.4 10.5 7 11 8.2Z"/><path fill="currentColor" stroke="none" d="M8.9 11.6C7.2 11 5.9 9.6 5.5 7.4 6.3 8.7 7.2 9.3 8.4 9.5Z"/><path fill="currentColor" stroke="none" d="M9.5 13.8C7.6 13.8 5.7 12.8 4.6 10.6 5.9 11.5 7.2 11.7 8.8 11.5Z"/><path fill="#fff" stroke="none" d="M9.6 11.2L11.2 12.4 10.9 12.9Z"/><path stroke-width=".55" d="M10.3 17.6C8.2 17.3 6 17.4 4.8 18.8 3.9 19.9 4.4 21.4 5.7 21.4"/>';
+  const DRAGON_FACE = `<g transform="translate(12 12) scale(1.13) translate(-12 -11.6)">${DRAGON_HALF}<g transform="matrix(-1 0 0 1 24 0)">${DRAGON_HALF}</g></g>`;
+  // 레이드마다 모집 줄 왼쪽 그림
+  const RB_EM = {
+    morven: '<path fill="currentColor" stroke="none" d="M12 2C11.2 2.9 11.2 4.2 12 5 12.8 4.2 12.8 2.9 12 2Z"/><path stroke-width="1.2" d="M12 5v15.5"/><path fill="currentColor" stroke="none" d="M12 4.6C10.6 4.8 9.9 6 10.1 7.4 11.4 7.2 12 6 12 4.6Z"/><path fill="currentColor" stroke="none" d="M12 7.3C10.6 7.5 9.9 8.7 10.1 10.1 11.4 9.9 12 8.7 12 7.3Z"/><path fill="currentColor" stroke="none" d="M12 10C10.6 10.2 9.9 11.4 10.1 12.8 11.4 12.6 12 11.4 12 10Z"/><path fill="currentColor" stroke="none" d="M8.4 20.4C3.6 18.3 2.2 11.6 5.9 7 5.1 11.2 6.5 15.4 9.8 18.2Z"/><path stroke-width="1.5" d="M9.3 19.3l1.7 1.9"/><g transform="matrix(-1 0 0 1 24 0)"><path fill="currentColor" stroke="none" d="M12 4.6C10.6 4.8 9.9 6 10.1 7.4 11.4 7.2 12 6 12 4.6Z"/><path fill="currentColor" stroke="none" d="M12 7.3C10.6 7.5 9.9 8.7 10.1 10.1 11.4 9.9 12 8.7 12 7.3Z"/><path fill="currentColor" stroke="none" d="M12 10C10.6 10.2 9.9 11.4 10.1 12.8 11.4 12.6 12 11.4 12 10Z"/><path fill="currentColor" stroke="none" d="M8.4 20.4C3.6 18.3 2.2 11.6 5.9 7 5.1 11.2 6.5 15.4 9.8 18.2Z"/><path stroke-width="1.5" d="M9.3 19.3l1.7 1.9"/></g>', // 문양: 두 낫이 감싼 이삭
+    heiron: '<path fill="currentColor" stroke="none" d="M12 2.3L19.6 4.9V11.4C19.6 16.3 16.4 19.9 12 21.6 7.6 19.9 4.4 16.3 4.4 11.4V4.9Z"/><path fill="#fff" stroke="none" d="M11.3 10.1H12.7V16L12 17.9 11.3 16Z"/><path fill="#fff" stroke="none" d="M8.6 8.8H15.4V10.1H8.6Z"/><path fill="#fff" stroke="none" d="M11.4 6.9H12.6V8.8H11.4Z"/><circle fill="#fff" stroke="none" cx="12" cy="6.3" r=".85"/>', // 문양: 기사단 방패와 검
+    rift: DRAGON_FACE, // 문양: 고룡의 얼굴
+  };
   function renderRaidBar() {
     const bar = $('rb-bar'), me = S.me, V = S.raidBoss;
     if (!bar || !me) return;
     // GM은 아직 열리지 않은 레이드를 멸망한 대륙 어디서든 시험할 수 있음 (보상·기록 없음)
     const gmTest = (x) => S.isGm && !x.open && S.regions[S.region]?.realm === 'ruin';
-    const R = V?.list.find((x) => x.region === S.region && x.open) || (S.isGm ? V?.list.find((x) => gmTest(x) && (!x.lobby || x.lobby.ids.includes(me.id))) : null);
+    const gmPick = (x) => gmTest(x) && (!x.lobby || x.lobby.ids.includes(me.id));
+    const R = V?.list.find((x) => x.region === S.region && x.open) || (S.isGm ? V?.list.find((x) => gmPick(x) && x.region === S.region) || V?.list.find(gmPick) : null); // GM 시험은 지금 있는 지역의 레이드를 먼저
     bar.hidden = !R || !!me.exp || !!me.fallen;
     if (bar.hidden) return;
     const lb = R.lobby;
@@ -14318,6 +14359,8 @@
     const used = me.raidBoss?.used?.[R.key] || 0;
     const W = R.weekly || V.weekly; // 레이드마다 주간 보상 횟수 (균열은 2회)
     const locked = !!me.raidBoss?.locked?.[R.key] && !S.isGm; // 아직 자격이 없음 (무엇이 모자란지는 밝히지 않음)
+    const em = bar.querySelector('.rb-em');
+    if (em && em.dataset.k !== R.key) { em.dataset.k = R.key; em.className = `rb-em k-${R.key}`; em.querySelector('svg').innerHTML = RB_EM[R.key] || RB_EM.morven; }
     $('rb-bar-t').textContent = `${R.place} · ${R.name}${gmTest(R) ? (R.closed ? ' (GM 시험 · 잠시 닫음)' : ' (GM 시험 · 아직 닫힘)') : ''}`;
     const sub = [];
     if (lb) {

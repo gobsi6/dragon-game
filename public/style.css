@@ -736,10 +736,17 @@ dialog.frame:not(.as-panel) > .bl { bottom: 2px; left: 2px; } dialog.frame:not(.
 .fish-baits button[aria-checked="true"] { color: #fff; background: #2F6F86; border-color: #2F6F86; }
 .fish-baits .none { margin: 0; font-size: 12.5px; line-height: 1.6; color: var(--muted); }
 .fish-pond { display: block; width: 100%; padding: 0; border: 1px solid #B9CFD9; border-radius: 4px; overflow: hidden; background: #EAF2F5; cursor: pointer; aspect-ratio: 320 / 130; }
+/* 창 안 내용이 길어지면(줄 걸어 두기 칸이 생긴 뒤) 아이폰 사파리가 세로로 쌓인 칸들을 줄이면서 이 단추의 높이를 0까지 눌러 버렸음.
+   줄어들지 않게 고정하고, aspect-ratio를 못 따르는 경우에도 높이가 남게 최소 높이를 둠 */
+.fish-pond { flex: none; min-height: 110px; height: auto; }
 .fish-pond svg { display: block; width: 100%; height: 100%; }
 .fish-pond .wave { animation: fish-wave 3s ease-in-out infinite; }
 .fish-pond .wave.w2 { animation-duration: 4.2s; }
 .fish-pond .bob, .fish-pond .line, .fish-pond .ripple, .fish-pond .bang { transition: opacity .2s; }
+/* 찌·물결·느낌표가 움직이는 기준점을 자기 자신으로 고정 (모바일 사파리 등은 SVG 안의 transform 기준점을 그림 전체 왼쪽 위로 잡아,
+   흔들릴 때 찌가 줄 끝에서 떨어져 엉뚱한 곳으로 튀어 보였음) */
+.fish-pond .bob, .fish-pond .ripple, .fish-pond .bang, .fish-pond .wave { transform-box: fill-box; transform-origin: 50% 50%; }
+.fish-pond .bob { transform-origin: 50% 0%; } /* 찌는 줄에 매달린 윗부분을 축으로 */
 .fish-pond[data-st="idle"] .bob, .fish-pond[data-st="idle"] .line, .fish-pond[data-st="idle"] .ripple { opacity: 0; }
 .fish-pond .ripple, .fish-pond .bang { opacity: 0; }
 .fish-pond .bang { font: 700 26px/1 var(--serif); fill: #C2453F; }
@@ -3985,3 +3992,6 @@ html:has(dialog.dlg:modal) { overflow: hidden; overscroll-behavior: none; } /* �
 .bt-acts .btn.flee small { font-size: 11px; color: #8A9096; }
 .bt-acts .btn.flee:hover { background: #EEF0EC; }
 .bt-acts .bt-note { order: 98; }
+/* 레이드 모집 줄 그림: 레이드마다 색 (모르벤 황금빛 그대로, 헤이른 강철, 아스테르 잿빛 보라) */
+.rb-em.k-heiron { color: #3C5A73; border-color: #C5D0DA; }
+.rb-em.k-rift { color: #4E4859; border-color: #CFC9D6; }

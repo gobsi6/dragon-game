@@ -480,6 +480,7 @@ const online = new Map();
 // away: 원정을 떠나 자리를 비운 상태
 const publicDragon = (d) => ({
   id: d.id, name: d.name, kind: d.kind, av: d.has_avatar ? d.avatar_ver : 0, away: !!d.exp_end, resting: !!d.rest_at, raid: !!raidBoss?.busy(d.id),
+  fishing: !!d.exp_end && logic.expInfo(d).goal === 'fishline', // 줄 걸어 두기 (원정과 같이 자리를 비우지만 '낚시 중'으로 보임)
   berserk: !!logic.berserkOf(d),
   place: logic.placeOf(d),
   title: logic.titleName(d),

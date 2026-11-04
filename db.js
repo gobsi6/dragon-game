@@ -673,7 +673,7 @@ const q = {
   hoardClear:   db.prepare('DELETE FROM hoard WHERE dragon_id = ?'),
   hoardGoldSet: db.prepare('UPDATE dragons SET hoard_gold = ? WHERE id = ?'),
   kinMove:      db.prepare('UPDATE kin SET dragon_id = ? WHERE id = ? AND dragon_id = ?'),
-  arenaList:    db.prepare(`SELECT id, name, kind, level, combat, last_seen AS lastSeen, avatar_ver, (avatar IS NOT NULL) AS has_avatar, exp_end, fallen, dead_at
+  arenaList:    db.prepare(`SELECT id, name, kind, level, combat, last_seen AS lastSeen, avatar_ver, (avatar IS NOT NULL) AS has_avatar, exp_end, exp_info, fallen, dead_at
                             FROM dragons WHERE id != ? AND dead_at IS NULL ORDER BY last_seen DESC LIMIT 60`),
   kinDel:       db.prepare('DELETE FROM kin WHERE id = ? AND dragon_id = ?'),
   pruneChat:    db.prepare('DELETE FROM chat WHERE region = ? AND id <= (SELECT id FROM chat WHERE region = ? ORDER BY id DESC LIMIT 1 OFFSET ?)'),
