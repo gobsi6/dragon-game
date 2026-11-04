@@ -3733,6 +3733,50 @@
       box.appendChild(list);
     });
   }
+  // 중매 상대 고르기: 이 아이의 단짝·친구, 동료 둥지의 아이 (성공할 확률도 함께)
+  function matchPicker(card, v) {
+    const old = card.querySelector('.kin-adopt.kin-match');
+    if (old) { old.remove(); return; }
+    card.querySelector('.kin-adopt')?.remove();
+    const box = document.createElement('div');
+    box.className = 'kin-adopt kin-match';
+    box.textContent = '만나 볼 만한 아이를 찾는 중…';
+    card.appendChild(box);
+    socket.emit('kinmatch:cands', { kin: v.id }, (res) => {
+      box.replaceChildren();
+      if (res.error) { const p = document.createElement('p'); p.className = 'note'; p.textContent = res.error; box.appendChild(p); return; }
+      requestAnimationFrame(() => revealBox(box));
+      const p = document.createElement('p');
+      p.className = 'note';
+      p.textContent = res.list.length
+        ? `누구와 만남을 주선할까? 상대 보호자가 받아들이면 두 ${v.type === 'drake' ? '용' : '아이'}가 만나고, 인연이 닿으면 서로 마음을 주고받는 사이가 된다. 친구·단짝일수록 잘 이어진다.`
+        : `${v.name}${josa(v.name, '과', '와')} 만나 볼 만한 아이가 아직 없다. ${v.name}의 친구·단짝이나 동료 둥지의 ${v.type === 'drake' ? '젊은 용' : '청소년·어른'} 가운데에서 고를 수 있다.`;
+      box.appendChild(p);
+      const list = document.createElement('div');
+      list.className = 'kin-adopt-list';
+      const TIE = { best: '단짝', friend: '친구', none: '처음 보는 사이' };
+      for (const c of res.list) {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'btn match-c';
+        const t = document.createElement('span');
+        t.innerHTML = '<b></b><small></small>';
+        t.querySelector('b').textContent = `${c.ownerName}의 둥지 ${c.name}`;
+        t.querySelector('small').textContent = `${c.stage} · ${TIE[c.tie]} · 이어질 확률 ${c.chance}%${c.busy ? ' · 다른 청이 오가는 중' : c.cool ? ` · ${dur(c.cool - Date.now())} 뒤에 다시` : ''}`;
+        b.appendChild(t);
+        if (c.busy || c.cool) b.disabled = true;
+        b.addEventListener('click', () => {
+          if (!confirm(`${c.ownerName}에게 ${v.name}${josa(v.name, '과', '와')} ${c.name}의 만남을 주선하자고 청할까? (이어질 확률 ${c.chance}%)`)) return;
+          socket.emit('kinmatch:ask', { kin: v.id, owner: c.owner, to: c.id }, (r) => {
+            if (r.error) return toast(r.error);
+            toast(r.lines.join(' '));
+            if ($('nest-dlg').open) openNest();
+          });
+        });
+        list.appendChild(b);
+      }
+      box.appendChild(list);
+    });
+  }
   // 둥지에 든 도둑을 쫓음: 사냥처럼 직접 싸우는 전투
   function raidChase() {
     socket.emit('raid:chase', {}, (res) => {
@@ -3938,6 +3982,27 @@
       if (why2) ad.setAttribute('aria-disabled', 'true');
       ad.addEventListener('click', () => (why2 ? toast(why2) : adoptPicker(card, v)));
       hb.appendChild(ad);
+    }
+    // 만남 주선하기(중매): 다른 둥지 아이와 만남을 주선 (인간 청소년·어른, 젊은 용·다 자란 용, 짝이 없을 때)
+    const matchAge = (v.type === 'human' && ['청소년', '어른'].includes(v.stage)) || (v.type === 'drake' && ['젊은 용', '다 자란 용'].includes(v.stage));
+    if (!partner && v.status === 'home' && matchAge && !v.mate) {
+      const mb = document.createElement('button');
+      mb.type = 'button'; mb.className = 'linkbtn'; mb.textContent = '만남 주선하기';
+      mb.title = '다른 둥지의 아이와 만남을 주선한다. 상대 보호자가 받아들이면 두 아이가 만나고, 인연이 닿으면 서로 마음을 주고받는 사이가 된다.';
+      mb.dataset.flag = 'match'; // 처음 할 수 있게 되면 ⋯에 붉은 점
+      mb.addEventListener('click', () => matchPicker(card, v));
+      hb.appendChild(mb);
+    }
+    // 독립시키기: 독립할 수 있는 때가 되면 ⋯ 메뉴에
+    if (v.canRelease && !partner) {
+      const rb = document.createElement('button');
+      rb.type = 'button'; rb.className = 'linkbtn'; rb.textContent = '독립시키기';
+      rb.title = '둥지를 떠나보낸다. 강하게, 정 깊게 키웠을수록 용족 명성이 크게 오른다.';
+      rb.dataset.flag = 'release';
+      rb.addEventListener('click', () => {
+        if (confirm(`${v.name}${josa(v.name, '을', '를')} 독립시킬까? 강하게, 정 깊게 키웠을수록 용족 명성이 크게 오른다.${v.love ? `\n마음에 둔 ${v.love}${josa(v.love, '과', '와')} 짝을 맺기 전에 독립하면 그 인연은 이어지지 않는다.` : ''}`)) nestAct('kin:release', { id: v.id }, true);
+      });
+      hb.appendChild(rb);
     }
     if (hb.childElementCount) head.appendChild(hb);
     card.appendChild(head);
@@ -4203,12 +4268,7 @@
         const tired = full || v.trainIn > 0 || S.me.ap < R2.trainAp || S.me.en < R2.trainEn;
         for (const x of S.stats) { const b = btn(x.name, () => nestAct(partner ? 'kin:ptrain' : 'kin:train', { id: v.id, stat: x.key }), tired); const c = document.createElement('small'); c.className = 'cnt'; c.textContent = String(v.stats[x.key] ?? ''); b.append(' ', c); }
         st.dataset.taught = '1'; // 가르치기 단추에 능력치가 보이므로 따로 둔 능력치 줄은 숨김
-        if (v.canRelease && !partner) {
-          label('독립');
-          btn('둥지를 떠나보낸다', () => {
-            if (confirm(`${v.name}${josa(v.name, '을', '를')} 독립시킬까? 강하게, 정 깊게 키웠을수록 용족 명성이 크게 오른다.${v.love ? `\n마음에 둔 ${v.love}${josa(v.love, '과', '와')} 짝을 맺기 전에 독립하면 그 인연은 이어지지 않는다.` : ''}`)) nestAct('kin:release', { id: v.id }, true);
-          }).classList.add('primary');
-        }
+        // 독립시키기는 카드 오른쪽 위 ⋯ 메뉴로 옮김
       }
     }
     // 입양: 알(식지 않은 것)이나 아직 갈 길을 정하지 않은 인간 아이
@@ -4504,8 +4564,25 @@
       const menu = document.createElement('div');
       menu.className = 'kin-more-menu';
       menu.hidden = KIN_MENU !== key;
-      for (const b of btns) { b.className = `kin-more-item${b.classList.contains('off') ? ' off' : ''}`; b.addEventListener('click', () => { KIN_MENU = null; menu.hidden = true; mb.setAttribute('aria-expanded', 'false'); }); menu.appendChild(b); }
-      mb.addEventListener('click', (e) => { e.stopPropagation(); KIN_MENU = KIN_MENU === key ? null : key; menu.hidden = KIN_MENU !== key; mb.setAttribute('aria-expanded', String(KIN_MENU === key)); });
+      // 새로 생긴 메뉴(만남 주선하기·독립시키기)는 아이마다 처음 한 번 붉은 점으로 알림. 메뉴를 열어 보면 '봤다'로 적어 둠
+      const seenKey = (f) => `kinNew:${S.me?.id || 0}:${v.id}:${f}`;
+      const isNew = (f) => { try { return !localStorage.getItem(seenKey(f)); } catch { return false; } };
+      let fresh = 0;
+      for (const b of btns) {
+        const f = b.dataset.flag, nw = f && isNew(f);
+        if (nw) fresh++;
+        b.className = `kin-more-item${b.classList.contains('off') ? ' off' : ''}${nw ? ' new' : ''}`;
+        b.addEventListener('click', () => { KIN_MENU = null; menu.hidden = true; mb.setAttribute('aria-expanded', 'false'); });
+        menu.appendChild(b);
+      }
+      if (fresh) mb.classList.add('has-new');
+      mb.addEventListener('click', (e) => {
+        e.stopPropagation(); KIN_MENU = KIN_MENU === key ? null : key; menu.hidden = KIN_MENU !== key; mb.setAttribute('aria-expanded', String(KIN_MENU === key));
+        if (KIN_MENU === key && mb.classList.contains('has-new')) { // 열어 봤으니 ⋯의 점은 끄고, 메뉴 안의 점은 이번에 연 동안만 남김
+          mb.classList.remove('has-new');
+          for (const b of btns) if (b.dataset.flag) { try { localStorage.setItem(seenKey(b.dataset.flag), '1'); } catch {} }
+        }
+      });
       more.append(mb, menu);
       corner.appendChild(more);
     }
@@ -4888,6 +4965,28 @@
           );
         }
 
+        // 받은 중매 청: 다른 둥지 보호자가 두 아이의 만남을 주선하자고 함
+        for (const o of n.loves?.matchIn || []) {
+          const oc = add('<div class="adopt-card love-card match-card"><b></b><p></p><div class="row"></div></div>').firstChild;
+          oc.querySelector('b').textContent = `${o.from.ownerName}${josa(o.from.ownerName, '이', '가')} 중매를 청해 왔다`;
+          oc.querySelector('p').textContent = `${o.from.ownerName}의 둥지 ${o.from.name}${josa(o.from.name, '과', '와')} 내 둥지 ${o.to.name}${josa(o.to.name, '이', '가')} 한번 만나 보기를 바란다. 받아들이면 두 ${o.drake ? '용' : '아이'}가 바로 만나고, 인연이 닿으면 서로 마음을 주고받는 사이가 된다. ${dur(o.until - Date.now())} 안에 정하지 않으면 청은 사라진다.`;
+          const ans = (yes) => {
+            if (!yes && !confirm(`${o.from.ownerName}의 중매 청을 사양할까?`)) return;
+            socket.emit('kinmatch:answer', { id: o.id, yes }, (res) => {
+              if (res.error) return toast(res.error);
+              if (yes) showResult({ title: '중매', lines: res.lines }); else toast(res.lines.join(' '));
+              if ($('nest-dlg').open) openNest();
+            });
+          };
+          oc.querySelector('.row').append(btn('만나게 한다', () => ans(true), true), btn('정중히 사양한다', () => ans(false)));
+        }
+        // 보낸 중매 청 (답을 기다리는 중)
+        for (const o of n.loves?.matchOut || []) {
+          const oc = add('<div class="adopt-card match-card out"><b></b><p></p><div class="row"></div></div>').firstChild;
+          oc.querySelector('b').textContent = `${o.to.ownerName}에게 중매를 청해 두었다`;
+          oc.querySelector('p').textContent = `${o.from.name}${josa(o.from.name, '과', '와')} ${o.to.ownerName}의 둥지 ${o.to.name}의 만남. ${dur(o.until - Date.now())} 안에 답이 오지 않으면 청은 사라진다.`;
+          oc.querySelector('.row').append(btn('청 거두기', () => socket.emit('kinmatch:cancel', { id: o.id }, (res) => { if (res.error) return toast(res.error); toast(res.lines.join(' ')); openNest(); })));
+        }
         // 받은 혼인 청: 다른 둥지의 첫사랑이 내 둥지 아이와 맺어지기를 바람
         for (const o of n.loves?.in || []) {
           const oc = add('<div class="adopt-card love-card"><b></b><p></p><div class="row"></div></div>').firstChild;
@@ -4895,9 +4994,9 @@
           oc.querySelector('b').textContent = `${o.from.ownerName}${josa(o.from.ownerName, '이', '가')} ${o.drake ? '짝을' : '혼인을'} 청해 왔다`;
           oc.querySelector('p').textContent = o.drake
             ? `${o.from.ownerName}의 둥지 ${o.from.name}${josa(o.from.name, '과', '와')} 내 둥지 ${o.to.name}${josa(o.to.name, '이', '가')} 서로를 마음에 둔 사이다. 허락하면 두 용이 구애 비행을 하고 짝이 되며, 각자의 둥지에 살며 서로 오간다. ${dur(o.until - Date.now())} 안에 정하지 않으면 청은 사라진다.`
-            : `${o.from.ownerName}의 둥지 ${o.from.name}${josa(o.from.name, '과', '와')} 내 둥지 ${o.to.name}${josa(o.to.name, '이', '가')} 서로의 첫사랑이다. 허락하면 두 아이가 맺어지고, 각자의 둥지에 살며 서로 오간다. ${dur(o.until - Date.now())} 안에 정하지 않으면 청은 사라진다.`;
+            : `${o.from.ownerName}의 둥지 ${o.from.name}${josa(o.from.name, '과', '와')} 내 둥지 ${o.to.name}${josa(o.to.name, '이', '가')} ${o.match ? '중매로 만나 서로 마음을 주고받는 사이다' : '서로의 첫사랑이다'}. 허락하면 두 아이가 맺어지고, 각자의 둥지에 살며 서로 오간다. ${dur(o.until - Date.now())} 안에 정하지 않으면 청은 사라진다.`;
           const ans = (yes) => {
-            if (!yes && !confirm(o.drake ? `${o.from.ownerName}의 청을 사양할까? ${o.from.name}${josa(o.from.name, '은', '는')} 마음에 둔 용을 가슴에 묻게 된다.` : `${o.from.ownerName}의 혼인 청을 사양할까? ${o.from.name}${josa(o.from.name, '은', '는')} 첫사랑을 마음에 묻게 된다.`)) return;
+            if (!yes && !confirm(o.drake ? `${o.from.ownerName}의 청을 사양할까? ${o.from.name}${josa(o.from.name, '은', '는')} 마음에 둔 용을 가슴에 묻게 된다.` : `${o.from.ownerName}의 혼인 청을 사양할까? ${o.from.name}${josa(o.from.name, '은', '는')} ${o.match ? '마음에 둔 사람을' : '첫사랑을'} 마음에 묻게 된다.`)) return;
             socket.emit('kinlove:answer', { id: o.id, yes }, (res) => { if (res.error) return toast(res.error); toast(res.lines.join(' ')); openNest(); });
           };
           oc.querySelector('.row').append(btn('허락한다', () => ans(true), true), btn('정중히 사양한다', () => ans(false)));

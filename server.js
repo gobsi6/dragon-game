@@ -577,7 +577,7 @@ const meOf = (d) => ({
   raidBoss: raidBoss ? raidBoss.meView(d) : null, // 레이드: 이번 주 보상 횟수
   perks: d.perks || {},
   cost: { explore: logic.actionCost(d, 'explore'), gather: logic.actionCost(d, 'gather'), hunt: logic.actionCost(d, 'hunt') },
-  exp: d.exp_end ? { region: d.exp_region, start: d.exp_start, end: d.exp_end, goal: logic.expInfo(d).goal || 'gather', line: logic.expInfo(d).line || null, fork: logic.forkView(d), plan: logic.planView(d), went: logic.expInfo(d).went || [] } : null,
+  exp: d.exp_end ? { region: d.exp_region, start: d.exp_start, end: d.exp_end, goal: logic.expInfo(d).goal || (logic.expInfo(d).line ? 'fishline' : 'gather'), line: logic.expInfo(d).line || null, fork: logic.forkView(d), plan: logic.planView(d), went: logic.expInfo(d).went || [] } : null,
   expLast: d.exp_end ? null : (logic.expInfo(d).last || null), // 지난 원정 일지
 });
 
@@ -2631,6 +2631,22 @@ function onConnect(socket) {
     if (!res.error) { syncKin(socket, entry.dragon); sendMe(socket, entry.dragon); }
     ack(res);
   });
+  // 중매: 상대 고르기 · 청하기 · 답하기 · 거두기 (kinlove.js)
+  for (const [ev, fn] of [
+    ['kinmatch:cands', (d, p) => kinLove.matchCands(d, p?.kin)],
+    ['kinmatch:ask', (d, p) => kinLove.matchAsk(d, p?.kin, p?.owner, p?.to)],
+    ['kinmatch:answer', (d, p) => kinLove.matchAnswer(d, p?.id, !!p?.yes)],
+    ['kinmatch:cancel', (d, p) => kinLove.matchCancel(d, p?.id)],
+  ]) {
+    socket.on(ev, (payload, ack) => {
+      if (typeof ack !== 'function') return;
+      const entry = entryOf(socket);
+      if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+      const res = fn(entry.dragon, payload || {});
+      if (!res.error && ev !== 'kinmatch:cands') { syncKin(socket, entry.dragon); sendMe(socket, entry.dragon); }
+      ack(res);
+    });
+  }
   // 혼인 청에 답하기 (받은 쪽 보호자)
   socket.on('kinlove:answer', (payload, ack) => {
     if (typeof ack !== 'function') return;

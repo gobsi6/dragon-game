@@ -3995,3 +3995,15 @@ html:has(dialog.dlg:modal) { overflow: hidden; overscroll-behavior: none; } /* �
 /* 레이드 모집 줄 그림: 레이드마다 색 (모르벤 황금빛 그대로, 헤이른 강철, 아스테르 잿빛 보라) */
 .rb-em.k-heiron { color: #3C5A73; border-color: #C5D0DA; }
 .rb-em.k-rift { color: #4E4859; border-color: #CFC9D6; }
+/* 중매: 상대 고르기 목록 (둥지 이름·단계·사이·확률 두 줄) */
+.kin-match .match-c { flex-direction: column; align-items: flex-start; text-align: left; }
+.kin-match .match-c span { display: flex; flex-direction: column; gap: 2px; }
+.kin-match .match-c small { font-size: 11px; color: var(--muted); }
+.match-card.out { opacity: .85; }
+/* 식구 카드 ⋯: 새로 생긴 메뉴(만남 주선하기·독립시키기)를 처음 한 번 붉은 점으로 */
+.kin-more-btn { position: relative; }
+.kin-more-btn.has-new::after { content: ""; position: absolute; top: 2px; right: 2px; width: 8px; height: 8px; border-radius: 50%; background: #C0392B; box-shadow: 0 0 0 2px var(--surface); }
+.kin-more-item.new::after { content: ""; display: inline-block; width: 7px; height: 7px; margin-left: 6px; border-radius: 50%; background: #C0392B; vertical-align: 2px; }
+/* 만남 주선 상대 고르기: 단추 길이를 고르게 (한 줄에 하나씩, 칸 너비를 다 씀) */
+.kin-match .kin-adopt-list { display: flex; flex-direction: column; gap: 6px; }
+.kin-match .match-c { width: 100%; box-sizing: border-box; }

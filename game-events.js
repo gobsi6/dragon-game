@@ -1751,7 +1751,7 @@ module.exports = [
       const k = c.pick(c.humans.filter((x) => c.stage(x) === '어른' && canMate(c, x) && !loveWaits(c, x)));
       // 다른 둥지의 서로의 첫사랑이 어른이 되어 짝 없이 있으면: 그 아이와 맺어지기를 청함
       const ls = loveOf(c, k);
-      if (ls && ls.mutual && ls.adult && ls.free && !ls.pending) return { id: k.id, partner: ls.name, home: ls.ownerName, mutual: true };
+      if (ls && ls.mutual && ls.adult && ls.free && !ls.pending) return { id: k.id, partner: ls.name, home: ls.ownerName, mutual: true, match: !!ls.match };
       // 마을 아이가 첫사랑이었으면 그 사람 (다른 둥지 아이를 좋아했지만 맺어질 수 없으면 새로 만난 사람)
       const friendLove = Object.values(k.data.friends || {}).some((x) => x.type === 'human' && x.name === k.data.firstLove); // 예전 기록인데 첫사랑이 다른 둥지 단짝이었으면 마을 사람으로 쓰지 않음
       const love = !k.data.loveRef && !friendLove && k.data.firstLove && k.data.firstLove !== '-' ? k.data.firstLove : null;
@@ -1759,7 +1759,7 @@ module.exports = [
     },
     text: (c, v) => {
       const k = c.k(v.id);
-      if (v.mutual) return [`${k.name}${c.josa(k.name, '이', '가')} 쭈뼛거리며 둥지 앞에 섰다. 어릴 적부터 ${v.home}의 둥지에 놀러 갈 때마다 함께 뛰놀던 단짝, ${v.partner}의 이야기다.`, `"${v.partner}${c.josa(v.partner, '과', '와')} 함께하고 싶어요. ${v.home}께도 허락을 받아 주세요."`];
+      if (v.mutual) return [v.match ? `${k.name}${c.josa(k.name, '이', '가')} 쭈뼛거리며 둥지 앞에 섰다. 중매로 만난 뒤 마음을 주고받아 온 ${v.home}의 둥지 ${v.partner}의 이야기다.` : `${k.name}${c.josa(k.name, '이', '가')} 쭈뼛거리며 둥지 앞에 섰다. 어릴 적부터 ${v.home}의 둥지에 놀러 갈 때마다 함께 뛰놀던 단짝, ${v.partner}의 이야기다.`, `"${v.partner}${c.josa(v.partner, '과', '와')} 함께하고 싶어요. ${v.home}께도 허락을 받아 주세요."`];
       return v.love
         ? [`${k.name}${c.josa(k.name, '이', '가')} ${v.partner}의 손을 꼭 잡고 둥지 앞에 섰다. 강가에서 몰래 만나던 바로 그 ${v.partner}${c.josa(v.partner, '이다', '다')}.`, '"이제는 함께 살고 싶어요. 허락해 주세요."']
         : [`${k.name}${c.josa(k.name, '이', '가')} 마을에서 만난 ${v.partner}${c.josa(v.partner, '과', '와')} 함께 둥지 앞에 섰다. ${v.partner}${c.josa(v.partner, '은', '는')} 드래곤을 올려다보면서도 물러서지 않았다.`, '"이 사람과 함께 살고 싶어요."'];
@@ -1942,11 +1942,11 @@ module.exports = [
     setup: (c) => {
       const k = c.pick(c.drakes.filter((x) => drakeCourtReady(c, x)));
       const s = loveOf(c, k);
-      return { id: k.id, partner: s.name, home: s.ownerName };
+      return { id: k.id, partner: s.name, home: s.ownerName, match: !!s.match };
     },
     text: (c, v) => {
       const k = c.k(v.id);
-      return [`${k.name}${c.josa(k.name, '이', '가')} 둥지 꼭대기 바위에 올라 ${v.home}의 둥지 쪽을 오래 바라본다. 어릴 적부터 함께 날던 단짝, ${v.partner}의 이야기다.`,
+      return [`${k.name}${c.josa(k.name, '이', '가')} 둥지 꼭대기 바위에 올라 ${v.home}의 둥지 쪽을 오래 바라본다. ${v.match ? '중매로 만난 뒤 함께 날아 온' : '어릴 적부터 함께 날던 단짝,'} ${v.partner}의 이야기다.`,
         `발톱 사이에는 오래 아껴 온 반짝이는 돌이 쥐여 있다. "${v.partner}에게 이걸 건네고 싶어요. ${v.home}께도 허락을 받아 주세요."`];
     },
     choices: [
