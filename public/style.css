@@ -4014,3 +4014,5 @@ html:has(dialog.dlg:modal) { overflow: hidden; overscroll-behavior: none; } /* �
 #match-list { display: flex; flex-direction: column; gap: 6px; max-height: 55vh; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
 #match-list .match-c { display: flex; width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; white-space: normal; text-align: left; font-size: 13px; }
 #match-list .match-c b, #match-list .match-c small { white-space: normal; overflow-wrap: anywhere; word-break: keep-all; }
+/* 상대가 많아 목록이 스크롤될 때 단추가 눌려 줄어들며 둘째 줄이 밖으로 나오던 것: 줄어들지 않고 글자 높이만큼 */
+#match-list .match-c { flex: none; height: auto; min-height: 46px; padding: 7px 12px; overflow: hidden; }
