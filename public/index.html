@@ -637,6 +637,15 @@
     <div class="row"><button class="btn" type="button" id="notes-close">닫기</button></div>
   </div>
 </dialog>
+<dialog class="frame dlg" id="match-dlg" aria-labelledby="match-dlg-title"><!-- 만남 주선하기: 상대 고르기 -->
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="match-dlg-title">만남 주선하기</h2></div>
+  <div class="body">
+    <p class="note" id="match-dlg-note"></p>
+    <div class="kin-adopt-list match-list" id="match-list"></div>
+    <div class="row"><button class="btn" type="button" id="match-close">닫기</button></div>
+  </div>
+</dialog>
 <dialog class="frame dlg" id="uses-dlg" aria-labelledby="uses-dlg-title">
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="uses-dlg-title">쓰임새</h2></div>
@@ -3735,25 +3744,16 @@
   }
   // 중매 상대 고르기: 이 아이의 단짝·친구, 동료 둥지의 아이 (성공할 확률도 함께)
   function matchPicker(card, v) {
-    const old = card.querySelector('.kin-adopt.kin-match');
-    if (old) { old.remove(); return; }
-    card.querySelector('.kin-adopt')?.remove();
-    const box = document.createElement('div');
-    box.className = 'kin-adopt kin-match';
-    box.textContent = '만나 볼 만한 아이를 찾는 중…';
-    card.appendChild(box);
+    const dlg = $('match-dlg'), note = $('match-dlg-note'), list = $('match-list');
+    $('match-dlg-title').textContent = `${v.name}의 만남 주선하기`;
+    note.textContent = '만나 볼 만한 아이를 찾는 중…';
+    list.replaceChildren();
+    if (!dlg.open) dlg.showModal();
     socket.emit('kinmatch:cands', { kin: v.id }, (res) => {
-      box.replaceChildren();
-      if (res.error) { const p = document.createElement('p'); p.className = 'note'; p.textContent = res.error; box.appendChild(p); return; }
-      requestAnimationFrame(() => revealBox(box));
-      const p = document.createElement('p');
-      p.className = 'note';
-      p.textContent = res.list.length
+      if (res.error) { note.textContent = res.error; return; }
+      note.textContent = res.list.length
         ? `누구와 만남을 주선할까? 상대 보호자가 받아들이면 두 ${v.type === 'drake' ? '용' : '아이'}가 만나고, 인연이 닿으면 서로 마음을 주고받는 사이가 된다. 친구·단짝일수록 잘 이어진다.`
         : `${v.name}${josa(v.name, '과', '와')} 만나 볼 만한 아이가 아직 없다. ${v.name}의 친구·단짝이나 동료 둥지의 ${v.type === 'drake' ? '젊은 용' : '청소년·어른'} 가운데에서 고를 수 있다.`;
-      box.appendChild(p);
-      const list = document.createElement('div');
-      list.className = 'kin-adopt-list';
       const TIE = { best: '단짝', friend: '친구', none: '처음 보는 사이' };
       for (const c of res.list) {
         const b = document.createElement('button');
@@ -3768,15 +3768,17 @@
           if (!confirm(`${c.ownerName}에게 ${v.name}${josa(v.name, '과', '와')} ${c.name}의 만남을 주선하자고 청할까? (이어질 확률 ${c.chance}%)`)) return;
           socket.emit('kinmatch:ask', { kin: v.id, owner: c.owner, to: c.id }, (r) => {
             if (r.error) return toast(r.error);
+            dlg.close();
             toast(r.lines.join(' '));
             if ($('nest-dlg').open) openNest();
           });
         });
         list.appendChild(b);
       }
-      box.appendChild(list);
     });
+    void card;
   }
+  $('match-close').addEventListener('click', () => $('match-dlg').close());
   // 둥지에 든 도둑을 쫓음: 사냥처럼 직접 싸우는 전투
   function raidChase() {
     socket.emit('raid:chase', {}, (res) => {
