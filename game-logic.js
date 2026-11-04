@@ -5,7 +5,7 @@
 
 const {
   REGIONS, ITEMS, REGION_LOOT, CREATURES, SCENES, SCENES_HUMAN, RULES, RECIPES, SLOTS, STANCES, SHOPS, REP_TIERS, repTier, TRADE, NEST, hoardTier, RAID, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, ELEMENTS,
-  HOARD_TIERS, CRAFT, SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, SKILLS, FISHING, RUIN, FACILITY, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG, BOSSES, RAIDBOSS, ACHIEVEMENTS, KEEPSAKES, TALENTS,
+  HOARD_TIERS, CRAFT, SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, SKILLS, FISHING, RUIN, FACILITY, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG, EXP_FULL, BOSSES, RAIDBOSS, ACHIEVEMENTS, KEEPSAKES, TALENTS,
   FREE, FESTIVAL, DAY, BOSS,
 } = require('./game-data');
 
@@ -1032,9 +1032,13 @@ function finishExpedition(d, now = Date.now(), companions = 0) {
     if (Math.random() < p) { ids.push('star_fragment'); if (plannedMin >= 180 && Math.random() < EXP_LONG.second) ids.push('star_fragment'); longFind = 'star'; }
     if (isRuin(region) && Math.random() < EXP_LONG.ruinCore) { ids.push('ashen_core'); longFind = longFind || 'core'; }
   }
+  // 끝까지 다녀온 보람: 돌아오는 길에 물건을 더 챙김 (금화·경험치는 아래에서 더함)
+  const full = !early && EXP_FULL ? (EXP_FULL.items[plannedMin] ?? 1) : 0;
+  for (let i = 0; i < full; i++) ids.push(rollItem(region, { uncommon: EXP_FULL.uncommon, rare: EXP_FULL.rare[plannedMin] ?? 0.05 }));
   const items = bundle(ids);
   let gold = Math.round((Math.round(done * rand(0.4, 0.8)) + (rolls ? Math.floor(st.majesty / 2) : 0)) * G.gold) + (fr?.gold || 0);
   let xp = Math.round(done * 0.8 * G.xp * (fr?.xp || 1));
+  if (full) { gold = Math.round(gold * (1 + EXP_FULL.gold)); xp = Math.round(xp * (1 + EXP_FULL.xp)); }
 
   if (rolls === 0 && !ids.length) {
     journal.push('멀리 가지 못하고 금세 돌아왔다.');
@@ -1053,6 +1057,7 @@ function finishExpedition(d, now = Date.now(), companions = 0) {
     const rare = items.find((it) => ITEMS[it.id].rarity === 'rare');
     if (rare) journal.push(`그리고 ${ITEMS[rare.id].name}${josa(ITEMS[rare.id].name, '을', '를')} 손에 넣었다.`);
     if (longFind === 'star') journal.push('먼 길 끝, 밤하늘에서 떨어진 별똥별 조각이 발밑에서 빛나고 있었다.');
+    if (full) journal.push('끝까지 다녀온 보람이 있었다. 돌아오는 길에 쓸 만한 것을 더 챙겼다.');
     journal.push(early ? '부름을 받고 서둘러 돌아왔다.' : '긴 여정을 마치고 돌아왔다.');
   }
 
@@ -1074,6 +1079,7 @@ function finishExpedition(d, now = Date.now(), companions = 0) {
   if (fr?.mind < 0) lines.push(...loseMind(d, -fr.mind));
   if (fr?.mind > 0 && !berserkOf(d)) { const b0 = d.mind ?? MIND.max; d.mind = Math.min(MIND.max, b0 + fr.mind); if (d.mind > b0) lines.push(`정신 +${d.mind - b0}`); }
   if (fr?.rep) { const town = nearestTown(region); addRep(d, town, fr.rep); lines.push(`${REGIONS[town].name} 평판 ${fr.rep > 0 ? '+' : ''}${fr.rep}`); }
+  if (full) lines.push(`끝까지 다녀온 보람: 금화·경험치 +${Math.round(EXP_FULL.gold * 100)}%, 물건 ${full}개 더`);
   if (G.fame && !early && planned >= 120) { const f = addFame(d, G.fame); lines.push(f || `용족 명성 +${G.fame}`); }
 
   d.gold += gold;

@@ -1825,6 +1825,9 @@ const EXP_FORKS = [
 ];
 // 2시간 이상 원정을 끝까지 다녀오면: 별똥별 조각 (멸망한 대륙이면 잿빛 심장도 가끔)
 const EXP_LONG = { from: 120, star: { 120: 0.35, 180: 0.6 }, second: 0.2, ruinCore: 0.3 };
+// 원정을 끝까지 다녀온 보람 (일찍 불러들이면 없음): 금화·경험치를 더 주고, 돌아오는 길에 물건을 더 챙김
+// items: 원정 시간(분)마다 더 챙기는 물건 수 · uncommon·rare: 그 물건이 귀할 확률 (길수록 귀한 것이 잘 나옴)
+const EXP_FULL = { gold: 0.15, xp: 0.15, items: { 30: 1, 60: 1, 120: 2, 180: 2 }, uncommon: 0.5, rare: { 30: 0.05, 60: 0.08, 120: 0.12, 180: 0.16 } };
 const EXP_RULES = { forkFrom: 0.35, forkTo: 0.6, stanceTone: { hostile: ['bold', 'cruel', 'careful', 'kind'], hermit: ['careful', 'kind', 'bold', 'cruel'], friendly: ['kind', 'careful', 'bold', 'cruel'] } };
 
 // ── 칭호 ───────────────────────────────────────────
@@ -2900,5 +2903,5 @@ module.exports = {
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, FESTIVAL, NIGHT_MARKET, KIN_FEST, TITLES, TITLE_COUNT_NAMES, ACHIEVEMENTS, YABAWI, KEEPSAKES,
   PURIFY, CRAFT, SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, FISHING, RUIN, FACILITY, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
   DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, MATE_DRAKE_NAMES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, KIN_GROW, KIN_PLAY, KIN_TOUCH, KIN_BOND, FREE, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
-  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, RAIDBOSS, DEPART, departPts, BONDS, MARKS, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG,
+  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, RAIDBOSS, DEPART, departPts, BONDS, MARKS, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG, EXP_FULL,
 };

@@ -4016,3 +4016,9 @@ html:has(dialog.dlg:modal) { overflow: hidden; overscroll-behavior: none; } /* �
 #match-list .match-c b, #match-list .match-c small { white-space: normal; overflow-wrap: anywhere; word-break: keep-all; }
 /* 상대가 많아 목록이 스크롤될 때 단추가 눌려 줄어들며 둘째 줄이 밖으로 나오던 것: 줄어들지 않고 글자 높이만큼 */
 #match-list .match-c { flex: none; height: auto; min-height: 46px; padding: 7px 12px; overflow: hidden; }
+/* 지금 머무는 곳: 꼬리표끼리(야생 · 오염된 땅)는 바짝 (이름과 꼬리표 사이는 그대로) */
+.where .title .tag.corrupt { margin-left: 0; }
+.where .title .tag + .tag { margin-left: -6px; }
+/* 물러나기: 폰에서 단추가 높아져도 글자가 위아래 가운데에 오게 (글자 기준선 맞춤 대신 가운데 맞춤) */
+.bt-acts .btn.flee { align-items: center; align-content: center; padding-top: 0; padding-bottom: 0; }
+.bt-acts .btn.flee > * { line-height: 1.2; }

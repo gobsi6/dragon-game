@@ -8079,6 +8079,7 @@
         b.className = 'tier';
         b.innerHTML = `<span class="pips t${t}">${'<i></i>'.repeat(5)}</span><span class="w">${WORD[t]}</span>`;
         b.setAttribute('aria-label', `${cell.querySelector('span:last-child').textContent} ${WORD[t]} (5단계 중 ${t})`);
+
       });
       body.appendChild(a);
     }
@@ -12017,6 +12018,7 @@
     if (e.result?.items?.length) fetchInv();
   }
   $('battle-dlg').addEventListener('cancel', (e) => { if (BT && !BT.view.over && !BT.replay) e.preventDefault(); });
+  let ARENA_MORE = false; // 결투 기록 '지난 기록 더 보기'를 펼쳤는지 (결투장을 열어 둔 동안 기억)
   let ARENA_BACK = false; // 결투장에서 전투 창을 열었으면, 닫을 때 결투장으로 돌아감
   $('battle-dlg').addEventListener('close', () => {
     clearInterval(btTimer);
@@ -12072,7 +12074,7 @@
     arenaSoon = setTimeout(() => { arenaSoon = null; arenaLast = Date.now(); openArena(true); }, wait);
   };
   document.addEventListener('visibilitychange', () => { if (!document.hidden) arenaRefresh(); }); // 탭으로 돌아오면 한 번
-  $('arena-dlg').addEventListener('close', () => { clearInterval(arenaTick); arenaTick = null; });
+  $('arena-dlg').addEventListener('close', () => { clearInterval(arenaTick); arenaTick = null; if (!ARENA_BACK) ARENA_MORE = false; });
   new MutationObserver(() => { if ($('arena-dlg').open && !arenaTick) arenaTick = setInterval(arenaRefresh, 10000); }).observe($('arena-dlg'), { attributes: true, attributeFilter: ['open'] });
   // 레이드 기록 (상태 › 기록 › 레이드): 함께한 지난 레이드. 눌러서 처음부터 다시 볼 수 있음 (내 쪽에서 본 모습으로)
   function renderRaidLogs(list) {
@@ -12179,8 +12181,9 @@
       more.type = 'button';
       more.className = 'linkbtn duel-more';
       more.textContent = `지난 기록 ${list.length - SHOW}개 더 보기`;
-      more.addEventListener('click', () => { for (const r of box.children) r.hidden = false; more.remove(); });
-      body.appendChild(more);
+      more.addEventListener('click', () => { ARENA_MORE = true; for (const r of box.children) r.hidden = false; more.remove(); });
+      if (ARENA_MORE) { for (const r of box.children) r.hidden = false; } // 저절로 새로 그려도 펼친 채로 (결투장을 닫으면 다시 접힘)
+      else body.appendChild(more);
     }
   }
   function renderArena(res, history = []) {
