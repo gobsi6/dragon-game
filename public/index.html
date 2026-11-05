@@ -4983,6 +4983,27 @@
           );
         }
 
+        // 받은 함께 떠나기 청: 다른 둥지의 짝이 내 둥지 식구와 함께 떠나고 싶어 함
+        for (const o of n.loves?.leaveIn || []) {
+          const oc = add('<div class="adopt-card love-card leave-card"><b></b><p></p><div class="row"></div></div>').firstChild;
+          oc.querySelector('b').textContent = `${o.from.name}${josa(o.from.name, '이', '가')} 짝과 함께 떠나고 싶어 한다`;
+          oc.querySelector('p').textContent = `${o.from.ownerName}의 둥지 ${o.from.name}${josa(o.from.name, '이', '가')} 둥지를 떠나려 한다. 짝인 내 둥지 ${o.to.name}${josa(o.to.name, '과', '와')} ${o.drake ? '함께 넓은 하늘로 날아가고' : `함께 ${o.town}에 내려가 살고`} 싶어 한다. 허락하면 ${o.to.name}${josa(o.to.name, '도', '도')} 이 둥지를 떠난다. 사양하면 둘 다 조금 더 각자의 둥지에 머문다. ${dur(o.until - Date.now())} 안에 정하지 않으면 청은 사라진다.`;
+          const ans = (yes) => {
+            if (!confirm(yes ? `${o.to.name}${josa(o.to.name, '을', '를')} 짝과 함께 떠나보낼까? ${o.to.name}${josa(o.to.name, '은', '는')} 이 둥지를 떠난다.` : `${o.from.ownerName}의 청을 사양할까?`)) return;
+            socket.emit('kinleave:answer', { id: o.id, yes }, (res) => {
+              if (res.error) return toast(res.error);
+              if (yes) showResult({ title: '함께 떠나기', lines: res.lines }); else toast(res.lines.join(' '));
+              if ($('nest-dlg').open) openNest();
+            });
+          };
+          oc.querySelector('.row').append(btn('함께 떠나보낸다', () => ans(true), true), btn('조금 더 곁에 둔다', () => ans(false)));
+        }
+        // 보낸 함께 떠나기 청 (답을 기다리는 중)
+        for (const o of n.loves?.leaveOut || []) {
+          const oc = add('<div class="adopt-card leave-card out"><b></b><p></p></div>').firstChild;
+          oc.querySelector('b').textContent = `${o.to.ownerName}의 답을 기다리는 중`;
+          oc.querySelector('p').textContent = `${o.from.name}${josa(o.from.name, '이', '가')} 짝 ${o.to.name}${josa(o.to.name, '과', '와')} 함께 떠나도 될지 청해 두었다. ${dur(o.until - Date.now())} 안에 답이 오지 않으면 ${o.from.name}${josa(o.from.name, '은', '는')} 조금 더 둥지에 머문다.`;
+        }
         // 받은 중매 청: 다른 둥지 보호자가 두 아이의 만남을 주선하자고 함
         for (const o of n.loves?.matchIn || []) {
           const oc = add('<div class="adopt-card love-card match-card"><b></b><p></p><div class="row"></div></div>').firstChild;

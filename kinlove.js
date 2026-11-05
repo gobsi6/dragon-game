@@ -18,6 +18,7 @@ module.exports = function setupKinLove({ db, online, sendMe, life, logic, news, 
   if (!Array.isArray(st.offers)) st.offers = [];
   if (!Array.isArray(st.babies)) st.babies = [];
   if (!Array.isArray(st.matches)) st.matches = []; // 중매 청 (받은 쪽 보호자가 답하기를 기다림)
+  if (!Array.isArray(st.leaves)) st.leaves = []; // 짝과 함께 떠나기 청 (짝의 보호자가 답하기를 기다림)
   if (!st.matchTry || typeof st.matchTry !== 'object') st.matchTry = {}; // 두 아이 사이의 중매 기록 { n: 주선한 횟수, cool: 다시 주선할 수 있는 때 } // 짝 사이의 아이를 두고 둥지끼리 의논하는 청 (raise: 짝의 둥지에서 키우기 · village: 마을에 가정을 꾸리기)
   const save = () => db.worldSet('kinLove', st);
   const live = (id) => online.get(id) || null;
@@ -210,6 +211,7 @@ module.exports = function setupKinLove({ db, online, sendMe, life, logic, news, 
     const bv = (o) => ({ id: o.id, until: o.until, kind: o.kind, baby: o.baby, found: o.found, from: o.from, to: o.to });
     return {
       ...matchView(d, now), // 중매 청 (받은 것·보낸 것)
+      ...leaveView(d, now), // 짝과 함께 떠나기 청
       in: st.offers.filter((o) => o.to.owner === d.id).map((o) => ({ id: o.id, until: o.until, from: o.from, to: o.to, drake: !!o.drake, match: !!o.match })),
       out: st.offers.filter((o) => o.from.owner === d.id).map((o) => ({ id: o.id, until: o.until, kin: o.from.kin, to: o.to, drake: !!o.drake })),
       babyIn: st.babies.filter((o) => o.to.owner === d.id).map(bv),
@@ -283,6 +285,83 @@ module.exports = function setupKinLove({ db, online, sendMe, life, logic, news, 
     if (line) life.diary(k, line, now);
     kinChanged(ref.owner, kin);
   }
+  // ── 짝과 함께 떠나기 ──
+  // 다른 둥지에 짝이 있는 식구가 떠나려 할 때, 짝의 보호자에게 함께 떠나도 되는지 청함. 허락하면 둘이 함께 떠나고, 사양하면 둘 다 둥지에 남음
+  const leavePending = (owner, id) => st.leaves.find((o) => (o.from.owner === owner && o.from.kin === id) || (o.to.owner === owner && o.to.kin === id)) || null;
+  // 짝이 지금 짝의 둥지에 함께 사는지 (그래야 함께 떠날 수 있음. 짝이 이미 떠났거나 없으면 혼자 떠남)
+  function canLeaveTogether(owner, k) {
+    const r = k?.data?.mate?.ref;
+    if (!r || !r.owner || r.owner === owner) return false;
+    const { k: m } = homeKid(r.owner, r.id);
+    return !!m && m.data.mate?.ref?.owner === owner && m.data.mate.ref.id === k.id && !leavePending(owner, k.id);
+  }
+  function leaveAsk(d, info, now = Date.now()) {
+    leaveSweep(now);
+    const r = info.ref, od = r && db.getDragon(r.owner);
+    if (!od) return { lines: [] };
+    const o = { id: now + Math.floor(Math.random() * 1000), at: now, until: now + DAYS * DAY, drake: !!info.drake, town: info.town,
+      from: { owner: d.id, ownerName: d.name, kin: info.id, name: info.name }, to: { owner: r.owner, ownerName: od.name, kin: r.id, name: info.mate } };
+    st.leaves.push(o); save();
+    tell(r.owner, [`${d.name}의 둥지 ${info.name}${josa(info.name, '이', '가')} 둥지를 떠나려 한다. 짝인 당신의 둥지 ${info.mate}${josa(info.mate, '과', '와')} 함께 떠나고 싶어 한다. 둥지에서 허락할지 정할 수 있다. (${DAYS}일 안에)`], 'kinlove:got', { from: d.name, leave: true });
+    return { lines: [] };
+  }
+  function leaveSweep(now = Date.now()) {
+    const keep = [];
+    for (const o of st.leaves) {
+      if (now < o.until) { keep.push(o); continue; }
+      tell(o.from.owner, [`${o.to.ownerName}에게서 ${o.from.name}${josa(o.from.name, '과', '와')} ${o.to.name}의 함께 떠나기 청에 답이 오지 않았다. ${o.from.name}${josa(o.from.name, '은', '는')} 조금 더 둥지에 머물기로 했다.`]);
+    }
+    if (keep.length !== st.leaves.length) { st.leaves = keep; save(); }
+  }
+  // 짝의 보호자의 답: 허락하면 두 식구가 함께 떠남 (드래곤 식구는 함께 날아가 독립, 인간은 같은 마을에 함께 내려가 삶)
+  function leaveAnswer(d, id, yes, now = Date.now()) {
+    leaveSweep(now);
+    const o = st.leaves.find((x) => x.id === Number(id) && x.to.owner === d.id);
+    if (!o) return { error: '그 청은 이미 지나갔다.' };
+    st.leaves = st.leaves.filter((x) => x !== o); save();
+    if (!yes) {
+      tell(o.from.owner, [`${d.name}${josa(d.name, '이', '가')} ${o.from.name}${josa(o.from.name, '과', '와')} ${o.to.name}의 함께 떠나기 청을 사양했다. 둘은 조금 더 각자의 둥지에 머물기로 했다.`], 'kinlove:gone');
+      return { ok: true, lines: [`${o.from.ownerName}의 청을 사양했다. ${o.to.name}${josa(o.to.name, '은', '는')} 조금 더 이 둥지에 머문다.`] };
+    }
+    const A = homeKid(o.from.owner, o.from.kin), B = homeKid(d.id, o.to.kin);
+    if (!A.k || !B.k) {
+      tell(o.from.owner, [`${o.from.name}${josa(o.from.name, '과', '와')} ${o.to.name}${josa(o.to.name, '이', '가')} 함께 떠나지 못했다. 둘 가운데 하나가 이제 둥지에 없다.`], 'kinlove:gone');
+      return { error: '둘 가운데 하나가 이제 둥지에 없다.' };
+    }
+    const town = REGIONS[o.town] ? o.town : 'capital', tn = REGIONS[town].name;
+    const say = {};
+    for (const [ow, mine, other, kinList] of [[o.from.owner, A.k, B.k, A.kin], [d.id, B.k, A.k, B.kin]]) {
+      const e = live(ow); const p = e ? e.dragon : db.getDragon(ow);
+      if (!p) continue;
+      if (o.drake) {
+        say[ow] = life.freeDrake(p, kinList, mine, now) // 용족 명성 등 혼자 독립할 때와 같음 (홀로 살아간다는 말만 짝과 함께로)
+          .map((l) => (/살아갈 것이다\.$/.test(l) ? `짝 ${other.name}${josa(other.name, '과', '와')} 함께 ${l.replace('조용히 홀로', '조용히')}` : l));
+        life.diary(mine, `짝 ${other.name}${josa(other.name, '과', '와')} 함께 둥지를 떠났다.`, now);
+      } else {
+        life.diary(mine, `짝 ${other.name}${josa(other.name, '과', '와')} 함께 ${tn}${josa(tn, '으로', '로')} 내려가 살기로 했다.`, now);
+        mine.status = 'returned'; mine.data.ended = now; mine.data.liveIn = town;
+        logic.addRep(p, town, 15); const f = logic.addFame(p, 2);
+        say[ow] = [`${mine.name}${josa(mine.name, '과', '와')} ${other.name}${josa(other.name, '이', '가')} 몇 번이고 뒤돌아보며 손을 흔들었다. 둘은 ${tn}에서 함께 새 삶을 꾸릴 것이다.`, `${tn} 평판 +15, 용족 명성 +2`, ...(f ? [f] : [])];
+      }
+      logic.traitCount(p, 'sendoff');
+      logic.chron(p, 'mark', `${mine.name}${josa(mine.name, '이', '가')} 짝 ${other.name}${josa(other.name, '과', '와')} 함께 둥지를 떠났다.`, now);
+      kinChanged(ow, kinList);
+      db.saveState(p); if (e) sendMe(e.socket, p);
+    }
+    const both = `${o.from.ownerName}의 둥지 ${A.k.name}${josa(A.k.name, '과', '와')} ${d.name}의 둥지 ${B.k.name}`;
+    news(o.drake ? `${both}${josa(B.k.name, '이', '가')} 함께 둥지를 떠나 넓은 하늘로 날아갔다.` : `${both}${josa(B.k.name, '이', '가')} 함께 ${tn}에 내려가 새 삶을 꾸렸다.`);
+    const head = o.drake ? `두 용이 날개를 맞대고 둥지를 떠나 넓은 하늘로 날아갔다.` : '';
+    tell(o.from.owner, [`${d.name}${josa(d.name, '이', '가')} 함께 떠나기를 허락했다.`, ...(head ? [head] : []), ...(say[o.from.owner] || [])], 'kinlove:gone');
+    return { ok: true, lines: [`함께 떠나기를 허락했다.`, ...(head ? [head] : []), ...(say[d.id] || [])] };
+  }
+  function leaveView(d, now = Date.now()) {
+    leaveSweep(now);
+    return {
+      leaveIn: st.leaves.filter((o) => o.to.owner === d.id).map((o) => ({ id: o.id, until: o.until, from: o.from, to: o.to, drake: !!o.drake, town: REGIONS[o.town]?.name || '' })),
+      leaveOut: st.leaves.filter((o) => o.from.owner === d.id).map((o) => ({ id: o.id, until: o.until, from: o.from, to: o.to, drake: !!o.drake })),
+    };
+  }
+
   // 혼인 청하기(드래곤 식구는 짝 청하기) 메뉴: 사건을 기다리지 않고 보호자가 바로 청할 수 있는지. 되면 { name, ownerName, drake }
   function canPropose(owner, k, now = Date.now()) {
     if (!k || k.status !== 'home' || k.data.mate || !adult(k, now)) return null;
@@ -470,6 +549,6 @@ module.exports = function setupKinLove({ db, online, sendMe, life, logic, news, 
   }
 
   // 받은 청 수 (혼인 청 + 아이를 두고 받은 청): 아래 '둥지' 메뉴의 붉은 점에 씀
-  const inCount = (id, now = Date.now()) => st.offers.filter((o) => o.to.owner === id && now < o.until).length + st.babies.filter((o) => o.to.owner === id && now < o.until).length + st.matches.filter((o) => o.to.owner === id && now < o.until).length;
-  return { status, lovesBack, ask, view, answer, refOf, babyShared, eggShared, babyAsk, babyAnswer, babySweep, inCount, matchCands, matchAsk, matchAnswer, matchCancel, canPropose, propose };
+  const inCount = (id, now = Date.now()) => st.offers.filter((o) => o.to.owner === id && now < o.until).length + st.babies.filter((o) => o.to.owner === id && now < o.until).length + st.matches.filter((o) => o.to.owner === id && now < o.until).length + st.leaves.filter((o) => o.to.owner === id && now < o.until).length;
+  return { status, lovesBack, ask, view, answer, refOf, babyShared, eggShared, babyAsk, babyAnswer, babySweep, inCount, matchCands, matchAsk, matchAnswer, matchCancel, canPropose, propose, canLeaveTogether, leaveAsk, leaveAnswer, leaveWaiting: (owner, id) => !!leavePending(owner, Number(id)) };
 };

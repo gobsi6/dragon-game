@@ -4022,3 +4022,4 @@ html:has(dialog.dlg:modal) { overflow: hidden; overscroll-behavior: none; } /* �
 /* 물러나기: 폰에서 단추가 높아져도 글자가 위아래 가운데에 오게 (글자 기준선 맞춤 대신 가운데 맞춤) */
 .bt-acts .btn.flee { align-items: center; align-content: center; padding-top: 0; padding-bottom: 0; }
 .bt-acts .btn.flee > * { line-height: 1.2; }
+.leave-card.out { opacity: .85; }

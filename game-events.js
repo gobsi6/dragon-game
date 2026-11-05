@@ -1390,6 +1390,9 @@ module.exports = [
     choices: [
       { label: '등을 떠밀어 보내 준다', tone: 'trust', run: (h, c, v) => {
         const k = c.k(v.id);
+        // 다른 둥지에 짝이 있으면 혼자 떠나지 않고, 짝과 함께 떠나도 되는지 짝의 보호자에게 먼저 청함
+        if (h.leaveWaiting(k)) return h.say(`${k.data.mate?.name || '짝'}의 보호자에게 함께 떠나도 될지 청해 둔 참이다. 답을 기다리기로 했다.`);
+        if (h.leaveAsk(k)) { h.bond(k, 4); return h.say(`${h.name(k)} 짝 ${k.data.mate.name}${c.josa(k.data.mate.name, '과', '와')} 함께 떠나고 싶어 한다. ${k.data.mate.name}의 보호자에게 함께 떠나도 될지 청을 보냈다. 허락하면 둘이 함께 둥지를 떠난다. (유대 +4)`); }
         if (k.type === 'drake') h.free(k);
         else {
           const t = k.data.town || h.nearestTown();

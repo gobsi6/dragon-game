@@ -2152,8 +2152,9 @@ function onConnect(socket) {
       for (const g of res.sends || []) social.eventGift(d, g.id, g.items, g.msg); // 이벤트로 보낸 선물
       for (const l of res.loves || []) kinLove.ask(d, l); // 다른 둥지 첫사랑에게 혼인 청
       for (const b of res.babies || []) kinLove.babyAsk(d, b); // 짝 사이의 아이를 두고 상대 둥지에 청
+      for (const l of res.leaves || []) { const r = kinLove.leaveAsk(d, l); if (r?.lines) res.lines = [...(res.lines || []), ...r.lines]; } // 짝과 함께 떠나기 청
       if (res.purify) res.lines = [...(res.lines || []), ...logic.hooks.purify(d, 'event', res.purify)]; // 이벤트로 쌓은 정화 기여 (멸망한 대륙이면 그 땅의 정화로, 재앙의 오염이 있으면 그쪽에도)
-      delete res.tells; delete res.sends; delete res.purify; delete res.loves; delete res.babies;
+      delete res.tells; delete res.sends; delete res.purify; delete res.loves; delete res.babies; delete res.leaves;
       // 지나온 이야기에 남길 선택·사건
       const cr = CHRON_ON[event];
       if (cr) { const [k, t] = cr(d, res, payload || {}) || []; if (t) logic.chron(d, k, t); }
@@ -2642,6 +2643,7 @@ function onConnect(socket) {
     ['kinmatch:answer', (d, p) => kinLove.matchAnswer(d, p?.id, !!p?.yes)],
     ['kinmatch:cancel', (d, p) => kinLove.matchCancel(d, p?.id)],
     ['kinlove:propose', (d, p) => kinLove.propose(d, syncKin(socket, d), p?.kin)], // ⋯ 메뉴의 혼인 청하기·짝 청하기
+    ['kinleave:answer', (d, p) => kinLove.leaveAnswer(d, p?.id, !!p?.yes)], // 짝과 함께 떠나기 청에 답하기
   ]) {
     socket.on(ev, (payload, ack) => {
       if (typeof ack !== 'function') return;

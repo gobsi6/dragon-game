@@ -1523,12 +1523,22 @@ function train(d, kin, id, stat, now = Date.now(), opt = {}) {
 }
 
 // 다 자란 새끼를 떠나보냄. 강하게, 정 깊게 키울수록 용족 명성이 크게 오름
+// 함께 떠나기 청에 담을 것 (인간은 같은 마을로 내려감)
+const leaveInfo = (k, region) => ({ id: k.id, name: k.name, drake: k.type === 'drake', ref: k.data.mate.ref, mate: k.data.mate.name, town: k.data.town || nearestTown(region) });
 function release(d, kin, id, now = Date.now()) {
   const err = atNest(d);
   if (err) return { error: err };
   const k = findKin(kin, id);
   if (!k || k.type !== 'drake' || k.status !== 'home') return { error: '떠나보낼 새끼가 없다.' };
   if (ageOf(k, now) < R.independentDay) return { error: '아직 혼자 살아가기에는 어리다.' };
+  // 다른 둥지에 짝이 있으면: 혼자 떠나지 않고 짝과 함께 떠나도 되는지 짝의 보호자에게 청함 (kinlove.js)
+  const kl = logic.hooks.kinLove;
+  if (kl?.leaveWaiting(d.id, k.id)) return { error: `${k.data.mate?.name || '짝'}의 보호자에게 함께 떠나도 될지 청해 두었다. 답을 기다리자.` };
+  if (kl?.canLeaveTogether(d.id, k)) {
+    k.data.stayAsk = now;
+    const m = k.data.mate.name;
+    return { title: '독립', lines: [`${ga(k)} 짝 ${m}${josa(m, '과', '와')} 함께 떠나고 싶어 한다. ${m}의 보호자에게 함께 떠나도 될지 청을 보냈다. 허락하면 둘이 함께 둥지를 떠난다.`], leaves: [leaveInfo(k, d.region)] };
+  }
   return { title: '독립', lines: freeDrake(d, kin, k, now) };
 }
 // 새끼를 독립시키고 문장을 돌려줌 (떠나보내기, 이벤트에서 함께 씀)
@@ -1765,7 +1775,7 @@ function chooseEvent(d, kin, have, idx, now = Date.now()) {
   const reason = ch.need ? ch.need(c, vars) : null;
   if (reason) return { error: reason };
 
-  const out = { lines: [], items: [], hoardItems: [], gold: 0, tells: [], sends: [], purify: 0, loves: [], babies: [] };
+  const out = { lines: [], items: [], hoardItems: [], gold: 0, tells: [], sends: [], purify: 0, loves: [], babies: [], leaves: [] };
   const town = SHOPS[c.region] ? c.region : nearestTown(c.region);
   const h = {
     say: (...l) => out.lines.push(...l),
@@ -1808,6 +1818,9 @@ function chooseEvent(d, kin, have, idx, now = Date.now()) {
     // 다른 둥지의 짝: 아이를 그 둥지에서 키우게 하거나(raise), 마을에 가정을 꾸리게 하자는(village) 청 (kinlove.js)
     babyAsk: (k, kind, baby, found) => { if (k?.data.mate?.ref) out.babies.push({ kind, id: k.id, name: k.name, mate: k.data.mate.name, ref: k.data.mate.ref, baby, found: !!found, town: k.data.town || nearestTown(c.region) }); },
     loveAsk: (k) => { if (k?.data.loveRef) out.loves.push({ id: k.id, name: k.name, ref: k.data.loveRef, drake: k.type === 'drake' }); }, // 다른 둥지 첫사랑에게 혼인 청 · 새끼 드래곤은 짝을 청함 (kinlove.js)
+    // 다른 둥지에 짝이 있는 식구가 떠나려 할 때: 짝과 함께 떠나도 되는지 짝의 보호자에게 청함. 청을 보냈으면 true (kinlove.js)
+    leaveWaiting: (k) => !!k && !!logic.hooks.kinLove?.leaveWaiting(d.id, k.id), // 함께 떠나기 청의 답을 기다리는 중
+    leaveAsk: (k) => { const kl = logic.hooks.kinLove; if (!k || !kl?.canLeaveTogether(d.id, k)) return false; out.leaves.push(leaveInfo(k, c.region)); k.data.stayAsk = now; return true; },
     // 보물더미에서 꺼내거나 넣음 (꺼낼 때는 지금 있는 만큼만)
     hoardTake: (id, qty = 1) => {
       const have = (c.hoard.find((x) => x.item === id)?.qty || 0) + out.hoardItems.filter((x) => x.id === id).reduce((a, x) => a + x.qty, 0);
@@ -1940,6 +1953,7 @@ function festOuting(d, kin, fest, nightOpen, now = Date.now()) {
 }
 
 module.exports = {
+  freeDrake, // 짝과 함께 떠날 때 kinlove.js가 씀
   bornKid, // 짝 사이의 아이를 아기 식구로 (kinlove.js에서도 씀)
   layEgg, // 새끼 드래곤 짝 사이의 알을 둥지에 (kinlove.js)
   loveDiaryFix, // 예전 첫사랑 기록 채우기 (서버를 켤 때 한 번)
