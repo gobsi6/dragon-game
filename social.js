@@ -16,7 +16,7 @@ const { ITEMS, KINDS, STANCES, MIND, SKILLS, HEAL_OTHER, fameTier, KIN, DAY, BON
 const ADOPT = { days: 3 };         // 입양 제안을 기다리는 날 (지나면 저절로 거둬짐)
 
 const TRADE_MAX_ITEMS = 6;            // 한쪽이 올려놓을 수 있는 물건 종류
-const TP_MAX = 200;                   // 텔레파시 한 번의 글자 수
+const TP_MAX = 500;                   // 텔레파시 한 번의 글자 수
 const TP_COOLDOWN = 1500;             // 텔레파시 간격
 const INVITE_TTL = 60 * 1000;         // 교환 요청이 유효한 시간
 
