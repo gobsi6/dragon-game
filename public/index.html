@@ -12125,7 +12125,7 @@
       b.addEventListener('click', () => {
         socket.emit('raidboss:replay', { id: x.id }, (v) => {
           if (v.error) return toast(v.error);
-          if ($('char-dlg').open) $('char-dlg').close();
+          // 상태 › 기록 창은 닫지 않고 그 위에 다시 보기를 띄움 (닫으면 레이드 기록에 그대로 머묾)
           openBattle(v.view, { title: v.title, log: v.log, result: v.result, replay: true });
         });
       });
