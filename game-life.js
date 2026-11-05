@@ -1853,7 +1853,7 @@ function chooseEvent(d, kin, have, idx, now = Date.now()) {
   }
   d.pending_event = null;
   const label = typeof ch.label === 'function' ? ch.label(c, vars) : ch.label;
-  return { title: e.title, lines: out.lines, items: out.items, hoardItems: out.hoardItems, gold: out.gold, choice: label, tells: out.tells, sends: out.sends, purify: out.purify, loves: out.loves, babies: out.babies };
+  return { title: e.title, lines: out.lines, items: out.items, hoardItems: out.hoardItems, gold: out.gold, choice: label, tells: out.tells, sends: out.sends, purify: out.purify, loves: out.loves, babies: out.babies, leaves: out.leaves };
 }
 
 // GM 도구: 자람 기록과 가장 가까운 성격, 친구
