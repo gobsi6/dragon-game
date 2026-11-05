@@ -555,6 +555,7 @@ const meOf = (d) => ({
   stanceAt: d.stance_at || 0,
   nest: d.nest || null,
   restAt: d.rest_at || null,
+  restWhere: d.rest_at ? (() => { const h = logic.restHostOf(d); return h && h.id !== d.id ? { partner: h.name, region: h.nest || d.region } : { partner: null, region: d.nest || d.region }; })() : null, // 지금 쉬는 둥지 (반려의 둥지면 반려 이름)
   hoardGold: d.hoard_gold || 0,
   nestTier: d.nest ? logic.nestInfo(d).tier : 0,
   restTier: d.rest_at ? (() => { const h = logic.restHostOf(d); return h.nest ? logic.nestInfo(h).tier : 0; })() : null, // 쉬는 둥지의 크기 (반려의 둥지면 그 둥지)
@@ -1432,6 +1433,7 @@ logic.hooks.together = (d) => {
 };
 // 반려의 둥지에서 쉬는 중이면 그 둥지의 주인 (쉬기 회복을 그 둥지의 크기·보물더미·온천으로)
 logic.hooks.restHost = (d) => {
+  if (d.nest && d.nest === d.region) return null; // 내 둥지가 이 지역에 있으면 내 둥지에서 쉼 (반려의 둥지가 같은 지역이어도)
   const pn = logic.hooks.partnerNest(d);
   if (!pn || pn.region !== d.region) return null;
   return online.get(pn.id)?.dragon || db.getDragon(pn.id) || null;
@@ -2314,6 +2316,19 @@ function onConnect(socket) {
     system(res.from, `${d.name}${ga} 둥지를 향해 날아갔다.`);
     socket.join(d.region);
     system(d.region, `${d.name}${ga} 둥지로 돌아왔다.`, socket);
+    broadcastPresence(res.from);
+    broadcastPresence(d.region);
+    broadcastCounts();
+    sendRegionState(socket, d);
+    social.onMove(d.id);
+  });
+  // 반려의 둥지로 날아가기
+  itemAction('nest:partner', (d) => logic.flyPartner(d), (d, res) => {
+    const ga = josa(d.name, '이', '가');
+    socket.leave(res.from);
+    system(res.from, `${d.name}${ga} 반려의 둥지를 향해 날아갔다.`);
+    socket.join(d.region);
+    system(d.region, `${d.name}${ga} 반려 ${res.partner}의 둥지로 날아왔다.`, socket);
     broadcastPresence(res.from);
     broadcastPresence(d.region);
     broadcastCounts();

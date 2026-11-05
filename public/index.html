@@ -3662,8 +3662,8 @@
     if (!on) return;
     const r = me.stance === 'hermit' ? S.stanceRules.hermit.rest : S.nestRules.rest;
     // 반려의 둥지에서 쉬는 중이면 그 둥지로 (내 둥지가 아닌 곳에서 쉬고 있음)
-    const pn = me.partnerNest;
-    $('rest-where').textContent = me.region !== me.nest && pn && pn.region === me.region ? `반려 ${pn.name}의 둥지 · ${S.regions[pn.region]?.name || ''}` : `${S.regions[me.nest]?.name || ''}의 둥지`;
+    const rw = me.restWhere; // 서버가 알려 준 '지금 쉬는 둥지' (반려의 둥지면 반려 이름)
+    $('rest-where').textContent = rw?.partner ? `반려 ${rw.partner}의 둥지 · ${S.regions[rw.region]?.name || ''}` : `${S.regions[rw?.region || me.nest]?.name || ''}의 둥지`;
     $('rest-clock').textContent = fmt(Date.now() - me.restAt);
     const tr = S.nestRules.tiers?.[(me.restTier ?? me.nestTier) || 0]?.rest || 1; // 쉬는 둥지의 크기 (반려의 둥지면 그 둥지)
     const x = (v) => +(v * tr).toFixed(2);
@@ -4950,6 +4950,7 @@
           if (n.here) {
             note.textContent = me.restAt ? '지금 둥지에서 쉬고 있다.' : '둥지에서 쉬면 회복이 빨라진다. 쉬는 동안에는 채팅과 제작, 보물더미 정리만 할 수 있다.';
             row.appendChild(me.restAt ? btn('깨어나기', () => nestAct('rest:stop'), true) : btn('둥지에서 쉬기', () => nestAct('rest:start'), true, !!me.exp));
+            { const pn2 = me.partnerNest; if (pn2 && pn2.region !== S.region) row.appendChild(btn(`반려 ${pn2.name}의 둥지로 날아가기${S.nestRules.homeFlightAp > 0 ? ` −${S.nestRules.homeFlightAp}` : ''}`, () => nestAct('nest:partner'), false, !!me.exp || !!me.restAt || me.ap < S.nestRules.homeFlightAp)); }
           } else {
             note.textContent = S.regions[S.region]?.realm === 'ruin' ? '다른 대륙에 있을 땐 둥지로 돌아가려면 대륙을 넘어야 한다.' : S.nestRules.homeFlightAp > 0 ? `어디서든 둥지로 곧장 날아갈 수 있다. 행동력 ${S.nestRules.homeFlightAp}${numJosa(S.nestRules.homeFlightAp, '이', '가')} 든다.` : '어디서든 둥지로 곧장 날아갈 수 있다. 행동력은 들지 않는다.';
             // 반려의 둥지에 와 있으면 그곳에서도 쉴 수 있음
@@ -4957,6 +4958,7 @@
             if (pn && pn.region === S.region) row.appendChild(me.restAt ? btn('깨어나기', () => nestAct('rest:stop'), true) : btn(`반려 ${pn.name}의 둥지에서 쉬기`, () => nestAct('rest:start'), true, !!me.exp));
             if (pn && pn.region === S.region) note.textContent += ` 반려 ${pn.name}의 식구는 '식구' 탭에서 함께 돌볼 수 있다.`;
             row.appendChild(btn(`둥지로 날아가기${S.nestRules.homeFlightAp > 0 ? ` −${S.nestRules.homeFlightAp}` : ''}`, () => { nestAct('nest:home'); }, true, !!me.exp || !!me.restAt || me.ap < S.nestRules.homeFlightAp));
+            if (pn && pn.region !== S.region) row.appendChild(btn(`반려의 둥지로 날아가기${S.nestRules.homeFlightAp > 0 ? ` −${S.nestRules.homeFlightAp}` : ''}`, () => nestAct('nest:partner'), false, !!me.exp || !!me.restAt || me.ap < S.nestRules.homeFlightAp));
             if (!town) row.appendChild(btn(`여기로 둥지 옮기기 (금화 ${S.nestRules.moveCost})`, () => {
               const tierNote = (n.tier || 0) > 0 ? ` 넓혀 둔 둥지는 한 단계 낮아져 ${S.nestRules.tiers[n.tier - 1].name}${ro(S.nestRules.tiers[n.tier - 1].name)} 된다.` : '';
               const wardNote = n.wards && (n.wards.trap || n.wards.stone) ? ' 설치한 덫과 결계는 두고 간다.' : '';
@@ -12214,6 +12216,11 @@
     me.className = 'ar-me';
     me.innerHTML = '<span>내 전적 <b></b></span><span class="sp"></span><small></small>';
     me.querySelector('b').textContent = `${res.me.w}승 ${res.me.l}패`;
+    if (res.me.daily) { // 오늘 남은 결투 (하루 n번)
+      const lf = document.createElement('span'); lf.className = `ar-left${res.me.left <= 0 ? ' none' : ''}`;
+      lf.textContent = `오늘 남은 결투 ${res.me.left}/${res.me.daily}`;
+      me.querySelector('span').after(lf);
+    }
     me.querySelector('small').textContent = `결투 받기 ${res.me.duelOn ? '켬' : '끔'} · 자동 결투 ${res.me.autoDuel ? '허용' : '안 함'}`;
     const set = document.createElement('button');
     set.type = 'button'; set.className = 'linkbtn'; set.textContent = '설정';
@@ -12225,7 +12232,7 @@
     rules.appendChild(Object.assign(document.createElement('summary'), { textContent: '결투 규칙 보기' }));
     const n = document.createElement('p');
     n.className = 'note';
-    n.textContent = '결투에서는 다치지 않는다. 둘 다 접속해 있으면 직접 턴을 골라 싸우고, 상대가 자동 결투를 허용했다면 접속하지 않았어도 스킬 구성대로 싸운다. 이기면 용족 명성과 경험치가 오른다. 내기 결투는 둘 다 접속해 있고 레벨 차이가 5 이하일 때, 서로 금화나 물건을 걸고 겨뤄 진 쪽이 건 것을 이긴 쪽이 가져간다.';
+    n.textContent = '결투에서는 다치지 않는다. 둘 다 접속해 있으면 직접 턴을 골라 싸우고, 상대가 자동 결투를 허용했다면 접속하지 않았어도 스킬 구성대로 싸운다. 이기면 용족 명성과 경험치가 오른다. 결투는 하루에 15번, 같은 상대와는 하루에 3번까지 할 수 있다(직접·자동·내기 모두, 신청한 쪽과 받은 쪽 모두 한 번씩 센다). 내기 결투는 둘 다 접속해 있고 레벨 차이가 5 이하일 때, 서로 금화나 물건을 걸고 겨뤄 진 쪽이 건 것을 이긴 쪽이 가져간다.';
     rules.appendChild(n);
     body.appendChild(rules);
     const box = document.createElement('div');
@@ -12252,7 +12259,7 @@
         b.addEventListener('click', fn);
         a.appendChild(b);
       };
-      const expWhy = S.me?.exp ? awayMsg('결투할 수 없다.') : null;
+      const expWhy = S.me?.exp ? awayMsg('결투할 수 없다.') : res.me.daily && res.me.left <= 0 ? `오늘은 결투를 다 했다. (하루 ${res.me.daily}번)` : null; // 원정 중이거나 오늘 결투를 다 했으면 신청 단추를 막음
       btn('결투 신청', expWhy || x.live, () => challenge(x, 'live'), true);
       // 내기 결투: 실시간 결투로만, 레벨 차이 BET_UI.gap 이하
       const gapWhy = Math.abs((S.me?.level || 0) - x.level) > BET_UI.gap ? `레벨 차이가 ${BET_UI.gap}보다 크면 내기를 걸 수 없다.` : null;

@@ -2138,6 +2138,8 @@ const COMBAT = {
   inviteSeconds: 30,       // 결투 신청을 기다리는 시간
   // 내기 결투: 실시간 결투에서만. 둘 다 걸고, 진 쪽이 건 것을 이긴 쪽이 가져감
   bet: { levelGap: 5, goldMax: 200, itemKinds: 3, itemQty: 20, answerSeconds: 60, confirmSeconds: 30 },
+  duelPairDaily: 3,      // 같은 상대와는 하루에 3번까지
+  duelDaily: 15,         // 결투는 하루(한국 날짜)에 15번까지 (직접·자동·내기 모두, 이기든 지든 두 드래곤 모두 한 번씩 셈)
   autoCooldown: 10 * 60 * 1000, // 같은 상대에게 자동 결투를 다시 걸 수 있는 간격
   fameWin: 3, fameRival: 2, fameLose: -1,
   // 결투 경험치 = 기본 + 상대 레벨 × 레벨당 (예: 상대가 Lv.5면 이기면 20+5×4=40, 지면 8+5×2=18)

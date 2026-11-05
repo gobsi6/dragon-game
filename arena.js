@@ -322,6 +322,8 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
     const cw = combat.combatOf(w);
     const cl = combat.combatOf(l);
     cw.w += 1; cl.l += 1;
+    countDuel(w); countDuel(l); // 하루 결투 횟수 (두 드래곤 모두, 저장은 아래에서 함께)
+    countPair(w, l.id); countPair(l, w.id); // 같은 상대와의 하루 결투 횟수
     cw.lastWin ||= {};
     const lines = { [w.id]: [], [l.id]: [] };
     const fresh = now - (cw.lastWin[l.id] || 0) >= COMBAT.autoCooldown;
@@ -391,6 +393,16 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
   }
 
   // 결투장 목록에 보일 상대의 사정
+  // 하루 결투 횟수 (한국 날짜가 바뀌면 다시 0부터)
+  const DAILY = COMBAT.duelDaily || 0;
+  function duelsToday(d) { const c = combat.combatOf(d); const day = logic.dayIdx(); if (c.duelDay !== day) { c.duelDay = day; c.duelN = 0; } return c.duelN || 0; }
+  const duelsLeft = (d) => (DAILY ? Math.max(0, DAILY - duelsToday(d)) : Infinity);
+  const countDuel = (d) => { if (!DAILY) return; duelsToday(d); combat.combatOf(d).duelN += 1; };
+  // 같은 상대와 하루 결투 횟수 (한국 날짜가 바뀌면 다시 0부터)
+  const PAIR = COMBAT.duelPairDaily || 0;
+  function vsToday(d) { const c = combat.combatOf(d); const day = logic.dayIdx(); if (!c.duelVs || c.duelVs.day !== day) c.duelVs = { day, n: {} }; return c.duelVs.n; }
+  const pairLeft = (d, oid) => (PAIR ? Math.max(0, PAIR - (vsToday(d)[oid] || 0)) : Infinity);
+  const countPair = (d, oid) => { if (!PAIR) return; const n = vsToday(d); n[oid] = (n[oid] || 0) + 1; };
   function duelState(me, o, oCombat) {
     const on = !!live(o.id);
     const busy = inBattle(o.id);
@@ -400,6 +412,8 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
     else if (o.exp_end) res.live = res.auto = logic.expInfo(o).goal === 'fishline' ? '줄을 걸어 두고 낚시 중이다. 결투를 받을 수 없다.' : '원정 중이다. 결투를 받을 수 없다.'; // 원정·줄 걸어 두기 동안은 직접·자동 결투 모두 못 받음
     else if (logic.isFallen(o)) res.live = res.auto = '쓰러져 있다. 결투를 받을 수 없다.';
     else if (!c.duelOn) res.live = res.auto = '결투를 받지 않는다.';
+    else if (DAILY && duelsLeft(o) <= 0) res.live = res.auto = `오늘은 결투를 다 했다. (하루 ${DAILY}번)`;
+    else if (PAIR && pairLeft(me, o.id) <= 0) res.live = res.auto = `오늘은 이 드래곤과 결투를 다 했다. (같은 상대와 하루 ${PAIR}번)`;
     else {
       if (!on) res.live = '접속해 있지 않다.';
       else if (busy) res.live = '지금 싸우는 중이다.';
@@ -509,7 +523,7 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
       });
       // 접속 중인 드래곤이 언제나 위, 그 안에서는 최근에 접속한 순. 접속하지 않은 드래곤은 마지막으로 본 시각 순
       list.sort((a, b) => (b.online - a.online) || (b.at - a.at));
-      return { ok: true, me: { w: c.w, l: c.l, duelOn: c.duelOn, autoDuel: c.autoDuel }, list };
+      return { ok: true, me: { w: c.w, l: c.l, duelOn: c.duelOn, autoDuel: c.autoDuel, left: DAILY ? duelsLeft(d) : null, daily: DAILY || null }, list };
     });
 
     on('arena:challenge', (d, p) => {
@@ -519,6 +533,8 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
       const mine = myBlock(d);
       if (mine) return { error: mine };
       if (!combat.combatOf(d).duelOn) return { error: '결투 받기를 꺼 두었으면 신청도 할 수 없다. 설정에서 켜자.' };
+      if (DAILY && duelsLeft(d) <= 0) return { error: `오늘은 결투를 다 했다. 결투는 하루에 ${DAILY}번까지 할 수 있다.` };
+      if (PAIR && pairLeft(d, o.id) <= 0) return { error: `오늘은 ${o.name}${josa(o.name, '과', '와')} 결투를 다 했다. 같은 상대와는 하루에 ${PAIR}번까지 겨룰 수 있다.` };
       const why = duelState(d, o, combat.combatOf(o));
       if (str(p.mode) === 'auto') {
         if (why.auto) return { error: why.auto };
@@ -607,6 +623,9 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
         if (mine.error) return { error: mine.error };
         if (stakeEmpty(mine)) return { error: '내기 결투는 받는 쪽도 무언가를 걸어야 한다.' };
       }
+      if (p.accept && DAILY && duelsLeft(d) <= 0) return { error: `오늘은 결투를 다 했다. 결투는 하루에 ${DAILY}번까지 할 수 있다.` };
+      if (p.accept && PAIR && pairLeft(d, inv.from) <= 0) { invites.delete(inv.id); clearTimeout(inv.timer); emitTo(inv.from, 'arena:declined', { name: d.name, reason: `오늘은 서로 결투를 다 했다. (같은 상대와 하루 ${PAIR}번)` }); return { error: `오늘은 이 드래곤과 결투를 다 했다. 같은 상대와는 하루에 ${PAIR}번까지 겨룰 수 있다.` }; }
+      if (p.accept && DAILY) { const fo = load(inv.from); if (fo && duelsLeft(fo) <= 0) { invites.delete(inv.id); clearTimeout(inv.timer); emitTo(inv.from, 'arena:declined', { name: d.name, reason: '오늘은 결투를 다 해서 받을 수 없게 되었다.' }); return { error: '상대가 오늘 결투를 다 했다.' }; } }
       invites.delete(inv.id);
       clearTimeout(inv.timer);
       const from = live(inv.from);

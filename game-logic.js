@@ -2135,6 +2135,21 @@ function flyHome(d) {
   return { title: '둥지', lines: [`${REGIONS[d.nest].name}의 둥지로 곧장 날아왔다.`], from };
 }
 
+// 반려의 둥지로 곧장 날아감 (둥지로 날아가기와 같은 행동력)
+function flyPartner(d) {
+  if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
+  if (d.rest_at) return { error: RESTING };
+  const pn = hooks.partnerNest?.(d);
+  if (!pn) return { error: '반려가 없거나, 반려에게 아직 둥지가 없다.' };
+  if (d.region === pn.region) return { error: `이미 반려 ${pn.name}의 둥지에 있다.` };
+  if (isRuin(d.region) !== isRuin(pn.region)) return { error: '다른 대륙에 있을 땐 반려의 둥지로 가려면 대륙을 넘어야 한다.' };
+  if (d.ap < NEST.homeFlightAp) return { error: `행동력이 모자란다. (${NEST.homeFlightAp} 필요)` };
+  if (NEST.homeFlightAp > 0) spendAp(d, NEST.homeFlightAp);
+  const from = d.region;
+  d.region = pn.region;
+  return { title: '둥지', lines: [`${REGIONS[pn.region].name}, 반려 ${pn.name}의 둥지로 곧장 날아왔다.`], from, partner: pn.name };
+}
+
 // 쉬기 시작과 끝. 속도가 바뀌기 전에 지금까지의 회복을 먼저 계산함
 function startRest(d, now = Date.now()) {
   if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
@@ -2682,7 +2697,7 @@ const achHasNew = (d) => { const t = combatJson(d).achSeenAt || 0; return Object
 // 다른 모듈(서버)이 채워 주는 것: hoard(드래곤 id) → 보물더미 물건, bossTrace(지역) → 최근 재앙의 흔적
 const hooks = {};
 
-module.exports = { restHostOf,
+module.exports = { restHostOf, flyPartner,
   migrateMasterwork,
   hooks, BOND_TOGETHER: BOND_RULES.together,
   seasonAt, weatherOf, weatherIdAt, weatherFx, fxText, fxProse, weatherDebug, SLOT_MS,
