@@ -212,6 +212,14 @@ const ITEMS = {
   mz_king_seal:   { name: '옛 왕의 인장',       rarity: 'rare', cat: 'treasure', value: 500, desc: '지하 회랑을 판 이들의 인장. 용과 사람의 손이 함께 새겨져 있다.' },
   // 상흔을 하나 씻어 냄: 지하 회랑 수호자(아주 드물게) · 멸망한 대륙 생존자 교환. 7일에 한 번 (game-logic.js useItem)
   scar_tonic:     { name: '옛 샘의 정수', rarity: 'rare', type: 'use', use: { scar: 1 }, value: 900, desc: '고대도시 아래 샘에서 스며 나온 물을 정화의 결정으로 맑힌 것. 마시면 가장 최근에 입은 상흔 하나가 씻겨 나간다. 몸이 받아들이는 것은 7일에 한 번뿐이다.' },
+  // 고대도시 재료 (골렘이 채집·잔해 뒤지기로 가져옴. city.js)
+  sun_dust:       { name: '태양가루',       rarity: 'common',   value: 4, desc: '고대도시의 돌 틈에 고여 있는 금빛 가루. 손끝에서 미지근하게 빛난다.' },
+  cave_crystal:   { name: '동굴 수정',      rarity: 'common',   value: 6, desc: '도시 천장에서 떨어진 맑은 수정. 안쪽에 희미한 청록빛이 갇혀 있다.' },
+  shroom_spore:   { name: '빛버섯 포자',    rarity: 'common',   value: 4, desc: '온실 둘레에서 피어나는 빛버섯의 포자. 손바닥에 올리면 반딧불처럼 깜빡인다.' },
+  drip_dust:      { name: '종유석 가루',    rarity: 'common',   value: 3, desc: '오래된 종유석 끝에서 긁어낸 하얀 가루. 물에 개면 단단하게 굳는다.' },
+  old_tile:       { name: '옛 타일 조각',   rarity: 'common',   value: 4, desc: '무너진 집 바닥에서 나온 무늬 타일 조각. 용의 비늘을 닮은 무늬가 남아 있다.' },
+  spring_water:   { name: '샘물 한 병',     rarity: 'uncommon', type: 'use', use: { hp: 999, en: 999, mind: 100 }, value: 5, desc: '샘가 집 연못에서 길어 온 맑은 물. 마시면 체력·기력·정신이 모두 가득 찬다. 대륙 어디서나 마실 수 있다.' },
+  faded_cloth:    { name: '바랜 천 조각',   rarity: 'common',   value: 4, desc: '잔해 사이에서 건진 오래된 천. 색은 바랬지만 올이 질기다.' },
   mz_city_key:    { name: '고대도시의 열쇠 조각', rarity: 'rare', cat: 'treasure', value: 650, desc: '일곱 층 아래 문의 열쇠였던 것. 조각만으로도 보물더미가 묘하게 환해진다.' },
   tr_seed_sack:   { name: '이천 년 묵은 씨앗 자루', rarity: 'rare', cat: 'treasure', value: 600, desc: '모르벤의 밭 가장자리에 묻혀 있던 자루. 아직 싹을 틔울 수 있을 것만 같은 씨앗이 가득하다.' }, // 레이드 (모르벤)
   tr_oath_ring:   { name: '기사단장의 맹세 반지', rarity: 'rare', cat: 'treasure', value: 700, desc: '헤이른의 손가락에 끼워져 있던 반지. 안쪽에 "문을 지킨다"는 맹세가 새겨져 있다.' }, // 레이드 (헤이른)
@@ -2198,7 +2206,7 @@ const BREATHS = {
   gold:   { name: '번개 숨결',   element: 'lightning', power: 1.7,  debuff: { stun: 1 }, chance: 0.3, desc: '가장 강한 한 방. 가끔 상대를 마비시켜 한 턴 쉬게 한다.' },
   green:  { name: '독 숨결',     element: 'poison',    power: 1.0,  debuff: { poison: 3 }, desc: '짙은 독안개로 세 턴 동안 중독시킨다.' },
   clear:  { name: '투명한 숨결', element: 'mist', power: 0.8, desc: '시험용 숨결. 바람이 스칠 뿐 아무 일도 일어나지 않는다.' },
-  silver: { name: '안개 숨결',   element: 'mist',      power: 0.8,  self: { evade: 3 }, desc: '은빛 안개에 몸을 숨겨, 세 턴 동안 공격을 잘 피한다.' },
+  silver: { name: '안개 숨결',   element: 'mist',      power: 0.8,  self: { evade: 3 }, desc: '은빛 안개에 몸을 숨겨, 세 턴 동안 공격을 잘 피한다. (결투장에서는 두 턴)' },
   blue:   { name: '해일 숨결',   element: 'water',     power: 1.0, debuff: { soak: 2 }, desc: '거센 물살로 피해를 주고, 두 턴 동안 흠뻑 젖게 해 굼뜨게 만든다 (속도 −30%, 잘 피하지 못함). 젖은 적에게 꼬리치기를 하면 넘어뜨린다.' },
   purple: { name: '자수정 숨결', element: 'spirit',    power: 1.15, drain: 0.55, cleanse: 1, desc: '보랏빛 결정을 쏟아 피해를 주고, 입힌 피해의 55%만큼 체력을 되찾으며 나쁜 상태 하나를 씻어 낸다.' },
   bronze: { name: '모래 폭풍 숨결', element: 'earth',  power: 1.2,  self: { stone: 3 }, desc: '모래와 돌 조각을 쏟아 피해를 주고, 세 턴 동안 비늘이 돌처럼 굳어 받는 피해가 30% 준다.' },

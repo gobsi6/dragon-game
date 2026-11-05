@@ -133,12 +133,12 @@ module.exports = function setupKinLove({ db, online, sendMe, life, logic, news, 
     const A = homeKid(o.from.owner, o.from.kin), p = dragonOf(o.from.owner);
     const head = why === 'no' ? `${o.to.ownerName}${josa(o.to.ownerName, '이', '가')} 청을 정중히 사양했다.`
       : o.kind === 'egg' ? `${o.to.ownerName}에게서 ${o.baby}${josa(o.baby, '을', '를')} 맡아 달라는 청에 답이 오지 않았다.` : `${o.to.ownerName}에게서 ${o.baby}의 일에 답이 오지 않았다.`;
-    if (o.kind === 'egg') { // 알은 청을 보낸 둥지에서 품음 (자리가 없으면 두 용이 직접 품음)
-      const kin = A.k ? A.kin : db.kinLoad(o.from.owner);
-      const egg = p && life.layEgg(kin, p, o.egg, [o.from.name, o.to.name], now);
-      if (A.k) life.diary(A.k, egg ? `${o.baby}${josa(o.baby, '은', '는')} 이 둥지에서 품게 되었다.` : `둥지에 빈자리가 없어 ${o.baby}${josa(o.baby, '은', '는')} 짝과 둘이서 직접 품기로 했다.`, now);
-      if (egg || A.k) kinChanged(o.from.owner, kin);
-      tell(o.from.owner, [head, egg ? `${o.baby}${josa(o.baby, '은', '는')} 이 둥지에서 품는다.` : `둥지에 빈자리가 없어 ${o.from.name}${josa(o.from.name, '과', '와')} ${o.to.name}${josa(o.to.name, '이', '가')} 알을 직접 품기로 했다.`], 'kinlove:gone');
+    if (o.kind === 'egg') { // 알은 어느 둥지도 떠안지 않음: 두 식구가 직접 품으러 데려감 (청을 보낸 둥지로 오지 않음)
+      const line = `${o.baby}${josa(o.baby, '은', '는')} 어느 둥지에도 맡기지 않고 짝과 둘이서 직접 품기로 했다.`;
+      if (A.k) { life.diary(A.k, line, now); kinChanged(o.from.owner, A.kin); }
+      const B = homeKid(o.to.owner, o.to.kin); if (B.k) { life.diary(B.k, line, now); kinChanged(o.to.owner, B.kin); }
+      tell(o.from.owner, [head, `${o.from.name}${josa(o.from.name, '과', '와')} ${o.to.name}${josa(o.to.name, '이', '가')} 알을 직접 품으러 데려갔다.`], 'kinlove:gone');
+      if (why !== 'no') tell(o.to.owner, [`${o.from.ownerName}의 청에 답하지 않은 사이, ${o.from.name}${josa(o.from.name, '과', '와')} ${o.to.name}${josa(o.to.name, '이', '가')} ${o.baby}${josa(o.baby, '을', '를')} 직접 품으러 데려갔다.`], 'kinlove:gone');
       return;
     }
     const kid = A.k && p && life.bornKid(A.kin, p, [o.from.name, o.to.name], o.baby, o.found, o.town, now);
@@ -163,7 +163,7 @@ module.exports = function setupKinLove({ db, online, sendMe, life, logic, news, 
     const o = st.babies.find((x) => x.id === Number(id) && x.to.owner === d.id);
     if (!o) return { error: '그 청은 이미 지나갔다.' };
     const drop = () => { st.babies = st.babies.filter((x) => x !== o); save(); };
-    if (!yes) { drop(); babyFallback(o, 'no', now); return { ok: true, lines: [`${o.from.ownerName}의 청을 정중히 사양했다. ${o.baby}${josa(o.baby, '은', '는')} ${o.from.ownerName}의 둥지에서 ${o.kind === 'egg' ? '품는다' : '자란다'}.`] }; }
+    if (!yes) { drop(); babyFallback(o, 'no', now); return { ok: true, lines: [o.kind === 'egg' ? `${o.from.ownerName}의 청을 정중히 사양했다. ${o.from.name}${josa(o.from.name, '과', '와')} ${o.to.name}${josa(o.to.name, '이', '가')} ${o.baby}${josa(o.baby, '을', '를')} 직접 품으러 데려갔다.` : `${o.from.ownerName}의 청을 정중히 사양했다. ${o.baby}${josa(o.baby, '은', '는')} ${o.from.ownerName}의 둥지에서 자란다.`] }; }
     const A = homeKid(o.from.owner, o.from.kin), B = homeKid(d.id, o.to.kin);
     if (o.kind === 'egg') {
       const egg = life.layEgg(B.kin, d, o.egg, [o.to.name, o.from.name], now);

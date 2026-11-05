@@ -2034,7 +2034,15 @@ module.exports = [
         if (eggTaken(c, v)) return h.say(eggTaken(c, v));
         const k = c.kAny(v.id); k.data.eggBrought = c.now; h.bond(k, 4);
         h.babyAsk(k, 'egg', v.kind, v.found);
-        h.say(`${v.home}에게 ${KINDS[v.kind].name}의 알을 맡아 품어 달라는 청을 보냈다. 받아들이면 알은 ${v.home}의 둥지에서 깨어나고, 사양하면 이 둥지에서 품는다. (유대 +4)`);
+        h.say(`${v.home}에게 ${KINDS[v.kind].name}의 알을 맡아 품어 달라는 청을 보냈다. 받아들이면 알은 ${v.home}의 둥지에서 깨어나고, 사양하면 두 식구가 알을 직접 품으러 데려간다. (유대 +4)`);
+      } },
+      { label: '둘이 직접 키우라고 돌려보낸다', show: (c, v) => !!v.ref, run: (h, c, v) => {
+        if (eggTaken(c, v)) return h.say(eggTaken(c, v));
+        const k = c.kAny(v.id); k.data.eggBrought = c.now; h.mind(6);
+        const r = k.data.mate.ref, kl = require('./game-logic').hooks.kinLove; // 짝 쪽 둥지에도 알 일을 정했다고 표시 (두 둥지에서 겹쳐 뜨지 않게)
+        if (kl) kl.eggShared(r, c.now, `짝 ${k.name}${c.josa(k.name, '과', '와')}의 ${KINDS[v.kind].name}의 알은 둘이 직접 품기로 했다.`);
+        h.notify(r.owner, `${c.me}의 둥지 ${k.name}${c.josa(k.name, '과', '와')} 당신의 둥지 ${k.data.mate.name} 사이의 ${KINDS[v.kind].name}의 알은 어느 둥지에도 맡기지 않고 둘이 직접 품기로 했다.`, '둥지 소식');
+        h.say(`"너희 둘이 품으렴." ${k.name}${h.josa(k.name, '은', '는')} 짝과 눈을 맞추고 고개를 끄덕인 뒤, 알을 품에 안은 채 날아갔다. (정신 +6)`);
       } },
       { label: '둘이 직접 키우라고 돌려보낸다', show: (c, v) => !v.ref, run: (h, c, v) => {
         const k = c.kAny(v.id); k.data.eggBrought = c.now;

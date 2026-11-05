@@ -352,10 +352,13 @@ const ON_FOE_TURN = ['freeze', 'stun', 'weaken'];
 // 상대의 공격을 받을 때 효과가 나는 자기 상태 (막는 것·빈틈): 이번 턴에 상대가 모두 이미 움직였으면 한 턴 더
 // 안 그러면 늦게 움직인 쪽은 '두 턴 동안'이 상대 공격 한 번만 막게 됨 (비늘 세우기·돌 비늘·안개·하늘 낙하 뒤 빈틈)
 const ON_FOE_HIT = ['harden', 'stone', 'evade', 'exposed'];
-function setSelf(b, f, self) {
+// 결투장에서만 짧게 쓰는 자기 상태 (숨결): 실버의 안개 숨결은 결투에서 두 턴
+const DUEL_SELF = { silver: { evade: 2 } };
+function setSelf(b, f, self, s) {
   const opp = b && (f === b.a ? foesOf(b) : [b.a]).filter((o) => o && o.hp > 0);
   const late = !!opp && opp.length > 0 && f.turnNow != null && opp.every((o) => o.acted === f.turnNow);
-  for (const [k, n] of Object.entries(self)) f.st[k] = n + (late && ON_FOE_HIT.includes(k) ? 1 : 0);
+  const duel = b && b.kind === 'duel' && s && s.isBreath ? DUEL_SELF[f.breath] : null;
+  for (const [k, n0] of Object.entries(self)) { const n = duel && duel[k] != null ? duel[k] : n0; f.st[k] = n + (late && ON_FOE_HIT.includes(k) ? 1 : 0); }
 }
 function applyDebuff(att, def, debuff, chance, element, lines) {
   if (!debuff) return;
@@ -435,7 +438,7 @@ function perform(b, f, foe, act, lines) {
   }
   if (act.type === 'special') {
     const s = f.special;
-    if (s.self) { setSelf(b, f, s.self); lines.push(`${ga(f)} ${s.name}${josa(s.name, '으로', '로')} 몸을 단단히 했다.`); return; }
+    if (s.self) { setSelf(b, f, s.self, s); lines.push(`${ga(f)} ${s.name}${josa(s.name, '으로', '로')} 몸을 단단히 했다.`); return; }
     let dealt = 0;
     for (let i = 0; i < (s.hits || 1); i++) dealt += hit(f, foe, s.power, { element: s.element, special: true }, lines, `${ga(f)} ${s.name}!`);
     if (dealt) applyDebuff(f, foe, s.debuff, s.chance, s.element, lines);
@@ -449,7 +452,7 @@ function perform(b, f, foe, act, lines) {
       f.en -= s.en;
       (f.used ||= []).push(s.name);
       f.cd[act.id] = s.cd + 1; // 이번 턴 끝에 하나 줄어듦
-      if (s.self) setSelf(b, f, s.self);
+      if (s.self) setSelf(b, f, s.self, s);
       if (s.enGain) { const before = f.en; f.en = Math.min(f.enMax, f.en + Math.round(s.enGain * wisK(f))); lines.push(`${ga(f)} 숨을 깊이 골랐다. 기력을 ${Math.round(f.en - before)} 되찾았다.`); }
       if (s.heal) {
         const h = healAmount(f, s);

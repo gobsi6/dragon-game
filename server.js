@@ -529,6 +529,7 @@ const meOf = (d) => ({
   fallen: logic.isFallen(d) ? death.view(d) : null,
   titles: logic.titlesView(d),
   maze: maze.meView(d),               // 지하 회랑: 자격·횃불·오늘 입장
+  city: city.meView(d),               // 고대도시: 열렸는지·안에 있는지·집터 단계·돌아온 골렘
   dexNew: logic.dexHasNew(d), // 도감에 아직 열어 보지 않은 새 칸
   achNew: logic.achHasNew(d), // 아직 열어 보지 않은 새 업적
   yabawi: yabawi.here(d),     // 같은 장소에 야바위꾼이 있으면 { until, greet … }
@@ -868,6 +869,8 @@ const BERSERK = '광폭화한 몸이 제멋대로 날뛴다. 누군가 진정시
 const death = require('./death')({ io, db, online, logic, life, sendMe, broadcastPresence });
 // 지하 회랑: 고대 유적 아래 일곱 층의 공유 미로 (maze.js)
 const maze = require('./maze')({ io, db, online, logic, sendMe, system, death });
+// 고대도시: 지하 회랑을 모두 밝히면 고대 유적 아래로 열리는 도시 (city.js)
+const city = require('./city')({ io, db, online, logic, sendMe });
 // ── 계절과 날씨: 시각으로 정해짐. 바뀌면 모두에게 알리고, 그 지역 이야기 창에도 한 줄 ──
 function weatherAll(now = Date.now()) {
   const se = logic.seasonAt(now);
@@ -2216,6 +2219,7 @@ function onConnect(socket) {
   itemAction('mob:gate', (d, p) => mobs.storyAccept(d, str(p.mob), 'gate'));        // 지하 회랑 입장 부탁
   itemAction('mob:gateturn', (d, p, have) => mobs.storyTurnIn(d, str(p.mob), have, 'gate'));
   maze.bind(socket, () => entryOf(socket));
+  city.bind(socket, () => entryOf(socket));
   itemAction('mob:trade', (d, p, have) => mobs.trade(d, str(p.mob), p.i, have));
   socket.on('order:list', (payload, ack) => {
     if (typeof ack !== 'function') return;
