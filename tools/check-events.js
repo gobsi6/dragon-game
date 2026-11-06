@@ -89,6 +89,7 @@ logic.hooks.kinLove = {
   status: (owner, k) => (k.type === 'drake' && k.data.loveRef && !k.data.loveRef.ended && !k.data.loveRef.declined
     ? { name: k.data.loveRef.name, ownerName: k.data.loveRef.ownerName || '미르', mutual: true, otherLove: 'us', mateUs: !!k.data.mate?.ref, adult: true, late: true, free: !k.data.mate, pending: false } : null),
   lovesBack: () => true, babyShared() {}, eggShared() {},
+  leaveWaiting: () => false, canLeaveTogether: () => false, // 짝과 함께 떠나기 (kinlove.js에 나중에 생김. 없으면 kin_leaving에서 오류로 잘못 잡힘)
 };
 logic.hooks.hoard = () => [{ item: 'silver_ring', qty: 2 }, { item: 'gold_ore', qty: 3 }];
 logic.hooks.bossTrace = () => ({ name: '잿빛 군주', won: true });
