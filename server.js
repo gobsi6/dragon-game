@@ -1423,6 +1423,8 @@ const NOTES_DEFAULT = [{
   ].join('\n'),
 }];
 const notesOf = () => db.worldGet('notes', null) ?? NOTES_DEFAULT;
+// 공지: 업데이트 노트와 따로. 가장 새 공지는 아직 안 읽은 드래곤에게 접속할 때 메인에 한 번 뜸
+const noticesOf = () => db.worldGet('notices', null) || [];
 const kstDate = (t = Date.now()) => new Date(t + 9 * 3600000).toISOString().slice(0, 10); // 한국 날짜 YYYY-MM-DD
 
 const welcomeOf = () => { const w = db.worldGet('welcome', null); return w && w.text ? { text: w.text, ver: w.ver || 1 } : { text: WELCOME_DEFAULT, ver: 1 }; };
@@ -1602,6 +1604,7 @@ function onConnect(socket) {
   if (dragon) enterWorld(socket, dragon);
   socket.emit('welcome', { ...welcomeOf(), seen: db.welcomeSeen(user.id) }); // 환영 공지 (읽지 않은 판이면 화면이 띄움)
   socket.emit('notes:latest', { id: notesOf()[0]?.id || 0 }); // 가장 새 업데이트 노트 (읽지 않았으면 메뉴에 점)
+  { const nt = noticesOf()[0] || null; socket.emit('notices:latest', { id: nt?.id || 0, notice: nt }); } // 가장 새 공지 (안 읽었으면 메인에 뜸)
   socket.emit('rampage:list', arena.rampages());
   socket.emit('boss', boss.view());
   socket.emit('weather', weatherAll());
@@ -1826,7 +1829,7 @@ function onConnect(socket) {
     const key = str(payload?.key);
     const c = logic.combatJson(entry.dragon);
     const seen = { ...(c.seen || {}) };
-    if (key === 'notes' || key === 'slate') {
+    if (key === 'notes' || key === 'slate' || key === 'notices') {
       const v = Number(payload?.value);
       if (!Number.isFinite(v) || v < 0) return ack({ error: '이상한 값이다.' });
       if (v <= (seen[key] || 0)) return ack({ ok: true }); // 뒤로 돌아가지 않음
@@ -2509,6 +2512,49 @@ function onConnect(socket) {
     db.gmLog(socket.data.user.username, null, `환영 공지를 고침${p?.again ? ' (모두에게 다시 띄움)' : ''}`);
     if (p?.again) io.emit('welcome', { ...w, seen: -1 }); // 접속 중인 모두에게 바로 (seen −1: 다시 띄우라는 뜻)
     ack({ ok: true, welcome: w });
+  });
+
+  // ── 공지 (업데이트 노트와 따로) ──
+  socket.on('notices:get', (p, ack) => { if (typeof ack === 'function') ack({ ok: true, list: noticesOf() }); });
+  socket.on('gm:notice:save', (p, ack) => {
+    if (typeof ack !== 'function') return;
+    if (!socket.data.user?.is_gm) return ack({ error: 'GM만 쓸 수 있다.' });
+    const title = str(p?.title).replace(/\s+/g, ' ').slice(0, NOTE.titleMax);
+    const body = (typeof p?.body === 'string' ? p.body : '').replace(/\r/g, '').replace(/[ \t]+\n/g, '\n').trim().slice(0, NOTE.bodyMax);
+    if (!title) return ack({ error: '제목을 적자.' });
+    if (!body) return ack({ error: '내용을 적자.' });
+    const list = noticesOf().slice(), id = Number(p?.id) || 0;
+    if (id) {
+      const i = list.findIndex((n) => n.id === id); if (i < 0) return ack({ error: '그 공지를 찾지 못했다.' });
+      list[i] = { ...list[i], title, body }; db.worldSet('notices', list);
+      db.gmLog(socket.data.user.username, null, `공지를 고침: ${title}`);
+      if (i === 0) io.emit('notices:latest', { id: list[0].id, notice: list[0], edited: true }); // 가장 새 공지를 고치면 메뉴 내용만 바꿈 (다시 띄우지 않음)
+      return ack({ ok: true, list });
+    }
+    const n = { id: Date.now(), date: kstDate(), title, body };
+    list.unshift(n); db.worldSet('notices', list.slice(0, NOTE.max));
+    db.gmLog(socket.data.user.username, null, `공지를 올림: ${title}`);
+    io.emit('notices:latest', { id: n.id, notice: n }); // 접속 중인 모두에게도 바로 뜸
+    ack({ ok: true, list: noticesOf() });
+  });
+  // 다시 띄우기: 이미 읽은 드래곤(올린 GM 포함)에게도 다음 접속 때·지금 바로 다시 뜨게 (새 번호를 붙여 맨 위로)
+  socket.on('gm:notice:again', (p, ack) => {
+    if (typeof ack !== 'function') return;
+    if (!socket.data.user?.is_gm) return ack({ error: 'GM만 쓸 수 있다.' });
+    const list = noticesOf().slice(), i = list.findIndex((x) => x.id === Number(p?.id)); if (i < 0) return ack({ error: '그 공지를 찾지 못했다.' });
+    const n = { ...list[i], id: Date.now() }; list.splice(i, 1); list.unshift(n); db.worldSet('notices', list);
+    db.gmLog(socket.data.user.username, null, `공지를 다시 띄움: ${n.title}`);
+    io.emit('notices:latest', { id: n.id, notice: n });
+    ack({ ok: true, list });
+  });
+  socket.on('gm:notice:delete', (p, ack) => {
+    if (typeof ack !== 'function') return;
+    if (!socket.data.user?.is_gm) return ack({ error: 'GM만 쓸 수 있다.' });
+    const list = noticesOf(), n = list.find((x) => x.id === Number(p?.id)); if (!n) return ack({ error: '그 공지를 찾지 못했다.' });
+    const next = list.filter((x) => x.id !== n.id); db.worldSet('notices', next);
+    db.gmLog(socket.data.user.username, null, `공지를 지움: ${n.title}`);
+    io.emit('notices:latest', { id: next[0]?.id || 0, notice: next[0] || null, edited: true });
+    ack({ ok: true, list: next });
   });
 
   // ── 업데이트 노트 ──

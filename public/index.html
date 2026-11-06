@@ -5922,9 +5922,12 @@
   }
   function markNoticeSeen(id) { if (id && id > SEEN.num('notices')) SEEN.set('notices', id); renderNotesDot(); }
   function openNotices() {
-    $('menu').hidden = true;
+    $('menu').hidden = true; $('menu-btn').setAttribute('aria-expanded', 'false');
+    let answered = false;
+    setTimeout(() => { if (!answered) toast('공지를 불러오지 못했다. 서버가 아직 공지 기능이 없는 예전 판일 수 있다.'); }, 4000); // 서버가 답하지 않으면 (server.js가 예전 판일 때)
     socket.emit('notices:get', {}, (res) => {
-      if (res.error) return toast(res.error);
+      answered = true;
+      if (!res || res.error) return toast(res?.error || '공지를 불러오지 못했다.');
       drawNotices(res.list); if (!$('notices-dlg').open) $('notices-dlg').showModal();
       markNoticeSeen(res.list[0]?.id || 0);
     });
@@ -13261,7 +13264,7 @@
     wsec.appendChild(wlRow);
 
     // 공지: 새로 올리기·고치기·지우기 (가장 새 공지는 안 읽은 드래곤에게 접속할 때 메인에 뜸)
-    const ncsec = gmSection(body, '공지', "메뉴의 '공지'에 새것부터 쌓인다. 새로 올리면 지금 접속한 모두와, 나중에 접속하는 드래곤에게 메인에 한 번 뜬다. 고치기는 다시 띄우지 않는다.");
+    const ncsec = gmSection(body, '공지', "메뉴의 '공지'에 새것부터 쌓인다. 새로 올리면 지금 접속한 모두와, 나중에 접속하는 드래곤에게 메인에 한 번 뜬다(올린 GM은 올리는 순간 본 것으로 친다). 고치기는 다시 띄우지 않고, '다시 띄우기'를 누르면 이미 읽은 드래곤에게도 다시 뜬다.");
     GM.notice ||= { id: 0, title: '', body: '' };
     const ncTitle = gEl('input', 'input'); ncTitle.maxLength = 60; ncTitle.placeholder = '제목 (예: 장비 착용 레벨 안내)'; ncTitle.value = GM.notice.title; ncTitle.setAttribute('aria-label', '공지 제목');
     ncTitle.addEventListener('input', () => { GM.notice.title = ncTitle.value; });
@@ -13279,6 +13282,7 @@
     for (const n of GM.notices || []) {
       const r = gmRow(ncsec, `${n.date || ''} · ${n.title}`);
       gBtn(r, '고치기', () => { GM.notice = { id: n.id, title: n.title, body: n.body }; renderGm(); }, 'link');
+      gBtn(r, '다시 띄우기', () => { if (!confirm(`'${n.title}' 공지를 모두에게 다시 띄울까? 이미 읽은 드래곤에게도 뜬다.`)) return; gmCall('gm:notice:again', { id: n.id }, (res) => { GM.notices = res.list; toast('공지를 다시 띄웠다.'); renderGm(); }); }, 'link');
       gBtn(r, '지우기', () => { if (!confirm(`'${n.title}' 공지를 지울까?`)) return; gmCall('gm:notice:delete', { id: n.id }, (res) => { GM.notices = res.list; toast('공지를 지웠다.'); renderGm(); }); }, 'link');
     }
 
