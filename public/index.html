@@ -15085,7 +15085,8 @@
     const h = CT.v?.me; if (!h || !h.plot) return [];
     const out = [];
     h.golems.forEach((g) => { const s = gState(g);
-      if (s === 'back') out.push({ t: `${g.name} 돌아옴`, b: '보내기', a: `again:${g.i}`, pri: true });
+      if (durLow(g) && s !== 'work' && s !== 'due') out.push({ t: `${g.name} 손질이 필요하다 · 내구도 ${g.dur}`, b: '손질', a: `mend:${g.i}` }); // 보내기 전에 먼저
+      if (s === 'back') out.push({ t: `${g.name} 돌아옴 · ${repSum(g.report)}`, b: '보내기', a: `again:${g.i}`, pri: true });
       else if (s === 'due') out.push({ t: `${g.name} 돌아오는 중`, b: '맞이하기', a: 'get' });
       else if (s === 'idle') out.push({ t: `${g.name} 쉬는 중`, b: '보내기', a: `golem:${g.i}` });
       else if (s === 'off' && !g.gate && Object.entries(CT.v.rules.repair).every(([k, n]) => (h.inv[k] || 0) >= n)) out.push({ t: '쓰러진 골렘을 고칠 수 있다', b: '고치기', a: `golem:${g.i}` }); });
@@ -15103,7 +15104,7 @@
     return out;
   }
   function homeAct(a) {
-    if (a === 'get') return cityCall('city:get');
+    if (a === 'get') { const due = CT.v.me.golems.filter((g) => gState(g) === 'due').map((g) => g.i); return cityCall('city:get', {}, () => haulToast(due)); }
     if (a === 'put') return cityCall('city:put');
     if (a === 'req') return cityCall('city:req');
     if (a === 'give') return cityCall('city:give');
@@ -15112,20 +15113,24 @@
     if (a === 'gifts') { CT.tab = 'plan'; renderHome(); setTimeout(() => document.querySelector('#city-home-dlg .hm-gifts')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50); return; }
     const [k, i] = a.split(':');
     if (k === 'golem') { CT.sel = 'golems'; CT.gopen = +i; CT.tab = 'golems'; return renderHome(); }
+    if (k === 'mend') { const h = CT.v.me, g = h.golems[+i], by = canPay(h, mendCostOf(g, 'seal')) ? 'seal' : canPay(h, mendCostOf(g, 'mat')) ? 'mat' : null;
+      if (by) return cityCall('city:mend', { i: +i, by });
+      CT.sel = 'golems'; CT.gopen = +i; CT.tab = 'golems'; renderHome(); return toast('손질할 인장이나 재료가 모자란다.'); }
     if (k === 'again') { const g = CT.v.me.golems[+i], rep = g.report; return cityCall('city:send', { i: +i, job: rep.job === 'build' && !CT.v.me.rooms.some((r) => r.state === 'cur' && r.h < r.hours) ? 'city' : rep.job, hours: rep.hours }); }
   }
   // 할 일 모두 처리: 목록 순서대로 서버에 차례로 보냄. 골렘은 하던 일을 같은 시간만큼 다시, 쉬는 골렘은 공사(공사가 다 찼으면 도시 일손) 4시간
   async function homeAll() {
     if (CT.busy) return; CT.busy = true; renderHome();
     const call = (ev, p) => new Promise((r) => socket.emit(ev, p || {}, (res) => { if (res?.view) CT.v = res.view; r(res || {}); }));
-    let ok = 0; const fail = [], tried = new Set();
+    let ok = 0; const fail = [], tried = new Set(), hauls = [];
     for (let pass = 0; pass < 3; pass++) { // 고친 골렘처럼 처리하다 새로 생긴 할 일도 이어서 (같은 일은 한 번만)
      const list = homeTodo().filter((t) => !t.manual && !tried.has(t.t + t.a)); if (!list.length) break; // 골렘 불러들이기는 직접 고르게
      for (const t of list) { tried.add(t.t + t.a);
       const h = CT.v.me, [k, x] = t.a.split(':'), g = x != null ? h.golems[+x] : null;
       const curR = h.rooms.find((r) => r.state === 'cur'), buildOk = !!curR && curR.h < curR.hours;
       let ev, p = {};
-      if (k === 'get') ev = 'city:get';
+      if (k === 'get') { ev = 'city:get'; t.due = h.golems.filter((o) => gState(o) === 'due').map((o) => o.i); }
+      else if (k === 'mend') { const by = canPay(h, mendCostOf(g, 'seal')) ? 'seal' : canPay(h, mendCostOf(g, 'mat')) ? 'mat' : null; if (!by) { fail.push(`${g.name} 손질: 인장이나 재료가 모자란다`); continue; } ev = 'city:mend'; p = { i: +x, by }; }
       else if (k === 'put') ev = 'city:put';
       else if (k === 'req') ev = 'city:req';
       else if (k === 'give') ev = 'city:give';
@@ -15135,11 +15140,11 @@
       else if (k === 'golem') { ev = 'city:send'; p = { i: +x, job: buildOk ? 'build' : 'city', hours: 4 }; }
       if (!ev) continue;
       const res = await call(ev, p);
-      if (res.error) fail.push(`${t.t}: ${res.error}`); else ok++;
+      if (res.error) fail.push(`${t.t}: ${res.error}`); else { ok++; if (t.due) hauls.push(...CT.v.me.golems.filter((o) => o.report && t.due.includes(o.i)).map((o) => `${o.name}: ${repSum(o.report)}`)); }
      }
     }
     CT.busy = false; renderCityAll();
-    toast(fail.length ? `${ok}개를 처리했다. 하지 못한 것 ${fail.length}개 · ${fail[0]}` : `할 일 ${ok}개를 모두 처리했다.`);
+    toast((fail.length ? `${ok}개를 처리했다. 하지 못한 것 ${fail.length}개 · ${fail[0]}` : `할 일 ${ok}개를 모두 처리했다.`) + (hauls.length ? ` 가져온 것 — ${hauls.join(' / ')}` : ''));
   }
   function renderHome() {
     const body = $('city-home-body'), v = CT.v; if (!v) return;
@@ -15560,39 +15565,70 @@
   const GST = { back: ['돌아옴', 'ok'], due: ['돌아오는 중', 'ok'], work: ['일하는 중', 'cur'], idle: ['쉬는 중', ''], off: ['쓰러짐', 'lk'] };
   function golemsD(h) {
     const v = CT.v, G = h.golems, cnt = (s) => G.filter((g) => gState(g) === s).length;
-    const line = (g) => { const s = gState(g); return s === 'back' ? `${v.rules.jobs[g.report.job]} ${g.report.hours}시간 다녀옴` : s === 'due' ? '방금 돌아왔다 · 눌러 맞이하기' : s === 'work' ? `${v.rules.jobs[g.job]} · ${ctLeft(g.until - Date.now())} 남음` : s === 'idle' ? '시킬 일을 기다린다' : (g.gate ? `${g.gate}${ctJ(g.gate, '을', '를')} 되살리면 고칠 수 있다` : Object.entries(v.rules.repair).map(([k, n]) => `${k === 'bog_iron' ? '늪철' : '흑요석'} ${n}`).join(' · ') + '로 깨울 수 있다'); };
+    const line = (g) => { const s = gState(g); return s === 'back' ? `${v.rules.jobs[g.report.job]} ${g.report.hours}시간 · ${repSum(g.report)}` : s === 'due' ? '방금 돌아왔다 · 눌러 맞이하기' : s === 'work' ? `${v.rules.jobs[g.job]} · ${ctLeft(g.until - Date.now())} 남음` : s === 'idle' ? '시킬 일을 기다린다' : (g.gate ? `${g.gate}${ctJ(g.gate, '을', '를')} 되살리면 고칠 수 있다` : Object.entries(v.rules.repair).map(([k, n]) => `${k === 'bog_iron' ? '늪철' : '흑요석'} ${n}`).join(' · ') + '로 깨울 수 있다'); };
     const act = (g) => { const s = gState(g); if (s === 'work' && h.perk && h.perk.kind === 'recall' && h.perk.on && h.perk.left > 0) return `<button type="button" class="btn sm" data-ct="perkg:${g.i}" title="망루에서 깃발을 흔들어 바로 돌아오게 한다">불러들이기</button>`; return s === 'back' ? `<button type="button" class="btn sm primary" data-ct="act:again:${g.i}">보내기</button>` : s === 'due' ? '<button type="button" class="btn sm primary" data-ct="act:get">맞이하기</button>' : ''; };
     const rows = G.map((g) => { const on = CT.gopen === g.i, s = gState(g);
-      return `<li class="gr ${s === 'due' ? 'back' : s}${on ? ' open' : ''}"><div class="gr-h"><button type="button" class="gr-t" data-ct="gopen:${g.i}" aria-expanded="${on}"><span class="gr-ic">${dhIc('golem').replace('dh-ic', 'dh-ic sm')}</span><span class="gr-n"><span class="gr-nt"><b>${g.awake ? g.name : '쓰러진 골렘'}</b><span class="tg ${GST[s][1]}">${GST[s][0]}</span></span><small>${line(g)}</small></span><span class="chev2"></span></button>${act(g)}</div>${on ? `<div class="gr-b">${golemBody(h, g)}</div>` : ''}</li>`; }).join('');
+      return `<li class="gr ${s === 'due' ? 'back' : s}${on ? ' open' : ''}"><div class="gr-h"><button type="button" class="gr-t" data-ct="gopen:${g.i}" aria-expanded="${on}"><span class="gr-ic">${dhIc('golem').replace('dh-ic', 'dh-ic sm')}</span><span class="gr-n"><span class="gr-nt"><b>${g.awake ? g.name : '쓰러진 골렘'}</b><span class="tg ${GST[s][1]}">${GST[s][0]}</span>${g.awake ? `<span class="g-dur${durLow(g) ? ' low' : ''}" title="내구도">내구 ${g.dur ?? 100}</span>` : ''}</span><small>${line(g)}</small></span><span class="chev2"></span></button>${act(g)}</div>${on ? `<div class="gr-b">${golemBody(h, g)}</div>` : ''}</li>`; }).join('');
     return `<div class="dh"><b>${dhIc('golem')}골렘</b><span class="tg">${G.filter((g) => g.awake).length} / ${G.length} 깨어남</span></div>
+      ${G.some((g) => gState(g) === 'back') ? `<div class="g-haul"><b>돌아온 골렘이 가져온 것</b>${G.filter((g) => gState(g) === 'back').map((g) => `<div class="g-haul-r"><span>${ctEsc(g.name)}</span><em>${v.rules.jobs[g.report.job]} ${g.report.hours}시간</em><p>${repSum(g.report)}</p></div>`).join('')}</div>` : ''}
       <div class="gsum-row"><span><b>${cnt('back') + cnt('due')}</b> 돌아옴</span><span><b>${cnt('work')}</b> 일하는 중</span><span><b>${cnt('idle')}</b> 쉬는 중</span><span><b>${cnt('off')}</b> 쓰러짐</span></div>
       <ul class="glist">${rows}</ul>
       <small class="note">기력 ${S.me.en} / ${S.me.enMax} · 골렘 1시간에 기력 ${v.rules.golemEn} · 오늘 보탠 재건도 ${h.daySon} / ${v.rules.dayCap}${h.bank ? ` · 다음 날로 넘긴 재건도 ${h.bank}` : ''}</small>`;
   }
   function golemBody(h, g) {
-    const nm = g.awake ? `<div class="g-rename"><input type="text" class="input" maxlength="12" value="${ctEsc(g.name)}" aria-label="골렘 이름" data-gname="${g.i}"><button type="button" class="btn sm" data-ct="rename:${g.i}">이름 바꾸기</button></div>` : '';
-    return nm + golemBody0(h, g);
+    if (!g.awake) return golemBody0(h, g);
+    const editing = !g.named || (CT.gedit || {})[g.i];
+    const nm = editing
+      ? `<div class="g-name"><label for="gname-${g.i}">${g.named ? '새 이름' : '이름 짓기'}</label><input id="gname-${g.i}" type="text" maxlength="12" value="${ctEsc((CT.gdraft || {})[g.i] ?? (g.named ? g.name : ''))}" placeholder="${ctEsc(g.name)}" autocomplete="off" data-gname="${g.i}"><button type="button" class="btn sm" data-ct="rename:${g.i}">${g.named ? '바꾸기' : '짓기'}</button>${g.named ? `<button type="button" class="btn sm" data-ct="gedit:${g.i}:off">취소</button>` : ''}</div>`
+      : `<div class="g-name locked"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span>${ctEsc(g.name)}</span><button type="button" class="g-edit" data-ct="gedit:${g.i}:on" aria-label="${ctEsc(g.name)} 이름 수정">수정</button></div>`;
+    const W = CT.v.rules.wear || { max: 100, perHour: {} }, dur = g.dur ?? W.max;
+    const mendBtn = (by, label) => { const c = mendCostOf(g, by); return c ? `<button type="button" class="btn sm" data-ct="mend:${g.i}:${by}" ${canPay(h, c) && !g.job ? '' : 'disabled'}>${label(c)}</button>` : ''; };
+    const durRow = `<div class="g-dur-box"><div class="rm-row"><span>내구도</span><b>${dur} / ${W.max}</b></div><div class="bar${dur < (W.low ?? 30) ? ' low' : ''}"><i style="width:${(dur / W.max) * 100}%"></i></div>${dur < W.max && !g.job ? `<div class="g-mend">${mendBtn('seal', (c) => `인장 ${c.seals}개로 손질`)}${mendBtn('mat', (c) => `${Object.entries(c.items).map(([k, n]) => `${ITEMS_NAME(k)} ${n}`).join(' · ')}로 손질`)}</div>` : ''}</div>`;
+    return nm + durRow + golemBody0(h, g);
   }
   function golemBody0(h, g) {
     const v = CT.v, s = gState(g);
     if (s === 'off' && g.gate) return `<p class="note">금이 깊게 간 골렘이다. 집터의 ${g.gate}${ctJ(g.gate, '을', '를')} 되살려 연장을 갖춘 뒤에 고칠 수 있다.</p>`;
     if (s === 'off') { const ok = Object.entries(v.rules.repair).every(([k, n]) => (h.inv[k] || 0) >= n);
       return `<p class="note">고쳐서 깨우면 골렘이 한 기 늘어난다.</p><ul class="mats">${Object.entries(v.rules.repair).map(([k, n]) => `<li class="${(h.inv[k] || 0) >= n ? 'ok' : 'lack'}"><span>${k === 'bog_iron' ? '늪철' : '흑요석'}</span><b>${h.inv[k] || 0} / ${n}</b></li>`).join('')}</ul><div class="acts"><button type="button" class="btn primary" data-ct="repair:${g.i}" ${ok ? '' : 'disabled'}>고쳐서 깨운다</button></div>`; }
-    if (s === 'work') return `<div class="rm-row"><span>${v.rules.jobs[g.job]} ${g.hours}시간</span><b>${ctLeft(g.until - Date.now())} 남음</b></div><div class="bar"><i style="width:${Math.min(100, ((Date.now() - g.start) / (g.until - g.start)) * 100)}%"></i></div><p class="eta">${ctClock(g.until)}에 돌아온다</p><div class="g-cancel"><button type="button" class="btn sm" data-ct="gcancel:${g.i}">작업 중단</button><small class="note">다 채운 시간만큼만 일한 것으로 치고, 하지 못한 시간의 기력은 돌려받는다.</small></div>`;
+    if (s === 'work') return `<div class="rm-row"><span>${v.rules.jobs[g.job]} ${g.hours}시간</span><b>${ctLeft(g.until - Date.now())} 남음</b></div><div class="bar"><i style="width:${Math.min(100, ((Date.now() - g.start) / (g.until - g.start)) * 100)}%"></i></div><p class="eta">${ctClock(g.until)}에 돌아온다</p><div class="g-cancel"><button type="button" class="btn sm" data-ct="gcancel:${g.i}">작업 중단</button><small class="note">다 채운 시간만큼만 일한 것으로 치고, 하지 못한 시간의 기력과 내구도는 돌려받는다.</small></div>`;
     if (s === 'due') return '<p class="note">일을 마치고 돌아왔다. 맞이하면 가져온 것이 들어온다.</p>';
     let rep = '';
     if (s === 'back') { const r = g.report, got = Object.entries(r.got || {});
       rep = `<div class="box"><span class="rm-k">${v.rules.jobs[r.job]} ${r.hours}시간 · 가져온 것</span><div class="items">${got.length ? got.map(([k, n]) => `<span class="it">${ITEMS_NAME(k)} <b>${n}</b></span>`).join('') : ''}${r.room ? `<span class="it">${r.room} 공사 <b>+${r.roomH ?? r.hours}시간</b></span>` : ''}${r.extra ? `<span class="it">남은 ${r.extra}시간은 도시 공사</span>` : ''}${r.son ? `<span class="it">재건도 <b>+${r.son}</b></span>` : ''}<span class="it">석공 인장 <b>+${r.seals}</b></span>${r.frag ? '<span class="it">기억 조각 <b>1</b></span>' : ''}</div>${(r.job === 'build' || r.job === 'city') && r.son < r.hours ? `<small class="note">오늘 보탤 수 있는 재건도(${v.rules.dayCap})를 채워, 남은 재건도는 다음 날 먼저 보태진다.</small>` : ''}</div>`; }
     const curR = h.rooms.find((r) => r.state === 'cur'), buildOk = !!curR && curR.h < curR.hours;
     const job = CT.job[g.i] || (buildOk ? 'build' : 'city'), hrs = CT.hrs[g.i] || 4, cost = hrs * v.rules.golemEn;
-    const desc = { build: buildOk ? `${curR.name} 공사 시간을 채운다 (남은 ${curR.hours - curR.h}시간)` : '지금 칸의 공사 시간은 다 채웠다. 재료를 채워야 한다.', city: '도시 공사를 돕는다. 1시간마다 재건도 1 (하루 상한 안에서).', gather: '태양가루·동굴 수정·빛버섯 포자·종유석 가루 같은 도시 재료를 모아 온다. 구역 재료함에 넣을 수 있다.', dig: '옛 타일 조각·바랜 천 조각, 가끔 종유석 가루를 찾아온다. 재건된 구역에서는 아주 가끔 그 구역의 기억 조각도 나온다.' }[job];
+    const Wr = v.rules.wear || { perHour: {} }, dur = g.dur ?? 100, wear = hrs * (Wr.perHour?.[job] || 3), worn = dur < wear;
+    const desc = { build: buildOk ? `${curR.name} 공사 시간을 채운다 (남은 ${curR.hours - curR.h}시간)` : '지금 칸의 공사 시간은 다 채웠다. 재료를 채워야 한다.', city: '도시 공사를 돕는다. 1시간마다 재건도 1 (하루 상한 안에서).', gather: '태양가루·동굴 수정·빛버섯 포자 같은 도시 재료를 모아 온다. 종유석 가루는 가끔. 구역 재료함에 넣을 수 있다.', dig: '종유석 가루가 잘 나온다. 옛 타일 조각·바랜 천 조각도 찾아온다. 재건된 구역에서는 아주 가끔 그 구역의 기억 조각도 나온다.' }[job];
     return `${rep}<span class="rm-k">시킬 일</span><div class="seg s4">${Object.entries(v.rules.jobs).map(([k, n]) => `<button type="button" data-ct="job:${g.i}:${k}" class="${job === k ? 'on' : ''}" ${k === 'build' && !buildOk ? 'disabled' : ''}>${n}</button>`).join('')}</div>
       <p class="note">${desc}</p>
       <span class="rm-k">작동 시간</span><div class="seg s4">${v.rules.hours.map((x) => `<button type="button" data-ct="hrs:${g.i}:${x}" class="${hrs === x ? 'on' : ''}">${x}시간</button>`).join('')}</div>
-      <div class="sum"><div class="rm-row"><span>쓰는 기력</span><b>${cost}</b></div><div class="rm-row"><span>남는 기력</span><b>${S.me.en - cost}</b></div><div class="rm-row"><span>돌아오는 시각</span><b>${ctClock(Date.now() + hrs * 3600000)}</b></div></div>
-      <div class="acts"><button type="button" class="btn primary" data-ct="send:${g.i}" ${S.me.en < cost || (job === 'build' && !buildOk) ? 'disabled' : ''}>기력을 불어넣는다</button></div>`;
+      <div class="sum"><div class="rm-row"><span>쓰는 기력</span><b>${cost}</b></div><div class="rm-row"><span>남는 기력</span><b>${S.me.en - cost}</b></div><div class="rm-row${worn ? ' bad' : ''}"><span>닳는 내구도</span><b>${wear}${worn ? ' · 모자람' : ` (남는 ${dur - wear})`}</b></div><div class="rm-row"><span>돌아오는 시각</span><b>${ctClock(Date.now() + hrs * 3600000)}</b></div></div>
+      <div class="acts"><button type="button" class="btn primary" data-ct="send:${g.i}" ${S.me.en < cost || worn || (job === 'build' && !buildOk) ? 'disabled' : ''}>기력을 불어넣는다</button></div>${worn ? '<small class="note">내구도가 모자라 보낼 수 없다. 위에서 손질하거나 시간을 줄여 보자.</small>' : ''}`;
   }
-  const ITEMS_NAME = (k) => ({ sun_dust: '태양가루', cave_crystal: '동굴 수정', shroom_spore: '빛버섯 포자', drip_dust: '종유석 가루', old_tile: '옛 타일 조각', faded_cloth: '바랜 천 조각', rune_stone: '룬이 새겨진 돌' }[k] || k);
+  const ITEMS_NAME = (k) => ({ sun_dust: '태양가루', cave_crystal: '동굴 수정', shroom_spore: '빛버섯 포자', drip_dust: '종유석 가루', old_tile: '옛 타일 조각', faded_cloth: '바랜 천 조각', rune_stone: '룬이 새겨진 돌', bog_iron: '늪철', obsidian: '흑요석' }[k] || S.items?.[k]?.name || k);
+  // 골렘이 가져온 것 한 줄: '태양가루 2 · 동굴 수정 1 · 인장 +2'
+  function repSum(r) {
+    if (!r) return '';
+    const parts = Object.entries(r.got || {}).map(([k, n]) => `${ITEMS_NAME(k)} ${n}`);
+    if (r.room) parts.push(`${r.room} 공사 +${r.roomH ?? r.hours}시간`);
+    if (r.son) parts.push(`재건도 +${r.son}`);
+    if (r.frag) parts.push('기억 조각 1');
+    if (r.seals) parts.push(`인장 +${r.seals}`);
+    if (!Object.keys(r.got || {}).length && (r.job === 'gather' || r.job === 'dig')) parts.unshift('빈손');
+    return parts.join(' · ');
+  }
+  const durLow = (g) => g.awake && g.dur != null && g.dur < (CT.v.rules.wear?.low ?? 30);
+  function mendCostOf(g, by) { // city.js의 mendCost와 같은 셈
+    const W = CT.v.rules.wear, M = CT.v.rules.mend, lack = (W?.max ?? 100) - (g.dur ?? 100); if (!M || lack <= 0) return null;
+    if (by === 'seal') return { seals: Math.ceil(lack / M.seal), items: {} };
+    const n = Math.ceil(lack / M.mat.per); return { seals: 0, items: Object.fromEntries(Object.entries(M.mat.cost).map(([k, c]) => [k, c * n])) };
+  }
+  const canPay = (h, c) => !!c && h.seals >= c.seals && Object.entries(c.items).every(([k, n]) => (h.inv[k] || 0) >= n);
+  function haulToast(before) { // 맞이한 골렘들이 가져온 것을 한 번에
+    const got = CT.v.me.golems.filter((g) => g.report && before.includes(g.i));
+    if (got.length) toast(got.map((g) => `${g.name}: ${repSum(g.report)}`).join(' / '));
+  }
 
   // ════ 입구의 석판 (처음 내려가면, 그 뒤엔 도시 카드에서 다시 읽기) ════
   const INTRO = [ // 이야기는 기억의 벽 조각에 흩어 두고, 석판은 부름만 남김 (~로 시작하면 닳아 못 읽는 줄)
@@ -15719,6 +15755,8 @@
     if (a.startsWith('goldq:')) { const inp = document.getElementById('cc-gold-n'); if (!inp) return; const z = CT.v.zones.find((x) => x.state === 'going'), gb = z && z.box.find((m) => m.id === 'gold'), left = gb ? gb.need - gb.put : 0, mine = Math.floor(S.me.gold || 0); const q = a.slice(6); inp.value = q === 'max' ? Math.min(left, mine) : Math.min(left, mine, (Number(inp.value) || 0) + Number(q)); return; }
     if (a === 'todo') { CT.todoOpen = !CT.todoOpen; return renderHome(); }
     if (a === 'all') return homeAll();
+    if (k === 'gedit') { (CT.gedit ||= {})[x] = y === 'on'; if (y !== 'on' && CT.gdraft) delete CT.gdraft[x]; renderHome(); if (y === 'on') setTimeout(() => { const el = $(`gname-${x}`); el?.focus(); el?.select(); }, 0); return; }
+    if (k === 'mend') return cityCall('city:mend', { i: +x, by: y });
     if (k === 'mk') return cityCall('city:craft', { s: x, n: +(y || 1) });
     if (k === 'bp') return cityCall('city:bp', { s: x });
     if (k === 'look') return cityCall('city:look', { room: x, floor: y });
@@ -15752,7 +15790,7 @@
       if (!confirm(msg)) return;
       return cityCall('city:cancel', { i: +x });
     }
-    if (k === 'rename') { const inp = document.querySelector(`#city-home-dlg [data-gname="${x}"]`); return cityCall('city:rename', { i: +x, name: inp ? inp.value : '' }); }
+    if (k === 'rename') { const inp = document.querySelector(`#city-home-dlg [data-gname="${x}"]`); return cityCall('city:rename', { i: +x, name: inp ? inp.value : '' }, () => { if (CT.gedit) CT.gedit[x] = false; if (CT.gdraft) delete CT.gdraft[x]; }); }
     if (k === 'slot') { const key = `${x}:${y}`; CT.open = CT.open === key ? null : key; if (CT.open && !CT.scenes[key]) return cityCall('city:scene', { key }, (r) => { CT.scenes[key] = r.scene; }); return renderWall(); }
     if (k === 'frag') { const key = `${x}:${y}`; return cityCall('city:frag', { key }, () => { CT.fresh = key; CT.open = null; const z = key.split(':')[0]; if (CT.v.frags[z].every((_, i) => CT.v.wall[`${z}:${i}`])) CT.sweep = z; }); }
     if (k === 'hand') return cityCall('city:hand', { key: `${x}:${y}` });
@@ -15768,7 +15806,8 @@
   document.addEventListener('keydown', (e) => { const t = e.target.closest && e.target.closest('#city-map .cm-node, #city-home-dlg .hit'); if (t && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); t.dispatchEvent(new MouseEvent('click', { bubbles: true })); } });
   // 골렘이 돌아올 시각이 지나면 한 번 새로 고침 (창이 열려 있을 때)
   setInterval(() => { if (!CT.v || $('city-card').hidden) return; const now = Date.now(); if (CT.v.me.golems.some((g) => g.job && g.until <= now && g.until > now - 61000)) cityCall('city:get'); else if ($('city-home-dlg').open && CT.sel === 'golems' && !document.activeElement?.dataset?.gname) renderHome(); }, 60000); // 이름을 쓰는 중이면 다시 그리지 않음
-  document.addEventListener('keydown', (e) => { const t = e.target; if (t?.dataset?.gname != null && e.key === 'Enter') { e.preventDefault(); cityCall('city:rename', { i: +t.dataset.gname, name: t.value }); } });
+  document.addEventListener('keydown', (e) => { const t = e.target; if (t?.dataset?.gname != null && e.key === 'Enter') { e.preventDefault(); const gi = t.dataset.gname; cityCall('city:rename', { i: +gi, name: t.value }, () => { if (CT.gedit) CT.gedit[gi] = false; if (CT.gdraft) delete CT.gdraft[gi]; }); } if (t?.dataset?.gname != null && e.key === 'Escape' && CT.gedit?.[t.dataset.gname]) { e.preventDefault(); CT.gedit[t.dataset.gname] = false; if (CT.gdraft) delete CT.gdraft[t.dataset.gname]; renderHome(); } });
+  document.addEventListener('input', (e) => { const t = e.target; if (t?.dataset?.gname != null) (CT.gdraft ||= {})[t.dataset.gname] = t.value; });
 
   let caveOpenFn = null; // 시련의 굴 열기 (아래 묶음 안에서 채움)
   (() => {

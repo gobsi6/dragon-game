@@ -5047,3 +5047,43 @@ body.chat-off #say, body.chat-off #chat-view { display: none; }
 /* 골렘 불러들이기 (일하는 중인 골렘) */
 #home-ui .g-cancel { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; margin-top: 8px; }
 #home-ui .g-cancel .note { flex: 1; min-width: 180px; font-size: 12px; }
+.g-haul { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid #EBD3B2; background: #FDF7EE; }
+.g-haul > b { font: 700 13px/1.3 var(--sans); color: var(--hk); }
+.g-haul-r { display: grid; grid-template-columns: auto auto minmax(0, 1fr); align-items: baseline; gap: 4px 8px; font-size: 12.5px; }
+.g-haul-r span { font-weight: 600; color: var(--hk); }
+.g-haul-r em { font-style: normal; font-size: 11.5px; color: var(--hm); }
+.g-haul-r p { margin: 0; color: var(--hk); }
+#home-ui.hm-e .glist .gr-n small { white-space: normal; }
+.g-dur { display: inline-flex; align-items: center; height: 17px; padding: 0 6px; box-sizing: border-box; border: 1px solid var(--hl2); background: #fff; font: 500 10.5px/1 var(--sans); color: var(--hm); font-variant-numeric: tabular-nums; }
+.g-dur.low { border-color: var(--ht); color: var(--htt); font-weight: 600; }
+.g-name { display: flex; align-items: center; gap: 6px; min-height: 30px; }
+.g-name label { flex: none; font-size: 12px; color: var(--hm); }
+.g-name input { flex: 1; min-width: 0; height: 28px; padding: 0 8px; box-sizing: border-box; border: 1px solid #CDBB9A; background: #fff; font: 500 13px var(--sans); color: var(--hk); border-radius: 2px; }
+.g-name input:focus { outline: 2px solid var(--ht); outline-offset: 0; border-color: var(--ht); }
+#home-ui.hm-e .g-name .btn.sm { min-height: 28px; height: 28px; padding: 0 12px; font-size: 12.5px; }
+.g-name.locked { height: 28px; padding: 0 4px 0 8px; border: 1px solid var(--hl); background: #F3EEE4; color: var(--hm); }
+.g-name.locked svg { flex: none; width: 13px; height: 13px; }
+.g-name.locked span { font: 600 13px var(--sans); color: var(--hk); }
+.g-name.locked small { margin-left: auto; font-size: 11px; color: var(--hm); }
+.g-dur-box { display: flex; flex-direction: column; gap: 6px; }
+.g-dur-box .bar.low i { background: var(--ht) !important; }
+.g-mend { display: flex; flex-wrap: wrap; gap: 6px; }
+#home-ui.hm-e .g-mend .btn.sm { min-height: 30px; padding: 0 10px; font-size: 12px; }
+#home-ui.hm-e .sum .rm-row.bad b { color: #B0442E; }
+
+.g-name.locked .g-edit { margin-left: auto; height: 22px; padding: 0 8px; border: 1px solid transparent; background: none; font: 500 11.5px var(--sans); color: var(--hm); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.g-name.locked .g-edit:hover, .g-name.locked .g-edit:focus-visible { color: var(--hk); border-color: var(--hl2); background: #fff; text-decoration: none; }
+
+/* 내 집터 골렘 탭: 사이트 공통의 푸른 회색이 섞이지 않게 베이지로 통일 */
+#home-ui.hm-e .gr + .gr, #home-ui.hm-e .gr.open .gr-h { border-color: var(--hl); }
+#home-ui.hm-e .gr.open { background: #FBF8F2; }
+#home-ui.hm-e .gr.off .dh-ic { color: #A89878; background: #FBF8F2; }
+#home-ui.hm-e .bar { background: #EAE1D0; box-shadow: none; }
+#home-ui.hm-e .items .it { background: #fff; border-color: var(--hl2); color: var(--hk); }
+#home-ui.hm-e .seg { border-color: #CDBB9A; }
+#home-ui.hm-e .seg button + button { border-left-color: var(--hl2); }
+#home-ui.hm-e .seg button:not(.on) { color: var(--hm); }
+#home-ui.hm-e .seg button:not(.on):hover { background: #F6EFE2; }
+/* 돌아온 골렘의 '가져온 것' 상자: 왼쪽 띠를 돌아옴 아이콘과 같은 호박색으로 */
+#home-ui.hm-e .detail .box { border-left-color: var(--ht); background: #FDF7EE; }
+#home-ui.hm-e .detail .box > .rm-k { color: var(--htt); font-weight: 600; }

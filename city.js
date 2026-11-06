@@ -13,13 +13,15 @@ const CITY_RULES = {
   matSon: { common: 1, uncommon: 3, rare: 8 }, // 재료 10개마다 재건도 (등급별 배수)
   matSeal: 10,                     // 재료 몇 개마다 석공 인장 1
   repair: { bog_iron: 4, obsidian: 2 }, // 쓰러진 골렘 고치기
+  wear: { max: 100, low: 30, perHour: { build: 3, city: 3, gather: 4, dig: 5 } }, // 골렘 내구도: 일한 시간만큼 닳음 (보낼 때 깎이고, 작업 중단이면 하지 못한 시간만큼 돌려받음). low 아래면 할 일에 손질이 뜸
+  mend: { seal: 10, mat: { per: 25, cost: { rune_stone: 1, bog_iron: 1 } } }, // 손질: 석공 인장 1개마다 내구도 10, 또는 (룬이 새겨진 돌 1 + 늪철 1)마다 25
   repairGate: [null, null, 'work'],  // 골렘마다 고치기 전에 되살려야 하는 칸 (세 번째는 작업실)
   golems: 3,                       // 골렘 수 (처음엔 1기만 깨어 있음)
   fragDig: 0.02,                   // 잔해 뒤지기 1시간마다 기억 조각 확률 (재건된 구역의, 아직 벽에 없는 조각만 나옴)
   fragHand: 5,                     // 이미 채워진 조각을 오르딘에게 건네면 받는 인장
   request: { seals: 3, son: 2, pool: [['rune_stone', 8], ['red_clay', 6], ['sea_shell', 6], ['wolf_pelt', 5], ['salt_crystal', 6], ['beast_hide', 5]] },
   gather: [['sun_dust', 0.6, 2], ['cave_crystal', 0.4, 1], ['shroom_spore', 0.4, 1], ['drip_dust', 0.2, 1], ['rune_stone', 0.3, 1]], // [물건, 1시간마다 확률, 최대 개수]
-  dig: [['old_tile', 0.5, 1], ['faded_cloth', 0.35, 1], ['drip_dust', 0.15, 1]],
+  dig: [['old_tile', 0.5, 1], ['faded_cloth', 0.35, 1], ['drip_dust', 0.4, 1]], // 종유석 가루는 잔해 뒤지기가 주된 길 (채집은 가끔 덤)
 };
 // 도시 일곱 구역: 재건도가 차고 재료함이 다 차면 차례로 재건된다 (합 36,000 — 40명이 모두 매일 상한 30을 채워도 30일, 2/3가 열심히 하면 약 40일)
 const ZONES = [
@@ -289,6 +291,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     const m = c.city;
     if (!m.golems) m.golems = GOLEM_NAMES.slice(0, R.golems).map((name, i) => ({ name, awake: i === 0, job: null, hours: 0, start: 0, until: 0, report: null }));
     m.golems.forEach((g, i) => { if (!g.named && OLD_GOLEM_NAMES.includes(g.name)) g.name = GOLEM_NAMES[i]; }); // 예전 기본 이름은 새 기본 이름으로 (직접 지은 이름은 그대로)
+    m.golems.forEach((g) => { if (g.dur == null) g.dur = R.wear.max; }); // 내구도가 생기기 전 골렘은 새것으로
     if (m.seals == null) m.seals = 0; if (!m.frags) m.frags = []; if (m.frac == null) m.frac = 0;
     if (!m.furn || typeof m.furn !== 'object') m.furn = {}; if (!m.furnGot) m.furnGot = {};
     migrateRooms(m);
@@ -676,13 +679,14 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     if (!own(JOBS, job)) return err('그런 일은 없다.');
     hours = Number(hours); if (!R.hours.includes(hours)) return err('시간을 다시 골라야 한다.');
     if (job === 'build') { if (!m.plot) return err('먼저 집터를 골라야 한다.'); const r = plotRooms(m)[curIdx(m)]; if (!r) return err('모든 칸을 되살렸다. 도시 일손으로 보내 보자.'); if (m.rooms[r.id].h >= r.hours) return err(`${r.name}에 필요한 공사 시간은 다 채웠다. 재료를 채워야 한다.`); }
-    const cost = hours * R.golemEn;
+    const cost = hours * R.golemEn, wear = hours * (R.wear.perHour[job] || 3);
+    if (g.dur < wear) return err(`${g.name}의 내구도가 모자란다. (${wear} 필요, 지금 ${g.dur}) 먼저 손질해 주자.`);
     if (d.en < cost) return err(`기력이 모자란다. (${cost} 필요)`);
     if (d.en >= logic.enCap(d)) d.en_at = Date.now();
     d.en -= cost;
     const ms = hours * 3600000 * (m.plot === 'forge' && perkOn(m) ? 1 - PERK.forgeOff[perkLv(m)] : 1) / (Number(process.env.CITY_FAST) || 1); // CITY_FAST: 시험용으로 시간을 빨리 (평소엔 비워 둠)
-    Object.assign(g, { job, hours, start: Date.now(), until: Date.now() + ms, report: null });
-    return { ok: true, lines: [`${ga(g.name)} ${JOBS[job]} ${hours}시간을 하러 갔다. 기력 −${cost}.`] };
+    Object.assign(g, { job, hours, start: Date.now(), until: Date.now() + ms, report: null, dur: g.dur - wear });
+    return { ok: true, lines: [`${ga(g.name)} ${JOBS[job]} ${hours}시간을 하러 갔다. 기력 −${cost}, 내구도 −${wear} (남은 ${g.dur}).`] };
   }
   // 골렘 작업 중단 (일하러 간 골렘을 도중에 데려옴): 그때까지 다 채운 시간만큼만 일한 것으로 치고(가져온 것·재건도·인장도 그만큼),
   // 아직 하지 못한 시간의 기력은 돌려줌. 처음부터 그 시간만큼만 보낸 것과 같아 취소로 얻거나 잃는 것이 없음
@@ -695,6 +699,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     const per = Math.max(1, (g.until - g.start) / g.hours); // 한 시간 몫 (대장간 덤이면 짧음)
     const worked = Math.max(0, Math.min(g.hours - 1, Math.floor((now - g.start) / per)));
     const left = g.hours - worked, back = left * R.golemEn, name = g.name, job = JOBS[g.job];
+    const wearBack = left * (R.wear.perHour[g.job] || 3); g.dur = Math.min(R.wear.max, (g.dur ?? R.wear.max) + wearBack); // 하지 못한 시간만큼 내구도도
     const cap = logic.enCap(d), en0 = d.en;
     d.en = Math.min(cap, d.en + back); // 넘치는 몫은 버림 (기력이 이미 거의 찼을 때)
     if (d.en >= cap && en0 < cap) d.en_at = now;
@@ -704,6 +709,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     const lines = [worked > 0
       ? `${ga(name)} ${job} ${worked}시간만 하고 돌아왔다. 한 만큼 가져온 것은 골렘 탭에서 확인하자.`
       : `${ga(name)} ${eul(job)} 시작하기 전에 돌아왔다.`];
+    lines.push(`하지 못한 ${left}시간만큼 내구도도 ${wearBack} 돌아왔다. (지금 ${g.dur})`);
     lines.push(gotEn > 0 ? `하지 못한 ${left}시간의 기력을 ${gotEn}만큼 돌려받았다.${gotEn < back ? ` (기력이 가득 차 ${back - gotEn}만큼은 넘쳤다)` : ''}` : `하지 못한 ${left}시간의 기력은 이미 가득 차 있어 돌려받지 못했다.`);
     return { ok: true, lines };
   }
@@ -714,8 +720,28 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     const lack = Object.entries(R.repair).filter(([k, n]) => have(d, k) < n);
     if (lack.length) return err(`고치려면 ${lack.map(([k, n]) => `${ITEMS[k].name} ${n}개`).join(', ')}가 있어야 한다.`);
     db.saveState(d, Object.entries(R.repair).map(([k, n]) => ({ id: k, qty: -n })));
-    g.awake = true;
+    g.awake = true; g.dur = R.wear.max;
     return { ok: true, lines: [`쓰러진 골렘의 금 간 몸을 늪철로 잇고 흑요석을 박아 넣었다. 눈에 청록빛이 켜졌다. 골렘 탭에서 이름을 지어 줄 수 있다.`] };
+  }
+  // 손질: 닳은 만큼 한 번에 채움. by = 'seal'(석공 인장) | 'mat'(룬이 새겨진 돌 + 늪철)
+  const mendCost = (g, by) => { const lack = R.wear.max - (g.dur ?? R.wear.max); if (lack <= 0) return null;
+    if (by === 'seal') return { seals: Math.ceil(lack / R.mend.seal), items: {} };
+    const n = Math.ceil(lack / R.mend.mat.per); return { seals: 0, items: Object.fromEntries(Object.entries(R.mend.mat.cost).map(([k, c]) => [k, c * n])) }; };
+  function mend(d, i, by) {
+    const e = ready(d); if (e) return e;
+    const m = ct(d); const g = m.golems[Number(i)];
+    if (!g || !g.awake) return err('손질할 골렘이 아니다.');
+    if (g.job) return err('일하러 간 골렘은 돌아온 뒤에 손질할 수 있다.');
+    if (by !== 'seal' && by !== 'mat') return err('손질할 방법을 골라야 한다.');
+    const c = mendCost(g, by); if (!c) return err(`${g.name}에게는 손질할 곳이 없다.`);
+    if (m.seals < c.seals) return err(`석공 인장이 모자란다. (${c.seals}개 필요, 지금 ${m.seals}개)`);
+    const lack = Object.entries(c.items).filter(([k, n]) => have(d, k) < n);
+    if (lack.length) return err(`손질하려면 ${lack.map(([k, n]) => `${ITEMS[k].name} ${n}개`).join(', ')}가 있어야 한다.`);
+    m.seals -= c.seals;
+    if (Object.keys(c.items).length) db.saveState(d, Object.entries(c.items).map(([k, n]) => ({ id: k, qty: -n })));
+    const before = g.dur; g.dur = R.wear.max;
+    const paid = c.seals ? `석공 인장 ${c.seals}` : Object.entries(c.items).map(([k, n]) => `${ITEMS[k].name} ${n}`).join(', ');
+    return { ok: true, lines: [`${eul(g.name)} 손질했다. 내구도 ${before} → ${g.dur}. (${paid})`] };
   }
   // 아직 못 고치는 골렘이면 되살려야 하는 칸 이름
   function gateOf(m, i) {
@@ -807,14 +833,14 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     Object.values(ZONE_MATS).forEach((b) => Object.keys(b).forEach((k) => need.add(k)));
     grantFurn(d); Object.values(FURN).forEach((f) => Object.keys(f.mats).forEach((k) => need.add(k)));
     return {
-      rules: { dayCap: capOf(), golemEn: R.golemEn, hours: R.hours, repair: R.repair, jobs: JOBS },
+      rules: { dayCap: capOf(), golemEn: R.golemEn, hours: R.hours, repair: R.repair, jobs: JOBS, wear: R.wear, mend: R.mend },
       zones: ZONES.map((z) => ({ id: z.id, name: z.name, need: z.need, from: z.from, to: z.to, desc: z.desc, func: z.func, state: zState(z), box: Object.entries(ZONE_MATS[z.id]).map(([k, n]) => ({ id: k, name: matName(k), need: n, put: (W.box[z.id] || {})[k] || 0 })) })),
       son: W.son, total: CITY_NEED, hands: new Set([...Object.keys(W.hands), ...Object.keys(W.givers)]).size,
       wall: W.wall, frags: Object.fromEntries(Object.entries(FRAGS).map(([k, l]) => [k, l.map((f) => ({ t: f.t }))])),
       me: {
         plot: m.plot, plots: PLOTS.map((p) => ({ id: p.id, name: p.name, mood: p.mood, room: p.room, perk: p.perk })),
         rooms: rs.map((r, i) => ({ id: r.id, name: r.name, hours: r.hours, h: m.rooms[r.id].h, mats: Object.entries(r.mats).map(([k, n]) => ({ id: k, name: ITEMS[k].name, need: n, put: m.rooms[r.id].mats[k] || 0 })), opens: r.opens, state: i < ci ? 'done' : i === ci ? 'cur' : 'lock' })),
-        golems: m.golems.map((g, i) => ({ i, name: g.name, awake: g.awake, job: g.job, hours: g.hours, start: g.start, until: g.until, report: g.report, gate: g.awake ? null : gateOf(m, i) })),
+        golems: m.golems.map((g, i) => ({ i, name: g.name, named: !!g.named, awake: g.awake, job: g.job, hours: g.hours, start: g.start, until: g.until, report: g.report, gate: g.awake ? null : gateOf(m, i), dur: g.dur ?? R.wear.max })),
         deco: m.deco || null, decoRules: { grid: DECO.grid, max: DECO.max, out: DECO.out },
         furn: m.furn, furnCat: Object.entries(FURN).map(([k, f]) => ({ s: k, name: f.name, seals: sealCost(f), base: f.seals, bp: own(BLUEPRINT, k) ? !!(m.bp || {})[k] : null, mats: Object.entries(f.mats).map(([id, n]) => ({ id, name: ITEMS[id].name, need: n })) })),
         zday: Object.fromEntries(Object.entries(m.zday || {}).filter(([, v]) => v === dayIdx())), springLeft: ZF.springTimes - (m.spring && m.spring.day === dayIdx() ? m.spring.n : 0), bell: (() => { const bt = bellToday(), by = Array.isArray(bt.by) ? bt.by : []; return { n: by.length, need: ZF.bellNeed, mine: by.includes(d.name), on: by.length >= ZF.bellNeed }; })(), forgeOff: done('forge') ? ZF.forgeOff : 0,
@@ -859,6 +885,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     handle('city:repair', (d, p) => repair(d, p.i));
     handle('city:cancel', (d, p) => cancelJob(d, p.i)); // 골렘 작업 중단
     handle('city:rename', (d, p) => rename(d, p.i, p.name));
+    handle('city:mend', (d, p) => mend(d, p.i, String(p.by || '')));
     handle('city:req', (d) => fillReq(d));
     handle('city:frag', (d, p) => putFrag(d, String(p.key || '')));
     handle('city:hand', (d, p) => handFrag(d, String(p.key || '')));
