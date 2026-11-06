@@ -4594,14 +4594,17 @@ dialog.pop .pop-foot { margin-top: 12px; }
 .cc-wrow .c-zl::after { content: ""; flex: 1; height: 1px; background: #E6E8E9; }
 .cc-wrow.locked .c-zl { color: #B4B8BB; }
 .cc-wall { gap: 6px; }
-body.realm-city {
-  background-color: #8E7F66;
+/* 고대도시 바탕: 폰에서는 background-attachment: fixed가 먹지 않아, 주소창이 접히고 펴질 때 아래쪽 그라데이션이 잠깐 끊겨 보였음.
+   그래서 화면에 붙은 판(::before)에 그리고, 판 높이는 주소창이 다 접힌 가장 큰 화면(100lvh)에 맞춤. 판 밖으로 비치는 곳은 맨 아래 색과 같은 바탕색 */
+body.realm-city { background-color: #3E342A; background-image: none; }
+body.realm-city::before {
+  content: ""; position: fixed; left: 0; right: 0; top: 0; z-index: -1; pointer-events: none;
+  height: calc(100vh + 160px); height: 100lvh;
   background-image:
     radial-gradient(ellipse 110% 55% at 50% 0%, rgba(240, 230, 208, .92) 0%, rgba(240, 230, 208, 0) 62%),
     radial-gradient(ellipse 70% 50% at 100% 100%, rgba(40, 32, 24, .45) 0%, rgba(40, 32, 24, 0) 70%),
     radial-gradient(ellipse 60% 45% at 0% 90%, rgba(48, 38, 28, .40) 0%, rgba(48, 38, 28, 0) 70%),
     linear-gradient(180deg, #E4D6B8 0%, #BFAA82 40%, #7A6A52 75%, #3E342A 100%);
-  background-attachment: fixed;
 }
 .moss-fx { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
 .moss-fx i { position: absolute; left: var(--x); bottom: -12px; width: var(--s); height: var(--s); border-radius: 50%;
@@ -4787,7 +4790,7 @@ body:not(.realm-city) .moss-fx { display: none; }
 #home-ui .dk-it.none { opacity: .55; }
 #home-ui .dk-it.none .dk-n { color: #B0634A; }
 #home-ui .mk-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border-top: 1px solid #E3D6C2; }
-#home-ui .mk-row { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 4px; border-bottom: 1px solid #E3D6C2; }
+#home-ui .mk-row { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 14px 10px 4px; border-bottom: 1px solid #E3D6C2; } /* 오른쪽 단추가 테두리에 붙지 않게 */
 #home-ui .mk-row.focus { background: #FBF3E4; }
 #home-ui .mk-row .dk-th { justify-self: center; image-rendering: pixelated; }
 #home-ui .mk-b { display: flex; flex-direction: column; gap: 3px; min-width: 0; }

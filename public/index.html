@@ -113,6 +113,7 @@
             <button type="button" id="notices-open">공지<span class="menu-dot" id="notices-dot" hidden></span></button>
             <button type="button" id="notes-open">업데이트 노트<span class="menu-dot" id="notes-dot" hidden></span></button>
             <button type="button" id="guide-open">길잡이</button>
+            <button type="button" id="world-open">세계 이야기</button>
             <button type="button" id="gm-open" hidden>GM 도구</button>
             <button type="button" id="logout">로그아웃</button>
           </div>
@@ -664,6 +665,7 @@
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="notices-dlg-title">공지</h2></div>
   <div class="body">
+    <button class="nt-welcome" type="button" id="notices-welcome"><span><b>환영 공지</b><small>처음 대륙에 들어올 때 본 안내를 다시 본다</small></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
     <div class="nt-list" id="notices-list"></div>
     <div class="row"><button class="btn" type="button" id="notices-close">닫기</button></div>
   </div>
@@ -681,7 +683,6 @@
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="notes-dlg-title">업데이트 노트</h2></div>
   <div class="body">
-    <button class="nt-welcome" type="button" id="notes-welcome"><span><b>환영 공지</b><small>처음 대륙에 들어올 때 본 안내를 다시 본다</small></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
     <div class="nt-list" id="notes-list"></div>
     <div class="row"><button class="btn" type="button" id="notes-close">닫기</button></div>
   </div>
@@ -5967,9 +5968,11 @@
   // 길잡이: 처음 온 드래곤을 위한 안내 페이지 (guide.html, 새 탭)
   const openGuide = () => { $('menu').hidden = true; $('menu-btn').setAttribute('aria-expanded', 'false'); window.open('/guide.html', '_blank', 'noopener'); };
   $('guide-open').addEventListener('click', openGuide);
+  // 세계 이야기: 스포일러 없는 대륙 안내 (world.html, 새 탭)
+  $('world-open').addEventListener('click', () => { $('menu').hidden = true; $('menu-btn').setAttribute('aria-expanded', 'false'); window.open('/world.html', '_blank', 'noopener'); });
   $('welcome-guide').addEventListener('click', openGuide);
   $('notes-close').addEventListener('click', () => $('notes-dlg').close());
-  $('notes-welcome').addEventListener('click', () => openWelcome(false));
+  $('notices-welcome').addEventListener('click', () => openWelcome(false)); // 환영 공지는 공지 메뉴에서 다시 봄
 
   // ── 모브 드래곤: 의뢰 · 이야기 · 교환 ──
   let mobTab = 'quest';

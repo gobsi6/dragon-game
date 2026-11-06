@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>세계 이야기 · 용의 대륙</title>
+<!-- 세계 이야기: 처음 오는 용을 위한 세계 안내 (스포일러 없이 지금의 대륙). 원본은 Claude 문서 '용의 대륙 · 처음 오는 용을 위한 세계 안내'.
+     옛일의 진실·숨은 사연은 적지 않는다 (세계관 설정집에만). 글을 고칠 때는 이 파일만 고쳐 올리면 된다 -->
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700;900&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<style>
+:root {
+  --surface: #F7F7F5; --surface-2: #FCFCFB;
+  --ink: #1F2326; --ink-2: #4E5358; --muted: #5B6066;
+  --line: #9A9C98; --line-soft: #C4C6C2; --line-in: #DDDFDB; --orn: #7E8389;
+  --steel: #3C5A73; --steel-d: #2A4256; --steel-l: #9DB3C6; --forest: #3A6B50; --rose: #A63E4B;
+  --hp: linear-gradient(90deg, #8E3340, #CB5A66);
+  --en: linear-gradient(90deg, #2F6248, #5E9C7B);
+  --mind: linear-gradient(90deg, #4A3F78, #8E7FC4);
+  --serif: 'Noto Serif KR', 'AppleMyungjo', 'Batang', serif;
+  --sans: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: calc(env(safe-area-inset-top, 0px) + 16px); }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0; min-height: 100vh; color: var(--ink);
+  font: 15px/1.75 var(--sans); word-break: keep-all;
+  background-color: #DDE1E3;
+  background-image:
+    radial-gradient(ellipse 110% 60% at 50% 0%, #F7F8F8 0%, rgba(247, 248, 248, 0) 65%),
+    radial-gradient(ellipse 70% 50% at 100% 100%, rgba(148, 166, 184, .28) 0%, rgba(148, 166, 184, 0) 70%),
+    linear-gradient(180deg, #ECEEEE 0%, #E1E4E5 50%, #D2D8DC 100%);
+  background-attachment: fixed;
+  padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+}
+a { color: var(--steel); text-underline-offset: 3px; }
+a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--steel); outline-offset: 2px; }
+b, strong { font-weight: 600; }
+
+/* 장식 액자: 게임 화면과 같은 모양 */
+.frame { position: relative; background: var(--surface); border: 1px solid var(--line); box-shadow: inset 0 0 0 4px var(--surface), inset 0 0 0 5px var(--line-in); }
+.frame > .c { position: absolute; width: 8px; height: 8px; background: var(--orn); border: 1px solid var(--surface); transform: rotate(45deg); }
+.frame > .tl { top: -5px; left: -5px; } .frame > .tr { top: -5px; right: -5px; }
+.frame > .bl { bottom: -5px; left: -5px; } .frame > .br { bottom: -5px; right: -5px; }
+.orn-h { display: flex; align-items: center; gap: 10px; }
+.orn-h::before, .orn-h::after { content: ""; flex: 1; height: 1px; background: var(--line-soft); }
+.orn-h > * { margin: 0; font: 700 14px/1.4 var(--serif); color: var(--steel-d); display: flex; align-items: center; gap: 10px; }
+.orn-h > *::before, .orn-h > *::after { content: ""; width: 5px; height: 5px; background: var(--orn); transform: rotate(45deg); }
+
+/* ── 머리 ── */
+.top { max-width: 1120px; margin: 0 auto; padding: 22px 24px 0; display: flex; align-items: center; gap: 12px; }
+.top .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); }
+.top .brand span { font: 700 17px/1 var(--serif); letter-spacing: .02em; }
+.top .back { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border: 1px solid var(--line-soft); border-radius: 3px; background: var(--surface); color: var(--ink-2); font-size: 13px; text-decoration: none; }
+.top .back:hover { border-color: var(--steel); color: var(--steel-d); }
+
+.hero { max-width: 1120px; margin: 0 auto; padding: 40px 24px 34px; }
+.hero h1 { margin: 0; font: 900 clamp(34px, 6vw, 54px)/1.15 var(--serif); color: var(--steel-d); letter-spacing: -.01em; }
+.hero p { margin: 14px 0 0; max-width: 34em; font: 500 16.5px/1.85 var(--serif); color: var(--ink-2); }
+
+/* ── 몸통: 왼쪽 차례 + 오른쪽 글 ── */
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px 80px; display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 36px; align-items: start; }
+.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); padding: 18px 16px 16px; }
+.toc ol { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; }
+.toc a { display: flex; gap: 10px; padding: 6px 8px; border-radius: 2px; color: var(--ink-2); text-decoration: none; font-size: 14px; line-height: 1.45; }
+.toc a span { flex: none; width: 16px; color: var(--orn); font: 600 12px/1.7 var(--sans); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: #ECEEEC; color: var(--ink); }
+.toc a.on { background: #E6ECF1; color: var(--steel-d); font-weight: 600; }
+.toc a.on span { color: var(--steel); }
+.toc-m { display: none; }
+
+.doc { min-width: 0; padding: 34px clamp(20px, 4vw, 48px) 44px; }
+.doc > section { padding-top: 8px; }
+.doc > section + section { margin-top: 52px; padding-top: 44px; border-top: 3px double var(--line-soft); }
+.doc h2 { margin: 0 0 6px; font: 700 25px/1.35 var(--serif); color: var(--ink); }
+.doc h2 small { display: block; margin-bottom: 4px; font: 600 12.5px/1.4 var(--sans); color: var(--orn); letter-spacing: .04em; }
+.doc h3 { margin: 30px 0 8px; font: 700 17px/1.45 var(--serif); color: var(--steel-d); }
+.doc p { margin: 10px 0 0; max-width: 40em; }
+.doc .lead { color: var(--ink-2); }
+.note { font-size: 13.5px; color: var(--muted); }
+.key { display: inline-block; padding: 0 6px; border: 1px solid var(--line-soft); border-radius: 2px; background: var(--surface-2); font-size: 13px; line-height: 20px; color: var(--ink-2); white-space: nowrap; }
+
+/* 첫날 순서 */
+.steps { list-style: none; margin: 20px 0 0; padding: 0; counter-reset: s; max-width: 42em; }
+.steps li { counter-increment: s; position: relative; padding: 0 0 20px 50px; }
+.steps li::before { content: counter(s); position: absolute; left: 0; top: 1px; width: 30px; height: 30px; display: grid; place-items: center; background: var(--steel); color: #F4F7FA; font: 700 14px/1 var(--serif); border-radius: 2px; box-shadow: inset 0 0 0 1px var(--steel-l); }
+.steps li::after { content: ""; position: absolute; left: 14.5px; top: 37px; bottom: 6px; width: 1px; background: var(--line-soft); }
+.steps li:last-child { padding-bottom: 0; }
+.steps li:last-child::after { display: none; }
+.steps b { display: block; font: 700 16px/1.5 var(--serif); }
+.steps p { margin: 3px 0 0; color: var(--ink-2); font-size: 14.5px; }
+
+/* 드래곤 기록 풀이: 본뜬 액자 + 번호 풀이 */
+.anat { margin-top: 22px; display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 32px; align-items: start; }
+.mock { padding: 18px 18px 20px 34px; user-select: none; }
+.mock .orn-h { margin-left: -16px; }
+.mock .orn-h { margin-bottom: 14px; }
+/* 실제 그림 칸(가로 264 × 세로 300, 위쪽 둥글기 140)과 같은 비율 */
+.m-por { position: relative; aspect-ratio: 264 / 300; border: 1px solid var(--orn); border-radius: 53% 53% 2px 2px / 46.7% 46.7% 2px 2px; box-shadow: inset 0 0 0 4px var(--surface), inset 0 0 0 5px #CDCFCB; background: radial-gradient(circle at 50% 42%, #FFFFFF 0%, #ECEDEA 55%, #DFE1DE 100%); display: grid; place-items: center; }
+.m-por svg { width: 74px; height: 74px; opacity: .55; }
+.m-tag { position: absolute; left: 50%; top: 20px; transform: translateX(-50%); padding: 2px 9px; background: rgba(31, 35, 38, .66); color: #F4F7FA; font: 600 11px/1.4 var(--sans); border-radius: 2px; white-space: nowrap; }
+.m-np { position: relative; margin: -30px 12px 0; padding: 8px 12px 9px; background: var(--surface); border: 1px solid var(--orn); box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px var(--line-in); text-align: center; }
+.m-np .n { font: 700 19px/1.25 var(--serif); }
+.m-np .s { display: flex; justify-content: center; align-items: center; gap: 7px; font-size: 12px; color: var(--ink-2); }
+.m-np .lv { padding: 0 6px; background: var(--steel); color: #F4F7FA; font-weight: 600; font-size: 11px; line-height: 18px; border-radius: 2px; }
+.m-np .ttl { display: block; font-size: 11px; color: var(--steel); }
+.m-xp { margin-top: 6px; }
+.m-xp i { display: block; height: 3px; border-radius: 2px; background: #E1E3E0; }
+.m-xp i b { display: block; width: 62%; height: 100%; border-radius: 2px; background: var(--orn); }
+.m-xp div { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.m-vit { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+.m-v div { display: flex; font-size: 12.5px; color: var(--ink-2); }
+.m-v div span { margin-left: auto; color: var(--ink); font-variant-numeric: tabular-nums; }
+.m-v div span em { font-style: normal; color: #6A7076; }
+.m-v i { display: block; margin-top: 4px; height: 6px; border-radius: 3px; background: #E1E3E0; box-shadow: inset 0 1px 1px rgba(31, 35, 38, .14); }
+.m-v i b { display: block; height: 100%; border-radius: 3px; }
+.m-at { margin-top: 14px; display: grid; grid-template-columns: repeat(5, 1fr); border-top: 3px double var(--line-soft); border-bottom: 3px double var(--line-soft); padding: 9px 0 7px; }
+.m-at div { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.m-at div + div { border-left: 1px solid var(--line-in); }
+.m-at b { font: 700 16px/1.2 var(--serif); }
+.m-at span { font-size: 11px; color: var(--muted); }
+.m-pts { margin-top: 10px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-2); }
+  .m-acts { margin-top: 10px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .m-acts > span:not(.pin) { display: flex; align-items: center; justify-content: center; gap: 5px; height: 30px; border: 1px solid #C4C6C2; border-radius: 0; background: #F7F7F5; font-size: 12px; color: #4E5358; } /* 게임의 칭호 · 스킬 · 회복 단추와 같은 모양 (각진 네모, 옅은 테두리, 청회색 아이콘) */
+  .m-acts svg { flex: none; width: 14px; height: 14px; fill: none; stroke: #3C5A73; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.m-pts span:last-child { margin-left: auto; padding: 3px 10px; background: var(--steel); color: #F4F7FA; border-radius: 2px; font-weight: 600; font-size: 11.5px; }
+/* 번호 표 (본뜬 액자 위) */
+.zone { position: relative; border-radius: 3px; transition: box-shadow .15s, background-color .15s; }
+.zone.lit { box-shadow: 0 0 0 2px var(--steel), 0 0 0 5px rgba(60, 90, 115, .16); background-color: rgba(230, 236, 241, .55); }
+.pin { position: absolute; z-index: 3; width: 20px; height: 20px; display: grid; place-items: center; background: var(--steel-d); color: #F4F7FA; font: 700 11px/1 var(--sans); border-radius: 50%; box-shadow: 0 0 0 2px var(--surface); pointer-events: none; }
+.zone.lit .pin { background: var(--steel); }
+/* 풀이 목록 */
+.legend { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.legend li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 2px 12px; padding: 11px 12px; border-radius: 3px; cursor: default; transition: background-color .15s; }
+.legend li + li { border-top: 1px solid var(--line-in); }
+.legend li.lit { background: #E6ECF1; }
+.legend .no { width: 22px; height: 22px; margin-top: 2px; display: grid; place-items: center; background: var(--steel-d); color: #F4F7FA; font: 700 12px/1 var(--sans); border-radius: 50%; }
+.legend b { font: 700 15px/1.6 var(--serif); }
+.legend p { grid-column: 2; margin: 0; font-size: 14px; line-height: 1.7; color: var(--ink-2); }
+
+/* 네 가지 기운 */
+.vit4 { margin-top: 20px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.vcard { padding: 16px 18px 15px; border: 1px solid var(--line-soft); border-radius: 3px; background: var(--surface-2); }
+.vcard h3 { margin: 0; display: flex; align-items: center; gap: 10px; font: 700 17px/1.4 var(--serif); color: var(--ink); }
+.vcard h3 i { flex: none; width: 34px; height: 6px; border-radius: 3px; }
+.vcard h3 i.ap { background: repeating-linear-gradient(90deg, var(--steel) 0 5px, transparent 5px 7px); height: 7px; }
+.vcard dl { margin: 10px 0 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 5px 12px; font-size: 14px; line-height: 1.65; }
+.vcard dt { color: var(--muted); font-size: 13px; padding-top: 1px; white-space: nowrap; }
+.vcard dd { margin: 0; color: var(--ink); }
+
+/* 다섯 능력치 */
+.stats5 { margin-top: 22px; display: flex; flex-direction: column; gap: 12px; }
+.st { display: grid; grid-template-columns: 112px minmax(0, 1fr); border: 1px solid var(--line-soft); border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.st .nm { padding: 16px 14px; background: #ECEFF1; border-right: 1px solid var(--line-in); display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+.st .nm b { font: 900 22px/1.2 var(--serif); color: var(--steel-d); }
+.st .nm small { font-size: 12px; color: var(--muted); line-height: 1.45; }
+.st .bd { padding: 13px 18px 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 22px; }
+.st .bd h4 { margin: 0; font: 600 12.5px/1.6 var(--sans); color: var(--orn); }
+.st .bd p { margin: 2px 0 0; font-size: 14px; line-height: 1.7; color: var(--ink); max-width: none; }
+.st .bd .one { grid-column: 1 / -1; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line-in); font-size: 13px; color: var(--muted); }
+
+.box { margin-top: 22px; padding: 16px 20px; border-left: 3px solid var(--steel-l); background: #EEF2F5; }
+.box p { margin: 0; max-width: none; font-size: 14.5px; }
+.box p + p { margin-top: 6px; }
+
+/* 종류별 타고난 능력치 */
+.tbl-wrap { margin-top: 16px; overflow-x: auto; border: 1px solid var(--line-soft); border-radius: 3px; background: var(--surface-2); }
+table.kinds { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 14px; }
+.kinds th, .kinds td { padding: 9px 10px; text-align: center; border-bottom: 1px solid var(--line-in); }
+.kinds thead th { font: 600 12.5px/1.4 var(--sans); color: var(--muted); background: #F0F2F1; border-bottom: 1px solid var(--line-soft); }
+.kinds tbody tr:last-child th, .kinds tbody tr:last-child td { border-bottom: 0; }
+.kinds tbody th { text-align: left; font-weight: 600; white-space: nowrap; }
+.kinds tbody th i { display: inline-block; width: 9px; height: 9px; margin-right: 8px; transform: rotate(45deg); vertical-align: 1px; }
+.kinds td.v { font: 500 15px/1 var(--serif); font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.kinds td.hi { color: var(--steel-d); font-weight: 900; background: #E6ECF1; }
+.kinds td.lo { color: #9A9C98; }
+table.kinds.lands { min-width: 0; }
+table.kinds.lands td { text-align: left; font-size: 13px; color: var(--ink-2); }
+table.kinds.lands td.when { white-space: nowrap; }
+table.kinds.lands td.home span { display: block; white-space: nowrap; }
+@media (max-width: 600px) { table.kinds.lands tbody th { white-space: normal; } }
+.kinds td.br, .kinds td.home { text-align: left; font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+
+/* 성향 세 갈래 */
+.stance3 { margin-top: 20px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.sc { padding: 15px 16px; border: 1px solid var(--line-soft); border-top: 3px solid var(--c); border-radius: 3px; background: var(--surface-2); }
+.sc h3 { margin: 0; font: 700 18px/1.4 var(--serif); color: var(--c); }
+.sc p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+.sc ul { margin: 10px 0 0; padding: 0; list-style: none; font-size: 13.5px; line-height: 1.65; }
+.sc li { position: relative; padding-left: 16px; }
+.sc li + li { margin-top: 4px; }
+.sc li::before { position: absolute; left: 0; font-size: 11px; top: 2px; }
+.sc li.up::before { content: "▲"; color: var(--forest); }
+.sc li.dn::before { content: "▼"; color: var(--rose); }
+
+/* 쓰러졌을 때 세 갈래 */
+.fall3 { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; max-width: 42em; }
+.fall3 div { padding: 12px 16px; border: 1px solid var(--line-soft); border-radius: 3px; background: var(--surface-2); }
+.fall3 b { font: 700 15px/1.6 var(--serif); }
+.fall3 p { margin: 3px 0 0; font-size: 14px; color: var(--ink-2); }
+
+/* 메뉴 지도 */
+.menus { margin-top: 18px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; }
+.menus h3 { grid-column: 1 / -1; }
+.menus dl { margin: 0; display: contents; }
+.mi { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 0 12px; padding: 11px 0; border-bottom: 1px solid var(--line-in); }
+.mi svg { width: 22px; height: 22px; margin-top: 3px; color: var(--ink-2); }
+.mi dt { font: 700 15px/1.6 var(--serif); }
+.mi dd { grid-column: 2; margin: 0; font-size: 14px; color: var(--ink-2); line-height: 1.65; }
+
+/* 자주 묻는 것 */
+.faq { margin-top: 16px; max-width: 44em; }
+.faq details { border-bottom: 1px solid var(--line-in); }
+.faq details:first-child { border-top: 1px solid var(--line-in); }
+.faq summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 13px 4px; font: 700 15.5px/1.5 var(--serif); }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: ""; margin-left: auto; flex: none; width: 8px; height: 8px; border-right: 1.6px solid var(--orn); border-bottom: 1.6px solid var(--orn); transform: rotate(45deg) translate(-2px, -2px); transition: transform .15s; }
+.faq details[open] summary::after { transform: rotate(225deg) translate(-2px, -2px); }
+.faq details > div { padding: 0 4px 16px; }
+.faq details > div p { margin: 0; font-size: 14.5px; color: var(--ink-2); }
+.faq details > div p + p { margin-top: 6px; }
+
+.foot { margin-top: 56px; padding-top: 22px; border-top: 1px solid var(--line-in); display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; font-size: 13.5px; color: var(--muted); }
+.foot a.back2 { margin-left: auto; display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; background: var(--steel); color: #F4F7FA; border: 1px solid var(--steel-d); box-shadow: inset 0 0 0 1px var(--steel-l); border-radius: 3px; font-weight: 600; text-decoration: none; }
+
+/* ── 좁은 화면 ── */
+@media (max-width: 880px) {
+  .wrap { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .toc { display: none; }
+  .toc-m { display: block; padding: 0; }
+  .toc-m summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 18px; font: 700 15px/1 var(--serif); color: var(--steel-d); }
+  .toc-m summary::-webkit-details-marker { display: none; }
+  .toc-m summary::after { content: ""; margin-left: auto; width: 8px; height: 8px; border-right: 1.6px solid var(--orn); border-bottom: 1.6px solid var(--orn); transform: rotate(45deg) translate(-2px, -2px); }
+  .toc-m[open] summary::after { transform: rotate(225deg) translate(-2px, -2px); }
+  .toc-m ol { list-style: none; margin: 0; padding: 0 10px 12px; }
+  .toc-m a { display: flex; gap: 10px; padding: 8px; color: var(--ink-2); text-decoration: none; font-size: 14.5px; }
+  .toc-m a span { width: 16px; color: var(--orn); font-weight: 600; font-size: 12.5px; }
+  .anat { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .mock { max-width: 320px; width: 100%; margin: 0 auto; }
+  .stance3 { grid-template-columns: minmax(0, 1fr); }
+  .menus { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 600px) {
+  .top { padding: 16px 16px 0; }
+  .top .back { padding: 0 10px; }
+  .hero { padding: 28px 18px 24px; }
+  .hero p { font-size: 15.5px; }
+  .wrap { padding: 0 12px 56px; }
+  .doc { padding: 26px 16px 34px; }
+  .doc h2 { font-size: 22px; }
+  .vit4 { grid-template-columns: minmax(0, 1fr); }
+  .st { grid-template-columns: minmax(0, 1fr); }
+  .st .nm { flex-direction: row; align-items: baseline; gap: 10px; padding: 10px 16px; border-right: 0; border-bottom: 1px solid var(--line-in); }
+  .st .nm b { font-size: 19px; }
+  .st .bd { grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 12px 16px 14px; }
+  .foot a.back2 { margin-left: 0; width: 100%; justify-content: center; }
+}
+</style>
+<style>
+ul.dots { margin: 8px 0 14px; padding-left: 1.2em; } ul.dots li { margin: 4px 0; line-height: 1.7; }
+.wl-note { font-size: 13px; color: var(--ink-2); }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a class="brand" href="/" aria-label="용의 대륙으로 돌아가기">
+    <svg width="28" height="31" viewBox="0 0 34 38" fill="none" aria-hidden="true"><path d="M17 2l14 5v11c0 9-6 15-14 18C9 33 3 27 3 18V7z" fill="#F7F7F5" stroke="#3C5A73" stroke-width="1.6" stroke-linejoin="round"/><path d="M17 6l10 3.6V18c0 6.8-4.4 11.4-10 13.8C11.4 29.4 7 24.8 7 18V9.6z" stroke="#9DB3C6"/><path d="M11 19.5c3-1 4-4 6-7 2 3 3 6 6 7-2 0-4 1-6 4-2-3-4-4-6-4z" fill="#3C5A73"/></svg>
+    <span>용의 대륙</span>
+  </a>
+  <a class="back" href="/">대륙으로 돌아가기</a>
+</header>
+
+<div class="hero">
+  <h1>세계 이야기</h1>
+  <p>이 글은 대륙에 막 날아든 드래곤이 알아 두면 좋은 '지금'의 이야기다. 옛일이 궁금하다면 지역마다 머무는 토박이 용들에게 물어보라. 다만 그들의 말이 모두 같지는 않다.</p>
+</div>
+
+<div class="wrap">
+  <nav class="frame toc" aria-label="차례">
+    <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+    <div class="orn-h"><p>차례</p></div>
+    <ol id="toc-list"><li><a href="#now"><span>1</span>지금의 대륙</a></li><li><a href="#age"><span>2</span>용의 나이와 시간</a></li><li><a href="#come"><span>3</span>건너온 용과 토박이</a></li><li><a href="#hunt"><span>4</span>800년 전, 용 사냥의 시대</a></li><li><a href="#stance"><span>5</span>세 가지 성향</a></li><li><a href="#natives"><span>6</span>토박이 드래곤들</a></li><li><a href="#taint"><span>7</span>오염</a></li><li><a href="#rumors"><span>8</span>떠도는 소문</a></li></ol>
+  </nav>
+
+  <main class="frame doc">
+    <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+
+    <details class="frame toc-m">
+      <summary>차례</summary>
+      <ol><li><a href="#now"><span>1</span>지금의 대륙</a></li><li><a href="#age"><span>2</span>용의 나이와 시간</a></li><li><a href="#come"><span>3</span>건너온 용과 토박이</a></li><li><a href="#hunt"><span>4</span>800년 전, 용 사냥의 시대</a></li><li><a href="#stance"><span>5</span>세 가지 성향</a></li><li><a href="#natives"><span>6</span>토박이 드래곤들</a></li><li><a href="#taint"><span>7</span>오염</a></li><li><a href="#rumors"><span>8</span>떠도는 소문</a></li></ol>
+    </details>
+
+    <section id="now">
+      <h2><small>1</small>지금의 대륙</h2>
+      <p class="lead">지금 이 대륙에서 사람과 용은 이웃으로 산다. 다만 왕국과 용족 사이에 맺은 약속은 없다. 가까워진 것은 마을과 개인 사이에서부터다.</p>
+      <ul class="dots"><li>어떤 바닷가 마을의 어부는 앞바다를 지켜 주는 용을 믿고, 시장에서는 용과 거래가 오간다.</li><li>용의 둥지에서 자란 아이가 사람의 마을로 돌아가 가정을 꾸리기도 한다.</li><li>그래도 사람들은 하늘을 지나는 용의 그림자를 완전히 믿지는 못한다.</li></ul>
+      <p>왕도 아르덴의 기사단은 지금 치안과 의례를 맡는다. 그러나 옛 깃발을 아직 내리지 않은 무리도 어딘가에 있다는 말이 돈다.</p>
+    </section>
+
+    <section id="age">
+      <h2><small>2</small>용의 나이와 시간</h2>
+      <p class="lead">용이 늙어 죽는 나이는 정해져 있지 않다. 다만 싸움이나 병, 사고로 대개 500~800살 무렵에 삶을 마친다.</p>
+      <div class="tbl-wrap"><table class="kinds lands"><thead><tr><th scope="col" style="text-align: left">나이</th><th scope="col" style="text-align: left">어떤 때인가</th></tr></thead><tbody><tr><th scope="row">500살 아래</th><td>청년</td></tr><tr><th scope="row">500~1,000살</th><td>장년</td></tr><tr><th scope="row">1,000살 이상</th><td>중년 이상</td></tr></tbody></table></div>
+      <p>늙은 용일수록 수십 년에서 수백 년씩 잠든다. 그래서 나이에 비해 깨어 있던 시간은 훨씬 짧고, 오래된 기억은 듬성듬성하다.</p>
+      <p>용은 글로 역사를 남기지 않고 새끼를 홀로 키우는 일이 많다. 그래서 옛이야기는 잘 이어지지 않는다.</p>
+      <p>플레이어 드래곤이 몇 살인지는 정해져 있지 않다. 각자 정하면 된다.</p>
+    </section>
+
+    <section id="come">
+      <h2><small>3</small>건너온 용과 토박이</h2>
+      <p class="lead">지금 대륙에 사는 용의 대부분은 바다 너머, 산맥 너머 다른 곳에서 건너온 이들과 그 후손이다. 그러니 플레이어 드래곤도 이 대륙에서 태어났을 수도, 다른 곳에서 날아왔을 수도 있다. 어디서 왔는지, 왜 왔는지는 각자의 몫이다.</p>
+      <p>대륙의 옛일을 기억하는 토박이 용은 손에 꼽을 만큼 남아 저마다의 영역에 머문다. 두 무리 사이에는 아직 거리가 있다.</p>
+      <ul class="dots"><li>토박이 가운데에는 건너온 용들을 사람과 너무 쉽게 어울리는 철없는 이들로 보는 이도 있다.</li><li>건너온 용들 가운데에는 토박이를 옛일에 갇힌 고집스러운 노인들로 보는 이도 있다.</li></ul>
+    </section>
+
+    <section id="hunt">
+      <h2><small>4</small>800년 전, 용 사냥의 시대</h2>
+      <p class="lead">약 800년 전, 오랜 이웃이던 용과 사람이 서로를 사냥하는 전쟁이 있었다. 마을이 불타고 많은 용이 죽거나 떠나거나 깊은 잠에 들었다. 사람들은 살아남으려 기사단을 세웠고, 공격과 보복이 꼬리를 물었다.</p>
+      <p>전쟁은 누구의 승리도 없이 흐지부지 끝났다. 그 뒤 원한 없는 용들이 건너오면서, 지난 700년 동안 사람과 용은 다시 가까워졌다.</p>
+      <p>왜 시작되었는지는 아무도 똑같이 기억하지 않는다.</p>
+      <ul class="dots"><li>사람들은 "용이 재를 몰고 왔다"는 옛말로 기억한다. 대부분에게는 전설이다.</li><li>그 시절을 겪은 용들은 그 일을 좀처럼 입에 올리지 않는다.</li><li>그 시대를 직접 겪은 용은 이제 천 살을 넘긴 토박이 몇뿐이다.</li></ul>
+    </section>
+
+    <section id="stance">
+      <h2><small>5</small>세 가지 성향</h2>
+      <p class="lead">용마다 사람을 대하는 마음은 다르다. 사람과 가까이 지낼지(우호), 거리를 둘지(은둔), 맞설지(적대)는 저마다의 성향과 해석에 달렸다.</p>
+      <p>사람 쪽에도 용을 이웃으로 받아들인 마을이 있고, 용을 짐승으로 보는 이들도 있다.</p>
+    </section>
+
+    <section id="natives">
+      <h2><small>6</small>토박이 드래곤들</h2>
+      <p class="lead">지역마다 한 마리씩 머무는 토박이 용들이 있다. 대부분 천 살을 넘겨 지금 대륙의 어느 용보다 오래 살았고, 저마다의 성향대로 옛일을 들려준다. 누구도 거짓말을 하지 않지만, 누구도 전부를 알지는 못한다.</p>
+      <div class="tbl-wrap"><table class="kinds lands"><thead><tr><th scope="col" style="text-align: left">드래곤</th><th scope="col" style="text-align: left">머무는 곳</th><th scope="col" style="text-align: left">성향</th><th scope="col" style="text-align: left">대략 나이</th></tr></thead><tbody><tr><th scope="row">바르그 (레드)</th><td>중앙 평원</td><td>적대</td><td>1,100살 남짓</td></tr><tr><th scope="row">이그나르 (브론즈)</th><td>잿빛 화산</td><td>적대</td><td>1,000살 안팎</td></tr><tr><th scope="row">모르가나 (그린)</th><td>독안개 숲</td><td>적대</td><td>900살 안팎</td></tr><tr><th scope="row">하르시아 (화이트)</th><td>북부 설원</td><td>은둔</td><td>1,000살 남짓</td></tr><tr><th scope="row">스크라그 (블랙)</th><td>검은 늪</td><td>은둔</td><td>1,000살 남짓</td></tr><tr><th scope="row">아우렐 (골드)</th><td>태양 협곡</td><td>우호</td><td>1,000살 안팎</td></tr><tr><th scope="row">오르딘 (실버)</th><td>고대 유적</td><td>우호</td><td>600살 안팎</td></tr></tbody></table></div>
+      <p>오르딘은 토박이 가운데 드물게 젊은 축이다. 나이는 겉모습과 말투로 짐작한 것이라, 본인들에게 물으면 저마다 다르게 대답할지도 모른다.</p>
+    </section>
+
+    <section id="taint">
+      <h2><small>7</small>오염</h2>
+      <p class="lead">오래도록 대륙에서 거의 볼 수 없던 오염이 요즘 조금씩 돌아오고 있다. 어디서 오는지, 왜 다시 번지는지는 아무도 모른다.</p>
+      <ul class="dots"><li>오염된 땅은 풀과 흙이 검게 물들고, 잿빛 바람이 분다.</li><li>그 땅의 짐승은 사나워지고, 쓰러진 몸에서 검붉은 오염 결정이 나오기도 한다.</li><li>용은 대륙의 기운과 깊이 이어진 생물이라 오염에 유난히 약하다. 오염된 곳에 머물수록 정신이 깎이고, 정신이 바닥나면 스스로를 잃고 날뛴다.</li></ul>
+      <p>사람들 사이에서는 숲 깊은 곳에서 검게 물든 자리를 보았다는 말이 돈다.</p>
+    </section>
+
+    <section id="rumors">
+      <h2><small>8</small>떠도는 소문</h2>
+      <p class="lead">확인된 이야기는 아니다. 사람의 마을과 용의 둥지에서 오가는 말들이다.</p>
+      <ul class="dots"><li>바다 건너에 용과 사람이 왕관을 나눠 쓰던 나라가 있었다고 한다. 사람들 사이에서는 동화로 전해진다.</li><li>고대 유적의 무너진 석주 아래에 무언가가 잠들어 있다고 한다.</li><li>요즘 하늘에 용 그림자가 늘면서 "용이 늘면 재가 내린다"는 옛말이 다시 돈다.</li><li>오래 잠들어 있던 것들이 하나둘 깨어나고 있다는 이야기도 있다.</li></ul>
+    </section>
+
+    <div class="foot">
+      <span>나머지 이야기는 대륙을 다니며 직접 맞춰 가세요. 사는 법은 <a href="/guide.html">길잡이</a>에 있습니다.</span>
+      <a class="back2" href="/">대륙으로 돌아가기</a>
+    </div>
+  </main>
+</div>
+</body>
+</html>
