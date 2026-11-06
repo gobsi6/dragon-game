@@ -210,6 +210,7 @@ module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broa
     db.saveState(d);
     db.bury(d);
     d.dead_at = now;
+    logic.hooks.onGone?.(d); // 집터에 놓여 있던 선물은 보낸 이에게 (server.js)
     const where = REGIONS[graveRegion].name;
     const lines = [`${ga(d.name)} 긴 잠에 들었다.`];
     const kn = KINDS[d.kind].name;

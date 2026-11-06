@@ -2308,6 +2308,8 @@ button.trait.bad.on { background: #FBF1F2; box-shadow: inset 0 0 0 1px #A63E4B; 
 .ar-me { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 10px 12px; background: var(--surface-2); border: 1px solid var(--line-in); font-size: 13px; }
 .ar-me b { font: 700 16px/1.2 var(--serif); }
 .ar-me .sp { flex: 1; }
+/* 폰: 전적 줄의 '설정' 단추가 세로로 길어 자리를 차지하지 않게 낮게 */
+@media (max-width: 860px) { .ar-me .linkbtn { min-height: 26px; padding: 0 9px; font-size: 12px; line-height: 1; align-self: center; } }
 .fr-row .relb { font: 400 11px/18px var(--sans); padding: 0 6px; border-radius: 2px; border: 1px solid; vertical-align: 1px; }
 .fr-row .why { display: block; font-size: 11.5px; color: var(--muted); }
 .sfx-vol { display: flex; align-items: center; gap: 10px; margin-top: -13px; padding: 8px 12px; background: #fff; border: 1px solid var(--line-in); border-top: 1px dashed var(--line-in); font-size: 13px; color: var(--ink-2); }
@@ -2323,6 +2325,13 @@ button.trait.bad.on { background: #FBF1F2; box-shadow: inset 0 0 0 1px #A63E4B; 
 .setopt input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--forest); flex: none; }
 .setopt b { display: block; font-size: 14px; }
 .setopt small { display: block; font-size: 12.5px; line-height: 1.55; color: var(--muted); margin-top: 2px; }
+/* 폰: 설정 칸(결투 신청 받기·자동 결투 허용 등)이 설명 글 때문에 세로로 길어 화면을 많이 차지해서, 안쪽 여백과 글줄 간격을 줄임 */
+@media (max-width: 860px) {
+  .setopt { gap: 8px; padding: 7px 10px; }
+  .setopt input { margin-top: 1px; width: 16px; height: 16px; }
+  .setopt b { font-size: 13.5px; line-height: 1.35; }
+  .setopt small { font-size: 12px; line-height: 1.4; margin-top: 1px; }
+}
 .trait.skill { border-left-color: var(--steel); }
 .trait.skill.breath { border-left-color: #B0762B; }
 .trait.skill b em { color: var(--steel); }
@@ -5023,6 +5032,11 @@ body.chat-off #say, body.chat-off #chat-view { display: none; }
 @media (max-width: 520px) {
   .fr-row:has(.acts > :nth-child(2)) { grid-template-columns: 34px minmax(0, 1fr); }
   .fr-row:has(.acts > :nth-child(2)) .acts { grid-column: 2; justify-self: start; display: flex; gap: 6px; }
+  /* 맺은 관계: 집터가 있든 없든 단추를 늘 이름 아래 줄에 (줄마다 오른쪽·아래로 들쑥날쑥하지 않게).
+     텔레파시를 맨 앞에 두어 위아래 줄의 텔레파시가 같은 자리에 오고, 집터 방문은 그 옆에 */
+  .fr-row:has(.acts.below) { grid-template-columns: 34px minmax(0, 1fr); }
+  .fr-row .acts.below { grid-column: 2; justify-self: start; display: flex; gap: 6px; }
+  .fr-row .acts.below .fr-home { order: 2; }
 }
 
 /* 집터 구경 창: 위 줄 오른쪽 '선물' */

@@ -1611,6 +1611,7 @@
     }
     renderStanceNote();
     renderEventBar();
+    renderNestRaid(); // 둥지에 든 도둑 띠 · 둥지 단추 알림 점
     renderRaidBar();
     renderBoss();
     renderScar();
@@ -1924,7 +1925,8 @@
     renderEventBar();
   }
   // 둥지에 든 도둑: 쫓을 수 있는 동안 화면 위에 띄움
-  function renderRaidBar() {
+  // (예전엔 이름이 레이드 모집 줄의 renderRaidBar와 같아서, 뒤에 선언된 그쪽에 덮여 이 띠와 둥지 단추의 알림 점이 전혀 갱신되지 않았음)
+  function renderNestRaid() {
     const r = S.me?.raid;
     $('raid-bar').hidden = !r;
     $('dock-nest').classList.toggle('alert', !!r || (S.me?.kinOffersIn || 0) > 0); // 도둑이나 받은 입양 제안
@@ -3491,7 +3493,7 @@
   $('uses-close').addEventListener('click', () => $('uses-dlg').close());
   // ── 주고받은 기록 ──
   let ledgerF = 'all';
-  const LEDGER_KIND = { gift_in: '받은 선물', gift_out: '보낸 선물', trade: '교환', gm: 'GM 지급', bet: '내기', market: '야시장' };
+  const LEDGER_KIND = { gift_in: '받은 선물', gift_out: '보낸 선물', gift_back: '돌아온 선물', trade: '교환', gm: 'GM 지급', bet: '내기', market: '야시장' };
   function ledgerChips(host, gold, items) {
     if (gold) { const c = document.createElement('span'); c.className = 'lg-chip gold'; c.innerHTML = '<i class="coin" aria-hidden="true"></i>'; c.append(`금화 ${gold.toLocaleString()}닢`); host.appendChild(c); }
     for (const x of items || []) {
@@ -8687,7 +8689,7 @@
       }
       body.appendChild(box);
     };
-    const btn = (a, text, fn, primary) => { const b = document.createElement('button'); b.type = 'button'; b.className = `btn${primary ? ' primary' : ''}`; b.textContent = text; b.addEventListener('click', fn); a.appendChild(b); };
+    const btn = (a, text, fn, primary) => { const b = document.createElement('button'); b.type = 'button'; b.className = `btn${primary ? ' primary' : ''}`; b.textContent = text; b.addEventListener('click', fn); a.appendChild(b); return b; };
     const kindLv = (x) => `${S.kinds[x.kind]?.name || ''} · Lv. ${x.level}`;
     const where = (x) => `<span class="dot${x.online ? ' on' : ''}"></span>${x.online ? (x.away ? (x.fishing ? '낚시 중' : '원정 중') : S.regions[x.region]?.name || '') : '접속 안 함'} · ${kindLv(x)}`;
     const askText = (x) => `${S.bonds?.[x.bond]?.ask || '관계를 청했다'} · ${kindLv(x)}`;
@@ -8696,7 +8698,7 @@
       btn(a, '거절', () => socialAct('rel:decline', { id: x.id }));
     });
     const bondChip = (x) => `<span class="relb ${bondCls(x.bond)}">${bondName(x.bond)}</span> `;
-    section('맺은 관계', l.friends, (x) => `${bondChip(x)}${where(x)}`, (x, a) => { if (x.home && window.__cityVisit) btn(a, '집터 방문', () => window.__cityVisit(x.name)); btn(a, '텔레파시', () => { $('friends-dlg').close(); openTp(x.id); }); }); // 고대도시 집터가 있는 동료는 광장 게시판 없이도 놀러 감
+    section('맺은 관계', l.friends, (x) => `${bondChip(x)}${where(x)}`, (x, a) => { a.classList.add('below'); if (x.home && window.__cityVisit) btn(a, '집터 방문', () => window.__cityVisit(x.name)).classList.add('fr-home'); btn(a, '텔레파시', () => { $('friends-dlg').close(); openTp(x.id); }); }); // 고대도시 집터가 있는 동료는 광장 게시판 없이도 놀러 감
     section('보낸 관계 요청', l.outgoing, (x) => `'${S.bonds?.[x.bond]?.label || ''}' · ${kindLv(x)}`, (x, a) => btn(a, '거두기', () => socialAct('rel:cancel', { id: x.id })));
     section('라이벌', l.rivals, (x) => `${x.mutual ? '<span class="relb rival">숙적</span> ' : ''}${kindLv(x)}`, (x, a) => btn(a, '결투 신청', () => challenge(x, 'live')));
     section('나를 라이벌로 정한 드래곤', l.rivalsIn || [], kindLv, (x, a) => btn(a, '맞받아치기', () => socialAct('rel:mark', { id: x.id, kind: 'rival' }, () => openFriends()), true));

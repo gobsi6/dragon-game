@@ -1064,5 +1064,20 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     }
   }
 
-  return { attach, onEnter, onLeave, onMove, relIncoming: (id) => db.reqInCount(id), tellRival, refreshRivals, kinOffers, eventGift };
+  // 집주인이 먼 여행·긴 잠으로 집터 선물을 받을 수 없게 되면: 놓여 있던 선물을 보낸 드래곤에게 돌려줌
+  // (보낸 쪽도 이미 떠났으면 돌려줄 곳이 없어 그냥 거둠)
+  function returnHomeGifts(toId, toName) {
+    for (const g of db.giftHomeList(toId)) {
+      if (!db.giftHomeDrop(g.id, toId)) continue;
+      const s = live(g.from.id), sd = s ? s.dragon : db.getDragon(g.from.id);
+      if (!sd || sd.dead_at) continue;
+      if (s) { s.dragon.gold += g.gold; db.saveState(s.dragon, g.items); sendMe(s.socket, s.dragon); }
+      else db.giftOffline(g.from.id, g.gold, g.items);
+      const what = g.gold || g.items.length ? giveText(g.gold, g.items) : '선물';
+      db.ledgerAdd(g.from.id, { kind: 'gift_back', other: { id: toId, name: toName }, goldIn: g.gold, itemsIn: g.items, note: '집터' }); // gift_in이 아님: 보물 상자에 간직할 때 그 드래곤이 준 선물로 잘못 적히지 않게
+      const text = `${toName}${josa(toName, '이', '가')} 대륙을 떠나, 집터에 두고 왔던 ${what}${josa(what, '이', '가')} 돌아왔다.`;
+      if (s) s.socket.emit('notice', { title: '선물', lines: [text] }); else db.noteAdd(g.from.id, text);
+    }
+  }
+  return { attach, onEnter, onLeave, onMove, relIncoming: (id) => db.reqInCount(id), tellRival, refreshRivals, kinOffers, eventGift, returnHomeGifts };
 };

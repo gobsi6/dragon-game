@@ -1281,6 +1281,8 @@ raidBoss = require('./raidboss')({ io, db, online, logic, combat, arena, sendMe,
 arena.setRaid(raidBoss);
 logic.hooks.companionsHere = (d) => { for (const e of online.values()) if (e.dragon.id !== d.id && e.dragon.region === d.region && !e.dragon.dead_at) return true; return false; };
 // 청출어람: 내 스승의 레벨을 따라잡았으면 그 스승의 이름 (칭호 판정에서 씀)
+// 드래곤이 대륙을 떠남 (먼 여행·긴 잠): 그 집터에 놓여 있던 선물은 보낸 이에게 돌려줌
+logic.hooks.onGone = (d) => { try { social.returnHomeGifts(d.id, d.name); } catch (e) { console.error('[집터 선물 돌려주기]', e.message); } };
 logic.hooks.surpassed = (d) => {
   const low = logic.combatJson(d).mentorLow || {}; // 맺을 때 스승보다 레벨이 낮았는지 (0이면 처음부터 같거나 높았음 → 따라잡은 것이 아님. 적힌 것이 없는 예전 관계는 레벨 차이 3 이상일 때 맺었으므로 셈)
   for (const id of db.relByBond(d.id, 'mentor')) {
@@ -2891,6 +2893,7 @@ function onConnect(socket) {
     db.saveState(d);
     db.depart(d);
     d.dead_at = now;
+    logic.hooks.onGone?.(d); // 집터에 놓여 있던 선물은 보낸 이에게
     if (legacy) db.legacySet(user.id, legacy);
     for (const o of db.offersTo(d.id)) db.offerDel(o.id); // 받은 입양 제안은 지움 (보낸 제안은 동료가 받아 줄 수 있게 둠)
     social.onLeave(d.id);

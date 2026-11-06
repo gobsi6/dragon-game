@@ -583,7 +583,8 @@ const q = {
   giftImgPend:  db.prepare('SELECT COUNT(*) AS n FROM gift_images WHERE dragon_id = ? AND sent_at IS NULL'),
   giftImgDay:   db.prepare('SELECT COUNT(*) AS n FROM gift_images WHERE dragon_id = ? AND sent_at >= ?'),
   giftImgOldUp: db.prepare('DELETE FROM gift_images WHERE sent_at IS NULL AND at < ?'),
-  giftImgOldSent: db.prepare('DELETE FROM gift_images WHERE kept = 0 AND sent_at IS NOT NULL AND sent_at < ?'),
+  // 아직 받지 않은 선물(받은 선물 상자에 남아 있거나 집터에 놓여 있는 것)에 붙은 그림은 오래되어도 지우지 않음
+  giftImgOldSent: db.prepare("DELETE FROM gift_images WHERE kept = 0 AND sent_at IS NOT NULL AND sent_at < ? AND id NOT IN (SELECT CAST(json_extract(img, '$.id') AS INTEGER) FROM gift_inbox WHERE img != '' AND json_valid(img))"),
   giftImgKept:  db.prepare('SELECT id, to_id FROM gift_images WHERE kept = 1'),
   giftImgDel:   db.prepare('DELETE FROM gift_images WHERE id = ?'),
   imgBytes:     db.prepare(`SELECT (SELECT COUNT(*) FROM slate_images) AS sn, (SELECT IFNULL(SUM(LENGTH(data)), 0) FROM slate_images) AS sb,
@@ -597,6 +598,7 @@ const q = {
   giftHomeList: db.prepare('SELECT * FROM gift_inbox WHERE to_id = ? AND home = 1 ORDER BY id'),
   giftHomeOne:  db.prepare('SELECT * FROM gift_inbox WHERE id = ? AND to_id = ? AND home = 1'),
   giftHomeOff:  db.prepare('UPDATE gift_inbox SET home = 0 WHERE id = ?'),
+  giftHomeDel:  db.prepare('DELETE FROM gift_inbox WHERE id = ? AND to_id = ? AND home = 1'),
   giftImgSet:   db.prepare('UPDATE gift_inbox SET img = ? WHERE id = ?'),
   noteList:     db.prepare('SELECT text FROM notes WHERE dragon_id = ? ORDER BY id'),
   noteClear:    db.prepare('DELETE FROM notes WHERE dragon_id = ?'),
@@ -932,6 +934,8 @@ module.exports = {
     try { saveStateRaw(d, g.items, []); } catch (e) { d.gold = gold0; throw e; }
     return g;
   }),
+  // 집터 선물을 받을 수 없게 되어 거둠 (한 번만 true)
+  giftHomeDrop: (id, to) => q.giftHomeDel.run(id, to).changes > 0,
   giftGet: (id, to) => { const r = q.giftOne.get(id, to); if (!r) return null; let img = null; try { img = r.img ? JSON.parse(r.img) : null; } catch {} return { id: r.id, fromName: r.from_name, msg: r.msg, img }; },
   // 선물 그림
   giftImg: {
