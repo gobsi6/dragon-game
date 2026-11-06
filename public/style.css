@@ -3421,7 +3421,7 @@ body.mz-drag, body.mz-drag * { user-select: none !important; -webkit-user-select
   .map-scroll { overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
   .map-scroll::-webkit-scrollbar { display: none; }
   .map-scroll > #map-svg { width: 135%; max-width: none; }
-  .map .routes .hint::after { content: ' 지도는 옆으로 밀어 볼 수 있다.'; }
+  .map:not(#city-map) .routes .hint::after { content: ' 지도는 옆으로 밀어 볼 수 있다.'; } /* 대륙 지도만 (고대도시 지도는 밀리지 않음) */
 }
 /* 단추가 6개 이상(마을의 시장·위협·낚시)이면 아이콘과 글씨 사이를 더 좁히고, 아주 좁은 폰에서는 아이콘을 뺌 */
 @media (max-width: 860px) {
@@ -5004,3 +5004,7 @@ body:not(.realm-city) .moss-fx { display: none; }
 /* 착용 레벨 꼬리표: 레벨이 모자라면 붉게 */
 .lv-req { display: inline-block; font-size: .92em; color: var(--muted); white-space: nowrap; }
 .lv-req.no { color: #B23A2E; font-weight: 600; }
+
+/* 소지품: 차고 있는 즐겨찾기 장신구는 '착용 중' (다 쓴 것처럼 흐리게 하지 않음) */
+.inv .it.zero.worn > :not(.fav-star) { opacity: 1; }
+.inv .it.zero.worn .q { color: var(--steel); font-weight: 600; }

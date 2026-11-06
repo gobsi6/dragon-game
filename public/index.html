@@ -3313,7 +3313,12 @@
         mk('취소', '', normal);
       };
       normal();
-      if (!qty) { acts.replaceChildren(); row.classList.add('zero'); row.querySelector('.q').textContent = '다 씀'; } // 다 쓴 즐겨찾기: 쓰기·버리기 버튼 없이
+      if (!qty) { // 소지품에 없는 즐겨찾기: 차고 있으면 '착용 중', 아니면 '다 씀' (쓰기·버리기 버튼 없이)
+        const worn = Object.values(S.me?.equip || {}).includes(id);
+        acts.replaceChildren(); row.classList.add('zero'); if (worn) row.classList.add('worn');
+        row.querySelector('.q').textContent = worn ? '착용 중' : '다 씀';
+        if (worn) row.title = '지금 차고 있어 소지품에는 없다.';
+      }
       row.appendChild(acts);
       group.appendChild(row);
     }
