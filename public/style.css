@@ -3371,8 +3371,8 @@ body.mz-drag, body.mz-drag * { user-select: none !important; -webkit-user-select
   .center:not(.paneled) > .region-card:not([hidden]) #fish-open .cost { display: none; } /* '미끼'까지는 폭이 모자람 */
   .center:not(.paneled) > .region-card:not([hidden]) #actions .btn .w2 { display: none; } /* '위협하기'→'위협', '원정 보내기'→'원정' */
   .center:not(.paneled) > .region-card:not([hidden]) #actions .note { display: none; }
-  body:has(.center:not(.paneled) > .region-card:not([hidden]) #actions:not([hidden])) .chat-fab { bottom: calc(var(--dock-h, 56px) + 51px + 14px); } /* 행동 줄(51px) 위로 띄워서, 테두리가 줄에 닿지 않게 */
-  body:has(.center:not(.paneled) > .region-card:not([hidden]) #actions:not([hidden])) .main { padding-bottom: calc(51px + 12px); } /* 행동 줄 높이만큼만 */
+  body:has(.center:not(.paneled):not(.in-city) > .region-card:not([hidden]) #actions:not([hidden])) .chat-fab { bottom: calc(var(--dock-h, 56px) + 51px + 14px); } /* 행동 줄(51px) 위로 띄워서, 테두리가 줄에 닿지 않게. 고대도시(in-city)에서는 행동 줄이 없으니 메뉴 바로 위 원래 자리 */
+  body:has(.center:not(.paneled):not(.in-city) > .region-card:not([hidden]) #actions:not([hidden])) .main { padding-bottom: calc(51px + 12px); } /* 행동 줄 높이만큼만 */
   /* 4. 아래 탭으로 연 화면: '닫기'와 아래쪽 '이곳의 이야기'는 대륙 화면에만 (이야기 창 버튼은 그대로) */
   .dlg.as-panel .row:has(> .btn[id$="-close"]:only-child) { display: none; }
   /* (아래쪽 '이곳의 이야기' 칸은 이제 폰에서 늘 숨기고 머리줄 단추로 띄움 — 아래 '이곳의 이야기' 규칙) */
@@ -3518,9 +3518,9 @@ body.mz-drag, body.mz-drag * { user-select: none !important; -webkit-user-select
 @media (prefers-reduced-motion: reduce) { .gain-pop.in { animation: none; } .gain-pop.out { transition: none; } }
 /* 폰의 아래 행동 줄이 있으면 그 위로 (알림 띠도 함께) */
 @media (max-width: 860px) {
-  body:has(.center:not(.paneled) > .region-card:not([hidden]) #actions:not([hidden])) .gain-pop,
-  body:has(.center:not(.paneled) > .region-card:not([hidden]) #actions:not([hidden])) .toast,
-  body:has(.center:not(.paneled) > .region-card:not([hidden]) #actions:not([hidden])) #toast[popover] { bottom: calc(var(--dock-h, 56px) + 51px + 12px); }
+  body:has(.center:not(.paneled):not(.in-city) > .region-card:not([hidden]) #actions:not([hidden])) .gain-pop,
+  body:has(.center:not(.paneled):not(.in-city) > .region-card:not([hidden]) #actions:not([hidden])) .toast,
+  body:has(.center:not(.paneled):not(.in-city) > .region-card:not([hidden]) #actions:not([hidden])) #toast[popover] { bottom: calc(var(--dock-h, 56px) + 51px + 12px); }
 }
 /* ── 제작·부엌의 '방금 만든 것': 남은 시간을 아래 가는 막대로, 시간이 지나면 걷힘 ── */
 .craft-made { flex: none; } /* 창 안 세로 줄에서 눌려 줄어들지 않게 (전에 overflow: hidden을 주자 높이가 눌려 잘렸음) */
@@ -5011,3 +5011,17 @@ body:not(.realm-city) .moss-fx { display: none; }
 /* 소지품: 차고 있는 즐겨찾기 장신구는 '착용 중' (다 쓴 것처럼 흐리게 하지 않음) */
 .inv .it.zero.worn > :not(.fav-star) { opacity: 1; }
 .inv .it.zero.worn .q { color: var(--steel); font-weight: 600; }
+
+/* 채팅 가리기 (설정): 이야기 창에 대륙 소식만 */
+body.chat-off #log .msg, body.chat-off #log .sys:not(.wnews) { display: none; }
+body.chat-off #say, body.chat-off #chat-view { display: none; }
+/* 폰: 동료 줄에 단추가 둘 이상이면(집터 방문 · 텔레파시) 단추를 이름 아래 줄로 내려 이름·위치 글이 좁아지지 않게 */
+@media (max-width: 520px) {
+  .fr-row:has(.acts > :nth-child(2)) { grid-template-columns: 34px minmax(0, 1fr); }
+  .fr-row:has(.acts > :nth-child(2)) .acts { grid-column: 2; justify-self: start; display: flex; gap: 6px; }
+}
+
+/* 집터 구경 창: 위 줄 오른쪽 '선물' */
+#city-visit-body .cv-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+#city-visit-body .cv-top .hd-s { margin: 0; }
+#city-visit-body .cv-gift { flex: none; display: inline-flex; align-items: center; gap: 4px; }

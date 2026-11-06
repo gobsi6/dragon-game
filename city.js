@@ -558,7 +558,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     const o = otherDragon(name); if (!o) return err('그런 드래곤은 없다.');
     const m = cityOf(o); if (!m || !m.plot || !m.rooms) return err(`${ga(o.name)} 아직 집터를 고르지 않았다.`);
     const rs = ROOMS(m.plot), ci = curIdx(m), today = dayIdx();
-    return { ok: true, visit: { name: o.name, me: o.id === d.id, plot: { id: m.plot, name: PI[m.plot].name, mood: PI[m.plot].mood, perk: PI[m.plot].perk },
+    return { ok: true, visit: { id: o.id, name: o.name, me: o.id === d.id, plot: { id: m.plot, name: PI[m.plot].name, mood: PI[m.plot].mood, perk: PI[m.plot].perk },
       rooms: rs.map((r, i) => { const st = m.rooms[r.id], need = Object.values(r.mats).reduce((a, n) => a + n, 0), put = Object.entries(r.mats).reduce((a, [k, n]) => a + Math.min(n, (st.mats || {})[k] || 0), 0); return { id: r.id, name: r.name, hours: r.hours, h: Math.min(r.hours, st.h), matsFrac: need ? put / need : 1, state: i < ci ? 'done' : i === ci ? 'cur' : 'lock' }; }),
       deco: Array.isArray(m.deco) ? m.deco : null, look: m.look || null, book: hasBook(m), guest: bookOf(o.name),
       canWrite: hasBook(m) && o.id !== d.id && W.bookDay[`${d.name}>${o.name}`] !== today, phrases: BOOK.phrases, len: BOOK.len } };

@@ -326,11 +326,15 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
     countPair(w, l.id); countPair(l, w.id); // 같은 상대와의 하루 결투 횟수
     cw.lastWin ||= {};
     const lines = { [w.id]: [], [l.id]: [] };
+    const got = { [w.id]: [], [l.id]: [] }; // 얻은 물건 (라이벌의 비늘): 아래에서 상태와 함께 한 번에 저장
     const fresh = now - (cw.lastWin[l.id] || 0) >= COMBAT.autoCooldown;
     if (fresh) {
       cw.lastWin[l.id] = now;
       let fame = COMBAT.fameWin;
-      if (db.relGet(w.id, l.id) === 'rival') { fame += COMBAT.fameRival; lines[w.id].push('라이벌을 꺾었다! 명성이 더 오른다.'); }
+      if (db.relGet(w.id, l.id) === 'rival') {
+        fame += COMBAT.fameRival; lines[w.id].push('라이벌을 꺾었다! 명성이 더 오른다.');
+        got[w.id].push({ id: 'rival_scale', qty: 1 }); lines[w.id].push(`${l.name}${josa(l.name, '이', '가')} 떨어뜨린 라이벌의 비늘 한 조각을 주웠다.`); // 같은 상대에게는 명성처럼 한동안 한 번만 (fresh)
+      }
       const nemesis = db.relGet(w.id, l.id) === 'nemesis';
       if (nemesis) { fame += BOND_RULES.nemesis.fame; lines[w.id].push('원수를 꺾었다! 오랜 원한이 조금 풀린다.'); }
       lines[w.id].push(`용족 명성 +${fame}`);
@@ -355,7 +359,7 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
     });
     for (const d of [w, l]) {
       logic.regen(d);
-      db.saveState(d);
+      db.saveState(d, got[d.id]);
       const e = live(d.id);
       if (e) sendMe(e.socket, d);
     }

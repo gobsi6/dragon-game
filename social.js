@@ -300,7 +300,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
         theirMemo: db.memoShared(d.id, viewer.id),        // 이 드래곤이 나에 대해 남긴 메모
       },
       can: self ? null : {
-        gift: reach(viewer, d.id, { needOnline: false }),
+        gift: db.relGet(d.id, viewer.id) === 'wary' ? '상대가 마음을 닫고 있다. 선물이 닿지 않는다.' : reach(viewer, d.id, { needOnline: false }), // 나를 경계하면 선물 단추도 막음 (gift:send·gift:leave와 같은 규칙)
         trade: reach(viewer, d.id, { needOnline: true }),
         heal: (logic.regen(viewer), healWhy(viewer, d)),
       },
@@ -318,6 +318,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
         row.bond = r.bond || 'comrade';
         row.region = e ? e.dragon.region : r.region;
         row.away = !!e?.dragon.exp_end;
+        try { const dd = e ? e.dragon : db.getDragon(r.id); const cc = dd && logic.combatJson(dd); row.home = !!(cc && cc.city && cc.city.plot); } catch { row.home = false; } // 고대도시 집터가 있는지 (동료 목록의 '집터 방문')
         out.friends.push(row);
       } else if (r.kind === 'rival') { row.mutual = db.relGet(r.id, me.id) === 'rival'; out.rivals.push(row); }
       else if (r.kind === 'wary') out.wary.push(row);
@@ -461,7 +462,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     // 보기만 하는 요청(목록·프로필 읽기)은 간격 제한을 두지 않음.
     // 관계를 바꾼 직후 화면이 목록과 프로필을 다시 불러오는데, 여기에 걸리면 화면이 바뀌지 않고 멈춰 있었음
     // p.id가 상대 드래곤인 요청들 (시험용 드래곤이면 막음)
-    const TARGETED = new Set(['rel:request', 'rel:accept', 'rel:decline', 'rel:cancel', 'rel:unfriend', 'rel:mark', 'rel:memo', 'heal:other', 'rel:teach', 'kin:offer', 'gift:send', 'tp:open', 'tp:send', 'tp:heard', 'trade:invite', 'fest:invite']);
+    const TARGETED = new Set(['rel:request', 'rel:accept', 'rel:decline', 'rel:cancel', 'rel:unfriend', 'rel:mark', 'rel:memo', 'heal:other', 'rel:teach', 'kin:offer', 'gift:send', 'gift:leave', 'tp:open', 'tp:send', 'tp:heard', 'trade:invite', 'fest:invite']);
     const READ_ONLY = new Set(['dragon:profile', 'fest:get', 'rel:list', 'rel:map', 'gift:inbox', 'gift:seen', 'ledger:list', 'tp:threads', 'tp:open', 'tp:heard']);
     const on = (event, fn) => socket.on(event, (payload, ack) => {
       if (typeof ack !== 'function') ack = () => {};
@@ -837,11 +838,22 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       return { ok: true };
     });
 
-    on('gift:send', (d, p) => {
+    // 선물 보내기 · 집터에 두고 가기(leave): 두고 가기는 상대가 원정 중이든 접속하지 않았든 상관없이, 대신 내가 고대 유적(고대도시 포함)에 와 있어야 함
+    const giftDo = (d, p, leave) => {
       const id = target(p);
       if (!id) return { error: '그런 드래곤은 없다.' };
-      const why = reach(d, id, { needOnline: false });
-      if (why) return { error: why };
+      // 상대가 나를 경계하면 선물(보내기·두고 가기 모두)이 닿지 않음 — 텔레파시와 같음
+      if (db.relGet(id, d.id) === 'wary') { const nm = db.getDragon(id)?.name || '상대'; return { error: leave ? `${nm}의 집터 문이 굳게 닫혀 있다. 선물을 두고 갈 수 없다.` : `${nm}${josa(nm, '이', '가')} 마음을 닫고 있다. 선물이 닿지 않는다.` }; }
+      if (leave) {
+        if (id === d.id) return { error: '자기 집터에는 두고 갈 수 없다.' };
+        if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
+        if (d.region !== 'ruins') return { error: '선물을 두고 가려면 고대 유적에 직접 와 있어야 한다.' };
+        const od = live(id)?.dragon || db.getDragon(id), oc = od && logic.combatJson(od);
+        if (!oc || !oc.city || !oc.city.plot) return { error: '이 드래곤은 아직 집터가 없다.' };
+      } else {
+        const why = reach(d, id, { needOnline: false });
+        if (why) return { error: why };
+      }
       const gold = Math.floor(Number(p.gold) || 0);
       const items = cleanItems(p.items);
       const msg = (typeof p.msg === 'string' ? p.msg : '').replace(/\s+/g, ' ').trim().slice(0, GIFT_MSG_MAX); // 함께 보내는 말
@@ -876,9 +888,11 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
         t.socket.emit('gift:got', { id: gid, from: { id: d.id, name: d.name, kind: d.kind, av: avOf(d.id) }, gold, items, msg, img, at: Date.now() });
         sendMe(t.socket, t.dragon);
       }
-      sendMe(socket, d);
-      return { ok: true, lines: [`${name}에게 ${what}${josa(what, '을', '를')} 보냈다.${msg ? ' 함께 적은 말도 전해진다.' : ''}`] };
-    });
+      const me = live(d.id); if (me) sendMe(me.socket, d);
+      return { ok: true, lines: [leave ? `${name}의 집터에 ${what}${josa(what, '을', '를')} 두고 왔다.${msg ? ' 함께 적은 말도 남겼다.' : ''}` : `${name}에게 ${what}${josa(what, '을', '를')} 보냈다.${msg ? ' 함께 적은 말도 전해진다.' : ''}`] };
+    };
+    on('gift:send', (d, p) => giftDo(d, p, false));
+    on('gift:leave', (d, p) => giftDo(d, p, true));
 
     // 받은 선물 확인 (상자에서 지움)
     // keep: 함께 온 그림을 보물 상자에 간직 (둥지가 있어야 함. 간직하지 않은 그림은 주고받은 기록에서 90일 동안 보임)
