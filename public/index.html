@@ -14851,13 +14851,13 @@
       // 동굴 벽 가장자리: 두꺼운 테두리와 안쪽 그늘
       s += `<path d="${FLOOR}" fill="none" stroke="#5E5546" stroke-width="16" stroke-linejoin="round" opacity=".35"/><path d="${FLOOR}" fill="none" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>`;
       // 바위 결: 벽 바깥 바위에 금과 덩어리
-      for (let i = 0; i < 60; i++) { const a = rnd2(i + 300), x = rnd2(i + 360) * 1000, y = rnd2(i + 420) * 640; if (inFloor(x, y, 10)) continue; s += `<path d="M${x.toFixed(0)},${y.toFixed(0)} l${(6 + a * 10).toFixed(0)},${(-3 - a * 4).toFixed(0)} l${(4 + a * 6).toFixed(0)},${(5 + a * 3).toFixed(0)}" stroke="#4A4236" stroke-width="1.1" fill="none" opacity=".55"/>`; }
-      // 종유석 기둥과 석순 (성 밖 바닥)
-      for (const [x, y, h] of [[60, 150, 34], [104, 118, 26], [52, 230, 28], [74, 440, 32], [48, 510, 24], [196, 46, 22], [790, 54, 26], [840, 90, 20], [150, 600, 22], [330, 612, 18]]) s += `<path d="M${x - h * .28},${y} Q${x - h * .1},${y - h * .5} ${x},${y - h} Q${x + h * .1},${y - h * .5} ${x + h * .28},${y}z" fill="#B3AA8D" stroke="${INK}" stroke-width="1.1"/><path d="M${x - h * .34},${y} h${h * .68}" stroke="${INK}" stroke-width="1.1"/>`;
-      // 무너진 바위
-      for (const [x, y, w] of [[118, 210, 22], [96, 520, 26], [250, 616, 18], [700, 48, 20], [880, 40, 16]]) s += `<path d="M${x - w / 2},${y} l${w * .15},${-w * .45} l${w * .4},${-w * .15} l${w * .35},${w * .25} l${w * .1},${w * .35}z" fill="#C9C1A6" stroke="${INK}" stroke-width="1.1" stroke-linejoin="round"/>`;
+      for (let i = 0; i < 60; i++) { const a = rnd2(i + 300), x = rnd2(i + 360) * 1000, y = rnd2(i + 420) * 640; if (inPoly([x, y], FLOOR_PTS) || lineD([x, y], [...FLOOR_PTS, FLOOR_PTS[0]]) < 22) continue; /* 금이 바닥 테두리에 걸치지 않게 */ s += `<path d="M${x.toFixed(0)},${y.toFixed(0)} l${(6 + a * 10).toFixed(0)},${(-3 - a * 4).toFixed(0)} l${(4 + a * 6).toFixed(0)},${(5 + a * 3).toFixed(0)}" stroke="#4A4236" stroke-width="1.1" fill="none" opacity=".55"/>`; }
+      // 종유석 기둥과 석순 (성 밖 바닥: 동굴 벽 테두리에 걸치지 않게 바닥 안쪽에)
+      for (const [x, y, h] of [[85, 176, 34], [119, 136, 26], [80, 230, 28], [83, 436, 32], [92, 496, 24], [209, 82, 22], [788, 90, 26], [842, 90, 20], [158, 569, 22], [316, 595, 18], [905, 172, 30], [938, 230, 22], [930, 318, 28], [934, 388, 20], [900, 462, 24], [922, 501, 30], [843, 572, 18], [713, 583, 20]]) s += `<path d="M${x - h * .28},${y} Q${x - h * .1},${y - h * .5} ${x},${y - h} Q${x + h * .1},${y - h * .5} ${x + h * .28},${y}z" fill="#B3AA8D" stroke="${INK}" stroke-width="1.1"/><path d="M${x - h * .34},${y} h${h * .68}" stroke="${INK}" stroke-width="1.1"/>`;
+      // 무너진 바위 (바닥 안쪽에)
+      for (const [x, y, w] of [[118, 210, 22], [121, 497, 26], [245, 582, 18], [712, 69, 20], [867, 103, 16], [918, 268, 22], [902, 392, 18], [910, 533, 20], [653, 599, 16]]) s += `<path d="M${x - w / 2},${y} l${w * .15},${-w * .45} l${w * .4},${-w * .15} l${w * .35},${w * .25} l${w * .1},${w * .35}z" fill="#C9C1A6" stroke="${INK}" stroke-width="1.1" stroke-linejoin="round"/>`;
       // 빛나는 이끼 군락
-      for (let i = 0; i < 30; i++) { const x = 30 + rnd2(i) * 940, y = 30 + rnd2(i + 40) * 580; if (!inFloor(x, y, 14) || inPoly([x, y], WALL) || lineD([x, y], wallLoop) < 26 || x > 840) continue; s += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="9" fill="#E2EEDA" opacity=".55"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.6" fill="#A7C29F" stroke="#5F7A62" stroke-width=".8"/>`; }
+      for (let i = 0; i < 30; i++) { const x = 30 + rnd2(i) * 940, y = 30 + rnd2(i + 40) * 580; if (!inFloor(x, y, 14) || inPoly([x, y], WALL) || lineD([x, y], wallLoop) < 26) continue; s += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="9" fill="#E2EEDA" opacity=".55"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.6" fill="#A7C29F" stroke="#5F7A62" stroke-width=".8"/>`; }
       // 도시 쪽만 희미하게 밝음
       s += `<ellipse cx="490" cy="330" rx="420" ry="300" fill="url(#cm-glow)"/>`;
       // 성 안 바닥
@@ -15086,7 +15086,7 @@
     const out = [];
     h.golems.forEach((g) => { const s = gState(g);
       if (durLow(g) && s !== 'work' && s !== 'due') out.push({ t: `${g.name} 손질이 필요하다 · 내구도 ${g.dur}`, b: '손질', a: `mend:${g.i}` }); // 보내기 전에 먼저
-      if (s === 'back') out.push({ t: `${g.name} 돌아옴 · ${repSum(g.report)}`, b: '보내기', a: `again:${g.i}`, pri: true });
+      if (s === 'back') { const a = againOf(g); out.push({ t: `${g.name} 돌아옴 · ${repSum(g.report)} → 다음: ${CT.v.rules.jobs[a.job]} ${a.hours}시간`, b: '보내기', a: `again:${g.i}`, pri: true }); }
       else if (s === 'due') out.push({ t: `${g.name} 돌아오는 중`, b: '맞이하기', a: 'get' });
       else if (s === 'idle') out.push({ t: `${g.name} 쉬는 중`, b: '보내기', a: `golem:${g.i}` });
       else if (s === 'off' && !g.gate && Object.entries(CT.v.rules.repair).every(([k, n]) => (h.inv[k] || 0) >= n)) out.push({ t: '쓰러진 골렘을 고칠 수 있다', b: '고치기', a: `golem:${g.i}` }); });
@@ -15116,7 +15116,7 @@
     if (k === 'mend') { const h = CT.v.me, g = h.golems[+i], by = canPay(h, mendCostOf(g, 'seal')) ? 'seal' : canPay(h, mendCostOf(g, 'mat')) ? 'mat' : null;
       if (by) return cityCall('city:mend', { i: +i, by });
       CT.sel = 'golems'; CT.gopen = +i; CT.tab = 'golems'; renderHome(); return toast('손질할 인장이나 재료가 모자란다.'); }
-    if (k === 'again') { const g = CT.v.me.golems[+i], rep = g.report; return cityCall('city:send', { i: +i, job: rep.job === 'build' && !CT.v.me.rooms.some((r) => r.state === 'cur' && r.h < r.hours) ? 'city' : rep.job, hours: rep.hours }); }
+    if (k === 'again') { const g = CT.v.me.golems[+i]; return cityCall('city:send', { i: +i, ...againOf(g) }); }
   }
   // 할 일 모두 처리: 목록 순서대로 서버에 차례로 보냄. 골렘은 하던 일을 같은 시간만큼 다시, 쉬는 골렘은 공사(공사가 다 찼으면 도시 일손) 4시간
   async function homeAll() {
@@ -15135,7 +15135,7 @@
       else if (k === 'req') ev = 'city:req';
       else if (k === 'give') ev = 'city:give';
       else if (k === 'perk') ev = 'city:perk';
-      else if (k === 'again') { ev = 'city:send'; p = { i: +x, job: g.report.job === 'build' && !buildOk ? 'city' : g.report.job, hours: g.report.hours }; }
+      else if (k === 'again') { ev = 'city:send'; p = { i: +x, ...againOf(g) }; }
       else if (k === 'golem' && gState(g) === 'off') { ev = 'city:repair'; p = { i: +x }; }
       else if (k === 'golem') { ev = 'city:send'; p = { i: +x, job: buildOk ? 'build' : 'city', hours: 4 }; }
       if (!ev) continue;
@@ -15566,7 +15566,7 @@
   function golemsD(h) {
     const v = CT.v, G = h.golems, cnt = (s) => G.filter((g) => gState(g) === s).length;
     const line = (g) => { const s = gState(g); return s === 'back' ? `${v.rules.jobs[g.report.job]} ${g.report.hours}시간 · ${repSum(g.report)}` : s === 'due' ? '방금 돌아왔다 · 눌러 맞이하기' : s === 'work' ? `${v.rules.jobs[g.job]} · ${ctLeft(g.until - Date.now())} 남음` : s === 'idle' ? '시킬 일을 기다린다' : (g.gate ? `${g.gate}${ctJ(g.gate, '을', '를')} 되살리면 고칠 수 있다` : Object.entries(v.rules.repair).map(([k, n]) => `${k === 'bog_iron' ? '늪철' : '흑요석'} ${n}`).join(' · ') + '로 깨울 수 있다'); };
-    const act = (g) => { const s = gState(g); if (s === 'work' && h.perk && h.perk.kind === 'recall' && h.perk.on && h.perk.left > 0) return `<button type="button" class="btn sm" data-ct="perkg:${g.i}" title="망루에서 깃발을 흔들어 바로 돌아오게 한다">불러들이기</button>`; return s === 'back' ? `<button type="button" class="btn sm primary" data-ct="act:again:${g.i}">보내기</button>` : s === 'due' ? '<button type="button" class="btn sm primary" data-ct="act:get">맞이하기</button>' : ''; };
+    const act = (g) => { const s = gState(g); if (s === 'work' && h.perk && h.perk.kind === 'recall' && h.perk.on && h.perk.left > 0) return `<button type="button" class="btn sm" data-ct="perkg:${g.i}" title="망루에서 깃발을 흔들어 바로 돌아오게 한다">불러들이기</button>`; return s === 'back' ? (() => { const a = againOf(g); return `<button type="button" class="btn sm primary" data-ct="act:again:${g.i}" title="${v.rules.jobs[a.job]} ${a.hours}시간 보내기" aria-label="${ctEsc(g.name)}: ${v.rules.jobs[a.job]} ${a.hours}시간 보내기">보내기</button>`; })() : s === 'due' ? '<button type="button" class="btn sm primary" data-ct="act:get">맞이하기</button>' : ''; };
     const rows = G.map((g) => { const on = CT.gopen === g.i, s = gState(g);
       return `<li class="gr ${s === 'due' ? 'back' : s}${on ? ' open' : ''}"><div class="gr-h"><button type="button" class="gr-t" data-ct="gopen:${g.i}" aria-expanded="${on}"><span class="gr-ic">${dhIc('golem').replace('dh-ic', 'dh-ic sm')}</span><span class="gr-n"><span class="gr-nt"><b>${g.awake ? g.name : '쓰러진 골렘'}</b><span class="tg ${GST[s][1]}">${GST[s][0]}</span>${g.awake ? `<span class="g-dur${durLow(g) ? ' low' : ''}" title="내구도">내구 ${g.dur ?? 100}</span>` : ''}</span><small>${line(g)}</small></span><span class="chev2"></span></button>${act(g)}</div>${on ? `<div class="gr-b">${golemBody(h, g)}</div>` : ''}</li>`; }).join('');
     return `<div class="dh"><b>${dhIc('golem')}골렘</b><span class="tg">${G.filter((g) => g.awake).length} / ${G.length} 깨어남</span></div>
@@ -15617,6 +15617,11 @@
     if (r.seals) parts.push(`인장 +${r.seals}`);
     if (!Object.keys(r.got || {}).length && (r.job === 'gather' || r.job === 'dig')) parts.unshift('빈손');
     return parts.join(' · ');
+  }
+  function againOf(g) { // '보내기'(할 일·골렘 줄·모두 처리)로 보낼 일: 골렘 탭에서 고른 게 있으면 그것, 없으면 지난번 그대로
+    const rep = g.report || {}, cur = CT.v.me.rooms.find((r) => r.state === 'cur'), buildOk = !!cur && cur.h < cur.hours;
+    let job = (CT.job || {})[g.i] || rep.job || (buildOk ? 'build' : 'city'); if (job === 'build' && !buildOk) job = 'city';
+    return { job, hours: (CT.hrs || {})[g.i] || rep.hours || 4 };
   }
   const durLow = (g) => g.awake && g.dur != null && g.dur < (CT.v.rules.wear?.low ?? 30);
   function mendCostOf(g, by) { // city.js의 mendCost와 같은 셈

@@ -391,7 +391,7 @@ function applyDebuff(att, def, debuff, chance, element, lines) {
     lines.push(`${ga(def)} ${STATUS[k]} 상태가 되었다.${longer ? ' (지혜로 한 턴 더)' : ''}`);
   }
 }
-// 칭호 '불굴의 의지'·'꺾이지 않는 마음': 쓰러질 피해를 받으면 전투당 한 번 체력 1로 버팀 (사냥·강적에서만: hunt()가 f.endure를 붙임)
+// 칭호 '불굴의 의지'·'꺾이지 않는 마음': 쓰러질 피해를 받으면 전투당 한 번 체력 1로 버팀 (사냥터·강적·대륙의 재앙: hunt()·bossBattle()이 f.endure를 붙임, 레이드 보스·보물 도둑·결투에는 없음)
 // f.endure = 맞기 직전 체력이 최대의 이 비율 이상일 때만 (0이면 조건 없음), f.endureHeal = 버틸 때 되찾는 최대 체력 비율
 // 받을 피해(dmg)를 돌려줌. 버텼으면 체력 1이 남도록 줄이고, after에 남길 문장을 넣음
 function endureHit(f, dmg, after) {
@@ -758,7 +758,7 @@ function hunt(d) {
   const chance = corrupted ? (logic.isRuin(d.region) ? RUIN.eliteChance : MIND.eliteChance) : COMBAT.eliteChance;
   const eliteRoll = debug.forceElite ?? (d.level >= COMBAT.eliteFrom && Math.random() < chance * (logic.titleMods(d).eliteFind || 1)); // 칭호 '강적을 부르는 자'
   const me = fromDragon(d, 'hunt');
-  { const ti = logic.titleMods(d); if (ti.endure != null) { me.endure = ti.endure; me.endureHeal = ti.endureHeal || 0; } } // 칭호 '불굴의 의지'·'꺾이지 않는 마음' (사냥·강적만)
+  { const ti = logic.titleMods(d); if (ti.endure != null) { me.endure = ti.endure; me.endureHeal = ti.endureHeal || 0; } } // 칭호 '불굴의 의지'·'꺾이지 않는 마음' (사냥·강적, bossBattle에도 같은 줄)
   if (eliteRoll) {
     const foe = fromCreature(place, true, corrupted);
     me.atk *= (logic.titleMods(d).eliteAtk || 1) * logic.gearMods(d).eliteAtk; // 칭호: 강적 사냥꾼, 희귀 장비
@@ -1014,6 +1014,7 @@ function fromBoss(key, lv, hp, hpMax) {
 }
 function bossBattle(d, st) {
   const me = fromDragon(d, 'hunt');
+  { const ti = logic.titleMods(d); if (ti.endure != null) { me.endure = ti.endure; me.endureHeal = ti.endureHeal || 0; } } // 칭호 '불굴의 의지'·'꺾이지 않는 마음': 대륙의 재앙에서도
   me.atk *= (logic.titleMods(d).eliteAtk || 1) * logic.gearMods(d).eliteAtk; // 칭호: 강적 사냥꾼, 희귀 장비
   const foe = fromBoss(st.key, st.lv, st.hp, st.hpMax);
   const b = newBattle('hunt', me, foe);

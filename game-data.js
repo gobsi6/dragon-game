@@ -1843,7 +1843,7 @@ const EXP_RULES = { forkFrom: 0.35, forkTo: 0.6, stanceTone: { hostile: ['bold',
 // cond: { count: 셈 이름, at } (특성 횟수와 같은 곳에 셈) / { level } / { duel: 결투 승리 } / { scars: 상흔 수 } / { hoard: 보물더미 가치 }
 // mod: atk·taken(사냥·강적 전투 공격·받는 피해 배율, region이 있으면 그 지역에서만), eliteAtk(강적 공격), xp(경험치), huntGold(사냥 금화),
 //      drop(사냥 전리품 확률 +), craftEn(제작 기력 배율), mindWard(깎이는 정신 배율), heal(치유 배율), helpHp(일으켜 줄 때 체력 +), expRare(원정 귀한 물건 +)
-//      eliteFind(사냥하다 강적을 만날 확률 배율), fishJunk(낚시 잡동사니 확률 배율), fishRare(드문·귀한 물고기가 무는 정도 배율), fishTiming('완벽'·'좋음' 판정 시간 배율),
+//      eliteFind(사냥터에서 강적을 만날 확률 배율), fishJunk(낚시 잡동사니 확률 배율), fishRare(드문·귀한 물고기가 무는 정도 배율), fishTiming('완벽'·'좋음' 판정 시간 배율),
 //      cookEn(요리 제작 기력 배율: 강화 음식·식구 요리), buffMin(강화 음식 지속 시간 배율)
 // cond에 { fish: n }(낚은 물고기 수, tier를 주면 그 등급만. 도감의 낚은 수로 셈이라 칭호가 생기기 전에 낚은 것도 들어감)
 //      crit(사냥·강적 급소 확률 +, 날개 차이로 정해지는 확률 위에 더함)
@@ -1856,9 +1856,9 @@ const TITLES = [
   { id: 'ev_wed_yes2', name: '결혼하고 싶은 용', cond: { event: true }, mod: {}, eff: '효과 없음 · 달고 있으면 이름 옆에 은빛 왕관', event: true, crown: 'silver', crownText: '2위' },
   { id: 'ev_wed_no2',  name: '결혼하기 싫은 용', cond: { event: true }, mod: {}, eff: '효과 없음 · 달고 있으면 이름 옆에 은빛 왕관', event: true, crown: 'silver', crownText: '2위' },
   // 사냥
-  { id: 'hunter1',   name: '풋내기 사냥꾼',     cond: { count: 'huntwin', at: 10 },  mod: { huntGold: 1.1 },  eff: '사냥 금화 +10%' },
-  { id: 'hunter2',   name: '노련한 사냥꾼',     cond: { count: 'huntwin', at: 100 }, mod: { atk: 1.04 },      eff: '사냥 공격 +4%' },
-  { id: 'hunter3',   name: '대륙의 포식자',     cond: { count: 'huntwin', at: 400 }, mod: { atk: 1.07, taken: 0.97 }, eff: '사냥 공격 +7%, 받는 피해 −3%' },
+  { id: 'hunter1',   name: '풋내기 사냥꾼',     cond: { count: 'huntwin', at: 10 },  mod: { huntGold: 1.1 },  eff: '사냥터 금화 +10%' },
+  { id: 'hunter2',   name: '노련한 사냥꾼',     cond: { count: 'huntwin', at: 100 }, mod: { atk: 1.04 },      eff: '사냥터·레이드·강적 공격 +4%' },
+  { id: 'hunter3',   name: '대륙의 포식자',     cond: { count: 'huntwin', at: 400 }, mod: { atk: 1.07, taken: 0.97 }, eff: '사냥터·레이드·강적 공격 +7%, 받는 피해 −3%' },
   // 지역의 주인: 그 지역에서 사냥 30번 이기기
   { id: 'lord_plains',  name: '평원의 주인',     cond: { count: 'huntwin:plains', at: 30 },  mod: { region: 'plains',  atk: 1.08, taken: 0.92 }, eff: '중앙 평원에서 공격 +8%, 받는 피해 −8%' },
   { id: 'lord_forest',  name: '숲의 그림자',     cond: { count: 'huntwin:forest', at: 30 },  mod: { region: 'forest',  atk: 1.08, taken: 0.92 }, eff: '독안개 숲에서 공격 +8%, 받는 피해 −8%' },
@@ -1871,9 +1871,9 @@ const TITLES = [
   { id: 'lord_canyon',  name: '협곡의 맹금',     cond: { count: 'huntwin:canyon', at: 30 },  mod: { region: 'canyon',  atk: 1.08, taken: 0.92 }, eff: '태양 협곡에서 공격 +8%, 받는 피해 −8%' },
   { id: 'lord_volcano', name: '불꽃을 걷는 자',  cond: { count: 'huntwin:volcano', at: 30 }, mod: { region: 'volcano', atk: 1.08, taken: 0.92 }, eff: '잿빛 화산에서 공격 +8%, 받는 피해 −8%' },
   // 강적
-  { id: 'elite1',    name: '강적 사냥꾼',       cond: { count: 'elite', at: 5 },     mod: { eliteAtk: 1.06 }, eff: '강적과 싸울 때 공격 +6%' },
-  { id: 'elite2',    name: '전설을 쓰러뜨린 자', cond: { count: 'elite', at: 30 },   mod: { eliteAtk: 1.1, drop: 0.05 }, eff: '강적과 싸울 때 공격 +10%, 전리품 +5%' },
-  { id: 'elite3',    name: '강적을 부르는 자',   cond: { count: 'elite', at: 50 },   mod: { eliteFind: 1.3 }, eff: '사냥하다 강적을 만날 확률 ×1.3' },
+  { id: 'elite1',    name: '강적 사냥꾼',       cond: { count: 'elite', at: 5 },     mod: { eliteAtk: 1.06 }, eff: '레이드·강적 공격 +6%' },
+  { id: 'elite2',    name: '전설을 쓰러뜨린 자', cond: { count: 'elite', at: 30 },   mod: { eliteAtk: 1.1, drop: 0.05 }, eff: '레이드·강적 공격 +10%, 사냥터 전리품 +5%' },
+  { id: 'elite3',    name: '강적을 부르는 자',   cond: { count: 'elite', at: 50 },   mod: { eliteFind: 1.3 }, eff: '사냥터에서 강적을 만날 확률 ×1.3' },
   // 낚시 (해안): 도감에 남은 낚은 수로 셈 (잡동사니는 빼고)
   { id: 'fish1',     name: '갯바위 낚시꾼',     cond: { fish: 50 },                  mod: { fishJunk: 0.6 },  eff: '낚시에서 잡동사니가 걸릴 확률 −40%' },
   { id: 'fish2',     name: '바다를 읽는 용',     cond: { fish: 300 },                 mod: { fishRare: 1.2 },  eff: '드문·귀한 물고기가 더 잘 문다 (+20%)' },
@@ -1886,9 +1886,9 @@ const TITLES = [
   { id: 'gatherer',  name: '약초를 아는 발톱', cond: { count: 'gather', at: 60 },   mod: { heal: 1.15 },     eff: '치유 +15%' },
   { id: 'gatherer2', name: '부지런한 발톱', cond: { count: 'gather', at: 200 }, mod: { gatherExtra: 0.1 }, eff: '채집에서 물건을 하나 더 찾을 확률 +10%' },
   { id: 'gatherer3', name: '땅을 읽는 자', cond: { count: 'gather', at: 500 }, mod: { gatherExtra: 0.1, gatherRare: 0.02 }, eff: '채집에서 물건을 하나 더 찾을 확률 +10%, 귀한 물건 +2%' },
-  { id: 'explorer',  name: '길 찾는 자',       cond: { count: 'explore', at: 60 },  mod: { drop: 0.05 },     eff: '사냥 전리품 +5%' },
+  { id: 'explorer',  name: '길 찾는 자',       cond: { count: 'explore', at: 60 },  mod: { drop: 0.05 },     eff: '사냥터 전리품 +5%' },
   { id: 'wanderer',  name: '먼 길의 나그네',   cond: { count: 'expedition', at: 20 }, mod: { expRare: 0.03 }, eff: '원정 귀한 물건 +3%' },
-  { id: 'trader',    name: '흥정꾼',           cond: { count: 'trade', at: 30 },    mod: { huntGold: 1.15 }, eff: '사냥 금화 +15%' },
+  { id: 'trader',    name: '흥정꾼',           cond: { count: 'trade', at: 30 },    mod: { huntGold: 1.15 }, eff: '사냥터 금화 +15%' },
   { id: 'sleeper',   name: '깊은 잠의 용',     cond: { count: 'rest', at: 40 },     mod: { mindWard: 0.85 }, eff: '깎이는 정신 −15%' },
   // 만들기
   { id: 'crafter1',  name: '솜씨 좋은 발톱',   cond: { count: 'craft', at: 20 },    mod: { craftEn: 0.85 },  eff: '제작 기력 −15%' },
@@ -1897,11 +1897,11 @@ const TITLES = [
   { id: 'lv5',       name: '날개를 편 자',     cond: { level: 5 },                  mod: { xp: 1.03 },       eff: '경험치 +3%' },
   { id: 'lv10',      name: '하늘의 주인',      cond: { level: 10 },                 mod: { xp: 1.06 },       eff: '경험치 +6%' },
   // 결투장
-  { id: 'duel1',     name: '결투장의 신예',    cond: { duel: 10 },                  mod: { atk: 1.03 },      eff: '사냥 공격 +3%' },
-  { id: 'duel2',     name: '결투장의 왕',      cond: { duel: 50 },                  mod: { atk: 1.05, eliteAtk: 1.03 }, eff: '사냥 공격 +5%, 강적 공격 +3%' },
-  { id: 'duel3',     name: '결투장의 전설',    cond: { duel: 100 },                 mod: { atk: 1.05, crit: 0.05 }, eff: '사냥 공격 +5%, 급소 확률 +5%p' },
-  { id: 'unbowed',   name: '불굴의 의지',      cond: { duelLoss: 50 },              mod: { endure: 0.3 }, eff: '사냥·강적에서 전투당 한 번, 쓰러질 피해를 체력 1로 버틴다 (맞기 직전 체력이 최대의 30% 이상일 때)' },
-  { id: 'unbroken',  name: '꺾이지 않는 마음', cond: { duelLoss: 100 },             mod: { endure: 0, endureHeal: 0.15 }, eff: '사냥·강적에서 전투당 한 번, 쓰러질 피해를 버티고 최대 체력 15%를 되찾는다' },
+  { id: 'duel1',     name: '결투장의 신예',    cond: { duel: 10 },                  mod: { atk: 1.03 },      eff: '사냥터·레이드·강적 공격 +3%' },
+  { id: 'duel2',     name: '결투장의 왕',      cond: { duel: 50 },                  mod: { atk: 1.05, eliteAtk: 1.03 }, eff: '사냥터·레이드·강적 공격 +5%, 레이드·강적 공격 +3% 더' },
+  { id: 'duel3',     name: '결투장의 전설',    cond: { duel: 100 },                 mod: { atk: 1.05, crit: 0.05 }, eff: '사냥터·레이드·강적 공격 +5%, 급소 확률 +5%p' },
+  { id: 'unbowed',   name: '불굴의 의지',      cond: { duelLoss: 50 },              mod: { endure: 0.3 }, eff: '사냥터·강적·대륙의 재앙에서 전투당 한 번, 쓰러질 피해를 체력 1로 버틴다 (맞기 직전 체력이 최대의 30% 이상일 때)' },
+  { id: 'unbroken',  name: '꺾이지 않는 마음', cond: { duelLoss: 100 },             mod: { endure: 0, endureHeal: 0.15 }, eff: '사냥터·강적·대륙의 재앙에서 전투당 한 번, 쓰러질 피해를 버티고 최대 체력 15%를 되찾는다' },
   // 서로 돕기·정신
   { id: 'rescuer',   name: '손을 내미는 자',   cond: { count: 'rescue', at: 3 },    mod: { helpHp: 0.15 },   eff: '일으켜 줄 때 체력 +15%' },
   { id: 'mender',    name: '치유의 손길',      cond: { count: 'healother', at: 15 }, mod: { heal: 1.1, helpHp: 0.05 }, eff: '치유 +10%, 일으켜 줄 때 체력 +5%' },
@@ -1910,7 +1910,7 @@ const TITLES = [
   { id: 'dancer',    name: '축제의 춤꾼',       cond: { count: 'dance', at: 3 },     mod: { mindWard: 0.9 },  eff: '깎이는 정신 −10%' },
   // 관계
   { id: 'teacher',   name: '이름난 스승',      cond: { count: 'teach', at: 20 },    mod: { xp: 1.03 },       eff: '경험치 +3%' },
-  { id: 'surpass',   name: '청출어람',         cond: { count: 'surpass', at: 1 },   mod: { atk: 1.03 },      eff: '사냥 공격 +3%' },
+  { id: 'surpass',   name: '청출어람',         cond: { count: 'surpass', at: 1 },   mod: { atk: 1.03 },      eff: '사냥터·레이드·강적 공격 +3%' },
   // 이어받은 의지
   { id: 'pioneer',   name: '새 길을 연 발톱',   cond: { count: 'firstcraft', at: 1 }, mod: { craftEn: 0.9 }, eff: '제작 기력 −10%' },
   { id: 'masterwork', name: '걸작의 장인',     cond: { count: 'masterwork', at: 5 }, mod: { craftGreat: 0.05 }, eff: '제작 대성공 +5%' },
@@ -1922,37 +1922,37 @@ const TITLES = [
   { id: 'heir',      name: '의지를 이은 자',   cond: { count: 'heir', at: 1 },      mod: { xp: 1.05 },       eff: '경험치 +5%' },
   { id: 'sendoff',   name: '둥지를 떠나보낸 자', cond: { count: 'sendoff', at: 3 }, mod: { xp: 1.03 },     eff: '경험치 +3%' },
   // 대륙의 재앙
-  { id: 'boss1',     name: '재앙에 맞선 자',   cond: { count: 'bosswin', at: 1 },   mod: { eliteAtk: 1.04 }, eff: '강적과 싸울 때 공격 +4%' },
-  { id: 'boss2',     name: '대륙의 방패',      cond: { count: 'bosswin', at: 10 },  mod: { atk: 1.04, taken: 0.97 }, eff: '사냥 공격 +4%, 받는 피해 −3%' },
-  { id: 'bosslast',  name: '재앙을 끝낸 자',   cond: { count: 'bosslast', at: 1 },  mod: { eliteAtk: 1.06 }, eff: '강적과 싸울 때 공격 +6%' },
+  { id: 'boss1',     name: '재앙에 맞선 자',   cond: { count: 'bosswin', at: 1 },   mod: { eliteAtk: 1.04 }, eff: '레이드·강적 공격 +4%' },
+  { id: 'boss2',     name: '대륙의 방패',      cond: { count: 'bosswin', at: 10 },  mod: { atk: 1.04, taken: 0.97 }, eff: '사냥터·레이드·강적 공격 +4%, 받는 피해 −3%' },
+  { id: 'bosslast',  name: '재앙을 끝낸 자',   cond: { count: 'bosslast', at: 1 },  mod: { eliteAtk: 1.06 }, eff: '레이드·강적 공격 +6%' },
   // 레이드 (raidboss.js)
   { id: 'morven1',   name: '첫 추수',         cond: { count: 'raidwin_morven', at: 1 },  mod: { taken: 0.98 }, eff: '받는 피해 −2%' },
-  { id: 'morven10',  name: '이삭을 거둔 자',   cond: { count: 'raidwin_morven', at: 10 }, mod: { atk: 1.04 },   eff: '사냥 공격 +4%' },
+  { id: 'morven10',  name: '이삭을 거둔 자',   cond: { count: 'raidwin_morven', at: 10 }, mod: { atk: 1.04 },   eff: '사냥터·레이드·강적 공격 +4%' },
   { id: 'raidguard', name: '막아선 비늘',      cond: { count: 'raidguard', at: 20 },      mod: { taken: 0.97 }, eff: '받는 피해 −3%' },
   // 에레보스 정화도에 쌓은 내 기여 (멸망한 대륙에서 사냥·탐사·레이드 등으로 쌓임)
   { id: 'ruin1',     name: '잿빛 땅의 길손',     cond: { count: 'ruinpts', at: 1000 }, mod: { taken: 0.98 },    eff: '받는 피해 −2%' },
-  { id: 'ruin2',     name: '오염을 걷는 자',     cond: { count: 'ruinpts', at: 3000 }, mod: { eliteAtk: 1.03 }, eff: '강적과 싸울 때 공격 +3%' },
-  { id: 'ruin3',     name: '에레보스의 정화자',  cond: { count: 'ruinpts', at: 8000 }, mod: { atk: 1.05 },      eff: '사냥 공격 +5%' },
+  { id: 'ruin2',     name: '오염을 걷는 자',     cond: { count: 'ruinpts', at: 3000 }, mod: { eliteAtk: 1.03 }, eff: '레이드·강적 공격 +3%' },
+  { id: 'ruin3',     name: '에레보스의 정화자',  cond: { count: 'ruinpts', at: 8000 }, mod: { atk: 1.05 },      eff: '사냥터·레이드·강적 공격 +5%' },
   { id: 'heiron1',   name: '성문의 증인',       cond: { count: 'raidwin_heiron', at: 1 },  mod: { taken: 0.98 }, eff: '받는 피해 −2%' },
-  { id: 'heiron10',  name: '기사단을 쉬게 한 자', cond: { count: 'raidwin_heiron', at: 10 }, mod: { atk: 1.04 },   eff: '사냥 공격 +4%' },
-  { id: 'raidflank', name: '대열을 깬 날개',     cond: { count: 'raidflank', at: 15 },      mod: { eliteAtk: 1.04 }, eff: '강적과 싸울 때 공격 +4%', hide: 'raidwin_heiron' },
+  { id: 'heiron10',  name: '기사단을 쉬게 한 자', cond: { count: 'raidwin_heiron', at: 10 }, mod: { atk: 1.04 },   eff: '사냥터·레이드·강적 공격 +4%' },
+  { id: 'raidflank', name: '대열을 깬 날개',     cond: { count: 'raidflank', at: 15 },      mod: { eliteAtk: 1.04 }, eff: '레이드·강적 공격 +4%', hide: 'raidwin_heiron' },
   { id: 'raidduel',  name: '일기토의 맞수',      cond: { count: 'raidduel', at: 5 },        mod: { taken: 0.97 }, eff: '받는 피해 −3%', hide: 'raidwin_heiron' },
   // 균열 레이드 (엔드 콘텐츠: 지금 있는 칭호보다 확실히 앞서게)
-  { id: 'rift1',     name: '균열의 증인',       cond: { count: 'raidwin_rift', at: 1 },   mod: { eliteAtk: 1.12, taken: 0.95 }, eff: '강적·레이드 공격 +12%, 받는 피해 −5%' },
-  { id: 'rift10',    name: '심연을 건넌 날개',   cond: { count: 'raidwin_rift', at: 10 },  mod: { atk: 1.10, taken: 0.94 },      eff: '사냥 공격 +10%, 받는 피해 −6%' },
+  { id: 'rift1',     name: '균열의 증인',       cond: { count: 'raidwin_rift', at: 1 },   mod: { eliteAtk: 1.12, taken: 0.95 }, eff: '레이드·강적 공격 +12%, 받는 피해 −5%' },
+  { id: 'rift10',    name: '심연을 건넌 날개',   cond: { count: 'raidwin_rift', at: 10 },  mod: { atk: 1.10, taken: 0.94 },      eff: '사냥터·레이드·강적 공격 +10%, 받는 피해 −6%' },
   { id: 'riftgold',  name: '금빛을 지킨 이',     cond: { count: 'riftgold', at: 1 },       mod: { taken: 0.92, heal: 1.1 },      eff: '받는 피해 −8%, 치유 +10%', hide: 'raidwin_rift' },
   { id: 'riftlift',  name: '고룡을 붙든 자', cond: { count: 'riftlift', at: 8 }, mod: { ccResist: 0.2, roar: 0.15 },  eff: '마비·얼어붙음을 떨쳐 낼 확률 +20%, 포효 성공률 +15%', hide: 'raidwin_rift' },
   { id: 'riftsave',  name: '손아귀를 푼 자',      cond: { count: 'riftsave', at: 5 },       mod: { taken: 0.95, gust: 0.1 },      eff: '받는 피해 −5%, 날개 돌풍 성공률 +10%', hide: 'raidwin_rift' },
   { id: 'riftfirst', name: '균열을 닫은 넷',     cond: { count: 'riftfirst', at: 1 },      mod: {},                              eff: '서버에서 처음 아스테르를 쓰러뜨린 넷 (효과 없음)' },
-  { id: 'raidhelp',  name: '들판의 길잡이',    cond: { count: 'raidhelp', at: 10 },       mod: { huntGold: 1.05 }, eff: '사냥 금화 +5%' },
+  { id: 'raidhelp',  name: '들판의 길잡이',    cond: { count: 'raidhelp', at: 10 },       mod: { huntGold: 1.05 }, eff: '사냥터 금화 +5%' },
   // 보물더미
   { id: 'hoard1',    name: '보물을 품은 자',   cond: { hoard: 2000 },               mod: { mindWard: 0.9 },  eff: '깎이는 정신 −10%' },
-  { id: 'hoard2',    name: '황금 산의 주인',   cond: { hoard: 5000 },               mod: { huntGold: 1.1, mindWard: 0.9 }, eff: '사냥 금화 +10%, 깎이는 정신 −10%' },
-  { id: 'keeper',    name: '보물 지킴이',      cond: { count: 'raidwin', at: 3 },   mod: { atk: 1.03 },      eff: '사냥 공격 +3%' },
-  { id: 'scarred',   name: '상흔투성이',       cond: { scars: 3 },                  mod: { taken: 0.95 },    eff: '사냥 받는 피해 −5%' },
+  { id: 'hoard2',    name: '황금 산의 주인',   cond: { hoard: 5000 },               mod: { huntGold: 1.1, mindWard: 0.9 }, eff: '사냥터 금화 +10%, 깎이는 정신 −10%' },
+  { id: 'keeper',    name: '보물 지킴이',      cond: { count: 'raidwin', at: 3 },   mod: { atk: 1.03 },      eff: '사냥터·레이드·강적 공격 +3%' },
+  { id: 'scarred',   name: '상흔투성이',       cond: { scars: 3 },                  mod: { taken: 0.95 },    eff: '사냥터·레이드·강적 받는 피해 −5%' },
   // 떠돌이 야바위꾼: 서로 다른 때 나타난 야바위꾼에게 말 걸기 / 홀짝 판 수
   { id: 'yb_regular', name: '야바위꾼의 단골', cond: { count: 'yabawimeet', at: 5 }, mod: {}, eff: '달고 있으면 떠돌이 야바위꾼이 소문을 들려준다' },
-  { id: 'yb_gambler', name: '홀짝의 귀재', cond: { count: 'yabawi', at: 30 }, mod: { huntGold: 1.05 }, eff: '사냥 금화 +5%' },
+  { id: 'yb_gambler', name: '홀짝의 귀재', cond: { count: 'yabawi', at: 30 }, mod: { huntGold: 1.05 }, eff: '사냥터 금화 +5%' },
 ];
 // 칭호 조건을 사람이 읽는 글로
 const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: `둥지에서 {n}번 쉬기 (한 번에 ${NEST.restCountMin}분 이상)`, craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격', raidwin_morven: '레이드에서 이삭지기 모르벤을 {n}번 쓰러뜨리기', raidguard: '레이드에서 막아서기로 동료를 {n}번 지키기', raidhelp: '보상을 다 받은 주에 레이드를 {n}번 도와 이기기', ruinpts: '에레보스 정화도에 {n}만큼 기여하기', raidwin_heiron: '레이드에서 마지막 기사단장 헤이른을 {n}번 쓰러뜨리기', raidflank: '레이드에서 우회로 방패벽을 {n}번 깨기', raidduel: '레이드에서 일기토를 {n}번 끝까지 버티기', raidwin_rift: '레이드에서 균열을 지킨 자 아스테르를 {n}번 쓰러뜨리기', riftgold: '아스테르를 금빛 1 이상인 채로 쓰러뜨리기', riftlift: '아스테르의 마지막 숨을 {n}번 늦추기', riftsave: '심연의 손아귀에 잡힌 동료를 {n}번 구하기', riftfirst: '서버에서 처음 아스테르를 쓰러뜨리기', heir: '먼 여행을 떠난 드래곤의 의지를 잇기', teach: '제자를 {n}번 가르치기', surpass: '스승의 레벨을 따라잡기', sendoff: '다 자란 식구를 {n}번 떠나보내기', corrupt: '오염된 땅에서 {n}번 행동하기', purify: '오염된 땅을 {n}번 정화하기', firstcraft: '숨겨진 제작법을 대륙에서 처음 찾아내기', masterwork: '대성공 {n}번', mobquest: '모브 드래곤의 의뢰 {n}번 마치기', mobstory: '모브 드래곤의 이야기 {n}개를 끝까지 듣기', yabawimeet: '떠돌이 야바위꾼을 {n}번 만나기 (나타날 때마다 한 번)', yabawi: '야바위꾼과 홀짝 {n}판', dance: '왕도 축제에서 {n}번 춤추기', ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map((n) => [`mazef${n}`, `지하 회랑 제 ${n}층의 봉인이 풀린 날 수호자를 치거나 기둥을 밝히기`])), mazecity: '지하 회랑 일곱 층을 모두 밝힌 날 함께하기', cook: '요리 {n}번 하기 (강화 음식·식구 요리 만들기, 부엌에 맡기기)' };
