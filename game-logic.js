@@ -256,6 +256,8 @@ function migrateMasterwork(d, have) {
   }
   return { items, changed };
 }
+// 레벨이 모자라 효과가 꺼진 장신구 (예전에 찬 것·선물받은 것): 차고는 있어도 능력치·효과는 레벨이 되어야 켜짐
+const gearLvOk = (d, id) => !(ITEMS[id]?.lvReq > (d.level || 1));
 function equipOf(d) {
   // 예전 저장 버그로 여러 겹 감싸진 값도 다 풀어 냄 (다음 저장 때 바르게 고쳐져 들어감)
   for (let i = 0; typeof d.equip === 'string' && i < 10; i++) {
@@ -270,7 +272,7 @@ function bonusOf(d) {
   let expRare = 0;
   for (const id of Object.values(equipOf(d))) {
     const it = ITEMS[id];
-    if (!it) continue;
+    if (!it || !gearLvOk(d, id)) continue;
     for (const [k, v] of Object.entries(it.bonus || {})) b[k] += v;
     expRare += it.expRare || 0;
     // 강화(+1~+2, CRAFT.enhance 단계 수)와 걸작: 그 장신구의 주 능력치에 더함
@@ -573,7 +575,7 @@ function gearMods(d, raid = false) {
   const m = { vsCorrupt: 1, eliteAtk: 1, taken: 1, shard: 0, heal: 1, cover: 1, raidAtk: 1, flank: 0, linger: 0 };
   for (const id of Object.values(equipOf(d))) {
     const it = ITEMS[id], g = it?.gear;
-    if (!g) continue;
+    if (!g || !gearLvOk(d, id)) continue;
     if (!raid && (it.raidGear || ITEMS[it.mwOf]?.raidGear)) continue;
     for (const k of ['vsCorrupt', 'eliteAtk', 'taken', 'heal', 'cover', 'raidAtk']) if (g[k]) m[k] *= g[k]; // heal·cover·raidAtk: 레이드 희귀 장비
     if (g.shard) m.shard += g.shard;
@@ -584,7 +586,7 @@ function gearMods(d, raid = false) {
 }
 function mindWard(d) {
   let w = 1;
-  for (const id of Object.values(equipOf(d))) if (ITEMS[id]?.mindWard) w *= ITEMS[id].mindWard;
+  for (const id of Object.values(equipOf(d))) if (ITEMS[id]?.mindWard && gearLvOk(d, id)) w *= ITEMS[id].mindWard;
   return w * (titleMods(d).mindWard || 1);
 }
 // 정신을 깎음. 알려 줄 문장을 돌려줌 (경고 문턱을 넘으면 경고도)
@@ -1126,7 +1128,7 @@ const forgeP = (d) => (atForge(d) ? facPower(d, 'forge') : 0); // 공방의 힘 
 // 각인: 속성별 피해 배율 (착용한 장신구에 새긴 것만)
 function engraveOf(d) {
   const m = {};
-  for (const id of Object.values(equipOf(d))) { const e = gearOn(d, id)?.elem || ITEMS[id]?.elem; if (e) m[e] = (m[e] || 1) * CRAFT.engrave.power; } // 직접 빚은 장신구는 속성이 물건에 붙어 있음
+  for (const id of Object.values(equipOf(d))) { if (!gearLvOk(d, id)) continue; const e = gearOn(d, id)?.elem || ITEMS[id]?.elem; if (e) m[e] = (m[e] || 1) * CRAFT.engrave.power; } // 직접 빚은 장신구는 속성이 물건에 붙어 있음
   return m;
 }
 // 대성공 확률 (focus: 불 조절 점수 0~1, 없으면 null)
@@ -1602,6 +1604,7 @@ function equipRaw(d, id, have, plain = false) {
   const it = ITEMS[id];
   if (!it || it.type !== 'equip') return { error: '착용할 수 없는 물건이다.' };
   if (have(id) < 1) return { error: '가지고 있지 않다.' };
+  if (!gearLvOk(d, id)) return { error: `${it.name}${josa(it.name, '은', '는')} 레벨 ${it.lvReq}부터 찰 수 있다.` };
   const eq = equipOf(d), g = gearOf(d);
   const prev = eq[it.slot];
   const prevAt = prev && g[prev] ? gearAt(d, prev) : null;

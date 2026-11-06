@@ -110,6 +110,7 @@
           <button class="iconbtn" id="menu-btn" type="button" aria-label="설정" aria-expanded="false" aria-controls="menu"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="menu-dot" id="menu-dot" hidden></span></button>
           <div class="menu frame" id="menu" hidden>
             <button type="button" id="settings-open">설정</button>
+            <button type="button" id="notices-open">공지<span class="menu-dot" id="notices-dot" hidden></span></button>
             <button type="button" id="notes-open">업데이트 노트<span class="menu-dot" id="notes-dot" hidden></span></button>
             <button type="button" id="guide-open">길잡이</button>
             <button type="button" id="gm-open" hidden>GM 도구</button>
@@ -371,6 +372,11 @@
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="city-intro-t">입구의 석판</h2></div>
   <div class="body" id="city-intro-body"></div>
+</dialog>
+<dialog class="frame dlg wide ct-dlg" id="city-visit-dlg" aria-labelledby="city-visit-t">
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="city-visit-t">집터 구경</h2></div>
+  <div class="body" id="city-visit-body"></div>
 </dialog>
 <dialog class="frame dlg wide ct-dlg" id="city-wall-dlg" aria-labelledby="city-wall-t">
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
@@ -652,6 +658,23 @@
     <div class="nm-st-top"><div class="tx"><b id="nm-st-name"></b><small id="nm-st-who"></small></div><span class="mkb-gold"><i class="coin" aria-hidden="true"></i><b id="nm-st-gold"></b></span></div>
     <div class="mk-list" id="nm-st-list"></div>
     <div class="row"><button class="btn" type="button" id="nm-st-back">노점 거리로</button></div>
+  </div>
+</dialog>
+<dialog class="frame dlg" id="notices-dlg" aria-labelledby="notices-dlg-title">
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="notices-dlg-title">공지</h2></div>
+  <div class="body">
+    <div class="nt-list" id="notices-list"></div>
+    <div class="row"><button class="btn" type="button" id="notices-close">닫기</button></div>
+  </div>
+</dialog>
+<dialog class="frame dlg" id="notice-pop" aria-labelledby="notice-pop-title"><!-- 새 공지: 접속할 때 한 번 -->
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="notice-pop-title">공지</h2></div>
+  <div class="body">
+    <div class="np-head"><b id="notice-pop-t"></b><time id="notice-pop-d"></time></div>
+    <div id="notice-pop-body"></div>
+    <div class="row"><button class="btn" type="button" id="notice-pop-all">지난 공지</button><button class="btn primary" type="button" id="notice-pop-ok">확인</button></div>
   </div>
 </dialog>
 <dialog class="frame dlg" id="notes-dlg" aria-labelledby="notes-dlg-title">
@@ -5826,9 +5849,10 @@
   const NOTES_KEY = 'dragon-notes-seen';
   const notesSeen = () => Math.max(SEEN.num('notes'), (() => { try { return Number(localStorage.getItem(NOTES_KEY)) || 0; } catch { return 0; } })()); // 서버(드래곤마다)와 이 기기 중 큰 쪽
   function renderNotesDot() {
-    const unread = (S.notesLatest || 0) > notesSeen();
-    $('menu-dot').hidden = !unread;
+    const unread = (S.notesLatest || 0) > notesSeen(), nUnread = (S.noticeLatest || 0) > SEEN.num('notices');
+    $('menu-dot').hidden = !(unread || nUnread);
     $('notes-dot').hidden = !unread;
+    if ($('notices-dot')) $('notices-dot').hidden = !nUnread;
   }
   // 본문: 줄마다 문단, '- '로 시작하는 줄은 목록
   function noteBody(text) {
@@ -5883,6 +5907,44 @@
     });
   }
   $('notes-open').addEventListener('click', openNotes);
+  // ── 공지: 업데이트 노트와 따로. 가장 새 공지를 아직 안 읽었으면 접속할 때 메인에 한 번 뜸 ──
+  function drawNotices(list) {
+    const box = $('notices-list'); box.replaceChildren();
+    if (!list.length) { const p = document.createElement('p'); p.className = 'nt-empty'; p.textContent = '아직 올라온 공지가 없다.'; box.appendChild(p); return; }
+    const seen = SEEN.num('notices');
+    list.forEach((n, i) => {
+      const d = document.createElement('details'); d.className = 'nt'; d.open = i === 0;
+      const sm = document.createElement('summary'), b = document.createElement('b'), t = document.createElement('time');
+      b.textContent = n.title; t.textContent = n.date || ''; sm.append(b);
+      if (n.id > seen) { const nw = document.createElement('span'); nw.className = 'new'; nw.textContent = '새 공지'; sm.append(nw); }
+      sm.append(t); d.append(sm, noteBody(n.body)); box.appendChild(d);
+    });
+  }
+  function markNoticeSeen(id) { if (id && id > SEEN.num('notices')) SEEN.set('notices', id); renderNotesDot(); }
+  function openNotices() {
+    $('menu').hidden = true;
+    socket.emit('notices:get', {}, (res) => {
+      if (res.error) return toast(res.error);
+      drawNotices(res.list); if (!$('notices-dlg').open) $('notices-dlg').showModal();
+      markNoticeSeen(res.list[0]?.id || 0);
+    });
+  }
+  function showNoticePop(n) {
+    if (!n) return;
+    const go = () => {
+      if ($('notice-pop').open) return;
+      $('notice-pop-t').textContent = n.title; $('notice-pop-d').textContent = n.date || '';
+      $('notice-pop-body').replaceChildren(noteBody(n.body)); $('notice-pop').dataset.id = n.id;
+      $('notice-pop').showModal();
+    };
+    if ($('welcome-dlg') && $('welcome-dlg').open) $('welcome-dlg').addEventListener('close', () => setTimeout(go, 200), { once: true }); // 처음 온 드래곤은 환영 공지를 닫은 다음에
+    else go();
+  }
+  $('notices-open').addEventListener('click', openNotices);
+  $('notices-close').addEventListener('click', () => $('notices-dlg').close());
+  $('notice-pop').addEventListener('close', () => markNoticeSeen(Number($('notice-pop').dataset.id) || 0));
+  $('notice-pop-ok').addEventListener('click', () => $('notice-pop').close());
+  $('notice-pop-all').addEventListener('click', () => { $('notice-pop').close(); openNotices(); });
   // 길잡이: 처음 온 드래곤을 위한 안내 페이지 (guide.html, 새 탭)
   const openGuide = () => { $('menu').hidden = true; $('menu-btn').setAttribute('aria-expanded', 'false'); window.open('/guide.html', '_blank', 'noopener'); };
   $('guide-open').addEventListener('click', openGuide);
@@ -13198,6 +13260,28 @@
     }, 'primary');
     wsec.appendChild(wlRow);
 
+    // 공지: 새로 올리기·고치기·지우기 (가장 새 공지는 안 읽은 드래곤에게 접속할 때 메인에 뜸)
+    const ncsec = gmSection(body, '공지', "메뉴의 '공지'에 새것부터 쌓인다. 새로 올리면 지금 접속한 모두와, 나중에 접속하는 드래곤에게 메인에 한 번 뜬다. 고치기는 다시 띄우지 않는다.");
+    GM.notice ||= { id: 0, title: '', body: '' };
+    const ncTitle = gEl('input', 'input'); ncTitle.maxLength = 60; ncTitle.placeholder = '제목 (예: 장비 착용 레벨 안내)'; ncTitle.value = GM.notice.title; ncTitle.setAttribute('aria-label', '공지 제목');
+    ncTitle.addEventListener('input', () => { GM.notice.title = ncTitle.value; });
+    const ncBody = gEl('textarea', 'input gm-ta'); ncBody.maxLength = 3000; ncBody.rows = 8; ncBody.value = GM.notice.body; ncBody.placeholder = '공지 내용\n- 목록은 이렇게'; ncBody.setAttribute('aria-label', '공지 본문');
+    ncBody.addEventListener('input', () => { GM.notice.body = ncBody.value; });
+    ncsec.append(ncTitle, ncBody);
+    const ncRow = gEl('div', 'gm-r');
+    if (GM.notice.id) gBtn(ncRow, '고치기 그만두기', () => { GM.notice = { id: 0, title: '', body: '' }; renderGm(); }, 'link');
+    gBtn(ncRow, GM.notice.id ? '고친 내용 저장' : '새로 올리기', () => {
+      if (!GM.notice.id && !confirm('공지를 올릴까? 지금 접속한 모두에게 바로 뜬다.')) return;
+      gmCall('gm:notice:save', { id: GM.notice.id, title: GM.notice.title, body: GM.notice.body }, (res) => { toast(GM.notice.id ? '공지를 고쳤다.' : '공지를 올렸다.'); GM.notice = { id: 0, title: '', body: '' }; GM.notices = res.list; renderGm(); });
+    }, 'primary');
+    ncsec.appendChild(ncRow);
+    if (!GM.notices) socket.emit('notices:get', {}, (res) => { if (res.ok) { GM.notices = res.list; if (GM.tab === 'announce') renderGm(); } });
+    for (const n of GM.notices || []) {
+      const r = gmRow(ncsec, `${n.date || ''} · ${n.title}`);
+      gBtn(r, '고치기', () => { GM.notice = { id: n.id, title: n.title, body: n.body }; renderGm(); }, 'link');
+      gBtn(r, '지우기', () => { if (!confirm(`'${n.title}' 공지를 지울까?`)) return; gmCall('gm:notice:delete', { id: n.id }, (res) => { GM.notices = res.list; toast('공지를 지웠다.'); renderGm(); }); }, 'link');
+    }
+
     // 업데이트 노트: 새로 올리기·고치기·지우기
     const nsec = gmSection(body, '업데이트 노트', "메뉴의 '업데이트 노트'에 새것부터 쌓인다. 새로 올리면 모두의 메뉴에 빨간 점이 뜬다. 줄마다 문단이 되고, '- '로 시작하는 줄은 목록이 된다.");
     GM.note ||= { id: 0, title: '', body: '' };
@@ -14091,6 +14175,7 @@
     });
     bindMazeSocket(); // 지하 회랑
     socket.on('notes:latest', ({ id }) => { S.notesLatest = id || 0; renderNotesDot(); });
+    socket.on('notices:latest', ({ id, notice, edited }) => { S.noticeLatest = id || 0; renderNotesDot(); if (!edited && notice && notice.id > SEEN.num('notices')) setTimeout(() => showNoticePop(notice), 400); });
     socket.on('slate:latest', ({ at }) => { SL.latest = at || 0; renderSlateDot(); });
     // 석판이 바뀜: 열어 둔 화면은 새로 받고, 닫혀 있으면 새 글 점만
     socket.on('slate:changed', (x) => {
@@ -14820,7 +14905,7 @@
     $('city-card').innerHTML = `<i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
       <div class="where"><span class="k">지금 머무는 곳</span><div class="title"><h1>고대도시</h1><span class="tag">지하</span></div>
         <div class="at"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6-5.3-6-10a6 6 0 0 1 12 0c0 4.7-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/></svg><span>광장에 머무는 중</span></div>
-        <p class="quote">남은 용들이 일곱 겹 회랑 아래에 지은 성채 도시. 무너진 열주 사이로 빛나는 이끼가 길을 밝힌다.</p></div>
+        <p class="quote">땅속 깊이 가라앉은 옛 용들의 도시. 무너진 열주 사이로 빛나는 이끼가 길을 밝힌다.</p></div>
       <div class="mob-bar cz-bar${caveOpen ? '' : ' locked'}"><span class="cz-em" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20c2-8 5-13 9-13s7 5 9 13"/><path d="M9 20c.8-3.5 1.8-5 3-5s2.2 1.5 3 5"/></svg></span>
         <div class="mob-t"><b>시련의 굴</b><small>${caveOpen ? '날마다 규칙과 미로가 바뀜 · 하루 두 번 · 끝방의 석상' : `닫혀 있다 · 샘이 재건되면 열린다 (도시 재건도 ${ctNum(Math.min(v.son, sp.to))} / ${ctNum(sp.to)})`}</small></div>
         ${caveOpen ? '<button class="btn primary" type="button" data-ct="cave">들어간다</button>' : '<button class="btn" type="button" disabled>닫혀 있음</button>'}</div>
@@ -14860,7 +14945,7 @@
     if (st === 'done') {
       if (id === 'plaza') {
         lower = `<div class="cc-fn"><p>광장 벽에 기억의 벽이 섰다. 도시 게시판에는 재건을 도운 모두의 이름이 순서 없이 적혀 있다.</p><div class="cc-btns"><button type="button" class="btn primary" data-ct="wall">기억의 벽 보기</button><button type="button" class="btn primary" data-ct="board">도시 게시판</button></div>
-          ${CT.board ? `<div class="cc-board"><b>재건을 도운 이 ${CT.board.length}</b><p>${CT.board.map(ctEsc).join(' · ')}</p></div>` : ''}</div>`;
+          ${CT.board ? boardBox() : ''}</div>`;
       } else {
         const me = v.me, did = !!(me.zday || {})[id];
         const btn = (label, doneLabel) => `<div class="cc-btns"><button type="button" class="btn primary" data-ct="zone:${id}" ${did ? 'disabled' : ''}>${did ? doneLabel : label}</button></div>`;
@@ -14923,8 +15008,10 @@
   }
   const dhIc = (k) => `<span class="dh-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${GL[k]}</svg></span>`;
   const gState = (g) => (!g.awake ? 'off' : g.job ? (g.until <= Date.now() ? 'due' : 'work') : g.report ? 'back' : 'idle');
-  const roomPct = (r) => (r.state === 'done' ? 'done' : r.state === 'cur' ? Math.round((r.h / r.hours) * 100) : 0);
-  const pctTxt = (r) => (r.state === 'done' ? '완성' : r.state === 'cur' ? `${Math.round((r.h / r.hours) * 100)}%` : '잠김');
+  // 칸 진행: 공사 시간과 재료를 반반으로 셈 (시간만 다 차도 재료가 모자라면 100%가 아님)
+  const roomFrac = (r) => { if (r.state === 'done') return 1; if (r.state !== 'cur') return 0; const t = Math.min(1, r.h / r.hours); const need = (r.mats || []).reduce((a, m) => a + m.need, 0); const put = (r.mats || []).reduce((a, m) => a + Math.min(m.put, m.need), 0); const mf = need ? put / need : r.matsFrac ?? 1; return Math.min(0.99, (t + mf) / 2); };
+  const roomPct = (r) => (r.state === 'done' ? 'done' : r.state === 'cur' ? Math.floor(roomFrac(r) * 100) : 0);
+  const pctTxt = (r) => (r.state === 'done' ? '완성' : r.state === 'cur' ? `${Math.floor(roomFrac(r) * 100)}%` : '잠김');
   const canPut = (h) => { const r = h.rooms.find((x) => x.state === 'cur'); return r && r.mats.some((m) => m.put < m.need && (h.inv[m.id] || 0) > 0) ? r : null; };
   function homeTodo() {
     const h = CT.v?.me; if (!h || !h.plot) return [];
@@ -14936,6 +15023,7 @@
       else if (s === 'off' && !g.gate && Object.entries(CT.v.rules.repair).every(([k, n]) => (h.inv[k] || 0) >= n)) out.push({ t: '쓰러진 골렘을 고칠 수 있다', b: '고치기', a: `golem:${g.i}` }); });
     const r = canPut(h); if (r) out.push({ t: `${r.name}에 재료 넣기`, b: '넣기', a: 'put', pri: !out.some((x) => x.pri) });
     if (!h.req.done && (h.inv[h.req.id] || 0) >= h.req.n) out.push({ t: '오늘의 부탁', b: '채운다', a: 'req' });
+    if (h.book && h.book.unread) out.push({ t: `방명록에 새 글 ${h.book.unread}`, b: '보기', a: 'book', manual: true });
     const pk = h.perk; // 집터 덤
     if (pk && pk.on && pk.left > 0) {
       if (pk.kind === 'daily') out.push({ t: `집터 덤 · ${({ spring: '샘물 긷기', green: '정원 거두기', archive: '새김', plaza: '앞뜰 쓸기' })[h.plot] || '덤'}`, b: '받기', a: 'perk' });
@@ -14951,6 +15039,7 @@
     if (a === 'req') return cityCall('city:req');
     if (a === 'give') return cityCall('city:give');
     if (a === 'perk') return cityCall('city:perk');
+    if (a === 'book') { CT.tab = 'plan'; return renderHome(); }
     const [k, i] = a.split(':');
     if (k === 'golem') { CT.sel = 'golems'; CT.gopen = +i; CT.tab = 'golems'; return renderHome(); }
     if (k === 'again') { const g = CT.v.me.golems[+i], rep = g.report; return cityCall('city:send', { i: +i, job: rep.job === 'build' && !CT.v.me.rooms.some((r) => r.state === 'cur' && r.h < r.hours) ? 'city' : rep.job, hours: rep.hours }); }
@@ -14995,10 +15084,11 @@
     const gAtt = h.golems.some((g) => ['back', 'due', 'idle'].includes(gState(g)));
     const tabs = [['plan', '집터', ''], ['todo', '할 일', todo.length ? `<em class="hm-n">${todo.length}</em>` : ''], ['golems', '골렘', gAtt ? '<i class="hm-dot" aria-label="할 일 있음"></i>' : ''], ['deco', '꾸미기', '']];
     let main = '';
-    if (tab === 'plan') main = `${housePlan(h)}<section class="detail">${CT.sel === 'golems' ? roomD(h, cur || h.rooms[3]) : homeDetail(h)}</section>`;
-    else if (tab === 'todo') main = `${todo.length ? `<section class="hm-todo"><div class="hm-todo-h"><b>할 일 ${todo.length}</b><button type="button" class="btn sm primary" data-ct="all"${CT.busy ? ' disabled' : ''}>${CT.busy ? '처리하는 중…' : '모두 처리'}</button></div>${todo.map((t) => `<div class="tr"><span class="dot"></span><b>${t.t}</b><button type="button" class="btn sm" data-ct="act:${t.a}">${t.b}</button></div>`).join('')}</section>` : '<p class="hm-empty">지금은 할 일이 없다. 골렘이 돌아오면 다시 들러 보자.</p>'}<section class="detail">${reqD(h)}</section>`;
+    if (tab === 'plan') main = `${housePlan(h)}<section class="detail">${CT.sel === 'golems' ? roomD(h, cur || h.rooms[3]) : homeDetail(h)}</section>${bookBox(h)}`;
+    else if (tab === 'todo') main = `${todo.length ? `<section class="hm-todo"><div class="hm-todo-h"><b>할 일 ${todo.length}</b><button type="button" class="btn sm primary" data-ct="all"${CT.busy ? ' disabled' : ''}>${CT.busy ? '처리하는 중…' : '모두 처리'}</button></div>${todo.map((t) => `<div class="tr"><span class="dot"></span><b>${t.t}</b><button type="button" class="btn sm" data-ct="act:${t.a}">${t.b}</button></div>`).join('')}</section>` : '<p class="hm-empty">지금은 할 일이 없다. 골렘이 돌아오면 다시 들러 보자.</p>'}<section class="detail">${reqD(h)}</section>${tradeBox(h)}`;
     else if (tab === 'golems') main = `<section class="detail">${golemsD(h)}</section>`;
-    else main = `<nav class="seg dk-mode" aria-label="꾸미기"><button type="button" data-ct="dkm:place" class="${CT.dkMode === 'make' ? '' : 'on'}">가구 놓기</button><button type="button" data-ct="dkm:make" class="${CT.dkMode === 'make' ? 'on' : ''}">가구 만들기</button></nav>${CT.dkMode === 'make' ? furnMaker(h) : decoEditor(h)}`;
+    else { const md = CT.dkMode || 'place'; main = `<nav class="seg dk-mode" aria-label="꾸미기">${[['place', '가구 놓기'], ['make', '가구 만들기'], ['bp', '도면'], ['look', '바닥·담']].map(([k, n]) => `<button type="button" data-ct="dkm:${k}" class="${md === k ? 'on' : ''}">${n}</button>`).join('')}</nav>${md === 'make' ? furnMaker(h) : md === 'bp' ? bpShop(h) : md === 'look' ? lookEditor(h) : decoEditor(h)}`; }
+    if (tab === 'plan' && h.book && h.book.unread) { socket.emit('city:book:seen', {}, () => {}); setTimeout(() => { if (h.book) h.book.unread = 0; }, 0); } // 집터 탭을 열면 새 글을 읽은 것으로 (이번 화면에는 새 글 표시를 남김)
     body.innerHTML = `<div id="home-ui" class="hm-e">
       <header class="hd"><div class="hd-t"><h3>${plot.name}</h3><span class="hd-r"><span class="seal">인장 <b>${h.seals}</b></span><span class="tag">${stg} / 4단계</span></span></div>
         <p class="hd-s">${plot.mood} · 오늘 보탠 재건도 ${h.daySon} / ${v.rules.dayCap}${h.bank ? ` · 다음 날로 넘긴 재건도 ${h.bank}` : ''}</p>${h.perk ? `<p class="hd-perk${h.perk.on ? ' on' : ''}"><b>집터 덤</b> ${ctEsc(h.perk.text)}${h.perk.on ? (h.perk.up ? ' · <em>구역이 재건되어 한 단계 커짐</em>' : '') + (h.perk.kind !== 'passive' ? ` · 오늘 ${h.perk.left} / ${h.perk.max}` : ` · ${Math.round(h.perk.off * 100)}%`) : (() => { const rn = h.plots.find((p) => p.id === h.plot).room; return ` · ${ctEsc(rn)}${ctJ(rn, '을', '를')} 되살리면 열린다`; })()}</p>` : ''}</header>
@@ -15012,29 +15102,34 @@
     const R = Object.fromEntries(h.rooms.map((r) => [r.id, r])), cur = h.rooms.find((r) => r.state === 'cur');
     const selRoom = CT.sel.startsWith('room:') ? (CT.sel === 'room:cur' ? (cur || h.rooms[3]).id : CT.sel.slice(5)) : null;
     const chips = [], icons = [];
-    // 칸마다 아이콘이 설 자리 (칸 안의 상대 위치). 같은 칸에 여럿이면 차례로
-    const SLOTS = { yard: [[0.25, 0.45], [0.72, 0.45], [0.48, 0.7]], own: [[0.5, 0.62], [0.26, 0.62], [0.74, 0.62]], work: [[0.5, 0.68], [0.26, 0.68], [0.74, 0.68]], live: [[0.5, 0.6], [0.26, 0.6], [0.74, 0.6]] };
-    const used = { yard: 0, own: 0, work: 0, live: 0 };
-    const at = (room) => { const [x, y, w, hh] = HP.ROOMS[room], [fx, fy] = SLOTS[room][used[room]++ % 3]; return [x + w * fx, y + hh * fy]; };
+    // 아이콘 자리: 칸 이름 아래쪽의 후보 자리 중, 이미 놓인 아이콘과 겹치지 않는 가장 가운데 자리. 칸이 차면 마당으로
+    const placed = [], MIN = 13; // 도트 단위 (아이콘 지름 약 9~11도트 + 여유)
+    const NOTE_AT = [88, 95]; if (!h.req.done) placed.push(NOTE_AT);
+    const free = ([x, y]) => placed.every(([a, b]) => Math.hypot(a - x, b - y) >= MIN);
+    const spots = (room) => { const [x, y, w, hh] = HP.ROOMS[room], cx = x + w / 2, cy = y + hh * 0.66, out = [];
+      for (let fy = 0.45; fy <= 0.86; fy += 0.2) for (let fx = 0.18; fx <= 0.83; fx += 0.13) out.push([x + w * fx, y + hh * fy]);
+      return out.sort((p, q) => Math.hypot(p[0] - cx, p[1] - cy) - Math.hypot(q[0] - cx, q[1] - cy)); };
+    const at = (room) => { const list = room === 'yard' ? spots('yard') : [...spots(room), ...spots('yard')]; const p = list.find(free) || list[0]; placed.push(p); return p; };
     const ico = (kind, tone, ct, label, [dx, dy]) => `<button type="button" class="hp-ico ${tone}" data-ct="${ct}" aria-label="${label}" style="left:${((dx / HP.W) * 100).toFixed(2)}%;top:${((dy / HP.H) * 100).toFixed(2)}%"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${GL[kind]}</svg></button>`;
     h.golems.forEach((g) => {
       const s = gState(g); let room = null, txt, tone = 'hp-att';
-      if (s === 'off') { room = 'own'; txt = '쓰러짐'; tone = 'hp-off'; }                        // 쓰러진 골렘: 고유 칸 구석에 그대로
+      if (s === 'off') { room = R.own && R.own.state === 'lock' ? 'own' : 'yard'; txt = '쓰러짐'; tone = 'hp-off'; } // 쓰러진 골렘: 무너진 고유 칸에 누워 있고, 그 칸을 짓기 시작하면 마당으로 옮겨 둠
       else if (s === 'work' && g.job === 'build' && cur) { room = cur.id; txt = `${ctLeft(g.until - Date.now())} 남음`; tone = 'hp-work'; } // 공사: 공사 중인 칸에서 일함
       else if (s === 'work') { txt = `${CT.v.rules.jobs[g.job]} · ${ctLeft(g.until - Date.now())} 남음`; tone = 'hp-out'; } // 도시 일손·채집·잔해 뒤지기: 집터 밖 (도면에 없음)
       else { room = 'yard'; txt = s === 'idle' ? '쉬는 중' : '돌아옴'; }                          // 돌아옴·쉬는 중: 마당에서 기다림
       chips.push(`<button type="button" class="hp-chip ${tone}" data-ct="gopen:${g.i}"><i></i>${g.name} · ${txt}</button>`);
       if (room) icons.push(ico('golem', tone, `gopen:${g.i}`, `${g.name} ${txt}`, at(room)));
     });
-    if (!h.req.done) { chips.push('<button type="button" class="hp-chip hp-att" data-ct="sel:req"><i></i>오르딘의 부탁</button>'); icons.push(ico('note', 'hp-att', 'sel:req', '오르딘의 부탁', [88, 95])); } // 부탁: 입구 옆
-    const tagOf = (r) => (r.state === 'done' ? '<em class="hp-tag done">되살아남</em>' : r.state === 'cur' ? `<em class="hp-tag cur">${Math.round((r.h / r.hours) * 100)}%</em>` : '<em class="hp-tag lock">무너짐</em>');
+    if (!h.req.done) { chips.push('<button type="button" class="hp-chip hp-att" data-ct="sel:req"><i></i>오르딘의 부탁</button>'); icons.push(ico('note', 'hp-att', 'sel:req', '오르딘의 부탁', NOTE_AT)); } // 부탁: 입구 옆
+    const tagOf = (r) => (r.state === 'done' ? '<em class="hp-tag done">되살아남</em>' : r.state === 'cur' ? `<em class="hp-tag cur">${Math.floor(roomFrac(r) * 100)}%</em>` : '<em class="hp-tag lock">무너짐</em>');
     const pc = (v, t) => `${((v / t) * 100).toFixed(3)}%`;
     const rooms = Object.entries(HP.ROOMS).map(([id, [x, y, w, hh]]) => { const r = R[id];
       return `<div class="hp-room hit hp-${r.state}${selRoom === id ? ' hp-sel' : ''}" data-ct="sel:room:${id}" role="button" tabindex="0" aria-label="${r.name} ${pctTxt(r)}" style="left:${pc(x, HP.W)};top:${pc(y, HP.H)};width:${pc(w, HP.W)};height:${pc(hh, HP.H)}"><span class="hp-nm"><b>${id === 'own' ? r.name.replace('작은 ', '') : r.name}</b>${tagOf(r)}</span></div>`; }).join('') + icons.join('');
-    return `${chips.length ? `<div class="hp-strip">${chips.join('')}</div>` : ''}<div class="hp"><canvas class="hp-cv" width="146" height="110" aria-hidden="true"></canvas>${rooms}<span class="hp-door">입구</span></div>`;
+    const eye = `<button type="button" class="hp-view${CT.hpClean ? ' on' : ''}" data-ct="hpview" aria-pressed="${!!CT.hpClean}" title="이름·표시를 숨기고 꾸민 모습만 본다"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/></svg><span>감상 모드${CT.hpClean ? ' 끄기' : ''}</span></button>`; // 도면 아래 '입구' 줄 오른쪽
+    return `${chips.length ? `<div class="hp-strip">${chips.join('')}</div>` : ''}<div class="hp${CT.hpClean ? ' hp-clean' : ''}"><canvas class="hp-cv" width="146" height="110" aria-hidden="true"></canvas>${rooms}<span class="hp-door">입구</span>${eye}</div>`;
   }
   // ════ 꾸미기: 되살린 칸 안에 4도트 눈금에 맞춰 장식을 직접 놓는다 ════
-  const DK_NAME = { planter: '빛나는 꽃 화분', pot: '작은 화분', bench: '벤치', lamp: '등', bed: '침대', rug: '깔개', table: '탁자', shelf: '선반', workbench: '작업대', crate: '나무 상자', barrel: '통', pond: '작은 연못', steps: '돌계단', tablets: '돌판 서가', carvedesk: '새김 책상', hearth: '화덕', anvil: '모루', telescope: '망원경', bell: '작은 종', well: '우물', signpost: '방명록 받침', bedplot: '텃밭 두둑', arch: '덩굴 아치', jar: '항아리', chair: '의자', flowers: '들꽃 무리', mushroom: '빛버섯 무리', bush: '덤불', stepstone: '디딤돌', fence: '나무 울타리', flowerbed: '꽃 상자', stonelamp: '석등', brazier: '화로', tree: '작은 나무' };
+  const DK_NAME = { planter: '빛나는 꽃 화분', pot: '작은 화분', bench: '벤치', lamp: '등', bed: '침대', rug: '깔개', table: '탁자', shelf: '선반', workbench: '작업대', crate: '나무 상자', barrel: '통', pond: '작은 연못', steps: '돌계단', tablets: '돌판 서가', carvedesk: '새김 책상', hearth: '화덕', anvil: '모루', telescope: '망원경', bell: '작은 종', well: '우물', signpost: '방명록 받침', bedplot: '텃밭 두둑', arch: '덩굴 아치', jar: '항아리', chair: '의자', flowers: '들꽃 무리', mushroom: '빛버섯 무리', bush: '덤불', stepstone: '디딤돌', fence: '나무 울타리', flowerbed: '꽃 상자', stonelamp: '석등', brazier: '화로', tree: '작은 나무', mosaic: '모자이크 깔개', crystallamp: '수정 등', goldlamp: '금박 등', glowpatch: '빛버섯 정원', bookcase: '책장', nestbed: '둥지 쿠션', tapestry: '용 태피스트리', fountain: '작은 분수' };
   const DK_LIST = Object.keys(DK_NAME);
   const dkDone = (h) => h.rooms.filter((r) => r.state === 'done').map((r) => r.id);
   const dkLeft = (h, n) => (h.furn?.[n] || 0) - (CT.dk ? CT.dk.list.filter((o) => o.s === n).length : 0); // 가진 가구 − 놓은 가구
@@ -15069,14 +15164,32 @@
     dkState(h);
     const rows = (h.furnCat || []).map((f) => {
       const own = h.furn?.[f.s] || 0, placed = CT.dk.list.filter((o) => o.s === f.s).length;
-      const okSeal = h.seals >= f.seals, okMats = f.mats.every((m) => (h.inv[m.id] || 0) >= m.need), ok = okSeal && okMats;
+      const okSeal = h.seals >= f.seals, okMats = f.mats.every((m) => (h.inv[m.id] || 0) >= m.need), needBp = f.bp === false, ok = okSeal && okMats && !needBp;
       return `<li class="mk-row${CT.dkFocus === f.s ? ' focus' : ''}"><canvas class="dk-th" data-s="${f.s}" aria-hidden="true"></canvas>
         <div class="mk-b"><b>${f.name}</b><small>가진 것 ${own}개${placed ? ` · 놓은 것 ${placed}개` : ''}</small>
           <div class="mk-cost"><span class="it${okSeal ? '' : ' lack'}">인장 <b>${h.seals}</b><small> / ${f.seals}</small></span>${f.mats.map((m) => `<span class="it${(h.inv[m.id] || 0) >= m.need ? '' : ' lack'}">${m.name} <b>${h.inv[m.id] || 0}</b><small> / ${m.need}</small></span>`).join('')}</div></div>
-        <button type="button" class="btn sm${ok ? ' primary' : ''}" data-ct="mk:${f.s}:1" ${ok ? '' : 'disabled'}>만들기</button></li>`; }).join('');
+        ${needBp ? '<button type="button" class="btn sm" data-ct="dkm:bp">도면 필요</button>' : `<button type="button" class="btn sm${ok ? ' primary' : ''}" data-ct="mk:${f.s}:1" ${ok ? '' : 'disabled'}>만들기</button>`}</li>`; }).join('');
     CT.dkFocus = null;
     return `<div class="dk-top"><span>석공 인장 <b>${h.seals}</b></span><small>만든 가구는 '가구 놓기'에서 되살린 칸에 놓는다. 칸을 되살리면 그 칸의 기본 가구가 저절로 생긴다.</small></div>
       <ul class="mk-list">${rows}</ul>`;
+  }
+  // 장식 도면: 오르딘에게 석공 인장으로 사면 그 가구를 만들 수 있게 됨
+  function bpShop(h) {
+    const rows = (h.bp || []).map((b) => `<li class="mk-row"><canvas class="dk-th" data-s="${b.s}" aria-hidden="true"></canvas>
+      <div class="mk-b"><b>${b.name} 도면</b><small>${b.have ? '가진 도면 · 가구 만들기에서 만들 수 있다' : '사면 가구 만들기에서 이 가구를 만들 수 있다'}</small>
+        ${b.have ? '' : `<div class="mk-cost"><span class="it${h.seals >= b.seals ? '' : ' lack'}">인장 <b>${h.seals}</b><small> / ${b.seals}</small></span></div>`}</div>
+      ${b.have ? '<span class="tg ok">가짐</span>' : `<button type="button" class="btn sm${h.seals >= b.seals ? ' primary' : ''}" data-ct="bp:${b.s}" ${h.seals >= b.seals ? '' : 'disabled'}>사기</button>`}</li>`).join('');
+    return `<div class="dk-top"><span>석공 인장 <b>${h.seals}</b></span><small>오르딘이 옛 도시에서 찾아낸 장식 도면이다. 한 번 사면 계속 쓸 수 있다. 칸을 되살릴 때 생기는 기본 가구는 도면 없이도 받는다.</small></div><ul class="mk-list">${rows}</ul>`;
+  }
+  // 바닥·담 바꾸기: 되살린 칸의 바닥 무늬, 마당 담 모양
+  function lookEditor(h) {
+    const L = h.look; if (!L) return '';
+    const plan = `<div class="hp"><canvas class="hp-cv" width="146" height="110" aria-hidden="true"></canvas></div>`;
+    const rows = h.rooms.map((r) => { const done = r.state === 'done', cur = L.floor[r.id] || (L.def || {})[r.id];
+      return `<div class="lk-row"><b>${r.name}</b>${done ? `<div class="seg lk-seg">${Object.entries(L.floors).map(([k, n]) => `<button type="button" data-ct="look:${r.id}:${k}" class="${cur === k ? 'on' : ''}">${n}</button>`).join('')}</div>` : '<small>되살린 뒤에 바꿀 수 있다</small>'}</div>`; }).join('');
+    const yardDone = h.rooms[0] && h.rooms[0].state === 'done';
+    const wall = `<div class="lk-row"><b>마당 담</b>${yardDone ? `<div class="seg lk-seg">${Object.entries(L.walls).map(([k, n]) => `<button type="button" data-ct="lookw:${k}" class="${(L.wall || 'stone') === k ? 'on' : ''}">${n}</button>`).join('')}</div>` : '<small>마당을 되살린 뒤에 바꿀 수 있다</small>'}</div>`;
+    return `<div class="dk-top"><span>석공 인장 <b>${h.seals}</b></span><small>지금 깔린 바닥이 짙게 보인다. 바닥은 한 번 바꿀 때 인장 ${L.floorCost}, 마당 담은 ${L.wallCost}.</small></div>${plan}<div class="lk-list">${rows}${wall}</div>`;
   }
   function decoEditor(h) {
     const dk = dkState(h), max = h.decoRules?.max || 30, sel = dk.sel != null ? dk.list[dk.sel] : null;
@@ -15091,7 +15204,7 @@
   function dkDraw(body, h, ghost) { // 도면은 편집 중인 배치로, 위 덧칠 캔버스에는 눈금·고른 장식·놓을 자리
     const dk = CT.dk, cv = body.querySelector('.hp.dk .hp-cv'), fx = body.querySelector('.dk-fx'); if (!cv || !fx) return;
     const skip = ghost && ghost.move != null ? ghost.move : -1;
-    HP.paint(cv, HP.plan(h.plot, Object.fromEntries(h.rooms.map((r) => [r.id, { state: r.state, p: r.h / r.hours }])), dk.list.filter((_, i) => i !== skip)));
+    HP.paint(cv, HP.plan(h.plot, Object.fromEntries(h.rooms.map((r) => [r.id, { state: r.state, p: roomFrac(r) }])), dk.list.filter((_, i) => i !== skip), h.look));
     const g = fx.getContext('2d'), S = 4, grid = h.decoRules?.grid || 4, done = dkDone(h); g.clearRect(0, 0, fx.width, fx.height);
     for (const [id, [rx, ry, rw, rh]] of Object.entries(HP.ROOMS)) {
       if (!done.includes(id)) { g.fillStyle = 'rgba(252, 250, 246, .55)'; g.fillRect(rx * S, ry * S, rw * S, rh * S); continue; }
@@ -15161,12 +15274,12 @@
   function paintHouse(body, h) {
     const cv = body.querySelector('.hp-cv');
     // 꾸미기 화면과 똑같이: 저장한 배치가 없으면 눈금에 맞춘 기본 배치 (꾸미기를 처음 열 때와 같은 목록)
-    if (cv) HP.paint(cv, HP.plan(h.plot, Object.fromEntries(h.rooms.map((r) => [r.id, { state: r.state, p: r.h / r.hours }])), h.deco || HP.defaults(h.plot, h.rooms.filter((r) => r.state === 'done').map((r) => r.id), h.decoRules?.grid || 4)));
+    if (cv) HP.paint(cv, HP.plan(h.plot, Object.fromEntries(h.rooms.map((r) => [r.id, { state: r.state, p: roomFrac(r) }])), h.deco || HP.defaults(h.plot, h.rooms.filter((r) => r.state === 'done').map((r) => r.id), h.decoRules?.grid || 4), h.look));
     body.querySelectorAll('.hp-stage').forEach((c) => HP.paint(c, HP.stage(c.dataset.k, h.plot)));
   }
   // ════ 내 집터 도트 그림 (house-pixels/gen.py와 같은 규칙. 가구 그림은 SPR, 색은 PAL에서 고친다) ════
   const HP = (() => {
-    const D = {"pal":{"a":"#5e4f38","b":"#7d6a4c","w":"#b08e62","W":"#806644","v":"#c8aa7e","s":"#c8b898","S":"#968464","t":"#ded2ba","g":"#7a9c68","G":"#587a50","l":"#a4c488","y":"#f6e7a8","h":"#f3eac8","p":"#8a7556","P":"#68573e","c":"#d6be96","C":"#ba9e72","n":"#f6efe0","q":"#96b2b0","Q":"#769496","e":"#c4d6ce","f":"#e89646","F":"#f6cc70","r":"#b65c2e","k":"#6c6256","K":"#847e74","L":"#b0aa9e","j":"#7b7467","u":"#967242","1":"#ede3d0","2":"#e4d8c2","3":"#f4ecdd","4":"#e2d6bf","5":"#d6c8ae","6":"#a8926c","7":"#efe6d3","8":"#d6c8ac","9":"#dcc39a","0":"#b89a6c","+":"#e8d4b0","-":"#e6dac2","=":"#cebea0","#":"#c4b498","%":"#aa987a","A":"#eea6b0","B":"#ce7a88"},"spr":{"planter":["..y..y...y.",".lgl.gl.lg.","lgGglgGglgG",".gGgGgGgGg.","vvvvvvvvvvv","wwwwwwwwwww","wwWwwwwwWww","WWWWWWWWWWW"],"bench":["vvvvvvvvvv","wwwwwwwwww",".W......W.",".W......W."],"lamp":["..PPP..",".PyyyP.",".PyFyP.",".PyyyP.","..PPP..","...P...","...P...","...P...","...P...","..PPP.."],"bed":["WWWWWWWWWWWW","WnntCcCccccW","WnntCcCccccW","WnntCcCccccW","WtttCcCccccW","WnnnCcCccccW","WWWWWWWWWWWW","W..........W"],"rug":[".WWWWWWWWWWWW.","WccccccccccccW","WcCCCCCCCCCCcW","WcCccccccccCcW","WcCccccccccCcW","WcCCCCCCCCCCcW","WccccccccccccW",".WWWWWWWWWWWW."],"table":["WWWWWWWWWW","WvvvvvvvvW","WwwwwwwwwW","WWWWWWWWWW",".W......W.",".W......W.",".W......W."],"shelf":["WWWWWWWWWWWW","WsSwcCnSsKkW","WWWWWWWWWWWW","WnCsKwSnccsW","WWWWWWWWWWWW"],"workbench":["...SS....kK...","...SS...kK....","WWWWWWWWWWWWWW","WvvvvvvvvvvvvW","WwwwwwwwwwwwwW","WWWWWWWWWWWWWW",".W..........W.",".W..........W."],"crate":["WWWWWW","WvwwvW","WwvvwW","WvwwvW","WWWWWW"],"barrel":[".WWW.","WwvwW","WuuuW","WwvwW","WuuuW",".WWW."],"pond":[".....SSSSSSSSSS.....","...SStsssssssstSS...","..StsSqqqqqqqqSstS..",".StSqqqeqqqqqqqqStS.","StSqqqqqqqqQqqeqqStS","SsqqeqqqqqQQqqqqqqsS","SsqqqqqgqqqqqqqqeqsS","SsqqqqglgqqqqqqqqqsS","SsQqqqqgqqqqeqqqqQsS","StSQqqqqqqqqqqqQQStS",".StSQQqqqqqqqQQQStS.","..StsSSQQQQQQSSstS..","...SStsssssssstSS...",".....SSSSSSSSSS....."],"steps":["SSSSSSSSSS","SttttttltS","SssssssssS","SSSSSSSSSS","StttgttttS","SssssssssS","SSSSSSSSSS","SttttttgtS","SssssssssS","SSSSSSSSSS"],"tablets":["WWWWWWWWWW","WtSWtSWtSW","WsSWsSWsSW","WWWWWWWWWW","WtSWtSWtSW","WsSWsSWsSW","WWWWWWWWWW"],"carvedesk":["..SSSSSSS...","..St6t6tS.K.","..StttttS.K.","WWWWWWWWWWWW","WvvvvvvvvvvW","WwwwwwwwwwwW","WWWWWWWWWWWW",".W........W.",".W........W."],"hearth":["..aaaaaaaaaa..",".abbbbbbbbbba.","abkkkkkkkkkkba","abk...FF...kba","abk..FyyF..kba","abk.fFyFff.kba","abkrfffffrrkba","abkrrrrrrrrkba","abbbbbbbbbbbba","aaaaaaaaaaaaaa"],"anvil":["jjjjjjj.",".jKKKKjj","..kjjk..","..kKKk..",".kkkkkk."],"telescope":["......KK",".....KKk","....KKk.","...KKk..","..pKk...",".ppP.p..","pp.P..p.","p..P...."],"bell":["...P...","..LKj..",".LLKKj.",".LKKKj.",".LKKKj.","LKKKKjk","...k..."],"window":["aaaaaaaaaa","aeeqqeqqea","aqqQqqqQqa","aaaaaaaaaa"],"well":["...WWWWWW...",".WWvvvvvvWW.","WWWWWWWWWWWW",".P...P....P.",".P...P....P.",".P..jKKj..P.",".P..jjjj..P.",".tttttttttt.","tSkkkkkkkkSt","sssSssssSsss","SsssssSsssSs","sssSssssSsss","SSSSSSSSSSSS"],"signpost":["vvvvv","wnnnw","wnanw","wwwww","..W..","..W..",".WWW."],"pot":[".lg.","lgGg","vvvv","wwww",".WW."],"bedplot":["WWWWWWWWWWWWWW","W=g=-g==l=g=-W","W-lgl=gGg=lgGW","W=gGg-glg-gGgW","W-=g==-g==-g-W","WWWWWWWWWWWWWW"],"arch":["..lgglggGl..",".gGlg..GlgG.","gGy......ygg","gl........lG","p..........p","p..........p","p..........p","P..........P"],"rubble":[".tts..","tsssS.","ssSSSS"],"rubble2":[".ts","sSS"],"brazier":["..FfF..",".FfyfF.",".fFyFf.","KKKKKKK",".KjjjK.","..KjK..","..KjK..",".KKKKK."],"bush":["...GgG....","..GglgGg..",".GglggggG.","GllgGglgGG","GgglgggGgG",".GGgGGgGG."],"chair":["W.....","W.....","W.....","Wvvvvv","Wwwwww","W....W","W....W"],"fence":["W...W...W...W","WvvvWvvvWvvvW","WwwwWwwwWwwwW","W...W...W...W","W...W...W...W"],"flowerbed":[".y..F..y..","glgGglgGgl","WwwwwwwwwW","WvvvvvvvvW","WWWWWWWWWW"],"flowers":["..A.....q..",".AyA...qyq.","..Bg.A..Q..","...gAyA.g..",".F.g.Bg.g..","FyFgg.gl.l.",".Fglgggglg.","lgGgGlgGgGl",".=========."],"jar":[".CCC.","..C..",".CtC.","CtccC","CcccC",".CCC."],"mushroom":["..rrr....",".rfyfr...","rfffffr..","..CnC.rr.","..CnCrfyr","..CnC.Cn.",".=======."],"stepstone":[".SSS....SSS.","SttsS..SttsS","SsssS..SsssS",".SSS....SSS.","....SSS.....","...SttsS....","...SsssS....","....SSS....."],"stonelamp":["..SS..",".SttS.","SSSSSS","SyhhyS","SyyyyS","SSSSSS",".StsS.",".StsS.","SSSSSS"],"tree":[".....G.....","....GlG....","...GlggG...","..GlggggG..","...GlggG...","..GllgggG..",".GlgglgggG.","GllggggGgGG","..GlggGGG..",".GllgggggG.","GggglggGgGG","GgggggGgGGG","..GGGGGGG..","....WwW....","....WwW....","...=====..."]}};
+    const D = {"pal":{"a":"#5e4f38","b":"#7d6a4c","w":"#b08e62","W":"#806644","v":"#c8aa7e","s":"#c8b898","S":"#968464","t":"#ded2ba","g":"#7a9c68","G":"#587a50","l":"#a4c488","y":"#f6e7a8","h":"#f3eac8","p":"#8a7556","P":"#68573e","c":"#d6be96","C":"#ba9e72","n":"#f6efe0","q":"#96b2b0","Q":"#769496","e":"#c4d6ce","f":"#e89646","F":"#f6cc70","r":"#b65c2e","k":"#6c6256","K":"#847e74","L":"#b0aa9e","j":"#7b7467","u":"#967242","1":"#ede3d0","2":"#e4d8c2","3":"#f4ecdd","4":"#e2d6bf","5":"#d6c8ae","6":"#a8926c","7":"#efe6d3","8":"#d6c8ac","9":"#dcc39a","0":"#b89a6c","+":"#e8d4b0","-":"#e6dac2","=":"#cebea0","#":"#c4b498","%":"#aa987a","A":"#eedda7","B":"#4e7238","D":"#eea6b0","E":"#ce7a88","H":"#b1a288"},"spr":{"planter":["..y..y...y.",".lgl.gl.lg.","lgGglgGglgG",".gGgGgGgGg.","vvvvvvvvvvv","wwwwwwwwwww","wwWwwwwwWww","WWWWWWWWWWW"],"bench":["vvvvvvvvvv","wwwwwwwwww",".W......W.",".W......W."],"lamp":["..PPP..",".PyyyP.",".PyFyP.",".PyyyP.","..PPP..","...P...","...P...","...P...","...P...","..PPP.."],"bed":["WWWWWWWWWWWW","WnntCcCccccW","WnntCcCccccW","WnntCcCccccW","WtttCcCccccW","WnnnCcCccccW","WWWWWWWWWWWW","W..........W"],"rug":[".WWWWWWWWWWWW.","WccccccccccccW","WcCCCCCCCCCCcW","WcCccccccccCcW","WcCccccccccCcW","WcCCCCCCCCCCcW","WccccccccccccW",".WWWWWWWWWWWW."],"table":["WWWWWWWWWW","WvvvvvvvvW","WwwwwwwwwW","WWWWWWWWWW",".W......W.",".W......W.",".W......W."],"shelf":["WWWWWWWWWWWW","WsSwcCnSsKkW","WWWWWWWWWWWW","WnCsKwSnccsW","WWWWWWWWWWWW"],"workbench":["...SS....kK...","...SS...kK....","WWWWWWWWWWWWWW","WvvvvvvvvvvvvW","WwwwwwwwwwwwwW","WWWWWWWWWWWWWW",".W..........W.",".W..........W."],"crate":["WWWWWW","WvwwvW","WwvvwW","WvwwvW","WWWWWW"],"barrel":[".WWW.","WwvwW","WuuuW","WwvwW","WuuuW",".WWW."],"pond":[".....SSSSSSSSSS.....","...SStsssssssstSS...","..StsSqqqqqqqqSstS..",".StSqqqeqqqqqqqqStS.","StSqqqqqqqqQqqeqqStS","SsqqeqqqqqQQqqqqqqsS","SsqqqqqgqqqqqqqqeqsS","SsqqqqglgqqqqqqqqqsS","SsQqqqqgqqqqeqqqqQsS","StSQqqqqqqqqqqqQQStS",".StSQQqqqqqqqQQQStS.","..StsSSQQQQQQSSstS..","...SStsssssssstSS...",".....SSSSSSSSSS....."],"steps":["SSSSSSSSSS","SttttttltS","SssssssssS","SSSSSSSSSS","StttgttttS","SssssssssS","SSSSSSSSSS","SttttttgtS","SssssssssS","SSSSSSSSSS"],"tablets":["WWWWWWWWWW","WtSWtSWtSW","WsSWsSWsSW","WWWWWWWWWW","WtSWtSWtSW","WsSWsSWsSW","WWWWWWWWWW"],"carvedesk":["..SSSSSSS...","..St6t6tS.K.","..StttttS.K.","WWWWWWWWWWWW","WvvvvvvvvvvW","WwwwwwwwwwwW","WWWWWWWWWWWW",".W........W.",".W........W."],"hearth":["..aaaaaaaaaa..",".abbbbbbbbbba.","abkkkkkkkkkkba","abk...FF...kba","abk..FyyF..kba","abk.fFyFff.kba","abkrfffffrrkba","abkrrrrrrrrkba","abbbbbbbbbbbba","aaaaaaaaaaaaaa"],"anvil":["jjjjjjj.",".jKKKKjj","..kjjk..","..kKKk..",".kkkkkk."],"telescope":["......KK",".....KKk","....KKk.","...KKk..","..pKk...",".ppP.p..","pp.P..p.","p..P...."],"bell":["...P...","..LKj..",".LLKKj.",".LKKKj.",".LKKKj.","LKKKKjk","...k..."],"window":["aaaaaaaaaa","aeeqqeqqea","aqqQqqqQqa","aaaaaaaaaa"],"well":["...WWWWWW...",".WWvvvvvvWW.","WWWWWWWWWWWW",".P...P....P.",".P...P....P.",".P..jKKj..P.",".P..jjjj..P.",".tttttttttt.","tSkkkkkkkkSt","sssSssssSsss","SsssssSsssSs","sssSssssSsss","SSSSSSSSSSSS"],"signpost":["vvvvv","wnnnw","wnanw","wwwww","..W..","..W..",".WWW."],"pot":[".lg.","lgGg","vvvv","wwww",".WW."],"bedplot":["WWWWWWWWWWWWWW","W=g=-g==l=g=-W","W-lgl=gGg=lgGW","W=gGg-glg-gGgW","W-=g==-g==-g-W","WWWWWWWWWWWWWW"],"arch":["..lgglggGl..",".gGlg..GlgG.","gGy......ygg","gl........lG","p..........p","p..........p","p..........p","P..........P"],"rubble":[".tts..","tsssS.","ssSSSS"],"rubble2":[".ts","sSS"],"brazier":["..FfF..",".FfyfF.",".fFyFf.","KKKKKKK",".KjjjK.","..KjK..","..KjK..",".KKKKK."],"bush":["...GgG....","..GglgGg..",".GglggggG.","GllgGglgGG","GgglgggGgG",".GGgGGgGG."],"chair":["W.....","W.....","W.....","Wvvvvv","Wwwwww","W....W","W....W"],"fence":["W...W...W...W","WvvvWvvvWvvvW","WwwwWwwwWwwwW","W...W...W...W","W...W...W...W"],"flowerbed":[".y..F..y..","glgGglgGgl","WwwwwwwwwW","WvvvvvvvvW","WWWWWWWWWW"],"flowers":["..D.....q..",".DyD...qyq.","..Eg.D..Q..","...gDyD.g..",".F.g.Eg.g..","FyFgg.gl.l.",".Fglgggglg.","lgGgGlgGgGl",".=========."],"jar":[".CCC.","..C..",".CtC.","CtccC","CcccC",".CCC."],"mushroom":["..rrr....",".rfyfr...","rfffffr..","..CnC.rr.","..CnCrfyr","..CnC.Cn.",".=======."],"stepstone":[".SSS....SSS.","SttsS..SttsS","SsssS..SsssS",".SSS....SSS.","....SSS.....","...SttsS....","...SsssS....","....SSS....."],"stonelamp":["..SS..",".SttS.","SSSSSS","SyhhyS","SyyyyS","SSSSSS",".StsS.",".StsS.","SSSSSS"],"tree":[".....G.....","....GlG....","...GlggG...","..GlggggG..","...GlggG...","..GllgggG..",".GlgglgggG.","GllggggGgGG","..GlggGGG..",".GllgggggG.","GggglggGgGG","GgggggGgGGG","..GGGGGGG..","....WwW....","....WwW....","...=====..."],"bookcase":["WWWWWWWWWWWW","WrfAgBqrfgAW","WrfAgBqrfgAW","WWWWWWWWWWWW","WgqrAfgAqrfW","WgqrAfgAqrfW","WWWWWWWWWWWW","WBrgfqAgrBqW","WBrgfqAgrBqW","WWWWWWWWWWWW","W..........W"],"crystallamp":["..eQ..",".eqqQ.","eqeqQQ",".eqqQ.","..QQ..","..PP..","..PP..","..PP..",".PPPP.","PPPPPP"],"fountain":["......ee......",".....eQQe.....","......HH......","....HHttHH....","...HqqeqqqS...","....HHSSSS....","......SS......","..HHHHSSHHHH..",".HqqeqSSqeqqS.",".HHQQqqqqQQSS.",".HHHHSSSSSSSS.","..HSSSSSSSSS.."],"glowpatch":["..e.....e...",".eqe.e.eqe..","..P.eqe.P.e.",".gPg.P.gPgqe","glglgPglglP.","GGGGGGGGGGGG"],"goldlamp":["..FFF..",".FyyyF.",".FyhyF.",".FyyyF.","..FFF..","...F...","...u...","...u...","..uuu..",".uuuuu."],"mosaic":[".SSSSSSSSSSSS.","SttqqttqqttqqS","SttqqttqqttqqS","SqqttqqttqqttS","SqqttqqttqqttS","SttqqttqqttqqS","SttqqttqqttqqS",".SSSSSSSSSSSS."],"nestbed":["...uuuuuuuu...",".uuWuuWuuWuuu.","uWuccccccccuWu","uucchhhhhhccuu","uWchhhhhhhhcWu","uuuchhhhhhcuuu",".uuWuuWuuWuuu.","...uuuuuuuu..."],"tapestry":["PPPPPPPPPP",".rrrrrrrr.",".rFrrrrFr.",".rrFFFFrr.",".rFFrrFFr.",".rrFFFFrr.",".rrrFFrrr.",".rrFrrFrr.",".rrrrrrrr.",".rFrFrFrF.",".P......P.","PP......PP"]}};
     const PAL = D.pal, SPR = D.spr, W = 146, H = 110;
     const ROOMS = { live: [49, 6, 48, 29], own: [6, 39, 40, 44], yard: [49, 39, 48, 47], work: [101, 39, 41, 44] };
     const seedOf = (s) => [...s].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
@@ -15198,6 +15311,37 @@
       if (y + h - top > 12) put(c, x + 3, top + 3, 'workbench');
       border(c, x, y, w, h);
     }
+    // 마당 둘레: 두꺼운 벽 대신 낮은 돌담(옅은 선) + 8도트마다 돌기둥
+    function lowWall(c, st) {
+      const [x, y, w, h] = ROOMS.yard, low = '6', style = st.state === 'done' ? curLook.wall || 'stone' : 'stone';
+      if (style === 'hedge') { border(c, x, y, w, h, 'G'); border(c, x + 1, y + 1, w - 2, h - 2, 'g'); for (let i = x; i < x + w; i += 3) { px(c, i, y, 'l'); px(c, i + 1, y + h - 1, 'l'); } for (let j = y; j < y + h; j += 3) { px(c, x, j, 'l'); px(c, x + w - 1, j + 1, 'l'); } return; } // 덤불 담
+      if (style === 'fence') { border(c, x, y, w, h, 'v'); border(c, x + 1, y + 1, w - 2, h - 2, 'w'); for (let i = x; i < x + w - 1; i += 5) { for (const yy of [y, y + 1, y + h - 2, y + h - 1]) { px(c, i, yy, 'W'); px(c, i + 1, yy, 'W'); } } for (let j = y; j < y + h - 1; j += 5) { for (const xx of [x, x + 1, x + w - 2, x + w - 1]) { px(c, xx, j, 'W'); px(c, xx, j + 1, 'W'); } } return; } // 나무 울타리: 밝은 가로대 두 줄 + 짙은 말뚝
+      border(c, x, y, w, h, low);
+      for (let i = x; i < x + w; i += 8) { px(c, i, y, 'b'); px(c, i, y + h - 1, 'b'); }
+      for (let j = y; j < y + h; j += 8) { px(c, x, j, 'b'); px(c, x + w - 1, j, 'b'); }
+      px(c, x + w - 1, y, 'b'); px(c, x + w - 1, y + h - 1, 'b'); px(c, x, y + h - 1, 'b');
+    }
+    // 문과 길: 마당 ↔ 거처(위)·고유 칸(왼쪽)·작업실(오른쪽), 마당 ↔ 입구(아래). 양쪽 칸이 다 되살아나면 돌길, 아니면 흙길
+    const DOORS = { live: [70, 34, 7, 6], own: [45, 58, 5, 7], work: [96, 58, 6, 7] };
+    function doors(c, rooms) {
+      const ok = (id) => (rooms[id] || {}).state === 'done';
+      for (const [id, [x, y, w, h]] of Object.entries(DOORS)) {
+        const paved = ok('yard') && ok(id);
+        for (let i = x; i < x + w; i++) for (let j = y; j < y + h; j++) {
+          if (paved) px(c, i, j, (j - y) % 4 === 0 || (i - x) % 4 === 3 ? '8' : '7');
+          else px(c, i, j, (i * 7 + j * 3) % 5 === 0 ? '=' : '-');
+        }
+      }
+      const [yx, yy, yw, yh] = ROOMS.yard; for (let i = 66; i < 80; i++) px(c, i, yy + yh - 1, ok('yard') ? '7' : '-'); // 입구 쪽 문
+    }
+    // 바깥 뜰 배경: 칸·길과 겹치지 않는 자리에 작은 돌과 들꽃 몇 개 (꾸미기 가구가 아님)
+    const WILD = [[12, 9, 'r'], [24, 27, 'f'], [116, 10, 'f'], [134, 27, 'r'], [13, 92, 'f'], [38, 97, 'r'], [104, 96, 'r'], [128, 90, 'f'], [100, 25, 'f'], [36, 28, 'r']];
+    function wild(c) {
+      for (const [x, y, k] of WILD) {
+        if (k === 'r') { px(c, x, y, '6'); px(c, x + 1, y, '5'); px(c, x + 2, y, '6'); px(c, x, y + 1, '5'); px(c, x + 1, y + 1, '5'); px(c, x + 2, y + 1, '6'); px(c, x + 3, y + 1, '6'); }
+        else { px(c, x, y, 'l'); px(c, x + 2, y - 1, 'l'); px(c, x + 1, y + 1, 'g'); px(c, x + 1, y, 'G'); px(c, x + 3, y + 1, 'g'); }
+      }
+    }
     // 되살린 칸의 가구 (집터마다 고유 칸과 마당이 다름). [가구, x, y] 칸 안 좌표
     const DECO = {
       live: [['bed', 3, 3], ['rug', 18, 14], ['table', 36, 4], ['crate', 33, 22]],
@@ -15208,7 +15352,7 @@
     const OWN_FLOOR = { spring: 'moss', green: 'dirt', archive: 'pave', forge: 'dark', belfry: 'plank', plaza: 'pave' };
     function done(c, id, plot, R) {
       const [x, y, w, h] = ROOMS[id];
-      const fl = id === 'yard' ? 'pave' : id === 'own' ? OWN_FLOOR[plot] : 'plank';
+      const fl = (curLook.floor && curLook.floor[id]) || (id === 'yard' ? 'pave' : id === 'own' ? OWN_FLOOR[plot] : 'plank'); // 바닥 바꾸기를 했으면 그 바닥
       if (fl === 'pave') pave(c, x, y, w, h); else if (fl === 'dark') pave(c, x, y, w, h, '#', '%'); else if (fl === 'moss') moss(c, x, y, w, h, R); else if (fl === 'dirt') dirt(c, x, y, w, h, R); else plank(c, x, y, w, h);
       border(c, x, y, w, h);
       const list = id === 'yard' || id === 'own' ? DECO[id][plot] || [] : DECO[id];
@@ -15216,7 +15360,7 @@
       if (custom) return; // 직접 꾸민 배치가 있으면 옮길 수 있는 기본 가구는 그리지 않음
       list.filter(([n]) => !FIXED.has(n)).forEach(([n, dx, dy]) => put(c, x + dx, y + dy, n));
     }
-    let custom = false;
+    let custom = false, curLook = {};
     const FIXED = new Set(['window']); // 꾸미기로 옮길 수 없는 벽 장식
     const size = (n) => { const r = SPR[n] || []; return [Math.max(0, ...r.map((x) => x.length)), r.length]; };
     // 기본 배치를 눈금에 맞춘 목록으로 (꾸미기를 처음 열 때의 시작 모습)
@@ -15229,21 +15373,35 @@
       }
       return out;
     }
-    function plan(plot, rooms, deco) { // rooms: { yard: {state, p}, ... } state = 'done' | 'cur' | 'lock'. deco: 직접 꾸민 배치 [{s, x, y}] (없으면 기본 가구)
-      const R = rng(seedOf(plot)), c = mk(W, H); custom = Array.isArray(deco);
+    function plan(plot, rooms, deco, look) { // rooms: { yard: {state, p}, ... } state = 'done' | 'cur' | 'lock'. deco: 직접 꾸민 배치 [{s, x, y}] (없으면 기본 가구). look: { floor: {칸: 바닥}, wall: 마당 담 }
+      const R = rng(seedOf(plot)), c = mk(W, H); custom = Array.isArray(deco); curLook = look || {};
       rect(c, 0, 0, W, H, '1');
       for (let i = 0; i < W * H; i++) { const r = R(); if (r < 0.06) c.px[i] = '2'; else if (r < 0.09) c.px[i] = '3'; }
-      for (let gy = 4; gy < H - 6; gy += 9) for (let gx = 4; gx < W - 6; gx += 10) { if (R() > 0.5) continue; const x = gx + 1 + Math.floor(R() * 6), y = gy + 2 + Math.floor(R() * 5); px(c, x, y - 1, 'l'); px(c, x + 1, y, 'g'); px(c, x + 2, y - 1, 'l'); } // 잡초: 10×9 칸마다 많아야 하나 (겹치지 않음)
+      { // 잡초: 바둑판 대신 아무 데나 흩뿌리되 서로 너무 붙지 않게, 바깥 뜰의 돌·꽃 자리는 비워 둠 (모양도 세 가지)
+        const occ = WILD.map(([x, y]) => [x + 1, y]), target = 72;
+        for (let placed = 0, tries = 0; placed < target && tries < 3000; tries++) {
+          const x = 4 + Math.floor(R() * (W - 10)), y = 5 + Math.floor(R() * (H - 12));
+          if (occ.some(([a, b]) => Math.abs(a - x) < 7 && Math.abs(b - y) < 5)) continue;
+          occ.push([x, y]); placed++;
+          const v = R();
+          if (v < 0.45) { px(c, x, y - 1, 'l'); px(c, x + 1, y, 'g'); px(c, x + 2, y - 1, 'l'); }        // V자 잡초
+          else if (v < 0.75) { px(c, x + 1, y - 1, 'l'); px(c, x + 1, y, 'g'); }                          // 한 줄기
+          else { px(c, x, y, 'g'); px(c, x + 1, y - 1, 'l'); px(c, x + 2, y, 'G'); px(c, x + 3, y - 1, 'l'); } // 작은 덤불
+        }
+      }
       for (let j = 86; j < H; j++) for (let i = 66; i < 80; i++) px(c, i, j, j % 4 === 0 || (i + Math.floor(j / 4) * 3) % 6 === 0 ? '8' : '4');
       // 바깥 담: 안쪽 선을 먼저, 바깥 선을 나중에 그려 모서리가 비지 않게
       for (let i = 3; i < W - 3; i++) { if (i < 64 || i > 81) px(c, i, H - 4, 'b'); px(c, i, 3, 'b'); }
       for (let j = 3; j < H - 3; j++) { px(c, 3, j, 'b'); px(c, W - 4, j, 'b'); }
       for (let i = 2; i < W - 2; i++) { if (i < 64 || i > 81) px(c, i, H - 3, 'a'); px(c, i, 2, 'a'); }
       for (let j = 2; j < H - 2; j++) { px(c, 2, j, 'a'); px(c, W - 3, j, 'a'); }
+      wild(c, R); // 바깥 뜰의 작은 돌·꽃 (배경)
       for (const id of ['live', 'own', 'yard', 'work']) {
         const st = rooms[id] || { state: 'lock' }, [x, y, w, h] = ROOMS[id], RR = rng(seedOf(plot + id));
         if (st.state === 'done') done(c, id, plot, RR); else if (st.state === 'cur') build(c, x, y, w, h, st.p || 0); else ruin(c, x, y, w, h, RR, plot === 'green' && id === 'own');
       }
+      lowWall(c, rooms.yard || { state: 'lock' }); // 마당은 지붕 없는 안뜰: 낮은 돌담과 기둥
+      doors(c, rooms);                              // 마당에서 각 칸으로 이어지는 문과 길
       if (custom) deco.forEach((o) => put(c, o.x, o.y, o.s, o.f));
       return c;
     }
@@ -15276,7 +15434,7 @@
     ];
     const todoIn = (id) => objs.filter((o) => o.room === id && (o.kind === 'golem' ? tone(G[o.g]) === 'att' : o.todo)).length;
     const room = (id, x, y, w, hgt, door) => {
-      const r = R[id], s = selRoom === id, lock = r.state === 'lock', p = r.state === 'done' ? 1 : r.h / r.hours, t = todoIn(id), nm = id === 'own' ? r.name.replace('작은 ', '') : r.name;
+      const r = R[id], s = selRoom === id, lock = r.state === 'lock', p = roomFrac(r), t = todoIn(id), nm = id === 'own' ? r.name.replace('작은 ', '') : r.name;
       return `<g class="hit" data-ct="sel:room:${id}" role="button" tabindex="0" aria-label="${r.name} ${pctTxt(r)}">
         <rect x="${x}" y="${y}" width="${w}" height="${hgt}" fill="#fff"/>${lock ? `<rect x="${x}" y="${y}" width="${w}" height="${hgt}" fill="#F3F4F4"/>` : `<rect x="${x}" y="${y}" width="${w}" height="${hgt}" fill="${r.state === 'done' ? '#F1F3F5' : PC.steelL}"/>`}
         <rect x="${x}" y="${y}" width="${w}" height="${hgt}" fill="none" stroke="${s ? PC.steel : lock ? '#D3D7DA' : '#8E959B'}" stroke-width="${s ? 1.8 : lock ? 1 : 1.2}"/>
@@ -15385,6 +15543,49 @@
     const d = $('city-intro-dlg'); if (!d.open) d.showModal();
   }
 
+  // ════ 놀러 가기 · 방명록 ════
+  function cityVisit(name) {
+    if (!name) return;
+    socket.emit('city:visit', { name }, (r) => {
+      if (!r || r.error) return toast(r?.error || '집터를 볼 수 없다.');
+      CT.visit = r.visit; const v = r.visit, d = $('city-visit-dlg');
+      const rooms = Object.fromEntries(v.rooms.map((x) => [x.id, { state: x.state, p: roomFrac(x) }]));
+      const stg = v.rooms.filter((x) => x.state === 'done').length;
+      const guest = v.guest.length ? `<ul class="cv-book">${v.guest.map((g) => `<li><b>${ctEsc(g.by)}</b><span>${ctEsc(g.t)}</span></li>`).join('')}</ul>` : '<p class="note">아직 남긴 글이 없다.</p>';
+      const write = v.me ? '<p class="note">내 집터다. 방명록은 내 집터 창에서 볼 수 있다.</p>' : !v.book ? '<p class="note">이 집에는 방명록 받침이 없어 글을 남길 수 없다.</p>' : !v.canWrite ? '<p class="note">이 집 방명록에는 오늘 이미 글을 남겼다. 내일 다시 남길 수 있다.</p>'
+        : `<div class="cv-write"><div class="cv-phr">${v.phrases.map((t) => `<button type="button" class="btn sm" data-ct="gphrase" data-t="${ctEsc(t)}">${ctEsc(t)}</button>`).join('')}</div><div class="cv-row"><input type="text" class="input" id="cv-guest-t" maxlength="${v.len}" placeholder="짧게 한마디 (${v.len}자까지)"><button type="button" class="btn primary" data-ct="guest">남기기</button></div><small class="note">한 집에 하루 한 번 남길 수 있다.</small></div>`;
+      $('city-visit-t').textContent = `${v.name}의 집터`;
+      $('city-visit-body').innerHTML = `<div id="home-ui" class="hm-e"><p class="hd-s">${ctEsc(v.plot.name)} · ${ctEsc(v.plot.mood)} · ${stg} / 4단계</p>
+        <div class="hp hp-clean"><canvas class="hp-cv" width="146" height="110" aria-hidden="true"></canvas></div>
+        <section class="hm-book"><h4>방명록${v.book ? '' : ' (받침 없음)'}</h4>${guest}${write}</section></div>`;
+      HP.paint($('city-visit-body').querySelector('.hp-cv'), HP.plan(v.plot.id, rooms, v.deco, v.look));
+      if (!d.open) d.showModal();
+    });
+  }
+  // 도시 게시판: 이름 칸을 격자로, 집터 이름과 방명록 표시, 이름 찾기
+  const BOOK_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/></svg>';
+  function boardBox() {
+    const all = [...(CT.board || [])].sort((a, b) => (b.me - a.me) || (!!b.plot - !!a.plot) || a.name.localeCompare(b.name, 'ko')), q = (CT.boardQ || '').trim(), list = q ? all.filter((x) => x.name.includes(q)) : all; // 나 → 집터 있는 이 → 없는 이, 각각 가나다
+    const cards = list.map((x) => x.plot && !x.me
+      ? `<button type="button" class="bd-it" data-ct="visit" data-name="${ctEsc(x.name)}" title="${ctEsc(x.name)}의 집터에 놀러 간다"><b>${ctEsc(x.name)}</b><small>${ctEsc(x.plot)}</small>${x.book ? `<i class="bd-bk" title="방명록을 받는다">${BOOK_ICO}</i>` : ''}</button>`
+      : `<div class="bd-it${x.me ? ' me' : ' off'}"><b>${ctEsc(x.name)}</b><small>${x.me ? '나' : '집터 없음'}</small></div>`).join('');
+    return `<div class="cc-board"><div class="bd-h"><b>재건을 도운 이 <em>${all.length}</em></b>${all.length > 8 ? `<input type="search" class="input bd-q" id="bd-q" placeholder="이름 찾기" value="${ctEsc(q)}" aria-label="이름 찾기">` : ''}</div>
+      <small class="bd-s">집터가 있는 이부터 가나다 순 · 이름을 누르면 그 집터에 놀러 간다${all.some((x) => x.book) ? ` · <i class="bd-bk">${BOOK_ICO}</i> 방명록을 받는 집` : ''}</small>
+      ${list.length ? `<div class="bd-grid">${cards}</div>` : '<p class="note">찾는 이름이 없다.</p>'}</div>`;
+  }
+  document.addEventListener('input', (e) => { if (e.target && e.target.id === 'bd-q') { CT.boardQ = e.target.value; const pos = e.target.selectionStart; renderCityMap(); const inp = document.getElementById('bd-q'); if (inp) { inp.focus(); try { inp.setSelectionRange(pos, pos); } catch {} } } });
+  // 오르딘 교환: 일주일에 몇 번, 인장으로 대륙의 귀한 재료를
+  function tradeBox(h) {
+    const t = h.trade; if (!t) return '';
+    return `<section class="hm-book"><h4>오르딘과 바꾸기 <small class="note">오늘 ${t.left} / ${t.per}번 · 자정에 새 물건</small></h4>
+      <ul class="cv-book">${t.offers.map((o) => `<li class="tr-row"><b>${ctEsc(o.name)}${o.qty > 1 ? ` ×${o.qty}` : ''}</b><span class="tr-r">${o.city ? '도시 재료' : o.rarity === 'rare' ? '희귀' : o.rarity === 'uncommon' ? '고급' : '보통'}</span><span class="tr-c${h.seals >= o.seals ? '' : ' lack'}">인장 ${o.seals}</span><button type="button" class="btn sm${t.left && h.seals >= o.seals ? ' primary' : ''}" data-ct="trade:${o.i}" ${t.left && h.seals >= o.seals ? '' : 'disabled'}>바꾸기</button></li>`).join('')}</ul></section>`;
+  }
+  function bookBox(h) {
+    const b = h.book; if (!b) return '';
+    if (!b.has) return '<section class="hm-book"><h4>방명록</h4><p class="note">꾸미기에서 \'방명록 받침\'을 놓으면 놀러 온 이웃이 글을 남길 수 있다.</p></section>';
+    return `<section class="hm-book"><h4>방명록${b.unread ? ` <em class="hm-n">${b.unread}</em>` : ''}</h4>${b.list.length ? `<ul class="cv-book">${b.list.map((g) => `<li><b><button type="button" class="cc-visit" data-ct="visit" data-name="${ctEsc(g.by)}">${ctEsc(g.by)}</button></b><span>${ctEsc(g.t)}</span></li>`).join('')}</ul>` : '<p class="note">아직 남긴 글이 없다. 도시 게시판에서 이웃의 집터에 놀러 갈 수 있다.</p>'}</section>`;
+  }
+
   // ════ 기억의 벽 (팝업) ════
   function renderWall() {
     const v = CT.v, body = $('city-wall-body'), plaza = zoneOf('plaza');
@@ -15410,7 +15611,7 @@
 
   // ── 누르기 ──
   document.addEventListener('click', (e) => {
-    const n = e.target.closest('#city-card [data-ct], #city-map [data-ct], #city-home-dlg [data-ct], #city-wall-dlg [data-ct], #city-intro-dlg [data-ct], #city-bar [data-ct]');
+    const n = e.target.closest('#city-card [data-ct], #city-map [data-ct], #city-home-dlg [data-ct], #city-wall-dlg [data-ct], #city-intro-dlg [data-ct], #city-visit-dlg [data-ct], #city-bar [data-ct]');
     const node = e.target.closest('#city-map .cm-node');
     if (node && !n) {
       const zid = node.dataset.zone || node.dataset.lock; // 잠긴 구역도 열어서 필요한 재건도·재료를 미리 본다
@@ -15428,12 +15629,21 @@
     if (a === 'board') return cityCall('city:board', {}, (r) => { CT.board = r.board; });
     if (a === 'cave') return caveOpenFn && caveOpenFn(true);
     if (a.startsWith('zone:')) return cityCall('city:zone', { id: a.slice(5) }, (r) => { if (a === 'zone:sanctum') CT.story = r.lines; });
+    if (a === 'hpview') { CT.hpClean = !CT.hpClean; return renderHome(); }
+    if (a === 'visit') return cityVisit(n.dataset.name);
+    if (a === 'gphrase') { const inp = document.getElementById('cv-guest-t'); if (inp) { inp.value = n.dataset.t; inp.focus(); } return; }
+    if (a === 'guest') { const t = document.getElementById('cv-guest-t')?.value || '', name = CT.visit && CT.visit.name; if (!name) return; return cityCall('city:guest', { name, text: t }, () => cityVisit(name)); }
+    if (a === 'book') { CT.tab = 'plan'; renderHome(); setTimeout(() => document.querySelector('#city-home-dlg .hm-book')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50); return; }
     if (a === 'give') return cityCall('city:give');
     if (a === 'gold') { const n = Number(document.getElementById('cc-gold-n')?.value || 0); if (!(n >= 100)) return toast('금화는 100 이상 녹여 넣을 수 있다.'); if (!confirm(`금화 ${ctNum(n)}을 녹여 넣을까? 되돌릴 수 없다.`)) return; return cityCall('city:gold', { n }); }
     if (a.startsWith('goldq:')) { const inp = document.getElementById('cc-gold-n'); if (!inp) return; const z = CT.v.zones.find((x) => x.state === 'going'), gb = z && z.box.find((m) => m.id === 'gold'), left = gb ? gb.need - gb.put : 0, mine = Math.floor(S.me.gold || 0); const q = a.slice(6); inp.value = q === 'max' ? Math.min(left, mine) : Math.min(left, mine, (Number(inp.value) || 0) + Number(q)); return; }
     if (a === 'todo') { CT.todoOpen = !CT.todoOpen; return renderHome(); }
     if (a === 'all') return homeAll();
     if (k === 'mk') return cityCall('city:craft', { s: x, n: +(y || 1) });
+    if (k === 'bp') return cityCall('city:bp', { s: x });
+    if (k === 'look') return cityCall('city:look', { room: x, floor: y });
+    if (k === 'lookw') return cityCall('city:look', { wall: x });
+    if (k === 'trade') { if (!confirm('석공 인장으로 바꿀까?')) return; return cityCall('city:trade', { i: +x }); }
     if (k === 'dkm') { CT.dkMode = x; if (CT.dk) { CT.dk.pick = null; CT.dk.sel = null; } return renderHome(); }
     if (k === 'dk' && CT.dk) { const dk = CT.dk;
       if (x === 'pick') { if (dk.pick !== y && dkLeft(CT.v.me, y) <= 0) { CT.dkMode = 'make'; CT.dkFocus = y; toast(`가진 ${DK_NAME[y]}${ctJ(DK_NAME[y], '이', '가')} 없다. 만들기에서 만든다.`); return renderHome(); } dk.pick = dk.pick === y ? null : y; dk.pickF = false; dk.sel = null; return renderHome(); }

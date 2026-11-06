@@ -2906,6 +2906,38 @@ const ACHIEVEMENTS = [
   { id: 'h_jelly',  hidden: true, name: '하늘을 건진 밤',   desc: '오로라 해파리를 낚기',                    cond: { item: 'fish_jelly' } },
 ];
 
+// ── 장신구 착용 레벨 (lvReq) ──
+// 레벨대에 맞지 않는 사냥터의 재료로 빚은 장신구와 에레보스 장신구는 그 레벨이 되어야 찰 수 있다 (선물로 받아도 마찬가지).
+// 재료의 레벨 = 그 재료가 나오는 사냥터(PLACES.drop) 가운데 가장 낮은 레벨. 장신구 = 만드는 재료 레벨 중 가장 높은 것.
+// 에레보스(RUIN)에서만 나오는 장신구는 RUIN.minLevel. 걸작(id__mw)은 원래 장신구와 같음. 1~3레벨은 표시하지 않음.
+(() => {
+  const matLv = {};
+  for (const p of Object.values(PLACES)) if (p.drop) matLv[p.drop] = Math.min(matLv[p.drop] ?? 99, p.level || 1);
+  const ruinLv = RUIN.minLevel || 20; // 에레보스 지역에서 채집·탐사로 나오는 재료
+  for (const [r, l] of Object.entries(REGION_LOOT)) if (r.startsWith('ruin_')) for (const id of [...(l.common || []), ...(l.uncommon || []), ...(l.rare || [])]) if (matLv[id] == null) matLv[id] = ruinLv;
+  const elsewhere = new Set(); for (const [r, l] of Object.entries(REGION_LOOT)) if (!r.startsWith('ruin_')) for (const id of [...(l.common || []), ...(l.uncommon || []), ...(l.rare || [])]) elsewhere.add(id);
+  for (const id of Object.keys(matLv)) if (matLv[id] === ruinLv && elsewhere.has(id)) delete matLv[id]; // 다른 지역에서도 나오는 재료는 빼고
+  if (ITEMS.ashen_core) matLv.ashen_core = Math.min(matLv.ashen_core ?? 99, ruinLv); // 에레보스 강적·원정의 잿빛 핵
+  const ruinGear = new Set([...(RUIN.gear?.pool || [])]);
+  const ruinStr = JSON.stringify(RUIN);
+  for (const [k, v] of Object.entries(ITEMS)) if (v.type === 'equip' && !k.endsWith('__mw') && ruinStr.includes(`"${k}"`)) ruinGear.add(k);
+  const memo = {};
+  const lvOf = (id, depth = 0) => {
+    if (memo[id] != null) return memo[id];
+    if (depth > 6) return 0;
+    let lv = matLv[id] || 0;
+    if (ruinGear.has(id)) lv = Math.max(lv, RUIN.minLevel || 20);
+    for (const r of RECIPES) if (r.out === id) for (const n of Object.keys(r.needs || {})) lv = Math.max(lv, lvOf(n, depth + 1));
+    return (memo[id] = lv);
+  };
+  for (const [k, v] of Object.entries(ITEMS)) {
+    if (v.type !== 'equip') continue;
+    const base = k.endsWith('__mw') ? k.slice(0, -4) : k;
+    const lv = lvOf(base);
+    if (lv >= 4) { v.lvReq = lv; if (v.desc && !v.desc.includes('부터 찰 수 있다')) v.desc = `${v.desc} (레벨 ${lv}부터 찰 수 있다)`; }
+  }
+})();
+
 module.exports = {
   SCENES_HUMAN,
   PLAY_KINDS: Object.keys(KINDS).filter((k) => !KINDS[k].hidden), // 고를 수 있는 종족 (무작위로 뽑을 때도 이것만)
