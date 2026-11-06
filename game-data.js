@@ -2278,7 +2278,7 @@ const BONDS = {
 const MARKS = { rival: '라이벌', wary: '경계', nemesis: '원수' };
 const BOND_RULES = {
   hearts: ['lover', 'partner'],      // 연인·반려는 한 번에 한 상대
-  mentorGap: 3,                      // 스승은 제자보다 이만큼 레벨이 높아야
+  mentorGap: 3,                      // 가르치기: 스승이 제자보다 이만큼 레벨이 높아야 (관계는 레벨과 상관없이 맺음)
   studentsMax: 3,                    // 스승 하나가 둘 수 있는 제자 수 (제자는 스승 하나)
   // 가르치기: 스승이 같은 지역의 제자에게. 제자는 경험치, 스승은 명성
   teach: { ap: 2, en: 8, cooldown: 4 * 60 * 60 * 1000, xpBase: 20, xpPerLv: 4, fame: 1 },
@@ -2292,7 +2292,7 @@ const BOND_RULES = {
 // minLevel 이상이면 새 드래곤에게 의지를 이어 줌: 능력치 포인트(레벨 계단 tiers)와 칭호 '의지를 이은 자'
 const departPts = (lv) => (DEPART.tiers.find(([at]) => lv >= at) || [0, 0])[1];
 // 재산(금화·물건·보물더미)과 둥지, 식구는 함께 떠남 (남기고 싶은 식구는 먼저 동료에게 입양 보내기)
-const DEPART = { minLevel: 5, tiers: [[25, 8], [20, 5], [15, 3], [10, 2], [5, 1]], wordsMax: 100, dripEvery: 2 }; // tiers: [이 레벨부터, 이어 줄 포인트] (위에서부터 맞는 첫 칸). 오래 키울수록 더, 만렙에 가장 크게. // dripEvery: 이어받은 포인트는 한꺼번에 주지 않고, 새 드래곤이 이 레벨마다(2·4·6…) 1점씩 (초반에 몰려 강해지지 않게)
+const DEPART = { minLevel: 5, tiers: [[25, 5], [20, 4], [15, 3], [10, 2], [5, 1]], wordsMax: 100, dripEvery: 2 }; // tiers: [이 레벨부터, 이어 줄 포인트] (위에서부터 맞는 첫 칸). 오래 키울수록 더, 만렙에 가장 크게. // dripEvery: 이어받은 포인트는 한꺼번에 주지 않고, 새 드래곤이 이 레벨마다(2·4·6…) 1점씩 (초반에 몰려 강해지지 않게)
 
 // ── 계절과 날씨 ────────────────────────────────────
 // 계절은 대륙 전체에 같이 흐르고(SEASON_RULES.days일마다 바뀜), 날씨는 지역마다 SEASON_RULES.weatherHours시간마다 바뀐다.

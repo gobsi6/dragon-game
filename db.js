@@ -268,6 +268,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS gift_images_from ON gift_images(dragon_id, sent_at);
 `);
 if (!db.prepare('PRAGMA table_info(gift_inbox)').all().some((c) => c.name === 'img')) db.exec("ALTER TABLE gift_inbox ADD COLUMN img TEXT NOT NULL DEFAULT ''"); // 함께 온 그림 {id,key,w,h}
+if (!db.prepare('PRAGMA table_info(gift_inbox)').all().some((c) => c.name === 'home')) db.exec('ALTER TABLE gift_inbox ADD COLUMN home INTEGER NOT NULL DEFAULT 0'); // 1: 집터에 두고 간 선물 (주인이 고대도시의 집터에서 받기 전까지 소지품에 들어가지 않음)
 if (!db.prepare('PRAGMA table_info(ledger)').all().some((c) => c.name === 'img')) db.exec("ALTER TABLE ledger ADD COLUMN img TEXT NOT NULL DEFAULT ''");
 
 // 관계 이름: 서로 맺은 관계(kind = friend)가 어떤 사이인지 (비어 있으면 동료). 요청에도 청한 관계를 적음
@@ -589,10 +590,13 @@ const q = {
                             (SELECT COUNT(*) FROM gift_images) AS gn, (SELECT IFNULL(SUM(LENGTH(data)), 0) FROM gift_images) AS gb`),
   ledgerList:   db.prepare('SELECT * FROM ledger WHERE dragon_id = ? ORDER BY id DESC LIMIT ?'),
   ledgerPrune:  db.prepare(`DELETE FROM ledger WHERE dragon_id = @d AND (at < @old OR id <= (SELECT id FROM ledger WHERE dragon_id = @d ORDER BY id DESC LIMIT 1 OFFSET @keep))`),
-  giftIn:       db.prepare('INSERT INTO gift_inbox (to_id, from_id, from_name, from_kind, gold, items, msg, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'),
-  giftList:     db.prepare('SELECT * FROM gift_inbox WHERE to_id = ? ORDER BY id'),
-  giftSeen:     db.prepare('DELETE FROM gift_inbox WHERE id = ? AND to_id = ?'),
-  giftOne:      db.prepare('SELECT * FROM gift_inbox WHERE id = ? AND to_id = ?'),
+  giftIn:       db.prepare('INSERT INTO gift_inbox (to_id, from_id, from_name, from_kind, gold, items, msg, at, home) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'),
+  giftList:     db.prepare('SELECT * FROM gift_inbox WHERE to_id = ? AND home = 0 ORDER BY id'),
+  giftSeen:     db.prepare('DELETE FROM gift_inbox WHERE id = ? AND to_id = ? AND home = 0'),
+  giftOne:      db.prepare('SELECT * FROM gift_inbox WHERE id = ? AND to_id = ? AND home = 0'),
+  giftHomeList: db.prepare('SELECT * FROM gift_inbox WHERE to_id = ? AND home = 1 ORDER BY id'),
+  giftHomeOne:  db.prepare('SELECT * FROM gift_inbox WHERE id = ? AND to_id = ? AND home = 1'),
+  giftHomeOff:  db.prepare('UPDATE gift_inbox SET home = 0 WHERE id = ?'),
   giftImgSet:   db.prepare('UPDATE gift_inbox SET img = ? WHERE id = ?'),
   noteList:     db.prepare('SELECT text FROM notes WHERE dragon_id = ? ORDER BY id'),
   noteClear:    db.prepare('DELETE FROM notes WHERE dragon_id = ?'),
@@ -668,6 +672,7 @@ const q = {
   legacyGet:    db.prepare('SELECT legacy FROM users WHERE id = ?'),
   legacySet:    db.prepare('UPDATE users SET legacy = ? WHERE id = ?'),
   setHeir:      db.prepare('UPDATE dragons SET heir = ? WHERE id = ?'),
+  heirDripIds:  db.prepare("SELECT id FROM dragons WHERE combat LIKE '%heirDrip%'"),
   invClear:     db.prepare('DELETE FROM inventory WHERE dragon_id = ?'),
   hoardSet:     db.prepare('UPDATE hoard SET qty = qty - ? WHERE dragon_id = ? AND item = ? AND qty >= ?'),
   hoardClear:   db.prepare('DELETE FROM hoard WHERE dragon_id = ?'),
@@ -737,6 +742,8 @@ function checkBackup(file) {
 function stageRestore(file) {
   fs.copyFileSync(file, RESTORE_PATH);
 }
+// 받은 선물 한 줄 (gift_inbox) → 화면에 보낼 모양
+const giftRow = (r) => ({ id: r.id, from: { id: r.from_id, name: r.from_name, kind: r.from_kind }, gold: r.gold, items: JSON.parse(r.items || '[]'), msg: r.msg, at: r.at, img: r.img ? (() => { try { return JSON.parse(r.img); } catch { return null; } })() : null });
 const closeDb = () => { try { db.pragma('wal_checkpoint(TRUNCATE)'); db.close(); } catch {} };
 const dbFileSize = () => { try { return fs.statSync(DB_PATH).size + (fs.existsSync(`${DB_PATH}-wal`) ? fs.statSync(`${DB_PATH}-wal`).size : 0); } catch { return 0; } };
 
@@ -911,8 +918,20 @@ module.exports = {
     };
   }),
   // 받은 선물 상자 (확인할 때까지 남는 알림)
-  giftIn: (to, from, gold, items, msg, img = null) => { const id = Number(q.giftIn.run(to, from.id, from.name, from.kind, gold, JSON.stringify(items), msg, Date.now()).lastInsertRowid); if (img) q.giftImgSet.run(JSON.stringify(img), id); return id; },
-  giftList: (to) => q.giftList.all(to).map((r) => ({ id: r.id, from: { id: r.from_id, name: r.from_name, kind: r.from_kind }, gold: r.gold, items: JSON.parse(r.items || '[]'), msg: r.msg, at: r.at, img: r.img ? (() => { try { return JSON.parse(r.img); } catch { return null; } })() : null })),
+  // home: 집터에 두고 간 선물 (받은 선물 상자에는 뜨지 않고, 주인이 집터에서 받을 때까지 기다림)
+  giftIn: db.transaction((to, from, gold, items, msg, img = null, home = false) => { const id = Number(q.giftIn.run(to, from.id, from.name, from.kind, gold, JSON.stringify(items), msg, Date.now(), home ? 1 : 0).lastInsertRowid); if (img) q.giftImgSet.run(JSON.stringify(img), id); return id; }),
+  giftList: (to) => q.giftList.all(to).map(giftRow),
+  // 집터에 놓여 있는 선물
+  giftHomeList: (to) => q.giftHomeList.all(to).map(giftRow),
+  // 집터에서 선물 받기: 물건·금화를 소지품에 넣고, 그 선물을 보통 받은 선물로 바꿈 (받은 선물 창에서 말·그림을 보고 그림을 간직할 수 있게)
+  giftHomeTake: db.transaction((d, id) => {
+    const r = q.giftHomeOne.get(id, d.id); if (!r) return null;
+    const g = giftRow(r), gold0 = d.gold;
+    q.giftHomeOff.run(id);
+    d.gold += g.gold;
+    try { saveStateRaw(d, g.items, []); } catch (e) { d.gold = gold0; throw e; }
+    return g;
+  }),
   giftGet: (id, to) => { const r = q.giftOne.get(id, to); if (!r) return null; let img = null; try { img = r.img ? JSON.parse(r.img) : null; } catch {} return { id: r.id, fromName: r.from_name, msg: r.msg, img }; },
   // 선물 그림
   giftImg: {
@@ -1020,6 +1039,7 @@ module.exports = {
   legacyGet: (userId) => { const r = q.legacyGet.get(userId); try { return r?.legacy ? JSON.parse(r.legacy) : null; } catch { return null; } },
   legacySet: (userId, v) => q.legacySet.run(v ? JSON.stringify(v) : null, userId),
   setHeir: (dragonId, v) => q.setHeir.run(JSON.stringify(v), dragonId),
+  heirDripIds: () => q.heirDripIds.all().map((r) => r.id), // 이어받은 의지 포인트를 레벨마다 받는 중인(또는 받았던) 드래곤
   hoardTake: (dragonId, item, qty) => q.hoardSet.run(qty, dragonId, item, qty).changes > 0,
   hoardClear: (dragonId) => { q.hoardClear.run(dragonId); q.hoardGoldSet.run(0, dragonId); },
   kinMove: (kinId, from, to) => q.kinMove.run(to, kinId, from).changes > 0,

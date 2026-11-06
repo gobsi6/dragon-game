@@ -28,6 +28,7 @@ function josa(word, a, b) {
 }
 const ga = (n) => `${n}${josa(n, '이', '가')}`;
 const GIFT_MSG_MAX = 100; // 선물과 함께 보내는 말 (글자 수)
+const HOME_GIFT_MAX = 30; // 한 집터에 받지 않고 쌓여 있을 수 있는 선물 수
 const MEMO_MAX = 200;     // 관계 메모 (글자 수, 상대도 볼 수 있음)
 const itemText = (items) => items.map(({ id, qty }) => `${ITEMS[id].name}${qty > 1 ? ` ${qty}개` : ''}`).join(', ');
 const giveText = (gold, items) => [gold ? `금화 ${gold}닢` : '', itemText(items)].filter(Boolean).join(', ');
@@ -60,9 +61,8 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       if (ha && ha.id !== b) return `이미 마음을 준 상대가 있다.`;
       if (hb && hb.id !== a) return `${B.name}에게는 이미 마음을 준 상대가 있다.`;
     }
-    const G = BOND_RULES.mentorGap;
+    // 스승·제자는 레벨과 상관없이 맺을 수 있음 (가르치기만 레벨 차이가 BOND_RULES.mentorGap 이상일 때)
     const mentorStudent = (m, st) => {
-      if (m.level < st.level + G) return `스승은 제자보다 레벨이 ${G} 이상 높아야 한다.`;
       if (db.relByBond(st.id, 'mentor').some((x) => x !== m.id)) return `${st.name}에게는 이미 스승이 있다.`;
       if (db.relByBond(m.id, 'student').filter((x) => x !== st.id).length >= BOND_RULES.studentsMax) return `${m.name}에게는 이미 제자가 ${BOND_RULES.studentsMax}명 있다.`;
       return null;
@@ -104,6 +104,11 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     const say = (p, other, n, same) => `${pre(p)}${other}${same ? `${josa(other, '과', '와')} ${n} 사이가 되었다` : `${josa(other, '이', '가')} 나의 ${n}${josa(n, '이', '가')} 되었다`}.`;
     logic.chron(A, 'mark', say(pa, B.name, nA, nA === nB));
     logic.chron(B, 'mark', say(pb, A.name, nB, nA === nB));
+    // 스승·제자: 맺을 때 제자가 스승보다 레벨이 낮았는지 적어 둠 (청출어람은 낮았던 제자가 따라잡았을 때만. 레벨과 상관없이 맺을 수 있게 되어서)
+    if (bond === 'mentor' || bond === 'student') {
+      const [m, st] = bond === 'mentor' ? [B, A] : [A, B];
+      const c = logic.combatJson(st); c.mentorLow = { ...(c.mentorLow || {}), [m.id]: st.level < m.level ? 1 : 0 };
+    }
     db.saveState(A); db.saveState(B);
     for (const id of [a, b]) { const e = live(id); if (e) refreshRivals(e.dragon); }
     return { a: pa?.end || null, b: pb?.end || null };
@@ -685,6 +690,8 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       if (!t || t.dead_at) return { error: '지금은 가르칠 수 없다.' };
       if (t.region !== d.region || d.exp_end || t.exp_end) return { error: '같은 지역에 함께 있어야 가르칠 수 있다.' };
       if (inBattle(d.id) || inBattle(id)) return { error: '싸우는 중에는 할 수 없다.' };
+      const G = BOND_RULES.mentorGap;
+      if (d.level < t.level + G) return { error: `가르치려면 스승이 제자보다 레벨이 ${G} 이상 높아야 한다. (나 Lv. ${d.level} · ${t.name} Lv. ${t.level})` };
       const now = Date.now();
       const last = teachAt.get(`${d.id}:${id}`) || 0;
       if (now - last < T.cooldown) return { error: `${t.name}${josa(t.name, '은', '는')} 아직 배운 것을 익히는 중이다. (${Math.ceil((T.cooldown - (now - last)) / 60000)}분 뒤)` };
@@ -850,6 +857,8 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
         if (d.region !== 'ruins') return { error: '선물을 두고 가려면 고대 유적에 직접 와 있어야 한다.' };
         const od = live(id)?.dragon || db.getDragon(id), oc = od && logic.combatJson(od);
         if (!oc || !oc.city || !oc.city.plot) return { error: '이 드래곤은 아직 집터가 없다.' };
+        if (od.dead_at) return { error: `${ga(od.name)} 긴 잠에 들었다. 집터에 선물을 두어도 받아 갈 이가 없다.` }; // 받을 수 없는 집터에 물건이 묶이지 않게
+        if (db.giftHomeList(id).length >= HOME_GIFT_MAX) return { error: `${od.name}의 집터 앞에 선물이 가득 쌓여 있다. 주인이 받아 갈 때까지 기다리자.` };
       } else {
         const why = reach(d, id, { needOnline: false });
         if (why) return { error: why };
@@ -871,6 +880,16 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       const what = gold || items.length ? `${giveText(gold, items)}${img ? `, ${mine}` : ''}` : mine;
       if (img) db.giftImg.send(img.id, id);
       d.gold -= gold;
+      if (leave) {
+        // 집터에 두고 가기: 내 것만 빼고, 받는 쪽 소지품에는 넣지 않음 (주인이 고대도시의 집터에서 받을 때 들어감)
+        db.saveState(d, items.map((x) => ({ id: x.id, qty: -x.qty })));
+        db.giftIn(id, d, gold, items, msg, img, true);
+        db.ledgerAdd(d.id, { kind: 'gift_out', other: { id, name, kind: (t ? t.dragon : db.getDragon(id))?.kind }, goldOut: gold, itemsOut: items, msg, img, note: '집터' });
+        const tell = `${ga(d.name)} 집터에 선물을 두고 갔다. 고대도시의 내 집터에서 받을 수 있다.`;
+        if (t) t.socket.emit('notice', { title: '선물', lines: [tell] }); else db.noteAdd(id, tell);
+        const me = live(d.id); if (me) sendMe(me.socket, d);
+        return { ok: true, lines: [`${name}의 집터에 ${what}${josa(what, '을', '를')} 두고 왔다.${msg ? ' 함께 적은 말도 남겼다.' : ''}`] };
+      }
       if (t) {
         t.dragon.gold += gold;
         db.saveMany([[d, items.map((x) => ({ id: x.id, qty: -x.qty }))], [t.dragon, items]]);
@@ -889,7 +908,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
         sendMe(t.socket, t.dragon);
       }
       const me = live(d.id); if (me) sendMe(me.socket, d);
-      return { ok: true, lines: [leave ? `${name}의 집터에 ${what}${josa(what, '을', '를')} 두고 왔다.${msg ? ' 함께 적은 말도 남겼다.' : ''}` : `${name}에게 ${what}${josa(what, '을', '를')} 보냈다.${msg ? ' 함께 적은 말도 전해진다.' : ''}`] };
+      return { ok: true, lines: [`${name}에게 ${what}${josa(what, '을', '를')} 보냈다.${msg ? ' 함께 적은 말도 전해진다.' : ''}`] };
     };
     on('gift:send', (d, p) => giftDo(d, p, false));
     on('gift:leave', (d, p) => giftDo(d, p, true));

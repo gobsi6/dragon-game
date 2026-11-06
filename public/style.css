@@ -4936,6 +4936,10 @@ body:not(.realm-city) .moss-fx { display: none; }
 #home-ui .cv-book li { display: flex; gap: 8px; align-items: baseline; padding: 7px 10px; background: #FBF8F2; border: 1px solid #EDE3D2; font-size: 13px; line-height: 1.5; }
 #home-ui .cv-book li b { flex: none; font-weight: 600; color: #5B4A35; }
 #home-ui .cv-book li span { color: #3A2E26; word-break: break-all; }
+/* 집터에 놓인 선물: 보낸 이 · 언제 · 받기 */
+#home-ui .hm-gifts .cv-book li { align-items: center; }
+#home-ui .hm-gifts .cv-book li span { flex: 1; color: #7A6A55; }
+#home-ui .hm-gifts .cv-book li .btn { flex: none; }
 #home-ui .cv-write { display: flex; flex-direction: column; gap: 6px; }
 #home-ui .cv-phr { display: flex; flex-wrap: wrap; gap: 4px; }
 #home-ui .cv-row { display: flex; gap: 6px; }

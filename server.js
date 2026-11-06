@@ -1282,7 +1282,9 @@ arena.setRaid(raidBoss);
 logic.hooks.companionsHere = (d) => { for (const e of online.values()) if (e.dragon.id !== d.id && e.dragon.region === d.region && !e.dragon.dead_at) return true; return false; };
 // 청출어람: 내 스승의 레벨을 따라잡았으면 그 스승의 이름 (칭호 판정에서 씀)
 logic.hooks.surpassed = (d) => {
+  const low = logic.combatJson(d).mentorLow || {}; // 맺을 때 스승보다 레벨이 낮았는지 (0이면 처음부터 같거나 높았음 → 따라잡은 것이 아님. 적힌 것이 없는 예전 관계는 레벨 차이 3 이상일 때 맺었으므로 셈)
   for (const id of db.relByBond(d.id, 'mentor')) {
+    if (low[id] === 0) continue;
     const m = online.get(id)?.dragon || db.getDragon(id);
     if (m && !m.dead_at && d.level >= m.level) return m.name;
   }
@@ -1659,6 +1661,7 @@ function onConnect(socket) {
     // 먼 여행을 떠난 드래곤의 의지: 능력치 포인트와 칭호
     const legacy = db.legacyGet(user.id);
     if (legacy) {
+      legacy.pts = require('./game-data').departPts(legacy.level); // 떠날 때 적어 둔 점수 대신 지금 표(DEPART.tiers)로 다시 셈 (표가 바뀐 뒤에 새 드래곤을 만들어도 같은 규칙)
       // 능력치 포인트는 한꺼번에 주지 않고 레벨 DEPART.dripEvery마다 1점씩 (game-logic.js gainXp)
       if (legacy.pts > 0) logic.combatJson(created).heirDrip = { left: legacy.pts, every: DEPART.dripEvery || 2 };
       logic.traitCount(created, 'heir');
@@ -2958,6 +2961,36 @@ function onConnect(socket) {
     broadcastCounts();
   });
 }
+
+// 이어받은 의지를 지금 표(DEPART.tiers)에 맞춤: 표가 낮아지면 이미 이어받아 받는 중인 드래곤의 남은 몫도 줄임 (2026-11-06 최대 8점 → 5점)
+// 이미 받은 포인트는 거두지 않음 (새 몫보다 많이 받았으면 남은 몫만 0). 이어받은 점수(heir.pts)를 새 몫으로 고쳐 두므로 다시 켜도 그대로
+function capHeirDrip() {
+  const { departPts } = require('./game-data');
+  let n = 0;
+  for (const id of db.heirDripIds()) {
+    try {
+      const d = db.getDragon(id); if (!d || d.dead_at) continue;
+      const dr = logic.combatJson(d).heirDrip; if (!dr) continue;
+      let h = null; try { h = d.heir ? JSON.parse(d.heir) : null; } catch {}
+      if (!h || !Number.isFinite(h.level) || !Number.isFinite(h.pts)) continue;
+      const total = departPts(h.level);
+      if (total >= h.pts) continue; // 표가 낮아지지 않았으면 그대로
+      const got = Math.max(0, h.pts - (dr.left || 0)); // 지금까지 받은 포인트
+      const left = Math.max(0, total - got);
+      const before = dr.left || 0;
+      if (left === before) continue; // 남은 몫이 그대로면 손대지 않음 (이미 다 받은 드래곤에게 알림이 가지 않게)
+      dr.left = left; h.pts = total;
+      db.setHeir(id, h);
+      const text = `대륙의 규칙이 바뀌어, ${h.name}에게서 이어받은 의지가 모두 ${total}점이 되었다. ${left > 0 ? `남은 의지 ${before}점 → ${left}점.` : `이미 ${got}점을 받아 더 받을 의지는 없다.`}`;
+      logic.chron(d, 'mark', text);
+      db.saveState(d);
+      db.noteAdd(id, text);
+      n++;
+    } catch (e) { console.error('[이어받은 의지 정리]', id, e.message); }
+  }
+  if (n) console.log(`[이어받은 의지 정리] ${n}마리의 남은 몫을 지금 표에 맞춤`);
+}
+capHeirDrip();
 
 server.listen(PORT, () => {
   console.log(`용의 대륙 서버가 http://localhost:${PORT} 에서 열렸어요.`);

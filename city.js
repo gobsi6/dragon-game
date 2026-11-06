@@ -576,6 +576,18 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     const oe = online.get && online.get(o.id); if (oe && oe.socket) { try { sendMe(oe.socket, oe.dragon); } catch {} } // 집주인이 접속해 있으면 새 글 표시를 바로
     return { ok: true, lines: [`${o.name}의 집 방명록에 "${text}"라고 남겼다.`] };
   }
+  // 집터에 놓인 선물 받기: 고대도시 안, 내 집터에서만. 받으면 소지품에 넣고 받은 선물 창(말·그림·보물 상자에 간직)을 띄움
+  function takeGift(d, id, socket) {
+    const e = ready(d); if (e) return e;
+    if (!inside(d)) return err('집터에 놓인 선물은 고대도시의 내 집터에서 받을 수 있다.');
+    if (!ct(d).plot) return err('먼저 집터를 골라야 한다.');
+    const g = Number.isInteger(id) ? db.giftHomeTake(d, id) : null;
+    if (!g) return err('이미 받은 선물이다.');
+    const f = db.getDragon(g.from.id);
+    db.ledgerAdd(d.id, { kind: 'gift_in', other: { id: g.from.id, name: g.from.name, kind: g.from.kind }, goldIn: g.gold, itemsIn: g.items, msg: g.msg, img: g.img, note: '집터' });
+    try { socket.emit('gift:got', { ...g, home: true, from: { ...g.from, av: f && f.has_avatar ? f.avatar_ver : 0 } }); } catch {}
+    return { ok: true };
+  }
   const bookNew = (d, m) => (W.books[d.name] || []).filter((x) => x.at > (m.bookSeen || 0)).length;
 
   // ── 장식 도면 · 바닥·담 · 오르딘 교환 ──
@@ -788,6 +800,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
         trade: { left: tradeLeft(m), per: TRADE.perDay, offers: tradeOffers().map(([k, c, q], i) => ({ i, id: k, name: ITEMS[k].name, rarity: ITEMS[k].rarity, seals: c, qty: q || 1, city: TRADE.city.some((x) => x[0] === k) })) },
         perk: m.plot ? (() => { const on = perkOn(m), pd = perkDaily(m), max = perkMax(m); return { on, up: perkUp(m), kind: m.plot === 'forge' ? 'passive' : m.plot === 'belfry' ? 'recall' : 'daily', text: PI[m.plot].perk, left: on ? Math.max(0, max - pd.n) : 0, max, off: m.plot === 'forge' ? PERK.forgeOff[perkLv(m)] : 0 }; })() : null,
         book: { has: hasBook(m), list: bookOf(d.name), unread: bookNew(d, m) },
+        gifts: m.plot && db.giftHomeList ? db.giftHomeList(d.id).map((g) => ({ id: g.id, from: g.from.name, at: g.at })) : [], // 집터에 놓여 있는 선물 (누가·언제만. 무엇인지는 받을 때 열어 봄)
         seals: m.seals, daySon: m.daySon || 0, bank: m.bank || 0, sonAll: m.sonAll || 0, frags: m.frags, en: d.en, enMax: logic.enCap(d),
         req: { ...q, name: ITEMS[q.id].name },
         inv: Object.fromEntries([...need].map((k) => [k, have(d, k)])),
@@ -833,6 +846,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     handle('city:visit', (d, p) => visitView(d, String(p.name || '')));
     handle('city:guest', (d, p) => guestWrite(d, String(p.name || ''), p.text));
     handle('city:book:seen', (d) => { ct(d).bookSeen = Date.now(); return { ok: true }; });
+    handle('city:gift:take', (d, p) => takeGift(d, Number(p.id), socket));
     handle('city:gold', (d, p) => giveGold(d, p.n));
     handle('city:perk', (d, p) => perkUse(d, p.i));
     handle('city:zone', (d, p) => zoneAct(d, String(p.id || '')));

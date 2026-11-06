@@ -942,6 +942,14 @@
   <div class="row"><button class="btn" type="button" id="gift-thanks">답장 보내기</button><button class="btn" type="button" id="gift-keep" hidden>간직하기</button><button class="btn primary" type="button" id="gift-ok">확인</button></div>
 </dialog>
 
+<!-- 집터에 선물 두기: 고대도시 집터 구경 창의 '선물'로 엶 (드래곤 기록 창 대신 선물 칸만) -->
+<dialog class="frame dlg" id="hgift-dlg" aria-labelledby="hgift-title">
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="hgift-title">집터에 선물 두기</h2></div>
+  <div class="body" id="hgift-body"></div>
+  <div class="row"><button class="btn" type="button" id="hgift-close">닫기</button></div>
+</dialog>
+
 <dialog class="frame dlg" id="rip-dlg" aria-labelledby="rip-title">
   <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
   <div class="orn-h"><h2 id="rip-title">긴 잠</h2></div>
@@ -8109,8 +8117,13 @@
 
   // ── 다른 드래곤의 기록 (프로필) ──
   let profileId = null;
-  let PROFILE_GIFT = false; // 다음에 그리는 프로필에서 선물 칸을 펼침
-  window.__openGiftTo = (id) => { PROFILE_GIFT = true; openProfile(id); }; // 동료 집터 구경 창의 '선물'
+  // 집터 구경 창의 '선물': 드래곤 기록 창 대신 선물 칸만 있는 작은 창 ('집터에 두고 가기')
+  window.__openGiftTo = (id, name) => fetchInv(() => {
+    const body = $('hgift-body');
+    $('hgift-title').textContent = `${name}의 집터에 선물 두기`;
+    body.replaceChildren(buildGiftBox({ id, name }, true, () => { if ($('hgift-dlg').open) $('hgift-dlg').close(); }));
+    if (!$('hgift-dlg').open) $('hgift-dlg').showModal();
+  });
   // 프로필은 동료 목록 위에 겹쳐 뜸. 닫으면 보던 목록이 그대로 남아 있음
   // 같은 프로필을 다시 그릴 때(관계를 바꾼 뒤 등)는 스크롤 위치와 열어 둔 선물 칸·쓰던 메모를 그대로 둠
   function openProfile(id) {
@@ -8125,7 +8138,6 @@
           gift: !!body.querySelector('.gift-box:not([hidden])'),
           memo: body.querySelector('.rel-memo textarea')?.dataset.dirty === '1' ? body.querySelector('.rel-memo textarea').value : null,
           memoEdit: !!body.querySelector('.rel-memo.editing') && !!body.querySelector('.rel-memo textarea')?.value,
-          leave: !!body.querySelector('.gift-box[data-leave]'), // 집터에 두고 가기로 연 선물 칸은 다시 그려도 그대로
         } : null;
         renderProfile(res.profile, keep);
         // GM 시험용 투명 드래곤: 프로필은 보이지만 어울리는 버튼(관계·선물·교환·결투 등)은 빼고 안내만
@@ -8141,6 +8153,95 @@
     });
   }
   const refreshProfile = () => { if ($('profile-dlg').open && profileId) openProfile(profileId); };
+  // 선물 칸: 물건 고르기 · 금화 · 함께 보낼 말 · 그림. 드래곤 기록 창의 '선물 보내기'와 집터의 '선물'(leave: 집터에 두고 가기)이 함께 씀
+  // after: 보낸 뒤 (소지품을 다시 받아 온 다음)
+  function buildGiftBox(p, leave, after) {
+    const gift = document.createElement('div');
+    gift.className = 'gift-box';
+    if (leave) gift.dataset.leave = '1';
+    const own = Object.entries(invCache).filter(([id, q]) => S.items[id] && q > 0);
+    // 보낼 물건 고르기: 이름으로 찾기 + 종류로 거르기 + 눌러서 고르는 목록 (긴 드롭다운 대신)
+    gift.innerHTML = `<div class="gp">
+        <input class="input gp-q" type="search" placeholder="물건 이름으로 찾기" aria-label="보낼 물건 찾기" autocomplete="off">
+        <div class="gp-tags" role="group" aria-label="물건 종류"></div>
+        <div class="gp-list" role="listbox" aria-label="보낼 물건"></div>
+        <div class="r gp-pick"><span class="gp-sel">물건 없이 보낸다</span><input class="input num" type="number" min="1" value="1" aria-label="개수"></div>
+      </div>
+      <div class="r"><span style="font-size: 13px">금화</span><input class="input num gold" type="number" min="0" value="0" aria-label="금화"><span class="note">가진 금화 ${S.me.gold}</span></div>
+      <div class="r"><textarea class="input msg" rows="2" maxlength="100" placeholder="함께 보낼 말 (적지 않아도 된다, 100자까지)" aria-label="함께 보낼 말"></textarea></div>
+      <div class="r"><button class="btn primary" type="button">보내기</button></div>`;
+    if (leave) { const sb = [...gift.querySelectorAll('button.btn.primary')].find((x) => x.textContent === '보내기'); if (sb) sb.textContent = '집터에 두고 가기'; const n = document.createElement('p'); n.className = 'note'; n.textContent = `${p.name}의 집터에 두고 간다. 원정 중이거나 접속하지 않았어도 두고 갈 수 있고, 주인이 고대도시의 집터에 들르면 받는다.`; gift.prepend(n); }
+    own.sort(([a], [b]) => S.items[a].name.localeCompare(S.items[b].name, 'ko'));
+    const gp = { id: '', tag: '', q: '' };
+    const gpList = gift.querySelector('.gp-list'), gpTags = gift.querySelector('.gp-tags');
+    const gpNum = gift.querySelector('.gp-pick .num'), gpSel = gift.querySelector('.gp-sel');
+    const tagOf = (id) => itemTagText(S.items[id]);
+    const tags = [...new Set(own.map(([id]) => tagOf(id)))];
+    const drawPick = () => {
+      const q = own.find(([id]) => id === gp.id)?.[1] || 0;
+      gpSel.textContent = gp.id ? `${S.items[gp.id].name} · 가진 것 ${q}` : '물건 없이 보낸다'; // 걸작은 이름에 '걸작'이 붙어 있음
+      gpSel.classList.toggle('on', !!gp.id);
+      gpNum.disabled = !gp.id;
+      gpNum.max = q || '';
+      if (gp.id && Number(gpNum.value) > q) gpNum.value = q;
+    };
+    const drawList = () => {
+      gpList.replaceChildren();
+      const q = gp.q.trim().toLowerCase();
+      const hits = own.filter(([id]) => (!gp.tag || tagOf(id) === gp.tag) && (!q || S.items[id].name.toLowerCase().includes(q)));
+      for (const [id, n] of hits) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = `gp-it${gp.id === id ? ' on' : ''}${S.items[id].mwOf ? ' mw' : ''}`;
+        b.setAttribute('role', 'option');
+        b.setAttribute('aria-selected', String(gp.id === id));
+        b.innerHTML = '<b></b><small></small><span></span>';
+        b.querySelector('b').textContent = S.items[id].mwOf ? (S.items[S.items[id].mwOf]?.name || S.items[id].name) : S.items[id].name; // 걸작은 이름 대신 옆 표시로
+        b.querySelector('small').textContent = tagOf(id);
+        if (S.items[id].mwOf) { const t = document.createElement('i'); t.className = 'gw-mw'; t.textContent = '걸작'; b.querySelector('b').appendChild(t); } // 걸작 장신구는 표시를 붙여 일반과 구분
+        b.querySelector('span').textContent = `×${n}`;
+        b.addEventListener('click', () => { gp.id = gp.id === id ? '' : id; drawList(); drawPick(); }); // 다시 누르면 고르기 취소
+        gpList.appendChild(b);
+      }
+      if (!hits.length) {
+        const e = document.createElement('p');
+        e.className = 'note gp-empty';
+        e.textContent = own.length ? '찾는 물건이 없다.' : '보낼 수 있는 물건이 없다.';
+        gpList.appendChild(e);
+      }
+    };
+    const drawTags = () => {
+      gpTags.replaceChildren();
+      if (tags.length < 2) { gpTags.hidden = true; return; }
+      for (const t of ['', ...tags]) {
+        const c = document.createElement('button');
+        c.type = 'button';
+        c.className = `gp-tag${gp.tag === t ? ' on' : ''}`;
+        c.setAttribute('aria-pressed', String(gp.tag === t));
+        c.textContent = t || '전체';
+        c.addEventListener('click', () => { gp.tag = t; drawTags(); drawList(); });
+        gpTags.appendChild(c);
+      }
+    };
+    gift.querySelector('.gp-q').addEventListener('input', (e) => { gp.q = e.target.value; drawList(); });
+    drawTags(); drawList(); drawPick();
+    const gImg = giftImgPick(gift.querySelector('.msg').closest('.r'), gift.querySelector('.msg')); // 그림 한 장 (그림만 보내도 됨)
+    gift.querySelector('.btn').addEventListener('click', () => {
+      const id = gp.id;
+      const qty = Number(gift.querySelector('.num').value) || 0;
+      const gold = Number(gift.querySelector('.gold').value) || 0;
+      const items = id && qty > 0 ? [{ id, qty }] : [];
+      const msg = gift.querySelector('.msg').value.trim();
+      if (gImg.busy()) return toast('그림을 올리는 중이다. 잠깐 기다리자.');
+      socket.emit(gift.dataset.leave ? 'gift:leave' : 'gift:send', { id: p.id, gold, items, msg, img: gImg.id(), imgTitle: gImg.id() ? gImg.title() : '' }, (res) => {
+        if (res.error) return toast(res.error);
+        toast(res.lines.join(' '));
+        gImg.clear(); gift.querySelector('.msg').value = '';
+        fetchInv(() => { after?.(); if ($('inv-dlg').open) keepScroll($('inv-dlg'), renderInv); }); // 소지품 창이 열려 있으면 줄어든 개수를 바로 보여 줌
+      });
+    });
+    return gift;
+  }
   function renderProfile(p, keep) {
     const body = $('profile-body');
     body.replaceChildren();
@@ -8340,7 +8441,7 @@
       const it = (id) => {
         const b = B[id];
         if (!b || id === r.bond || (b.needs && r.bond !== b.needs)) return null;
-        const title = id === 'mentor' ? `${p.name}${josa(p.name, '이', '가')} 나보다 레벨이 ${BR.mentorGap} 이상 높아야 한다.` : id === 'student' ? `내가 ${p.name}보다 레벨이 ${BR.mentorGap} 이상 높아야 한다.` : b.label;
+        const title = id === 'mentor' || id === 'student' ? `${b.label} · 레벨과 상관없이 맺을 수 있다. 가르치기는 스승이 제자보다 레벨이 ${BR.mentorGap} 이상 높을 때.` : b.label;
         const text = { lover: '마음 고백' }[id] || b.name;
         return { text, title, cls: id === 'lover' ? 'bp-heart' : '', run: () => { if (markWarn(p.name, r.mine, '청할까')) socialAct('rel:request', { id: p.id, bond: id }, refreshProfile); } };
       };
@@ -8380,11 +8481,13 @@
       if (r.bond === 'student') {
         const T = BR.teach || { ap: 2, en: 8 };
         const here = p.region && p.region === S.region;
-        const tb = btn(g1, r.teachIn > 0 ? `가르치기 · ${dur(r.teachIn)} 뒤` : `가르치기 −${T.ap}`, () => socialAct('rel:teach', { id: p.id }, refreshProfile), { disabled: !here || r.teachIn > 0 || p.dead, primary: here && !r.teachIn });
-        tb.title = `행동력 ${T.ap}, 기력 ${T.en}. 제자는 경험치를, 스승은 명성을 얻는다.`;
-        if (!here) why(g1, '같은 지역에 함께 있어야 가르칠 수 있다.');
+        const gap = (BR.mentorGap || 3), lvOk = (S.me?.level || 0) >= p.level + gap; // 가르치기: 내가 제자보다 레벨이 gap 이상 높아야
+        const tb = btn(g1, r.teachIn > 0 ? `가르치기 · ${dur(r.teachIn)} 뒤` : `가르치기 −${T.ap}`, () => socialAct('rel:teach', { id: p.id }, refreshProfile), { disabled: !here || !lvOk || r.teachIn > 0 || p.dead, primary: here && lvOk && !r.teachIn });
+        tb.title = `행동력 ${T.ap}, 기력 ${T.en}. 제자는 경험치를, 스승은 명성을 얻는다. 내가 제자보다 레벨이 ${gap} 이상 높아야 가르칠 수 있다.`;
+        if (!lvOk) why(g1, `가르치려면 내가 ${p.name}보다 레벨이 ${gap} 이상 높아야 한다. (나 Lv. ${S.me?.level || 0} · ${p.name} Lv. ${p.level})`);
+        else if (!here) why(g1, '같은 지역에 함께 있어야 가르칠 수 있다.');
       }
-      const eff = { mentor: '나의 스승. 같은 지역에서 나를 가르쳐 줄 수 있다.', student: '나의 제자. 같은 지역에 함께 있으면 가르칠 수 있다.', lover: '같은 지역에 함께 있으면 정신이 빨리 맑아지고 사냥에서 받는 피해가 준다.', partner: '같은 지역에 함께 있으면 정신이 빨리 맑아지고 사냥에서 받는 피해가 준다. 서로의 둥지에서 쉴 수 있다.' }[r.bond];
+      const eff = { mentor: `나의 스승. 같은 지역에서 스승이 나보다 레벨이 ${BR.mentorGap || 3} 이상 높으면 나를 가르쳐 줄 수 있다.`, student: `나의 제자. 같은 지역에 함께 있고 내가 레벨이 ${BR.mentorGap || 3} 이상 높으면 가르칠 수 있다.`, lover: '같은 지역에 함께 있으면 정신이 빨리 맑아지고 사냥에서 받는 피해가 준다.', partner: '같은 지역에 함께 있으면 정신이 빨리 맑아지고 사냥에서 받는 피해가 준다. 서로의 둥지에서 쉴 수 있다.' }[r.bond];
       if (eff) { const n = document.createElement('span'); n.className = 'l'; n.textContent = eff; g1.appendChild(n); }
     } else if (!r.gotBond) {
       if (r.sentBond) btn(g1, `'${B[r.sentBond]?.label || ''}' 청 거두기`, () => socialAct('rel:cancel', { id: p.id }, refreshProfile));
@@ -8469,105 +8572,22 @@
       gift.hidden = !gift.hidden;
       if (!gift.hidden) requestAnimationFrame(() => revealBox(gift)); // 펼친 선물 칸이 화면 아래로 숨지 않게 따라 내려감
     }, { disabled: !!p.can.gift, instant: true });
-    why(g2, p.can.trade && p.can.gift ? p.can.gift : p.can.trade ? `교환: ${p.can.trade}` : '');
-    const gift = document.createElement('div');
-    gift.className = 'gift-box';
-    const wantGift = PROFILE_GIFT || !!keep?.leave; PROFILE_GIFT = false; // 집터 구경 창의 '선물'로 열었으면: 선물 칸을 펼치고 '집터에 두고 가기'로 (상대가 원정 중·접속 안 함이어도 됨)
-    gift.hidden = !(keep?.gift || wantGift);
-    if (wantGift) { gift.dataset.leave = '1'; requestAnimationFrame(() => revealBox(gift)); }
-    const own = Object.entries(invCache).filter(([id, q]) => S.items[id] && q > 0);
-    // 보낼 물건 고르기: 이름으로 찾기 + 종류로 거르기 + 눌러서 고르는 목록 (긴 드롭다운 대신)
-    gift.innerHTML = `<div class="gp">
-        <input class="input gp-q" type="search" placeholder="물건 이름으로 찾기" aria-label="보낼 물건 찾기" autocomplete="off">
-        <div class="gp-tags" role="group" aria-label="물건 종류"></div>
-        <div class="gp-list" role="listbox" aria-label="보낼 물건"></div>
-        <div class="r gp-pick"><span class="gp-sel">물건 없이 보낸다</span><input class="input num" type="number" min="1" value="1" aria-label="개수"></div>
-      </div>
-      <div class="r"><span style="font-size: 13px">금화</span><input class="input num gold" type="number" min="0" value="0" aria-label="금화"><span class="note">가진 금화 ${S.me.gold}</span></div>
-      <div class="r"><textarea class="input msg" rows="2" maxlength="100" placeholder="함께 보낼 말 (적지 않아도 된다, 100자까지)" aria-label="함께 보낼 말"></textarea></div>
-      <div class="r"><button class="btn primary" type="button">보내기</button></div>`;
-    if (wantGift) { const sb = [...gift.querySelectorAll('button.btn.primary')].find((x) => x.textContent === '보내기'); if (sb) sb.textContent = '집터에 두고 가기'; const n = document.createElement('p'); n.className = 'note'; n.textContent = `${p.name}의 집터에 두고 간다. 상대가 원정 중이거나 접속하지 않았어도 돌아오면 받는다.`; gift.prepend(n); }
-    own.sort(([a], [b]) => S.items[a].name.localeCompare(S.items[b].name, 'ko'));
-    const gp = { id: '', tag: '', q: '' };
-    const gpList = gift.querySelector('.gp-list'), gpTags = gift.querySelector('.gp-tags');
-    const gpNum = gift.querySelector('.gp-pick .num'), gpSel = gift.querySelector('.gp-sel');
-    const tagOf = (id) => itemTagText(S.items[id]);
-    const tags = [...new Set(own.map(([id]) => tagOf(id)))];
-    const drawPick = () => {
-      const q = own.find(([id]) => id === gp.id)?.[1] || 0;
-      gpSel.textContent = gp.id ? `${S.items[gp.id].name} · 가진 것 ${q}` : '물건 없이 보낸다'; // 걸작은 이름에 '걸작'이 붙어 있음
-      gpSel.classList.toggle('on', !!gp.id);
-      gpNum.disabled = !gp.id;
-      gpNum.max = q || '';
-      if (gp.id && Number(gpNum.value) > q) gpNum.value = q;
-    };
-    const drawList = () => {
-      gpList.replaceChildren();
-      const q = gp.q.trim().toLowerCase();
-      const hits = own.filter(([id]) => (!gp.tag || tagOf(id) === gp.tag) && (!q || S.items[id].name.toLowerCase().includes(q)));
-      for (const [id, n] of hits) {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.className = `gp-it${gp.id === id ? ' on' : ''}${S.items[id].mwOf ? ' mw' : ''}`;
-        b.setAttribute('role', 'option');
-        b.setAttribute('aria-selected', String(gp.id === id));
-        b.innerHTML = '<b></b><small></small><span></span>';
-        b.querySelector('b').textContent = S.items[id].mwOf ? (S.items[S.items[id].mwOf]?.name || S.items[id].name) : S.items[id].name; // 걸작은 이름 대신 옆 표시로
-        b.querySelector('small').textContent = tagOf(id);
-        if (S.items[id].mwOf) { const t = document.createElement('i'); t.className = 'gw-mw'; t.textContent = '걸작'; b.querySelector('b').appendChild(t); } // 걸작 장신구는 표시를 붙여 일반과 구분
-        b.querySelector('span').textContent = `×${n}`;
-        b.addEventListener('click', () => { gp.id = gp.id === id ? '' : id; drawList(); drawPick(); }); // 다시 누르면 고르기 취소
-        gpList.appendChild(b);
-      }
-      if (!hits.length) {
-        const e = document.createElement('p');
-        e.className = 'note gp-empty';
-        e.textContent = own.length ? '찾는 물건이 없다.' : '보낼 수 있는 물건이 없다.';
-        gpList.appendChild(e);
-      }
-    };
-    const drawTags = () => {
-      gpTags.replaceChildren();
-      if (tags.length < 2) { gpTags.hidden = true; return; }
-      for (const t of ['', ...tags]) {
-        const c = document.createElement('button');
-        c.type = 'button';
-        c.className = `gp-tag${gp.tag === t ? ' on' : ''}`;
-        c.setAttribute('aria-pressed', String(gp.tag === t));
-        c.textContent = t || '전체';
-        c.addEventListener('click', () => { gp.tag = t; drawTags(); drawList(); });
-        gpTags.appendChild(c);
-      }
-    };
-    gift.querySelector('.gp-q').addEventListener('input', (e) => { gp.q = e.target.value; drawList(); });
-    drawTags(); drawList(); drawPick();
-    const gImg = giftImgPick(gift.querySelector('.msg').closest('.r'), gift.querySelector('.msg')); // 그림 한 장 (그림만 보내도 됨)
-    gift.querySelector('.btn').addEventListener('click', () => {
-      const id = gp.id;
-      const qty = Number(gift.querySelector('.num').value) || 0;
-      const gold = Number(gift.querySelector('.gold').value) || 0;
-      const items = id && qty > 0 ? [{ id, qty }] : [];
-      const msg = gift.querySelector('.msg').value.trim();
-      if (gImg.busy()) return toast('그림을 올리는 중이다. 잠깐 기다리자.');
-      socket.emit(gift.dataset.leave ? 'gift:leave' : 'gift:send', { id: p.id, gold, items, msg, img: gImg.id(), imgTitle: gImg.id() ? gImg.title() : '' }, (res) => {
-        if (res.error) return toast(res.error);
-        toast(res.lines.join(' '));
-        gImg.clear(); gift.querySelector('.msg').value = '';
-        fetchInv(() => { refreshProfile(); if ($('inv-dlg').open) keepScroll($('inv-dlg'), renderInv); }); // 소지품 창이 열려 있으면 줄어든 개수를 바로 보여 줌
-      });
-    });
+    why(g2, p.can.trade && p.can.gift ? p.can.gift : p.can.trade ? `교환: ${p.can.trade}` : p.can.gift ? `선물: ${p.can.gift}` : ''); // 선물만 막힌 때(상대가 나를 경계)도 까닭을 보여 줌
+    const gift = buildGiftBox(p, false, refreshProfile);
+    gift.hidden = !keep?.gift;
     acts.appendChild(gift);
     body.appendChild(acts);
-    if (giftBtn.disabled && !wantGift) gift.remove(); // 집터에 두고 가기는 상대가 원정 중·접속 안 함이어도 됨
+    if (giftBtn.disabled) gift.remove();
   }
   $('profile-close').addEventListener('click', () => $('profile-dlg').close());
+  $('hgift-close').addEventListener('click', () => $('hgift-dlg').close());
 
   // ── 받은 선물: '확인'을 누를 때까지 남는 알림 ──
   let giftQ = [];
   function showGift() {
     const g = giftQ[0];
     if (!g) { if ($('gift-dlg').open) $('gift-dlg').close(); return; }
-    $('gift-title').textContent = giftQ.length > 1 ? `선물이 도착했다 (${giftQ.length}개)` : '선물이 도착했다';
+    $('gift-title').textContent = g.home ? '집터에 놓여 있던 선물' : giftQ.length > 1 ? `선물이 도착했다 (${giftQ.length}개)` : '선물이 도착했다';
     const body = $('gift-body');
     body.replaceChildren();
     const head = document.createElement('div');
@@ -9182,7 +9202,7 @@
   function renderDepart() {
     const me = S.me;
     if (!me) return;
-    const R = S.departRules || { minLevel: 5, tiers: [[25, 8], [20, 5], [15, 3], [10, 2], [5, 1]] };
+    const R = S.departRules || { minLevel: 5, tiers: [[25, 5], [20, 4], [15, 3], [10, 2], [5, 1]] }; // 서버가 보내 주는 표가 없을 때만 씀 (game-data DEPART.tiers와 같게)
     const pts = ((R.tiers || []).find(([at]) => me.level >= at) || [0, 0])[1]; // 떠날 때 레벨 계단 (game-data DEPART.tiers)
     $('depart-what').textContent = me.level >= R.minLevel
       ? `${me.name}${josa(me.name, '은', '는')} 대륙을 떠나 먼 여행길에 오른다. 같은 계정으로 새 드래곤을 만들면, 그 드래곤이 ${me.name}의 의지를 이어받아 능력치 포인트 ${pts}점(새 드래곤이 레벨 2·4·6…에 오를 때마다 1점씩)과 칭호 '의지를 이은 자'를 받는다. 떠난 드래곤의 이야기는 동료들의 기록에 남는다.`
@@ -14287,7 +14307,7 @@
     socket.on('notice', (r) => {
       SFX.play('notice');
       // 동료·선물·교환 소식은 바로 알림으로, 둥지 소식은 소식 카드로
-      if (['동료', '동료 요청', '선물', '교환', '결투', '부고', '구조 요청', '칭호', '라이벌', '야시장'].includes(r.title)) { toast(r.lines.join(' ')); if (r.items?.length) fetchInv(); }
+      if (['동료', '동료 요청', '선물', '교환', '결투', '부고', '구조 요청', '칭호', '라이벌', '야시장'].includes(r.title)) { toast(r.lines.join(' ')); if (r.items?.length) fetchInv(); if (r.title === '선물' && $('city-home-dlg')?.open) cityCall('city:get'); } // 집터에 선물이 놓이면 열어 둔 내 집터 화면에도 바로
       else addNews(r);
     });
     socket.on('rel:changed', () => { loadRel(); refreshProfile(); });
@@ -15069,6 +15089,7 @@
       else if (s === 'off' && !g.gate && Object.entries(CT.v.rules.repair).every(([k, n]) => (h.inv[k] || 0) >= n)) out.push({ t: '쓰러진 골렘을 고칠 수 있다', b: '고치기', a: `golem:${g.i}` }); });
     const r = canPut(h); if (r) out.push({ t: `${r.name}에 재료 넣기`, b: '넣기', a: 'put', pri: !out.some((x) => x.pri) });
     if (!h.req.done && (h.inv[h.req.id] || 0) >= h.req.n) out.push({ t: '오늘의 부탁', b: '채운다', a: 'req' });
+    if (h.gifts && h.gifts.length) out.push({ t: `집터에 놓인 선물 ${h.gifts.length}`, b: '보기', a: 'gifts', manual: true });
     if (h.book && h.book.unread) out.push({ t: `방명록에 새 글 ${h.book.unread}`, b: '보기', a: 'book', manual: true });
     const pk = h.perk; // 집터 덤
     if (pk && pk.on && pk.left > 0) {
@@ -15086,6 +15107,7 @@
     if (a === 'give') return cityCall('city:give');
     if (a === 'perk') return cityCall('city:perk');
     if (a === 'book') { CT.tab = 'plan'; return renderHome(); }
+    if (a === 'gifts') { CT.tab = 'plan'; renderHome(); setTimeout(() => document.querySelector('#city-home-dlg .hm-gifts')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50); return; }
     const [k, i] = a.split(':');
     if (k === 'golem') { CT.sel = 'golems'; CT.gopen = +i; CT.tab = 'golems'; return renderHome(); }
     if (k === 'again') { const g = CT.v.me.golems[+i], rep = g.report; return cityCall('city:send', { i: +i, job: rep.job === 'build' && !CT.v.me.rooms.some((r) => r.state === 'cur' && r.h < r.hours) ? 'city' : rep.job, hours: rep.hours }); }
@@ -15130,7 +15152,7 @@
     const gAtt = h.golems.some((g) => ['back', 'due', 'idle'].includes(gState(g)));
     const tabs = [['plan', '집터', ''], ['todo', '할 일', todo.length ? `<em class="hm-n">${todo.length}</em>` : ''], ['golems', '골렘', gAtt ? '<i class="hm-dot" aria-label="할 일 있음"></i>' : ''], ['deco', '꾸미기', '']];
     let main = '';
-    if (tab === 'plan') main = `${housePlan(h)}<section class="detail">${CT.sel === 'golems' ? roomD(h, cur || h.rooms[3]) : homeDetail(h)}</section>${bookBox(h)}`;
+    if (tab === 'plan') main = `${housePlan(h)}<section class="detail">${CT.sel === 'golems' ? roomD(h, cur || h.rooms[3]) : homeDetail(h)}</section>${homeGiftBox(h)}${bookBox(h)}`;
     else if (tab === 'todo') main = `${todo.length ? `<section class="hm-todo"><div class="hm-todo-h"><b>할 일 ${todo.length}</b><button type="button" class="btn sm primary" data-ct="all"${CT.busy ? ' disabled' : ''}>${CT.busy ? '처리하는 중…' : '모두 처리'}</button></div>${todo.map((t) => `<div class="tr"><span class="dot"></span><b>${t.t}</b><button type="button" class="btn sm" data-ct="act:${t.a}">${t.b}</button></div>`).join('')}</section>` : '<p class="hm-empty">지금은 할 일이 없다. 골렘이 돌아오면 다시 들러 보자.</p>'}<section class="detail">${reqD(h)}</section>${tradeBox(h)}`;
     else if (tab === 'golems') main = `<section class="detail">${golemsD(h)}</section>`;
     else { const md = CT.dkMode || 'place'; main = `<nav class="seg dk-mode" aria-label="꾸미기">${[['place', '가구 놓기'], ['make', '가구 만들기'], ['bp', '도면'], ['look', '바닥·담']].map(([k, n]) => `<button type="button" data-ct="dkm:${k}" class="${md === k ? 'on' : ''}">${n}</button>`).join('')}</nav>${md === 'make' ? furnMaker(h) : md === 'bp' ? bpShop(h) : md === 'look' ? lookEditor(h) : decoEditor(h)}`; }
@@ -15628,6 +15650,12 @@
       <ul class="cv-book">${t.offers.map((o) => `<li class="tr-row"><b>${ctEsc(o.name)}${o.qty > 1 ? ` ×${o.qty}` : ''}</b><span class="tr-r">${o.city ? '도시 재료' : o.rarity === 'rare' ? '희귀' : o.rarity === 'uncommon' ? '고급' : '보통'}</span><span class="tr-c${h.seals >= o.seals ? '' : ' lack'}">인장 ${o.seals}</span><button type="button" class="btn sm${t.left && h.seals >= o.seals ? ' primary' : ''}" data-ct="trade:${o.i}" ${t.left && h.seals >= o.seals ? '' : 'disabled'}>바꾸기</button></li>`).join('')}</ul></section>`;
   }
   window.__cityVisit = cityVisit; // 동료 목록의 '집터 방문'에서도 씀
+  // 집터에 놓인 선물: 이웃이 두고 간 것. 누가·언제만 보이고, '받기'를 누르면 받은 선물 창에서 열어 봄
+  function homeGiftBox(h) {
+    const l = h.gifts || []; if (!l.length) return '';
+    const when = (t) => { const m = Math.floor((Date.now() - t) / 60000); return m < 1 ? '방금' : m < 60 ? `${m}분 전` : m < 1440 ? `${Math.floor(m / 60)}시간 전` : `${Math.floor(m / 1440)}일 전`; };
+    return `<section class="hm-book hm-gifts"><h4>집터에 놓인 선물 <em class="hm-n">${l.length}</em></h4><ul class="cv-book">${l.map((g) => `<li><b>${ctEsc(g.from)}</b><span>${when(g.at)}에 두고 갔다</span><button type="button" class="btn sm primary" data-ct="gtake:${g.id}"${CT.busy ? ' disabled' : ''}>받기</button></li>`).join('')}</ul></section>`;
+  }
   function bookBox(h) {
     const b = h.book; if (!b) return '';
     if (!b.has) return '<section class="hm-book"><h4>방명록</h4><p class="note">꾸미기에서 \'방명록 받침\'을 놓으면 놀러 온 이웃이 글을 남길 수 있다.</p></section>';
@@ -15679,10 +15707,11 @@
     if (a.startsWith('zone:')) return cityCall('city:zone', { id: a.slice(5) }, (r) => { if (a === 'zone:sanctum') CT.story = r.lines; });
     if (a === 'hpview') { CT.hpClean = !CT.hpClean; return renderHome(); }
     if (a === 'visit') return cityVisit(n.dataset.name);
-    if (a === 'vgift') { const id = CT.visit && CT.visit.id; if (S.region !== 'ruins') return toast('선물을 두고 가려면 고대 유적에 직접 와 있어야 한다.'); if (id && window.__openGiftTo) window.__openGiftTo(id); return; }
+    if (a.startsWith('gtake:')) return cityCall('city:gift:take', { id: +a.slice(6) }); // 집터에 놓인 선물 받기 (받은 선물 창이 뜸)
+    if (a === 'vgift') { const id = CT.visit && CT.visit.id; if (S.region !== 'ruins') return toast('선물을 두고 가려면 고대 유적에 직접 와 있어야 한다.'); if (id && window.__openGiftTo) window.__openGiftTo(id, CT.visit.name); return; }
     if (a === 'gphrase') { const inp = document.getElementById('cv-guest-t'); if (inp) { inp.value = n.dataset.t; inp.focus(); } return; }
     if (a === 'guest') { const t = document.getElementById('cv-guest-t')?.value || '', name = CT.visit && CT.visit.name; if (!name) return; return cityCall('city:guest', { name, text: t }, () => cityVisit(name)); }
-    if (a === 'book') { CT.tab = 'plan'; renderHome(); setTimeout(() => document.querySelector('#city-home-dlg .hm-book')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50); return; }
+    if (a === 'book') { CT.tab = 'plan'; renderHome(); setTimeout(() => document.querySelector('#city-home-dlg .hm-book:not(.hm-gifts)')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50); return; }
     if (a === 'give') return cityCall('city:give');
     if (a === 'gold') { const n = Number(document.getElementById('cc-gold-n')?.value || 0); if (!(n >= 100)) return toast('금화는 100 이상 녹여 넣을 수 있다.'); if (!confirm(`금화 ${ctNum(n)}을 녹여 넣을까? 되돌릴 수 없다.`)) return; return cityCall('city:gold', { n }); }
     if (a.startsWith('goldq:')) { const inp = document.getElementById('cc-gold-n'); if (!inp) return; const z = CT.v.zones.find((x) => x.state === 'going'), gb = z && z.box.find((m) => m.id === 'gold'), left = gb ? gb.need - gb.put : 0, mine = Math.floor(S.me.gold || 0); const q = a.slice(6); inp.value = q === 'max' ? Math.min(left, mine) : Math.min(left, mine, (Number(inp.value) || 0) + Number(q)); return; }
