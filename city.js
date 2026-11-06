@@ -684,6 +684,29 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     Object.assign(g, { job, hours, start: Date.now(), until: Date.now() + ms, report: null });
     return { ok: true, lines: [`${ga(g.name)} ${JOBS[job]} ${hours}시간을 하러 갔다. 기력 −${cost}.`] };
   }
+  // 골렘 작업 중단 (일하러 간 골렘을 도중에 데려옴): 그때까지 다 채운 시간만큼만 일한 것으로 치고(가져온 것·재건도·인장도 그만큼),
+  // 아직 하지 못한 시간의 기력은 돌려줌. 처음부터 그 시간만큼만 보낸 것과 같아 취소로 얻거나 잃는 것이 없음
+  function cancelJob(d, i) {
+    const e = ready(d); if (e) return e;
+    const m = ct(d); const g = m.golems[Number(i)];
+    if (!g || !g.job) return err('일하러 간 골렘이 아니다.');
+    const now = Date.now();
+    if (g.until <= now) return err('이미 일을 마치고 돌아왔다.');
+    const per = Math.max(1, (g.until - g.start) / g.hours); // 한 시간 몫 (대장간 덤이면 짧음)
+    const worked = Math.max(0, Math.min(g.hours - 1, Math.floor((now - g.start) / per)));
+    const left = g.hours - worked, back = left * R.golemEn, name = g.name, job = JOBS[g.job];
+    const cap = logic.enCap(d), en0 = d.en;
+    d.en = Math.min(cap, d.en + back); // 넘치는 몫은 버림 (기력이 이미 거의 찼을 때)
+    if (d.en >= cap && en0 < cap) d.en_at = now;
+    const gotEn = d.en - en0;
+    if (worked > 0) { g.hours = worked; g.until = now; settle(d); }
+    else { g.job = null; g.hours = 0; g.start = 0; g.until = 0; }
+    const lines = [worked > 0
+      ? `${ga(name)} ${job} ${worked}시간만 하고 돌아왔다. 한 만큼 가져온 것은 골렘 탭에서 확인하자.`
+      : `${ga(name)} ${eul(job)} 시작하기 전에 돌아왔다.`];
+    lines.push(gotEn > 0 ? `하지 못한 ${left}시간의 기력을 ${gotEn}만큼 돌려받았다.${gotEn < back ? ` (기력이 가득 차 ${back - gotEn}만큼은 넘쳤다)` : ''}` : `하지 못한 ${left}시간의 기력은 이미 가득 차 있어 돌려받지 못했다.`);
+    return { ok: true, lines };
+  }
   function repair(d, i) {
     const e = ready(d); if (e) return e;
     const m = ct(d); const g = m.golems[Number(i)]; if (!g || g.awake) return err('고칠 골렘이 아니다.');
@@ -834,6 +857,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     handle('city:put', (d) => put(d));
     handle('city:send', (d, p) => send(d, p.i, String(p.job || ''), p.hours));
     handle('city:repair', (d, p) => repair(d, p.i));
+    handle('city:cancel', (d, p) => cancelJob(d, p.i)); // 골렘 작업 중단
     handle('city:rename', (d, p) => rename(d, p.i, p.name));
     handle('city:req', (d) => fillReq(d));
     handle('city:frag', (d, p) => putFrag(d, String(p.key || '')));

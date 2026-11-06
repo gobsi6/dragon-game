@@ -15578,7 +15578,7 @@
     if (s === 'off' && g.gate) return `<p class="note">금이 깊게 간 골렘이다. 집터의 ${g.gate}${ctJ(g.gate, '을', '를')} 되살려 연장을 갖춘 뒤에 고칠 수 있다.</p>`;
     if (s === 'off') { const ok = Object.entries(v.rules.repair).every(([k, n]) => (h.inv[k] || 0) >= n);
       return `<p class="note">고쳐서 깨우면 골렘이 한 기 늘어난다.</p><ul class="mats">${Object.entries(v.rules.repair).map(([k, n]) => `<li class="${(h.inv[k] || 0) >= n ? 'ok' : 'lack'}"><span>${k === 'bog_iron' ? '늪철' : '흑요석'}</span><b>${h.inv[k] || 0} / ${n}</b></li>`).join('')}</ul><div class="acts"><button type="button" class="btn primary" data-ct="repair:${g.i}" ${ok ? '' : 'disabled'}>고쳐서 깨운다</button></div>`; }
-    if (s === 'work') return `<div class="rm-row"><span>${v.rules.jobs[g.job]} ${g.hours}시간</span><b>${ctLeft(g.until - Date.now())} 남음</b></div><div class="bar"><i style="width:${Math.min(100, ((Date.now() - g.start) / (g.until - g.start)) * 100)}%"></i></div><p class="eta">${ctClock(g.until)}에 돌아온다</p>`;
+    if (s === 'work') return `<div class="rm-row"><span>${v.rules.jobs[g.job]} ${g.hours}시간</span><b>${ctLeft(g.until - Date.now())} 남음</b></div><div class="bar"><i style="width:${Math.min(100, ((Date.now() - g.start) / (g.until - g.start)) * 100)}%"></i></div><p class="eta">${ctClock(g.until)}에 돌아온다</p><div class="g-cancel"><button type="button" class="btn sm" data-ct="gcancel:${g.i}">작업 중단</button><small class="note">다 채운 시간만큼만 일한 것으로 치고, 하지 못한 시간의 기력은 돌려받는다.</small></div>`;
     if (s === 'due') return '<p class="note">일을 마치고 돌아왔다. 맞이하면 가져온 것이 들어온다.</p>';
     let rep = '';
     if (s === 'back') { const r = g.report, got = Object.entries(r.got || {});
@@ -15744,6 +15744,14 @@
     if (k === 'send') { const i = +x, h = CT.v.me, curR = h.rooms.find((r) => r.state === 'cur'), buildOk = !!curR && curR.h < curR.hours; return cityCall('city:send', { i, job: CT.job[i] || (buildOk ? 'build' : 'city'), hours: CT.hrs[i] || 4 }); }
     if (k === 'repair') return cityCall('city:repair', { i: +x });
     if (k === 'perkg') return cityCall('city:perk', { i: +x });
+    if (k === 'gcancel') { // 골렘 작업 중단: 무엇이 되는지 먼저 보여 줌 (서버 cancelJob과 같은 셈)
+      const g = CT.v?.me?.golems?.[+x]; if (!g || !g.job) return;
+      const per = Math.max(1, (g.until - g.start) / g.hours), worked = Math.max(0, Math.min(g.hours - 1, Math.floor((Date.now() - g.start) / per)));
+      const left = g.hours - worked, back = left * CT.v.rules.golemEn, jn = CT.v.rules.jobs[g.job];
+      const msg = worked > 0 ? `${ctIga(g.name)} ${jn} ${g.hours}시간 가운데 ${worked}시간만 한 것으로 치고 돌아온다. 하지 못한 ${left}시간의 기력을 ${back}만큼 돌려받는다.\n작업을 중단할까?` : `${ctIga(g.name)} 아직 한 시간도 채우지 못했다. 일한 것 없이 돌아오고 기력을 ${back}만큼 모두 돌려받는다.\n작업을 중단할까?`;
+      if (!confirm(msg)) return;
+      return cityCall('city:cancel', { i: +x });
+    }
     if (k === 'rename') { const inp = document.querySelector(`#city-home-dlg [data-gname="${x}"]`); return cityCall('city:rename', { i: +x, name: inp ? inp.value : '' }); }
     if (k === 'slot') { const key = `${x}:${y}`; CT.open = CT.open === key ? null : key; if (CT.open && !CT.scenes[key]) return cityCall('city:scene', { key }, (r) => { CT.scenes[key] = r.scene; }); return renderWall(); }
     if (k === 'frag') { const key = `${x}:${y}`; return cityCall('city:frag', { key }, () => { CT.fresh = key; CT.open = null; const z = key.split(':')[0]; if (CT.v.frags[z].every((_, i) => CT.v.wall[`${z}:${i}`])) CT.sweep = z; }); }
