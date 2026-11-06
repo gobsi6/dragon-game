@@ -2934,7 +2934,7 @@ const ACHIEVEMENTS = [
     if (v.type !== 'equip') continue;
     const base = k.endsWith('__mw') ? k.slice(0, -4) : k;
     const lv = lvOf(base);
-    if (lv >= 4) { v.lvReq = lv; if (v.desc && !v.desc.includes('부터 찰 수 있다')) v.desc = `${v.desc} (레벨 ${lv}부터 찰 수 있다)`; }
+    if (lv >= 4) v.lvReq = lv; // 화면이 설명 끝에 'Lv. n부터 착용 가능'을 붙임 (레벨이 모자라면 붉게)
   }
 })();
 

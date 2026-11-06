@@ -2619,17 +2619,26 @@
     w.append(c, r);
     return w;
   }
+  // 물건 설명 + 착용 레벨 꼬리표 (레벨이 모자라면 붉게)
+  function lvReqTag(it) {
+    if (!it || !it.lvReq) return null;
+    const t = document.createElement('span'); const no = (S.me?.level || 1) < it.lvReq;
+    t.className = `lv-req${no ? ' no' : ''}`; t.textContent = `Lv. ${it.lvReq}부터 착용 가능`; return t;
+  }
+  function setItemDesc(el, it, prefix = '') {
+    if (!el) return; el.textContent = `${prefix}${it?.desc || ''}`; const t = lvReqTag(it); if (t) { el.append(' '); el.appendChild(t); }
+  }
   function effectText(it) {
     if (it.kin) return `식구 요리 · 유대 +${it.kin.bond}, 배 +${it.kin.sat}${it.kin.talent ? ` · ${S.talents?.[it.kin.talent]?.name || ''} 쪽` : ''}`; // 자유 제작으로 빚은 식구 요리
     if (it.type === 'use') {
       const u = it.use, out = [];
-      if (u.buff && !(u.hp || u.en || u.mind)) { const B = S.buffs?.[u.buff]; return B ? `${S.buffs.minutes || 60}분 동안 ${B.name}: ${B.desc} (사냥·강적 전투)` : ''; }
+      if (u.buff && !(u.hp || u.en || u.mind)) { const B = S.buffs?.[u.buff]; return B ? `사냥·강적 전용 · ${S.buffs.minutes || 60}분 동안 ${B.name}: ${B.desc}` : ''; }
       if (u.buff) { const B = S.buffs?.[u.buff]; if (B) out.push(`${S.buffs.minutes || 60}분 동안 ${B.name}`); } // 직접 빚은 독 깃든 먹을거리
       if (u.hp) out.push(`체력 +${u.hp}`);
       if (u.en) out.push(`기력 +${u.en}`);
       if (u.ap) out.push(`행동력 +${u.ap}`);
       if (u.mind) out.push(`정신 +${u.mind}`);
-      if (u.scar) out.push('가장 최근 상흔 하나를 씻어 냄 (7일에 한 번)');
+      if (u.scar) out.push('가장 최근 상흔 하나를 씻어 냄 · 7일에 한 번');
       if (u.keep && !u.mind) out.push(`보물 상자에 간직할 선물${it.value ? ` · 가치 ${it.value}` : ''}`);
       return out.join(', ');
     }
@@ -2638,9 +2647,9 @@
       if (it.expRare) out.push(`원정 귀한 물건 +${Math.round(it.expRare * 100)}%`);
       if (it.elem) out.push(`${ELEM_NAME[it.elem] || it.elem} 속성`); // 직접 빚은 장신구의 기운
       if (it.mindWard) out.push(`깎이는 정신 ${it.mindWard > 1 ? '+' : '−'}${Math.round(Math.abs(1 - it.mindWard) * 100)}%`); // 1보다 크면 더 깎임 (심연의 왕관·속삭이는 반지)
-      const g = it.gear || {}; // 희귀 장비의 특별한 효과 (사냥·강적에서만)
+      const g = it.gear || {}; // 희귀 장비의 특별한 효과
       const raidOnly = it.raidGear || S.items[it.mwOf]?.raidGear; // 레이드 장신구: 특별한 효과는 레이드에서만
-      const gOut = out.length;
+      const base = out.splice(0); // 능력치 등 늘 켜진 효과는 앞에, 특별한 효과는 뒤에 따로 묶음
       if (g.vsCorrupt) out.push(`오염된 적에게 주는 피해 +${Math.round((g.vsCorrupt - 1) * 100)}%`);
       if (g.eliteAtk) out.push(`강적에게 주는 피해 +${Math.round((g.eliteAtk - 1) * 100)}%`);
       if (g.taken) out.push(`받는 피해 −${Math.round((1 - g.taken) * 100)}%`);
@@ -2650,10 +2659,10 @@
       if (g.raidAtk) out.push(`레이드 보스에게 주는 피해 +${Math.round((g.raidAtk - 1) * 100)}%`);
       if (g.flank) out.push(`우회 성공 확률 +${Math.round(g.flank * 100)}%`);
       if (g.linger) out.push(`내가 건 상태 이상이 한 턴 더 갈 확률 +${Math.round(g.linger * 100)}%`);
-      if (raidOnly && out.length > gOut) out[out.length - 1] += ' (레이드에서만)';
-      return `${slotName(it.slot)} 장신구. ${out.join(', ')}`;
+      const special = out.length ? `${raidOnly ? '레이드 전용 · ' : ''}${out.join(', ')}` : '';
+      return `${slotName(it.slot)} 장신구. ${[base.join(', '), special].filter(Boolean).join(' / ')}`;
     }
-    if (it.cat === 'treasure') return `보물 · 보물더미 가치 ${it.value.toLocaleString()} (팔 수 없고, 도둑도 가져가지 못한다)`;
+    if (it.cat === 'treasure') return `보물 · 보물더미 가치 ${it.value.toLocaleString()} · 판매 불가 · 도둑맞지 않음`;
     if (it.cat === 'trophy') {
       const where = dropPlaces(it.id);
       return where ? `사냥 전리품 · ${where}` : '사냥 전리품';
@@ -2815,8 +2824,10 @@
       const id = S.me.equip?.[sl.key];
       if (id && S.items[id]) {
         const d = document.createElement('div');
-        d.className = `slot on ${S.items[id].rarity || 'common'}`;
+        const lv = S.items[id].lvReq || 0, off = lv > (S.me.level || 1); // 착용 레벨이 모자라 효과가 꺼진 장신구
+        d.className = `slot on ${S.items[id].rarity || 'common'}${off ? ' lv-off' : ''}`;
         gearSlotHead(d, sl, id, 'gear', renderGear);
+        if (off) { const n = document.createElement('small'); n.className = 'lv-off-note'; n.textContent = `Lv. ${lv}부터 효과가 켜진다`; d.appendChild(n); d.title = `레벨이 모자라 효과가 꺼져 있다. Lv. ${lv}부터 켜진다.`; }
         box.appendChild(d);
         continue;
       }
@@ -2841,7 +2852,7 @@
     $('buff-row').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6-4.5-4.2 6.1-.7z"/></svg><b></b><span></span>';
     $('buff-row').querySelector('b').textContent = B.name;
     $('buff-row').querySelector('span').textContent = `${B.desc} · ${leftMin(b.until)}분`;
-    $('buff-row').title = '강화 음식 효과. 사냥과 강적 전투에서만 (결투장 제외)';
+    $('buff-row').title = '강화 음식 효과 · 사냥·강적 전용 · 결투장 제외';
   }
   setInterval(() => { if (S.me) renderBuff(); }, 30000);
 
@@ -3250,7 +3261,7 @@
         for (const el of [...nb.children]) if (el !== nm) tg.appendChild(el);
         nb.appendChild(tg);
       }
-      row.querySelector('small').textContent = it.desc;
+      setItemDesc(row.querySelector('small'), it);
       if (it.cat === 'trophy') {
         const eff = document.createElement('span');
         eff.className = 'eff';
@@ -4307,7 +4318,7 @@
           ms.className = 'input kin-sel';
           ms.setAttribute('aria-label', '심부름 시간');
           for (const m of EH.minutes) { const o = document.createElement('option'); o.value = m; o.textContent = `${m / 60}시간`; ms.appendChild(o); }
-          label(`심부름: 혼자 다녀오며 그 지역의 재료를 구해 온다. 날개가 높을수록 많이, 지혜가 높을수록 귀한 것을 찾는다.${v.errandRuin ? '' : ' (멸망한 대륙은 다 자란 용만)'}${canAct ? '' : ' · 둥지 밖에서도 보낼 수 있다.'}`);
+          label(`심부름: 혼자 다녀오며 그 지역의 재료를 구해 온다. 날개가 높을수록 많이, 지혜가 높을수록 귀한 것을 찾는다.${v.errandRuin ? '' : ' 멸망한 대륙은 다 자란 용 전용.'}${canAct ? '' : ' · 둥지 밖에서도 보낼 수 있다.'}`);
           acts.append(rs, ms);
           btn('심부름 보내기', () => nestAct('kin:errand', { id: v.id, region: rs.value, minutes: Number(ms.value) })); // 보낸 뒤에도 둥지 창에 머묾
         }
@@ -5584,7 +5595,7 @@
     b.append(itemTags(it));
     if (it.custom) { const t = document.createElement('span'); t.className = it.custom.quality === 'great' || it.custom.mw ? 'gw-mw' : 'gw-el'; t.textContent = `${it.custom.byName}${josa(it.custom.byName, '이', '가')} 빚음${{ good: ' · 좋음', great: ' · 빼어남' }[it.custom.quality] || ''}${it.custom.mw ? ' · 걸작' : ''}`; b.appendChild(t); } // 직접 빚은 물건
     if (it.type) { const e = document.createElement('span'); e.className = 'eff'; e.textContent = effectText(it); b.appendChild(e); }
-    row.querySelector('small').textContent = it.desc;
+    setItemDesc(row.querySelector('small'), it);
     return row;
   }
   // 개수 고르기 (− n +) 와 합계가 적힌 버튼. 개수를 바꿔도 창을 다시 그리지 않고 그 줄만 바꿈
@@ -6256,7 +6267,7 @@
           top.append(g, ar);
           c.appendChild(top);
           const it = o.get[0] && S.items[o.get[0].id];
-          if (it) { const say = document.createElement('span'); say.className = 'mc-say'; const ef = it.type ? effectText(it) : ''; say.textContent = ef ? `${ef} · ${it.desc}` : it.desc; c.appendChild(say); }
+          if (it) { const say = document.createElement('span'); say.className = 'mc-say'; const ef = it.type ? effectText(it) : ''; setItemDesc(say, it, ef ? `${ef} · ` : ''); c.appendChild(say); }
           const foot = document.createElement('div'); foot.className = 'mc-foot';
           const when = o.weekly ? '이번 주' : '오늘';
           const lf = document.createElement('span'); lf.className = 'prog'; lf.textContent = o.locked || (o.left > 0 ? `${when} ${o.left}번 남음` : `${when}${josa(when, '은', '는')} 끝`);
@@ -11258,7 +11269,7 @@
         row.querySelector('b').textContent = it.name;
         row.querySelector('b').append(itemTags(it));
         row.querySelector('.eff').textContent = effectText(it);
-        row.querySelector('small').textContent = `정화의 결정 ${x.cost}개 · ${it.desc || ''}`;
+        setItemDesc(row.querySelector('small'), it, `정화의 결정 ${x.cost}개 · `);
         const bt = document.createElement('button');
         bt.type = 'button';
         bt.className = 'btn primary';
