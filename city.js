@@ -144,7 +144,25 @@ const FURN = {
   stonelamp: { name: '석등',          seals: 6,  mats: { rune_stone: 6, cave_crystal: 2 } },
   brazier:   { name: '화로',          seals: 7,  mats: { bog_iron: 3, sun_dust: 3 } },
   tree:      { name: '작은 나무',     seals: 8,  mats: { living_bark: 3, glow_moss: 3 } },
+  // 장식 도면으로만 만들 수 있는 것
+  mosaic:       { name: '모자이크 깔개', seals: 8,  mats: { old_tile: 12, sea_glass: 6 } },
+  crystallamp:  { name: '수정 등',       seals: 6,  mats: { cave_crystal: 5, bog_iron: 2 } },
+  goldlamp:     { name: '금박 등',       seals: 8,  mats: { gold_ore: 3, sun_dust: 4 } },
+  glowpatch:    { name: '빛버섯 정원',   seals: 6,  mats: { shroom_spore: 8, red_clay: 4 } },
+  bookcase:     { name: '책장',          seals: 10, mats: { living_bark: 4, old_scroll: 3, faded_cloth: 4 } },
+  nestbed:      { name: '둥지 쿠션',     seals: 10, mats: { faded_cloth: 8, wolf_pelt: 4 } },
+  tapestry:     { name: '용 태피스트리', seals: 12, mats: { faded_cloth: 10, sun_dust: 6 } },
+  fountain:     { name: '작은 분수',     seals: 15, mats: { sea_shell: 10, cave_crystal: 6, rune_stone: 10 } },
 };
+// 장식 도면: 오르딘에게 석공 인장으로 사면 그 가구를 만들 수 있게 됨 (한 번 사면 계속). 칸을 되살릴 때 생기는 기본 가구는 도면 없이도 받음
+const BLUEPRINT = { stonelamp: 30, brazier: 30, arch: 40, bell: 50, carvedesk: 50, hearth: 60, pond: 60, telescope: 70, well: 80,
+  mosaic: 40, crystallamp: 40, goldlamp: 50, glowpatch: 50, bookcase: 60, nestbed: 60, tapestry: 80, fountain: 100 }; // 아래 열 가지는 도면 전용 새 장식
+// 바닥·담 바꾸기: 되살린 칸의 바닥 무늬, 마당 담 모양 (석공 인장)
+const FLOOR_DEF = (plot, id) => (id === 'yard' ? 'pave' : id === 'own' ? ({ spring: 'moss', green: 'dirt', archive: 'pave', forge: 'dark', belfry: 'plank', plaza: 'pave' })[plot] || 'pave' : 'plank'); // 화면 HP의 기본 바닥과 같음
+const LOOK = { floors: { pave: '돌바닥', plank: '나무 마루', moss: '이끼 낀 돌', dirt: '흙바닥', dark: '검은 돌' }, walls: { stone: '낮은 돌담', hedge: '덤불 담', fence: '나무 울타리' }, floorCost: 25, wallCost: 30 };
+// 오르딘 교환: 하루 3번까지(희귀·도시 재료 통틀어), 석공 인장으로 귀한 재료나 도시 재료 묶음을 바꿈. 날마다 희귀 1가지 + 도시 재료 3가지가 나옴 [물건, 인장, 개수]
+const TRADE = { perDay: 3, rare: [['ancient_relic', 50, 1], ['sun_stone', 40, 1], ['bog_pearl', 35, 1]],
+  city: [['drip_dust', 15, 5], ['cave_crystal', 12, 5], ['shroom_spore', 12, 5], ['faded_cloth', 8, 5], ['old_tile', 8, 5], ['sun_dust', 8, 8]] }; // 묶음은 작게: 재료함은 골렘이 주로 채우고, 교환은 모자란 것을 메우는 정도
 // 칸을 되살릴 때 저절로 생기는 기본 가구 (집터마다, 칸마다 개수). 화면의 HP.defaults와 같은 값
 const FURN_GIFT = {"spring":{"yard":{"planter":1,"lamp":1,"bench":1,"steps":1},"work":{"shelf":1,"workbench":1,"barrel":2,"crate":1},"live":{"bed":1,"rug":1,"table":1,"crate":1},"own":{"pond":1,"pot":2}},"green":{"yard":{"planter":1,"lamp":1,"bench":1,"pot":2},"work":{"shelf":1,"workbench":1,"barrel":2,"crate":1},"live":{"bed":1,"rug":1,"table":1,"crate":1},"own":{"bedplot":2,"arch":1,"pot":2}},"archive":{"yard":{"tablets":1,"lamp":1,"bench":1,"planter":1},"work":{"shelf":1,"workbench":1,"barrel":2,"crate":1},"live":{"bed":1,"rug":1,"table":1,"crate":1},"own":{"tablets":2,"carvedesk":1,"lamp":1}},"forge":{"yard":{"anvil":1,"lamp":1,"bench":1,"barrel":1,"crate":1},"work":{"shelf":1,"workbench":1,"barrel":2,"crate":1},"live":{"bed":1,"rug":1,"table":1,"crate":1},"own":{"hearth":1,"anvil":1,"workbench":1,"barrel":1,"crate":1}},"belfry":{"yard":{"planter":1,"lamp":1,"bench":1,"bell":1},"work":{"shelf":1,"workbench":1,"barrel":2,"crate":1},"live":{"bed":1,"rug":1,"table":1,"crate":1},"own":{"telescope":1,"bell":1,"rug":1,"crate":1}},"plaza":{"yard":{"planter":1,"lamp":1,"bench":2},"work":{"shelf":1,"workbench":1,"barrel":2,"crate":1},"live":{"bed":1,"rug":1,"table":1,"crate":1},"own":{"well":1,"signpost":1,"pot":3}}};
 const ZF_NAMES = { spring: 1, archive: 1, green: 1, belfry: 1, sanctum: 1 }; // 구역 기능 중 직접 하는 것 (대장간 거리는 늘 켜지는 효과)
@@ -155,7 +173,7 @@ const DECO = {
   // 바깥 뜰: 담 안 풀밭 (칸·입구 길과 겹치지 않게). 마당을 되살리면 열림. 도면 146×110
   out: { x0: 5, y0: 5, x1: 141, y1: 105, path: [64, 86, 18, 24] },
   rooms: { live: [49, 6, 48, 29], own: [6, 39, 40, 44], yard: [49, 39, 48, 47], work: [101, 39, 41, 44] },
-  size: {"planter":[11,8],"bench":[10,4],"lamp":[7,10],"bed":[12,8],"rug":[14,8],"table":[10,7],"shelf":[12,5],"workbench":[14,8],"crate":[6,5],"barrel":[5,6],"pond":[20,14],"steps":[10,10],"tablets":[10,7],"carvedesk":[12,9],"hearth":[14,10],"anvil":[8,5],"telescope":[8,8],"bell":[7,7],"well":[12,13],"signpost":[5,7],"pot":[4,5],"bedplot":[14,6],"arch":[12,8],"brazier":[7,8],"bush":[10,6],"chair":[6,7],"fence":[13,5],"flowerbed":[10,5],"flowers":[11,9],"jar":[5,6],"mushroom":[9,7],"stepstone":[12,8],"stonelamp":[6,9],"tree":[11,16]}, // 장식마다 [가로, 세로] 도트
+  size: {"planter":[11,8],"bench":[10,4],"lamp":[7,10],"bed":[12,8],"rug":[14,8],"table":[10,7],"shelf":[12,5],"workbench":[14,8],"crate":[6,5],"barrel":[5,6],"pond":[20,14],"steps":[10,10],"tablets":[10,7],"carvedesk":[12,9],"hearth":[14,10],"anvil":[8,5],"telescope":[8,8],"bell":[7,7],"well":[12,13],"signpost":[5,7],"pot":[4,5],"bedplot":[14,6],"arch":[12,8],"brazier":[7,8],"bush":[10,6],"chair":[6,7],"fence":[13,5],"flowerbed":[10,5],"flowers":[11,9],"jar":[5,6],"mushroom":[9,7],"stepstone":[12,8],"stonelamp":[6,9],"tree":[11,16],"bookcase":[12,11],"crystallamp":[6,10],"fountain":[14,12],"glowpatch":[12,6],"goldlamp":[7,10],"mosaic":[14,8],"nestbed":[14,8],"tapestry":[10,12]}, // 장식마다 [가로, 세로] 도트
 };
 const GOLEM_NAMES = ['유적 골렘 1', '유적 골렘 2', '유적 골렘 3']; // 기본 이름 (내 집터 골렘 탭에서 바꿀 수 있음)
 const OLD_GOLEM_NAMES = ['돌멩이', '이끼등', '모래발'];
@@ -163,6 +181,7 @@ const GOLEM_NAME_RE = /^[가-힣A-Za-z0-9 ·'\-]{1,12}$/;
 
 const josa = (w, a, b) => { w = String(w); const l = w[w.length - 1]; if (/[0-9]/.test(l)) return '013678'.includes(l) ? a : b; const c = w.charCodeAt(w.length - 1); if (c < 0xac00 || c > 0xd7a3) return b; return (c - 0xac00) % 28 ? a : b; }; // 숫자로 끝나면 읽는 소리대로 (일·삼·육·칠·팔·영은 받침)
 const ga = (n) => `${n}${josa(n, '이', '가')}`;
+const ro = (w) => { const c = String(w).charCodeAt(String(w).length - 1); if (c < 0xac00 || c > 0xd7a3) return `${w}로`; const t = (c - 0xac00) % 28; return `${w}${t && t !== 8 ? '으로' : '로'}`; }; // ㄹ 받침은 '로'
 const eul = (n) => `${n}${josa(n, '을', '를')}`;
 const err = (t) => ({ error: t });
 const own = (o, k) => typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k); // '__proto__' 같은 이름을 걸러냄
@@ -381,6 +400,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     const e = ready(d); if (e) return e;
     const m = ct(d); if (!m.plot) return err('먼저 집터를 골라야 한다.');
     if (!own(FURN, s)) return err('모르는 가구다.'); const f = { ...FURN[s], seals: sealCost(FURN[s]) };
+    if (own(BLUEPRINT, s) && !(m.bp || {})[s]) return err(`${f.name} 도면이 있어야 만들 수 있다. 꾸미기의 '도면'에서 살 수 있다.`);
     n = Math.max(1, Math.min(5, Math.floor(Number(n) || 1)));
     if (m.seals < f.seals * n) return err(`석공 인장 ${f.seals * n}개가 있어야 한다. (가진 것 ${m.seals})`);
     const lack = Object.entries(f.mats).filter(([k, q]) => have(d, k) < q * n);
@@ -525,6 +545,74 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     } else return err('이 집터의 덤은 아직 없다.');
     pd.n += 1;
     return { ok: true, lines };
+  }
+
+  // ── 놀러 가기 · 방명록: 남의 집터는 보기만, 방명록은 '방명록 받침'을 놓은 집에만 하루 한 줄 ──
+  const BOOK = { keep: 30, len: 40, show: 20, phrases: ['멋진 집이에요!', '잠깐 쉬었다 가요', '꾸민 솜씨가 좋아요', '다음에 또 올게요', '골렘이 귀여워요', '도시를 함께 고쳐요'] };
+  if (!W.books) W.books = {}; if (!W.bookDay) W.bookDay = {};
+  const otherDragon = (name) => { const id = db.dragonNameOwner ? db.dragonNameOwner(String(name || '')) : null; if (!id) return null; return (online.get && online.get(id) && online.get(id).dragon) || db.getDragon(id); };
+  const cityOf = (o) => { const c = logic.combatJson(o); return c && c.city && typeof c.city === 'object' ? c.city : null; };
+  const hasBook = (m) => { if (!m || !m.plot || !m.rooms) return false; if (Array.isArray(m.deco)) return m.deco.some((o) => o.s === 'signpost'); return m.plot === 'plaza' && curIdx(m) >= 4; }; // 기본 배치에선 광장 앞 집 앞뜰에 받침이 있음
+  const bookOf = (name) => (W.books[name] || []).slice(-BOOK.show).reverse();
+  function visitView(d, name) {
+    const o = otherDragon(name); if (!o) return err('그런 드래곤은 없다.');
+    const m = cityOf(o); if (!m || !m.plot || !m.rooms) return err(`${ga(o.name)} 아직 집터를 고르지 않았다.`);
+    const rs = ROOMS(m.plot), ci = curIdx(m), today = dayIdx();
+    return { ok: true, visit: { name: o.name, me: o.id === d.id, plot: { id: m.plot, name: PI[m.plot].name, mood: PI[m.plot].mood, perk: PI[m.plot].perk },
+      rooms: rs.map((r, i) => { const st = m.rooms[r.id], need = Object.values(r.mats).reduce((a, n) => a + n, 0), put = Object.entries(r.mats).reduce((a, [k, n]) => a + Math.min(n, (st.mats || {})[k] || 0), 0); return { id: r.id, name: r.name, hours: r.hours, h: Math.min(r.hours, st.h), matsFrac: need ? put / need : 1, state: i < ci ? 'done' : i === ci ? 'cur' : 'lock' }; }),
+      deco: Array.isArray(m.deco) ? m.deco : null, look: m.look || null, book: hasBook(m), guest: bookOf(o.name),
+      canWrite: hasBook(m) && o.id !== d.id && W.bookDay[`${d.name}>${o.name}`] !== today, phrases: BOOK.phrases, len: BOOK.len } };
+  }
+  function guestWrite(d, name, text) {
+    const e = ready(d); if (e) return e;
+    const o = otherDragon(name); if (!o) return err('그런 드래곤은 없다.');
+    if (o.id === d.id) return err('내 집 방명록에는 쓸 수 없다.');
+    const m = cityOf(o); if (!hasBook(m)) return err('이 집에는 방명록 받침이 없다.');
+    const key = `${d.name}>${o.name}`, today = dayIdx(); if (W.bookDay[key] === today) return err('이 집 방명록에는 오늘 이미 글을 남겼다.');
+    text = String(text || '').replace(/[\u0000-\u001f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, BOOK.len);
+    if (!text) return err('남길 말을 적어야 한다.');
+    const list = (W.books[o.name] = W.books[o.name] || []); list.push({ by: d.name, t: text, at: Date.now() }); if (list.length > BOOK.keep) list.splice(0, list.length - BOOK.keep);
+    W.bookDay[key] = today; save();
+    const oe = online.get && online.get(o.id); if (oe && oe.socket) { try { sendMe(oe.socket, oe.dragon); } catch {} } // 집주인이 접속해 있으면 새 글 표시를 바로
+    return { ok: true, lines: [`${o.name}의 집 방명록에 "${text}"라고 남겼다.`] };
+  }
+  const bookNew = (d, m) => (W.books[d.name] || []).filter((x) => x.at > (m.bookSeen || 0)).length;
+
+  // ── 장식 도면 · 바닥·담 · 오르딘 교환 ──
+  const weekNo = () => Math.floor((dayIdx() + 3) / 7); // 한국 시간 월요일에 바뀜
+  function buyBp(d, s) {
+    const e = ready(d); if (e) return e;
+    const m = ct(d); if (!m.plot) return err('먼저 집터를 골라야 한다.');
+    if (!own(BLUEPRINT, s)) return err('그런 도면은 없다.'); if (!m.bp) m.bp = {};
+    if (m.bp[s]) return err('이미 가진 도면이다.'); const cost = BLUEPRINT[s];
+    if (m.seals < cost) return err(`석공 인장 ${cost}개가 있어야 한다. (가진 것 ${m.seals})`);
+    m.seals -= cost; m.bp[s] = 1;
+    return { ok: true, lines: [`오르딘에게서 ${FURN[s].name} 도면을 받았다. 이제 가구 만들기에서 만들 수 있다. 석공 인장 −${cost}.`] };
+  }
+  function setLook(d, p) {
+    const e = ready(d); if (e) return e;
+    const m = ct(d); if (!m.plot) return err('먼저 집터를 골라야 한다.'); if (!m.look) m.look = { floor: {}, wall: 'stone' };
+    if (p.wall != null) {
+      const w = String(p.wall); if (!own(LOOK.walls, w)) return err('그런 담은 없다.'); if (!roomDone(plotRooms(m)[0], m.rooms.yard)) return err('마당을 되살린 뒤에 바꿀 수 있다.');
+      if ((m.look.wall || 'stone') === w) return err('이미 그 담이다.'); if (m.seals < LOOK.wallCost) return err(`석공 인장 ${LOOK.wallCost}개가 있어야 한다.`);
+      m.seals -= LOOK.wallCost; m.look.wall = w; return { ok: true, lines: [`마당 담을 ${ro(LOOK.walls[w])} 바꿨다. 석공 인장 −${LOOK.wallCost}.`] };
+    }
+    const id = String(p.room || ''), f = String(p.floor || ''), r = plotRooms(m).find((x) => x.id === id);
+    if (!r) return err('그런 칸은 없다.'); if (!roomDone(r, m.rooms[id])) return err(`${r.name}${josa(r.name, '을', '를')} 되살린 뒤에 바꿀 수 있다.`);
+    if (!own(LOOK.floors, f)) return err('그런 바닥은 없다.'); if (((m.look.floor || {})[id] || FLOOR_DEF(m.plot, id)) === f) return err('이미 그 바닥이다.');
+    if (m.seals < LOOK.floorCost) return err(`석공 인장 ${LOOK.floorCost}개가 있어야 한다.`);
+    m.seals -= LOOK.floorCost; m.look.floor = { ...(m.look.floor || {}), [id]: f };
+    return { ok: true, lines: [`${r.name} 바닥을 ${ro(LOOK.floors[f])} 새로 깔았다. 석공 인장 −${LOOK.floorCost}.`] };
+  }
+  const tradeOffers = () => { const w = dayIdx(), r = TRADE.rare.filter(([k]) => ITEMS[k]), c = TRADE.city.filter(([k]) => ITEMS[k]), out = []; if (r.length) out.push(r[w % r.length]); for (let i = 0; out.length < 1 + Math.min(3, c.length); i++) { const it = c[(w * 2 + i) % c.length]; if (!out.includes(it)) out.push(it); } return out; }; // 희귀 1 + 도시 재료 3 (주마다 돌아감)
+  const tradeLeft = (m) => { if (!m.trade || m.trade.day !== dayIdx()) m.trade = { day: dayIdx(), n: 0 }; return Math.max(0, TRADE.perDay - m.trade.n); }; // 한국 시간 자정에 다시
+  function doTrade(d, i) {
+    const e = ready(d); if (e) return e;
+    const m = ct(d), offers = tradeOffers(), o = offers[Number(i)]; if (!o) return err('그런 물건은 없다.');
+    if (tradeLeft(m) <= 0) return err(`오늘은 ${TRADE.perDay}번 다 바꿨다. 내일 다시 바꿀 수 있다.`);
+    if (m.seals < o[1]) return err(`석공 인장 ${o[1]}개가 있어야 한다. (가진 것 ${m.seals})`);
+    const q = o[2] || 1; m.seals -= o[1]; m.trade.n += 1; db.saveState(d, [{ id: o[0], qty: q }]);
+    return { ok: true, lines: [`오르딘과 바꿨다: ${ITEMS[o[0]].name} ${q}. 석공 인장 −${o[1]}. (오늘 남은 교환 ${tradeLeft(m)})`] };
   }
 
   // ── 동작 ──
@@ -672,7 +760,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     // 게임 어디에 있든 접속해 있으면 돌아온 골렘을 바로 정리 (도시를 열지 않아도 재건도가 늦게 쌓이지 않게)
     if (m.plot) { let ch = false; try { ch = settle(d); ch = flushBank(d) || ch; } catch (er) { console.error('[고대도시] meView', er && er.stack ? er.stack : er); } if (ch) db.saveState(d); }
     const awake = m.golems.filter((g) => g.awake);
-    return { open: isOpen(), closed: !!W.closed && pathOpen(), inside: inside(d), plot: m.plot || null, stage: m.plot ? stage(m) : 0,
+    return { bookNew: bookNew(d, m), open: isOpen(), closed: !!W.closed && pathOpen(), inside: inside(d), plot: m.plot || null, stage: m.plot ? stage(m) : 0,
       back: awake.filter((g) => !g.job && g.report).length, idle: awake.filter((g) => !g.job).length, work: awake.filter((g) => g.job).length,
       next: (() => { const t = awake.filter((g) => g.job).reduce((a, g) => Math.min(a, g.until), Infinity); return Number.isFinite(t) ? t : null; })(), son: W.son, need: CITY_NEED };
   }
@@ -693,16 +781,24 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
         rooms: rs.map((r, i) => ({ id: r.id, name: r.name, hours: r.hours, h: m.rooms[r.id].h, mats: Object.entries(r.mats).map(([k, n]) => ({ id: k, name: ITEMS[k].name, need: n, put: m.rooms[r.id].mats[k] || 0 })), opens: r.opens, state: i < ci ? 'done' : i === ci ? 'cur' : 'lock' })),
         golems: m.golems.map((g, i) => ({ i, name: g.name, awake: g.awake, job: g.job, hours: g.hours, start: g.start, until: g.until, report: g.report, gate: g.awake ? null : gateOf(m, i) })),
         deco: m.deco || null, decoRules: { grid: DECO.grid, max: DECO.max, out: DECO.out },
-        furn: m.furn, furnCat: Object.entries(FURN).map(([k, f]) => ({ s: k, name: f.name, seals: sealCost(f), base: f.seals, mats: Object.entries(f.mats).map(([id, n]) => ({ id, name: ITEMS[id].name, need: n })) })),
+        furn: m.furn, furnCat: Object.entries(FURN).map(([k, f]) => ({ s: k, name: f.name, seals: sealCost(f), base: f.seals, bp: own(BLUEPRINT, k) ? !!(m.bp || {})[k] : null, mats: Object.entries(f.mats).map(([id, n]) => ({ id, name: ITEMS[id].name, need: n })) })),
         zday: Object.fromEntries(Object.entries(m.zday || {}).filter(([, v]) => v === dayIdx())), springLeft: ZF.springTimes - (m.spring && m.spring.day === dayIdx() ? m.spring.n : 0), bell: (() => { const bt = bellToday(), by = Array.isArray(bt.by) ? bt.by : []; return { n: by.length, need: ZF.bellNeed, mine: by.includes(d.name), on: by.length >= ZF.bellNeed }; })(), forgeOff: done('forge') ? ZF.forgeOff : 0,
+        bp: Object.entries(BLUEPRINT).map(([k, c]) => ({ s: k, name: FURN[k].name, seals: c, have: !!(m.bp || {})[k] })),
+        look: { def: m.plot ? Object.fromEntries(['yard', 'work', 'live', 'own'].map((k) => [k, FLOOR_DEF(m.plot, k)])) : {}, floor: (m.look && m.look.floor) || {}, wall: (m.look && m.look.wall) || 'stone', floors: LOOK.floors, walls: LOOK.walls, floorCost: LOOK.floorCost, wallCost: LOOK.wallCost },
+        trade: { left: tradeLeft(m), per: TRADE.perDay, offers: tradeOffers().map(([k, c, q], i) => ({ i, id: k, name: ITEMS[k].name, rarity: ITEMS[k].rarity, seals: c, qty: q || 1, city: TRADE.city.some((x) => x[0] === k) })) },
         perk: m.plot ? (() => { const on = perkOn(m), pd = perkDaily(m), max = perkMax(m); return { on, up: perkUp(m), kind: m.plot === 'forge' ? 'passive' : m.plot === 'belfry' ? 'recall' : 'daily', text: PI[m.plot].perk, left: on ? Math.max(0, max - pd.n) : 0, max, off: m.plot === 'forge' ? PERK.forgeOff[perkLv(m)] : 0 }; })() : null,
+        book: { has: hasBook(m), list: bookOf(d.name), unread: bookNew(d, m) },
         seals: m.seals, daySon: m.daySon || 0, bank: m.bank || 0, sonAll: m.sonAll || 0, frags: m.frags, en: d.en, enMax: logic.enCap(d),
         req: { ...q, name: ITEMS[q.id].name },
         inv: Object.fromEntries([...need].map((k) => [k, have(d, k)])),
       },
     };
   }
-  function board() { return [...new Set([...Object.keys(W.hands), ...Object.keys(W.givers)])]; }
+  // 도시 게시판: 재건을 도운 이 (가나다 순). 집터 이름과 방명록 받침이 있는지 함께 (놀러 가기용)
+  function board(d) {
+    const names = [...new Set([...Object.keys(W.hands), ...Object.keys(W.givers)])].sort((a, b) => a.localeCompare(b, 'ko'));
+    return names.map((n) => { let plot = null, book = false; try { const o = otherDragon(n), m = o && cityOf(o); if (m && m.plot && PI[m.plot]) { plot = PI[m.plot].name; book = hasBook(m); } } catch {} return { name: n, plot, book, me: !!d && n === d.name }; });
+  }
   function scene(key) { const [zid, i] = String(key).split(':'); const f = own(FRAGS, zid) ? FRAGS[zid][+i] : null; if (!f || !W.wall[key]) return null; return { t: f.t, s: f.s, who: W.wall[key], zone: ZONES.find((z) => z.id === zid).name }; }
 
   // ── 소켓 ──
@@ -729,8 +825,14 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     handle('city:req', (d) => fillReq(d));
     handle('city:frag', (d, p) => putFrag(d, String(p.key || '')));
     handle('city:hand', (d, p) => handFrag(d, String(p.key || '')));
-    handle('city:board', () => ({ ok: true, board: board() }));
+    handle('city:board', (d) => ({ ok: true, board: board(d) }));
     handle('city:give', (d) => give(d));
+    handle('city:bp', (d, p) => buyBp(d, String(p.s || '')));
+    handle('city:look', (d, p) => setLook(d, p));
+    handle('city:trade', (d, p) => doTrade(d, p.i));
+    handle('city:visit', (d, p) => visitView(d, String(p.name || '')));
+    handle('city:guest', (d, p) => guestWrite(d, String(p.name || ''), p.text));
+    handle('city:book:seen', (d) => { ct(d).bookSeen = Date.now(); return { ok: true }; });
     handle('city:gold', (d, p) => giveGold(d, p.n));
     handle('city:perk', (d, p) => perkUse(d, p.i));
     handle('city:zone', (d, p) => zoneAct(d, String(p.id || '')));

@@ -15195,6 +15195,7 @@
   }
   // 장식 도면: 오르딘에게 석공 인장으로 사면 그 가구를 만들 수 있게 됨
   function bpShop(h) {
+    if (!Array.isArray(h.bp)) return `<div class="dk-top"><p class="note">서버의 <code>city.js</code>가 이 기능이 없는 예전 판이라 보이지 않는다. 최신 <code>city.js</code>를 함께 올려야 한다.</p></div>`; // 서버가 예전 판이면 비어 보이지 않게 알림
     const rows = (h.bp || []).map((b) => `<li class="mk-row"><canvas class="dk-th" data-s="${b.s}" aria-hidden="true"></canvas>
       <div class="mk-b"><b>${b.name} 도면</b><small>${b.have ? '가진 도면 · 가구 만들기에서 만들 수 있다' : '사면 가구 만들기에서 이 가구를 만들 수 있다'}</small>
         ${b.have ? '' : `<div class="mk-cost"><span class="it${h.seals >= b.seals ? '' : ' lack'}">인장 <b>${h.seals}</b><small> / ${b.seals}</small></span></div>`}</div>
@@ -15203,7 +15204,7 @@
   }
   // 바닥·담 바꾸기: 되살린 칸의 바닥 무늬, 마당 담 모양
   function lookEditor(h) {
-    const L = h.look; if (!L) return '';
+    const L = h.look; if (!L) return `<div class="dk-top"><p class="note">서버의 <code>city.js</code>가 이 기능이 없는 예전 판이라 보이지 않는다. 최신 <code>city.js</code>를 함께 올려야 한다.</p></div>`;
     const plan = `<div class="hp"><canvas class="hp-cv" width="146" height="110" aria-hidden="true"></canvas></div>`;
     const rows = h.rooms.map((r) => { const done = r.state === 'done', cur = L.floor[r.id] || (L.def || {})[r.id];
       return `<div class="lk-row"><b>${r.name}</b>${done ? `<div class="seg lk-seg">${Object.entries(L.floors).map(([k, n]) => `<button type="button" data-ct="look:${r.id}:${k}" class="${cur === k ? 'on' : ''}">${n}</button>`).join('')}</div>` : '<small>되살린 뒤에 바꿀 수 있다</small>'}</div>`; }).join('');

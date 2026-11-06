@@ -269,7 +269,7 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
       if (typeof ack !== 'function') return;
       if (!socket.data.user?.is_gm) return ack({ error: 'GM만 쓸 수 있다.' });
       const r = fn(p || {});
-      if (!r.error) { db.gmLog(socket.data.user.username, null, r.gmlog); delete r.gmlog; r.log = db.gmLogList(40); }
+      if (!r.error) { if (r.gmlog) db.gmLog(socket.data.user.username, null, r.gmlog); delete r.gmlog; r.log = db.gmLogList(40); } // 기록할 말이 없는 동작(체력 맞추기 등)은 건너뜀
       ack(r);
     });
     gm('gm:boss:spawn', (p) => {

@@ -139,7 +139,8 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     if (me.id === them) return '자기 자신과는 할 수 없다.';
     if (me.exp_end) return '원정을 떠나 있는 동안에는 할 수 없다.';
     const t = live(them);
-    if (t && t.dragon.exp_end) return '상대가 원정을 떠나 있다.';
+    const td = t ? t.dragon : db.getDragon(them); // 접속해 있지 않아도 원정 중인지 봄 (전에는 접속한 상대만 봐서 오프라인 원정 중에도 선물이 갔음)
+    if (td && td.exp_end) return '상대가 원정을 떠나 있다.';
     if (isFriend(me.id, them)) {
       if (needOnline && !t) return '상대가 접속해 있지 않다.';
       return null;

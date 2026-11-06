@@ -1604,7 +1604,7 @@ function equipRaw(d, id, have, plain = false) {
   const it = ITEMS[id];
   if (!it || it.type !== 'equip') return { error: '착용할 수 없는 물건이다.' };
   if (have(id) < 1) return { error: '가지고 있지 않다.' };
-  if (!gearLvOk(d, id)) return { error: `${it.name}${josa(it.name, '은', '는')} 레벨 ${it.lvReq}부터 찰 수 있다.` };
+  if (!gearLvOk(d, id)) return { error: `${it.name}${josa(it.name, '은', '는')} Lv. ${it.lvReq}부터 착용 가능하다.` };
   const eq = equipOf(d), g = gearOf(d);
   const prev = eq[it.slot];
   const prevAt = prev && g[prev] ? gearAt(d, prev) : null;
