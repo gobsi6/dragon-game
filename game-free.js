@@ -1,6 +1,6 @@
 // ── 자유 제작: 재료의 성질로 물건을 빚음 (실험) ─────────────────────
 // 설계서: 바탕(먹을거리·엮음)이 종류를, 효능이 효과를, 기운(불·얼음·독·혼)이 덧입힘을 정함
-const { ITEMS, FREE, SHOPS, SHOPS_SPECIAL } = require('./game-data');
+const { ITEMS, FREE, SHOPS, SHOPS_SPECIAL, gearLvOfMats } = require('./game-data');
 // 상점에서 금화로 살 수 있는 재료 (값을 낮춰 셈)
 const SHOP_MATS = new Set([...Object.values(SHOPS || {}).flat(), ...Object.values(SHOPS_SPECIAL || {}).flat()].map((x) => (typeof x === 'string' ? x : x?.id)).filter(Boolean));
 const matValue = (id) => (ITEMS[id]?.value || 1) * (SHOP_MATS.has(id) ? FREE.shopMatValue : 1);
@@ -137,6 +137,7 @@ function resolve(ids, wis, greatChance, rnd = Math.random) {
   const def = { bonus };
   if (aura && ELEM[aura]) def.elem = ELEM[aura];
   if (aura === 'soul') def.mindWard = 0.85;
+  const lvReq = gearLvOfMats(ids); if (lvReq) def.lvReq = lvReq; // 레벨대에 맞지 않는 사냥터의 재료가 섞이면 그 레벨부터 착용 (일반 제작과 같은 셈)
   const main = best[top]?.id;
   const name = makeName({ ids, aura, second, main, form: SLOT_WORD[slot], quality, mw });
   return { kind: 'gear', top, aura, quality, mw, slot, def, name, sum, value: Math.round(value * { normal: 1, good: 1.5, great: 2 }[quality] * (mw ? 1.3 : 1)), rarity: pts >= 5 ? 'rare' : pts >= 3 ? 'uncommon' : 'common' };

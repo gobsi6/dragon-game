@@ -1313,6 +1313,10 @@ const CUSTOM = db.worldGet('customItems') || {};
 }
 // 이국 장신구(행상인): 효과 글·값은 지금 PEDDLER.gear로 맞춤 (수치를 고쳐도 이미 가진 것에 바로 들게)
 { const PG = require('./game-data').PEDDLER.gear; for (const def of Object.values(CUSTOM)) { const g = def.exotic && PG[def.exotic]; if (g) { def.life = { ...g.life }; def.lifeEff = g.eff; def.desc = `${g.desc} 안개 너머의 행상인에게서 왔다.`; def.lvReq = require('./game-data').PEDDLER.gearLv || undefined; } } }
+// 자유 제작 장신구의 착용 레벨: 섞은 재료(custom.mats)로 다시 셈 (예전에 빚은 것에도. 이미 차고 있는 것은 벗기 전까지 그대로)
+{ const { gearLvOfMats } = require('./game-data'); let n = 0;
+  for (const def of Object.values(CUSTOM)) if (def.type === 'equip' && Array.isArray(def.custom?.mats)) { const lv = gearLvOfMats(def.custom.mats.filter((x) => ITEMS[x])); if ((def.lvReq || 0) !== lv) { if (lv) def.lvReq = lv; else delete def.lvReq; n++; } }
+  if (n) { db.worldSet('customItems', CUSTOM); console.log(`[빚은 물건] 자유 제작 장신구 ${n}개의 착용 레벨을 재료에 맞춤`); } }
 for (const [id, def] of Object.entries(CUSTOM)) ITEMS[id] = def;
 const customSave = (id, def) => { CUSTOM[id] = def; db.worldSet('customItems', CUSTOM); ITEMS[id] = def; io.emit('items:add', { id, item: def }); };
 // 이국 장신구 (행상인): 같은 나눔이면 같은 id로 겹침
@@ -1327,7 +1331,8 @@ logic.hooks.registerCustom = (d, ids, r) => {
   const sig = free.signature(d.id, ids, r);
   const all = CUSTOM;
   let id = free.hashId(sig), n = 0;
-  while (all[id] && all[id].custom?.sig !== sig) id = free.hashId(`${sig}#${++n}`);
+  const lvReq = r.kind === 'gear' ? (r.def.lvReq || 0) : 0;
+  while (all[id] && (all[id].custom?.sig !== sig || (all[id].lvReq || 0) !== lvReq)) id = free.hashId(`${sig}#${++n}`); // 착용 레벨이 다르면 다른 물건
   if (all[id]) { ITEMS[id] = all[id]; return { id, isNew: false }; }
   const mats = ids.map((x) => ITEMS[x].name).join('·');
   const base = { name: r.name, rarity: r.rarity, value: r.value, desc: `${mats}${josa(mats, '을', '를')} 섞어 빚었다.` };
