@@ -6210,7 +6210,7 @@
       $('pd-where').textContent = `${m.where} · 어촌 선창`;
       $('pd-say').textContent = pdGreet;
       $('pd-gold').textContent = `${S.me.gold.toLocaleString()}닢`;
-      $('pd-note').textContent = `${yabaLeft(m.until)}분 뒤 다시 안개 속으로 떠난다. 한 번 들를 때 물건마다 살 수 있는 개수가 정해져 있다.`;
+      $('pd-note').textContent = `${yabaLeft(m.until)}분 뒤 다시 안개 속으로 떠난다. 한 번 들를 때 물건마다 살 수 있는 개수가 정해져 있다.${(() => { const bx = m.shop.find((x) => x.daily); return bx ? ` ${S.items[bx.id]?.name || '안개 상자'}${josa(S.items[bx.id]?.name || '안개 상자', '은', '는')} 몇 번 들르든 하루 ${bx.limit}개까지다.` : ''; })()}`;
       $('pd-n-token').textContent = m.tokens ? `${m.tokens}/${m.tokenTrade}` : '';
       for (const t of $('pd-tabs').children) { const on = t.dataset.t === pdTab; t.classList.toggle('on', on); t.setAttribute('aria-selected', on); }
       const body = $('pd-body'); body.replaceChildren();
@@ -6221,7 +6221,7 @@
           const row = marketRow(x.id, x.left ? '' : 'locked');
           const sm = row.querySelector('small');
           const u = document.createElement('span'); u.className = 'unit'; u.textContent = `개당 ${x.price.toLocaleString()}닢`;
-          const q = document.createElement('span'); q.className = `daily${x.left ? '' : ' none'}`; q.textContent = `이번에 ${x.left}/${x.limit}개`;
+          const q = document.createElement('span'); q.className = `daily${x.left ? '' : ' none'}`; q.textContent = `${x.daily ? '오늘' : '이번에'} ${x.left}/${x.limit}개`;
           sm.prepend(u, ' · ', q, ' · ');
           if (S.items[x.id]?.cat === 'treasure') { const tv = document.createElement('span'); tv.className = 'eff'; tv.textContent = `보물더미 가치 ${S.items[x.id].value.toLocaleString()} · 팔 수 없음`; row.querySelector('b').appendChild(tv); }
           if (x.id === 'mist_box') { // 상자 안에 든 것 비율
@@ -6230,7 +6230,7 @@
             od.textContent = `상자 안: ${m.odds.map((o) => `${o.what} ${o.pct}%`).join(' · ')} · 열 때마다 증표 1개`;
             row.querySelector('.nm').appendChild(od);
           }
-          if (!x.left) { const l = document.createElement('span'); l.className = 'lock'; l.textContent = '이번에는 다 샀다'; row.querySelector('.ctl').appendChild(l); }
+          if (!x.left) { const l = document.createElement('span'); l.className = 'lock'; l.textContent = x.daily ? '오늘은 다 샀다' : '이번에는 다 샀다'; row.querySelector('.ctl').appendChild(l); }
           else mkControls(row, `pd:${x.id}`, x.price, x.left, '사기', (n) => pdAct('pd:buy', { item: x.id, qty: n }, `pd:${x.id}`), (t) => S.me.gold >= t);
           // 가진 상자는 소지품에서 '열기'로 엶 (여기에는 단추를 두지 않음)
           list.appendChild(row);

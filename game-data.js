@@ -2657,7 +2657,7 @@ const PEDDLER = {
     '안개가 걷히는 날이 오면, 그때는 이쪽에서도 배를 띄우시오.',
   ],
   shop: [ // 한 번 들를 때(90분) 드래곤마다 살 수 있는 개수
-    { id: 'mist_box',        price: 3000, limit: 5, group: '안개 상자' },
+    { id: 'mist_box',        price: 3000, limit: 5, daily: true, group: '안개 상자' }, // daily: 행상인이 몇 번 오든 하루(한국 시간 자정 기준) limit개까지
     { id: 'sunset_apple',    price: 90,   limit: 6, group: '과일·양념' },
     { id: 'honey_date',      price: 70,   limit: 6 },
     { id: 'star_lemon',      price: 140,  limit: 4 },
@@ -2677,17 +2677,17 @@ const PEDDLER = {
   ],
   // 안개 상자 한 개를 열 때: w 비율로 하나, 그리고 증표는 언제나 tokens개
   box: [
-    { w: 5,  kind: 'gear' },     // 이국 장신구 (여섯 가지가 같은 확률)
+    { w: 1.5, kind: 'gear' },    // 이국 장신구 (여섯 가지가 같은 확률)
     { w: 4,  kind: 'mat' },      // 이국 합성 재료 (boxMat)
     { w: 33, kind: 'potion' },   // 이국 회복약 (boxPotion)
-    { w: 58, kind: 'food' },     // 이국 요리 재료 꾸러미 (boxFood)
+    { w: 61.5, kind: 'food' },   // 이국 요리 재료 꾸러미 (boxFood)
   ],
   boxMat: { pool: { mist_pearl: 1, coral_branch: 1, sand_glass: 1 }, qty: [1, 1] }, // 하나 골라 1개
   boxPotion: { pool: { mist_draught: 4, coral_tonic: 4, clear_wind_incense: 3, star_honey: 1 }, qty: [1, 2] }, // 하나 골라 1~2개
   boxFood: { picks: [2, 3], pool: { sunset_apple: 3, honey_date: 3, star_lemon: 2, sea_salt_flower: 1, red_peppercorn: 1, cedar_bark: 1 }, qty: [1, 2] },
   tokens: 1,
   tokenTrade: 40,              // 증표 이만큼이면 고른 이국 장신구 하나 (상자 40개 = 120,000닢)
-  total: [10, 12],             // 능력치 총합 (총합이 클수록 이름 앞에 꾸밈말)
+  total: [9, 12],             // 능력치 총합 (총합이 클수록 이름 앞에 꾸밈말)
   gearLv: 20,                  // 이국 장신구를 찰 수 있는 레벨 (레이드·에레보스 장신구와 같은 줄. 사고팔 수 있어 낮은 레벨이 돈으로 강해지지 않게)
   totalWord: { 11: '고운', 12: '빼어난' },
   gear: {

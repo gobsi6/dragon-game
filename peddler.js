@@ -52,9 +52,22 @@ module.exports = function setupPeddler({ io, db, online, logic, sendMe, register
   // 드래곤마다 이번에 산 개수 (combat JSON)
   function bookOf(d, key) {
     const c = logic.combatJson(d);
-    if (!c.pd || c.pd.key !== key) c.pd = { key, n: {} };
+    if (!c.pd || c.pd.key !== key) { dayBookOf(d); c.pd = { key, n: {} }; } // 지난 판 기록을 지우기 전에 하루치로 옮겨 둠 (dayBookOf의 mig)
     return c.pd;
   }
+  // 하루 제한 물건(row.daily)은 들른 판과 상관없이 한국 시간 하루 동안 센 개수
+  function dayBookOf(d, now = Date.now()) {
+    const c = logic.combatJson(d), day = Math.floor((now + KST) / DAY);
+    if (!c.pdDay || c.pdDay.day !== day) c.pdDay = { day, n: {} };
+    // 하루 제한으로 바뀌기 전에 산 것도 셈: 예전엔 판마다(c.pd) 셌으므로, 오늘 판의 기록이 남아 있으면 하루치에 한 번만 더함
+    if (!c.pdDay.mig) {
+      c.pdDay.mig = 1;
+      const old = c.pd && typeof c.pd.key === 'string' && c.pd.key.startsWith(`${day}-`) ? c.pd.n : null;
+      if (old) for (const row of P.shop) if (row.daily && old[row.id]) c.pdDay.n[row.id] = (c.pdDay.n[row.id] || 0) + old[row.id];
+    }
+    return c.pdDay;
+  }
+  const boughtOf = (d, key, row, now) => ((row.daily ? dayBookOf(d, now) : bookOf(d, key)).n[row.id] || 0);
 
   // 내 정보에 붙임. now: 와 있으면 { until, here } / 아니면 { next } (다음에 닿는 시각)
   function status(d, now = Date.now()) {
@@ -70,7 +83,7 @@ module.exports = function setupPeddler({ io, db, online, logic, sendMe, register
     const b = bookOf(d, s.key);
     return {
       name: P.name, until: s.end, where: where(), greet: P.greet[Math.floor(Math.random() * P.greet.length)],
-      shop: P.shop.filter((x) => ITEMS[x.id]).map((x) => ({ id: x.id, price: x.price, limit: x.limit, group: x.group || null, left: Math.max(0, x.limit - (b.n[x.id] || 0)) })),
+      shop: P.shop.filter((x) => ITEMS[x.id]).map((x) => ({ id: x.id, price: x.price, limit: x.limit, daily: !!x.daily, group: x.group || null, left: Math.max(0, x.limit - boughtOf(d, s.key, x, now)) })),
       tokens: db.itemCount(d.id, 'mist_token') || 0, tokenTrade: P.tokenTrade,
       gear: Object.entries(P.gear).map(([k, g]) => ({ key: k, name: g.name, slot: g.slot, stats: g.stats, eff: g.eff })),
       total: P.total, gearLv: P.gearLv || null, odds: boxOdds(), spices: Object.values(P.spices).map((x) => ({ item: x.item, fits: x.fits, text: x.text })),
@@ -90,9 +103,9 @@ module.exports = function setupPeddler({ io, db, online, logic, sendMe, register
     const row = P.shop.find((x) => x.id === id);
     if (!row || !ITEMS[id]) return { error: '행상인이 파는 물건이 아니다.' };
     qty = Math.max(1, Math.floor(Number(qty)) || 1);
-    const b = bookOf(d, s.key), left = Math.max(0, row.limit - (b.n[id] || 0)), nm = ITEMS[id].name;
-    if (!left) return { error: `${nm}${josa(nm, '은', '는')} 이번에 더 살 수 없다. (한 번 들를 때 ${row.limit}개까지)` };
-    if (qty > left) return { error: `${nm}${josa(nm, '은', '는')} 이번에 ${left}개까지만 더 살 수 있다.` };
+    const b = row.daily ? dayBookOf(d, now) : bookOf(d, s.key), left = Math.max(0, row.limit - (b.n[id] || 0)), nm = ITEMS[id].name;
+    if (!left) return { error: row.daily ? `${nm}${josa(nm, '은', '는')} 오늘 더 살 수 없다. (하루 ${row.limit}개까지, 자정에 다시)` : `${nm}${josa(nm, '은', '는')} 이번에 더 살 수 없다. (한 번 들를 때 ${row.limit}개까지)` };
+    if (qty > left) return { error: `${nm}${josa(nm, '은', '는')} ${row.daily ? '오늘' : '이번에'} ${left}개까지만 더 살 수 있다.` };
     const cost = row.price * qty;
     if ((d.gold || 0) < cost) return { error: `금화가 모자란다. (${cost.toLocaleString()}닢 필요)` };
     d.gold -= cost;
