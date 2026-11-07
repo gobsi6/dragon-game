@@ -2686,7 +2686,7 @@ const PEDDLER = {
   boxPotion: { pool: { mist_draught: 4, coral_tonic: 4, clear_wind_incense: 3, star_honey: 1 }, qty: [1, 2] }, // 하나 골라 1~2개
   boxFood: { picks: [2, 3], pool: { sunset_apple: 3, honey_date: 3, star_lemon: 2, sea_salt_flower: 1, red_peppercorn: 1, cedar_bark: 1 }, qty: [1, 2] },
   tokens: 1,
-  tokenTrade: 40,              // 증표 이만큼이면 고른 이국 장신구 하나 (상자 40개 = 120,000닢)
+  tokenTrade: 50,              // 증표 이만큼이면 고른 이국 장신구 하나 (상자 50개 = 150,000닢)
   total: [8, 12],             // 능력치 총합 (총합이 클수록 이름 앞에 꾸밈말)
   totalW: { 8: 60, 9: 39, 10: 0.8, 11: 0.15, 12: 0.05 }, // 총합이 나오는 비율(%). 10~12는 모두 합쳐 1%
   gearLv: 20,                  // 이국 장신구를 찰 수 있는 레벨 (레이드·에레보스 장신구와 같은 줄. 사고팔 수 있어 낮은 레벨이 돈으로 강해지지 않게)

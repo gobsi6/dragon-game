@@ -96,14 +96,8 @@ module.exports = function setupPeddler({ io, db, online, logic, sendMe, register
       shop: P.shop.filter((x) => ITEMS[x.id]).map((x) => ({ id: x.id, price: x.price, limit: x.limit, daily: !!x.daily, group: x.group || null, left: Math.max(0, x.limit - boughtOf(d, s.key, x, now)) })),
       tokens: db.itemCount(d.id, 'mist_token') || 0, tokenTrade: P.tokenTrade,
       gear: Object.entries(P.gear).map(([k, g]) => ({ key: k, name: g.name, slot: g.slot, stats: g.stats, eff: g.eff })),
-      total: P.total, totalOdds: totalOdds(), gearLv: P.gearLv || null, odds: boxOdds(), spices: Object.values(P.spices).map((x) => ({ item: x.item, fits: x.fits, text: x.text })),
+      total: P.total, gearLv: P.gearLv || null, odds: boxOdds(), spices: Object.values(P.spices).map((x) => ({ item: x.item, fits: x.fits, text: x.text })),
     };
-  }
-  // 능력치 총합마다 나오는 비율 (증표 바꾸기 창에 보여 줌)
-  function totalOdds() {
-    if (!P.totalW) return null;
-    const sum = Object.values(P.totalW).reduce((a, w) => a + w, 0);
-    return Object.entries(P.totalW).map(([t, w]) => ({ total: Number(t), pct: Math.round((w / sum) * 10000) / 100 }));
   }
   // 상자 안에 든 것 비율 (창에 그대로 보여 줌)
   function boxOdds() {
