@@ -3297,6 +3297,23 @@
         u2.addEventListener('click', () => openUses(id));
         row._usesBtn = u2;
       }
+      // 레이드 희귀 장비: '제작' 칩과 같은 모양의 '각성' 칩 → 제작 창의 각성 제작법으로 (재료 확인·만들기는 제작 창에서)
+      const aw = it.type === 'equip' && (S.recipes || []).find((r) => r.awaken && r.needs?.[id]);
+      if (aw) {
+        const nm = S.items[aw.out]?.name || '깨어난 장비';
+        const go = () => { const dlg = $('inv-dlg'); if (dlg?.open) dlg.close(); goRecipe(aw.out); };
+        const w = document.createElement('button');
+        w.type = 'button';
+        w.className = 'use-n awaken-n';
+        w.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5C8.5 5.4 10.6 7.5 14.5 8C10.6 8.5 8.5 10.6 8 14.5C7.5 10.6 5.4 8.5 1.5 8C5.4 7.5 7.5 5.4 8 1.5Z"/></svg><span>각성</span>';
+        w.title = `${nm}${ro(nm)} 깨운다 (제작 창에서 재료를 확인한다)`;
+        w.addEventListener('click', go);
+        (row.querySelector('.use-n:not(.in-acts)') || row.querySelector('.q')).after(w);
+        const w2 = w.cloneNode(true);
+        w2.classList.add('in-acts');
+        w2.addEventListener('click', go);
+        row._awakenBtn = w2;
+      }
       if (gmod?.mw) { const t = document.createElement('span'); t.className = 'gw-mw'; t.textContent = '걸작'; row.querySelector('b').appendChild(t); }
       if (it.custom?.byName) { const t = document.createElement('span'); t.className = it.custom.quality === 'great' || it.custom.mw ? 'gw-mw' : 'gw-el'; t.textContent = `${it.custom.byName}${josa(it.custom.byName, '이', '가')} 빚음${{ good: ' · 좋음', great: ' · 빼어남' }[it.custom.quality] || ''}${it.custom.mw ? ' · 걸작' : ''}`; row.querySelector('b').appendChild(t); } // 직접 빚은 물건
       // 선물 물건: 받은 것 · 직접 만든 것이 몇 개인지 (같은 물건이라 한 줄에 모여 있어서)
@@ -3330,6 +3347,7 @@
       const normal = () => {
         acts.replaceChildren();
         if (row._usesBtn) acts.appendChild(row._usesBtn); // 폰에서만 보이는 '제작' 단추
+        if (row._awakenBtn) acts.appendChild(row._awakenBtn); // 폰에서만 보이는 '각성' 단추
         if (it.type) {
           const b = document.createElement('button');
           b.type = 'button';
@@ -6887,6 +6905,7 @@
         row.querySelector('b').prepend(favBtn('recipes', r.out, renderCraft));
         row.querySelector('b').append(itemTags(it));
         if (r.hidden) { const t = document.createElement('span'); t.className = 'rc-found'; t.textContent = '찾아낸 제작법'; row.querySelector('b').appendChild(t); }
+        if (r.awaken) { const t = document.createElement('span'); t.className = 'rc-found rc-awaken'; t.textContent = '각성'; t.title = '레이드에서 얻은 희귀 장비를 그 레이드 조각으로 깨운다'; row.querySelector('b').appendChild(t); }
         row.querySelector('.eff').textContent = effectText(it);
         const needs = row.querySelector('.needs');
         let ok = true;
@@ -7615,6 +7634,8 @@
     });
   }
   const STORY = {
+    // 아기와 함께 (아기는 b): 술래잡기·가위바위보 같은 어린이 놀이 대신
+    pairBaby: ['{a}[이/가] 기어 다니는 {b} 곁에 엎드려 눈을 맞춰 주었다.', '{a}[이/가] 낮잠 든 {b} 곁에 나란히 누워 함께 잠들었다.', '{b}[이/가] {a}[을/를] 보고 손을 뻗으며 까르르 웃었다.', '{a}[이/가] 반짝이는 조약돌을 {b} 앞에 굴려 주었다. {b}[은/는] 신기한 듯 한참 들여다본다.'],
     night: [
       '{a}[이/가] 둥지 구석에서 몸을 동그랗게 말고 곤히 잠들었다.',
       '{a}[이/가] 잠꼬대를 하다가 스스로 놀라 눈을 떴다가 다시 잠들었다.',
@@ -7801,13 +7822,13 @@
       homebody: ['{a}[이/가] 둥지 구석 제일 따뜻한 자리에 몸을 말고 누워 있다.', '{a}[은/는] 바깥 날씨가 아무리 좋아도 둥지가 제일이라고 한다.'],
       adventurer: ['{a}[이/가] 다음 원정은 어디로 가느냐고 벌써 짐을 꾸리고 있다.', '{a}[이/가] 지난 원정에서 본 것들을 손짓 발짓으로 이야기한다.'],
       sturdy: ['{a}[이/가] 무거운 장작을 한 아름 번쩍 들어 옮겼다.', '{a}[은/는] 찬바람이 불어도 콧물 한 번 안 흘린다.'],
-      warm: ['{a}[이/가] {o}의 날개 밑에 담요를 살며시 덮어 주었다.', '{a}[이/가] 오늘 있었던 일을 하나도 빼놓지 않고 들려준다.'],
+      warm: ['{a}[이/가] 꾸벅꾸벅 조는 {o}에게 담요를 살며시 덮어 주었다.', '{a}[이/가] 오늘 있었던 일을 하나도 빼놓지 않고 들려준다.'],
       capable: ['{a}[이/가] 시키지도 않았는데 둥지 살림을 척척 정리해 두었다.', '{a}[이/가] 자기 몫의 일을 끝내고 다른 식구 일까지 거들고 있다.'],
       tough: ['{a}[이/가] 혼자서도 잘 놀았다며 씩 웃는다.', '{a}[이/가] 넘어져도 툭툭 털고 일어나 다시 뛰어간다.'],
       fussy: ['{a}[이/가] 오늘 저녁은 맛있는 걸로 해 달라고 졸라 댄다.', '{a}[이/가] 밥그릇을 들여다보더니 입을 삐죽 내민다.'],
       willful: ['{a}[이/가] 하지 말라는 일만 골라 하다가 들키자 딴청을 피운다.', '{a}[은/는] 오늘도 자기 마음대로 둥지 가구를 옮겨 놓았다.'],
       opened: ['{a}[이/가] 먼저 다가와 오늘 주운 조약돌을 보여 준다.', '{a}[이/가] 예전엔 숨어 있던 바위 위에 올라가 노래를 부른다.'],
-      fierce: ['{a}[이/가] 둥지 앞 바위에 발톱을 갈며 으르렁 소리를 연습한다.', '{a}[이/가] 그림자만 움직여도 털을 곤두세우고 몸을 낮춘다.'],
+      fierce: ['{a}[이/가] 둥지 앞 바위에 발톱을 갈며 으르렁 소리를 연습한다.', '{a}[이/가] 그림자만 움직여도 비늘을 곤두세우고 몸을 낮춘다.'],
       windrider: ['{a}[이/가] 바람이 세게 부는 틈을 타 둥지 위로 높이 솟구쳤다.', '{a}[이/가] 날개를 편 채 바람에 몸을 맡기고 둥둥 떠 있다.'],
       stargazer: ['{a}[이/가] 밤하늘의 별자리를 하나하나 짚으며 중얼거린다.', '{a}[이/가] 별이 가장 잘 보이는 바위에 올라 꼼짝도 하지 않는다.'],
       shieldmate: ['{a}[이/가] {o}의 등 뒤에 서서 주위를 살피고 있다.', '{a}[이/가] 사냥에서 돌아와 {o}의 상처를 혀로 핥아 준다.'],
@@ -7831,7 +7852,7 @@
     fac: {
       spa: ['{a}[이/가] 온천에 발을 담그고 눈을 지그시 감았다.', '{a}[이/가] 온천에서 물장구를 치다가 김이 서려 앞이 안 보인다며 웃는다.'],
       library: ['{a}[이/가] 서고에서 그림책을 펼쳐 놓고 그림만 한참 들여다본다.', '{a}[이/가] 서고 구석에서 글자를 하나씩 따라 쓰고 있다.'],
-      herb: ['{a}[이/가] 약초밭에 쪼그려 앉아 새싹이 몇 개 났는지 세고 있다.', '{a}[이/가] 약초밭에 물을 주다가 신발까지 흠뻑 적셨다.'],
+      herb: ['{a}[이/가] 약초밭에 쪼그려 앉아 새싹이 몇 개 났는지 세고 있다.', '{a}[이/가] 약초밭에 물을 주다가 제 몸까지 흠뻑 적셨다.'],
       kitchen: ['{a}[이/가] 부엌 근처를 맴돌며 냄새를 킁킁 맡는다.', '{a}[이/가] 부엌에서 몰래 집어 온 빵 조각을 반으로 나눴다.'],
       tower: ['{a}[이/가] 망루 계단을 몇 칸까지 올라갈 수 있나 시험해 보고 있다.', '{a}[이/가] 망루 꼭대기에 올라 크게 소리를 질렀다. 메아리가 돌아왔다.'],
       forge: ['{a}[이/가] 공방에서 반짝이는 쇳조각을 하나 주워 와 자랑했다.', '{a}[이/가] 공방 화로 앞에 앉아 불꽃 튀는 걸 구경한다.'],
@@ -7920,7 +7941,7 @@
     festAfterGrown: ['{a}[이/가] 축제에서 들은 노래를 흥얼거리며 둥지 살림을 정리한다.', '{a}[이/가] 축제 때 어린 식구들이 얼마나 신나 했는지 떠올리며 빙그레 웃는다.', '{a}[이/가] 다음 축제에는 무엇을 보러 갈지 벌써부터 이야기한다.'],
     festWantGrown: ['{a}[이/가] 바람에 실려 오는 북소리에 귀를 기울이며, 왕도는 지금쯤 북적이겠다고 중얼거린다.', '{a}[이/가] 왕도 쪽 하늘에 오르는 불꽃을 한참 바라본다.'],
     festWantBaby: ['멀리서 북소리가 들릴 때마다 {a}[이/가] 버둥거리며 소리 나는 쪽으로 고개를 돌린다.'],
-    festAfterD: ['{a}[이/가] 축제에서 본 불꽃을 흉내 내 하늘에 대고 불씨를 퐁퐁 뿜어 본다.', '{a}[이/가] 날개에 묶어 온 축제 리본을 풀지 않겠다고 고집을 부린다.'],
+    festAfterD: ['{a}[이/가] 축제에서 본 불꽃을 흉내 내 하늘에 대고 불씨를 퐁퐁 뿜어 본다.', '{a}[이/가] 날개에 묶어 온 축제 리본을 풀지 않겠다고 고집을 부린다.', '{a}[이/가] 축제에서 본 춤을 흉내 내 앞발을 번갈아 들며 빙글빙글 돈다.'],
     depart: [
       '{n}[이/가] {o}[을/를] 따라 원정길에 올랐다. {r}[으로/로] 간다며 들떠 있다.',
       '{n}[이/가] {o}의 뒤를 바짝 따라 원정을 떠났다. 남은 식구들이 입구까지 배웅했다.',
@@ -7971,6 +7992,9 @@
       withOwner: ['{a}[이/가] {o}의 꼬리에 기대어 옹알옹알 무언가를 이야기한다.', '{a}[이/가] {o}의 발톱을 붙잡고 일어서 보려 애쓴다.', '{a}[이/가] {o}의 날개 그늘 아래에서 낮잠을 잔다.'],
       ownerRest: ['{a}[이/가] 잠든 {o}의 날개 밑에서 함께 새근새근 잠들었다.', '{a}[이/가] 잠든 {o}의 콧김에 머리카락이 날리자 까르르 웃었다.'],
       miss: ['{a}[이/가] {o}[이/가] 보이지 않자 둥지 입구 쪽을 보며 칭얼거린다.', '{a}[이/가] {o}의 냄새가 밴 자리에 엎드려 겨우 울음을 그쳤다.'],
+      // 다른 둥지 친구: 아직 말·글을 못 하니 몸짓으로 (공용은 편지 쓰기·이야기하기)
+      friend: ['{a}[이/가] {b}[이/가] 다녀간 뒤로 둥지 입구 쪽만 바라보며 옹알거린다.', '{a}[이/가] {b}[이/가] 두고 간 조약돌을 꼭 쥐고 놓지 않는다.'],
+      bestFriend: ['{a}[이/가] {b}[이/가] 오는 기척만 나도 손발을 버둥거리며 까르르 웃는다.', '{a}[은/는] {b}의 냄새가 밴 담요를 꼭 쥐고 잠든다.'],
     },
     Hatch: {
       night: ['{a}[이/가] 보물더미 위에서 작은 날개를 담요처럼 덮고 잠들었다.', '{a}[이/가] 자다가 작은 불씨를 퐁 뿜고는 제풀에 놀라 깼다.', '{a}[이/가] {o}의 꼬리를 베개 삼아 몸을 둥글게 말았다.'],
@@ -7980,7 +8004,7 @@
       full: ['{a}[이/가] 배가 볼록해져서 뒤뚱뒤뚱 걷다가 드러누웠다.', '{a}[이/가] 배불리 먹고 만족스럽게 작은 연기를 뿜었다.', '{a}[이/가] 배가 불러 꼬리를 말고 꾸벅꾸벅 존다.'],
       peckish: ['{a}[이/가] 지나가는 벌레를 쫓아 혀를 날름거린다.', '{a}[이/가] 부엌 쪽 냄새에 콧구멍을 벌름거린다.'],
       starving: ['{a}[이/가] 배가 너무 고파 날개를 축 늘어뜨린 채 웅크려 있다.', '{a}[이/가] 끼익 하는 울음소리마저 힘이 없다.', '{a}[이/가] 먹을 것을 찾다 지쳐 보물더미 위에 쓰러지듯 엎드렸다.'],
-      bondHigh: ['{a}[이/가] {o}의 발치를 졸졸 따라다니며 꼬리를 흔든다.', '{a}[이/가] {o}에게 주겠다며 반짝이는 조약돌을 물어 왔다.', '{a}[이/가] {o}의 머리 위로 기어 올라가 제자리인 양 엎드렸다.'],
+      bondHigh: ['{a}[이/가] {o}의 발치를 졸졸 따라다니며 꼬리를 흔든다.', '{a}[이/가] 반짝이는 조약돌을 물어다 {o} 앞에 살며시 내려놓았다.', '{a}[이/가] {o}의 머리 위로 기어 올라가 제자리인 양 엎드렸다.'],
       bondLow: ['{a}[이/가] 낯선지 보물더미 뒤에 숨어 눈만 내놓고 있다.', '{a}[이/가] 누가 다가오면 작게 으르렁거리며 몸을 부풀린다.', '{a}[이/가] {o}[을/를] 힐끔거리다가 눈이 마주치자 고개를 돌렸다.'],
       withOwnerShy: ['{a}[이/가] {o}의 꼬리 끝을 살짝 깨물어 보고는 얼른 달아났다.', '{a}[이/가] {o} 곁으로 다가오다 말고 바위 뒤에 웅크렸다.'],
       awayLow: ['{a}[이/가] {o}[이/가] 없는 틈에 보물더미를 파헤치며 논다.'],
@@ -7988,6 +8012,8 @@
       withOwner: ['{a}[이/가] {o}의 날개 위를 미끄럼틀처럼 타고 내려온다.', '{a}[이/가] {o}의 꼬리를 쫓아 빙글빙글 돈다.', '{a}[이/가] {o} 곁에 바짝 붙어 하는 걸 모두 따라 한다.'],
       ownerRest: ['{a}[이/가] 잠든 {o}의 날개 밑으로 쏙 들어가 몸을 말았다.', '{a}[이/가] 잠든 {o}의 콧등 위에 올라가 함께 눈을 감았다.'],
       miss: ['{a}[이/가] {o}[이/가] 돌아오나 둥지 입구에서 하늘만 올려다본다.', '{a}[이/가] {o}의 냄새가 남은 자리에 몸을 둥글게 말고 있다.'],
+      friend: ['{a}[이/가] {b}[이/가] 놀러 오면 보여 주려는 듯 반짝이는 돌을 한쪽에 모아 두었다.', '{a}[이/가] {b}[과/와] 놀던 자리를 맴돌며 꼬리를 흔든다.'],
+      bestFriend: ['{a}[이/가] {b}[이/가] 오는 기척만 느껴도 날개를 파닥이며 입구로 달려 나간다.', '{a}[은/는] {b}의 냄새가 남은 자리에 몸을 말고 잠든다.', '{a}[이/가] {b}[과/와] 나눠 가진 조약돌을 보물더미 맨 위에 올려 두었다.'],
     },
     Grown: {
       night: ['{a}[이/가] 불씨가 꺼지지 않게 장작을 하나 더 얹고 자리에 누웠다.', '{a}[은/는] 잠이 오지 않는지 동굴 입구에 앉아 별을 올려다보고 있다.', '{a}[이/가] 잠든 어린 식구들의 이불을 한 번씩 고쳐 덮어 주고 눈을 붙였다.', '{a}[이/가] 낮 동안 고단했는지 눕자마자 깊이 잠들었다.'],
@@ -8081,6 +8107,14 @@
         autumn: ['{a}[이/가] 낙엽 더미에 파묻혀 꼬리만 내놓고 있다.', '{a}[이/가] 도토리를 보물처럼 물어다 모은다.'],
         winter: ['{a}[이/가] 불가에 바짝 붙어 몸을 둥글게 말았다.', '{a}[이/가] 입김 대신 작은 연기를 퐁퐁 뿜으며 신기해한다.'],
       },
+      // 성격: 아직 말을 못 하니 몸짓으로 (나머지 성격은 공용 그대로)
+      trait: {
+        curious: ['{a}[이/가] 처음 보는 벌레를 따라 동굴 깊은 곳까지 들어갔다 나왔다.', '{a}[이/가] 낯선 냄새가 날 때마다 고개를 갸웃거리며 킁킁 맡아 본다.'],
+        clever: ['{a}[이/가] 금화를 크기대로 줄 세워 놓고 뿌듯해한다.', '{a}[이/가] 보물더미에서 금화 하나가 빠진 자리를 코끝으로 콕콕 짚었다.'],
+        stubborn: ['{a}[은/는] 아무리 불러도 보물더미 제 자리에서 내려오지 않는다.', '{a}[이/가] 싫은 건 고개를 홱 돌리며 오늘만 열 번은 버텼다.'],
+        dreamy: ['{a}[이/가] 구름을 한참 올려다보며 꼬리를 살랑거린다.', '{a}[이/가] 자다 깨어 꿈속에서 본 무언가를 찾는 듯 둥지를 두리번거린다.'],
+        stargazer: ['{a}[이/가] 밤하늘의 별을 하나하나 올려다보며 꼼짝도 하지 않는다.', '{a}[이/가] 별이 가장 잘 보이는 바위에 올라 꼼짝도 하지 않는다.'],
+      },
     },
     Grown: {
       fac: {
@@ -8164,6 +8198,7 @@
   };
   // 어린 용: 공용 장면 가운데 사람 아이에게만 맞는 것(이불·그릇)을 바꿈. 나머지는 공용 그대로
   STORY_V.LittleD = {
+    bestFriend: ['{a}[이/가] 단짝 {b}에게 줄 반짝이는 돌을 몇 번이나 골랐다 내려놓았다.', '{a}[은/는] {b} 이야기만 나오면 꼬리가 절로 흔들린다.', '{a}[이/가] {b}[과/와] 나눠 가진 조약돌을 보물더미 맨 위에 올려 두었다.'],
     night: ['{a}[이/가] 보물더미 위에 몸을 동그랗게 말고 곤히 잠들었다.', '{a}[이/가] 잠꼬대를 하다가 작은 불씨를 뿜고는 제풀에 놀라 깼다.', '{a}[은/는] 잠이 오지 않는지 동굴 입구에 엎드려 별을 세고 있다.',
       '{a}[이/가] 날개를 대자로 펼친 채 뻗어 잔다. 꼬리가 둥지 밖까지 삐져나왔다.', '{a}[이/가] 꿈속에서 무언가를 먹는지 입을 오물거린다.', '{a}[이/가] 반쯤 깬 채로 {o}의 자리를 더듬어 찾다가 다시 잠들었다.'],
     hungry: ['{a}[이/가] 배가 고픈지 먹을 것을 찾아 둥지 안을 기웃거린다.', '{a}의 배에서 꼬르륵 소리가 났다. 모른 척하지만 다 들렸다.', '{a}[이/가] 빈 먹이 그릇을 코로 밀고 와서 아무 말 없이 올려다본다.', '{a}[이/가] 보물더미 속 금화를 깨물어 보더니 실망한 얼굴을 했다.'],
@@ -8213,6 +8248,7 @@
       const b = pickOf(rnd, home.filter((k) => k !== a));
       const [big, small] = GROWN.has(a.stage) && SMALL.has(b.stage) ? [a, b] : GROWN.has(b.stage) && SMALL.has(a.stage) ? [b, a] : [null, null];
       if (big) return storyText(pickOf(rnd, STORY.care), big.name, small.name); // 다 큰 식구와 어린 식구면 돌보는 장면
+      if (a.stage === '아기' || b.stage === '아기') { const [x, y] = b.stage === '아기' ? [a, b] : [b, a]; return storyText(pickOf(rnd, STORY.pairBaby), x.name, y.name); } // 아기가 끼면 함께 놀이 대신 곁에 있어 주기
       const pk = a.type === 'human' && b.type === 'human' ? 'pairHH' : a.type === 'drake' && b.type === 'drake' ? 'pairDD' : 'pairHD';
       const both = STORY[GROWN.has(a.stage) || GROWN.has(b.stage) ? `${pk}Grown` : pk]; // 다 큰 식구가 끼면 어린아이 놀이 대신
       const [x, y] = pk === 'pairHD' && a.type === 'drake' ? [b, a] : [a, b]; // 사람과 용이면 사람을 앞에
@@ -8232,7 +8268,7 @@
     // 왕도 축제: 다녀온 지 이틀 안이면 그 이야기, 축제 중인데 아직 못 갔으면 가 보고 싶어 함
     // 말을 못 하는 아기·해츨링, 다 큰 식구(어른·노년·젊은 용·다 자란 용)는 따로. 어린 용은 용다운 장면도 섞음
     const fk = a.stage === '해츨링' ? 'Hatch' : a.stage === '아기' ? 'Baby' : ['어른', '노년', '젊은 용', '다 자란 용'].includes(a.stage) ? 'Grown' : '';
-    if (a.festAt && a.festAt < t0) { add(STORY[`festAfter${fk}`], 2); if (a.stage === '어린 용') add(STORY.festAfterD, 2); }
+    if (a.festAt && a.festAt < t0) add(STORY[a.stage === '어린 용' ? 'festAfterD' : `festAfter${fk}`], 2); // 어린 용은 용 장면만 (사람 아이 장면은 두 팔·손가락이 나옴)
     else if (S.me?.nightMarket && !a.festAt) add(STORY[`festWant${fk}`]);
     // 유대: 높으면 내 드래곤을 따르고, 낮으면 아직 서먹함
     const bond = a.bond ?? 50;
@@ -15397,7 +15433,7 @@
     const eye = `<button type="button" class="hp-view${CT.hpClean ? ' on' : ''}" data-ct="hpview" aria-pressed="${!!CT.hpClean}" title="이름·표시를 숨기고 꾸민 모습만 본다"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/></svg><span>감상 모드${CT.hpClean ? ' 끄기' : ''}</span></button>`; // 도면 아래 '입구' 줄 오른쪽
     return `${chips.length ? `<div class="hp-strip">${chips.join('')}</div>` : ''}<div class="hp${CT.hpClean ? ' hp-clean' : ''}"><canvas class="hp-cv" width="146" height="110" aria-hidden="true"></canvas>${rooms}<span class="hp-door">입구</span>${eye}</div>`;
   }
-  // ════ 꾸미기: 되살린 칸 안에 4도트 눈금에 맞춰 장식을 직접 놓는다 ════
+  // ════ 꾸미기: 되살린 칸 안에 1도트 단위로, 벽·옆 장식에 자석처럼 붙여 장식을 직접 놓는다 ════
   const DK_NAME = { planter: '빛나는 꽃 화분', pot: '작은 화분', bench: '벤치', lamp: '등', bed: '침대', rug: '깔개', table: '탁자', shelf: '선반', workbench: '작업대', crate: '나무 상자', barrel: '통', pond: '작은 연못', steps: '돌계단', tablets: '돌판 서가', carvedesk: '새김 책상', hearth: '화덕', anvil: '모루', telescope: '망원경', bell: '작은 종', well: '우물', signpost: '방명록 받침', bedplot: '텃밭 두둑', arch: '덩굴 아치', jar: '항아리', chair: '의자', flowers: '들꽃 무리', mushroom: '빛버섯 무리', bush: '덤불', stepstone: '디딤돌', fence: '나무 울타리', flowerbed: '꽃 상자', stonelamp: '석등', brazier: '화로', tree: '작은 나무', mosaic: '모자이크 깔개', crystallamp: '수정 등', goldlamp: '금박 등', glowpatch: '빛버섯 정원', bookcase: '책장', nestbed: '둥지 쿠션', tapestry: '용 태피스트리', fountain: '작은 분수' };
   const DK_LIST = Object.keys(DK_NAME);
   const dkDone = (h) => h.rooms.filter((r) => r.state === 'done').map((r) => r.id);
@@ -15407,24 +15443,53 @@
     if (!CT.dk || CT.dk.saved !== saved) CT.dk = { saved, list: (h.deco || HP.defaults(h.plot, dkDone(h), h.decoRules?.grid || 4)).map((o) => ({ ...o })), pick: null, sel: null, dirty: false };
     return CT.dk;
   }
-  // 놓을 자리: 점(px, py, 도트)을 가운데로 하는 눈금 자리. 되살린 칸 안이어야 하고 다른 장식과 겹치면 안 됨
+  // 놓을 자리: 점(px, py, 도트)을 가운데로 하는 자리 (1도트 단위). 되살린 칸 안이어야 하고 다른 장식과 겹치면 안 됨
+  // 자석: 벽이나 가까운 장식의 가장자리에서 DK_SNAP도트 안이면 착 붙음 (옆에 붙이기 · 바닥선/윗선 맞추기 · 벽에 붙이기)
+  const DK_SNAP = 2;
+  function dkSnap(v, len, lo, hi, cuts) { // v: 왼쪽(위) 끝, len: 폭(키). cuts: 붙을 수 있는 선들. 가장 가까운 것 하나로
+    let best = null;
+    for (const c of cuts) for (const nv of [c, c - len]) { // 시작 끝을 선에, 또는 반대쪽 끝을 선에
+      const d = Math.abs(nv - v); if (d <= DK_SNAP && nv >= lo && nv + len <= hi && (!best || d < best.d)) best = { v: nv, d };
+    }
+    return best ? best.v : v;
+  }
+  function dkPlace(h, name, px, py, skip, box, noSnap = false) { // box: [x0, y0, x1, y1] 놓을 수 있는 영역. noSnap: 자석 없이 손으로 둔 자리 그대로
+    const [w, hh] = HP.size(name), [x0, y0, x1, y1] = box;
+    if (x1 - x0 < w || y1 - y0 < hh) return { x: x0, y: y0, w, h: hh, ok: false, why: '이 칸에는 너무 크다.' };
+    let x = Math.max(x0, Math.min(x1 - w, Math.round(px - w / 2))), y = Math.max(y0, Math.min(y1 - hh, Math.round(py - hh / 2)));
+    const rawX = x, rawY = y; // 자석으로 붙인 자리가 겹치면 손으로 둔 자리로
+    const near = CT.dk.list.filter((o, i) => i !== skip).map((o) => { const [ow, oh] = HP.size(o.s); return { x: o.x, y: o.y, w: ow, h: oh }; });
+    const R = 8; // 이만큼(도트) 떨어진 장식까지만 줄 맞추기 대상으로
+    const xs = [x0, x1], ys = [y0, y1];
+    for (const o of near) {
+      if (o.y < y + hh + R && y < o.y + o.h + R) xs.push(o.x, o.x + o.w);  // 위아래로 가까우면: 옆에 붙이기 · 왼쪽/오른쪽 끝 맞추기
+      if (o.x < x + w + R && x < o.x + o.w + R) ys.push(o.y, o.y + o.h);   // 옆으로 가까우면: 바닥선·윗선 맞추기 · 위아래로 붙이기
+    }
+    if (!noSnap) x = dkSnap(x, w, x0, x1, xs);
+    // 바닥선(다리 끝) 맞추기를 먼저: 옆에 있는 장식과 아래 끝이 DK_SNAP + 1도트 안이면 그 줄에 세움
+    let foot = null;
+    for (const o of near) if (o.x < x + w + R && x < o.x + o.w + R) { const nv = o.y + o.h - hh, d = Math.abs(nv - y); if (d <= DK_SNAP + 1 && nv >= y0 && nv + hh <= y1 && (!foot || d < foot.d)) foot = { v: nv, d }; }
+    if (!noSnap) y = foot ? foot.v : dkSnap(y, hh, y0, y1, ys);
+    const over = (x, y) => near.some((o) => x < o.x + o.w && o.x < x + w && y < o.y + o.h && o.y < y + hh);
+    if (over(x, y) && !over(rawX, rawY)) { x = rawX; y = rawY; }
+    const hit = over(x, y);
+    return { x, y, w, h: hh, ok: !hit, why: hit ? '다른 장식과 겹친다.' : '' };
+  }
   function dkFit(h, name, px, py, skip) {
-    const g = h.decoRules?.grid || 4, [w, hh] = HP.size(name);
+    const [w, hh] = HP.size(name);
     for (const id of dkDone(h)) {
       const [rx, ry, rw, rh] = HP.ROOMS[id];
       if (px < rx || px >= rx + rw || py < ry || py >= ry + rh) continue;
-      const mx = Math.floor((rw - 2 - w) / g), my = Math.floor((rh - 2 - hh) / g); if (mx < 0 || my < 0) return { x: rx + 1, y: ry + 1, ok: false, w, h: hh, why: '이 칸에는 너무 크다.' };
-      const x = rx + 1 + Math.max(0, Math.min(mx, Math.round((px - w / 2 - rx - 1) / g))) * g, y = ry + 1 + Math.max(0, Math.min(my, Math.round((py - hh / 2 - ry - 1) / g))) * g;
-      const hit = CT.dk.list.some((o, i) => { if (i === skip) return false; const [ow, oh] = HP.size(o.s); return x < o.x + ow && o.x < x + w && y < o.y + oh && o.y < y + hh; });
-      return { x, y, w, h: hh, ok: !hit, why: hit ? '다른 장식과 겹친다.' : '' };
+      return dkPlace(h, name, px, py, skip, [rx + 1, ry + 1, rx + rw - 1, ry + rh - 1]);
     }
     const O = h.decoRules?.out;
     if (O && dkDone(h).includes('yard') && px >= O.x0 && px < O.x1 && py >= O.y0 && py < O.y1) { // 바깥 뜰 (담 안 풀밭)
-      const x = O.x0 + Math.max(0, Math.min(Math.floor((O.x1 - O.x0 - w) / g), Math.round((px - w / 2 - O.x0) / g))) * g, y = O.y0 + Math.max(0, Math.min(Math.floor((O.y1 - O.y0 - hh) / g), Math.round((py - hh / 2 - O.y0) / g))) * g;
-      const box = (bx, by, bw, bh) => x < bx + bw && bx < x + w && y < by + bh && by < y + hh;
-      if (Object.values(HP.ROOMS).some(([rx, ry, rw, rh]) => box(rx - 1, ry - 1, rw + 2, rh + 2)) || box(...O.path)) return { x, y, w, h: hh, ok: false, why: '칸 벽이나 입구 길 위에는 놓을 수 없다.' };
-      const hit = CT.dk.list.some((o, i) => { if (i === skip) return false; const [ow, oh] = HP.size(o.s); return x < o.x + ow && o.x < x + w && y < o.y + oh && o.y < y + hh; });
-      return { x, y, w, h: hh, ok: !hit, why: hit ? '다른 장식과 겹친다.' : '' };
+      const wall = (f) => { const { x, y } = f, box = (bx, by, bw, bh) => x < bx + bw && bx < x + w && y < by + bh && by < y + hh; return Object.values(HP.ROOMS).some(([rx, ry, rw, rh]) => box(rx - 1, ry - 1, rw + 2, rh + 2)) || box(...O.path); };
+      let f = dkPlace(h, name, px, py, skip, [O.x0, O.y0, O.x1, O.y1]);
+      if (!f.ok || wall(f)) { const raw = dkPlace(h, name, px, py, skip, [O.x0, O.y0, O.x1, O.y1], true); if (raw.ok && !wall(raw)) f = raw; } // 자석 자리가 벽·길에 걸치면 손으로 둔 자리로
+      if (!f.ok) return f;
+      if (wall(f)) return { ...f, ok: false, why: '칸 벽이나 입구 길 위에는 놓을 수 없다.' };
+      return f;
     }
     return { x: Math.round(px - w / 2), y: Math.round(py - hh / 2), w, h: hh, ok: false, why: dkDone(h).includes('yard') ? '되살린 칸 안이나 바깥 뜰에만 놓을 수 있다.' : '마당을 되살리면 바깥 뜰에도 놓을 수 있다.' };
   }
@@ -15465,10 +15530,10 @@
     const dk = dkState(h), max = h.decoRules?.max || 30, sel = dk.sel != null ? dk.list[dk.sel] : null;
     const hint = dk.pick ? '도면을 누르면 그 자리에 놓인다. 오른쪽 클릭이나 Esc로 선택 취소, F로 좌우 반전.' : sel ? '끌어서 옮긴다. 오른쪽 클릭이나 Esc로 선택 취소, F로 좌우 반전.' : '아래에서 장식을 고르거나, 놓인 장식을 끌어 옮긴다.';
     return `<div class="dk-top"><span>장식 <b>${dk.list.length}</b> / ${max}${dk.dirty ? ' · <em>저장하지 않음</em>' : ''}</span><small>${hint}</small></div>
+      <div class="dk-acts"><button type="button" class="btn primary" data-ct="dk:save"${dk.dirty ? '' : ' disabled'}>저장</button><button type="button" class="btn" data-ct="dk:undo"${dk.dirty ? '' : ' disabled'}>되돌리기</button><button type="button" class="btn" data-ct="dk:reset">처음 모습으로</button></div>
       <div class="hp dk"><canvas class="hp-cv" width="146" height="110" aria-hidden="true"></canvas><canvas class="dk-fx" width="584" height="440" aria-hidden="true"></canvas><div class="dk-hit" role="application" aria-label="장식 놓는 도면"></div></div>
       ${sel || dk.pick ? `<div class="dk-sel"><b>${sel ? `${DK_NAME[sel.s] || sel.s}${sel.f ? ' (좌우 반전)' : ''}` : `놓을 장식: ${DK_NAME[dk.pick]}${dk.pickF ? ' (좌우 반전)' : ''}`}</b><button type="button" class="btn sm" data-ct="dk:flip">좌우 반전</button>${sel ? '<button type="button" class="btn sm" data-ct="dk:del">치우기</button>' : ''}<button type="button" class="btn sm" data-ct="dk:none">선택 취소</button></div>` : ''}
       <div class="dk-pal" role="list">${DK_LIST.map((n) => { const left = dkLeft(h, n); return `<button type="button" role="listitem" class="dk-it${dk.pick === n ? ' on' : ''}${left > 0 ? '' : ' none'}" data-ct="dk:pick:${n}" aria-pressed="${dk.pick === n}"><canvas class="dk-th" data-s="${n}" aria-hidden="true"></canvas><span>${DK_NAME[n]}</span><em class="dk-n">${left > 0 ? `${left}개` : '없음'}</em></button>`; }).join('')}</div>
-      <div class="dk-acts"><button type="button" class="btn primary" data-ct="dk:save"${dk.dirty ? '' : ' disabled'}>저장</button><button type="button" class="btn" data-ct="dk:undo"${dk.dirty ? '' : ' disabled'}>되돌리기</button><button type="button" class="btn" data-ct="dk:reset">처음 모습으로</button></div>
       <small class="note">되살린 칸 안과, 마당을 되살린 뒤에는 담 안 바깥 뜰(풀밭)에도 놓을 수 있다. 칸을 더 되살리면 놓을 곳이 넓어진다.</small>`;
   }
   function dkDraw(body, h, ghost) { // 도면은 편집 중인 배치로, 위 덧칠 캔버스에는 눈금·고른 장식·놓을 자리

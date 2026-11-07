@@ -172,6 +172,7 @@ const JOBS = { build: '집터 공사', city: '도시 일손', gather: '채집', 
 // 꾸미기: 되살린 칸 안에 4도트 눈금에 맞춰 장식을 놓는다 (도면 146×110 도트, 칸 좌표는 화면의 HP.ROOMS와 같음)
 const DECO = {
   grid: 4, max: 30,
+  step: 1, // 놓을 수 있는 단위(도트). grid(4)는 화면의 눈금선·처음 모습 배치에만 씀 (예전에 4도트로 놓은 배치도 그대로 맞음)
   // 바깥 뜰: 담 안 풀밭 (칸·입구 길과 겹치지 않게). 마당을 되살리면 열림. 도면 146×110
   out: { x0: 5, y0: 5, x1: 141, y1: 105, path: [64, 86, 18, 24] },
   rooms: { live: [49, 6, 48, 29], own: [6, 39, 40, 44], yard: [49, 39, 48, 47], work: [101, 39, 41, 44] },
@@ -796,11 +797,11 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     for (const it of list) {
       const sz = it && own(DECO.size, it.s) ? DECO.size[it.s] : null; if (!sz) return err('모르는 장식이다.');
       const x = Math.floor(Number(it.x)), y = Math.floor(Number(it.y)), [w, h] = sz;
-      const inRoom = done.some((id) => { const [rx, ry, rw, rh] = DECO.rooms[id]; return x >= rx + 1 && y >= ry + 1 && x + w <= rx + rw - 1 && y + h <= ry + rh - 1 && (x - rx - 1) % DECO.grid === 0 && (y - ry - 1) % DECO.grid === 0; });
+      const inRoom = done.some((id) => { const [rx, ry, rw, rh] = DECO.rooms[id]; return x >= rx + 1 && y >= ry + 1 && x + w <= rx + rw - 1 && y + h <= ry + rh - 1 && (x - rx - 1) % DECO.step === 0 && (y - ry - 1) % DECO.step === 0; });
       const O = DECO.out, hitBox = (bx, by, bw, bh) => x < bx + bw && bx < x + w && y < by + bh && by < y + h;
-      const outside = done.includes('yard') && x >= O.x0 && y >= O.y0 && x + w <= O.x1 && y + h <= O.y1 && (x - O.x0) % DECO.grid === 0 && (y - O.y0) % DECO.grid === 0
+      const outside = done.includes('yard') && x >= O.x0 && y >= O.y0 && x + w <= O.x1 && y + h <= O.y1 && (x - O.x0) % DECO.step === 0 && (y - O.y0) % DECO.step === 0
         && !Object.values(DECO.rooms).some(([rx, ry, rw, rh]) => hitBox(rx - 1, ry - 1, rw + 2, rh + 2)) && !hitBox(...O.path);
-      if (!inRoom && !outside) return err('장식은 되살린 칸 안이나 바깥 뜰에, 눈금에 맞춰 놓아야 한다.');
+      if (!inRoom && !outside) return err('장식은 되살린 칸 안이나 바깥 뜰에 놓아야 한다.');
       if (boxes.some((b) => x < b.x + b.w && b.x < x + w && y < b.y + b.h && b.y < y + h)) return err('장식끼리 겹친다.');
       boxes.push({ s: it.s, x, y, w, h, f: it.f ? 1 : 0 });
     }

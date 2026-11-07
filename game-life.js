@@ -766,7 +766,7 @@ function view(k, now, d) {
     v.touchActs = away ? [] : Object.entries(TC.acts).filter(([id]) => actFor(k, id, now)).map(([id, a]) => ({ id, name: a.name }));
     // 자라기 전에 조르던 교감이 아직 남아 있으면 그 단추도 보여 줌 (받아 줄 수 있게)
     if (!away && k.data.ask && k.data.ask.until > now && TC.acts[k.data.ask.act] && !v.touchActs.some((a) => a.id === k.data.ask.act)) v.touchActs.push({ id: k.data.ask.act, name: TC.acts[k.data.ask.act].name });
-    if (k.data.ask && k.data.ask.until > now) v.ask = { act: k.data.ask.act, name: TC.acts[k.data.ask.act].name, line: ASK_LINE[k.data.ask.act], left: k.data.ask.until - now };
+    if (k.data.ask && k.data.ask.until > now) v.ask = { act: k.data.ask.act, name: TC.acts[k.data.ask.act].name, line: askLine(k, k.data.ask.act, now), left: k.data.ask.until - now };
   }
   diaryStart(k);
   if (k.data.diary) { const b0 = k.data.born || k.data.diary[0].at; v.diary = k.data.diary.map((x) => ({ d: Math.max(1, Math.floor((x.at - b0) / DAY) + 1), t: x.t })).reverse(); }
@@ -916,6 +916,18 @@ const TOUCH_FIRST = { pat: '처음 머리를 쓰다듬어 주었다.', hug: '처
 const ASK_LINE = { pat: '머리를 쓰다듬어 달라고 슬그머니 다가온다', hug: '안아 달라고 팔을 뻗는다', play: '놀아 달라고 자꾸 잡아당긴다', story: '이야기를 해 달라고 조른다', ride: '등에 태워 달라고 조른다', fly: '함께 날자고 날개를 퍼덕인다',
   train: '같이 몸을 풀자며 찾아온다', worry: '할 말이 있다며 곁에서 머뭇거린다', talk: '의논할 일이 있다며 찾아온다', walk: '바람 쐬러 나가자고 한다', help: '손이 모자란다며 도움을 청한다',
   oldtale: '옛날이야기를 들려주겠다며 부른다', sun: '볕이 좋다며 곁으로 부른다', hand: '말없이 손을 내민다', spar: '발톱을 세우고 겨뤄 보자며 덤빈다', rest: '말없이 곁에 와 몸을 기댄다' };
+// 아기(사람)는 아직 말을 못 하고 걷지도 못함: 조를 때·교감할 때 몸짓과 옹알이로만 (해츨링은 용 문장 그대로, 말하는 문장만 막음)
+const ASK_BABY = { pat: '손을 뻗으며 옹알옹알 보호자를 부른다', hug: '안아 달라는 듯 두 팔을 뻗으며 칭얼거린다', play: '심심한지 손발을 버둥거리며 칭얼거린다', story: '잠이 안 오는지 칭얼거리며 보호자 쪽을 바라본다', ride: '바깥이 궁금한지 둥지 입구 쪽으로 손을 뻗는다' };
+const TOUCH_BABY = {
+  pat: { like: ['{g} 손길에 눈을 가늘게 뜨고 옹알거린다.', '{g} 눈을 감고 배시시 웃는다.'], ok: ['{g} 가만히 쓰다듬어지다가 손가락을 꼭 쥔다.'] },
+  hug: { like: ['{g} 품에 쏙 안겨 새근새근 숨을 고른다.', '{g} 꼭 안긴 채 까르르 웃음소리를 낸다.'], ok: ['{g} 잠깐 안겨 있다가 꼼지락거린다.'] },
+  play: { like: ['{g} 손발을 버둥거리며 까르르 웃는다.', '{g} 눈앞에서 흔드는 손을 잡으려고 한참 손을 뻗는다.'], ok: ['{g} 바닥을 기어다니며 한참 함께 놀았다.'] },
+  story: { like: ['{g} 목소리를 따라 눈을 반짝이며 옹알거린다.', '{g} 이야기를 듣다가 스르르 잠이 든다.'], ok: ['{g} 목소리가 들리는 쪽을 가만히 바라본다.'] },
+  ride: { like: ['{g} 등 위에 폭 엎드려 바람에 까르르 웃는다.', '{g} 작은 손으로 비늘을 꼭 쥐고 신기한 듯 두리번거린다.'], ok: ['{g} 등 위에 엎드린 채 둥지 둘레를 천천히 한 바퀴 돌았다.'] },
+};
+const isBabyH = (k, now) => k.type === 'human' && stageOf(k, now).name === '아기';
+const isTiny = (k, now) => ['아기', '해츨링'].includes(stageOf(k, now).name); // 말을 못 하는 어린 식구
+const askLine = (k, act, now = Date.now()) => (isBabyH(k, now) && ASK_BABY[act]) || ASK_LINE[act];
 // 반응 문장: [행동][좋음·보통·싫음] (n: 이름, g: 이름+이/가, e: 이름+은/는)
 const TOUCH_LINES = {
   pat: { like: ['{g} 눈을 가늘게 뜨고 손길에 머리를 비빈다.', '{g} 기분 좋은 듯 {purr}'], ok: ['{g} 가만히 쓰다듬어지다가 씩 웃는다.'], dislike: ['{e} "이제 애 아니거든!" 하고 고개를 홱 돌린다.', '{e} 머리를 피하며 투덜거린다.'] },
@@ -967,7 +979,7 @@ function touch(d, kin, id, act, now = Date.now()) {
     // 너무 자주: 유대는 그대로, 과보호가 쌓임
     const key = overdoKey(k);
     growAdd(k, key, 1);
-    lines.push(key === 'pamper' ? `${ga(k)} 또 매달리며 놓아 주지 않는다.` : `${k.name}${josa(k.name, '은', '는')} "또요?" 하는 얼굴로 슬그머니 피한다.`); // 안내 없이 반응으로만 (알아 가는 재미)
+    lines.push(key === 'pamper' ? `${ga(k)} 또 매달리며 놓아 주지 않는다.` : isTiny(k, now) ? `${ga(k)} ${k.type === 'drake' ? '작게 끼잉 소리를 내며' : '칭얼거리며'} 고개를 돌린다.` : `${k.name}${josa(k.name, '은', '는')} "또요?" 하는 얼굴로 슬그머니 피한다.`); // 안내 없이 반응으로만 (알아 가는 재미)
     t.last = now;
     return { title: k.name, lines };
   }
@@ -987,7 +999,8 @@ function touch(d, kin, id, act, now = Date.now()) {
   let line;
   if (shyNow) line = `${ga(k)} 살짝 몸을 빼다가, 조심스레 다시 다가온다.`;
   else if (mood === 'sleepy' && (act === 'play' || act === 'fly' || act === 'ride')) line = `${ga(k)} 눈을 비비며 꾸벅꾸벅 존다. 지금은 졸린가 보다.`;
-  else if ((hasT(k, 'sleepy') || hasT(k, 'sleepyhead')) && kstHour(now) >= 6 && kstHour(now) < 10 && act !== 'story') line = `${ga(k)} 이불 속에서 "오 분만…" 하고 웅얼거린다.`;
+  else if ((hasT(k, 'sleepy') || hasT(k, 'sleepyhead')) && kstHour(now) >= 6 && kstHour(now) < 10 && act !== 'story') line = isTiny(k, now) ? `${ga(k)} 눈을 비비며 칭얼거리다가 다시 잠이 든다.` : `${ga(k)} 이불 속에서 "오 분만…" 하고 웅얼거린다.`;
+  else if (isBabyH(k, now) && TOUCH_BABY[act]) line = fillLine(pickLine(TOUCH_BABY[act][pref] || TOUCH_BABY[act].ok), k);
   else line = fillLine(pickLine(TOUCH_LINES[act][pref]), k);
   if (asked) line = `${ga(k)} 기다렸다는 듯이 활짝 웃는다. ${line}`;
   if (k.data.bond >= 100 && pref === 'like' && !shyNow) line = `${line} 보호자를 세상에서 가장 믿는 얼굴이다.`; // 유대 100
@@ -1026,7 +1039,7 @@ function bondGift(k, out, now) {
   const id = list[Math.floor(Math.random() * list.length)];
   out.items.push({ id, qty: 1 });
   out.lines.push(k.type === 'human'
-    ? `${ga(k)} 어디선가 ${ITEMS[id].name}${josa(ITEMS[id].name, '을', '를')} 주워 와 수줍게 내밀었다.`
+    ? (isBabyH(k, now) ? `${ga(k)} 작은 손에 꼭 쥐고 있던 ${ITEMS[id].name}${josa(ITEMS[id].name, '을', '를')} 내밀었다.` : `${ga(k)} 어디선가 ${ITEMS[id].name}${josa(ITEMS[id].name, '을', '를')} 주워 와 수줍게 내밀었다.`)
     : `${ga(k)} ${ITEMS[id].name}${josa(ITEMS[id].name, '을', '를')} 물어 와 발치에 툭 내려놓았다.`);
 }
 function touchTick(k, now, out) {
@@ -1059,7 +1072,7 @@ function touchTick(k, now, out) {
       const act = acts[Math.floor(Math.random() * acts.length)] || all[0] || 'pat';
       k.data.ask = { act, at: now, until: now + TC.ask.waitMin * 60000 };
       k.data.askAt = now;
-      out.lines.push(`${ga(k)} ${ASK_LINE[act]}.`);
+      out.lines.push(`${ga(k)} ${askLine(k, act, now)}.`);
     }
   } else if (!k.data.askCheck) k.data.askCheck = now;
 }
@@ -1120,10 +1133,15 @@ function care(d, kin, id, item, have, now = Date.now(), opt = {}) {
   })[c.talent] || '고맙다며 받아 든다.';
   // 음식 반응: KIN.care의 eat은 아이 말투라, 어른·노년에게는 그 나이에 맞는 말로
   const stN = stageOf(k, now).name;
+  // 아기는 아직 말을 못 하고 뛰거나 혼자 먹지도 못함: 아이 문장 대신 아기 몸짓으로 (말은 넣지 않음)
+  const baby = stN === '아기';
+  const BABY_EAT = ['숟가락으로 조금씩 떠 넣어 주자 작은 입을 오물거리며 받아먹는다.', '한 입 받아먹을 때마다 두 손을 파닥이며 옹알거린다.', '잘게 으깨 주자 입가에 잔뜩 묻혀 가며 먹는다.', '몇 입 받아먹더니 배가 부른지 품에 안긴 채 새근새근 잠이 든다.', '처음 먹어 보는 맛에 눈을 동그랗게 뜨더니, 다음 숟가락을 기다리며 입을 벌린다.'];
+  const BABY_HUNGRY = ['배가 고팠는지 숟가락이 다가오기도 전에 입부터 크게 벌린다.', '배가 고파 칭얼거리다가, 한 입 받아먹자 금세 울음을 그친다.'];
+  const BABY_TOY = ['작은 손으로 꼭 쥐고는 입으로 가져가 보려 한다.', '눈앞에서 흔들어 주자 까르르 웃으며 손을 뻗는다.', '한참 동안 신기한 듯 바라보다가 꼭 쥐고 놓지 않는다.'];
   const ADULT_EAT = stN === '노년'
     ? ['천천히 오래 씹으며 고맙다고 고개를 숙인다.', '"이 나이에도 챙겨 주시니 송구하네요." 하며 남김없이 먹는다.', '옛날 생각이 난다며 웃더니 그릇을 깨끗이 비운다.']
     : ['고맙다며 받아 들고 천천히 맛을 음미한다.', '한 입 먹고는 "역시 이 맛이에요." 하며 웃는다.', '어릴 적 생각이 난다며 웃더니 남김없이 먹는다.', '일하느라 출출했는지 반가워하며 맛있게 먹는다.'];
-  const eat = food && ['어른', '노년'].includes(stN) ? pick(ADULT_EAT) : c.eat;
+  const eat = food && ['어른', '노년'].includes(stN) ? pick(ADULT_EAT) : baby ? (food ? pick(hungry ? BABY_HUNGRY : BABY_EAT) : hungry ? '작은 손으로 받아 쥐어 본다.' : pick(BABY_TOY)) : c.eat;
   const lines = [job ? `${k.name}에게 ${name}${josa(name, '을', '를')} 건넸다.` : `${k.name}에게 ${name}${josa(name, '을', '를')} 건넸다. ${(hungry && food && ['어른', '노년'].includes(stN)) ? '배가 고팠는지 반가워하며 단숨에 먹는다.' : eat || (hungry && food ? '배가 고팠는지 허겁지겁 먹는다.' : react)}`];
   if (hungry && !food && !job) lines.push(`${ga(k)} 배가 고파서인지 금방 내려놓고 둥지 입구만 바라본다.`);
   if (fav) {
@@ -1937,11 +1955,14 @@ function festOuting(d, kin, fest, nightOpen, now = Date.now()) {
       const x = pick(can), y = pick(can.filter((k) => k !== x));
       // 사람과 용이면 사람을 앞에, 용 둘이면 나이 많은 쪽을 앞에 (어린 쪽을 날개로 감싸 주는 장면 등)
       const [a, b] = x.type === 'drake' && y.type === 'human' ? [y, x] : x.type === 'drake' && y.type === 'drake' && (x.data.born || 0) > (y.data.born || 0) ? [y, x] : [x, y];
-      const pool = a.type === 'human' && b.type === 'human' ? F.pair.hh : a.type === 'drake' && b.type === 'drake' ? F.pair.dd : F.pair.hd;
-      lines.push(fillT(pick(pool), { a: a.name, b: b.name, o: callFor(d, a, now) }));
+      const pool0 = a.type === 'human' && b.type === 'human' ? F.pair.hh : a.type === 'drake' && b.type === 'drake' ? F.pair.dd : F.pair.hd;
+      const grownBoth = !YOUNG.has(groupOf(a)) && !YOUNG.has(groupOf(b)) && ![a, b].some((k) => groupOf(k) === 'youthH'); // 어른·노년·젊은 용·다 자란 용끼리
+      const pool = grownBoth ? pool0.filter((t) => !/깔깔|뛰어다녔다|먼저 물겠다/.test(t)) : pool0;
+      lines.push(fillT(pick(pool.length ? pool : pool0), { a: a.name, b: b.name, o: callFor(d, a, now) }));
     }
     const hs = went.some((k) => k.type === 'human'), ds = went.some((k) => k.type === 'drake');
-    lines.push(pick(F.family[hs && ds ? 'mixed' : ds ? 'drake' : 'human']));
+    const fam = F.family[hs && ds ? 'mixed' : ds ? 'drake' : 'human'], young = went.some((k) => YOUNG.has(groupOf(k)));
+    lines.push(pick(fam.filter((t) => young || !/어린 식구/.test(t))));
   }
   // 아이나 어린 용이 함께 갔으면, 가끔 축제 그림을 그려 줌 (보물 상자)
   const drawer = went.filter((k) => F.drawStages.includes(stageOf(k, now).name));

@@ -246,9 +246,16 @@ const ITEMS = {
   raid_harvest_crown: { name: '거둔 이삭의 관',           rarity: 'rare', type: 'equip', raidGear: true, slot: 'head', bonus: { wisdom: 4, majesty: 3 }, gear: { heal: 1.15 }, value: 140, desc: '모르벤이 마지막으로 거둔 이삭을 엮은 관. 치유로 되찾는 체력 +15%.' },
   raid_scarecrow_cloak: { name: '허수아비 군주의 넝마 망토', rarity: 'rare', type: 'equip', raidGear: true, slot: 'wing', bonus: { scale: 4, wing: 3 }, gear: { cover: 0.8 }, value: 140, desc: '군주가 걸치고 있던 넝마. 몇 번을 베여도 찢어지지 않는다. 막아서기로 대신 맞을 때 받는 피해 −20%.' },
   raid_heiron_helm:   { name: '헤이른의 금 간 투구',       rarity: 'rare', type: 'equip', raidGear: true, slot: 'head', bonus: { scale: 4, majesty: 3 }, gear: { raidAtk: 1.1 }, value: 140, desc: '이천 년 동안 성문을 지킨 투구. 금이 간 자리로 바람이 들어온다. 레이드 보스에게 주는 피해 +10%.' },
-  raid_banner_wing:   { name: '기사단 깃발의 날개덮개',    rarity: 'rare', type: 'equip', raidGear: true, slot: 'wing', bonus: { wing: 5, claw: 2 }, gear: { flank: 0.15 }, value: 140, desc: '꺾인 깃발 천으로 날개 끝을 감쌌다. 펼치면 대열이 흔들린다. 우회 성공 확률 +15%.' },
+  raid_banner_wing:   { name: '기사단 깃발의 날개덮개',    rarity: 'rare', type: 'equip', raidGear: true, slot: 'wing', bonus: { wing: 5, claw: 2 }, gear: { cover: 0.85 }, value: 140, desc: '꺾인 깃발 천으로 날개 끝을 감쌌다. 펼치면 동료 앞을 가리는 방패가 된다. 막아서기로 대신 맞을 때 받는 피해 −15%.' },
   raid_rift_eye:      { name: '심연을 본 눈',             rarity: 'rare', type: 'equip', raidGear: true, slot: 'head', bonus: { wisdom: 5, majesty: 4 }, gear: { linger: 0.15 }, value: 180, desc: '고룡이 이천 년 동안 균열 아래를 내려다본 눈빛이 굳은 보석. 들여다보면 바닥이 보일 것만 같다. 내가 건 상태 이상이 한 턴 더 갈 확률 +15%.' },
   raid_rift_feather:  { name: '고룡의 마지막 날개깃',      rarity: 'rare', type: 'equip', raidGear: true, slot: 'wing', bonus: { wing: 6, scale: 3 }, gear: { taken: 0.94 }, value: 180, desc: '대륙이 갈라지던 날 균열 위를 덮었던 날개의 깃. 아직 금빛이 바래지 않았다. 받는 피해 −6%.' },
+  // 깨어난 레이드 장비: 레이드에서 드물게 나온 희귀 장비를 그 레이드 조각 4 + 정화의 조각 15로 '각성' (능력치 총합 +2, 특수 효과도 조금 더)
+  raid_harvest_crown_up:   { name: '깨어난 거둔 이삭의 관',       rarity: 'rare', type: 'equip', raidGear: true, slot: 'head', bonus: { wisdom: 5, majesty: 4 }, gear: { heal: 1.2 },     value: 260, desc: '모르벤의 낫 조각으로 다시 엮은 이삭의 관. 이삭 끝마다 금빛이 돈다. 치유로 되찾는 체력 +20%.' },
+  raid_scarecrow_cloak_up: { name: '깨어난 허수아비 군주의 망토', rarity: 'rare', type: 'equip', raidGear: true, slot: 'wing', bonus: { scale: 5, wing: 4 },   gear: { cover: 0.75 },   value: 260, desc: '낫 조각을 꿰매 넣은 넝마 망토. 이제는 칼날이 닿아도 미끄러진다. 막아서기로 대신 맞을 때 받는 피해 −25%.' },
+  raid_heiron_helm_up:     { name: '깨어난 헤이른의 투구',        rarity: 'rare', type: 'equip', raidGear: true, slot: 'head', bonus: { scale: 5, majesty: 4 }, gear: { raidAtk: 1.13 }, value: 260, desc: '금 간 자리를 기사단 문장으로 메운 투구. 바람 소리가 그쳤다. 레이드 보스에게 주는 피해 +13%.' },
+  raid_banner_wing_up:     { name: '깨어난 기사단 깃발의 날개덮개', rarity: 'rare', type: 'equip', raidGear: true, slot: 'wing', bonus: { wing: 6, claw: 3 },   gear: { cover: 0.8 },    value: 260, desc: '꺾인 깃발을 문장 조각으로 다시 세웠다. 펼치면 대열 전체가 그 뒤에 선다. 막아서기로 대신 맞을 때 받는 피해 −20%.' },
+  raid_rift_eye_up:        { name: '깨어난 심연을 본 눈',         rarity: 'rare', type: 'equip', raidGear: true, slot: 'head', bonus: { wisdom: 6, majesty: 5 }, gear: { linger: 0.2 },  value: 330, desc: '고룡의 비늘로 감싸자 보석 속 어둠이 천천히 눈을 떴다. 내가 건 상태 이상이 한 턴 더 갈 확률 +20%.' },
+  raid_rift_feather_up:    { name: '깨어난 고룡의 날개깃',        rarity: 'rare', type: 'equip', raidGear: true, slot: 'wing', bonus: { wing: 7, scale: 4 },   gear: { taken: 0.92 },  value: 330, desc: '고룡의 비늘을 엮어 다시 세운 날개깃. 금빛이 깃 끝까지 번졌다. 받는 피해 −8%.' },
   knight_tail_shield: { name: '성문 기사단의 꼬리 방패', rarity: 'rare', type: 'equip', slot: 'tail', bonus: { wing: 4, scale: 3, claw: 3 }, value: 160, desc: '헤이른의 방패를 잘라 꼬리 끝에 맞췄다. 휘두르면 대열을 갈랐던 바람 소리가 난다.' },
   charge_banner_charm: { name: '돌격 깃발 장식', rarity: 'rare', type: 'equip', slot: 'charm', bonus: { wing: 8, claw: 2 }, value: 160, desc: '기사단 깃발의 술을 엮어 만든 장식. 날개를 펼치면 깃발처럼 펄럭인다.' },
   // 균열 레이드 전용 장신구 (능력치 합 12, 지금 가장 좋은 장신구. gear: 사냥·레이드에서만 듣는 효과)
@@ -639,6 +646,13 @@ const RECIPES = [
   { out: 'rift_claw',           needs: { rift_scale: 6, purify_shard: 25, abyss_fang: 1 }, en: 25, wis: 20 }, // 균열 레이드
   { out: 'rift_ember_pendant',  needs: { rift_scale: 6, purify_shard: 25, ashen_core: 1 }, en: 25, wis: 20 },
   { out: 'charge_banner_charm', needs: { heiron_crest: 5, purify_shard: 15, faded_crest: 2 }, en: 20, wis: 18 },
+  // 레이드 희귀 장비 각성: 레이드에서 드물게 나온 장비 + 그 레이드 조각 4 + 정화의 조각 15 → 깨어난 장비 (총합 +2, 특수 효과도 조금 더)
+  { out: 'raid_harvest_crown_up',   needs: { raid_harvest_crown: 1, morven_shard: 4, purify_shard: 15 },  awaken: true, en: 20, wis: 18 },
+  { out: 'raid_scarecrow_cloak_up', needs: { raid_scarecrow_cloak: 1, morven_shard: 4, purify_shard: 15 }, awaken: true, en: 20, wis: 18 },
+  { out: 'raid_heiron_helm_up',     needs: { raid_heiron_helm: 1, heiron_crest: 4, purify_shard: 15 },     awaken: true, en: 20, wis: 18 },
+  { out: 'raid_banner_wing_up',     needs: { raid_banner_wing: 1, heiron_crest: 4, purify_shard: 15 },     awaken: true, en: 20, wis: 18 },
+  { out: 'raid_rift_eye_up',        needs: { raid_rift_eye: 1, rift_scale: 4, purify_shard: 15 },          awaken: true, en: 25, wis: 20 },
+  { out: 'raid_rift_feather_up',    needs: { raid_rift_feather: 1, rift_scale: 4, purify_shard: 15 },      awaken: true, en: 25, wis: 20 },
   // 낚시
   { out: 'salted_fish',   needs: { fish_mackerel: 3, salt_crystal: 1 },                 en: 4,  wis: 0 },
   { out: 'bait_meat',     needs: { beast_hide: 1 },                                     en: 2,  wis: 0 },
@@ -2119,7 +2133,7 @@ const MIND = {
   // 오염된 땅의 보상
   reward: { xp: 1.5, gold: 1.5 },                             // 오염된 사냥감·강적: 경험치·금화 배율
   scale: { explore: 0.12, gather: 0.15, hunt: 0.25, elite: 2 }, // 검게 물든 비늘이 나올 확률 (강적은 개수)
-  legend: { item: 'abyss_crown', chance: 0.08 },               // 오염된 강적이 떨어뜨리는 전설 장신구
+  legend: { item: 'abyss_crown', chance: 0.03 },               // 오염된 강적이 떨어뜨리는 전설 장신구 (3%)
 };
 // 제작을 더 재미있게: 대성공, 실험, 장신구 강화·각인, 마을 의뢰, 둥지 공방
 const CRAFT = {
