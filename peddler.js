@@ -96,16 +96,9 @@ module.exports = function setupPeddler({ io, db, online, logic, sendMe, register
       shop: P.shop.filter((x) => ITEMS[x.id]).map((x) => ({ id: x.id, price: x.price, limit: x.limit, daily: !!x.daily, group: x.group || null, left: Math.max(0, x.limit - boughtOf(d, s.key, x, now)) })),
       tokens: db.itemCount(d.id, 'mist_token') || 0, tokenTrade: P.tokenTrade,
       gear: Object.entries(P.gear).map(([k, g]) => ({ key: k, name: g.name, slot: g.slot, stats: g.stats, eff: g.eff })),
-      total: P.total, gearLv: P.gearLv || null, odds: boxOdds(), spices: Object.values(P.spices).map((x) => ({ item: x.item, fits: x.fits, text: x.text })),
+      total: P.total, gearLv: P.gearLv || null, spices: Object.values(P.spices).map((x) => ({ item: x.item, fits: x.fits, text: x.text })),
     };
   }
-  // 상자 안에 든 것 비율 (창에 그대로 보여 줌)
-  function boxOdds() {
-    const sum = P.box.reduce((a, x) => a + x.w, 0);
-    const label = { gear: '이국 장신구', mat: '이국 합성 재료', potion: '이국 회복약', food: '이국 요리 재료 꾸러미', item: null };
-    return P.box.map((x) => ({ what: label[x.kind] || ITEMS[x.id]?.name || x.id, pct: Math.round((x.w / sum) * 1000) / 10 }));
-  }
-
   function buy(d, id, qty, now = Date.now()) {
     const s = slotNow(now);
     if (!s) return { error: '행상인의 배는 이미 안개 속으로 떠났다.' };

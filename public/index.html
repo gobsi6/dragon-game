@@ -6224,10 +6224,10 @@
           const q = document.createElement('span'); q.className = `daily${x.left ? '' : ' none'}`; q.textContent = `${x.daily ? '오늘' : '이번에'} ${x.left}/${x.limit}개`;
           sm.prepend(u, ' · ', q, ' · ');
           if (S.items[x.id]?.cat === 'treasure') { const tv = document.createElement('span'); tv.className = 'eff'; tv.textContent = `보물더미 가치 ${S.items[x.id].value.toLocaleString()} · 팔 수 없음`; row.querySelector('b').appendChild(tv); }
-          if (x.id === 'mist_box') { // 상자 안에 든 것 비율
+          if (x.id === 'mist_box') { // 상자 안내 (확률은 보여 주지 않음)
             row.classList.add('pd-boxrow');
             const od = document.createElement('div'); od.className = 'pd-odds';
-            od.textContent = `상자 안: ${m.odds.map((o) => `${o.what} ${o.pct}%`).join(' · ')} · 열 때마다 증표 1개`;
+            od.textContent = '열 때마다 증표 1개';
             row.querySelector('.nm').appendChild(od);
           }
           if (!x.left) { const l = document.createElement('span'); l.className = 'lock'; l.textContent = x.daily ? '오늘은 다 샀다' : '이번에는 다 샀다'; row.querySelector('.ctl').appendChild(l); }
