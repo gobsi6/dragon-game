@@ -5005,6 +5005,7 @@ body:not(.realm-city) .moss-fx { display: none; }
 #home-ui .lk-seg button.pv { border: 1px dashed #6E5A48; background: #F3ECDF; color: #3A2E26; }
 #home-ui .lk-seg button .lk-c { font-style: normal; font-size: 10.5px; color: #9A876C; }
 #home-ui .lk-seg button.on .lk-c { color: #E3D6C2; }
+#home-ui .lk-seg, #home-ui.hm-e .lk-seg { border: 0; background: transparent; padding: 0; box-shadow: none; } /* 바닥·담 단추: 바깥 테두리 없이 단추만 */
 #home-ui .lk-pv { margin: -4px 0 10px; border-color: #DCCDB2; background: #F7F1E6; }
 #home-ui .cv-book li.tr-row { align-items: center; }
 #home-ui .tr-row b { flex: 1; min-width: 0; }
@@ -5138,3 +5139,7 @@ body.chat-off #say, body.chat-off #chat-view { display: none; }
 
 /* 강화한 장신구를 넘길 때 안내 (선물·교환) */
 .enh-note { display: block; margin-top: 3px; font: 400 11.5px/1.45 var(--sans); color: #8A5E2A; }
+/* 바닥·담 단추: 단추마다 제 테두리 (묶음 칸 구분선 색이 왼쪽에 덮이지 않게) */
+#home-ui.hm-e .lk-seg button + button { border-left-color: #DCCDB2; }
+#home-ui.hm-e .lk-seg button.on { border-color: var(--ha); }
+#home-ui.hm-e .lk-seg button.pv { border-color: #6E5A48; }

@@ -15442,6 +15442,7 @@
   const DK_NAME = { planter: '빛나는 꽃 화분', pot: '작은 화분', bench: '벤치', lamp: '등', bed: '침대', rug: '깔개', table: '탁자', shelf: '선반', workbench: '작업대', crate: '나무 상자', barrel: '통', pond: '작은 연못', steps: '돌계단', tablets: '돌판 서가', carvedesk: '새김 책상', hearth: '화덕', anvil: '모루', telescope: '망원경', bell: '작은 종', well: '우물', signpost: '방명록 받침', bedplot: '텃밭 두둑', arch: '덩굴 아치', jar: '항아리', chair: '의자', flowers: '들꽃 무리', mushroom: '빛버섯 무리', bush: '덤불', stepstone: '디딤돌', fence: '나무 울타리', flowerbed: '꽃 상자', stonelamp: '석등', brazier: '화로', tree: '작은 나무', mosaic: '모자이크 깔개', crystallamp: '수정 등', goldlamp: '금박 등', glowpatch: '빛버섯 정원', bookcase: '책장', nestbed: '둥지 쿠션', tapestry: '용 태피스트리', fountain: '작은 분수' };
   const DK_LIST = Object.keys(DK_NAME);
   const dkDone = (h) => h.rooms.filter((r) => r.state === 'done').map((r) => r.id);
+  const dkDefaults = (h) => HP.defaults(h.plot, dkDone(h), h.decoRules?.grid || 4).map((o) => ({ ...o })); // 칸을 되살릴 때 생기는 처음 배치
   const dkLeft = (h, n) => (h.furn?.[n] || 0) - (CT.dk ? CT.dk.list.filter((o) => o.s === n).length : 0); // 가진 가구 − 놓은 가구
   function dkState(h) { // 편집 중인 사본 (저장 전까지는 화면에만)
     const saved = JSON.stringify(h.deco || null);
@@ -16048,8 +16049,8 @@
       if (x === 'none') { dk.sel = null; dk.pick = null; return renderHome(); }
       if (x === 'flip') { if (dk.sel != null && dk.list[dk.sel]) { const o = dk.list[dk.sel]; if (o.f) delete o.f; else o.f = 1; dk.dirty = true; } else if (dk.pick) dk.pickF = !dk.pickF; return renderHome(); }
       if (x === 'undo') { CT.dk = null; return renderHome(); }
-      if (x === 'save') return cityCall('city:deco', { list: dk.list }, () => { CT.dk = null; });
-      if (x === 'reset') return cityCall('city:deco', { list: null }, () => { CT.dk = null; });
+      if (x === 'save') { const h = CT.v.me, def = JSON.stringify(dkDefaults(h)), same = JSON.stringify(dk.list) === def; return cityCall('city:deco', { list: same ? null : dk.list }, () => { CT.dk = null; }); } // 처음 모습 그대로면 '기본 배치'로 저장
+      if (x === 'reset') { dk.list = dkDefaults(CT.v.me); dk.pick = null; dk.sel = null; dk.dirty = true; toast('처음 모습을 불러왔다. 저장을 눌러야 바뀌고, 되돌리기로 취소할 수 있다.'); return renderHome(); } // 바로 저장하지 않고 편집 중인 배치에만 불러옴
     }
     if (k === 'choose') return cityCall('city:choose', { id: x });
     if (k === 'act') return homeAct(a.slice(4));
