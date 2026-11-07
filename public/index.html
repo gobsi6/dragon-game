@@ -6241,7 +6241,7 @@
         if (food) list.insertBefore(sp, food); else list.appendChild(sp);
       } else {
         const hd = document.createElement('p'); hd.className = 'note';
-        hd.textContent = `행상인의 증표 ${m.tokenTrade}개를 내면 고른 장신구 하나와 바꿔 준다. 능력치 총합은 ${m.total[0]}~${m.total[1]} 사이에서 무작위로 나뉜다.${m.gearLv ? ` 이국 장신구는 Lv. ${m.gearLv}부터 찰 수 있다.` : ''} 지금 가진 증표 ${m.tokens}개.`;
+        hd.textContent = `행상인의 증표 ${m.tokenTrade}개를 내면 고른 장신구 하나와 바꿔 준다. 능력치 총합은 ${m.total[0]}~${m.total[1]} 사이에서 무작위로 나뉜다.${m.totalOdds ? ` (총합 ${m.totalOdds.map((x) => `${x.total}: ${x.pct}%`).join(' · ')})` : ''}${m.gearLv ? ` 이국 장신구는 Lv. ${m.gearLv}부터 찰 수 있다.` : ''} 지금 가진 증표 ${m.tokens}개.`;
         list.appendChild(hd);
         for (const g of m.gear) {
           const row = document.createElement('div'); row.className = 'mk-row rare pd-gear';
