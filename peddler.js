@@ -55,15 +55,25 @@ module.exports = function setupPeddler({ io, db, online, logic, sendMe, register
     if (!c.pd || c.pd.key !== key) { dayBookOf(d); c.pd = { key, n: {} }; } // 지난 판 기록을 지우기 전에 하루치로 옮겨 둠 (dayBookOf의 mig)
     return c.pd;
   }
+  // 판 이름(key)이 어느 한국 날짜의 판인지: `날짜-번호` / `gm-시각` / `force-날짜`. 모르면 null
+  function slotDay(key) {
+    let m;
+    if ((m = /^(\d+)-\d+$/.exec(key))) return Number(m[1]);
+    if ((m = /^gm-(\d+)$/.exec(key))) return Math.floor((Number(m[1]) + KST) / DAY);
+    if ((m = /^force-(\d+)$/.exec(key))) return Number(m[1]);
+    return null;
+  }
   // 하루 제한 물건(row.daily)은 들른 판과 상관없이 한국 시간 하루 동안 센 개수
   function dayBookOf(d, now = Date.now()) {
     const c = logic.combatJson(d), day = Math.floor((now + KST) / DAY);
     if (!c.pdDay || c.pdDay.day !== day) c.pdDay = { day, n: {} };
     // 하루 제한으로 바뀌기 전에 산 것도 셈: 예전엔 판마다(c.pd) 셌으므로, 오늘 판의 기록이 남아 있으면 하루치에 한 번만 더함
-    if (!c.pdDay.mig) {
-      c.pdDay.mig = 1;
-      const old = c.pd && typeof c.pd.key === 'string' && c.pd.key.startsWith(`${day}-`) ? c.pd.n : null;
-      if (old) for (const row of P.shop) if (row.daily && old[row.id]) c.pdDay.n[row.id] = (c.pdDay.n[row.id] || 0) + old[row.id];
+    // mig 1: 평소 판(`날짜-번호`)만 옮김 / mig 2: GM이 부른 판(`gm-시각`)·강제 판(`force-날짜`)도 옮김
+    if (c.pdDay.mig !== 2) {
+      const key = c.pd && typeof c.pd.key === 'string' ? c.pd.key : '', normal = /^\d+-\d+$/.test(key);
+      const take = slotDay(key) === day && !(c.pdDay.mig === 1 && normal); // mig 1 때 이미 옮긴 평소 판은 다시 더하지 않음
+      c.pdDay.mig = 2;
+      if (take) for (const row of P.shop) if (row.daily && c.pd.n[row.id]) c.pdDay.n[row.id] = (c.pdDay.n[row.id] || 0) + c.pd.n[row.id];
     }
     return c.pdDay;
   }
