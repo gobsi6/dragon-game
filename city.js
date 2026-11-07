@@ -334,7 +334,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     const m = ct(d), now = Date.now(); const items = []; let changed = false;
     for (const g of m.golems) {
       if (!g.job || g.until > now) continue;
-      const rep = { job: g.job, hours: g.hours, got: {}, son: 0, seals: g.hours * R.sealPerHour, frag: null, at: g.until };
+      const rep = { job: g.job, hours: g.hours, got: {}, son: 0, seals: Math.round(g.hours * R.sealPerHour * (logic.lifeMods ? logic.lifeMods(d).seals : 1)), frag: null, at: g.until }; // 장신구 효과 seals (지금은 이 효과를 가진 장신구 없음, 늘 1)
       if (g.job === 'build') {
         const rs = plotRooms(m), i = curIdx(m), r = rs[i];
         const add = r ? Math.min(g.hours, Math.max(0, r.hours - m.rooms[r.id].h)) : 0;
@@ -679,13 +679,13 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     if (!own(JOBS, job)) return err('그런 일은 없다.');
     hours = Number(hours); if (!R.hours.includes(hours)) return err('시간을 다시 골라야 한다.');
     if (job === 'build') { if (!m.plot) return err('먼저 집터를 골라야 한다.'); const r = plotRooms(m)[curIdx(m)]; if (!r) return err('모든 칸을 되살렸다. 도시 일손으로 보내 보자.'); if (m.rooms[r.id].h >= r.hours) return err(`${r.name}에 필요한 공사 시간은 다 채웠다. 재료를 채워야 한다.`); }
-    const cost = hours * R.golemEn, wear = hours * (R.wear.perHour[job] || 3);
+    const cost = hours * R.golemEn, wear = wearOf(d, job, hours);
     if (g.dur < wear) return err(`${g.name}의 내구도가 모자란다. (${wear} 필요, 지금 ${g.dur}) 먼저 손질해 주자.`);
     if (d.en < cost) return err(`기력이 모자란다. (${cost} 필요)`);
     if (d.en >= logic.enCap(d)) d.en_at = Date.now();
     d.en -= cost;
     const ms = hours * 3600000 * (m.plot === 'forge' && perkOn(m) ? 1 - PERK.forgeOff[perkLv(m)] : 1) / (Number(process.env.CITY_FAST) || 1); // CITY_FAST: 시험용으로 시간을 빨리 (평소엔 비워 둠)
-    Object.assign(g, { job, hours, start: Date.now(), until: Date.now() + ms, report: null, dur: g.dur - wear });
+    Object.assign(g, { job, hours, start: Date.now(), until: Date.now() + ms, report: null, dur: g.dur - wear, wear, last: { job, hours } }); // last: 다음에 고를 일의 기본값 (돌아온 뒤에도 눌렀던 버튼이 그대로)
     return { ok: true, lines: [`${ga(g.name)} ${JOBS[job]} ${hours}시간을 하러 갔다. 기력 −${cost}, 내구도 −${wear} (남은 ${g.dur}).`] };
   }
   // 골렘 작업 중단 (일하러 간 골렘을 도중에 데려옴): 그때까지 다 채운 시간만큼만 일한 것으로 치고(가져온 것·재건도·인장도 그만큼),
@@ -699,7 +699,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     const per = Math.max(1, (g.until - g.start) / g.hours); // 한 시간 몫 (대장간 덤이면 짧음)
     const worked = Math.max(0, Math.min(g.hours - 1, Math.floor((now - g.start) / per)));
     const left = g.hours - worked, back = left * R.golemEn, name = g.name, job = JOBS[g.job];
-    const wearBack = left * (R.wear.perHour[g.job] || 3); g.dur = Math.min(R.wear.max, (g.dur ?? R.wear.max) + wearBack); // 하지 못한 시간만큼 내구도도
+    const wearBack = g.wear != null && g.hours ? Math.round(g.wear * left / g.hours) : left * (R.wear.perHour[g.job] || 3); g.dur = Math.min(R.wear.max, (g.dur ?? R.wear.max) + wearBack); // 하지 못한 시간만큼 내구도도
     const cap = logic.enCap(d), en0 = d.en;
     d.en = Math.min(cap, d.en + back); // 넘치는 몫은 버림 (기력이 이미 거의 찼을 때)
     if (d.en >= cap && en0 < cap) d.en_at = now;
@@ -723,6 +723,9 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     g.awake = true; g.dur = R.wear.max;
     return { ok: true, lines: [`쓰러진 골렘의 금 간 몸을 늪철로 잇고 흑요석을 박아 넣었다. 눈에 청록빛이 켜졌다. 골렘 탭에서 이름을 지어 줄 수 있다.`] };
   }
+  // 일 보낼 때 닳는 내구도 (장신구 효과 golemWear: 지금은 이 효과를 가진 장신구 없음, 늘 1)
+  const wearMul = (d) => (logic.lifeMods ? logic.lifeMods(d).golemWear : 1);
+  const wearOf = (d, job, hours) => Math.max(1, Math.round(hours * (R.wear.perHour[job] || 3) * wearMul(d)));
   // 손질: 닳은 만큼 한 번에 채움. by = 'seal'(석공 인장) | 'mat'(룬이 새겨진 돌 + 늪철)
   const mendCost = (g, by) => { const lack = R.wear.max - (g.dur ?? R.wear.max); if (lack <= 0) return null;
     if (by === 'seal') return { seals: Math.ceil(lack / R.mend.seal), items: {} };
@@ -840,7 +843,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
       me: {
         plot: m.plot, plots: PLOTS.map((p) => ({ id: p.id, name: p.name, mood: p.mood, room: p.room, perk: p.perk })),
         rooms: rs.map((r, i) => ({ id: r.id, name: r.name, hours: r.hours, h: m.rooms[r.id].h, mats: Object.entries(r.mats).map(([k, n]) => ({ id: k, name: ITEMS[k].name, need: n, put: m.rooms[r.id].mats[k] || 0 })), opens: r.opens, state: i < ci ? 'done' : i === ci ? 'cur' : 'lock' })),
-        golems: m.golems.map((g, i) => ({ i, name: g.name, named: !!g.named, awake: g.awake, job: g.job, hours: g.hours, start: g.start, until: g.until, report: g.report, gate: g.awake ? null : gateOf(m, i), dur: g.dur ?? R.wear.max })),
+        golems: m.golems.map((g, i) => ({ i, name: g.name, named: !!g.named, awake: g.awake, job: g.job, hours: g.hours, start: g.start, until: g.until, report: g.report, last: g.last || null, gate: g.awake ? null : gateOf(m, i), dur: g.dur ?? R.wear.max })),
         deco: m.deco || null, decoRules: { grid: DECO.grid, max: DECO.max, out: DECO.out },
         furn: m.furn, furnCat: Object.entries(FURN).map(([k, f]) => ({ s: k, name: f.name, seals: sealCost(f), base: f.seals, bp: own(BLUEPRINT, k) ? !!(m.bp || {})[k] : null, mats: Object.entries(f.mats).map(([id, n]) => ({ id, name: ITEMS[id].name, need: n })) })),
         zday: Object.fromEntries(Object.entries(m.zday || {}).filter(([, v]) => v === dayIdx())), springLeft: ZF.springTimes - (m.spring && m.spring.day === dayIdx() ? m.spring.n : 0), bell: (() => { const bt = bellToday(), by = Array.isArray(bt.by) ? bt.by : []; return { n: by.length, need: ZF.bellNeed, mine: by.includes(d.name), on: by.length >= ZF.bellNeed }; })(), forgeOff: done('forge') ? ZF.forgeOff : 0,
@@ -850,7 +853,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
         perk: m.plot ? (() => { const on = perkOn(m), pd = perkDaily(m), max = perkMax(m); return { on, up: perkUp(m), kind: m.plot === 'forge' ? 'passive' : m.plot === 'belfry' ? 'recall' : 'daily', text: PI[m.plot].perk, left: on ? Math.max(0, max - pd.n) : 0, max, off: m.plot === 'forge' ? PERK.forgeOff[perkLv(m)] : 0 }; })() : null,
         book: { has: hasBook(m), list: bookOf(d.name), unread: bookNew(d, m) },
         gifts: m.plot && db.giftHomeList ? db.giftHomeList(d.id).map((g) => ({ id: g.id, from: g.from.name, at: g.at })) : [], // 집터에 놓여 있는 선물 (누가·언제만. 무엇인지는 받을 때 열어 봄)
-        seals: m.seals, daySon: m.daySon || 0, bank: m.bank || 0, sonAll: m.sonAll || 0, frags: m.frags, en: d.en, enMax: logic.enCap(d),
+        seals: m.seals, wearMul: wearMul(d), daySon: m.daySon || 0, bank: m.bank || 0, sonAll: m.sonAll || 0, frags: m.frags, en: d.en, enMax: logic.enCap(d),
         req: { ...q, name: ITEMS[q.id].name },
         inv: Object.fromEntries([...need].map((k) => [k, have(d, k)])),
       },

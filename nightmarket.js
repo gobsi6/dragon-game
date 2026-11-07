@@ -49,10 +49,11 @@ module.exports = function setupNightMarket({ io, db, online, logic, sendMe }) {
   function spare(d, id) {
     const it = ITEMS[id];
     if (!it || it.cat === 'treasure') return 0;
-    const worn = Object.values(logic.equipOf(d)).includes(id) ? 1 : 0;
-    const enh = !worn && logic.gearOf(d)[id] && logic.gearAt(d, id) === 'inv' ? 1 : 0; // 강화·각인한 장신구는 그 한 개를 남김 (기록이 사라지지 않게)
-    const kept = logic.keptFor ? logic.keptFor(d, id) : 0; // 프리셋에 넣어 둔 몫은 남김 (시장 팔기와 같게)
-    return Math.max(0, db.itemCount(d.id, id) - worn - enh - kept);
+    // 끼고 있는 장신구는 이미 소지품에서 빠져 있으므로(equip이 소지품에서 하나를 덜어 냄) 따로 빼지 않음.
+    // 예전에는 여기서 끼고 있는 것을 한 번 더 빼서, 같은 장신구를 하나 끼고 하나 여분으로 가지고 있으면 여분을 올릴 수 없었음
+    // 강화·각인한 것도 올릴 수 있음 (보통 것부터 올라가고, 강화한 한 개까지 올리면 강화는 떨어진 채 노점에 감: put에서 안내)
+    const kept = logic.keptFor ? logic.keptFor(d, id) : 0; // 프리셋에 넣어 둔 몫은 남김 (시장 팔기와 같게. 끼고 있는 것은 keptFor가 이미 셈)
+    return Math.max(0, db.itemCount(d.id, id) - kept);
   }
   const itemText = (id, qty) => `${ITEMS[id].name}${qty > 1 ? ` ${qty}개` : ''}`;
   const live = (id) => online.get(id) || null;
@@ -136,7 +137,7 @@ module.exports = function setupNightMarket({ io, db, online, logic, sendMe }) {
     if (!Number.isFinite(qty) || qty < 1 || qty > R.qtyMax) return { error: '개수를 다시 정해야 한다.' };
     if (!Number.isFinite(price) || price < 1 || price > R.priceMax) return { error: `값은 1닢부터 ${R.priceMax.toLocaleString()}닢까지 정할 수 있다.` };
     const nm = ITEMS[id].name;
-    if (spare(d, id) < qty) return { error: `${nm}${josa(nm, '이', '가')} 그만큼 없다.${Object.values(logic.equipOf(d)).includes(id) ? ' (끼고 있는 것은 올릴 수 없다)' : logic.gearOf(d)[id] && logic.gearAt(d, id) === 'inv' ? ' (강화·각인한 것은 올릴 수 없다)' : ''}` };
+    if (spare(d, id) < qty) return { error: `${nm}${josa(nm, '이', '가')} 그만큼 없다.${logic.keptFor?.(d, id) ? ' (프리셋에 넣어 둔 것은 올릴 수 없다)' : Object.values(logic.equipOf(d)).includes(id) ? ' (끼고 있는 것은 올릴 수 없다)' : ''}` };
     const m = st.stalls[d.id] || { name: d.name, kind: d.kind, sign: '', items: [], at: now, sold: 0, earned: 0 };
     const line = m.items.find((x) => x.id === id);
     if (!line && m.items.length >= R.lines) return { error: `노점에는 물건을 ${R.lines}가지까지 올릴 수 있다.` };
@@ -146,7 +147,10 @@ module.exports = function setupNightMarket({ io, db, online, logic, sendMe }) {
     m.name = d.name; m.kind = d.kind; m.at = now;
     st.stalls[d.id] = m;
     save();
-    return { title: '야시장', lines: [`${first ? '광장 한쪽에 노점을 펴고 ' : ''}${itemText(id, qty)}${josa(qty > 1 ? '개' : nm, '을', '를')} 개당 ${price}닢에 올려놓았다.`], items: [{ id, qty: -qty }] };
+    // 강화·각인한 한 개까지 올라가면 강화는 떨어짐 (노점의 물건은 보통 것으로 팔림)
+    const g = logic.gearOf(d)[id], strip = ITEMS[id].type === 'equip' && g && logic.gearAt(d, id) === 'inv' && db.itemCount(d.id, id) - qty < 1;
+    if (strip) delete logic.gearOf(d)[id];
+    return { title: '야시장', lines: [`${first ? '광장 한쪽에 노점을 펴고 ' : ''}${itemText(id, qty)}${josa(qty > 1 ? '개' : nm, '을', '를')} 개당 ${price}닢에 올려놓았다.`, ...(strip ? [`${nm}의 강화가 떨어졌다.`] : [])], items: [{ id, qty: -qty }] };
   }
   // 내 노점에서 물건 거두기 (id가 없으면 노점을 통째로 걷음). 어디에 있든 할 수 있음
   function take(d, id) {

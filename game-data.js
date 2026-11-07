@@ -533,6 +533,18 @@ const ITEMS = {
   herbal_ointment:{ name: '약초상 연고',    rarity: 'common',   type: 'use', use: { hp: 50 }, value: 18, desc: '왕도 약초상이 파는 쓴 냄새의 연고다.' },
   strong_wine:  { name: '진한 포도주',      rarity: 'common',   type: 'use', use: { en: 40 }, value: 20, desc: '한 통을 비우면 기운이 끓어오른다.' },
   salted_fish:  { name: '절인 생선',        rarity: 'common',   type: 'use', use: { ap: 2 },  value: 25, desc: '어촌에서 말린 짭짤한 생선이다.' },
+  // 시장 요리 재료 (왕도·남쪽 해안 시장)
+  hen_egg:      { name: '달걀',             rarity: 'common',   value: 4,  desc: '닭장에서 갓 꺼내 아직 따뜻한 달걀. 시장 아주머니가 지푸라기에 싸서 내준다.' },
+  wheat_flour:  { name: '밀가루',           rarity: 'common',   value: 3,  desc: '왕도 방앗간에서 곱게 빻은 하얀 밀가루. 자루를 열면 고소한 냄새가 훅 올라온다.' },
+  cane_sugar:   { name: '설탕',             rarity: 'common',   value: 4,  desc: '남쪽 바닷가 사탕수수로 만든 누런 설탕. 한 꼬집이면 아이들 얼굴이 환해진다.' },
+  raspberry:    { name: '산딸기',           rarity: 'common',   value: 4,  desc: '해안 언덕 덤불에서 딴 새빨간 산딸기. 손끝이 금세 붉게 물든다.' },
+  grape:        { name: '포도',             rarity: 'common',   value: 5,  desc: '왕도 남쪽 비탈에서 자란 보랏빛 포도 한 송이. 알이 탱탱하고 달다.' },
+  pear:         { name: '배',               rarity: 'common',   value: 5,  desc: '해안 마을 과수원의 둥글고 큼직한 배. 한 입 베어 물면 시원한 물이 흐른다.' },
+  // 시장 재료로 만드는 요리
+  egg_bread:    { name: '달걀빵',           rarity: 'common',   cat: 'meal', value: 12, desc: '밀가루 반죽에 달걀을 통째로 얹어 구운 빵. 갈라진 틈으로 노른자가 보인다. (대장장이 쪽)' },
+  berry_tart:   { name: '산딸기 타르트',    rarity: 'uncommon', cat: 'meal', value: 18, desc: '바삭한 반죽 위에 설탕에 졸인 산딸기를 소복이 올렸다. 아이들이 입가를 빨갛게 물들인다. (약초꾼 쪽)' },
+  egg_stirfry:  { name: '닭고기 달걀볶음',  rarity: 'common',   cat: 'meal', value: 16, desc: '닭고기를 잘게 썰어 달걀과 함께 볶았다. 새끼 드래곤이 접시째 핥아 먹는다.' },
+  fruit_punch:  { name: '과일 화채',        rarity: 'common',   type: 'use', use: { en: 25, mind: 8 }, value: 14, desc: '포도알과 배를 썰어 설탕물에 띄웠다. 시원하게 들이켜면 기운이 돌고 머리가 맑아진다.' },
   chicken_meat: { name: '닭고기',           rarity: 'common',   value: 8,  desc: '왕도 시장 정육점에서 끈으로 묶어 내주는 통통한 닭고기. 사람 아이도 새끼 드래곤도 잘 먹는다.' }, // 시장에서 파는 고기 (식구 먹이)
   silver_chain: { name: '은 사슬',          rarity: 'uncommon', value: 15, desc: '인간 대장장이가 엮은 가는 사슬이다.' },
   travel_map:   { name: '여행자의 지도',    rarity: 'uncommon', type: 'equip', slot: 'charm', bonus: {}, expRare: 0.04, value: 60, desc: '인간들이 그린 대륙 지도다. 생각보다 정확하다.' },
@@ -655,6 +667,10 @@ const RECIPES = [
   { out: 'fish_porridge', needs: { salted_fish: 1, grass_seed: 1 },                    en: 3,  wis: 0 },
   { out: 'hearth_bread',  needs: { red_clay: 1, grass_seed: 2 },                       en: 3,  wis: 0 },
   { out: 'feast_plate',   needs: { wild_honey: 1, salted_fish: 1, grass_seed: 3 },      en: 6,  wis: 0 },
+  { out: 'egg_bread',     needs: { wheat_flour: 2, hen_egg: 1, cane_sugar: 1 },        en: 3,  wis: 0 }, // 시장 재료 요리
+  { out: 'berry_tart',    needs: { wheat_flour: 1, cane_sugar: 1, raspberry: 2 },      en: 4,  wis: 0 },
+  { out: 'egg_stirfry',   needs: { hen_egg: 2, chicken_meat: 1 },                      en: 3,  wis: 0 }, // 새끼 먹이
+  { out: 'fruit_punch',   needs: { grape: 2, pear: 1, cane_sugar: 1 },                 en: 3,  wis: 0 },
   { out: 'honey_salve',   needs: { wild_honey: 1, grass_seed: 2 },                     en: 4,  wis: 0 },
   { out: 'calamity_charm',needs: { calamity_core: 2, ancient_relic: 1 },                en: 16, wis: 13 },
   { out: 'thorn_trap',    needs: { beast_hide: 2, sharp_fang: 2 },                     en: 5,  wis: 0 },
@@ -767,8 +783,8 @@ for (const it of Object.values(ITEMS)) if (it.value == null) it.value = RARITY_V
 // ── 인간 마을 ──────────────────────────────────────
 // 시장이 있는 지역과 파는 물건
 const SHOPS = {
-  capital: ['herbal_ointment', 'strong_wine', 'silver_chain', 'travel_map', 'holy_water', 'chicken_meat'],
-  coast:   ['herbal_ointment', 'salted_fish', 'bait_worm', 'silver_chain', 'sea_compass', 'salt_crystal'],
+  capital: ['herbal_ointment', 'strong_wine', 'silver_chain', 'travel_map', 'holy_water', 'chicken_meat', 'hen_egg', 'wheat_flour', 'cane_sugar', 'grape'],
+  coast:   ['herbal_ointment', 'salted_fish', 'bait_worm', 'silver_chain', 'sea_compass', 'salt_crystal', 'hen_egg', 'wheat_flour', 'cane_sugar', 'raspberry', 'pear'],
 };
 
 // 우호 성향이고 마을 평판이 '호의'(20) 이상일 때만 파는 물건
@@ -995,7 +1011,7 @@ const RUIN = {
 
 const TRADE = {
   // 시장에서 하루(한국 날짜)에 살 수 있는 개수. 적지 않은 물건은 제한 없음
-  dailyBuy: { salted_fish: 5, holy_water: 5, herbal_ointment: 10, strong_wine: 10, bait_worm: 10, salt_crystal: 5, chicken_meat: 10 },
+  dailyBuy: { salted_fish: 5, holy_water: 5, herbal_ointment: 10, strong_wine: 10, bait_worm: 10, salt_crystal: 5, chicken_meat: 10, hen_egg: 10, wheat_flour: 10, cane_sugar: 10, raspberry: 10, grape: 10, pear: 10 },
   stanceCooldown: 12 * 60 * 60 * 1000, // 성향을 바꾼 뒤 다시 바꾸기까지 (12시간)
   refuseBelow: -40,                 // 평판이 이보다 낮으면 상인이 거래를 거절
   intimidateCost: 2,                // 위협하기에 드는 행동력
@@ -1070,6 +1086,12 @@ const KIN = {
     fish_octopus:  { bond: 6,  talent: 'guard',     sat: 35, eat: '문어 빨판이 손가락에 달라붙자 깔깔 웃다가, 데쳐 주자 쫄깃쫄깃 씹어 먹는다.' },
     fish_crab:     { bond: 5,  talent: 'smith',     sat: 25, eat: '단단한 게딱지를 돌로 톡톡 깨 가며 살을 파먹는다. 껍데기는 장난감이 되었다.' },
     fish_cod:      { bond: 7,  talent: 'herbalist', sat: 40, eat: '뽀얗게 끓인 대구 국물을 후후 불어 마시고는 볼이 발그레해진다.' },
+    hen_egg:       { bond: 2,  talent: 'guard',     sat: 15, eat: '삶은 달걀을 탁자에 콩 찧어 까더니, 노른자부터 쏙 빼 먹는다.' },
+    raspberry:     { bond: 3,  talent: 'herbalist', sat: 10, eat: '산딸기를 손가락마다 하나씩 끼우고 하나씩 빼 먹는다.' },
+    grape:         { bond: 3,  talent: 'herbalist', sat: 12, eat: '포도알을 하나씩 떼어 입에 넣고, 씨는 멀리 뱉기 내기를 한다.' },
+    pear:          { bond: 3,  talent: 'guard',     sat: 15, eat: '배를 두 손으로 들고 크게 베어 물자 턱으로 물이 줄줄 흐른다.' },
+    egg_bread:     { bond: 8,  talent: 'smith',     sat: 45, eat: '달걀빵을 반으로 갈라 노른자 쪽을 먼저 먹고, 빵은 나중에 아껴 먹는다.' },
+    berry_tart:    { bond: 11, talent: 'herbalist', sat: 40, eat: '타르트 위의 산딸기를 하나하나 세어 보더니 한입에 넣고 눈을 꼭 감는다.' },
     chicken_meat:  { bond: 4,  talent: 'guard',     sat: 30, eat: '닭다리를 구워 주자 두 손으로 붙잡고 뜯는다. 기름 묻은 손을 옷에 쓱 닦았다.' },
     fish_flyingfish:{ bond: 6, talent: 'guard',     sat: 30, eat: '날치 지느러미를 펼쳐 보며 "나도 날 수 있을까?" 하고 묻는다. 구워 주자 맛있게 먹는다.' },
     fish_bream:    { bond: 12, talent: null,        sat: 60, eat: '금빛 비늘에 눈이 휘둥그레진다. 한 점 한 점 아껴 가며 먹는다.' },
@@ -1155,7 +1177,7 @@ const KIN = {
       fish_mackerel: { bond: 3, sat: 25 }, fish_flounder: { bond: 3, sat: 25 }, fish_salmon: { bond: 6, sat: 45 }, fish_eel: { bond: 6, sat: 40 }, fish_marlin: { bond: 12, sat: 90 },
       bait_meat: { bond: 4, sat: 30 }, salted_fish: { bond: 4, sat: 30 },
       roast_meat: { bond: 8, sat: 60 }, ember_snack: { bond: 7, sat: 45 }, fish_skewer: { bond: 8, sat: 55 }, dragon_feast: { bond: 14, sat: 100 },
-      wyvern_meat: { bond: 6, sat: 40 }, wyvern_steak: { bond: 12, sat: 80 }, chicken_meat: { bond: 3, sat: 25 }, // 와이번 고기 · 시장 닭고기
+      wyvern_meat: { bond: 6, sat: 40 }, wyvern_steak: { bond: 12, sat: 80 }, chicken_meat: { bond: 3, sat: 25 }, hen_egg: { bond: 2, sat: 15 }, egg_stirfry: { bond: 9, sat: 60 }, // 와이번 고기 · 시장 닭고기·달걀
       // 늘어난 물고기 (가시 복어는 독이 있어 빼고, 오로라 해파리·달빛 가오리는 먹이가 아니라 재료)
       fish_mullet: { bond: 3, sat: 25 }, fish_gizzard: { bond: 3, sat: 25 }, fish_anchovy: { bond: 2, sat: 15 },
       fish_rockfish: { bond: 3, sat: 25 }, fish_jack: { bond: 3, sat: 20 }, fish_filefish: { bond: 3, sat: 20 }, fish_greenling: { bond: 3, sat: 25 }, fish_hairtail: { bond: 5, sat: 40 },
@@ -1375,6 +1397,10 @@ const FREE = {
     wild_honey: {food: 2, life: 2, vigor: 2},
     wyvern_meat: {food: 3, vigor: 2},
     chicken_meat: {food: 2, life: 1},
+    // 행상인 재료: 과일은 이 대륙 것보다 성질이 진함, 양념은 기운(바다꽃 소금 얼음 · 붉은 후추 불 · 향나무 껍질 혼)을 덧입힘
+    sunset_apple: {food: 2, clear: 3}, honey_date: {food: 2, vigor: 2, life: 1}, star_lemon: {food: 1, vigor: 3},
+    sea_salt_flower: {food: 1, frost: 2}, red_peppercorn: {food: 1, fire: 2}, cedar_bark: {food: 1, soul: 2},
+    hen_egg: {food: 2, life: 1}, wheat_flour: {food: 2}, cane_sugar: {food: 1, vigor: 1}, raspberry: {food: 1, clear: 1}, grape: {food: 1, vigor: 1}, pear: {food: 2, clear: 1},
     moss_flower: {food: 2, clear: 2},
     snow_flower: {food: 2, clear: 2, frost: 2},
     glow_moss: {food: 2, clear: 2},
@@ -2564,6 +2590,126 @@ const ELITES = {
   ruins: '깨어난 수호 골렘', canyon: '황금 꼬리 전갈', volcano: '용암 도롱뇽 군주',
 };
 
+// ── 안개 너머의 행상인: 하루 세 번, 남쪽 해안 어촌 선창에 배를 대는 이국 상인 (peddler.js) ──
+// 끝없는 안개 너머 어딘가에 또 다른 땅이 있음을 내비침. 이 대륙에서는 나지 않는 과일·양념과 '안개 상자'를 팖
+Object.assign(ITEMS, {
+  // 과일·양념 (요리 재료)
+  sunset_apple:   { name: '노을 사과',     rarity: 'uncommon', type: 'use', use: { mind: 12 }, value: 30, exotic: true, desc: '껍질이 저녁노을처럼 붉다가 끝으로 갈수록 보랏빛이 도는 사과. 한 입 베어 물면 머리가 맑아진다. 이 대륙의 어느 과수원에서도 자라지 않는다.' },
+  honey_date:     { name: '꿀대추',        rarity: 'uncommon', value: 24, exotic: true, desc: '말리면 꿀처럼 끈적하게 단맛이 배는 대추. 안개 너머 사막에서 따 왔다고 한다. 아이들도 새끼 드래곤도 좋아한다.' },
+  star_lemon:     { name: '별 레몬',       rarity: 'uncommon', value: 40, exotic: true, desc: '꼭지 쪽이 다섯 갈래로 갈라진 노란 열매. 자르면 단면이 별 모양이다. 시큼한 즙이 혀끝을 깨운다.' },
+  sea_salt_flower:{ name: '바다꽃 소금',   rarity: 'uncommon', value: 45, exotic: true, spice: 'salt', desc: '파도가 바위에 남긴 소금이 꽃잎처럼 겹겹이 굳은 것. 식구 요리와 새끼 먹이에 한 꼬집 넣으면 맛이 깊어진다.' },
+  red_peppercorn: { name: '붉은 후추 열매', rarity: 'uncommon', value: 45, exotic: true, spice: 'pepper', desc: '작고 단단한 붉은 열매. 깨물면 혀가 얼얼하다. 강화 음식에 넣으면 기운이 오래 간다.' },
+  cedar_bark:     { name: '향나무 껍질',   rarity: 'uncommon', value: 45, exotic: true, spice: 'cedar', desc: '얇게 벗긴 향나무 껍질. 끓이면 숲 냄새가 퍼진다. 회복 음식에 넣으면 효과가 더 잘 돈다.' },
+  // 안개 상자: 열면 이국 장신구·요리 재료·기념품 중 하나 (+ 행상인의 증표)
+  mist_box:       { name: '안개 상자',     rarity: 'rare', type: 'use', use: { mistBox: 1 }, value: 0, noSell: true, exotic: true, desc: '안개 너머의 행상인이 파는 봉인된 나무 상자. 겉에 알 수 없는 글자가 낙인처럼 찍혀 있다. 열어 보기 전에는 무엇이 들었는지 모른다.' },
+  mist_token:     { name: '행상인의 증표', rarity: 'uncommon', value: 0, noSell: true, exotic: true, desc: '안개 상자를 열면 함께 들어 있는 조개 동전. 행상인에게 모아 가면 원하는 이국 장신구와 바꿔 준다.' },
+  // 행상인이 바로 파는 것: 음식 · 회복약 · 보물 · 추억 선물
+  date_bread:     { name: '꿀대추 빵',     rarity: 'uncommon', cat: 'meal', value: 30, exotic: true, desc: '꿀대추를 잔뜩 박아 구운 사막 사람들의 납작한 빵. 오래 두어도 굳지 않아 먼 뱃길에 싣는다. 아이들이 한 조각씩 뜯어 먹으며 좋아한다.' },
+  salt_jerky:     { name: '바다소금 육포', rarity: 'uncommon', cat: 'meal', value: 28, exotic: true, desc: '바다꽃 소금에 절여 말린 두툼한 고기. 새끼 드래곤이 앞발로 붙잡고 한참을 씹는다.' },
+  coral_salve:    { name: '산호 연고',     rarity: 'common',   type: 'use', use: { hp: 40 },          value: 20, exotic: true, desc: '산호 가루를 기름에 갠 붉은 연고. 상처에 바르면 시원하다가 금세 따뜻해진다.' },
+  mint_drop:      { name: '박하 별사탕',   rarity: 'common',   type: 'use', use: { en: 20, mind: 5 }, value: 18, exotic: true, desc: '별 모양으로 굳힌 박하 사탕. 입에 넣으면 코끝이 뻥 뚫리고 졸음이 달아난다.' },
+  tr_mist_coin:   { name: '안개 너머의 금화', rarity: 'rare', cat: 'treasure', value: 1700, exotic: true, desc: '이 대륙의 것이 아닌 금화. 한쪽에는 처음 보는 왕의 얼굴이, 다른 쪽에는 바다를 가르는 배가 새겨져 있다. 안개 너머에도 왕국이 있다는 증거다.' },
+  tr_star_chart:  { name: '모래 왕국의 별 지도', rarity: 'rare', cat: 'treasure', value: 1100, exotic: true, desc: '낯선 별자리가 금실로 수놓인 가죽 지도. 이 대륙의 하늘에서는 보이지 않는 별이 절반이다.' },
+  tr_coral_cup:   { name: '산호 도시의 은잔', rarity: 'uncommon', cat: 'treasure', value: 800, exotic: true, desc: '손잡이가 산호 가지 모양으로 휘어진 은잔. 바닥에 물결무늬가 새겨져 있어, 물을 부으면 잔 속에서 파도가 이는 것 같다.' },
+  fog_conch:      { name: '안개 고둥',     rarity: 'uncommon', type: 'use', use: { keep: 'fog_conch' },     value: 40, exotic: true, desc: '귀에 대면 파도 소리 대신 낯선 말소리가 들리는 고둥. 보물 상자에 간직하거나 누군가에게 선물할 수 있다.' },
+  coral_comb:     { name: '산호 머리빗',   rarity: 'uncommon', type: 'use', use: { keep: 'coral_comb' },    value: 30, exotic: true, desc: '붉은 산호를 깎아 만든 작은 빗. 바닷속 도시의 신부들이 쓴다고 한다. 보물 상자에 간직하거나 누군가에게 선물할 수 있다.' },
+  star_hourglass: { name: '별자리 모래시계', rarity: 'rare',   type: 'use', use: { keep: 'star_hourglass' }, value: 60, exotic: true, desc: '뒤집으면 반짝이는 모래가 별자리 모양으로 쌓였다가 흩어진다. 보물 상자에 간직하거나 누군가에게 선물할 수 있다.' },
+  // 이국 합성 재료: 안개 상자에서만 드물게. 자유 제작에서 멸망한 대륙 재료처럼 장신구 상한을 1단계 올림 (FREE.ruinMats 1)
+  mist_pearl:     { name: '안개 진주',     rarity: 'rare', value: 60, exotic: true, desc: '안개 너머 바다에서만 자란다는 뿌연 진주. 들여다보면 속에서 옅은 안개가 천천히 돈다. 자유 제작에 넣으면 장신구가 한 단계 더 단단해진다.' },
+  coral_branch:   { name: '붉은 산호 가지', rarity: 'rare', value: 60, exotic: true, desc: '바닷속 도시의 성벽을 이룬다는 붉은 산호를 한 가지 꺾어 왔다. 돌처럼 단단하고, 실처럼 엮을 수도 있다. 자유 제작에 넣으면 장신구가 한 단계 더 단단해진다.' },
+  sand_glass:     { name: '모래 유리 조각', rarity: 'rare', value: 60, exotic: true, desc: '모래 왕국의 사막에 번개가 떨어져 녹아 굳은 유리. 가볍고 끝이 날카롭다. 자유 제작에 넣으면 장신구가 한 단계 더 단단해진다.' },
+  // 이국 회복약: 안개 상자에서만 나옴
+  mist_draught:   { name: '안개꽃 물약',   rarity: 'uncommon', type: 'use', use: { hp: 50 },          value: 30, exotic: true, desc: '안개 속에서만 피는 흰 꽃을 우려낸 물약. 병을 흔들면 안에서 옅은 안개가 피어오른다. 마시면 상처가 금세 아문다.' },
+  coral_tonic:    { name: '산호 강장제',   rarity: 'uncommon', type: 'use', use: { en: 35 },          value: 30, exotic: true, desc: '바닷속 도시에서 붉은 산호 가루를 녹여 만든다는 강장제. 짭짤하고 뜨끈한 것이 목을 타고 내려가면 기운이 돈다.' },
+  clear_wind_incense: { name: '맑은 바람 향', rarity: 'uncommon', type: 'use', use: { mind: 25 },   value: 35, exotic: true, desc: '피우면 바닷바람 같은 연기가 퍼지는 향. 어지럽던 머릿속이 씻은 듯 맑아진다.' },
+  star_honey:     { name: '별꿀 한 병',    rarity: 'rare',     type: 'use', use: { hp: 35, en: 20, mind: 10 }, value: 60, exotic: true, desc: '별빛이 드는 밤에만 꿀을 모은다는 안개 너머 벌의 꿀. 한 숟갈이면 몸도 기운도 마음도 한꺼번에 추슬러진다.' },
+  // 행상인 재료로 만드는 요리
+  apple_pie:      { name: '노을 사과 파이', rarity: 'uncommon', cat: 'meal', value: 30, desc: '노을 사과를 얇게 저며 꿀과 함께 구운 파이. 자르면 단면이 노을빛이다. 아이들이 한 조각 더 달라고 조른다.' },
+  date_dumpling:  { name: '꿀대추 경단',   rarity: 'uncommon', cat: 'meal', value: 26, desc: '꿀대추를 으깨 곡식 가루에 버무려 빚은 경단. 새끼 드래곤이 한입에 삼키고 또 조른다.' },
+  lemon_tonic:    { name: '별 레몬 절임',  rarity: 'uncommon', type: 'use', use: { buff: 'zest' }, value: 40, desc: '별 레몬을 꿀에 재운 절임. 한 조각 깨물면 온몸이 번쩍 깬다.' },
+});
+BUFFS.zest = { name: '상큼함', desc: '공격 +6%, 받는 피해 −6%, 전리품 확률 +10%', atk: 1.06, taken: 0.94, drop: 0.1 };
+RECIPES.push(
+  { out: 'apple_pie',     needs: { sunset_apple: 2, grass_seed: 2, wild_honey: 1 }, en: 5, wis: 0 },
+  { out: 'date_dumpling', needs: { honey_date: 2, grass_seed: 1 },                  en: 4, wis: 0 },
+  { out: 'lemon_tonic',   needs: { star_lemon: 2, wild_honey: 1 },                  en: 5, wis: 4 },
+);
+Object.assign(KIN.care, {
+  sunset_apple: { bond: 5, talent: 'herbalist', sat: 15 }, honey_date: { bond: 5, talent: 'herbalist', sat: 15 },
+  apple_pie: { bond: 14, talent: 'herbalist', sat: 55, eat: '노을빛 단면을 한참 들여다보다가, 아껴 먹듯 가장자리부터 조금씩 베어 문다.' },
+});
+Object.assign(KIN.drakeFood.items, { honey_date: { bond: 4, sat: 25 }, sunset_apple: { bond: 4, sat: 20 }, date_dumpling: { bond: 11, sat: 70 }, salt_jerky: { bond: 9, sat: 60 } });
+KIN.care.date_bread = { bond: 10, talent: 'herbalist', sat: 45, eat: '납작한 빵을 두 손으로 쥐고 꿀대추만 쏙쏙 골라 먹다가, 들킨 걸 알고 배시시 웃는다.' };
+
+// 이국 장신구: 상자에서 나올 때마다 능력치가 total 범위 안에서 새로 나뉨 (같은 나눔이면 같은 물건으로 겹침)
+// life: 싸움 밖에서 드는 효과 (game-logic.js lifeMods). 공격·받는 피해 같은 싸움 효과는 일부러 없음 (레이드 장비와 겹치지 않게)
+const PEDDLER = {
+  name: '안개 너머의 행상인',
+  region: 'coast',             // 남쪽 해안 절벽 (어촌 선창)
+  perDay: 3, minutes: 90,      // 하루 세 번, 한 번에 90분
+  from: 7, to: 25,             // 아침 7시부터 새벽 1시 사이에만 (이 시간을 셋으로 나눈 구간마다 한 번, 무작위 시각)
+  edge: 20,                    // 구간 가장자리에서 이만큼(분)은 비움
+  greet: [
+    '안개를 사흘 꼬박 헤치고 왔소. 이쪽 바다는 여전히 사납구려.',
+    '이 열매? 우리 고향에선 아이들도 길가에서 따 먹는다오. 여기선 귀한 모양이지만.',
+    '상자 속은 나도 다 모르오. 배에 실을 때 봉인된 채로 받아 오니까.',
+    '당신네 땅 이야기는 우리 쪽에선 옛날이야기로만 들었소. 정말 용이 사는 줄은 몰랐지.',
+    '안개가 걷히는 날이 오면, 그때는 이쪽에서도 배를 띄우시오.',
+  ],
+  shop: [ // 한 번 들를 때(90분) 드래곤마다 살 수 있는 개수
+    { id: 'mist_box',        price: 3000, limit: 5, group: '안개 상자' },
+    { id: 'sunset_apple',    price: 90,   limit: 6, group: '과일·양념' },
+    { id: 'honey_date',      price: 70,   limit: 6 },
+    { id: 'star_lemon',      price: 140,  limit: 4 },
+    { id: 'sea_salt_flower', price: 180,  limit: 3 },
+    { id: 'red_peppercorn',  price: 180,  limit: 3 },
+    { id: 'cedar_bark',      price: 180,  limit: 3 },
+    { id: 'date_bread',      price: 120,  limit: 3, group: '음식' },
+    { id: 'salt_jerky',      price: 110,  limit: 3 },
+    { id: 'coral_salve',     price: 90,   limit: 4, group: '회복약' },
+    { id: 'mint_drop',       price: 80,   limit: 4 },
+    { id: 'tr_coral_cup',    price: 700,  limit: 1, group: '보물 (보물더미 가치)' },
+    { id: 'tr_star_chart',   price: 1000, limit: 1 },
+    { id: 'tr_mist_coin',    price: 1500, limit: 1 },
+    { id: 'fog_conch',       price: 120,  limit: 2, group: '추억 선물' },
+    { id: 'coral_comb',      price: 100,  limit: 2 },
+    { id: 'star_hourglass',  price: 200,  limit: 1 },
+  ],
+  // 안개 상자 한 개를 열 때: w 비율로 하나, 그리고 증표는 언제나 tokens개
+  box: [
+    { w: 5,  kind: 'gear' },     // 이국 장신구 (여섯 가지가 같은 확률)
+    { w: 4,  kind: 'mat' },      // 이국 합성 재료 (boxMat)
+    { w: 33, kind: 'potion' },   // 이국 회복약 (boxPotion)
+    { w: 58, kind: 'food' },     // 이국 요리 재료 꾸러미 (boxFood)
+  ],
+  boxMat: { pool: { mist_pearl: 1, coral_branch: 1, sand_glass: 1 }, qty: [1, 1] }, // 하나 골라 1개
+  boxPotion: { pool: { mist_draught: 4, coral_tonic: 4, clear_wind_incense: 3, star_honey: 1 }, qty: [1, 2] }, // 하나 골라 1~2개
+  boxFood: { picks: [2, 3], pool: { sunset_apple: 3, honey_date: 3, star_lemon: 2, sea_salt_flower: 1, red_peppercorn: 1, cedar_bark: 1 }, qty: [1, 2] },
+  tokens: 1,
+  tokenTrade: 40,              // 증표 이만큼이면 고른 이국 장신구 하나 (상자 40개 = 120,000닢)
+  total: [10, 12],             // 능력치 총합 (총합이 클수록 이름 앞에 꾸밈말)
+  gearLv: 20,                  // 이국 장신구를 찰 수 있는 레벨 (레이드·에레보스 장신구와 같은 줄. 사고팔 수 있어 낮은 레벨이 돈으로 강해지지 않게)
+  totalWord: { 11: '고운', 12: '빼어난' },
+  gear: {
+    mist_turban:  { slot: 'head',  name: '모래바람 터번',       stats: ['wisdom', 'majesty', 'scale'], life: { fieldHp: 1.2 },     eff: '둥지 밖에서 체력이 저절로 차는 빠르기 +20%', desc: '모래바람 속을 며칠씩 걷는 안개 너머 상인들의 터번. 겹겹이 감은 천이 볕과 바람을 막아, 쓰고 있으면 지친 몸이 금세 추슬러진다.' },
+    mist_cape:    { slot: 'wing',  name: '무지개 섬 깃 망토',   stats: ['wing', 'wisdom', 'majesty'],  life: { gatherAp: 0.25 },   eff: '채집할 때 25% 확률로 쓴 행동력을 돌려받음', desc: '이 대륙에는 없는 새의 깃을 엮었다. 빛을 받으면 일곱 빛깔로 일렁이고, 두르면 풀숲을 헤치는 걸음이 깃털처럼 가볍다.' },
+    mist_hook:    { slot: 'claw',  name: '별 항해사의 발톱 고리', stats: ['claw', 'wing', 'wisdom'],   life: { healItem: 1.15 },   eff: '회복약·회복 음식으로 되찾는 체력·기력 +15%', desc: '별을 보고 바다를 건너는 항해사들의 쇠고리. 긴 항해에서 상처를 달래려고 고리 안쪽 홈에 약초 기름을 채워 둔다.' },
+    mist_coral:   { slot: 'tail',  name: '산호 비늘 꼬리 장식', stats: ['scale', 'wing', 'majesty'],   life: { restHp: 1.2 },      eff: '둥지에서 쉴 때 체력 회복 +20%', desc: '바닷속 도시에서 깎았다는 산호 장식. 꼬리에 감으면 물속처럼 몸이 가볍다.' },
+    mist_compass: { slot: 'neck',  name: '안개 나침반 목걸이',  stats: ['wisdom', 'scale', 'majesty'], life: { mindRegen: 1.2 },   eff: '정신이 맑아지는 빠르기 +20%', desc: '바늘이 북쪽이 아니라 늘 안개 쪽을 가리키는 나침반. 행상인도 왜 그런지 모른다고 한다. 걸고 있으면 어지럽던 마음이 가라앉고 갈 길이 또렷해진다.' },
+    mist_charm:   { slot: 'charm', name: '향신료 길의 부적',    stats: ['majesty', 'claw', 'wisdom'],  life: { enRegen: 1.2 },     eff: '기력이 저절로 차는 빠르기 +20%', desc: '향신료 상단이 길을 떠날 때 목에 거는 부적. 오래된 계피와 정향 냄새가 배어 있어, 한 번 들이마시면 처진 기운이 번쩍 든다.' },
+  },
+};
+// 이국 합성 재료의 자유 제작 성질과 단계 (멸망한 대륙 1단계 재료와 같음: 능력치 합의 끝 9, 한 능력치 6)
+Object.assign(FREE.tags, { mist_pearl: { lore: 3, shine: 2 }, coral_branch: { hard: 3, bind: 2 }, sand_glass: { sharp: 2, light: 3 } });
+Object.assign(FREE.ruinMats, { mist_pearl: 1, coral_branch: 1, sand_glass: 1 });
+// 양념: 요리를 만들 때 하나 넣으면 '○○ 요리'(id__salt 등)가 됨. 맞는 요리 종류에만
+//  salt(바다꽃 소금): 식구 요리·새끼 먹이 유대·배 ×1.3 / pepper(붉은 후추): 강화 음식 지속 ×1.4 / cedar(향나무 껍질): 회복 음식 체력·기력·정신 ×1.3
+PEDDLER.spices = {
+  salt:   { item: 'sea_salt_flower', word: '간이 밴',  fits: 'meal', bond: 1.3, sat: 1.2, text: '유대·배 +30%' },
+  pepper: { item: 'red_peppercorn',  word: '얼큰한',  fits: 'buff', min: 1.4,           text: '지속 시간 +40%' },
+  cedar:  { item: 'cedar_bark',      word: '향긋한',  fits: 'heal', mul: 1.3,           text: '회복량 +30%' },
+};
+
 // 부엌에서 아이가 만든 요리: 제작법이 있는 식구 요리·강화 음식·새끼 먹이마다 '정성 들인 ○○'(id__k)을 만들어 둠
 FACILITY.cookable = [];
 for (const r of RECIPES) {
@@ -2581,6 +2727,27 @@ for (const r of RECIPES) {
   FACILITY.cookable.push(r.out);
 }
 
+
+// 양념 넣은 요리: 제작법이 있는 요리마다 맞는 양념의 '○○ 요리'(id__salt · id__pepper · id__cedar)를 만들어 둠
+const josaKr = (w, a, b) => { const c = String(w).charCodeAt(String(w).length - 1) - 0xAC00; return c >= 0 && c <= 11171 && c % 28 ? a : b; };
+PEDDLER.spiceOf = {}; // 요리 id → 넣을 수 있는 양념 키
+for (const r of RECIPES) {
+  const it = ITEMS[r.out];
+  if (!it || r.out.includes('__')) continue;
+  const u = it.use || {};
+  const kind = it.cat === 'meal' ? 'meal' : it.type === 'use' && u.buff && !(u.hp || u.en || u.mind) ? 'buff' : it.type === 'use' && !u.buff && !u.keep && !u.crown && (u.hp || u.en || u.mind) ? 'heal' : null;
+  if (!kind) continue;
+  const [key, S] = Object.entries(PEDDLER.spices).find(([, x]) => x.fits === kind);
+  const id = `${r.out}__${key}`;
+  const def = { ...it, name: `${S.word} ${it.name}`, value: Math.round((it.value || 1) * 1.4), spiced: r.out, desc: `${it.desc} ${ITEMS[S.item].name}${josaKr(ITEMS[S.item].name, '을', '를')} 넣어 맛을 냈다. (${S.text})` };
+  if (kind === 'buff') def.use = { ...u, minutes: Math.round((u.minutes || BUFFS.minutes) * S.min) };
+  if (kind === 'heal') def.use = { ...u, ...Object.fromEntries(['hp', 'en', 'mind'].filter((k) => u[k]).map((k) => [k, Math.round(u[k] * S.mul)])) };
+  ITEMS[id] = def;
+  if (KIN.care[r.out]) { const c = KIN.care[r.out]; KIN.care[id] = { ...c, bond: Math.round(c.bond * (S.bond || 1)), sat: Math.round((c.sat || 0) * (S.sat || 1)) }; }
+  if (KIN.drakeFood.items[r.out]) { const f = KIN.drakeFood.items[r.out]; KIN.drakeFood.items[id] = { bond: Math.round(f.bond * (S.bond || 1)), sat: Math.round(f.sat * (S.sat || 1)) }; }
+  PEDDLER.spiceOf[r.out] = key;
+}
+
 // 걸작 장신구: 장신구마다 '걸작 ○○'(id__mw)을 따로 둠. 주 능력치 +1이 이미 들어 있고, 강화·각인도 걸작은 걸작대로 따로 기록됨
 // (예전에는 같은 장신구 전체에 걸작 표시가 붙어 일반·걸작이 한 칸에 겹쳤음)
 for (const [id, it] of Object.entries(ITEMS)) {
@@ -2596,6 +2763,9 @@ for (const [id, it] of Object.entries(ITEMS)) {
 // fmt — of: '루비의 그림' / from: '하늘에게 받은 들꽃 꽃다발' / plain: 이름만 · say: false면 함께 남은 글이 말이 아니라 설명 (따옴표 없이)
 const KEEPSAKES = {
   // 제작으로 만드는 선물 (보물 상자에 간직. 받은 것이면 '○○에게 받은')
+  fog_conch:     { name: '안개 고둥',         value: 40, fmt: 'from', desc: '귀에 대면 파도 소리 대신 낯선 말소리가 들리는 고둥. 안개 너머의 행상인에게서 왔다.' },
+  coral_comb:    { name: '산호 머리빗',       value: 30, fmt: 'from', desc: '붉은 산호를 깎아 만든 작은 빗. 바닷속 도시의 신부들이 쓴다고 한다.' },
+  star_hourglass:{ name: '별자리 모래시계',   value: 60, fmt: 'from', desc: '뒤집으면 반짝이는 모래가 별자리 모양으로 쌓였다가 흩어진다.' },
   shell_chime:   { name: '조개 풍경',         value: 12, fmt: 'from', desc: '조개껍데기를 거미줄 실에 꿰어 단 풍경. 바람이 불면 자그락자그락 바다 소리가 난다.' },
   amber_star:    { name: '호박 별 장식',      value: 30, fmt: 'from', desc: '호박을 별 모양으로 깎아 금실로 감쌌다. 안에 갇힌 작은 벌레가 별빛처럼 보인다.' },
   sea_glass_mobile: { name: '바다 유리 모빌',  value: 14, fmt: 'from', desc: '푸른 바다 유리 조각들이 떠내려온 나무 끝에서 흔들린다. 햇빛이 들면 상자 안이 물속처럼 일렁인다.' },
@@ -2942,7 +3112,7 @@ module.exports = {
   SCENES_HUMAN,
   PLAY_KINDS: Object.keys(KINDS).filter((k) => !KINDS[k].hidden), // 고를 수 있는 종족 (무작위로 뽑을 때도 이것만)
   isTestDragon: (d) => !!d && !!KINDS[d.kind]?.test,                // GM 시험용 투명 드래곤인가
-  KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, FESTIVAL, NIGHT_MARKET, KIN_FEST, TITLES, TITLE_COUNT_NAMES, ACHIEVEMENTS, YABAWI, KEEPSAKES,
+  KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, FESTIVAL, NIGHT_MARKET, KIN_FEST, TITLES, TITLE_COUNT_NAMES, ACHIEVEMENTS, YABAWI, PEDDLER, KEEPSAKES,
   PURIFY, CRAFT, SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, FISHING, RUIN, FACILITY, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
   DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, MATE_DRAKE_NAMES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, KIN_GROW, KIN_PLAY, KIN_TOUCH, KIN_BOND, FREE, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
   COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, RAIDBOSS, DEPART, departPts, BONDS, MARKS, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG, EXP_FULL,

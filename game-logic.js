@@ -6,7 +6,7 @@
 const {
   REGIONS, ITEMS, REGION_LOOT, CREATURES, SCENES, SCENES_HUMAN, RULES, RECIPES, SLOTS, STANCES, SHOPS, REP_TIERS, repTier, TRADE, NEST, hoardTier, RAID, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, ELEMENTS,
   HOARD_TIERS, CRAFT, SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, SKILLS, FISHING, RUIN, FACILITY, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG, EXP_FULL, BOSSES, RAIDBOSS, ACHIEVEMENTS, KEEPSAKES, TALENTS,
-  FREE, FESTIVAL, DAY, BOSS,
+  FREE, FESTIVAL, DAY, BOSS, PEDDLER,
 } = require('./game-data');
 
 const SR = STANCE_RULES;
@@ -469,9 +469,11 @@ function regen(d, now = Date.now()) {
   if (d.rest_at) {
     const base = d.stance === 'hermit' ? SR.hermit.rest : NEST.rest;
     const r = nestTier(host).rest; // 넓힌 둥지일수록 더 빨리
-    m = { ap: base.ap * r, hp: base.hp * r, en: base.en * r };
+    m = { ap: base.ap * r, hp: base.hp * r * lifeMods(d).restHp, en: base.en * r }; // 이국 장신구: 쉴 때 체력
   } else if (d.stance === 'friendly' && isTown(d.region)) m = { ap: 1, hp: SR.friendly.townHpRegen, en: 1 };
   const tm = traitMods(d); // 특성: 회복 빠르기
+  const lm = lifeMods(d); // 이국 장신구: 둥지 밖 체력(fieldHp) · 정신(mindRegen)
+  if (!d.rest_at) m.hp *= lm.fieldHp;
   // 계절과 날씨. 둥지에서 쉬는 동안에는 궂은 날씨를 피함 (느려지는 효과는 없고, 겨울에는 둥지 온기로 더 빨라짐)
   const wx = weatherFx(d.region, now);
   const shelter = (v) => (d.rest_at ? Math.max(1, v) : v);
@@ -483,11 +485,11 @@ function regen(d, now = Date.now()) {
   tick('ap', apCap(d), 'ap_at', apEvery);
   if (isFallen(d)) d.hp_at = now; // 쓰러져 있는 동안은 체력이 차지 않음
   else tick('hp', hpCap(d), 'hp_at', RULES.hpEvery / (m.hp * tm.hpRegen));
-  tick('en', enCap(d), 'en_at', RULES.enEvery / (m.en * tm.enRegen));
+  tick('en', enCap(d), 'en_at', RULES.enEvery / (m.en * tm.enRegen * lm.enRegen)); // 이국 장신구 '향신료 길의 부적'
   // 정신: 광폭화 중에는 차지 않음. 둥지에서 쉬면 빨리, 은둔이면 조금 더 빨리
   if (d.mind == null) d.mind = MIND.max;
   if (berserkOf(d)) d.mind_at = now;
-  else tick('mind', MIND.max, 'mind_at', MIND.regenEvery / ((d.rest_at ? MIND.restMult * (hoardTier(nestInfo(host).value || 0)?.mind || 1) * (1 + FACILITY.list.spa.mind * facPower(host, 'spa')) : 1) * (d.stance === 'hermit' ? MIND.hermitMult : 1) * shelter(wx.mindRegen) * (hooks.together?.(d) ? BOND_RULES.together.mind : 1)));
+  else tick('mind', MIND.max, 'mind_at', MIND.regenEvery / ((d.rest_at ? MIND.restMult * (hoardTier(nestInfo(host).value || 0)?.mind || 1) * (1 + FACILITY.list.spa.mind * facPower(host, 'spa')) : 1) * (d.stance === 'hermit' ? MIND.hermitMult : 1) * shelter(wx.mindRegen) * (hooks.together?.(d) ? BOND_RULES.together.mind : 1) * lm.mindRegen));
 }
 
 // ── 장소 ───────────────────────────────────────────
@@ -581,6 +583,17 @@ function gearMods(d, raid = false) {
     if (g.shard) m.shard += g.shard;
     if (g.flank) m.flank += g.flank;
     if (g.linger) m.linger += g.linger; // 심연을 본 눈: 상태 이상이 한 턴 더 갈 확률
+  }
+  return m;
+}
+// 이국 장신구(안개 너머의 행상인)의 생활 효과: 싸움 밖에서만. gatherRare는 더하고 나머지는 곱함
+// 효과는 장신구 종류(it.exotic)의 지금 PEDDLER.gear 값으로 셈 (수치를 고치면 이미 가진 것에도 바로 들게)
+function lifeMods(d) {
+  const m = { seals: 1, golemWear: 1, restHp: 1, fishRare: 1, buffMin: 1, gatherRare: 0, craftEn: 1, healItem: 1, kinBond: 1, fieldHp: 1, mindRegen: 1, gatherAp: 0, enRegen: 1 };
+  for (const id of Object.values(equipOf(d))) {
+    const it = ITEMS[id], L = (it?.exotic && PEDDLER.gear[it.exotic]?.life) || it?.life;
+    if (!L || !gearLvOk(d, id)) continue;
+    for (const [k, v] of Object.entries(L)) if (k in m) m[k] = k === 'gatherRare' || k === 'gatherAp' ? m[k] + v : m[k] * v;
   }
   return m;
 }
@@ -791,7 +804,7 @@ function gather(d) {
   const ids = [];
   for (let i = 0; i < n; i++) {
     const pl = placeLoot(d);
-    ids.push(rollItem(d.region, { uncommon: 0.12 + st.wisdom * 0.006 + pl.uncommon, rare: Math.max(0, 0.01 + st.wisdom * 0.001 + pl.rare + wx.findRare + (tg.gatherRare || 0)) }));
+    ids.push(rollItem(d.region, { uncommon: 0.12 + st.wisdom * 0.006 + pl.uncommon, rare: Math.max(0, 0.01 + st.wisdom * 0.001 + pl.rare + wx.findRare + (tg.gatherRare || 0) + lifeMods(d).gatherRare) }));
   }
   if (d.region === FISHING.region) { // 해안: 갯바위 틈의 미끼와 소금
     if (Math.random() < FISHING.gatherBait) ids.push(...Array(randInt(1, 2)).fill('bait_shrimp'));
@@ -802,9 +815,12 @@ function gather(d) {
   xp = xpOf(d, xp);
   const levelUp = gainXp(d, xp);
   const what = items.map(itemLabel).join(', ');
+  const lines = [`${REGIONS[d.region].name}에서 ${what}${josa(what, '을', '를')} 모았다.`];
+  const ga = lifeMods(d).gatherAp; // 이국 장신구 '무지개 섬 깃 망토': 채집에 쓴 행동력을 돌려받을 확률
+  if (ga > 0 && Math.random() < ga) { const c = actionCost(d, 'gather'); d.ap = Math.min(apCap(d), d.ap + c); lines.push(`깃 망토가 풀숲을 가볍게 헤쳐 주어 힘이 들지 않았다. (행동력 ${c} 돌려받음)`); }
   return {
     title: '채집',
-    lines: [`${REGIONS[d.region].name}에서 ${what}${josa(what, '을', '를')} 모았다.`],
+    lines,
     items, gold: 0, xp, levelUp,
   };
 }
@@ -1105,7 +1121,7 @@ function finishExpedition(d, now = Date.now(), companions = 0) {
 // 둥지의 대장장이가 있으면 기력이 30% 덜 듦
 // 요리: 강화 음식(쓰면 사나움 등)과 식구 요리 (칭호 '둥지의 요리사'·'용족의 미식가'가 셈)
 const isCook = (id) => { const it = ITEMS[id]; return !!it && ((it.type === 'use' && !!it.use?.buff) || it.cat === 'meal'); };
-const craftEnBase = (d, r) => Math.ceil(r.en * (d.perks?.smith ? 0.7 : 1) * (titleMods(d).craftEn || 1) * (atForge(d) ? CRAFT.forge.en - FACILITY.list.forge.en * (forgeP(d) - 1) : 1) - 1e-9);
+const craftEnBase = (d, r) => Math.ceil(r.en * (d.perks?.smith ? 0.7 : 1) * (titleMods(d).craftEn || 1) * lifeMods(d).craftEn * (atForge(d) ? CRAFT.forge.en - FACILITY.list.forge.en * (forgeP(d) - 1) : 1) - 1e-9);
 // 칭호 '둥지의 요리사': 요리는 기력이 적어(3~4) 올림하면 줄지 않으니, 요리에만 내림으로 (최소 1)
 const craftEn = (d, r) => { const en = craftEnBase(d, r), k = isCook(r.out) ? titleMods(d).cookEn || 1 : 1; return k < 1 ? Math.max(1, Math.floor(en * k + 1e-9)) : en; };
 // ── 제작 확장: 걸작·강화·각인(장신구별 기록), 숨겨진 제작법, 공방 ──
@@ -1143,7 +1159,7 @@ function greatChance(d, focus = null) {
   return Math.min(G.cap, p);
 }
 // have(id): 지금 가진 개수를 알려주는 함수 (저장 공간에서 읽음). focus: 장신구를 만들 때 불 조절 점수
-function craft(d, outId, have, focus = null) {
+function craft(d, outId, have, focus = null, spice = null) {
   if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
   const r = RECIPES.find((x) => x.out === outId);
   if (!r || !recipeKnown(d, r)) return { error: '알 수 없는 제작법이다.' };
@@ -1154,17 +1170,26 @@ function craft(d, outId, have, focus = null) {
   for (const [id, n] of Object.entries(r.needs)) {
     if (have(id) < n) return { error: `${ITEMS[id].name}${josa(ITEMS[id].name, '이', '가')} 모자란다.` };
   }
+  // 양념 (안개 너머의 행상인): 맞는 요리에 하나 넣으면 '○○ 요리'가 됨
+  let sp = null;
+  if (spice) {
+    const key = PEDDLER.spiceOf[r.out], S = key && PEDDLER.spices[key];
+    if (!S || S.item !== spice) return { error: '이 요리에는 그 양념을 넣을 수 없다.' };
+    if (have(spice) < 1 + (r.needs[spice] || 0)) return { error: `${ITEMS[spice].name}${josa(ITEMS[spice].name, '이', '가')} 모자란다.` };
+    sp = { key, item: spice };
+  }
   const it = ITEMS[r.out];
   const f = it.type === 'equip' && Number.isFinite(Number(focus)) ? Math.max(0, Math.min(1, Number(focus))) : null;
   const chance = greatChance(d, f);
   if (d.en >= enCap(d)) d.en_at = Date.now();
   d.en -= en;
   const items = Object.entries(r.needs).map(([id, n]) => ({ id, qty: -n }));
-  const name = it.name;
+  if (sp) items.push({ id: sp.item, qty: -1 });
+  const name = sp ? ITEMS[`${r.out}__${sp.key}`].name : it.name;
   const lines = [];
   let qty = 1;
   let great = false;
-  let madeId = r.out;
+  let madeId = sp ? `${r.out}__${sp.key}` : r.out;
   // 불 조절은 걸작이 될 기운을 북돋울 뿐 걸작을 정하지는 않음. 결과는 바로 아래 줄에서 따로 알림
   if (f != null) lines.push(f >= 0.85 ? '불길을 완벽하게 다스렸다. 쇠가 맑게 울린다.' : f >= 0.55 ? '불길을 제법 잘 다스렸다.' : '불길이 조금 흔들렸다.');
   if (Math.random() < chance) {
@@ -1188,16 +1213,16 @@ function craft(d, outId, have, focus = null) {
   return { title: great ? '제작 · 대성공' : '제작', lines, items, made: [{ id: madeId, qty }], gold: 0, xp, levelUp, great };
 }
 // 여러 개 한꺼번에 만들기 (장신구는 불 조절을 거치므로 하나씩). 재료나 기력이 모자라면 거기서 멈추고 만든 만큼만
-function craftMany(d, outId, have, focus = null, n = 1) {
+function craftMany(d, outId, have, focus = null, n = 1, spice = null) {
   n = Math.max(1, Math.min(99, Math.floor(Number(n)) || 1));
   if (ITEMS[outId]?.type === 'equip') n = 1;
-  if (n === 1) return craft(d, outId, have, focus);
+  if (n === 1) return craft(d, outId, have, focus, spice);
   const delta = {};
   const haveNow = (id) => have(id) + (delta[id] || 0);
   const items = [], made = {}, lines = [];
   let xp = 0, levelUp = 0, done = 0, greats = 0, stop = null;
   for (let i = 0; i < n; i++) {
-    const r = craft(d, outId, haveNow, null);
+    const r = craft(d, outId, haveNow, null, spice);
     if (r.error) { stop = r.error; break; }
     done++;
     if (r.great) greats++;
@@ -1206,7 +1231,7 @@ function craftMany(d, outId, have, focus = null, n = 1) {
     xp += r.xp; levelUp += r.levelUp || 0;
   }
   if (!done) return { error: stop };
-  const name = ITEMS[outId].name;
+  const name = (Object.keys(made).length === 1 && ITEMS[Object.keys(made)[0]]?.name) || ITEMS[outId].name; // 양념 넣은 요리면 그 이름으로
   const total = Object.values(made).reduce((a, b) => a + b, 0);
   lines.push(`${name}${josa(name, '을', '를')} ${done}번 만들어 ${total}개를 얻었다.${greats ? ` (대성공 ${greats}번)` : ''}`);
   if (done < n) lines.push(`${n}번 중 ${done}번만 만들었다. ${stop}`);
@@ -1220,7 +1245,7 @@ function experiment(d, ids, have, opts = {}) {
   for (const id of ids) if (have(id) < 1) return { error: `${ITEMS[id].name}${josa(ITEMS[id].name, '이', '가')} 없다.` };
   // 직접 빚은 물건은 다시 화로에 넣을 수 없음 (값이 거듭 불어나지 않게)
   const re = ids.find((id) => ITEMS[id].custom);
-  if (re) return { error: `${ITEMS[re].name}${josa(ITEMS[re].name, '은', '는')} 직접 빚은 물건이라 다시 화로에 넣을 수 없다.` };
+  if (re) return { error: `${ITEMS[re].name}${josa(ITEMS[re].name, '은', '는')} ${ITEMS[re].exotic ? '안개 너머에서 온 물건이라' : '직접 빚은 물건이라 다시'} 화로에 넣을 수 없다.` };
   const key = (r) => Object.keys(r.needs).sort().join('|');
   const mine = ids.slice().sort().join('|');
   const hit = RECIPES.find((r) => key(r) === mine);
@@ -1493,6 +1518,7 @@ function useItem(d, id, have, opts = {}) {
   if (!it || it.type !== 'use') return { error: '쓸 수 없는 물건이다.' };
   if (have(id) < 1) return { error: '가지고 있지 않다.' };
   const u = it.use;
+  if (u.mistBox) return hooks.openMistBox ? hooks.openMistBox(d, id) : { error: '지금은 열 수 없다.' }; // 안개 상자 (peddler.js)
   const lines = [];
   // 지하 회랑 안에서는 회복 아이템을 쓸 수 없다. 상처는 화톳불에서만 돌본다 (maze.js heal)
   const mzs = combatJson(d).maze;
@@ -1558,14 +1584,15 @@ function useItem(d, id, have, opts = {}) {
   if (u.buff) {
     const B = BUFFS[u.buff];
     const old = buffOf(d);
-    const mins = Math.round((u.minutes || BUFFS.minutes) * (titleMods(d).buffMin || 1)); // 부엌에서 아이가 만든 것은 더 오래감 · 칭호 '용족의 미식가'
+    const mins = Math.round((u.minutes || BUFFS.minutes) * (titleMods(d).buffMin || 1) * lifeMods(d).buffMin); // 부엌에서 아이가 만든 것은 더 오래감 · 칭호 '용족의 미식가'
     combatJson(d).buff = { id: u.buff, until: Date.now() + mins * 60000 };
     lines.push(`${mins}분 동안 ${B.name} 상태가 된다. (사냥·강적 전투에서 ${B.desc})`);
     if (old && old.id !== u.buff) lines.push(`먼저 있던 ${old.name}의 효과는 사라졌다.`);
     if (u.mindCost) lines.push(...loseMind(d, u.mindCost)); // 광기의 묘약: 정신이 깎임
     // 강화와 함께 회복도 있는 음식 (와이번 꼬치 등): 가득 차 있지 않은 만큼 함께 회복
-    if (u.hp && d.hp < hpCap(d)) { const before = d.hp; d.hp = Math.min(hpCap(d), d.hp + u.hp); lines.push(`체력이 ${d.hp - before} 회복되었다.`); }
-    if (u.en && d.en < enCap(d)) { const before = d.en; d.en = Math.min(enCap(d), d.en + u.en); lines.push(`기력이 ${d.en - before} 회복되었다.`); }
+    const hm = lifeMods(d).healItem;
+    if (u.hp && d.hp < hpCap(d)) { const before = d.hp; d.hp = Math.min(hpCap(d), d.hp + Math.round(u.hp * hm)); lines.push(`체력이 ${d.hp - before} 회복되었다.`); }
+    if (u.en && d.en < enCap(d)) { const before = d.en; d.en = Math.min(enCap(d), d.en + Math.round(u.en * hm)); lines.push(`기력이 ${d.en - before} 회복되었다.`); }
     return { title: it.name, lines, items: [{ id, qty: -1 }] };
   }
   // 여러 효과가 있는 물건(체력·기력·행동력·정신)은 하나라도 쓸모가 있으면 씀. 이미 가득 찬 효과는 건너뜀
@@ -1586,8 +1613,9 @@ function useItem(d, id, have, opts = {}) {
     if (u.mind) return { error: berserkOf(d) ? '광폭화한 몸은 무엇도 받아들이지 않는다.' : '정신이 이미 맑다.' };
     return { error: '지금은 쓸 데가 없다.' };
   }
-  if (can.hp) { const before = d.hp; d.hp = Math.min(hpCap(d), d.hp + u.hp); lines.push(`체력이 ${d.hp - before} 회복되었다.`); }
-  if (can.en) { const before = d.en; d.en = Math.min(enCap(d), d.en + u.en); lines.push(`기력이 ${d.en - before} 회복되었다.`); }
+  const hm = lifeMods(d).healItem; // 이국 장신구 '별 항해사의 발톱 고리': 회복약·회복 음식 +15%
+  if (can.hp) { const before = d.hp; d.hp = Math.min(hpCap(d), d.hp + Math.round(u.hp * hm)); lines.push(`체력이 ${d.hp - before} 회복되었다.`); }
+  if (can.en) { const before = d.en; d.en = Math.min(enCap(d), d.en + Math.round(u.en * hm)); lines.push(`기력이 ${d.en - before} 회복되었다.`); }
   if (can.mind) { d.mind = Math.min(MIND.max, mindNow + u.mind); lines.push(`정신이 ${d.mind - mindNow} 맑아졌다.`); }
   if (can.ap) {
     const before = d.ap;
@@ -1820,7 +1848,7 @@ function marketInfo(d, invList) {
     specialFrom: repTier(SR.friendly.specialFrom),
     // lock: 판매 잠금한 물건 (목록에는 보이되 팔 수 없음)
     // 프리셋에 넣어 둔 몫(keptFor)은 빼고 보여 줌. 다 프리셋 몫이면 목록에서 빠짐
-    sell: invList.filter((x) => ITEMS[x.item] && ITEMS[x.item].cat !== 'treasure').map((x) => ({ id: x.item, qty: x.qty - keptFor(d, x.item), price: sellPrice(d, x.item), lock: sellLocked(d, x.item) })).filter((x) => x.qty > 0),
+    sell: invList.filter((x) => ITEMS[x.item] && ITEMS[x.item].cat !== 'treasure' && !ITEMS[x.item].noSell).map((x) => ({ id: x.item, qty: x.qty - keptFor(d, x.item), price: sellPrice(d, x.item), lock: sellLocked(d, x.item) })).filter((x) => x.qty > 0),
   };
 }
 
@@ -1879,6 +1907,7 @@ function sell(d, id, qty, have) {
   if (!ITEMS[id]) return { error: '알 수 없는 물건이다.' };
   if (sellLocked(d, id)) return { error: '판매 잠금을 건 물건이다. 자물쇠를 풀어야 팔 수 있다.' };
   if (ITEMS[id].cat === 'treasure') return { error: '보물은 팔 수 없다. 둥지의 보물더미에 쌓아 두자.' };
+  if (ITEMS[id].noSell) return { error: `${ITEMS[id].name}${josa(ITEMS[id].name, '은', '는')} 시장에서 받아 주지 않는다. (다른 드래곤과는 주고받을 수 있다)` }; // 안개 상자·증표: 값이 0이라 1닢에 팔리지 않게
   const n = have(id) - keptFor(d, id); // 프리셋 몫은 팔지 않음
   if (n < 1 && have(id) > 0) return { error: '프리셋에 넣어 둔 장신구다. 프리셋에서 빼야 팔 수 있다.' };
   qty = Math.max(1, Math.min(n, Math.floor(qty) || 1));
@@ -1888,6 +1917,8 @@ function sell(d, id, qty, have) {
   const name = ITEMS[id].name;
   const lines = [`${name}${qty > 1 ? ` ${qty}개` : ''}${josa(qty > 1 ? '개' : name, '을', '를')} 팔고 금화 ${gain}닢을 받았다.`];
   friendlyTrade(d, lines);
+  const g = gearOf(d)[id]; // 강화·각인한 한 개까지 팔면 강화는 떨어진 채 팔림 (기록은 tidyGear가 지움)
+  if (ITEMS[id].type === 'equip' && g && gearAt(d, id) === 'inv' && have(id) - qty < 1) lines.push(`${name}의 강화가 떨어졌다.`);
   return { title: '시장', lines, items: [{ id, qty: -qty }] };
 }
 
@@ -1904,7 +1935,7 @@ const isBait = (id) => ITEMS[id]?.cat === 'bait';
 function fishRoll(d, bait, quality, at = Date.now()) {
   const wx = weatherIdAt(d.region, at), sx = seasonAt(at).id; // 날씨(wx)와 계절(sx)마다 잘 무는 물고기가 다름 (at: 줄 걸어 두기는 물고기가 문 그 시각)
   const q = FG.quality[quality] || {}, b = FG.bait[bait] || {};
-  const fr = titleMods(d).fishRare || 1; // 칭호 '바다를 읽는 용': 드문·귀한 물고기가 더 잘 묾
+  const fr = (titleMods(d).fishRare || 1) * lifeMods(d).fishRare; // 칭호 '바다를 읽는 용': 드문·귀한 물고기가 더 잘 묾
   const fm = titleMods(d).fishMackerel || 1; // 칭호 '고등어 박사': 고등어가 더 잘 묾
   const list = FG.fish.map((f) => ({ f, w: f.w * (q[f.tier] ?? 1) * (b[f.tier] ?? 1) * (f.wx?.[wx] ?? 1) * (f.sx?.[sx] ?? 1) * (f.tier === 'common' ? 1 : fr) * (f.id === 'fish_mackerel' ? fm : 1) }));
   let r = Math.random() * list.reduce((a, x) => a + x.w, 0);
@@ -2196,7 +2227,7 @@ function hoardMove(d, dir, what, qty, have, hoardHave) {
   const g = it.type === 'equip' ? gearOf(d)[what] : null;
   const gTag = g ? ` (${[g.plus ? `+${g.plus}` : '', g.elem ? `${ELEMENTS[g.elem] || g.elem} 각인` : ''].filter(Boolean).join(' · ') || '강화'})` : '';
   if (dir === 'put') {
-    if (it.type === 'equip' && isWorn(d, what)) return { error: '착용 중인 장신구와 같은 물건은 보물더미에 쌓지 않는다. 벗은 뒤에 쌓자.' };
+    // 끼고 있는 장신구는 소지품에서 이미 빠져 있으므로, 소지품에 남은 같은 장신구(여분)는 쌓을 수 있음 (예전에는 같은 것을 끼고 있으면 여분도 막았음)
     if (have(what) - keptFor(d, what) < qty) return { error: keptFor(d, what) && have(what) >= qty ? '프리셋에 넣어 둔 장신구다. 프리셋에서 빼야 쌓을 수 있다.' : '그만큼 가지고 있지 않다.' };
     const lines = [`${label}${josa(label, '을', '를')} 보물더미에 쌓았다.`];
     if (g && gearAt(d, what) === 'inv' && have(what) - qty < 1) { g.at = 'hoard'; lines.push(`강화한 ${it.name}${gTag}도 함께 쌓았다. 꺼내면 그대로다.`); }
@@ -2463,7 +2494,7 @@ function dexOf(d) {
   if (!x.f || typeof x.f !== 'object') x.f = {};
   return x;
 }
-const dexKey = (id) => ITEMS[id]?.cooked || ITEMS[id]?.mwOf || id; // 정성 들인 요리·걸작은 본래 물건으로 셈
+const dexKey = (id) => ITEMS[id]?.cooked || ITEMS[id]?.spiced || ITEMS[id]?.mwOf || id; // 정성 들인 요리·양념 넣은 요리·걸작은 본래 물건으로 셈
 // 처음 만난 사냥감이면 true
 function dexMeet(d, key, now = Date.now()) {
   const m = dexOf(d).m;
@@ -2578,7 +2609,7 @@ function dexView(d) {
   const fishIds = new Set(FISHING.fish.map((f) => f.id));
   const items = DEX_CATS.map(([k, name]) => ({ cat: k, name, list: [] }));
   for (const [id, it] of Object.entries(ITEMS)) {
-    if (it.cooked || it.mwOf || it.custom || fishIds.has(id)) continue; // 직접 빚은 물건은 '빚은 물건'에 따로
+    if (it.cooked || it.spiced || it.mwOf || it.custom || fishIds.has(id)) continue; // 직접 빚은 물건은 '빚은 물건'에 따로
     const at = x.i[id];
     const src = dexSources(d, id);
     const row = at != null
@@ -2621,7 +2652,7 @@ function dexHasNew(d) {
 const DEX_ALL = (() => { // 도감의 모든 칸 (분류별 물건 id 포함)
   const fishIds = new Set(FISHING.fish.map((f) => f.id));
   const cats = {};
-  for (const [id, it] of Object.entries(ITEMS)) if (!it.cooked && !it.mwOf && !fishIds.has(id)) (cats[dexCat(it)] ||= []).push(id);
+  for (const [id, it] of Object.entries(ITEMS)) if (!it.cooked && !it.spiced && !it.mwOf && !fishIds.has(id)) (cats[dexCat(it)] ||= []).push(id);
   const beasts = Object.values(REGION_PLACES).flat().flatMap((p) => [p, `${p}!`]);
   return { cats, beasts, bosses: Object.keys(BOSSES).map((r) => `boss:${r}`), fish: [...fishIds], items: Object.values(cats).flat() };
 })();
@@ -2717,7 +2748,7 @@ module.exports = { restHostOf, flyPartner,
   corruptedRegion, corruptUntil, corruptPeriod, isCorrupted, corruptMul, isRuin, berserkOf, loseMind, nearestTown,
   placeOf, goPlace, isFallen, chron, chronOf,
   titlesOf, titleOn, titleName, titleMods, checkTitles, setTitle, titlesView,
-  eventTitle, combatJson, dayIdx, gearMods, clampVitals, planExpedition, planView, facOf, facSlots, facPower, buildFacility, removeFacility, // 모브 드래곤(game-mobs.js)이 씀
+  eventTitle, combatJson, dayIdx, gearMods, lifeMods, clampVitals, planExpedition, planView, facOf, facSlots, facPower, buildFacility, removeFacility, // 모브 드래곤(game-mobs.js)이 씀
   xpNeed, atMaxLevel,
   dexOf, dexMeet, dexWin, dexItems, dexBackfill, dexView, dexSeen, dexHasNew, // 도감
   checkAch, achView, achSeen, achHasNew, // 업적

@@ -236,9 +236,29 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       if (!ITEMS[it.id] || seen.has(it.id)) return '알 수 없는 물건이다.';
       seen.add(it.id);
       if (!Number.isInteger(it.qty) || it.qty < 1) return '개수를 다시 정해야 한다.';
-      if (db.itemCount(d.id, it.id) < it.qty) return `${ITEMS[it.id].name}${josa(ITEMS[it.id].name, '이', '가')} 그만큼 없다.`;
+      // 프리셋에 넣어 둔 몫과 끼고 있는 장신구는 넘길 수 없음 (끼고 있는 것은 소지품에서 이미 빠져 있음. 시장 팔기·야시장 노점과 같게)
+      const have = db.itemCount(d.id, it.id), kept = logic.keptFor ? logic.keptFor(d, it.id) : 0, nm = ITEMS[it.id].name;
+      if (have - kept < it.qty) {
+        if (kept && have >= it.qty) return `${nm}${josa(nm, '은', '는')} 프리셋에 넣어 둔 장신구다. 프리셋에서 빼야 넘길 수 있다.`;
+        const worn = Object.values(logic.equipOf(d)).includes(it.id);
+        if (!have && worn) return `${nm}${josa(nm, '은', '는')} 지금 끼고 있다. 끼고 있는 장신구는 넘길 수 없다.`;
+        return `${nm}${josa(nm, '이', '가')} 그만큼 없다.${kept ? ` (프리셋 몫 ${kept}개는 넘길 수 없다)` : worn ? ' (끼고 있는 것은 넘길 수 없다)' : ''}`;
+      }
     }
     return null;
+  }
+  // 강화·각인은 장신구가 아니라 내 기록에 붙어 있어 넘어가지 않음: 같은 것이 여러 개면 보통 것부터 나가고,
+  // 강화한 한 개까지 나가면 그 기록을 지우고 안내 한 줄 (받는 쪽에는 보통 것으로 감)
+  function stripGear(d, items) {
+    const lines = [], g = logic.gearOf(d);
+    for (const it of items) {
+      const rec = g[it.id];
+      if (!rec || ITEMS[it.id]?.type !== 'equip' || logic.gearAt(d, it.id) !== 'inv' || db.itemCount(d.id, it.id) > 0) continue;
+      const tag = [rec.plus ? `+${rec.plus}` : '', rec.elem ? '각인' : ''].filter(Boolean).join('·') || '강화';
+      delete g[it.id];
+      lines.push(`${ITEMS[it.id].name}의 강화(${tag})가 떨어졌다.`);
+    }
+    return lines;
   }
   const cleanItems = (raw) => (Array.isArray(raw) ? raw : [])
     .map((x) => ({ id: str(x?.id), qty: Math.floor(Number(x?.qty)) }))
@@ -384,6 +404,8 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     b.gold += sa.gold - sb.gold;
     const move = (from, to) => [...from.items.map((x) => ({ id: x.id, qty: -x.qty })), ...to.items.map((x) => ({ id: x.id, qty: x.qty }))];
     db.saveMany([[a, move(sa, sb)], [b, move(sb, sa)]]);
+    const stA = stripGear(a, sa.items), stB = stripGear(b, sb.items); // 넘어간 강화 장신구는 강화를 떼어 냄
+    if (stA.length) db.saveState(a); if (stB.length) db.saveState(b);
     trades.delete(t.id);
     // 주고받은 기록 (교환)
     db.ledgerAdd(a.id, { kind: 'trade', other: { id: b.id, name: b.name, kind: b.kind }, goldOut: sa.gold, itemsOut: sa.items, goldIn: sb.gold, itemsIn: sb.items });
@@ -392,7 +414,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       id: t.id, title: '교환',
       lines: [`${them.name}${josa(them.name, '과', '와')} 교환했다.`,
         gave.gold || gave.items.length ? `건넨 것: ${giveText(gave.gold, gave.items)}` : '건넨 것 없음',
-        got.gold || got.items.length ? `받은 것: ${giveText(got.gold, got.items)}` : '받은 것 없음'],
+        got.gold || got.items.length ? `받은 것: ${giveText(got.gold, got.items)}` : '받은 것 없음', ...(me === a ? stA : stB)],
       items: got.items, gold: got.gold - gave.gold,
     });
     A.socket.emit('trade:done', done(a, sa, sb, b));
@@ -887,8 +909,9 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
         db.ledgerAdd(d.id, { kind: 'gift_out', other: { id, name, kind: (t ? t.dragon : db.getDragon(id))?.kind }, goldOut: gold, itemsOut: items, msg, img, note: '집터' });
         const tell = `${ga(d.name)} 집터에 선물을 두고 갔다. 고대도시의 내 집터에서 받을 수 있다.`;
         if (t) t.socket.emit('notice', { title: '선물', lines: [tell] }); else db.noteAdd(id, tell);
+        const st = stripGear(d, items); if (st.length) db.saveState(d);
         const me = live(d.id); if (me) sendMe(me.socket, d);
-        return { ok: true, lines: [`${name}의 집터에 ${what}${josa(what, '을', '를')} 두고 왔다.${msg ? ' 함께 적은 말도 남겼다.' : ''}`] };
+        return { ok: true, lines: [`${name}의 집터에 ${what}${josa(what, '을', '를')} 두고 왔다.${msg ? ' 함께 적은 말도 남겼다.' : ''}`, ...st] };
       }
       if (t) {
         t.dragon.gold += gold;
@@ -907,8 +930,9 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
         t.socket.emit('gift:got', { id: gid, from: { id: d.id, name: d.name, kind: d.kind, av: avOf(d.id) }, gold, items, msg, img, at: Date.now() });
         sendMe(t.socket, t.dragon);
       }
+      const st = stripGear(d, items); if (st.length) db.saveState(d); // 넘어간 강화 장신구는 강화를 떼어 냄
       const me = live(d.id); if (me) sendMe(me.socket, d);
-      return { ok: true, lines: [`${name}에게 ${what}${josa(what, '을', '를')} 보냈다.${msg ? ' 함께 적은 말도 전해진다.' : ''}`] };
+      return { ok: true, lines: [`${name}에게 ${what}${josa(what, '을', '를')} 보냈다.${msg ? ' 함께 적은 말도 전해진다.' : ''}`, ...st] };
     };
     on('gift:send', (d, p) => giftDo(d, p, false));
     on('gift:leave', (d, p) => giftDo(d, p, true));

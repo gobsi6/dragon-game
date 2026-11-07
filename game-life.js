@@ -846,7 +846,7 @@ function feedDrake(d, kin, k, item, have, now) {
   if (left > 0) { const m = Math.ceil(left / 60000); return { error: `${k.name}${josa(k.name, '은', '는')} 아직 배가 부르다. ${m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m}분`} 뒤에 다시 주자.` }; }
   satUpdate(k, now, false, DF, drakeFloor(k, now));
   const hungry = k.data.sat < DF.hungry;
-  const fav = (ITEMS[item]?.cooked || item) === DF.kindFav[k.data.kind];
+  const fav = (ITEMS[item]?.cooked || ITEMS[item]?.spiced || item) === DF.kindFav[k.data.kind];
   let gain = Math.max(1, f.bond + (fav ? DF.favBond : 0) + (clingyish(k) ? 1 : 0) + (hasT(k, 'foodie') ? (fav ? 3 : -1) : 0)); // 입맛 까다로운
   gain = addBond(k, gain); // 실제로 오른 만큼
   k.data.sat = Math.min(100, k.data.sat + f.sat);
@@ -1083,7 +1083,7 @@ function care(d, kin, id, item, have, now = Date.now(), opt = {}) {
   satUpdate(k, now, hasKeeper(kin, k));
   const food = isFood(item);
   const hungry = k.data.sat < HG.hungry;
-  const fav = (ITEMS[item]?.cooked || item) === k.data.favFood; // 정성 들인 것도 같은 음식
+  const fav = (ITEMS[item]?.cooked || ITEMS[item]?.spiced || item) === k.data.favFood; // 정성 들인 것·양념 넣은 것도 같은 음식
   // 특성: 다정한 발톱·냉담 / 아이의 성격: 다정한·먹보·수줍은 / 가장 좋아하는 요리
   let mood = 0;
   if (hasT(k, 'gentle')) mood += 1;

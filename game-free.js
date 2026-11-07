@@ -21,13 +21,26 @@ const SLOT_WORD = {
   head: [['관', '머리장식'], ['투구'], ['왕관']],
   charm: [['부적', '매듭'], ['인장'], ['비약 부적']],
 };
+// 과일·단것이 주재료일 때의 형태 (먹을거리 · 식구 요리). 과일이 들어가면 과일이 이름 앞에, 밀가루와 설탕이 함께면 구운 과자
+const FRUITS = new Set(['raspberry', 'grape', 'pear', 'sunset_apple', 'honey_date', 'star_lemon']);
+const SWEET_FORM = {
+  fruitFood: [['절임', '화채'], ['과일잼'], ['꿀절임']], fruitMeal: [['과자', '타르트'], ['파이'], ['과일 한 상']],
+  bakeFood: [['과자', '빵'], ['카스텔라'], ['꿀 카스텔라']], bakeMeal: [['빵', '과자'], ['케이크'], ['잔치 케이크']],
+};
+// 단것이면 { main, form }을, 아니면 null
+function sweetOf(ids, meal) {
+  const fruit = ids.find((id) => FRUITS.has(id));
+  if (fruit) return { main: fruit, form: SWEET_FORM[meal ? 'fruitMeal' : 'fruitFood'] };
+  if (ids.includes('wheat_flour') && (ids.includes('cane_sugar') || ids.includes('wild_honey'))) return { main: ['hen_egg', 'wild_honey', 'cane_sugar', 'wheat_flour'].find((x) => ids.includes(x)), form: SWEET_FORM[meal ? 'bakeMeal' : 'bakeFood'] };
+  return null;
+}
 const FOOD_WORD = { life: [['탕', '죽'], ['보양탕'], ['선약']], vigor: [['차', '강장제'], ['강장차'], ['영약']], clear: [['꽃물', '향차'], ['맑은 차'], ['이슬']] };
 // 기운: 맨 앞에 붙는 말
 const AURA_WORD = { fire: ['불꽃', '타오르는', '불씨 품은'], frost: ['서리', '얼어붙은', '눈보라'], venom: ['독기 어린', '독니', '검붉은'], soul: ['혼이 깃든', '잿빛', '넋 서린'] };
 // 두 번째로 센 성질: 그 앞에 붙는 꾸밈말
 const EFF_WORD = { hard: ['단단한', '굳센'], sharp: ['날 선', '서슬 퍼런'], light: ['가벼운', '바람결'], lore: ['오래된', '옛'], shine: ['빛나는', '찬란한'], life: ['든든한', '푸릇한'], vigor: ['뜨끈한', '힘찬'], clear: ['맑은', '고요한'] };
 // 재료 이름을 짧게 (이름이 길어지지 않게)
-const SHORT = { spider_silk: '거미줄', wolf_pelt: '늑대털', beast_hide: '가죽', black_reed: '검은 갈대', silk_scrap: '비단', silver_chain: '은사슬', void_silk: '공허실', king_scale: '금빛 비늘', morven_shard: '낫 조각', heiron_crest: '방패 조각', rift_scale: '고룡 비늘', tough_sinew: '힘줄', dry_vine: '덩굴', owl_quill: '깃펜', rune_shell: '거북 등딱지', frost_thorn: '수정 가시', rainbow_feather: '무지개 깃', wind_stone: '바람돌', forest_mushroom: '버섯', lotus_root: '연근', sulfur: '유황', fish_mackerel: '고등어', fish_flounder: '가자미', fish_salmon: '연어', fish_eel: '번개 장어', fish_marlin: '청새치', sea_scale: '용비늘', silver_ore: '은광석', fish_rockfish: '우럭', fish_jack: '전갱이', fish_filefish: '쥐치', fish_greenling: '노래미', fish_hairtail: '갈치', fish_mullet: '숭어', fish_gizzard: '전어', fish_anchovy: '멸치', fish_octopus: '문어', fish_crab: '게딱지', fish_cod: '대구', fish_flyingfish: '날치', fish_puffer: '복어 가시', fish_bream: '도미', fish_moonray: '가오리', fish_jelly: '해파리', fish_ashfin: '심해어', old_boot: '장화', driftwood: '유목', tangled_net: '그물', rusty_hook: '낚싯바늘', sea_glass: '바다 유리', living_bark: '나무껍질', wyvern_membrane: '와이번', hydra_blood: '히드라', heartwood: '고목', volcanic_ash: '화산재', salamander_tail: '불도마뱀', sun_stone: '태양석', giant_ember: '거인불씨', star_shard: '별조각', purify_shard: '정화', star_fragment: '별똥별', red_clay: '점토', croc_scale: '악어비늘', bison_horn: '들소뿔', bog_iron: '늪철', troll_tusk: '트롤엄니', stone_heart: '돌심장', carnem_steel: '카르넴', cursed_steel: '저주강철', blackened_scale: '검은 비늘', frost_heart: '서리심장', scorpion_stinger: '전갈침', sharp_fang: '송곳니', obsidian: '흑요석', sandworm_tooth: '모래이빨', sphinx_mane: '스핑크스', griffin_feather: '그리핀', ice_shard: '얼음', rune_stone: '룬', old_scroll: '두루마리', faded_crest: '왕국 문장', ashen_tablet: '예언 석판', anchor_chain: '닻 사슬', archivist_cord: '비단 끈', knight_blade: '부러진 검날', royal_chronicle: '왕실 연대기', abyss_fang: '심연 송곳니', ancient_relic: '고대', seal_core: '봉인', brass_button: '놋쇠', sea_shell: '조개', amber: '호박', gold_ore: '금', rival_scale: '라이벌', bog_pearl: '늪진주', deep_pearl: '심해진주', lost_seal: '인장', knight_crest: '기사단', crown_shard: '왕관', fire_crystal: '불결정', magma_core: '용암', elder_ember: '고룡불씨', frost_lichen: '서리이끼', eternal_ice: '만년빙', poison_herb: '독초', toad_gland: '두꺼비', shadow_spore: '그늘포자', ashen_dust: '잿먼지', ghost_ash: '망령', corrupt_crystal: '오염', ashen_core: '잿빛 심장', basilisk_eye: '바실리스크', calamity_core: '재앙', grass_seed: '들풀', wild_flower: '들꽃', sea_bindweed: '갯메꽃', salt_crystal: '소금', wild_honey: '꿀', moss_flower: '이끼꽃', snow_flower: '눈꽃', glow_moss: '빛이끼', silver_clover: '은토끼풀' };
+const SHORT = { mist_pearl: '안개 진주', coral_branch: '산호', sand_glass: '모래 유리', spider_silk: '거미줄', wolf_pelt: '늑대털', beast_hide: '가죽', black_reed: '검은 갈대', silk_scrap: '비단', silver_chain: '은사슬', void_silk: '공허실', king_scale: '금빛 비늘', morven_shard: '낫 조각', heiron_crest: '방패 조각', rift_scale: '고룡 비늘', tough_sinew: '힘줄', dry_vine: '덩굴', owl_quill: '깃펜', rune_shell: '거북 등딱지', frost_thorn: '수정 가시', rainbow_feather: '무지개 깃', wind_stone: '바람돌', forest_mushroom: '버섯', lotus_root: '연근', sulfur: '유황', fish_mackerel: '고등어', fish_flounder: '가자미', fish_salmon: '연어', fish_eel: '번개 장어', fish_marlin: '청새치', sea_scale: '용비늘', silver_ore: '은광석', fish_rockfish: '우럭', fish_jack: '전갱이', fish_filefish: '쥐치', fish_greenling: '노래미', fish_hairtail: '갈치', fish_mullet: '숭어', fish_gizzard: '전어', fish_anchovy: '멸치', fish_octopus: '문어', fish_crab: '게딱지', fish_cod: '대구', fish_flyingfish: '날치', fish_puffer: '복어 가시', fish_bream: '도미', fish_moonray: '가오리', fish_jelly: '해파리', fish_ashfin: '심해어', old_boot: '장화', driftwood: '유목', tangled_net: '그물', rusty_hook: '낚싯바늘', sea_glass: '바다 유리', living_bark: '나무껍질', wyvern_membrane: '와이번', hydra_blood: '히드라', heartwood: '고목', volcanic_ash: '화산재', salamander_tail: '불도마뱀', sun_stone: '태양석', giant_ember: '거인불씨', star_shard: '별조각', purify_shard: '정화', star_fragment: '별똥별', red_clay: '점토', croc_scale: '악어비늘', bison_horn: '들소뿔', bog_iron: '늪철', troll_tusk: '트롤엄니', stone_heart: '돌심장', carnem_steel: '카르넴', cursed_steel: '저주강철', blackened_scale: '검은 비늘', frost_heart: '서리심장', scorpion_stinger: '전갈침', sharp_fang: '송곳니', obsidian: '흑요석', sandworm_tooth: '모래이빨', sphinx_mane: '스핑크스', griffin_feather: '그리핀', ice_shard: '얼음', rune_stone: '룬', old_scroll: '두루마리', faded_crest: '왕국 문장', ashen_tablet: '예언 석판', anchor_chain: '닻 사슬', archivist_cord: '비단 끈', knight_blade: '부러진 검날', royal_chronicle: '왕실 연대기', abyss_fang: '심연 송곳니', ancient_relic: '고대', seal_core: '봉인', brass_button: '놋쇠', sea_shell: '조개', amber: '호박', gold_ore: '금', rival_scale: '라이벌', bog_pearl: '늪진주', deep_pearl: '심해진주', lost_seal: '인장', knight_crest: '기사단', crown_shard: '왕관', fire_crystal: '불결정', magma_core: '용암', elder_ember: '고룡불씨', frost_lichen: '서리이끼', eternal_ice: '만년빙', poison_herb: '독초', toad_gland: '두꺼비', shadow_spore: '그늘포자', ashen_dust: '잿먼지', ghost_ash: '망령', corrupt_crystal: '오염', ashen_core: '잿빛 심장', basilisk_eye: '바실리스크', calamity_core: '재앙', grass_seed: '들풀', wild_flower: '들꽃', sea_bindweed: '갯메꽃', salt_crystal: '소금', wild_honey: '꿀', moss_flower: '이끼꽃', snow_flower: '눈꽃', glow_moss: '빛이끼', silver_clover: '은토끼풀' };
 const pickBy = (arr, seed) => arr[seed % arr.length];
 const seedOf = (s) => { let h = 7; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; };
 // 기운 → 꾸밈말 → 주재료 → 형태. 길면(14자 넘으면) 꾸밈말부터 뺌
@@ -88,7 +101,8 @@ function resolve(ids, wis, greatChance, rnd = Math.random) {
     if (hp) use.hp = hp; if (en) use.en = en; if (mind) use.mind = mind;
     const top = effs[0];
     const main = best[top]?.id;
-    const name = makeName({ ids, aura, second: effs[1] || null, main, form: FOOD_WORD[top], quality });
+    const sw = sweetOf(ids, false); // 과일·단것이면 절임·과자 같은 형태로
+    const name = makeName({ ids, aura, second: effs[1] || null, main: sw ? sw.main : main, form: sw ? sw.form : FOOD_WORD[top], quality });
     const pts = hp / 30 + en / 20 + mind / 4;
     return { kind: 'food', top, aura, quality, use, name, sum, value: Math.round(value * { normal: 1, good: 1.5, great: 2 }[quality]), rarity: pts >= 5 ? 'rare' : pts >= 2.5 ? 'uncommon' : 'common' };
   }
@@ -170,7 +184,8 @@ function resolveMeal(ids, rnd = Math.random) {
   const aura = pickTop(AURA, sum, first)[0] || null;
   const top = talent === 'herbalist' ? ((sum.life || 0) >= (sum.clear || 0) ? 'life' : 'clear') : talent === 'guard' ? 'vigor' : talent === 'smith' ? 'hard' : 'food';
   const main = best[top]?.id || best.food?.id;
-  const name = makeName({ ids, aura, second: null, main, form: MEAL_WORD[talent || 'none'], quality });
+  const sw = sweetOf(ids, true);
+  const name = makeName({ ids, aura, second: null, main: sw ? sw.main : main, form: sw ? sw.form : MEAL_WORD[talent || 'none'], quality });
   const kin = { bond, sat, talent, drake: { bond: Math.max(1, Math.round(bond * M.drakeBond)), sat } }; // 새끼 드래곤은 유대가 조금 덜 오름 (먹이 기준)
   return { kind: 'meal', top, aura, quality, name, sum, kin, value: Math.round(value0 * { normal: 1, good: 1.5, great: 2 }[quality]), rarity: bond >= 14 ? 'rare' : bond >= 9 ? 'uncommon' : 'common' };
 }

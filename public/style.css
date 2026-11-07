@@ -5087,3 +5087,44 @@ body.chat-off #say, body.chat-off #chat-view { display: none; }
 /* 돌아온 골렘의 '가져온 것' 상자: 왼쪽 띠를 돌아옴 아이콘과 같은 호박색으로 */
 #home-ui.hm-e .detail .box { border-left-color: var(--ht); background: #FDF7EE; }
 #home-ui.hm-e .detail .box > .rm-k { color: var(--htt); font-weight: 600; }
+
+/* ── 안개 너머의 행상인 (peddler.js) ── 안개 낀 바다 빛: 회청록 */
+.itag.ex { border-color: #9DB7B8; background: #EEF4F3; color: #2F5A5C; font-weight: 600; }
+.pd-bar { background: #F1F5F4; border-color: #B9CCCB; }
+.pd-bar small .rd { color: #2F5A5C; font-weight: 600; }
+.pd-hint { background: #F7FAF9; border-style: dashed; }
+.pd-em svg { display: block; }
+#pd-dlg .mk-banner.pd-banner { background: #2F4B4D; }
+#pd-dlg .pd-banner .mkb-note { color: #C9DAD8; }
+#pd-dlg .mk-banner + * { margin-top: 10px; }
+.pd-odds { margin-top: 4px; font-size: 11.5px; line-height: 1.5; color: #2F5A5C; }
+.pd-boxrow { background: #F5F9F8; }
+.pd-openbox { min-height: 32px; padding: 0 12px; font-size: 12.5px; }
+.mk-row .nm .pd-openbox { align-self: flex-start; margin-top: 8px; }
+.pd-spnote { margin: 10px 2px 0; }
+.pd-gear small { color: var(--muted); }
+/* 열린 상자 */
+.pd-reveal { display: grid; grid-template-columns: 56px 1fr; gap: 4px 12px; align-items: center; padding: 12px 14px; border: 1px solid #B9CCCB; border-left: 3px solid #4F7C7E; background: #F1F6F5; border-radius: 3px; margin-bottom: 10px; animation: pd-in .35s ease-out; }
+.pd-reveal.k-gear { border-left-color: #B08A3E; background: #FBF6E8; border-color: #E2CF9E; }
+.pd-box { grid-row: span 2; width: 48px; height: 40px; }
+.pd-box svg { width: 48px; height: 40px; overflow: visible; }
+.pd-box .lid { transform-origin: 4px 9px; animation: pd-lid .6s ease-out forwards; }
+.pd-rv-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pd-rv-t b { font: 700 15px/1.35 var(--serif); color: var(--ink); }
+.pd-reveal.k-gear .pd-rv-t b { color: #8C6A1E; }
+.pd-rv-t small { font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+.pd-rv-l { grid-column: 2; margin: 0; font-size: 12px; line-height: 1.55; color: var(--muted); }
+@keyframes pd-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes pd-lid { 0% { transform: rotate(0); } 30% { transform: rotate(-6deg); } 100% { transform: translate(-2px, -6px) rotate(-24deg); } }
+@media (prefers-reduced-motion: reduce) { .pd-reveal, .pd-box .lid { animation: none; } }
+/* 제작: 양념 넣기 */
+.rc-spice { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border: 1px dashed #9DB7B8; border-radius: 3px; background: #F5F9F8; color: #2F5A5C; font-size: 12px; cursor: pointer; }
+.rc-spice input { margin: 0; accent-color: #2F5A5C; }
+.rc-spice.on { border-style: solid; background: #E6F0EF; font-weight: 600; }
+
+.pd-grp { margin: 14px 2px 2px; font: 600 12px/1.4 var(--sans); color: #2F5A5C; letter-spacing: .02em; }
+.pd-grp:first-child { margin-top: 0; }
+#pd-body .pd-spnote { margin: 2px 2px 4px; }
+
+/* 강화한 장신구를 넘길 때 안내 (선물·교환) */
+.enh-note { display: block; margin-top: 3px; font: 400 11.5px/1.45 var(--sans); color: #8A5E2A; }

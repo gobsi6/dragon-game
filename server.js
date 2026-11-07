@@ -534,8 +534,10 @@ const meOf = (d) => ({
   achNew: logic.achHasNew(d), // 아직 열어 보지 않은 새 업적
   yabawi: yabawi.here(d),     // 같은 장소에 야바위꾼이 있으면 { until, greet … }
   yabawiNow: yabawi.nowInfo(), // 대륙 어딘가에 야바위꾼이 나와 있으면 { hint, until } (지역 카드의 알림 줄)
+  peddler: peddler.status(d),          // 안개 너머의 행상인: 와 있으면 { open, until, here }, 아니면 { next } (남쪽 해안)
   nightMarket: nightMarket.status(d), // 축제 중이면 { open, until, next, here, mine } (왕도 야시장)
-  craftMult: logic.titleMods(d).craftEn || 1,
+  craftMult: (logic.titleMods(d).craftEn || 1) * logic.lifeMods(d).craftEn, // 칭호 · 장신구 효과 craftEn (지금은 이 효과를 가진 장신구 없음)
+  craftGear: logic.lifeMods(d).craftEn < 1, // 제작 기력이 장신구 덕에 줄었는지 (화면의 '○○ 덕분에' 글)
   cookMult: logic.titleMods(d).cookEn || 1, // 칭호 '둥지의 요리사': 요리 제작 기력
   mob: mobs.summary(d),                     // 맡은 모브 드래곤 의뢰와 진행도
   craft: logic.craftView(d),                // 찾아낸 제작법, 대성공 확률, 공방, 장신구 강화·각인
@@ -907,6 +909,9 @@ const slate = require('./slate')({ io, db, entryOf }); // 석판 (게시판)
 const yabawi = require('./yabawi')({ io, db, online, logic, sendMe, isOpen: (r) => (r.startsWith('raid:') ? !!raidBoss?.cleared(r.slice(5)) : ruin.unlocked(r)) }); // ruin은 아래에서 만들어지지만, 쓰는 건 게임이 돌아갈 때라 괜찮음
 // 왕도 야시장: 축제 날 저녁 6시~새벽 5시, 상인 노점과 드래곤들의 노점 (nightmarket.js)
 const nightMarket = require('./nightmarket')({ io, db, online, logic, sendMe });
+// 안개 너머의 행상인: 하루 세 번 남쪽 해안에 90분씩 (peddler.js). 이국 장신구는 빚은 물건처럼 월드에 저장 (아래 registerItem)
+const peddler = require('./peddler')({ io, db, online, logic, sendMe, registerItem: (sig, def) => peddlerItem(sig, def) });
+logic.hooks.openMistBox = (d, id) => peddler.openBox(d, id);
 // 다른 둥지 아이와 맺어지기: 서로의 첫사랑 → 혼인 청 → 두 보호자 허락 (kinlove.js)
 const kinLove = require('./kinlove')({ db, online, sendMe, life, logic,
   news: (text) => { const at = Date.now(); let id = 0; try { id = db.addChat('!', { dragonId: 0, name: '', kind: '', text, at }); } catch {} io.emit('system', { text, at, news: true, id }); },
@@ -1306,8 +1311,18 @@ const CUSTOM = db.worldGet('customItems') || {};
   }
   if (n) { db.worldSet('customItems', CUSTOM); console.log(`[빚은 물건] 예전 걸작 ${n}개의 이름 앞에 '걸작'을 붙임`); }
 }
+// 이국 장신구(행상인): 효과 글·값은 지금 PEDDLER.gear로 맞춤 (수치를 고쳐도 이미 가진 것에 바로 들게)
+{ const PG = require('./game-data').PEDDLER.gear; for (const def of Object.values(CUSTOM)) { const g = def.exotic && PG[def.exotic]; if (g) { def.life = { ...g.life }; def.lifeEff = g.eff; def.desc = `${g.desc} 안개 너머의 행상인에게서 왔다.`; def.lvReq = require('./game-data').PEDDLER.gearLv || undefined; } } }
 for (const [id, def] of Object.entries(CUSTOM)) ITEMS[id] = def;
 const customSave = (id, def) => { CUSTOM[id] = def; db.worldSet('customItems', CUSTOM); ITEMS[id] = def; io.emit('items:add', { id, item: def }); };
+// 이국 장신구 (행상인): 같은 나눔이면 같은 id로 겹침
+function peddlerItem(sig, def) {
+  let id = free.hashId(sig), n = 0;
+  while (CUSTOM[id] && CUSTOM[id].custom?.sig !== sig) id = free.hashId(`${sig}#${++n}`);
+  if (CUSTOM[id]) { ITEMS[id] = CUSTOM[id]; return id; }
+  customSave(id, { ...def, custom: { sig, kind: 'exotic', at: Date.now() } });
+  return id;
+}
 logic.hooks.registerCustom = (d, ids, r) => {
   const sig = free.signature(d.id, ids, r);
   const all = CUSTOM;
@@ -1575,6 +1590,7 @@ function onConnect(socket) {
     slots: SLOTS,
     recipes: RECIPES.map((r) => (r.hidden ? { ...r, needs: {} } : r)), // 숨겨진 제작법은 재료를 숨김 (찾아내면 me.craft.needs로)
     buffs: require('./game-data').BUFFS,
+    peddler: (({ spiceOf, spices, region }) => ({ spiceOf, spices, region }))(require('./game-data').PEDDLER), // 양념 넣을 요리 · 행상인이 오는 지역
     expGoals: Object.fromEntries(Object.entries(require('./game-data').EXP_GOALS).map(([k, g]) => [k, { name: g.name, desc: g.desc, eff: g.eff, wild: !!g.wild }])),
     death: { waitMs: require('./game-data').DEATH.waitMs, helpAp: require('./game-data').DEATH.helpAp, helpEn: require('./game-data').DEATH.helpEn },
     shops: Object.keys(SHOPS),
@@ -2034,6 +2050,13 @@ function onConnect(socket) {
     });
   }
   // GM: 야바위꾼을 지금 바로 부름 (시험용). 어디에 있는지도 알려 줌
+  socket.on('gm:peddler', (p, ack) => {
+    if (typeof ack !== 'function') return;
+    if (!socket.data.user?.is_gm) return ack({ error: 'GM만 쓸 수 있다.' });
+    if (p?.summon) peddler.summon(Number(p.minutes) || undefined);
+    const nowS = peddler.slotNow();
+    ack({ ok: true, now: nowS ? { until: nowS.end } : null, today: peddler.daySlots(logic.dayIdx()).map((x) => ({ start: x.start, end: x.end })) });
+  });
   socket.on('gm:yabawi', (p, ack) => {
     if (typeof ack !== 'function') return;
     if (!socket.data.user?.is_gm) return ack({ error: 'GM만 쓸 수 있다.' });
@@ -2187,7 +2210,7 @@ function onConnect(socket) {
   };
 // 직접 만든 선물(보물 상자에 간직할 수 있는 것) 개수를 셈: 상자에 넣을 때 '직접 만든 것'으로 적고, 소지품에서 받은 선물과 나눠 보여 줌
   const countMade = (d, res) => { if (res.error) return res; const c = logic.combatJson(d); for (const m of res.made || []) if (m.qty > 0 && ITEMS[m.id]?.use?.keep) { c.madeKeep ||= {}; c.madeKeep[m.id] = (c.madeKeep[m.id] || 0) + m.qty; } return res; };
-  itemAction('craft', (d, p, have) => countMade(d, logic.craftMany(d, str(p.recipe), have, p.focus, p.qty))); // qty: 한꺼번에 만들 개수 (장신구는 하나씩)
+  itemAction('craft', (d, p, have) => countMade(d, logic.craftMany(d, str(p.recipe), have, p.focus, p.qty, p.spice ? str(p.spice) : null))); // spice: 양념 (행상인) // qty: 한꺼번에 만들 개수 (장신구는 하나씩)
   itemAction('craft:experiment', (d, p, have) => countMade(d, logic.experiment(d, p.items, have, { gift: p.gift === true, meal: p.meal === true && p.gift !== true }))); // gift: 선물로 빚기 · meal: 식구 요리로 빚기
   // 자유 제작: 내 제작법으로 다시 빚기 (저장한 재료 조합으로 실험)
   itemAction('craft:mine', (d, p, have) => {
@@ -2279,6 +2302,8 @@ function onConnect(socket) {
   itemAction('market:buy', counted('trade', (d, p, have) => logic.buy(d, str(p.item), Number(p.qty), have)));
   itemAction('market:sell', counted('trade', (d, p, have) => logic.sell(d, str(p.item), Number(p.qty), have)));
   // 왕도 야시장: 상인 노점에서 사기 · 내 노점에 올리기·거두기·간판 · 다른 드래곤 노점에서 사기
+  itemAction('pd:buy', (d, p) => peddler.buy(d, str(p.item), p.qty));
+  itemAction('pd:trade', (d, p) => peddler.trade(d, str(p.key)));
   itemAction('nm:npcBuy', (d, p) => nightMarket.npcBuy(d, str(p.item), p.qty));
   itemAction('nm:put', (d, p) => nightMarket.put(d, str(p.item), p.qty, p.price, typeof p.sign === 'string' ? p.sign : undefined));
   itemAction('nm:take', (d, p) => nightMarket.take(d, p.item ? str(p.item) : null));
@@ -2732,6 +2757,14 @@ function onConnect(socket) {
     const res = kinLove.answer(entry.dragon, payload?.id, !!payload?.yes);
     if (!res.error) sendMe(socket, entry.dragon);
     ack(res);
+  });
+  // 안개 너머의 행상인 (남쪽 해안)
+  socket.on('pd:get', (payload, ack) => {
+    if (typeof ack !== 'function') return;
+    const entry = entryOf(socket);
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
+    const res = peddler.view(entry.dragon);
+    ack(res.error ? res : { ok: true, pd: res });
   });
   socket.on('nm:get', (payload, ack) => {
     if (typeof ack !== 'function') return;
