@@ -255,11 +255,11 @@
           <button class="btn primary" type="button" id="yaba-open">말 걸기</button>
         </div>
         <div class="mob-bar pd-bar pd-hint" id="pd-hint" hidden><!-- 안개 너머의 행상인: 남쪽 해안에 배를 댐 (peddler.js) -->
-          <span class="mob-em pd-em"><svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="16" fill="#EEF1F1" stroke="#7C8F95" stroke-width="1.2"/><path d="M7 21h20l-3 5H10z" fill="#8A6A48" stroke="#3B3328" stroke-width="1"/><path d="M17 7v14" stroke="#3B3328" stroke-width="1.2"/><path d="M17 8l7 10h-7z" fill="#F4EEE2" stroke="#3B3328" stroke-width="1"/><path d="M17 10l-5 8h5z" fill="#D9CDB8" stroke="#3B3328" stroke-width="1"/><path d="M5 27c3 1.5 5-1 8 0s5 1.5 8 0 5-1 8 0" fill="none" stroke="#7C8F95" stroke-width="1.1" stroke-linecap="round"/></svg></span>
+          <span class="pd-em" aria-hidden="true"><svg viewBox="3.5 4.5 26.5 26"><path d="M10 26.2L7 21h20l-3 5.2"/><path d="M17 7v14"/><path d="M17 8l7 10h-7z"/><path d="M17 10l-5 8h5z"/><path d="M3.5 28.6C6.2 28.6 7.8 26.2 10 26.2s4.4 2.2 7 2.2 4.8-2.2 7-2.2 3.8 2.4 6.5 2.4"/></svg></span>
           <div class="mob-t"><b>안개 너머의 배</b><small id="pd-hint-t"></small></div>
         </div>
         <div class="mob-bar pd-bar" id="pd-bar" hidden>
-          <span class="mob-em pd-em"><svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="16" fill="#EEF1F1" stroke="#7C8F95" stroke-width="1.2"/><path d="M7 21h20l-3 5H10z" fill="#8A6A48" stroke="#3B3328" stroke-width="1"/><path d="M17 7v14" stroke="#3B3328" stroke-width="1.2"/><path d="M17 8l7 10h-7z" fill="#F4EEE2" stroke="#3B3328" stroke-width="1"/><path d="M17 10l-5 8h5z" fill="#D9CDB8" stroke="#3B3328" stroke-width="1"/><path d="M5 27c3 1.5 5-1 8 0s5 1.5 8 0 5-1 8 0" fill="none" stroke="#7C8F95" stroke-width="1.1" stroke-linecap="round"/></svg></span>
+          <span class="pd-em" aria-hidden="true"><svg viewBox="3.5 4.5 26.5 26"><path d="M10 26.2L7 21h20l-3 5.2"/><path d="M17 7v14"/><path d="M17 8l7 10h-7z"/><path d="M17 10l-5 8h5z"/><path d="M3.5 28.6C6.2 28.6 7.8 26.2 10 26.2s4.4 2.2 7 2.2 4.8-2.2 7-2.2 3.8 2.4 6.5 2.4"/></svg></span>
           <div class="mob-t"><b>안개 너머의 행상인</b><small id="pd-sub"></small></div>
           <button class="btn primary" type="button" id="pd-open">둘러보기</button>
         </div>
@@ -2642,7 +2642,7 @@
   function itemCatName(it) {
     if (!it) return '';
     if (it.type === 'equip') return '장신구';
-    if (it.type === 'use') return it.use?.mistBox ? '상자' : it.use?.nestWard ? '둥지 보호' : it.use?.buff ? '강화 음식' : it.use?.crown || (it.use?.keep && it.use?.mind) ? '꽃 선물' : it.use?.keep ? '추억' : '회복약';
+    if (it.type === 'use') return it.use?.mistBox ? '전리품' : it.use?.nestWard ? '둥지 보호' : it.use?.buff ? '강화 음식' : it.use?.crown || (it.use?.keep && it.use?.mind) ? '꽃 선물' : it.use?.keep ? '추억' : '회복약';
     if (it.spice) return '양념';
     return { meal: '식구 요리', bait: '미끼', fish: '물고기', treasure: '보물', trophy: '전리품' }[it.cat] || '재료';
   }
@@ -2719,7 +2719,7 @@
     if (!S.places) return '';
     return Object.values(S.places).filter((p) => p.drop === id).map((p) => `${p.name}(${S.regions[p.region]?.name || ''})`).join(', ');
   }
-  const itemCat = (it) => (it.type === 'equip' ? 'equip' : it.type === 'use' ? (it.use?.keep ? 'gift' : it.use?.buff ? 'buff' : 'use') : it.cat === 'meal' ? 'meal' : it.cat === 'bait' || it.cat === 'fish' ? 'fish' : it.cat === 'treasure' ? 'treasure' : it.cat === 'trophy' ? 'trophy' : 'mat');
+  const itemCat = (it) => (it.type === 'equip' ? 'equip' : it.use?.mistBox ? 'trophy' : it.type === 'use' ? (it.use?.keep ? 'gift' : it.use?.buff ? 'buff' : 'use') : it.cat === 'meal' ? 'meal' : it.cat === 'bait' || it.cat === 'fish' ? 'fish' : it.cat === 'treasure' ? 'treasure' : it.cat === 'trophy' ? 'trophy' : 'mat');
 
   // 프로필 카드의 장신구 자리
   // ── 즐겨찾기 (칭호·제작법): 이 기기에 드래곤마다 따로 저장 ──
@@ -3129,7 +3129,7 @@
 
     const order = { rare: 0, uncommon: 1, common: 2 };
     const CATS = ['treasure', 'equip', 'use', 'buff', 'gift', 'meal', 'fish', 'trophy', 'mat'];
-    const CAT_NAME = { treasure: '보물 (둥지 전용)', equip: '장신구', use: '회복약', buff: '강화 음식', gift: '선물·추억 (보물 상자에 간직)', meal: '식구 요리', fish: '낚시', trophy: '사냥 전리품', mat: '재료' };
+    const CAT_NAME = { treasure: '보물 (둥지 전용)', equip: '장신구', use: '회복약', buff: '강화 음식', gift: '선물·추억 (보물 상자에 간직)', meal: '식구 요리', fish: '낚시', trophy: '전리품', mat: '재료' };
     // 즐겨찾기: '전체'에서는 맨 위에 따로 모으고 아래 묶음에서는 빼며, 분류 탭에서는 그 묶음 맨 위로 (제작 창과 같음)
     const favI = FAV.list('items');
     const isFav = (id) => favI.includes(id);
@@ -7113,7 +7113,7 @@
     if (!mats.length) { box.appendChild(el('div', 'empty', '섞어 볼 재료가 없다.')); }
     // ── 재료: 소지품과 같은 분류·순서 ──
     const XCATS = ['treasure', 'use', 'buff', 'gift', 'meal', 'fish', 'trophy', 'mat'];
-    const XCAT_NAME = { treasure: '보물', use: '회복약', buff: '강화 음식', gift: '선물·추억', meal: '식구 요리', fish: '낚시', trophy: '사냥 전리품', mat: '재료' };
+    const XCAT_NAME = { treasure: '보물', use: '회복약', buff: '강화 음식', gift: '선물·추억', meal: '식구 요리', fish: '낚시', trophy: '전리품', mat: '재료' };
     const order = { rare: 0, uncommon: 1, common: 2 };
     mats.sort(([a], [b2]) => XCATS.indexOf(itemCat(S.items[a])) - XCATS.indexOf(itemCat(S.items[b2])) || order[S.items[a].rarity] - order[S.items[b2].rarity] || S.items[a].name.localeCompare(S.items[b2].name, 'ko'));
     // 성질로 거르기: 고른 성질이 있는 재료만

@@ -2558,6 +2558,7 @@ const DEX_CATS = [['material', '재료'], ['trophy', '전리품'], ['meal', '요
 function dexCat(it) {
   if (it.cat === 'treasure') return 'treasure';
   if (it.type === 'equip') return 'equip';
+  if (it.use?.mistBox) return 'trophy'; // 안개 상자는 전리품으로
   if (it.cat === 'meal') return 'meal';
   if (it.type === 'use') return 'use';
   if (it.cat === 'trophy') return 'trophy';

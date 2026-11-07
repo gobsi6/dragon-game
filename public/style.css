@@ -5093,7 +5093,8 @@ body.chat-off #say, body.chat-off #chat-view { display: none; }
 .pd-bar { background: #F1F5F4; border-color: #B9CCCB; }
 .pd-bar small .rd { color: #2F5A5C; font-weight: 600; }
 .pd-hint { background: #F7FAF9; border-style: dashed; }
-.pd-em svg { display: block; }
+.pd-em { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #fff; border: 1px solid #B9CCCB; color: #2F5A5C; flex: none; }
+.pd-em svg { display: block; width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 #pd-dlg .mk-banner.pd-banner { background: #2F4B4D; }
 #pd-dlg .pd-banner .mkb-note { color: #C9DAD8; }
 #pd-dlg .mk-banner + * { margin-top: 10px; }

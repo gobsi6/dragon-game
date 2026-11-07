@@ -2677,10 +2677,10 @@ const PEDDLER = {
   ],
   // 안개 상자 한 개를 열 때: w 비율로 하나, 그리고 증표는 언제나 tokens개
   box: [
-    { w: 1.5, kind: 'gear' },    // 이국 장신구 (여섯 가지가 같은 확률)
+    { w: 0.3, kind: 'gear' },    // 이국 장신구 (여섯 가지가 같은 확률)
     { w: 4,  kind: 'mat' },      // 이국 합성 재료 (boxMat)
     { w: 33, kind: 'potion' },   // 이국 회복약 (boxPotion)
-    { w: 61.5, kind: 'food' },   // 이국 요리 재료 꾸러미 (boxFood)
+    { w: 62.7, kind: 'food' },   // 이국 요리 재료 꾸러미 (boxFood)
   ],
   boxMat: { pool: { mist_pearl: 1, coral_branch: 1, sand_glass: 1 }, qty: [1, 1] }, // 하나 골라 1개
   boxPotion: { pool: { mist_draught: 4, coral_tonic: 4, clear_wind_incense: 3, star_honey: 1 }, qty: [1, 2] }, // 하나 골라 1~2개
