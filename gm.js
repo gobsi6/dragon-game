@@ -79,6 +79,7 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
       lastSeen: entry ? now : d.last_seen,
       eventId: ev,
       items: db.inventory(d.id),
+      seals: (logic.combatJson(d).city || {}).seals || 0, // 고대도시 석공 인장
       hoard: d.nest ? db.hoard(d.id) : [],
       kinAll: kin.map((k) => ({
         id: k.id, type: k.type, status: k.status, name: k.name,
@@ -117,6 +118,19 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
         ledger: real > 0 ? { goldIn: real } : { goldOut: -real },
         log: `금화 ${real > 0 ? '+' : ''}${real}`,
         tell: real > 0 ? `하늘에서 금화 ${real}닢이 내려왔다.` : `금화 ${-real}닢이 바람에 흩어졌다.`,
+      };
+    },
+    // 고대도시 석공 인장 주기·빼기 (집터를 아직 안 고른 드래곤도 미리 받아 둘 수 있음)
+    seals(d, kin, now, p) {
+      const n = int(p.n);
+      if (!n || Math.abs(n) > 99999) return { error: '인장 숫자를 확인하자.' };
+      const c = logic.combatJson(d); if (!c.city || typeof c.city !== 'object') c.city = {};
+      const before = c.city.seals || 0; c.city.seals = Math.max(0, before + n);
+      const real = c.city.seals - before;
+      if (!real) return { error: '뺄 인장이 없다.' };
+      return {
+        log: `석공 인장 ${real > 0 ? '+' : ''}${real} (→ ${c.city.seals})`,
+        tell: real > 0 ? `석공 인장 ${real}개를 받았다.` : `석공 인장 ${-real}개가 사라졌다.`,
       };
     },
     item(d, kin, now, p) {

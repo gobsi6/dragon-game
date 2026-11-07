@@ -605,20 +605,39 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     m.seals -= cost; m.bp[s] = 1;
     return { ok: true, lines: [`오르딘에게서 ${FURN[s].name} 도면을 받았다. 이제 가구 만들기에서 만들 수 있다. 석공 인장 −${cost}.`] };
   }
+  // 바닥·담은 한 번 사면 계속 가짐 (바닥은 어느 칸에서나). 칸마다 처음 깔린 바닥과 낮은 돌담은 처음부터 가짐
+  function lookOwn(m) {
+    if (!m.look) m.look = { floor: {}, wall: 'stone' };
+    if (!m.look.own) m.look.own = { floor: [...new Set(Object.values(m.look.floor || {}))], wall: m.look.wall && m.look.wall !== 'stone' ? [m.look.wall] : [] }; // 예전에 깔아 둔 것은 산 것으로 침
+    return m.look.own;
+  }
+  const hasFloor = (m, id, f) => f === FLOOR_DEF(m.plot, id) || lookOwn(m).floor.includes(f);
+  const hasWall = (m, w) => w === 'stone' || lookOwn(m).wall.includes(w);
   function setLook(d, p) {
     const e = ready(d); if (e) return e;
-    const m = ct(d); if (!m.plot) return err('먼저 집터를 골라야 한다.'); if (!m.look) m.look = { floor: {}, wall: 'stone' };
+    const m = ct(d); if (!m.plot) return err('먼저 집터를 골라야 한다.'); const ow = lookOwn(m);
     if (p.wall != null) {
       const w = String(p.wall); if (!own(LOOK.walls, w)) return err('그런 담은 없다.'); if (!roomDone(plotRooms(m)[0], m.rooms.yard)) return err('마당을 되살린 뒤에 바꿀 수 있다.');
-      if ((m.look.wall || 'stone') === w) return err('이미 그 담이다.'); if (m.seals < LOOK.wallCost) return err(`석공 인장 ${LOOK.wallCost}개가 있어야 한다.`);
-      m.seals -= LOOK.wallCost; m.look.wall = w; return { ok: true, lines: [`마당 담을 ${ro(LOOK.walls[w])} 바꿨다. 석공 인장 −${LOOK.wallCost}.`] };
+      if ((m.look.wall || 'stone') === w) return err('이미 그 담이다.');
+      if (!hasWall(m, w)) {
+        if (!p.buy) return err('아직 갖지 않은 담이다.'); // 미리 보기에서 '사서 두르기'를 눌렀을 때만 삼
+        if (m.seals < LOOK.wallCost) return err(`석공 인장 ${LOOK.wallCost}개가 있어야 한다. (가진 것 ${m.seals})`);
+        m.seals -= LOOK.wallCost; ow.wall.push(w); m.look.wall = w;
+        return { ok: true, lines: [`마당 담을 ${ro(LOOK.walls[w])} 새로 둘렀다. 석공 인장 −${LOOK.wallCost}. 이제 언제든 다시 바꿀 수 있다.`] };
+      }
+      m.look.wall = w; return { ok: true, lines: [`마당 담을 ${ro(LOOK.walls[w])} 바꿨다.`] };
     }
     const id = String(p.room || ''), f = String(p.floor || ''), r = plotRooms(m).find((x) => x.id === id);
     if (!r) return err('그런 칸은 없다.'); if (!roomDone(r, m.rooms[id])) return err(`${r.name}${josa(r.name, '을', '를')} 되살린 뒤에 바꿀 수 있다.`);
     if (!own(LOOK.floors, f)) return err('그런 바닥은 없다.'); if (((m.look.floor || {})[id] || FLOOR_DEF(m.plot, id)) === f) return err('이미 그 바닥이다.');
-    if (m.seals < LOOK.floorCost) return err(`석공 인장 ${LOOK.floorCost}개가 있어야 한다.`);
-    m.seals -= LOOK.floorCost; m.look.floor = { ...(m.look.floor || {}), [id]: f };
-    return { ok: true, lines: [`${r.name} 바닥을 ${ro(LOOK.floors[f])} 새로 깔았다. 석공 인장 −${LOOK.floorCost}.`] };
+    if (!hasFloor(m, id, f)) {
+      if (!p.buy) return err('아직 갖지 않은 바닥이다.');
+      if (m.seals < LOOK.floorCost) return err(`석공 인장 ${LOOK.floorCost}개가 있어야 한다. (가진 것 ${m.seals})`);
+      m.seals -= LOOK.floorCost; ow.floor.push(f); m.look.floor = { ...(m.look.floor || {}), [id]: f };
+      return { ok: true, lines: [`${r.name} 바닥을 ${ro(LOOK.floors[f])} 새로 깔았다. 석공 인장 −${LOOK.floorCost}. 이제 어느 칸에서든 다시 쓸 수 있다.`] };
+    }
+    m.look.floor = { ...(m.look.floor || {}), [id]: f };
+    return { ok: true, lines: [`${r.name} 바닥을 ${ro(LOOK.floors[f])} 바꿨다.`] };
   }
   const tradeOffers = () => { const w = dayIdx(), r = TRADE.rare.filter(([k]) => ITEMS[k]), c = TRADE.city.filter(([k]) => ITEMS[k]), out = []; if (r.length) out.push(r[w % r.length]); for (let i = 0; out.length < 1 + Math.min(3, c.length); i++) { const it = c[(w * 2 + i) % c.length]; if (!out.includes(it)) out.push(it); } return out; }; // 희귀 1 + 도시 재료 3 (주마다 돌아감)
   const tradeLeft = (m) => { if (!m.trade || m.trade.day !== dayIdx()) m.trade = { day: dayIdx(), n: 0 }; return Math.max(0, TRADE.perDay - m.trade.n); }; // 한국 시간 자정에 다시
@@ -849,7 +868,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
         furn: m.furn, furnCat: Object.entries(FURN).map(([k, f]) => ({ s: k, name: f.name, seals: sealCost(f), base: f.seals, bp: own(BLUEPRINT, k) ? !!(m.bp || {})[k] : null, mats: Object.entries(f.mats).map(([id, n]) => ({ id, name: ITEMS[id].name, need: n })) })),
         zday: Object.fromEntries(Object.entries(m.zday || {}).filter(([, v]) => v === dayIdx())), springLeft: ZF.springTimes - (m.spring && m.spring.day === dayIdx() ? m.spring.n : 0), bell: (() => { const bt = bellToday(), by = Array.isArray(bt.by) ? bt.by : []; return { n: by.length, need: ZF.bellNeed, mine: by.includes(d.name), on: by.length >= ZF.bellNeed }; })(), forgeOff: done('forge') ? ZF.forgeOff : 0,
         bp: Object.entries(BLUEPRINT).map(([k, c]) => ({ s: k, name: FURN[k].name, seals: c, have: !!(m.bp || {})[k] })),
-        look: { def: m.plot ? Object.fromEntries(['yard', 'work', 'live', 'own'].map((k) => [k, FLOOR_DEF(m.plot, k)])) : {}, floor: (m.look && m.look.floor) || {}, wall: (m.look && m.look.wall) || 'stone', floors: LOOK.floors, walls: LOOK.walls, floorCost: LOOK.floorCost, wallCost: LOOK.wallCost },
+        look: { def: m.plot ? Object.fromEntries(['yard', 'work', 'live', 'own'].map((k) => [k, FLOOR_DEF(m.plot, k)])) : {}, floor: (m.look && m.look.floor) || {}, wall: (m.look && m.look.wall) || 'stone', own: m.plot ? lookOwn(m) : { floor: [], wall: [] }, floors: LOOK.floors, walls: LOOK.walls, floorCost: LOOK.floorCost, wallCost: LOOK.wallCost },
         trade: { left: tradeLeft(m), per: TRADE.perDay, offers: tradeOffers().map(([k, c, q], i) => ({ i, id: k, name: ITEMS[k].name, rarity: ITEMS[k].rarity, seals: c, qty: q || 1, city: TRADE.city.some((x) => x[0] === k) })) },
         perk: m.plot ? (() => { const on = perkOn(m), pd = perkDaily(m), max = perkMax(m); return { on, up: perkUp(m), kind: m.plot === 'forge' ? 'passive' : m.plot === 'belfry' ? 'recall' : 'daily', text: PI[m.plot].perk, left: on ? Math.max(0, max - pd.n) : 0, max, off: m.plot === 'forge' ? PERK.forgeOff[perkLv(m)] : 0 }; })() : null,
         book: { has: hasBook(m), list: bookOf(d.name), unread: bookNew(d, m) },

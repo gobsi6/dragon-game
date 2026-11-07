@@ -5001,6 +5001,11 @@ body:not(.realm-city) .moss-fx { display: none; }
 #home-ui .lk-seg { display: flex; flex-wrap: wrap; gap: 4px; }
 #home-ui .lk-seg button { flex: none; min-height: 28px; padding: 0 8px; font-size: 12px; border: 1px solid #DCCDB2; background: #FFFDF9; color: #5B4A35; cursor: pointer; }
 #home-ui .lk-seg button.on { background: #6E5A48; border-color: #6E5A48; color: #FBF8F2; }
+#home-ui .lk-seg button { display: inline-flex; align-items: center; gap: 4px; }
+#home-ui .lk-seg button.pv { border: 1px dashed #6E5A48; background: #F3ECDF; color: #3A2E26; }
+#home-ui .lk-seg button .lk-c { font-style: normal; font-size: 10.5px; color: #9A876C; }
+#home-ui .lk-seg button.on .lk-c { color: #E3D6C2; }
+#home-ui .lk-pv { margin: -4px 0 10px; border-color: #DCCDB2; background: #F7F1E6; }
 #home-ui .cv-book li.tr-row { align-items: center; }
 #home-ui .tr-row b { flex: 1; min-width: 0; }
 #home-ui .tr-row .tr-r { flex: none; font-size: 11px; color: #8A7A64; }

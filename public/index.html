@@ -13249,6 +13249,11 @@
     const gold = gNum(r, '금화', 100);
     gBtn(r, '주기', () => gmDo('gold', { n: Math.abs(+gold.value) }));
     gBtn(r, '빼기', () => gmDo('gold', { n: -Math.abs(+gold.value) }));
+    r = gmRow(s, '석공 인장');
+    const sealIn = gNum(r, '석공 인장', 10);
+    gBtn(r, '주기', () => gmDo('seals', { n: Math.abs(+sealIn.value) }, '석공 인장을 줬다.'));
+    gBtn(r, '빼기', () => gmDo('seals', { n: -Math.abs(+sealIn.value) }, '석공 인장을 뺐다.'));
+    r.appendChild(gEl('span', 'gm-val', `가진 인장 ${d.seals || 0}`));
     r = gmRow(s, '경험치');
     const xp = gNum(r, '경험치', 100);
     gBtn(r, '주기', () => gmDo('xp', { n: Math.abs(+xp.value) }));
@@ -15519,12 +15524,17 @@
   // 바닥·담 바꾸기: 되살린 칸의 바닥 무늬, 마당 담 모양
   function lookEditor(h) {
     const L = h.look; if (!L) return `<div class="dk-top"><p class="note">서버의 <code>city.js</code>가 이 기능이 없는 예전 판이라 보이지 않는다. 최신 <code>city.js</code>를 함께 올려야 한다.</p></div>`;
-    const plan = `<div class="hp"><canvas class="hp-cv" width="146" height="110" aria-hidden="true"></canvas></div>`;
+    const ow = L.own || { floor: [], wall: [] }, pv = CT.lookPv, plan = `<div class="hp"><canvas class="hp-cv" width="146" height="110" aria-hidden="true"></canvas></div>`;
+    const hasF = (id, k) => k === (L.def || {})[id] || ow.floor.includes(k), hasW = (k) => k === 'stone' || ow.wall.includes(k);
+    const cost = (n) => `<em class="lk-c" title="처음 쓸 때 석공 인장 ${n}">${n}</em>`;
     const rows = h.rooms.map((r) => { const done = r.state === 'done', cur = L.floor[r.id] || (L.def || {})[r.id];
-      return `<div class="lk-row"><b>${r.name}</b>${done ? `<div class="seg lk-seg">${Object.entries(L.floors).map(([k, n]) => `<button type="button" data-ct="look:${r.id}:${k}" class="${cur === k ? 'on' : ''}">${n}</button>`).join('')}</div>` : '<small>되살린 뒤에 바꿀 수 있다</small>'}</div>`; }).join('');
+      return `<div class="lk-row"><b>${r.name}</b>${done ? `<div class="seg lk-seg">${Object.entries(L.floors).map(([k, n]) => `<button type="button" data-ct="lkp:${r.id}:${k}" class="${cur === k ? 'on' : ''}${pv && pv.room === r.id && pv.k === k ? ' pv' : ''}">${n}${hasF(r.id, k) ? '' : cost(L.floorCost)}</button>`).join('')}</div>` : '<small>되살린 뒤에 바꿀 수 있다</small>'}</div>`; }).join('');
     const yardDone = h.rooms[0] && h.rooms[0].state === 'done';
-    const wall = `<div class="lk-row"><b>마당 담</b>${yardDone ? `<div class="seg lk-seg">${Object.entries(L.walls).map(([k, n]) => `<button type="button" data-ct="lookw:${k}" class="${(L.wall || 'stone') === k ? 'on' : ''}">${n}</button>`).join('')}</div>` : '<small>마당을 되살린 뒤에 바꿀 수 있다</small>'}</div>`;
-    return `<div class="dk-top"><span>석공 인장 <b>${h.seals}</b></span><small>지금 깔린 바닥이 짙게 보인다. 바닥은 한 번 바꿀 때 인장 ${L.floorCost}, 마당 담은 ${L.wallCost}.</small></div>${plan}<div class="lk-list">${rows}${wall}</div>`;
+    const wall = `<div class="lk-row"><b>마당 담</b>${yardDone ? `<div class="seg lk-seg">${Object.entries(L.walls).map(([k, n]) => `<button type="button" data-ct="lkp:wall:${k}" class="${(L.wall || 'stone') === k ? 'on' : ''}${pv && pv.room === 'wall' && pv.k === k ? ' pv' : ''}">${n}${hasW(k) ? '' : cost(L.wallCost)}</button>`).join('')}</div>` : '<small>마당을 되살린 뒤에 바꿀 수 있다</small>'}</div>`;
+    let bar = '';
+    if (pv) { const isW = pv.room === 'wall', name = isW ? L.walls[pv.k] : L.floors[pv.k], where = isW ? '마당 담' : (h.rooms.find((r) => r.id === pv.room) || {}).name, have = isW ? hasW(pv.k) : hasF(pv.room, pv.k), c = isW ? L.wallCost : L.floorCost;
+      bar = `<div class="dk-sel lk-pv"><b>미리 보기 · ${where} ${name}</b>${have ? `<button type="button" class="btn sm primary" data-ct="lkok">이걸로 바꾸기</button>` : `<button type="button" class="btn sm primary" data-ct="lkok"${h.seals < c ? ' disabled' : ''}>인장 ${c}로 ${isW ? '두르기' : '깔기'}</button>`}<button type="button" class="btn sm" data-ct="lkno">되돌리기</button></div>`; }
+    return `<div class="dk-top"><span>석공 인장 <b>${h.seals}</b></span><small>누르면 그림에 먼저 미리 보인다. 숫자가 붙은 것은 처음 쓸 때만 인장이 들고, 한 번 산 바닥은 어느 칸에서든 다시 쓸 수 있다.</small></div>${plan}${bar}<div class="lk-list">${rows}${wall}</div>`;
   }
   function decoEditor(h) {
     const dk = dkState(h), max = h.decoRules?.max || 30, sel = dk.sel != null ? dk.list[dk.sel] : null;
@@ -15609,7 +15619,9 @@
   function paintHouse(body, h) {
     const cv = body.querySelector('.hp-cv');
     // 꾸미기 화면과 똑같이: 저장한 배치가 없으면 눈금에 맞춘 기본 배치 (꾸미기를 처음 열 때와 같은 목록)
-    if (cv) HP.paint(cv, HP.plan(h.plot, Object.fromEntries(h.rooms.map((r) => [r.id, { state: r.state, p: roomFrac(r) }])), h.deco || HP.defaults(h.plot, h.rooms.filter((r) => r.state === 'done').map((r) => r.id), h.decoRules?.grid || 4), h.look));
+    let look = h.look; const pv = CT.lookPv; // 바닥·담 미리 보기: 아직 바꾸지 않은 모습을 그림에만 입힘
+    if (pv && look && CT.tab === 'deco' && CT.dkMode === 'look') look = pv.room === 'wall' ? { ...look, wall: pv.k } : { ...look, floor: { ...(look.floor || {}), [pv.room]: pv.k } };
+    if (cv) HP.paint(cv, HP.plan(h.plot, Object.fromEntries(h.rooms.map((r) => [r.id, { state: r.state, p: roomFrac(r) }])), h.deco || HP.defaults(h.plot, h.rooms.filter((r) => r.state === 'done').map((r) => r.id), h.decoRules?.grid || 4), look));
     body.querySelectorAll('.hp-stage').forEach((c) => HP.paint(c, HP.stage(c.dataset.k, h.plot)));
   }
   // ════ 내 집터 도트 그림 (house-pixels/gen.py와 같은 규칙. 가구 그림은 SPR, 색은 PAL에서 고친다) ════
@@ -16024,10 +16036,12 @@
     if (k === 'mend') return cityCall('city:mend', { i: +x, by: y });
     if (k === 'mk') return cityCall('city:craft', { s: x, n: +(y || 1) });
     if (k === 'bp') return cityCall('city:bp', { s: x });
-    if (k === 'look') return cityCall('city:look', { room: x, floor: y });
-    if (k === 'lookw') return cityCall('city:look', { wall: x });
+    if (k === 'lkp') { const L = CT.v.me.look || {}, cur = x === 'wall' ? (L.wall || 'stone') : ((L.floor || {})[x] || (L.def || {})[x]); CT.lookPv = cur === y ? null : { room: x, k: y }; return renderHome(); } // 누르면 미리 보기만
+    if (a === 'lkno') { CT.lookPv = null; return renderHome(); }
+    if (a === 'lkok') { const pv = CT.lookPv; if (!pv) return; const L = CT.v.me.look || {}, ow = L.own || { floor: [], wall: [] }, have = pv.room === 'wall' ? (pv.k === 'stone' || ow.wall.includes(pv.k)) : (pv.k === (L.def || {})[pv.room] || ow.floor.includes(pv.k));
+      return cityCall('city:look', pv.room === 'wall' ? { wall: pv.k, buy: !have } : { room: pv.room, floor: pv.k, buy: !have }, () => { CT.lookPv = null; }); }
     if (k === 'trade') { if (!confirm('석공 인장으로 바꿀까?')) return; return cityCall('city:trade', { i: +x }); }
-    if (k === 'dkm') { CT.dkMode = x; if (CT.dk) { CT.dk.pick = null; CT.dk.sel = null; } return renderHome(); }
+    if (k === 'dkm') { CT.dkMode = x; CT.lookPv = null; if (CT.dk) { CT.dk.pick = null; CT.dk.sel = null; } return renderHome(); }
     if (k === 'dk' && CT.dk) { const dk = CT.dk;
       if (x === 'pick') { if (dk.pick !== y && dkLeft(CT.v.me, y) <= 0) { CT.dkMode = 'make'; CT.dkFocus = y; toast(`가진 ${DK_NAME[y]}${ctJ(DK_NAME[y], '이', '가')} 없다. 만들기에서 만든다.`); return renderHome(); } dk.pick = dk.pick === y ? null : y; dk.pickF = false; dk.sel = null; return renderHome(); }
       if (x === 'del') { if (dk.sel != null) { dk.list.splice(dk.sel, 1); dk.sel = null; dk.dirty = true; } return renderHome(); }
@@ -16039,7 +16053,7 @@
     }
     if (k === 'choose') return cityCall('city:choose', { id: x });
     if (k === 'act') return homeAct(a.slice(4));
-    if (k === 'tab') { CT.tab = x; if (CT.dk) { CT.dk.pick = null; CT.dk.sel = null; } if (x === 'plan' && CT.sel === 'golems') CT.sel = 'room:cur'; return renderHome(); }
+    if (k === 'tab') { CT.tab = x; CT.lookPv = null; if (CT.dk) { CT.dk.pick = null; CT.dk.sel = null; } if (x === 'plan' && CT.sel === 'golems') CT.sel = 'room:cur'; return renderHome(); }
     if (k === 'sel') { CT.sel = a.slice(4); if (CT.sel !== 'golems') CT.gopen = null; CT.tab = CT.sel === 'golems' ? 'golems' : 'plan'; renderHome(); $('city-home-dlg').querySelector('.detail')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); return; }
     if (k === 'gopen') { const i = +x; CT.gopen = CT.sel === 'golems' && CT.gopen === i && CT.tab === 'golems' ? null : i; CT.sel = 'golems'; CT.tab = 'golems'; renderHome(); return; }
     if (k === 'job') { CT.job[+x] = y; return renderHome(); }
