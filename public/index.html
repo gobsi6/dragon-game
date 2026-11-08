@@ -3301,7 +3301,7 @@
       const aw = it.type === 'equip' && (S.recipes || []).find((r) => r.awaken && r.needs?.[id]);
       if (aw) {
         const nm = S.items[aw.out]?.name || '깨어난 장비';
-        const go = () => { const dlg = $('inv-dlg'); if (dlg?.open) dlg.close(); goRecipe(aw.out); };
+        const go = () => goRecipe(aw.out); // 제작 창은 소지품 위에 겹쳐 뜨므로 소지품 창은 닫지 않음
         const w = document.createElement('button');
         w.type = 'button';
         w.className = 'use-n awaken-n';
