@@ -3137,10 +3137,13 @@
     const groupOf = (id) => (invTab === 'all' && isFav(id) ? 'fav' : itemCat(S.items[id]));
     const GORDER = ['fav', ...CATS];
     // 즐겨찾기한 물건은 다 써서 없어도 '다 씀'으로 남겨 보여 줌 (별이 풀린 것처럼 보이지 않게, 다시 모을 때 찾기 쉽게)
-    const zeros = favI.filter((id) => S.items[id] && !(invCache[id] > 0)).map((id) => [id, 0]);
+    // 차고 있는 장신구도 소지품에 '착용 중' 꼬리표를 달고 함께 보여 줌 ([id, 0, 부위]: 같은 것이 소지품에도 있으면 그 줄 위에 따로)
+    const wornE = S.slots.map((sl) => [S.me.equip?.[sl.key], 0, sl.key]).filter(([id]) => id && S.items[id]);
+    const wornIds = new Set(wornE.map(([id]) => id));
+    const zeros = favI.filter((id) => S.items[id] && !(invCache[id] > 0) && !wornIds.has(id)).map((id) => [id, 0]);
     // 정렬: 기본(등급·이름) · 성능순(높은 것부터) · 값순. 묶음(분류)은 그대로 두고 묶음 안에서만
     const pw = invSort === 'power' ? invPower : invSort === 'value' ? (id) => S.items[id]?.value || 0 : null;
-    const list = [...all, ...zeros]
+    const list = [...wornE, ...all, ...zeros]
       .filter(([id]) => invTab === 'all' || (invTab === 'fav' ? isFav(id) : itemCat(S.items[id]) === invTab))
       .filter(([id]) => invTab !== 'equip' || invSlot === 'all' || S.items[id].slot === invSlot) // 장신구 탭: 부위별 소분류
       .sort(([a], [b]) => GORDER.indexOf(groupOf(a)) - GORDER.indexOf(groupOf(b))
@@ -3152,10 +3155,10 @@
     const tabX = box.querySelector('.utabs')?.scrollLeft || 0;
     box.replaceChildren();
     // 분류 탭: 가진 물건이 있는 분류만 (전체 · 즐겨찾기는 늘)
-    const has = new Set(all.map(([id]) => itemCat(S.items[id])));
+    const has = new Set([...wornE, ...all].map(([id]) => itemCat(S.items[id])));
     if (invTab !== 'all' && invTab !== 'fav' && !has.has(invTab)) invTab = 'all';
     const kinds = {};
-    for (const [id] of all) { const c = itemCat(S.items[id]); kinds[c] = (kinds[c] || 0) + 1; }
+    for (const id of new Set([...wornE, ...all].map(([x]) => x))) { const c = itemCat(S.items[id]); kinds[c] = (kinds[c] || 0) + 1; }
     const { wrap: bar, tabs } = buildTabs(
       [['all', '전체'], ['fav', '★ 즐겨찾기'], ...CATS.filter((c) => has.has(c)).map((c) => [c, INV_TAB_NAME[c], true, kinds[c]])],
       invTab, (k) => { invTab = k; keepScroll($('inv-dlg'), renderInv); }, '물건 분류');
@@ -3206,7 +3209,7 @@
     // 장신구 탭: 부위별 소분류 (만들기 창과 같은 모양). 가진 장신구 수를 함께
     if (invTab === 'equip') {
       const cnt = {};
-      for (const [id] of all) if (S.items[id].type === 'equip') cnt[S.items[id].slot] = (cnt[S.items[id].slot] || 0) + 1;
+      for (const id of new Set([...wornE, ...all].map(([x]) => x))) if (S.items[id].type === 'equip') cnt[S.items[id].slot] = (cnt[S.items[id].slot] || 0) + 1;
       if (invSlot !== 'all' && !cnt[invSlot]) invSlot = 'all';
       const sub = document.createElement('div');
       sub.className = 'craft-sub inv-sub';
@@ -3232,22 +3235,23 @@
     }
     let lastCat = null, group = box;
     const catN = {};
-    for (const [id] of list) { const c = groupOf(id); catN[c] = (catN[c] || 0) + 1; }
+    for (const id of new Set(list.map(([x]) => x))) { const c = groupOf(id); catN[c] = (catN[c] || 0) + 1; } // 착용 중 줄과 소지품 줄이 함께 있어도 한 종
     if (!list.length) {
       const p = document.createElement('div');
       p.className = 'empty';
-      p.textContent = !all.length ? '아직 모은 물건이 없다. 탐사나 채집으로 모아 보자.'
+      p.textContent = !all.length && !wornE.length ? '아직 모은 물건이 없다. 탐사나 채집으로 모아 보자.'
         : invTab === 'fav' ? '즐겨찾기한 물건이 없다. 물건 이름 앞의 ☆를 누르면 여기에 모인다.' : '이 분류의 물건이 없다.';
       box.appendChild(p);
     }
     // 강화·각인된 한 개가 소지품에 있으면 그 한 개는 따로 한 줄로 (나머지는 보통 것)
     const rows = [];
-    for (const [id, qty] of list) {
+    for (const [id, qty, slot] of list) {
+      if (slot) { rows.push([id, 1, 'worn', slot]); continue; } // 차고 있는 것
       const gm = S.items[id]?.type === 'equip' ? S.me.craft?.gear?.[id] : null;
       if (gm && gm.at === 'inv') { rows.push([id, 1, 'enh']); if (qty > 1) rows.push([id, qty - 1, 'plain']); }
       else rows.push([id, qty, gm ? 'plain' : '']);
     }
-    for (const [id, qty, kind] of rows) {
+    for (const [id, qty, kind, slot] of rows) {
       const it = S.items[id];
       const cat = groupOf(id);
       if (cat !== lastCat) {
@@ -3268,11 +3272,13 @@
       row.className = `it ${it.rarity}`;
       row.dataset.q = it.name; // 찾기 칸에서 이름으로 거름
       row.innerHTML = '<b><span class="nm"></span><span class="q"></span></b><small></small>';
-      const gmod = kind === 'enh' ? S.me.craft?.gear?.[id] : null; // 보통 것 줄에는 강화·각인 표시 없음
+      const gm0 = S.me.craft?.gear?.[id];
+      const gmod = kind === 'enh' || (kind === 'worn' && gm0?.at === 'eq') ? gm0 : null; // 보통 것 줄에는 강화·각인 표시 없음 (차고 있는 것이 강화된 것이면 착용 중 줄에)
       row.querySelector('.nm').textContent = `${it.name}${gmod?.plus ? ` +${gmod.plus}` : ''}`;
       row.querySelector('.nm').append(itemTags(it));
       row.querySelector('.q').textContent = `×${qty}`;
-      if (it.cat !== 'treasure') row.querySelector('.q').after(lockBtn(id, () => keepScroll($('inv-dlg'), renderInv))); // 판매 잠금 (개수 옆 작은 자물쇠)
+      if (kind === 'worn') { row.classList.add('worn-row'); row.querySelector('.q').hidden = true; const t = document.createElement('span'); t.className = 'gw-worn'; t.textContent = '착용 중'; row.querySelector('.q').after(t); }
+      if (it.cat !== 'treasure' && kind !== 'worn') row.querySelector('.q').after(lockBtn(id, () => keepScroll($('inv-dlg'), renderInv))); // 판매 잠금 (개수 옆 작은 자물쇠)
       row.prepend(favBtn('items', id, () => keepScroll($('inv-dlg'), renderInv))); // 별은 줄 왼쪽 여백에
       const uses = usesOf(id).length; // 이 물건을 재료로 쓰는 제작법 수 (찾아낸 것만)
       if (uses) {
@@ -3298,7 +3304,7 @@
         row._usesBtn = u2;
       }
       // 레이드 희귀 장비: '제작' 칩과 같은 모양의 '각성' 칩 → 제작 창의 각성 제작법으로 (재료 확인·만들기는 제작 창에서)
-      const aw = it.type === 'equip' && (S.recipes || []).find((r) => r.awaken && r.needs?.[id]);
+      const aw = kind !== 'worn' && it.type === 'equip' && (S.recipes || []).find((r) => r.awaken && r.needs?.[id]); // 차고 있는 것은 벗어야 재료가 됨
       if (aw) {
         const nm = S.items[aw.out]?.name || '깨어난 장비';
         const go = () => goRecipe(aw.out); // 제작 창은 소지품 위에 겹쳐 뜨므로 소지품 창은 닫지 않음
@@ -3381,11 +3387,18 @@
         mk('취소', '', normal);
       };
       normal();
-      if (!qty) { // 소지품에 없는 즐겨찾기: 차고 있으면 '착용 중', 아니면 '다 씀' (쓰기·버리기 버튼 없이)
-        const worn = Object.values(S.me?.equip || {}).includes(id);
-        acts.replaceChildren(); row.classList.add('zero'); if (worn) row.classList.add('worn');
-        row.querySelector('.q').textContent = worn ? '착용 중' : '다 씀';
-        if (worn) row.title = '지금 차고 있어 소지품에는 없다.';
+      if (kind === 'worn') { // 차고 있는 것: '벗기'만 (버리기는 벗은 뒤에)
+        acts.replaceChildren();
+        if (row._usesBtn) acts.appendChild(row._usesBtn);
+        if (row._awakenBtn) acts.appendChild(row._awakenBtn);
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'btn'; b.textContent = '벗기';
+        if (S.me?.exp) { b.disabled = true; b.title = awayMsg('할 수 없다.'); } // 원정 중에는 장신구를 바꿀 수 없음
+        b.addEventListener('click', () => itemAct('unequip', { slot }));
+        acts.appendChild(b);
+      } else if (!qty) { // 소지품에 없는 즐겨찾기: '다 씀' (쓰기·버리기 버튼 없이)
+        acts.replaceChildren(); row.classList.add('zero');
+        row.querySelector('.q').textContent = '다 씀';
       }
       row.appendChild(acts);
       group.appendChild(row);
