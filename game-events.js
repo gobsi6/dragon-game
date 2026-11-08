@@ -1226,7 +1226,7 @@ module.exports = [
     setup: (c) => ({ did: c.ties.heart.id, name: c.ties.heart.name, bond: c.ties.heart.bond, item: c.pick(['silver_clover', 'wild_honey', 'glow_moss', 'deep_pearl', 'gold_ore', 'heartwood']) }),
     text: (c, v) => {
       const it = ITEMS[v.item].name;
-      return [`풀숲 사이에서 ${c.josa(it, '이', '가')} 반짝였다.`, `문득 ${v.name}의 얼굴이 떠오른다. ${v.bond === 'partner' ? '반려' : '연인'}에게 주면 좋아하지 않을까.`];
+      return [`풀숲 사이에서 ${it}${c.josa(it, '이', '가')} 반짝였다.`, `문득 ${v.name}의 얼굴이 떠오른다. ${v.bond === 'partner' ? '반려' : '연인'}에게 주면 좋아하지 않을까.`];
     },
     choices: [
       { label: (c, v) => `${v.name}에게 보낸다`, run: (h, c, v) => {

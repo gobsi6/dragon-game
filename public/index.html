@@ -3974,9 +3974,17 @@
     }
     for (const [, card] of cards) wrap.appendChild(card);
     if (k.past.length) {
+      // 지난 식구: 접어 두었다가 펼쳐 봄 (둥지 창을 다시 그려도 펼친 채로)
+      const box = document.createElement('details');
+      box.className = 'kin-past-box';
+      box.open = PAST_OPEN;
+      box.addEventListener('toggle', () => { PAST_OPEN = box.open; });
+      const sm = document.createElement('summary');
       const h2 = document.createElement('h3');
-      h2.textContent = k.lineage ? `지난 식구와 계보 · ${k.lineage}마리 독립` : '지난 식구';
-      wrap.appendChild(h2);
+      h2.textContent = k.lineage ? `지난 식구와 계보 · ${k.lineage}마리 독립` : `지난 식구 · ${k.past.length}`;
+      sm.appendChild(h2);
+      box.appendChild(sm);
+      wrap.appendChild(box);
       const list = document.createElement('div');
       list.className = 'kin-past';
       for (const v of k.past) {
@@ -3993,12 +4001,13 @@
         list.appendChild(row);
         const dy = kinDiary(v); if (dy) list.appendChild(dy); // 떠난 뒤에도 남는 함께한 날들
       }
-      wrap.appendChild(list);
+      box.appendChild(list);
     }
     return wrap;
   }
   // 반려의 둥지에 와 있을 때: 그 집 식구를 함께 돌봄 (아이에게 물건 건네기, 새끼 가르치기)
   // 함께한 날들: 접어 두었다가 펼쳐 봄 (며칠째 · 있었던 일)
+  let PAST_OPEN = false; // 지난 식구 목록 펼침 (처음엔 접힘)
   const DIARY_OPEN = new Set(); // 펼쳐 둔 일기 (둥지 창을 다시 그려도 펼친 채로)
   function kinDiary(v) {
     if (!v.diary?.length) return null;
