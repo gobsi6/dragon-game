@@ -339,7 +339,7 @@
       <div class="orn-h" style="padding: 0 10px"><h2>이곳의 이야기</h2></div>
       <div class="here" id="here-box">
         <button type="button" class="here-tog" id="here-tog" aria-expanded="false" aria-controls="here"><span class="t"></span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
-        <div class="cnt"><span>이곳의 드래곤</span><b id="here-n"></b></div>
+        <button type="button" class="cnt" id="here-cnt" aria-expanded="true" aria-controls="here"><span>이곳의 드래곤</span><span class="r"><b id="here-n"></b><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></button>
         <div id="here" class="here-list"></div>
       </div>
       <!-- 이야기 창: 넓은 화면에서는 이 칸 안에, 폰에서는 오른쪽 아래 버튼으로 접었다 폈다 -->
@@ -14766,6 +14766,11 @@
       if (narrowMq.matches) { if (hereBox.parentElement !== chatEl) chatH.after(hereBox); hereBox.classList.add('in-chat'); }
       else { if (hereBox.parentElement !== side) side.querySelector(':scope > .orn-h').after(hereBox); hereBox.classList.remove('in-chat'); }
     };
+    // 넓은 화면: '이곳의 드래곤' 머리줄을 누르면 목록을 접고 폄 (폰과 따로 기억, 처음엔 펼침)
+    let wideOpen = (() => { try { return localStorage.getItem('dragon-here-wide') !== '0'; } catch { return true; } })();
+    const applyWide = () => { hereBox.classList.toggle('wfold', !wideOpen); $('here-cnt').setAttribute('aria-expanded', String(wideOpen)); };
+    $('here-cnt').addEventListener('click', () => { wideOpen = !wideOpen; try { localStorage.setItem('dragon-here-wide', wideOpen ? '1' : '0'); } catch {} applyWide(); });
+    applyWide();
     $('here-tog').addEventListener('click', () => { hereOpen = !hereOpen; try { localStorage.setItem('dragon-here-open', hereOpen ? '1' : '0'); } catch {} applyHere(); });
     narrowMq.addEventListener?.('change', placeHere);
     placeHere(); applyHere();
