@@ -813,7 +813,7 @@ function chatPage(region, before) {
 }
 // 진행 중인 큰 사건의 알림 (끝나면 빠짐)
 function livePins() {
-  const out = [marketFall.state()?.pin, boss.pin()];
+  const out = [...marketFall.pins(), boss.pin()];
   const cp = db.worldGet('corruptPin');
   if (cp && cp.region === logic.corruptedRegion() && !purify.purified()) out.push(cp);
   out.push(blight.pin());
@@ -1076,70 +1076,77 @@ logic.hooks.blightClear = blight.clear; // GM 시험용
 // 몫 제한: 한 드래곤은 자원마다 목표의 cap%까지만 보탬 (일찍 온 한두 드래곤이 다 채우지 않게). 시작하고 하루가 지나면 제한이 풀림 (사람이 적어 멈추지 않게)
 const MF_CAP_FREE = 24 * 3600000;
 const marketFall = (() => {
-  let st = db.worldGet('marketFall') || null; // { town, at, goals: {gold, 물건id: 개수}, got: {...}, pts: {id: 점수}, names: {}, reward: {sun, salt}, attacker }
-  const save = () => db.worldSet('marketFall', st);
-  const active = () => !!st && !st.done;
-  const keys = () => Object.keys(st.goals);
+  // 마을마다 따로: { towns: { 마을id: { town, at, goals: {gold, 물건id: 개수}, got: {...}, pts: {id: 점수}, names: {}, reward: {sun, salt}, attacker } } }
+  // (예전 저장 모양은 한 마을짜리 { town, ... } — 그대로 읽어 옮김)
+  const raw = db.worldGet('marketFall') || null;
+  const all = raw?.towns || (raw?.town ? { [raw.town]: raw } : {});
+  const save = () => db.worldSet('marketFall', { towns: all });
+  const actives = () => Object.values(all).filter((x) => x && !x.done);
+  const of = (town) => { const x = all[town]; return x && !x.done ? x : null; };
+  const keys = (st) => Object.keys(st.goals);
   const nameOf = (k) => (k === 'gold' ? '금화' : ITEMS[k]?.name || k);
-  const pct = () => keys().reduce((a, k) => a + Math.min(1, (st.got[k] || 0) / st.goals[k]), 0) / keys().length;
-  // 모두에게 보일 모습 (my: 이 드래곤의 몫)
-  const capOn = (now = Date.now()) => !!st.cap && now - st.at < MF_CAP_FREE;
-  const myCap = (k) => Math.ceil(st.goals[k] * st.cap / 100); // 한 드래곤이 이 자원에 보탤 수 있는 끝
-  const myGiven = (id, k) => st.given?.[id]?.[k] || 0;
-  const view = (d) => (active() ? {
+  const pct = (st) => keys(st).reduce((a, k) => a + Math.min(1, (st.got[k] || 0) / st.goals[k]), 0) / keys(st).length;
+  const capOn = (st, now = Date.now()) => !!st.cap && now - st.at < MF_CAP_FREE;
+  const myCap = (st, k) => Math.ceil(st.goals[k] * st.cap / 100); // 한 드래곤이 이 자원에 보탤 수 있는 끝
+  const myGiven = (st, id, k) => st.given?.[id]?.[k] || 0;
+  const fullPts = (st) => 100 * keys(st).length;
+  const maxPts = (st) => (st.cap ? st.cap * keys(st).length : fullPts(st)); // 한 드래곤의 최대 기여 (몫 제한까지 다 보탰을 때. 제한이 없으면 전체)
+  const rewardOf = (st, pts) => { const r = Math.min(1, pts / maxPts(st)); return { sun: Math.round(r * st.reward.sun), salt: Math.max(1, Math.round(r * st.reward.salt)) }; }; // 제한이 풀린 뒤 더 보태도 최대를 넘지 않음
+  // 모두에게 보일 모습: 무너진 마을마다 하나씩 (my: 이 드래곤의 몫)
+  const view1 = (st, d) => ({
     town: st.town, at: st.at, attacker: st.attacker || '',
-    cap: capOn() ? st.cap : 0, capFree: st.at + MF_CAP_FREE,
-    res: keys().map((k) => ({ id: k, name: nameOf(k), got: st.got[k] || 0, goal: st.goals[k], mine: d ? myGiven(d.id, k) : 0, myCap: capOn() ? myCap(k) : null })),
-    pct: pct(), people: Object.keys(st.pts).length, mine: d ? Math.round(st.pts[d.id] || 0) : 0,
-    reward: st.reward, full: fullPts(), maxPts: maxPts(), // { sun, salt } 한 드래곤의 최대 보상과 그때의 기여 (화면에서 '지금 몫이면 받을 것'을 보여 줌)
-  } : null);
-  const fullPts = () => 100 * keys().length;
-  const maxPts = () => (st.cap ? st.cap * keys().length : fullPts()); // 한 드래곤의 최대 기여 (몫 제한까지 다 보탰을 때. 제한이 없으면 전체)
-  const rewardOf = (pts) => { const r = Math.min(1, pts / maxPts()); return { sun: Math.round(r * st.reward.sun), salt: Math.max(1, Math.round(r * st.reward.salt)) }; }; // 제한이 풀린 뒤 더 보태도 최대를 넘지 않음
+    cap: capOn(st) ? st.cap : 0, capFree: st.at + MF_CAP_FREE,
+    res: keys(st).map((k) => ({ id: k, name: nameOf(k), got: st.got[k] || 0, goal: st.goals[k], mine: d ? myGiven(st, d.id, k) : 0, myCap: capOn(st) ? myCap(st, k) : null })),
+    pct: pct(st), people: Object.keys(st.pts).length, mine: d ? Math.round(st.pts[d.id] || 0) : 0,
+    reward: st.reward, full: fullPts(st), maxPts: maxPts(st), // { sun, salt } 한 드래곤의 최대 보상과 그때의 기여 (화면에서 '지금 몫이면 받을 것'을 보여 줌)
+  });
+  const view = (d) => actives().map((st) => view1(st, d));
   const push = () => { for (const e of online.values()) e.socket.emit('marketfall', view(e.dragon)); };
   function start(town, goals, reward, attacker, cap = 20) {
-    st = { town, at: Date.now(), goals, got: {}, given: {}, pts: {}, names: {}, reward, attacker: attacker || '', cap, done: false };
+    const st = all[town] = { town, at: Date.now(), goals, got: {}, given: {}, pts: {}, names: {}, reward, attacker: attacker || '', cap, done: false };
     save();
     const tn = REGIONS[town].name;
     io.emit('system', { text: `[습격] ${attacker ? `${attacker}${josa(attacker, '이', '가')}` : '정체를 알 수 없는 드래곤이'} ${tn}의 시장을 덮쳤다! 가게들이 무너져 장사를 할 수 없다. ${tn}에서 금화와 재료를 모아 함께 다시 세우자.`, at: Date.now() });
     st.pin = io.lastNews || null; save(); // 다시 세울 때까지 이 알림은 이야기 창 기록에 늘 남김
     push();
   }
-  // 보태기: { gold, items: { id: 개수 } }. 목표를 넘는 몫은 받지 않음. 점수 = 자원마다 (보탠 양 ÷ 목표) × 100
+  // 보태기: 지금 있는 마을의 시장에. { gold, items: { id: 개수 } }. 목표를 넘는 몫은 받지 않음. 점수 = 자원마다 (보탠 양 ÷ 목표) × 100
   function help(d, gold, items, have) {
-    if (!active()) return { error: '지금은 다시 세우는 시장이 없다.' };
-    if (d.region !== st.town) return { error: `${REGIONS[st.town].name}에 가야 도울 수 있다.` };
+    if (!actives().length) return { error: '지금은 다시 세우는 시장이 없다.' };
+    const st = of(d.region);
+    if (!st) return { error: `${actives().map((x) => REGIONS[x.town].name).join('이나 ')}에 가야 도울 수 있다.` };
     if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
     const give = {};
-    const room = (k) => Math.max(0, Math.min(st.goals[k] - (st.got[k] || 0), capOn() ? myCap(k) - myGiven(d.id, k) : Infinity)); // 남은 몫과 내 몫 제한
+    const room = (k) => Math.max(0, Math.min(st.goals[k] - (st.got[k] || 0), capOn(st) ? myCap(st, k) - myGiven(st, d.id, k) : Infinity)); // 남은 몫과 내 몫 제한
     const g = Math.max(0, Math.floor(Number(gold) || 0));
     if (g && st.goals.gold) give.gold = Math.min(g, d.gold, room('gold'));
     let capped = false;
     for (const [id, n0] of Object.entries(items || {})) {
       if (id === 'gold' || !st.goals[id]) continue;
       const n = Math.max(0, Math.floor(Number(n0) || 0));
-      if (n) { give[id] = Math.min(n, have(id), room(id)); if (capOn() && n > give[id] && myGiven(d.id, id) + give[id] >= myCap(id)) capped = true; }
+      if (n) { give[id] = Math.min(n, have(id), room(id)); if (capOn(st) && n > give[id] && myGiven(st, d.id, id) + give[id] >= myCap(st, id)) capped = true; }
     }
-    if (g && capOn() && g > (give.gold || 0) && myGiven(d.id, 'gold') + (give.gold || 0) >= myCap('gold')) capped = true;
+    if (g && capOn(st) && g > (give.gold || 0) && myGiven(st, d.id, 'gold') + (give.gold || 0) >= myCap(st, 'gold')) capped = true;
     for (const k of Object.keys(give)) if (!(give[k] > 0)) delete give[k];
     if (!Object.keys(give).length) return { error: capped ? `한 드래곤이 보탤 수 있는 몫(자원마다 ${st.cap}%)을 다 채웠다. 남은 것은 다른 드래곤들에게 맡기자.` : '보탤 것이 없다. (이미 다 모인 것은 더 받지 않는다)' };
     let pts = 0;
     const out = [];
     st.given ||= {};
-    for (const [k, n] of Object.entries(give)) { st.got[k] = (st.got[k] || 0) + n; (st.given[d.id] ||= {})[k] = myGiven(d.id, k) + n; pts += (n / st.goals[k]) * 100; out.push(`${nameOf(k)} ${n.toLocaleString()}`); }
+    for (const [k, n] of Object.entries(give)) { st.got[k] = (st.got[k] || 0) + n; (st.given[d.id] ||= {})[k] = myGiven(st, d.id, k) + n; pts += (n / st.goals[k]) * 100; out.push(`${nameOf(k)} ${n.toLocaleString()}`); }
     if (!st.pts[d.id]) logic.chron(d, 'mark', `무너진 ${REGIONS[st.town].name}의 시장을 다시 세우는 일에 손을 보탰다.`); // 발자취: 처음 보탤 때 한 번
     st.pts[d.id] = (st.pts[d.id] || 0) + pts;
     st.names[d.id] = d.name;
     if (give.gold) d.gold -= give.gold;
-    const done = keys().every((k) => (st.got[k] || 0) >= st.goals[k]);
+    const done = keys(st).every((k) => (st.got[k] || 0) >= st.goals[k]);
     save();
     const lines = [`${out.join(', ')}만큼 보탰다. 마을 사람들이 고개 숙여 고마워한다.`];
-    if (done) { lines.push('마지막 들보가 올라갔다. 시장이 다시 선다!'); setImmediate(finish); } else push();
+    if (done) { lines.push('마지막 들보가 올라갔다. 시장이 다시 선다!'); setImmediate(() => finish(st.town)); } else push();
     return { title: '시장 다시 세우기', lines, items: Object.entries(give).filter(([k]) => k !== 'gold').map(([id, n]) => ({ id, qty: -n })), gold: give.gold ? -give.gold : 0 };
   }
   // 다 세움: 보탠 몫에 따라 태양석·소금 결정, 그 마을 평판
-  function finish() {
-    if (!active()) return;
+  function finish(town) {
+    const st = of(town);
+    if (!st) return;
     st.done = true; save();
     const tn = REGIONS[st.town].name;
     const ids = Object.keys(st.pts).map(Number);
@@ -1147,7 +1154,7 @@ const marketFall = (() => {
     for (const id of ids) {
       const e = online.get(id); const d = e ? e.dragon : db.getDragon(id);
       if (!d || d.dead_at) continue;
-      const { sun, salt } = rewardOf(st.pts[id]);
+      const { sun, salt } = rewardOf(st, st.pts[id]);
       const items = [{ id: 'sun_stone', qty: sun }, { id: 'salt_crystal', qty: salt }];
       logic.addRep(d, st.town, 10);
       logic.chron(d, 'mark', `무너진 ${tn}의 시장을 함께 다시 세웠다.`);
@@ -1157,8 +1164,8 @@ const marketFall = (() => {
     }
     push();
   }
-  function stop() { if (!active()) return false; st.done = true; save(); io.emit('system', { text: `[복구] ${REGIONS[st.town].name}의 시장이 마을 사람들의 손으로 다시 섰다.`, at: Date.now() }); push(); return true; }
-  return { start, help, view, stop, down: (region) => active() && st.town === region, state: () => (active() ? st : null) };
+  function stop(town) { const st = of(town); if (!st) return false; st.done = true; save(); io.emit('system', { text: `[복구] ${REGIONS[st.town].name}의 시장이 마을 사람들의 손으로 다시 섰다.`, at: Date.now() }); push(); return true; }
+  return { start, help, view, stop, has: (town) => !!of(town), down: (region) => !!of(region), pins: () => actives().map((x) => x.pin) };
 })();
 logic.hooks.marketDown = marketFall.down;
 // ── 멸망한 대륙의 정화도: 서버 전체가 함께 채움. 단계를 넘을 때마다 새 지역이 열림 ──
@@ -2654,10 +2661,10 @@ function onConnect(socket) {
   socket.on('gm:marketfall', (p, ack) => {
     if (typeof ack !== 'function') return;
     if (!socket.data.user?.is_gm) return ack({ error: 'GM만 쓸 수 있다.' });
-    if (p?.stop) { const ok = marketFall.stop(); db.gmLog(socket.data.user.username, null, '무너진 시장 이벤트를 끝냄'); return ack(ok ? { ok: true } : { error: '지금은 무너진 시장이 없다.' }); }
-    if (marketFall.state()) return ack({ error: '이미 무너진 시장이 있다. 먼저 끝내야 한다.' });
     const town = str(p?.town);
+    if (p?.stop) { const ok = marketFall.stop(town); if (ok) db.gmLog(socket.data.user.username, null, `무너진 시장 이벤트를 끝냄: ${REGIONS[town]?.name || town}`); return ack(ok ? { ok: true } : { error: '그 마을에는 지금 무너진 시장이 없다.' }); }
     if (!SHOPS[town]) return ack({ error: '시장이 있는 인간 마을을 골라야 한다.' });
+    if (marketFall.has(town)) return ack({ error: `${REGIONS[town].name}의 시장은 이미 무너져 있다. 다른 마을을 고르거나 먼저 끝내야 한다.` }); // 마을마다 하나씩, 여러 마을에 함께 일으킬 수 있음
     const num = (v, lo, hi) => Math.max(lo, Math.min(hi, Math.floor(Number(v) || 0)));
     const goals = {};
     if (num(p?.gold, 0, 1e9)) goals.gold = num(p.gold, 0, 1e9);

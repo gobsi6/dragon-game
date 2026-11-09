@@ -11569,11 +11569,14 @@
   $('orsha-open').addEventListener('click', openRuinTrade);
 
   // ── 무너진 시장 (GM 이벤트): 그 마을에 있으면 지역 카드에 진행 막대와 '복구 돕기' ──
+  // 무너진 시장은 마을마다 따로 (여러 마을에 함께 있을 수 있음): 지금 있는 마을의 것
+  const mfList = () => { const x = S.me?.marketFall; return Array.isArray(x) ? x : x ? [x] : []; };
+  const mfHere = () => mfList().find((x) => x.town === S.region) || null;
   function renderMarketFall() {
-    const v = S.me?.marketFall, box = $('mf-note');
-    const on = !!v && v.town === S.region;
+    const v = mfHere(), box = $('mf-note');
+    const on = !!v;
     box.hidden = !on;
-    if ($('market-open')) { const down = !!v && v.town === S.region; $('market-open').classList.toggle('mf-down', down); $('market-open').disabled = down; $('market-open').title = down ? '시장이 무너져 다시 세우는 중이다' : ''; } // 무너진 동안 시장을 열 수 없음
+    if ($('market-open')) { const down = on; $('market-open').classList.toggle('mf-down', down); $('market-open').disabled = down; $('market-open').title = down ? '시장이 무너져 다시 세우는 중이다' : ''; } // 무너진 동안 시장을 열 수 없음
     if (!on) return;
     box.replaceChildren();
     const h = document.createElement('p');
@@ -11596,7 +11599,7 @@
     foot.append(s, b); box.appendChild(foot);
   }
   function openMarketHelp() {
-    const v = S.me?.marketFall; if (!v) return;
+    const v = mfHere(); if (!v) return;
     fetchInv(() => {
       $('mf-lead').textContent = '보탤 만큼 적어 넣자. 이미 다 모인 것은 받지 않는다.';
       const f = $('mf-form'); f.replaceChildren();
@@ -13627,16 +13630,15 @@
     }
 
     // 무너진 시장 (단발 이벤트)
-    const mfv = S.me?.marketFall;
-    const msec = gmSection(body, '무너진 시장', mfv
-      ? `지금: ${S.regions[mfv.town]?.name} · ${Math.round(mfv.pct * 100)}% · 함께하는 드래곤 ${mfv.people}`
-      : '인간 마을 하나의 시장이 무너지고, 모두가 금화와 재료를 모아 다시 세운다. 다 세우면 보탠 몫에 따라 태양석·소금 결정을 나눈다.');
-    if (mfv) {
-      const r0 = gmRow(msec, '');
-      gBtn(r0, '이벤트 끝내기 (그대로 다시 세움)', () => { if (!confirm('보상 없이 시장을 바로 다시 세울까?')) return; gmCall('gm:marketfall', { stop: true }, () => { toast('무너진 시장 이벤트를 끝냈다.'); renderGm(); }); }, 'link');
-    } else {
+    const mfs = mfList(), mfFree = S.shops.filter((id) => !mfs.some((x) => x.town === id)); // 마을마다 하나씩, 여러 마을에 함께 일으킬 수 있음
+    const msec = gmSection(body, '무너진 시장', '인간 마을의 시장이 무너지고, 모두가 금화와 재료를 모아 다시 세운다. 다 세우면 보탠 몫에 따라 태양석·소금 결정을 나눈다. 마을마다 따로 일으킬 수 있다.');
+    for (const mfv of mfs) {
+      const r0 = gmRow(msec, `${S.regions[mfv.town]?.name} · ${Math.round(mfv.pct * 100)}% · 함께하는 드래곤 ${mfv.people}`);
+      gBtn(r0, '이벤트 끝내기 (그대로 다시 세움)', () => { if (!confirm(`보상 없이 ${S.regions[mfv.town]?.name}의 시장을 바로 다시 세울까?`)) return; gmCall('gm:marketfall', { stop: true, town: mfv.town }, () => { toast('무너진 시장 이벤트를 끝냈다.'); renderGm(); }); }, 'link');
+    }
+    if (mfFree.length) {
       const r1 = gmRow(msec, '마을');
-      const mtown = gSelect(r1, '마을', S.shops.map((id) => [id, S.regions[id].name]), S.shops.includes('coast') ? 'coast' : S.shops[0]); // 기본은 남쪽 해안 절벽
+      const mtown = gSelect(r1, '마을', mfFree.map((id) => [id, S.regions[id].name]), mfFree.includes('coast') ? 'coast' : mfFree[0]); // 기본은 남쪽 해안 절벽 (이미 무너진 마을은 빼고)
       const matk = gEl('input', 'input'); matk.placeholder = '덮친 드래곤 이름 (비워 두면 정체불명)'; matk.maxLength = 16; matk.setAttribute('aria-label', '덮친 드래곤 이름'); r1.appendChild(matk);
       const r2 = gmRow(msec, '모을 것');
       const mg = gNum(r2, '금화', '200000', '96px'), mc = gNum(r2, '붉은 점토', '200', '60px'), mi = gNum(r2, '늪철', '100', '60px'), mb = gNum(r2, '나무껍질', '100', '60px'); // 기본값: 드래곤 30마리, 그중 10마리쯤이 만렙인 규모
