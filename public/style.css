@@ -2485,6 +2485,9 @@ button.trait.skill.on { background: #EEF2F6; box-shadow: inset 0 0 0 1px var(--s
 .nest-state { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .nest-state .where { font: 700 18px/1.3 var(--serif); }
 .nest-state .row { flex-wrap: wrap; }
+.btn.nest-btn { gap: 6px; font-size: 13px; line-height: 1.35; font-weight: 500; } /* 둥지 창 버튼: 크기는 그대로, 글씨만 작게 통일 (날아가기·옮기기·쉬기 등) */
+.btn.nest-btn.primary { font-weight: 600; }
+.btn.nest-btn .cost { font-size: 11px; white-space: nowrap; }
 .hoard-sum { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; padding: 12px 14px; background: #FBF6E8; border: 1px solid #E2CF9E; }
 .hoard-sum .v { font: 700 26px/1 var(--serif); color: #6B4E12; font-variant-numeric: tabular-nums; }
 .hoard-sum .l { font-size: 13px; color: #6B5A3A; }
@@ -5009,6 +5012,23 @@ body:not(.realm-city) .moss-fx { display: none; }
 #home-ui .lk-row > b { font-size: 13px; font-weight: 600; color: #3A2E26; }
 #home-ui .lk-row > small { font-size: 12px; color: #8A7A64; }
 #home-ui .lk-seg { display: flex; flex-wrap: wrap; gap: 4px; }
+/* 바닥·벽·담 고르기: 바꿀 곳 탭 + 견본 타일 */
+#home-ui .lk-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 10px; padding-bottom: 8px; border-bottom: 1px solid #E3D6C2; }
+#home-ui .lk-tabs button { min-height: 30px; padding: 0 12px; border: 1px solid #DCCDB2; background: #FFFDF9; font: 500 12.5px/1 var(--sans); color: #5B4A35; cursor: pointer; }
+#home-ui .lk-tabs button.on { background: #6E5A48; border-color: #6E5A48; color: #FBF8F2; }
+#home-ui .lk-tabs button.off:not(.on) { color: #A8987E; }
+#home-ui .lk-tabs button:focus-visible, #home-ui .lk-tile:focus-visible { outline: 2px solid var(--ht); outline-offset: 1px; }
+#home-ui .lk-h { margin: 12px 0 6px; font: 600 12px/1.3 var(--sans); color: #8A7A64; }
+#home-ui .lk-body > .lk-h:first-child { margin-top: 0; }
+#home-ui .lk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; }
+#home-ui .lk-tile { display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 5px 5px 6px; border: 1px solid #DCCDB2; background: #FFFDF9; font: 500 12px/1.25 var(--sans); color: #5B4A35; text-align: center; cursor: pointer; }
+#home-ui .lk-tile canvas { display: block; width: 100%; aspect-ratio: 16 / 10; height: auto; image-rendering: pixelated; border: 1px solid #E3D6C2; }
+#home-ui .lk-tile em { font-style: normal; font-size: 10.5px; line-height: 1.2; color: #9A876C; }
+#home-ui .lk-tile em.lk-now { color: #6E5A48; font-weight: 600; }
+#home-ui .lk-tile:hover { border-color: #A8926C; }
+#home-ui .lk-tile.on { border-color: #6E5A48; box-shadow: inset 0 0 0 1px #6E5A48; }
+#home-ui .lk-tile.pv { border: 1px dashed #6E5A48; background: #F3ECDF; }
+#home-ui .lk-empty { margin: 6px 0 2px; font-size: 12.5px; color: #8A7A64; }
 #home-ui .lk-seg button { flex: none; min-height: 28px; padding: 0 8px; font-size: 12px; border: 1px solid #DCCDB2; background: #FFFDF9; color: #5B4A35; cursor: pointer; }
 #home-ui .lk-seg button.on { background: #6E5A48; border-color: #6E5A48; color: #FBF8F2; }
 #home-ui .lk-seg button { display: inline-flex; align-items: center; gap: 4px; }

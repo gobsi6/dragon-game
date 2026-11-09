@@ -5087,8 +5087,9 @@
         const btn = (text, fn, primary, disabled) => {
           const b = document.createElement('button');
           b.type = 'button';
-          b.className = `btn${primary ? ' primary' : ''}`;
-          b.textContent = text;
+          b.className = `btn nest-btn${primary ? ' primary' : ''}`; // 둥지 창 버튼: 작은 글씨로 통일
+          const m = /^(.*?)(?:\s+(−\d+)|\s+\((금화 \d+)\))$/.exec(text); // 끝에 붙은 비용(−1, 금화 N)은 작은 꼬리표로
+          if (m) { b.append(m[1]); const c = document.createElement('span'); c.className = 'cost'; c.textContent = m[2] || m[3]; b.append(c); } else b.textContent = text;
           b.disabled = !!disabled;
           b.addEventListener('click', fn);
           return b;
@@ -15468,13 +15469,14 @@
     if (!h.req.done) { chips.push('<button type="button" class="hp-chip hp-att" data-ct="sel:req"><i></i>오르딘의 부탁</button>'); icons.push(ico('note', 'hp-att', 'sel:req', '오르딘의 부탁', NOTE_AT)); } // 부탁: 입구 옆
     const tagOf = (r) => (r.state === 'done' ? '<em class="hp-tag done">되살아남</em>' : r.state === 'cur' ? `<em class="hp-tag cur">${Math.floor(roomFrac(r) * 100)}%</em>` : '<em class="hp-tag lock">무너짐</em>');
     const pc = (v, t) => `${((v / t) * 100).toFixed(3)}%`;
-    const rooms = Object.entries(HP.ROOMS).map(([id, [x, y, w, hh]]) => { const r = R[id];
+    const rooms = Object.entries(HP.ROOMS).map(([id, [x0, y0, w0, h0]]) => { const r = R[id];
+      const fit = id !== 'yard' && r.state !== 'lock', [x, y, w, hh] = fit ? [x0 - 1, y0 - 1, w0 + 2, h0 + 5] : [x0, y0, w0, h0]; // 지붕 있는 칸은 바깥 벽선·아랫벽 앞면까지 감싸게 (선택 꺾쇠가 건물에 맞게)
       return `<div class="hp-room hit hp-${r.state}${selRoom === id ? ' hp-sel' : ''}" data-ct="sel:room:${id}" role="button" tabindex="0" aria-label="${r.name} ${pctTxt(r)}" style="left:${pc(x, HP.W)};top:${pc(y, HP.H)};width:${pc(w, HP.W)};height:${pc(hh, HP.H)}"><span class="hp-nm"><b>${id === 'own' ? r.name.replace('작은 ', '') : r.name}</b>${tagOf(r)}</span></div>`; }).join('') + icons.join('');
     const eye = `<button type="button" class="hp-view${CT.hpClean ? ' on' : ''}" data-ct="hpview" aria-pressed="${!!CT.hpClean}" title="이름·표시를 숨기고 꾸민 모습만 본다"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/></svg><span>감상 모드${CT.hpClean ? ' 끄기' : ''}</span></button>`; // 도면 아래 '입구' 줄 오른쪽
     return `${chips.length ? `<div class="hp-strip">${chips.join('')}</div>` : ''}<div class="hp${CT.hpClean ? ' hp-clean' : ''}"><canvas class="hp-cv" width="146" height="110" aria-hidden="true"></canvas>${rooms}<span class="hp-door">입구</span>${eye}</div>`;
   }
   // ════ 꾸미기: 되살린 칸 안에 1도트 단위로, 벽·옆 장식에 자석처럼 붙여 장식을 직접 놓는다 ════
-  const DK_NAME = { planter: '빛나는 꽃 화분', pot: '작은 화분', bench: '벤치', lamp: '등', bed: '침대', rug: '깔개', table: '탁자', shelf: '선반', workbench: '작업대', crate: '나무 상자', barrel: '통', pond: '작은 연못', steps: '돌계단', tablets: '돌판 서가', carvedesk: '새김 책상', hearth: '화덕', anvil: '모루', telescope: '망원경', bell: '작은 종', well: '우물', signpost: '방명록 받침', bedplot: '텃밭 두둑', arch: '덩굴 아치', jar: '항아리', chair: '의자', flowers: '들꽃 무리', mushroom: '빛버섯 무리', bush: '덤불', stepstone: '디딤돌', fence: '나무 울타리', flowerbed: '꽃 상자', stonelamp: '석등', brazier: '화로', tree: '작은 나무', mosaic: '모자이크 깔개', crystallamp: '수정 등', goldlamp: '금박 등', glowpatch: '빛버섯 정원', bookcase: '책장', nestbed: '둥지 쿠션', tapestry: '용 태피스트리', fountain: '작은 분수' };
+  const DK_NAME = { planter: '빛나는 꽃 화분', pot: '작은 화분', bench: '벤치', lamp: '등', bed: '침대', rug: '깔개', table: '탁자', shelf: '선반', workbench: '작업대', crate: '나무 상자', barrel: '통', pond: '작은 연못', steps: '돌계단', tablets: '돌판 서가', tablets2: '두 칸 돌판 서가', tablets3: '높은 돌판 서가', carvedesk: '새김 책상', hearth: '화덕', anvil: '모루', telescope: '망원경', bell: '작은 종', well: '우물', signpost: '방명록 받침', bedplot: '텃밭 두둑', arch: '덩굴 아치', jar: '항아리', chair: '의자', flowers: '들꽃 무리', mushroom: '빛버섯 무리', bush: '덤불', stepstone: '디딤돌', fence: '나무 울타리', flowerbed: '꽃 상자', stonelamp: '석등', brazier: '화로', tree: '작은 나무', mosaic: '모자이크 깔개', crystallamp: '수정 등', goldlamp: '금박 등', glowpatch: '빛버섯 정원', bookcase: '책장', nestbed: '둥지 쿠션', tapestry: '용 태피스트리', fountain: '작은 분수' };
   const DK_LIST = Object.keys(DK_NAME);
   const dkDone = (h) => h.rooms.filter((r) => r.state === 'done').map((r) => r.id);
   const dkDefaults = (h) => HP.defaults(h.plot, dkDone(h), h.decoRules?.grid || 4).map((o) => ({ ...o })); // 칸을 되살릴 때 생기는 처음 배치
@@ -15494,14 +15496,14 @@
     }
     return best ? best.v : v;
   }
-  function dkPlace(h, name, px, py, skip, box, noSnap = false) { // box: [x0, y0, x1, y1] 놓을 수 있는 영역. noSnap: 자석 없이 손으로 둔 자리 그대로
+  function dkPlace(h, name, px, py, skip, box, noSnap = false, extraYs = []) { // extraYs: 더 붙을 수 있는 가로선 (아랫벽 윗선 등) // box: [x0, y0, x1, y1] 놓을 수 있는 영역. noSnap: 자석 없이 손으로 둔 자리 그대로
     const [w, hh] = HP.size(name), [x0, y0, x1, y1] = box;
     if (x1 - x0 < w || y1 - y0 < hh) return { x: x0, y: y0, w, h: hh, ok: false, why: '이 칸에는 너무 크다.' };
     let x = Math.max(x0, Math.min(x1 - w, Math.round(px - w / 2))), y = Math.max(y0, Math.min(y1 - hh, Math.round(py - hh / 2)));
     const rawX = x, rawY = y; // 자석으로 붙인 자리가 겹치면 손으로 둔 자리로
     const near = CT.dk.list.filter((o, i) => i !== skip).map((o) => { const [ow, oh] = HP.size(o.s); return { x: o.x, y: o.y, w: ow, h: oh }; });
     const R = 8; // 이만큼(도트) 떨어진 장식까지만 줄 맞추기 대상으로
-    const xs = [x0, x1], ys = [y0, y1];
+    const xs = [x0, x1], ys = [y0, y1, ...extraYs];
     for (const o of near) {
       if (o.y < y + hh + R && y < o.y + o.h + R) xs.push(o.x, o.x + o.w);  // 위아래로 가까우면: 옆에 붙이기 · 왼쪽/오른쪽 끝 맞추기
       if (o.x < x + w + R && x < o.x + o.w + R) ys.push(o.y, o.y + o.h);   // 옆으로 가까우면: 바닥선·윗선 맞추기 · 위아래로 붙이기
@@ -15521,7 +15523,10 @@
     for (const id of dkDone(h)) {
       const [rx, ry, rw, rh] = HP.ROOMS[id];
       if (px < rx || px >= rx + rw || py < ry || py >= ry + rh) continue;
-      return dkPlace(h, name, px, py, skip, [rx + 1, ry + 1, rx + rw - 1, ry + rh - 1]);
+      const B = HP.BEHIND, back = B && B.rooms.includes(id) ? B.depth : 0; // 아랫벽 뒤로 이만큼(줄) 숨겨 놓을 수 있음
+      const f = dkPlace(h, name, px, py, skip, [rx + 1, ry + 1, rx + rw - 1, ry + rh - 1 + back], false, back ? [ry + rh - 1] : []);
+      if (f.ok && back && B.doors.some(([dx, dy, dw, dh]) => f.x < dx + dw && dx < f.x + f.w && f.y < dy + dh && dy < f.y + f.h)) return { ...f, ok: false, why: '문 앞은 비워 둬야 한다.' };
+      return f;
     }
     const O = h.decoRules?.out;
     if (O && dkDone(h).includes('yard') && px >= O.x0 && px < O.x1 && py >= O.y0 && py < O.y1) { // 바깥 뜰 (담 안 풀밭)
@@ -15560,17 +15565,29 @@
   // 바닥·담 바꾸기: 되살린 칸의 바닥 무늬, 마당 담 모양
   function lookEditor(h) {
     const L = h.look; if (!L) return `<div class="dk-top"><p class="note">서버의 <code>city.js</code>가 이 기능이 없는 예전 판이라 보이지 않는다. 최신 <code>city.js</code>를 함께 올려야 한다.</p></div>`;
-    const ow = L.own || { floor: [], wall: [] }, pv = CT.lookPv, plan = `<div class="hp"><canvas class="hp-cv" width="146" height="110" aria-hidden="true"></canvas></div>`;
-    const hasF = (id, k) => k === (L.def || {})[id] || ow.floor.includes(k), hasW = (k) => k === 'stone' || ow.wall.includes(k);
-    const cost = (n) => `<em class="lk-c" title="처음 쓸 때 석공 인장 ${n}">${n}</em>`;
-    const rows = h.rooms.map((r) => { const done = r.state === 'done', cur = L.floor[r.id] || (L.def || {})[r.id];
-      return `<div class="lk-row"><b>${r.name}</b>${done ? `<div class="seg lk-seg">${Object.entries(L.floors).map(([k, n]) => `<button type="button" data-ct="lkp:${r.id}:${k}" class="${cur === k ? 'on' : ''}${pv && pv.room === r.id && pv.k === k ? ' pv' : ''}">${n}${hasF(r.id, k) ? '' : cost(L.floorCost)}</button>`).join('')}</div>` : '<small>되살린 뒤에 바꿀 수 있다</small>'}</div>`; }).join('');
+    const ow = L.own || { floor: [], wall: [], face: [] }, pv = CT.lookPv, plan = `<div class="hp"><canvas class="hp-cv" width="146" height="110" aria-hidden="true"></canvas></div>`;
+    const hasF = (id, k) => k === (L.def || {})[id] || ow.floor.includes(k), hasW = (k) => k === 'stone' || ow.wall.includes(k), hasP = (id, k) => k === (L.defFace || {})[id] || (ow.face || []).includes(k);
+    // 고르는 대상: 칸 넷 + 마당 담. 한 번에 하나씩 보여 주고, 그 안에서 바닥·벽 견본을 고른다
     const yardDone = h.rooms[0] && h.rooms[0].state === 'done';
-    const wall = `<div class="lk-row"><b>마당 담</b>${yardDone ? `<div class="seg lk-seg">${Object.entries(L.walls).map(([k, n]) => `<button type="button" data-ct="lkp:wall:${k}" class="${(L.wall || 'stone') === k ? 'on' : ''}${pv && pv.room === 'wall' && pv.k === k ? ' pv' : ''}">${n}${hasW(k) ? '' : cost(L.wallCost)}</button>`).join('')}</div>` : '<small>마당을 되살린 뒤에 바꿀 수 있다</small>'}</div>`;
+    const targets = [...h.rooms.map((r) => ({ id: r.id, name: r.name, done: r.state === 'done' })), { id: 'wall', name: '마당 담', done: yardDone }];
+    const pvT = pv ? (pv.room.startsWith('face-') ? pv.room.slice(5) : pv.room) : null;
+    const cur = targets.some((t) => t.id === CT.lkRoom) ? CT.lkRoom : pvT || (targets.find((t) => t.done) || targets[0]).id; CT.lkRoom = cur;
+    const T = targets.find((t) => t.id === cur);
+    const tabs = `<div class="lk-tabs" role="tablist" aria-label="바꿀 곳">${targets.map((t) => `<button type="button" role="tab" aria-selected="${t.id === cur}" class="${t.id === cur ? 'on' : ''}${t.done ? '' : ' off'}" data-ct="lkr:${t.id}">${t.name}</button>`).join('')}</div>`;
+    const tile = (key, k, name, type, on, have, cost) => { const isPv = pv && pv.room === key && pv.k === k;
+      return `<button type="button" class="lk-tile${on ? ' on' : ''}${isPv ? ' pv' : ''}" data-ct="lkp:${key}:${k}" aria-pressed="${on}"><canvas class="lk-sw" data-t="${type}" data-k="${k}" width="16" height="10" aria-hidden="true"></canvas><span>${name}</span>${on ? '<em class="lk-now">지금</em>' : have ? '<em>가짐</em>' : `<em class="lk-c">인장 ${cost}</em>`}</button>`; };
+    let body;
+    if (!T.done) body = `<p class="lk-empty">${T.id === 'wall' ? '마당을 되살린 뒤에 바꿀 수 있다.' : `${T.name}${ctJ(T.name, '을', '를')} 되살린 뒤에 바꿀 수 있다.`}</p>`;
+    else if (cur === 'wall') { const now = L.wall || 'stone'; body = `<div class="lk-grid">${Object.entries(L.walls).map(([k, n]) => tile('wall', k, n, 'wall', now === k, hasW(k), L.wallCost)).join('')}</div>`; }
+    else {
+      const nowF = L.floor[cur] || (L.def || {})[cur], nowP = (L.face || {})[cur] || (L.defFace || {})[cur], fk = `face-${cur}`;
+      body = `<h5 class="lk-h">바닥</h5><div class="lk-grid">${Object.entries(L.floors).map(([k, n]) => tile(cur, k, n, 'floor', nowF === k, hasF(cur, k), L.floorCost)).join('')}</div>`
+        + (L.faces && (L.defFace || {})[cur] ? `<h5 class="lk-h">벽</h5><div class="lk-grid">${Object.entries(L.faces).map(([k, n]) => tile(fk, k, n, 'face', nowP === k, hasP(cur, k), L.faceCost)).join('')}</div>` : '');
+    }
     let bar = '';
-    if (pv) { const isW = pv.room === 'wall', name = isW ? L.walls[pv.k] : L.floors[pv.k], where = isW ? '마당 담' : (h.rooms.find((r) => r.id === pv.room) || {}).name, have = isW ? hasW(pv.k) : hasF(pv.room, pv.k), c = isW ? L.wallCost : L.floorCost;
-      bar = `<div class="dk-sel lk-pv"><b>미리 보기 · ${where} ${name}</b>${have ? `<button type="button" class="btn sm primary" data-ct="lkok">이걸로 바꾸기</button>` : `<button type="button" class="btn sm primary" data-ct="lkok"${h.seals < c ? ' disabled' : ''}>인장 ${c}로 ${isW ? '두르기' : '깔기'}</button>`}<button type="button" class="btn sm" data-ct="lkno">되돌리기</button></div>`; }
-    return `<div class="dk-top"><span>석공 인장 <b>${h.seals}</b></span><small>누르면 그림에 먼저 미리 보인다. 숫자가 붙은 것은 처음 쓸 때만 인장이 들고, 한 번 산 바닥은 어느 칸에서든 다시 쓸 수 있다.</small></div>${plan}${bar}<div class="lk-list">${rows}${wall}</div>`;
+    if (pv) { const isW = pv.room === 'wall', isP = pv.room.startsWith('face-'), rid = isP ? pv.room.slice(5) : pv.room, name = isW ? L.walls[pv.k] : isP ? L.faces[pv.k] : L.floors[pv.k], where = isW ? '마당 담' : `${(h.rooms.find((r) => r.id === rid) || {}).name} ${isP ? '벽' : '바닥'}`, have = isW ? hasW(pv.k) : isP ? hasP(rid, pv.k) : hasF(pv.room, pv.k), c = isW ? L.wallCost : isP ? L.faceCost : L.floorCost;
+      bar = `<div class="dk-sel lk-pv"><b>미리 보기 · ${where} ${name}</b>${have ? `<button type="button" class="btn sm primary" data-ct="lkok">이걸로 바꾸기</button>` : `<button type="button" class="btn sm primary" data-ct="lkok"${h.seals < c ? ' disabled' : ''}>인장 ${c}로 바꾸기</button>`}<button type="button" class="btn sm" data-ct="lkno">되돌리기</button></div>`; }
+    return `<div class="dk-top"><span>석공 인장 <b>${h.seals}</b></span><small>견본을 누르면 그림에 먼저 미리 보인다. 인장은 처음 쓸 때만 들고, 한 번 산 바닥·벽은 어느 칸에서든 다시 쓸 수 있다.</small></div>${plan}${bar}${tabs}<div class="lk-body">${body}</div>`;
   }
   function decoEditor(h) {
     const dk = dkState(h), max = h.decoRules?.max || 30, sel = dk.sel != null ? dk.list[dk.sel] : null;
@@ -15612,6 +15629,7 @@
     }
   }
   function decoBind(body, h) {
+    body.querySelectorAll('.lk-sw').forEach((c) => HP.paint(c, HP.swatch(c.dataset.t, c.dataset.k))); // 바닥·벽·담 견본
     body.querySelectorAll('.dk-th').forEach((c) => { HP.paint(c, HP.sprite(c.dataset.s)); const k = Math.min(3, 64 / c.width, 40 / c.height); c.style.width = `${c.width * k}px`; c.style.height = `${c.height * k}px`; });
     dkDraw(body, h);
     const hit = body.querySelector('.dk-hit'); if (!hit) return;
@@ -15656,25 +15674,32 @@
     const cv = body.querySelector('.hp-cv');
     // 꾸미기 화면과 똑같이: 저장한 배치가 없으면 눈금에 맞춘 기본 배치 (꾸미기를 처음 열 때와 같은 목록)
     let look = h.look; const pv = CT.lookPv; // 바닥·담 미리 보기: 아직 바꾸지 않은 모습을 그림에만 입힘
-    if (pv && look && CT.tab === 'deco' && CT.dkMode === 'look') look = pv.room === 'wall' ? { ...look, wall: pv.k } : { ...look, floor: { ...(look.floor || {}), [pv.room]: pv.k } };
+    if (pv && look && CT.tab === 'deco' && CT.dkMode === 'look') look = pv.room === 'wall' ? { ...look, wall: pv.k } : pv.room.startsWith('face-') ? { ...look, face: { ...(look.face || {}), [pv.room.slice(5)]: pv.k } } : { ...look, floor: { ...(look.floor || {}), [pv.room]: pv.k } };
     if (cv) HP.paint(cv, HP.plan(h.plot, Object.fromEntries(h.rooms.map((r) => [r.id, { state: r.state, p: roomFrac(r) }])), h.deco || HP.defaults(h.plot, h.rooms.filter((r) => r.state === 'done').map((r) => r.id), h.decoRules?.grid || 4), look));
     body.querySelectorAll('.hp-stage').forEach((c) => HP.paint(c, HP.stage(c.dataset.k, h.plot)));
   }
   // ════ 내 집터 도트 그림 (house-pixels/gen.py와 같은 규칙. 가구 그림은 SPR, 색은 PAL에서 고친다) ════
   const HP = (() => {
-    const D = {"pal":{"a":"#5e4f38","b":"#7d6a4c","w":"#b08e62","W":"#806644","v":"#c8aa7e","s":"#c8b898","S":"#968464","t":"#ded2ba","g":"#7a9c68","G":"#587a50","l":"#a4c488","y":"#f6e7a8","h":"#f3eac8","p":"#8a7556","P":"#68573e","c":"#d6be96","C":"#ba9e72","n":"#f6efe0","q":"#96b2b0","Q":"#769496","e":"#c4d6ce","f":"#e89646","F":"#f6cc70","r":"#b65c2e","k":"#6c6256","K":"#847e74","L":"#b0aa9e","j":"#7b7467","u":"#967242","1":"#ede3d0","2":"#e4d8c2","3":"#f4ecdd","4":"#e2d6bf","5":"#d6c8ae","6":"#a8926c","7":"#efe6d3","8":"#d6c8ac","9":"#dcc39a","0":"#b89a6c","+":"#e8d4b0","-":"#e6dac2","=":"#cebea0","#":"#c4b498","%":"#aa987a","A":"#eedda7","B":"#4e7238","D":"#eea6b0","E":"#ce7a88","H":"#b1a288"},"spr":{"planter":["..y..y...y.",".lgl.gl.lg.","lgGglgGglgG",".gGgGgGgGg.","vvvvvvvvvvv","wwwwwwwwwww","wwWwwwwwWww","WWWWWWWWWWW"],"bench":["vvvvvvvvvv","wwwwwwwwww",".W......W.",".W......W."],"lamp":["..PPP..",".PyyyP.",".PyFyP.",".PyyyP.","..PPP..","...P...","...P...","...P...","...P...","..PPP.."],"bed":["WWWWWWWWWWWW","WnntCcCccccW","WnntCcCccccW","WnntCcCccccW","WtttCcCccccW","WnnnCcCccccW","WWWWWWWWWWWW","W..........W"],"rug":[".WWWWWWWWWWWW.","WccccccccccccW","WcCCCCCCCCCCcW","WcCccccccccCcW","WcCccccccccCcW","WcCCCCCCCCCCcW","WccccccccccccW",".WWWWWWWWWWWW."],"table":["WWWWWWWWWW","WvvvvvvvvW","WwwwwwwwwW","WWWWWWWWWW",".W......W.",".W......W.",".W......W."],"shelf":["WWWWWWWWWWWW","WsSwcCnSsKkW","WWWWWWWWWWWW","WnCsKwSnccsW","WWWWWWWWWWWW"],"workbench":["...SS....kK...","...SS...kK....","WWWWWWWWWWWWWW","WvvvvvvvvvvvvW","WwwwwwwwwwwwwW","WWWWWWWWWWWWWW",".W..........W.",".W..........W."],"crate":["WWWWWW","WvwwvW","WwvvwW","WvwwvW","WWWWWW"],"barrel":[".WWW.","WwvwW","WuuuW","WwvwW","WuuuW",".WWW."],"pond":[".....SSSSSSSSSS.....","...SStsssssssstSS...","..StsSqqqqqqqqSstS..",".StSqqqeqqqqqqqqStS.","StSqqqqqqqqQqqeqqStS","SsqqeqqqqqQQqqqqqqsS","SsqqqqqgqqqqqqqqeqsS","SsqqqqglgqqqqqqqqqsS","SsQqqqqgqqqqeqqqqQsS","StSQqqqqqqqqqqqQQStS",".StSQQqqqqqqqQQQStS.","..StsSSQQQQQQSSstS..","...SStsssssssstSS...",".....SSSSSSSSSS....."],"steps":["SSSSSSSSSS","SttttttltS","SssssssssS","SSSSSSSSSS","StttgttttS","SssssssssS","SSSSSSSSSS","SttttttgtS","SssssssssS","SSSSSSSSSS"],"tablets":["WWWWWWWWWW","WtSWtSWtSW","WsSWsSWsSW","WWWWWWWWWW","WtSWtSWtSW","WsSWsSWsSW","WWWWWWWWWW"],"carvedesk":["..SSSSSSS...","..St6t6tS.K.","..StttttS.K.","WWWWWWWWWWWW","WvvvvvvvvvvW","WwwwwwwwwwwW","WWWWWWWWWWWW",".W........W.",".W........W."],"hearth":["..aaaaaaaaaa..",".abbbbbbbbbba.","abkkkkkkkkkkba","abk...FF...kba","abk..FyyF..kba","abk.fFyFff.kba","abkrfffffrrkba","abkrrrrrrrrkba","abbbbbbbbbbbba","aaaaaaaaaaaaaa"],"anvil":["jjjjjjj.",".jKKKKjj","..kjjk..","..kKKk..",".kkkkkk."],"telescope":["......KK",".....KKk","....KKk.","...KKk..","..pKk...",".ppP.p..","pp.P..p.","p..P...."],"bell":["...P...","..LKj..",".LLKKj.",".LKKKj.",".LKKKj.","LKKKKjk","...k..."],"window":["aaaaaaaaaa","aeeqqeqqea","aqqQqqqQqa","aaaaaaaaaa"],"well":["...WWWWWW...",".WWvvvvvvWW.","WWWWWWWWWWWW",".P...P....P.",".P...P....P.",".P..jKKj..P.",".P..jjjj..P.",".tttttttttt.","tSkkkkkkkkSt","sssSssssSsss","SsssssSsssSs","sssSssssSsss","SSSSSSSSSSSS"],"signpost":["vvvvv","wnnnw","wnanw","wwwww","..W..","..W..",".WWW."],"pot":[".lg.","lgGg","vvvv","wwww",".WW."],"bedplot":["WWWWWWWWWWWWWW","W=g=-g==l=g=-W","W-lgl=gGg=lgGW","W=gGg-glg-gGgW","W-=g==-g==-g-W","WWWWWWWWWWWWWW"],"arch":["..lgglggGl..",".gGlg..GlgG.","gGy......ygg","gl........lG","p..........p","p..........p","p..........p","P..........P"],"rubble":[".tts..","tsssS.","ssSSSS"],"rubble2":[".ts","sSS"],"brazier":["..FfF..",".FfyfF.",".fFyFf.","KKKKKKK",".KjjjK.","..KjK..","..KjK..",".KKKKK."],"bush":["...GgG....","..GglgGg..",".GglggggG.","GllgGglgGG","GgglgggGgG",".GGgGGgGG."],"chair":["W.....","W.....","W.....","Wvvvvv","Wwwwww","W....W","W....W"],"fence":["W...W...W...W","WvvvWvvvWvvvW","WwwwWwwwWwwwW","W...W...W...W","W...W...W...W"],"flowerbed":[".y..F..y..","glgGglgGgl","WwwwwwwwwW","WvvvvvvvvW","WWWWWWWWWW"],"flowers":["..D.....q..",".DyD...qyq.","..Eg.D..Q..","...gDyD.g..",".F.g.Eg.g..","FyFgg.gl.l.",".Fglgggglg.","lgGgGlgGgGl",".=========."],"jar":[".CCC.","..C..",".CtC.","CtccC","CcccC",".CCC."],"mushroom":["..rrr....",".rfyfr...","rfffffr..","..CnC.rr.","..CnCrfyr","..CnC.Cn.",".=======."],"stepstone":[".SSS....SSS.","SttsS..SttsS","SsssS..SsssS",".SSS....SSS.","....SSS.....","...SttsS....","...SsssS....","....SSS....."],"stonelamp":["..SS..",".SttS.","SSSSSS","SyhhyS","SyyyyS","SSSSSS",".StsS.",".StsS.","SSSSSS"],"tree":[".....G.....","....GlG....","...GlggG...","..GlggggG..","...GlggG...","..GllgggG..",".GlgglgggG.","GllggggGgGG","..GlggGGG..",".GllgggggG.","GggglggGgGG","GgggggGgGGG","..GGGGGGG..","....WwW....","....WwW....","...=====..."],"bookcase":["WWWWWWWWWWWW","WrfAgBqrfgAW","WrfAgBqrfgAW","WWWWWWWWWWWW","WgqrAfgAqrfW","WgqrAfgAqrfW","WWWWWWWWWWWW","WBrgfqAgrBqW","WBrgfqAgrBqW","WWWWWWWWWWWW","W..........W"],"crystallamp":["..eQ..",".eqqQ.","eqeqQQ",".eqqQ.","..QQ..","..PP..","..PP..","..PP..",".PPPP.","PPPPPP"],"fountain":["......ee......",".....eQQe.....","......HH......","....HHttHH....","...HqqeqqqS...","....HHSSSS....","......SS......","..HHHHSSHHHH..",".HqqeqSSqeqqS.",".HHQQqqqqQQSS.",".HHHHSSSSSSSS.","..HSSSSSSSSS.."],"glowpatch":["..e.....e...",".eqe.e.eqe..","..P.eqe.P.e.",".gPg.P.gPgqe","glglgPglglP.","GGGGGGGGGGGG"],"goldlamp":["..FFF..",".FyyyF.",".FyhyF.",".FyyyF.","..FFF..","...F...","...u...","...u...","..uuu..",".uuuuu."],"mosaic":[".SSSSSSSSSSSS.","SttqqttqqttqqS","SttqqttqqttqqS","SqqttqqttqqttS","SqqttqqttqqttS","SttqqttqqttqqS","SttqqttqqttqqS",".SSSSSSSSSSSS."],"nestbed":["...uuuuuuuu...",".uuWuuWuuWuuu.","uWuccccccccuWu","uucchhhhhhccuu","uWchhhhhhhhcWu","uuuchhhhhhcuuu",".uuWuuWuuWuuu.","...uuuuuuuu..."],"tapestry":["PPPPPPPPPP",".rrrrrrrr.",".rFrrrrFr.",".rrFFFFrr.",".rFFrrFFr.",".rrFFFFrr.",".rrrFFrrr.",".rrFrrFrr.",".rrrrrrrr.",".rFrFrFrF.",".P......P.","PP......PP"]}};
+    const D = {"pal":{"a":"#5e4f38","b":"#7d6a4c","w":"#b08e62","W":"#806644","v":"#c8aa7e","s":"#c8b898","S":"#968464","t":"#ded2ba","g":"#7a9c68","G":"#587a50","l":"#a4c488","y":"#f6e7a8","h":"#f3eac8","p":"#8a7556","P":"#68573e","c":"#d6be96","C":"#ba9e72","n":"#f6efe0","q":"#96b2b0","Q":"#769496","e":"#c4d6ce","f":"#e89646","F":"#f6cc70","r":"#b65c2e","k":"#6c6256","K":"#847e74","L":"#b0aa9e","j":"#7b7467","u":"#967242","1":"#ede3d0","2":"#e4d8c2","3":"#f4ecdd","4":"#e2d6bf","5":"#d6c8ae","6":"#a8926c","7":"#efe6d3","8":"#d6c8ac","9":"#dcc39a","0":"#b89a6c","+":"#e8d4b0","-":"#e6dac2","=":"#cebea0","#":"#c4b498","%":"#aa987a","A":"#eedda7","B":"#4e7238","D":"#eea6b0","E":"#ce7a88","H":"#b1a288"},"spr":{"planter":["..y..y...y.",".lgl.gl.lg.","lgGglgGglgG",".gGgGgGgGg.","vvvvvvvvvvv","wwwwwwwwwww","wwWwwwwwWww","WWWWWWWWWWW"],"bench":["vvvvvvvvvv","wwwwwwwwww",".W......W.",".W......W."],"lamp":["..PPP..",".PyyyP.",".PyFyP.",".PyyyP.","..PPP..","...P...","...P...","...P...","...P...","..PPP.."],"bed":["WWWWWWWWWWWW","WnntCcCccccW","WnntCcCccccW","WnntCcCccccW","WtttCcCccccW","WnnnCcCccccW","WWWWWWWWWWWW","W..........W"],"rug":[".WWWWWWWWWWWW.","WccccccccccccW","WcCCCCCCCCCCcW","WcCccccccccCcW","WcCccccccccCcW","WcCCCCCCCCCCcW","WccccccccccccW",".WWWWWWWWWWWW."],"table":["WWWWWWWWWW","WvvvvvvvvW","WwwwwwwwwW","WWWWWWWWWW",".W......W.",".W......W.",".W......W."],"shelf":["..c..q.nn.K.",".cCC.qQnnKk.","WWWWWWWWWWWW",".sS.CcC.qQq.","WWWWWWWWWWWW"],"workbench":["...SS....kK...","...SS...kK....","WWWWWWWWWWWWWW","WvvvvvvvvvvvvW","WwwwwwwwwwwwwW","WWWWWWWWWWWWWW",".W..........W.",".W..........W."],"crate":["WWWWWW","WvwwvW","WwvvwW","WvwwvW","WWWWWW"],"barrel":[".WWW.","WwvwW","WuuuW","WwvwW","WuuuW",".WWW."],"pond":[".....SSSSSSSSSS.....","...SStsssssssstSS...","..StsSqqqqqqqqSstS..",".StSqqqeqqqqqqqqStS.","StSqqqqqqqqQqqeqqStS","SsqqeqqqqqQQqqqqqqsS","SsqqqqqgqqqqqqqqeqsS","SsqqqqglgqqqqqqqqqsS","SsQqqqqgqqqqeqqqqQsS","StSQqqqqqqqqqqqQQStS",".StSQQqqqqqqqQQQStS.","..StsSSQQQQQQSSstS..","...SStsssssssstSS...",".....SSSSSSSSSS....."],"steps":["SSSSSSSSSS","SttttttltS","SssssssssS","SSSSSSSSSS","StttgttttS","SssssssssS","SSSSSSSSSS","SttttttgtS","SssssssssS","SSSSSSSSSS"],"tablets":["WWWWWWWWWW","WtLsaaeSaW","WtLsqaeSaW","WtLsqaeSKW","WtLsqaeStW","WWWWWWWWWW"],"carvedesk":["..SSSSSSS...","..St6t6tS.K.","..StttttS.K.","WWWWWWWWWWWW","WvvvvvvvvvvW","WwwwwwwwwwwW","WWWWWWWWWWWW",".W........W.",".W........W."],"hearth":["..aaaaaaaaaa..",".abbbbbbbbbba.","abkkkkkkkkkkba","abk...FF...kba","abk..FyyF..kba","abk.fFyFff.kba","abkrfffffrrkba","abkrrrrrrrrkba","abbbbbbbbbbbba","aaaaaaaaaaaaaa"],"anvil":["jjjjjjj.",".jKKKKjj","..kjjk..","..kKKk..",".kkkkkk."],"telescope":["......KK",".....KKk","....KKk.","...KKk..","..pKk...",".ppP.p..","pp.P..p.","p..P...."],"bell":["...P...","..LKj..",".LLKKj.",".LKKKj.",".LKKKj.","LKKKKjk","...k..."],"window":["aaaaaaaaaa","aeeqqeqqea","aqqQqqqQqa","aaaaaaaaaa"],"well":["...WWWWWW...",".WWvvvvvvWW.","WWWWWWWWWWWW",".P...P....P.",".P...P....P.",".P..jKKj..P.",".P..jjjj..P.",".tttttttttt.","tSkkkkkkkkSt","sssSssssSsss","SsssssSsssSs","sssSssssSsss","SSSSSSSSSSSS"],"signpost":["vvvvv","wnnnw","wnanw","wwwww","..W..","..W..",".WWW."],"pot":[".lg.","lgGg","vvvv","wwww",".WW."],"bedplot":["WWWWWWWWWWWWW","Wg=-g==l=g=-W","Wlgl=gGg=lgGW","WgGg-glg-gGgW","W=g==-g==-g-W","WWWWWWWWWWWWW"],"arch":["..lgglggGl..",".gGlg..GlgG.","gGy......ygg","gl........lG","p..........p","p..........p","p..........p","P..........P"],"rubble":[".tts..","tsssS.","ssSSSS"],"rubble2":[".ts","sSS"],"brazier":["..FfF..",".FfyfF.",".fFyFf.","KKKKKKK",".KjjjK.","..KjK..","..KjK..",".KKKKK."],"bush":["...GgG....","..GglgGg..",".GglggggG.","GllgGglgGG","GgglgggGgG",".GGgGGgGG."],"chair":["W.....","W.....","W.....","Wvvvvv","Wwwwww","W....W","W....W"],"fence":["W...W...W...W","WvvvWvvvWvvvW","WwwwWwwwWwwwW","W...W...W...W","W...W...W...W"],"flowerbed":[".y..F..y..","glgGglgGgl","WwwwwwwwwW","WvvvvvvvvW","WWWWWWWWWW"],"flowers":["..D.....q..",".DyD...qyq.","..Eg.D..Q..","...gDyD.g..",".F.g.Eg.g..","FyFgg.gl.l.",".Fglgggglg.","lgGgGlgGgGl",".=========."],"jar":[".CCC.","..C..",".CtC.","CtccC","CcccC",".CCC."],"mushroom":["..rrr....",".rfyfr...","rfffffr..","..CnC.rr.","..CnCrfyr","..CnC.Cn.",".=======."],"stepstone":[".SSS....SSS.","SttsS..SttsS","SsssS..SsssS",".SSS....SSS.","....SSS.....","...SttsS....","...SsssS....","....SSS....."],"stonelamp":["..SS..",".SttS.","SSSSSS","SyhhyS","SyyyyS","SSSSSS",".StsS.",".StsS.","SSSSSS"],"tree":[".....G.....","....GlG....","...GlggG...","..GlggggG..","...GlggG...","..GllgggG..",".GlgglgggG.","GllggggGgGG","..GlggGGG..",".GllgggggG.","GggglggGgGG","GgggggGgGGG","..GGGGGGG..","....WwW....","....WwW....","...=====..."],"bookcase":["WWWWWWWWWWWW","WrfAgBqrfgAW","WrfAgBqrfgAW","WWWWWWWWWWWW","WgqrAfgAqrfW","WgqrAfgAqrfW","WWWWWWWWWWWW","WBrgfqAgrBqW","WBrgfqAgrBqW","WWWWWWWWWWWW","W..........W"],"crystallamp":["..eQ..",".eqqQ.","eqeqQQ",".eqqQ.","..QQ..","..PP..","..PP..","..PP..",".PPPP.","PPPPPP"],"fountain":["......ee......",".....eQQe.....","......HH......","....HHttHH....","...HqqeqqqS...","....HHSSSS....","......SS......","..HHHHSSHHHH..",".HqqeqSSqeqqS.",".HHQQqqqqQQSS.",".HHHHSSSSSSSS.","..HSSSSSSSSS.."],"glowpatch":["..e.....e...",".eqe.e.eqe..","..P.eqe.P.e.",".gPg.P.gPgqe","glglgPglglP.","GGGGGGGGGGGG"],"goldlamp":["..FFF..",".FyyyF.",".FyhyF.",".FyyyF.","..FFF..","...F...","...u...","...u...","..uuu..",".uuuuu."],"mosaic":[".SSSSSSSSSSSS.","SttqqttqqttqqS","SttqqttqqttqqS","SqqttqqttqqttS","SqqttqqttqqttS","SttqqttqqttqqS","SttqqttqqttqqS",".SSSSSSSSSSSS."],"nestbed":["...uuuuuuuu...",".uuWuuWuuWuuu.","uWuccccccccuWu","uucchhhhhhccuu","uWchhhhhhhhcWu","uuuchhhhhhcuuu",".uuWuuWuuWuuu.","...uuuuuuuu..."],"tapestry":["PPPPPPPPPP",".rrrrrrrr.",".rFrrrrFr.",".rrFFFFrr.",".rFFrrFFr.",".rrFFFFrr.",".rrrFFrrr.",".rrFrrFrr.",".rrrrrrrr.",".rFrFrFrF.",".P......P.","PP......PP"],"tablets2":["WWWWWWWWWW","WtLasaeatW","WtLqsaeStW","WWWWWWWWWW","WtttaaLqaW","WssssaLqtW","WWWWWWWWWW"],"tablets3":["WWWWWWWWWW","WtLsaaeStW","WtLsqaeStW","WtLsqaeStW","WWWWWWWWWW","WaaaaaLatW","WtttaaLqtW","WsssSaLqtW","WWWWWWWWWW"]}};
     const PAL = D.pal, SPR = D.spr, W = 146, H = 110;
-    const ROOMS = { live: [49, 6, 48, 29], own: [6, 39, 40, 44], yard: [49, 39, 48, 47], work: [101, 39, 41, 44] };
+    Object.assign(PAL, { '¦': '#e2d7bf', '¬': '#caaf83', '¤': '#b7a689' }); // 바닥 줄눈·판자 이음을 바탕에 가깝게 (그림 데이터 D와 따로 둠)
+    const ROOMS = { live: [49, 6, 48, 29], own: [6, 40, 40, 43], yard: [49, 40, 48, 46], work: [100, 40, 40, 43] }; // 고유 칸·작업실은 위쪽 1도트 내림, 작업실은 고유 칸과 좌우 대칭 (바깥 담과 1도트 띄움), 마당은 위쪽 1도트 내려 두 칸과 윗선을 맞춤
     const seedOf = (s) => [...s].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
     const rng = (seed) => () => { seed = (seed + 0x6D2B79F5) >>> 0; let t = seed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-    const mk = (w, h) => ({ w, h, px: new Array(w * h).fill(null) });
-    const px = (c, x, y, ch) => { if (x >= 0 && y >= 0 && x < c.w && y < c.h) c.px[y * c.w + x] = ch; };
+    const mk = (w, h) => ({ w, h, px: new Array(w * h).fill(null), sh: new Array(w * h).fill(0) }); // sh: 그늘 세기 (0~1, 그림 위에 진갈색을 덮음)
+    const px = (c, x, y, ch) => { if (x >= 0 && y >= 0 && x < c.w && y < c.h) { c.px[y * c.w + x] = ch; if (c.sh) c.sh[y * c.w + x] = 0; } }; // 새로 칠하면 그늘은 지움 (가구는 그늘 위에 올라옴)
+    const shade = (c, x, y, a) => { if (x >= 0 && y >= 0 && x < c.w && y < c.h && c.sh) c.sh[y * c.w + x] = Math.max(c.sh[y * c.w + x], a); };
     const rect = (c, x, y, w, h, ch) => { for (let i = x; i < x + w; i++) for (let j = y; j < y + h; j++) px(c, i, j, ch); };
     const border = (c, x, y, w, h, ch = 'b') => { for (let i = x; i < x + w; i++) { px(c, i, y, ch); px(c, i, y + h - 1, ch); } for (let j = y; j < y + h; j++) { px(c, x, j, ch); px(c, x + w - 1, j, ch); } };
     const put = (c, x, y, name, flip) => { const rows = SPR[name] || [], w = Math.max(0, ...rows.map((r) => r.length)); rows.forEach((row, j) => [...row].forEach((ch, i) => { if (ch !== '.') px(c, x + (flip ? w - 1 - i : i), y + j, ch); })); }; // flip: 좌우 반전
-    const pave = (c, x, y, w, h, a = '7', b = '8') => { rect(c, x, y, w, h, a); for (let j = y; j < y + h; j++) { const row = Math.floor((j - y) / 4); for (let i = x; i < x + w; i++) if ((j - y) % 4 === 0 || (i - x + (row % 2 ? 3 : 0)) % 7 === 0) px(c, i, j, b); } };
-    const plank = (c, x, y, w, h) => { for (let j = y; j < y + h; j++) { const r = Math.floor((j - y) / 3); for (let i = x; i < x + w; i++) px(c, i, j, (j - y) % 3 === 2 || (i - x + r * 5) % 13 === 0 ? '0' : (j - y) % 3 === 0 ? '+' : '9'); } };
+    const pave = (c, x, y, w, h, a = '7', b = '¦') => { rect(c, x, y, w, h, a); for (let j = y; j < y + h; j++) { const row = Math.floor((j - y) / 4); for (let i = x; i < x + w; i++) if ((j - y) % 4 === 0 || (i - x + (row % 2 ? 3 : 0)) % 7 === 0) px(c, i, j, b); } };
+    const plank = (c, x, y, w, h) => { for (let j = y; j < y + h; j++) { const r = Math.floor((j - y) / 3); for (let i = x; i < x + w; i++) px(c, i, j, (j - y) % 3 === 2 || (i - x + r * 5) % 13 === 0 ? '¬' : (j - y) % 3 === 0 ? '+' : '9'); } };
     const dirt = (c, x, y, w, h, R) => { rect(c, x, y, w, h, '-'); for (let i = x; i < x + w; i++) for (let j = y; j < y + h; j++) if (R() < 0.1) px(c, i, j, '='); };
+    const check = (c, x, y, w, h) => { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) px(c, i, j, (Math.floor((i - x) / 4) + Math.floor((j - y) / 4)) % 2 ? 't' : '7'); }; // 체크 타일
+    const parquet = (c, x, y, w, h) => { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) { const a = i - x, b = j - y, flat = (Math.floor(a / 4) + Math.floor(b / 4)) % 2; px(c, i, j, (flat ? b % 2 : a % 2) ? '9' : '+'); if (a % 4 === 3 || b % 4 === 3) px(c, i, j, '¬'); } }; // 쪽모이 마루
+    const carpet = (c, x, y, w, h) => { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) { const e = Math.min(i - x, j - y, x + w - 1 - i, y + h - 1 - j); px(c, i, j, e === 1 ? 'C' : e > 2 && (i - x) % 6 === 3 && (j - y) % 6 === 3 ? 'H' : 'c'); } }; // 카펫 (가장자리 띠)
+    const sand = (c, x, y, w, h, R) => { rect(c, x, y, w, h, '+'); for (let i = x; i < x + w; i++) for (let j = y; j < y + h; j++) { const r = R(); if (r < 0.08) px(c, i, j, '9'); else if (r < 0.12) px(c, i, j, '-'); } }; // 모래 바닥
+    const darkwood = (c, x, y, w, h) => { for (let j = y; j < y + h; j++) { const r = Math.floor((j - y) / 3); for (let i = x; i < x + w; i++) px(c, i, j, (j - y) % 3 === 2 || (i - x + r * 5) % 13 === 0 ? 'W' : (j - y) % 3 === 0 ? 'v' : 'w'); } }; // 짙은 마루
     const moss = (c, x, y, w, h, R) => { pave(c, x, y, w, h); for (let k = 0; k < (w * h) / 30; k++) { const i = x + Math.floor(R() * w), j = y + Math.floor(R() * h); px(c, i, j, 'l'); px(c, i + 1, j, 'g'); } };
     function ruin(c, x, y, w, h, R, vines) {
       rect(c, x, y, w, h, '4');
@@ -15694,28 +15719,99 @@
       if (y + h - top > 12) put(c, x + 3, top + 3, 'workbench');
       border(c, x, y, w, h);
     }
+    // ── 입체 벽 (3/4 시점): 위쪽 벽은 앞면을 세우고, 옆·아래 벽은 윗면만. 빛은 왼쪽 위 ──
+    const FACE = 6; // 위쪽 벽 앞면 높이 (도트). 칸 안쪽 맨 위 줄부터 차지함
+    function walls3d(c, id, x, y, w, h, kind = 'done') {
+      if (id === 'yard') {
+        const st = curLook.wall || 'stone';
+        if (st === 'stone') { // 기본은 담 없는 트인 마당: 돌바닥 가장자리만 
+          // 담 없는 트인 마당: 테두리 없이 돌바닥만
+          return;
+        }
+        const F = st === 'hedge' ? ['g', 'G'] : ['w', 'W'];
+        border(c, x, y, w, h);
+        for (let i = x + 1; i < x + w - 1; i++) { if (i >= DOORS.live[0] && i < DOORS.live[0] + DOORS.live[2]) continue; px(c, i, y + 1, F[0]); px(c, i, y + 2, F[1]); shade(c, i, y + 3, 0.22); }
+        for (let j = y + 3; j < y + h - 1; j++) shade(c, x + 1, j, 0.12);
+        for (let i = x; i < x + w; i++) if (i < 66 || i > 79) { px(c, i, y + h, F[0]); px(c, i, y + h + 1, F[1]); shade(c, i, y + h + 2, 0.18); } // 입구 길(66~79)만 비움: 문기둥까지 빈틈 없이
+        return;
+      }
+      if (kind === 'ruin') { // 무너진 벽: 앞면이 군데군데 낮게만 남음
+        for (let i = x + 1; i < x + w - 1; i++) {
+          const k = (Math.floor((i - x) / 4) * 7 + 3) % 11; if (k < 4) { shade(c, i, y + 1, 0.12); continue; }
+          const hh = k > 8 ? 3 : 2; for (let j = 1; j <= hh; j++) px(c, i, y + j, j === hh ? 'S' : 's'); shade(c, i, y + hh + 1, 0.22);
+        }
+        for (let i = x; i < x + w; i++) { // 아랫벽 바깥 앞면도 위쪽처럼 4도트 덩어리로 남거나 무너짐 (점선처럼 보이지 않게)
+          const k = (Math.floor((i - x) / 4) * 5 + 2) % 11; if (k < 5) continue;
+          px(c, i, y + h, 's'); px(c, i, y + h + 1, 'S'); shade(c, i, y + h + 2, 0.15);
+        }
+        return;
+      }
+      // 벽 두께는 사방 2도트로 같게: 칸 테두리 1줄 + 바깥 1줄 (어두운 윗면)
+      for (let i = x - 1; i <= x + w; i++) { px(c, i, y - 1, 'a'); px(c, i, y, 'b'); px(c, i, y + h - 1, 'b'); px(c, i, y + h, 'a'); }
+      for (let j = y - 1; j <= y + h; j++) { px(c, x - 1, j, 'a'); px(c, x + w, j, 'a'); if (j >= y && j < y + h) { px(c, x, j, 'b'); px(c, x + w - 1, j, 'b'); } } // 안쪽 선은 칸 안에서만 (바깥 선 모서리를 덮지 않게)
+      for (let j = 1; j <= FACE; j++) for (let i = x + 1; i < x + w - 1; i++) { // 위쪽 벽 앞면 (윗면 바로 아래부터)
+        px(c, i, y + j, faceCh(faceOf(id), i - x, j));
+        if (j > 1 && j < FACE) shade(c, i, y + j, (j - 1) * 0.04);
+      }
+      for (let i = x + 1; i < x + w - 1; i++) { shade(c, i, y + FACE + 1, 0.32); shade(c, i, y + FACE + 2, 0.16); } // 벽 밑 그늘
+      for (let j = y + FACE + 1; j < y + h - 1; j++) shade(c, x + 1, j, 0.16);               // 왼쪽 벽 옆 그늘
+      southWall(c, id, x, y, w, h);
+    }
+    // 벽지 (지붕 있는 칸의 위쪽 벽 앞면). i: 칸 왼쪽에서 몇째 도트, j: 1(윗선)~FACE(걸레받이)
+    const FACE_DEF = (id) => (id === 'own' ? 'stone' : 'wood');
+    const faceOf = (id) => (curLook.face && curLook.face[id]) || FACE_DEF(id);
+    function faceCh(mat, i, j) {
+      if (mat === 'stone') return j === FACE ? 'b' : j % 2 === 1 || (i + ((j >> 1) % 2 ? 3 : 0)) % 6 === 0 ? 'b' : 'S';             // 돌벽
+      if (mat === 'plaster') return j === FACE ? 'a' : j === 1 ? 'W' : j === FACE - 1 ? 'w' : (i * 7 + j * 3) % 17 === 0 ? 's' : 't'; // 회벽 (아래 나무 띠)
+      if (mat === 'brick') return j === FACE ? 'a' : j === 1 ? 'W' : j % 2 === 1 ? 'C' : (i + (j % 4 === 0 ? 2 : 0)) % 4 === 0 ? 'C' : 'u'; // 벽돌벽 (한 줄 벽돌 + 한 줄 줄눈)
+      if (mat === 'paper') return j === FACE ? 'a' : j === 1 ? 'W' : i % 4 === 0 ? 'C' : i % 4 === 2 && j % 2 === 0 ? 'H' : 'c';      // 줄무늬 벽지
+      return j === FACE ? 'a' : i % 5 === 0 || j === 1 ? 'W' : 'w';                                                                    // 판자벽
+    }
+    // 아랫벽 (윗면 2줄 + 바깥 앞면 3줄): 3/4 시점에서 방 안 사물보다 앞에 있으니, 사물을 다 그린 뒤 한 번 더 덮어 그린다
+    function southWall(c, id, x, y, w, h) {
+      const f = faceOf(id), wood = f === 'brick' ? null : f === 'stone' || (id === 'own' && f !== 'wood') ? false : true; // 바깥벽: 벽돌·돌은 그대로, 회벽·벽지는 건물 본래 재질
+      for (let i = x - 1; i <= x + w; i++) { px(c, i, y + h - 1, i === x - 1 || i === x + w ? 'a' : 'b'); px(c, i, y + h, 'a'); }
+      for (let j = 1; j <= 3; j++) for (let i = x - 1; i <= x + w; i++) {                   // 아랫벽 바깥 앞면 (위쪽 벽과 같은 재질)
+        const ch = j === 3 || i === x - 1 || i === x + w ? 'a' : wood === null ? (j === 2 || (i - x) % 4 === 0 ? 'C' : 'u') : wood ? ((i - x) % 5 === 0 ? 'W' : 'w') : (j === 2 || (i - x) % 6 === 0 ? 'b' : 'S'); // 양 끝도 윤곽선으로 닫음
+        px(c, i, y + h + j, ch);
+      }
+    }
     // 마당 둘레: 두꺼운 벽 대신 낮은 돌담(옅은 선) + 8도트마다 돌기둥
     function lowWall(c, st) {
-      const [x, y, w, h] = ROOMS.yard, low = '6', style = st.state === 'done' ? curLook.wall || 'stone' : 'stone';
-      if (style === 'hedge') { border(c, x, y, w, h, 'G'); border(c, x + 1, y + 1, w - 2, h - 2, 'g'); for (let i = x; i < x + w; i += 3) { px(c, i, y, 'l'); px(c, i + 1, y + h - 1, 'l'); } for (let j = y; j < y + h; j += 3) { px(c, x, j, 'l'); px(c, x + w - 1, j + 1, 'l'); } return; } // 덤불 담
-      if (style === 'fence') { border(c, x, y, w, h, 'v'); border(c, x + 1, y + 1, w - 2, h - 2, 'w'); for (let i = x; i < x + w - 1; i += 5) { for (const yy of [y, y + 1, y + h - 2, y + h - 1]) { px(c, i, yy, 'W'); px(c, i + 1, yy, 'W'); } } for (let j = y; j < y + h - 1; j += 5) { for (const xx of [x, x + 1, x + w - 2, x + w - 1]) { px(c, xx, j, 'W'); px(c, xx, j + 1, 'W'); } } return; } // 나무 울타리: 밝은 가로대 두 줄 + 짙은 말뚝
+      const [x, y, w, h] = ROOMS.yard, low = 'b', style = st.state === 'done' ? curLook.wall || 'stone' : 'stone';
+      if (style === 'stone') return; // 기본: 담 없음
+      // 문과 입구 자리는 담을 두르지 않음: 그리기 전 바닥을 기억해 두었다가 되돌림 (길을 가로지르는 선이 생기지 않게)
+      const L = DOORS.live, S = DOORS.own, keep = [];
+      for (let i = L[0]; i < L[0] + L[2]; i++) for (const j of [y, y + 1]) keep.push([i, j]);                                     // 위: 거처 문
+      for (let i = 66; i < 80; i++) for (const j of [y + h - 2, y + h - 1]) keep.push([i, j]);                                       // 아래: 입구
+      for (let j = S[1]; j < S[1] + S[3]; j++) for (const i of [x, x + 1, x + w - 2, x + w - 1]) keep.push([i, j]);                // 옆: 고유 칸·작업실 문
+      const saved = keep.map(([i, j]) => [i, j, c.px[j * c.w + i], c.sh ? c.sh[j * c.w + i] : 0]);
+      const back = () => saved.forEach(([i, j, ch, a]) => { c.px[j * c.w + i] = ch; if (c.sh) c.sh[j * c.w + i] = a; });
+      if (style === 'hedge') { border(c, x, y, w, h, 'G'); border(c, x + 1, y + 1, w - 2, h - 2, 'g'); for (let i = x; i < x + w; i += 3) { px(c, i, y, 'l'); px(c, i + 1, y + h - 1, 'l'); } for (let j = y; j < y + h; j += 3) { px(c, x, j, 'l'); px(c, x + w - 1, j + 1, 'l'); } return back(); } // 덤불 담
+      if (style === 'fence') { border(c, x, y, w, h, 'v'); border(c, x + 1, y + 1, w - 2, h - 2, 'w'); for (let i = x; i < x + w - 1; i += 5) { for (const yy of [y, y + 1, y + h - 2, y + h - 1]) { px(c, i, yy, 'W'); px(c, i + 1, yy, 'W'); } } for (let j = y; j < y + h - 1; j += 5) { for (const xx of [x, x + 1, x + w - 2, x + w - 1]) { px(c, xx, j, 'W'); px(c, xx, j + 1, 'W'); } } return back(); } // 나무 울타리: 밝은 가로대 두 줄 + 짙은 말뚝
       border(c, x, y, w, h, low);
-      for (let i = x; i < x + w; i += 8) { px(c, i, y, 'b'); px(c, i, y + h - 1, 'b'); }
-      for (let j = y; j < y + h; j += 8) { px(c, x, j, 'b'); px(c, x + w - 1, j, 'b'); }
-      px(c, x + w - 1, y, 'b'); px(c, x + w - 1, y + h - 1, 'b'); px(c, x, y + h - 1, 'b');
+      for (let i = x; i < x + w; i += 8) { px(c, i, y, 'a'); px(c, i, y + h - 1, 'a'); }
+      for (let j = y; j < y + h; j += 8) { px(c, x, j, 'a'); px(c, x + w - 1, j, 'a'); }
+      px(c, x + w - 1, y, 'a'); px(c, x + w - 1, y + h - 1, 'a'); px(c, x, y + h - 1, 'a');
+      back();
     }
     // 문과 길: 마당 ↔ 거처(위)·고유 칸(왼쪽)·작업실(오른쪽), 마당 ↔ 입구(아래). 양쪽 칸이 다 되살아나면 돌길, 아니면 흙길
-    const DOORS = { live: [70, 34, 7, 6], own: [45, 58, 5, 7], work: [96, 58, 6, 7] };
+    const DOORS = { live: [70, 34, 7, 7], own: [45, 58, 5, 7], work: [96, 58, 5, 7] };
+    const DOOR_WALLS = { own: [45, 46, 49], work: [96, 99, 100] }; // 옆문이 지나는 벽 기둥 자리 (칸 벽 2줄 + 마당 담)
     function doors(c, rooms) {
       const ok = (id) => (rooms[id] || {}).state === 'done';
       for (const [id, [x, y, w, h]] of Object.entries(DOORS)) {
         const paved = ok('yard') && ok(id);
         for (let i = x; i < x + w; i++) for (let j = y; j < y + h; j++) {
-          if (paved) px(c, i, j, (j - y) % 4 === 0 || (i - x) % 4 === 3 ? '8' : '7');
+          if (paved) px(c, i, j, (j - y) % 4 === 0 || (i - x) % 4 === 3 ? '¦' : '7');
           else px(c, i, j, (i * 7 + j * 3) % 5 === 0 ? '=' : '-');
         }
+        if ((rooms[id] || {}).state === 'lock' || !rooms[id]) continue; // 무너진 칸은 벽이 낮아 문기둥 없음
+        if (id === 'live') { const end = ROOMS.live[1] + ROOMS.live[3] + 3; for (let j = y; j <= end; j++) { px(c, x - 1, j, 'a'); px(c, x + w, j, 'a'); } } // 문기둥은 아랫벽 앞면 끝줄까지만 (마당과의 틈으로 삐져나오지 않게) // 아랫벽을 뚫은 문: 양옆 문기둥
+        else for (const i of DOOR_WALLS[id].filter((i) => (curLook.wall || 'stone') !== 'stone' || (i !== 49 && i !== 96))) { px(c, i, y - 1, 'a'); px(c, i, y + h, 'a'); } // 옆문: 벽이 끊긴 자리에 문기둥 (위쪽은 한 도트 솟음)
       }
-      const [yx, yy, yw, yh] = ROOMS.yard; for (let i = 66; i < 80; i++) px(c, i, yy + yh - 1, ok('yard') ? '7' : '-'); // 입구 쪽 문
+      const [yx, yy, yw, yh] = ROOMS.yard; if ((curLook.wall || 'stone') !== 'stone') for (let i = 66; i < 80; i++) px(c, i, yy + yh - 1, ok('yard') ? '7' : '-'); // 입구 쪽 문
+      if ((curLook.wall || 'stone') !== 'stone') for (let j = yy + yh - 2; j <= yy + yh + 1; j++) { px(c, 65, j, 'a'); px(c, 80, j, 'a'); }       // 입구 문기둥
     }
     // 바깥 뜰 배경: 칸·길과 겹치지 않는 자리에 작은 돌과 들꽃 몇 개 (꾸미기 가구가 아님)
     const WILD = [[12, 9, 'r'], [24, 27, 'f'], [116, 10, 'f'], [134, 27, 'r'], [13, 92, 'f'], [38, 97, 'r'], [104, 96, 'r'], [128, 90, 'f'], [100, 25, 'f'], [36, 28, 'r']];
@@ -15733,11 +15829,12 @@
       own: { spring: [['pond', 10, 13], ['steps', 3, 3], ['pot', 30, 34], ['pot', 4, 34]], green: [['bedplot', 3, 4], ['bedplot', 3, 14], ['arch', 22, 24], ['pot', 4, 34], ['pot', 12, 35]], archive: [['tablets', 3, 3], ['tablets', 24, 3], ['carvedesk', 5, 23], ['lamp', 26, 30]], forge: [['hearth', 3, 3], ['anvil', 22, 8], ['workbench', 3, 22], ['barrel', 28, 34], ['crate', 20, 35]], belfry: [['window', 15, 0], ['telescope', 6, 6], ['bell', 26, 6], ['rug', 4, 26], ['crate', 26, 33]], plaza: [['well', 14, 13], ['signpost', 4, 4], ['pot', 4, 34], ['pot', 31, 34], ['pot', 31, 4]] },
     };
     const OWN_FLOOR = { spring: 'moss', green: 'dirt', archive: 'pave', forge: 'dark', belfry: 'plank', plaza: 'pave' };
+    const floorFill = (c, fl, x, y, w, h, R) => { if (fl === 'pave') pave(c, x, y, w, h); else if (fl === 'dark') pave(c, x, y, w, h, '#', '¤'); else if (fl === 'moss') moss(c, x, y, w, h, R); else if (fl === 'dirt') dirt(c, x, y, w, h, R); else if (fl === 'check') check(c, x, y, w, h); else if (fl === 'parquet') parquet(c, x, y, w, h); else if (fl === 'carpet') carpet(c, x, y, w, h); else if (fl === 'sand') sand(c, x, y, w, h, R); else if (fl === 'darkwood') darkwood(c, x, y, w, h); else plank(c, x, y, w, h); }; // 바닥 무늬 (칸 그림과 바닥 고르기 견본이 같이 씀)
     function done(c, id, plot, R) {
       const [x, y, w, h] = ROOMS[id];
       const fl = (curLook.floor && curLook.floor[id]) || (id === 'yard' ? 'pave' : id === 'own' ? OWN_FLOOR[plot] : 'plank'); // 바닥 바꾸기를 했으면 그 바닥
-      if (fl === 'pave') pave(c, x, y, w, h); else if (fl === 'dark') pave(c, x, y, w, h, '#', '%'); else if (fl === 'moss') moss(c, x, y, w, h, R); else if (fl === 'dirt') dirt(c, x, y, w, h, R); else plank(c, x, y, w, h);
-      border(c, x, y, w, h);
+      floorFill(c, fl, x, y, w, h, R);
+      walls3d(c, id, x, y, w, h);
       const list = id === 'yard' || id === 'own' ? DECO[id][plot] || [] : DECO[id];
       list.filter(([n]) => FIXED.has(n)).forEach(([n, dx, dy]) => put(c, x + dx, y + dy, n)); // 벽에 붙은 것(창)은 늘 그 자리
       if (custom) return; // 직접 꾸민 배치가 있으면 옮길 수 있는 기본 가구는 그리지 않음
@@ -15759,9 +15856,9 @@
     function plan(plot, rooms, deco, look) { // rooms: { yard: {state, p}, ... } state = 'done' | 'cur' | 'lock'. deco: 직접 꾸민 배치 [{s, x, y}] (없으면 기본 가구). look: { floor: {칸: 바닥}, wall: 마당 담 }
       const R = rng(seedOf(plot)), c = mk(W, H); custom = Array.isArray(deco); curLook = look || {};
       rect(c, 0, 0, W, H, '1');
-      for (let i = 0; i < W * H; i++) { const r = R(); if (r < 0.06) c.px[i] = '2'; else if (r < 0.09) c.px[i] = '3'; }
+      for (let i = 0; i < W * H; i++) { const r = R(); if (r < 0.03) c.px[i] = '2'; else if (r < 0.045) c.px[i] = '3'; }
       { // 잡초: 바둑판 대신 아무 데나 흩뿌리되 서로 너무 붙지 않게, 바깥 뜰의 돌·꽃 자리는 비워 둠 (모양도 세 가지)
-        const occ = WILD.map(([x, y]) => [x + 1, y]), target = 72;
+        const occ = WILD.map(([x, y]) => [x + 1, y]), target = 36;
         for (let placed = 0, tries = 0; placed < target && tries < 3000; tries++) {
           const x = 4 + Math.floor(R() * (W - 10)), y = 5 + Math.floor(R() * (H - 12));
           if (occ.some(([a, b]) => Math.abs(a - x) < 7 && Math.abs(b - y) < 5)) continue;
@@ -15773,19 +15870,29 @@
         }
       }
       for (let j = 86; j < H; j++) for (let i = 66; i < 80; i++) px(c, i, j, j % 4 === 0 || (i + Math.floor(j / 4) * 3) % 6 === 0 ? '8' : '4');
-      // 바깥 담: 안쪽 선을 먼저, 바깥 선을 나중에 그려 모서리가 비지 않게
-      for (let i = 3; i < W - 3; i++) { if (i < 64 || i > 81) px(c, i, H - 4, 'b'); px(c, i, 3, 'b'); }
-      for (let j = 3; j < H - 3; j++) { px(c, 3, j, 'b'); px(c, W - 4, j, 'b'); }
-      for (let i = 2; i < W - 2; i++) { if (i < 64 || i > 81) px(c, i, H - 3, 'a'); px(c, i, 2, 'a'); }
-      for (let j = 2; j < H - 2; j++) { px(c, 2, j, 'a'); px(c, W - 3, j, 'a'); }
+      // 바깥 담: 집터 경계일 뿐이라 옅게 (배경으로 물러나게)
+      for (let i = 3; i < W - 3; i++) { if (i < 64 || i > 81) px(c, i, H - 4, '5'); px(c, i, 3, '5'); }
+      for (let j = 3; j < H - 3; j++) { px(c, 3, j, '5'); px(c, W - 4, j, '5'); }
+      for (let i = 2; i < W - 2; i++) { if (i < 64 || i > 81) px(c, i, H - 3, '6'); px(c, i, 2, '6'); }
+      for (let j = 2; j < H - 2; j++) { px(c, 2, j, '6'); px(c, W - 3, j, '6'); }
       wild(c, R); // 바깥 뜰의 작은 돌·꽃 (배경)
+      const yard_ = (i, j, a) => { if (i > 3 && j > 3 && i < W - 4 && j < H - 4) shade(c, i, j, a); }; // 건물 그림자는 바깥 담 안쪽에만
+      for (const id of ['live', 'own', 'work']) { if (!rooms[id] || rooms[id].state === 'lock') continue; const [x, y, w, h] = ROOMS[id]; // 무너진 칸은 벽이 낮아 그림자 없음                          // 건물 그림자 (오른쪽·아래로)
+        for (let j = y + 1; j < y + h + 4; j++) { yard_(x + w + 1, j, 0.24); yard_(x + w + 2, j, 0.12); }
+        for (let i = x + 1; i < x + w + 3; i++) yard_(i, y + h + 4, 0.18); }
       for (const id of ['live', 'own', 'yard', 'work']) {
         const st = rooms[id] || { state: 'lock' }, [x, y, w, h] = ROOMS[id], RR = rng(seedOf(plot + id));
-        if (st.state === 'done') done(c, id, plot, RR); else if (st.state === 'cur') build(c, x, y, w, h, st.p || 0); else ruin(c, x, y, w, h, RR, plot === 'green' && id === 'own');
+        if (st.state === 'done') done(c, id, plot, RR); else if (st.state === 'cur') { build(c, x, y, w, h, st.p || 0); walls3d(c, id, x, y, w, h, 'build'); } else { ruin(c, x, y, w, h, RR, plot === 'green' && id === 'own'); walls3d(c, id, x, y, w, h, 'ruin'); }
       }
       lowWall(c, rooms.yard || { state: 'lock' }); // 마당은 지붕 없는 안뜰: 낮은 돌담과 기둥
       doors(c, rooms);                              // 마당에서 각 칸으로 이어지는 문과 길
-      if (custom) deco.forEach((o) => put(c, o.x, o.y, o.s, o.f));
+      // 칸 안 사물 → 아랫벽(앞에 있는 벽) → 바깥 뜰 사물 순서: 아랫벽 쪽에 붙인 사물은 벽 뒤로 살짝 가려진다
+      const front = ['live', 'own', 'work'].filter((id) => rooms[id] && rooms[id].state !== 'lock');
+      const inside = (o) => front.some((id) => { const [x, y, w, h] = ROOMS[id]; return o.x >= x && o.x < x + w && o.y >= y && o.y < y + h; });
+      if (custom) deco.filter(inside).forEach((o) => put(c, o.x, o.y, o.s, o.f));
+      front.forEach((id) => { const [x, y, w, h] = ROOMS[id]; southWall(c, id, x, y, w, h); });
+      doors(c, rooms);                              // 아랫벽을 다시 그렸으니 문 자리도 다시 뚫음
+      if (custom) deco.filter((o) => !inside(o)).forEach((o) => put(c, o.x, o.y, o.s, o.f));
       return c;
     }
     function stage(kind, plot) { // 한 칸이 되살아나는 모습 (33×21)
@@ -15798,11 +15905,21 @@
     function paint(canvas, c) {
       canvas.width = c.w; canvas.height = c.h;
       const g = canvas.getContext('2d'), img = g.createImageData(c.w, c.h);
-      c.px.forEach((ch, i) => { const hex = PAL[ch]; if (!hex) return; img.data[i * 4] = parseInt(hex.slice(1, 3), 16); img.data[i * 4 + 1] = parseInt(hex.slice(3, 5), 16); img.data[i * 4 + 2] = parseInt(hex.slice(5, 7), 16); img.data[i * 4 + 3] = 255; });
+      c.px.forEach((ch, i) => { const hex = PAL[ch]; if (!hex) return; img.data[i * 4] = parseInt(hex.slice(1, 3), 16); img.data[i * 4 + 1] = parseInt(hex.slice(3, 5), 16); img.data[i * 4 + 2] = parseInt(hex.slice(5, 7), 16); img.data[i * 4 + 3] = 255; const a = c.sh ? c.sh[i] : 0; if (a) { img.data[i * 4] = Math.round(img.data[i * 4] * (1 - a) + 70 * a); img.data[i * 4 + 1] = Math.round(img.data[i * 4 + 1] * (1 - a) + 52 * a); img.data[i * 4 + 2] = Math.round(img.data[i * 4 + 2] * (1 - a) + 44 * a); } });
       g.putImageData(img, 0, 0);
     }
     function sprite(n, flip) { const [w, h] = size(n), c = mk(w, h); put(c, 0, 0, n, flip); return c; }
-    return { W, H, ROOMS, PAL, plan, stage, paint, size, sprite, defaults };
+    // 바닥·벽·담 고르기 견본 (16×10 도트)
+    function swatch(t, k) {
+      const c = mk(16, 10), R = rng(seedOf('sw' + k));
+      if (t === 'floor') floorFill(c, k, 0, 0, 16, 10, R);
+      else if (t === 'face') { for (let i = 0; i < 16; i++) { px(c, i, 0, 'a'); px(c, i, 1, 'b'); } for (let j = 1; j <= FACE; j++) for (let i = 0; i < 16; i++) px(c, i, j + 1, faceCh(k, i + 1, j)); floorFill(c, 'plank', 0, FACE + 2, 16, 10 - FACE - 2, R); for (let i = 0; i < 16; i++) shade(c, i, FACE + 2, 0.3); }
+      else { rect(c, 0, 0, 16, 2, '1'); pave(c, 0, 2, 16, 8); const F = k === 'hedge' ? ['G', 'g', 'g', 'G'] : k === 'fence' ? ['v', 'w', 'w', 'W'] : null;
+        if (F) for (let i = 0; i < 16; i++) { F.forEach((ch, j) => px(c, i, 2 + j, ch)); if (k === 'hedge' && i % 3 === 0) px(c, i, 2, 'l'); if (k === 'fence' && i % 5 < 2) { px(c, i, 2, 'W'); px(c, i, 3, 'W'); } shade(c, i, 6, 0.22); } }
+      return c;
+    }
+    const BEHIND = { rooms: ['live', 'own', 'work'], depth: 3, doors: [DOORS.live] }; // 아랫벽 뒤로 숨길 수 있는 줄 수 (서버 DECO.behind와 같음)
+    return { W, H, ROOMS, PAL, plan, stage, paint, size, sprite, defaults, BEHIND, swatch };
   })();
 
   function homePlan(h) {
@@ -16072,10 +16189,12 @@
     if (k === 'mend') return cityCall('city:mend', { i: +x, by: y });
     if (k === 'mk') return cityCall('city:craft', { s: x, n: +(y || 1) });
     if (k === 'bp') return cityCall('city:bp', { s: x });
-    if (k === 'lkp') { const L = CT.v.me.look || {}, cur = x === 'wall' ? (L.wall || 'stone') : ((L.floor || {})[x] || (L.def || {})[x]); CT.lookPv = cur === y ? null : { room: x, k: y }; return renderHome(); } // 누르면 미리 보기만
+    if (k === 'lkr') { CT.lkRoom = x; return renderHome(); } // 바닥·벽·담: 바꿀 곳 고르기 (미리 보기는 그대로 둠)
+    if (k === 'lkp') { const L = CT.v.me.look || {}, cur = x === 'wall' ? (L.wall || 'stone') : x.startsWith('face-') ? ((L.face || {})[x.slice(5)] || (L.defFace || {})[x.slice(5)]) : ((L.floor || {})[x] || (L.def || {})[x]); CT.lookPv = cur === y ? null : { room: x, k: y }; return renderHome(); } // 누르면 미리 보기만
     if (a === 'lkno') { CT.lookPv = null; return renderHome(); }
-    if (a === 'lkok') { const pv = CT.lookPv; if (!pv) return; const L = CT.v.me.look || {}, ow = L.own || { floor: [], wall: [] }, have = pv.room === 'wall' ? (pv.k === 'stone' || ow.wall.includes(pv.k)) : (pv.k === (L.def || {})[pv.room] || ow.floor.includes(pv.k));
-      return cityCall('city:look', pv.room === 'wall' ? { wall: pv.k, buy: !have } : { room: pv.room, floor: pv.k, buy: !have }, () => { CT.lookPv = null; }); }
+    if (a === 'lkok') { const pv = CT.lookPv; if (!pv) return; const L = CT.v.me.look || {}, ow = L.own || { floor: [], wall: [], face: [] }, isP = pv.room.startsWith('face-'), rid = isP ? pv.room.slice(5) : pv.room;
+      const have = pv.room === 'wall' ? (pv.k === 'stone' || ow.wall.includes(pv.k)) : isP ? (pv.k === (L.defFace || {})[rid] || (ow.face || []).includes(pv.k)) : (pv.k === (L.def || {})[pv.room] || ow.floor.includes(pv.k));
+      return cityCall('city:look', pv.room === 'wall' ? { wall: pv.k, buy: !have } : isP ? { room: rid, face: pv.k, buy: !have } : { room: pv.room, floor: pv.k, buy: !have }, () => { CT.lookPv = null; }); }
     if (k === 'trade') { if (!confirm('석공 인장으로 바꿀까?')) return; return cityCall('city:trade', { i: +x }); }
     if (k === 'dkm') { CT.dkMode = x; CT.lookPv = null; if (CT.dk) { CT.dk.pick = null; CT.dk.sel = null; } return renderHome(); }
     if (k === 'dk' && CT.dk) { const dk = CT.dk;

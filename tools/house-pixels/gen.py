@@ -85,10 +85,10 @@ SPR = {
     ".W......W.",
     ".W......W."],
   'shelf': [
+    "..c..q.nn.K.",
+    ".cCC.qQnnKk.",
     "WWWWWWWWWWWW",
-    "WsSwcCnSsKkW",
-    "WWWWWWWWWWWW",
-    "WnCsKwSnccsW",
+    ".sS.CcC.qQq.",
     "WWWWWWWWWWWW"],
   'workbench': [
     "...SS....kK...",
@@ -140,11 +140,10 @@ SPR = {
     "SSSSSSSSSS"],
   'tablets': [
     "WWWWWWWWWW",
-    "WtSWtSWtSW",
-    "WsSWsSWsSW",
-    "WWWWWWWWWW",
-    "WtSWtSWtSW",
-    "WsSWsSWsSW",
+    "WtLsaaeSaW",
+    "WtLsqaeSaW",
+    "WtLsqaeSKW",
+    "WtLsqaeStW",
     "WWWWWWWWWW"],
   'carvedesk': [
     "..SSSSSSS...",
@@ -224,12 +223,12 @@ SPR = {
     "wwww",
     ".WW."],
   'bedplot': [
-    "WWWWWWWWWWWWWW",
-    "W=g=-g==l=g=-W",
-    "W-lgl=gGg=lgGW",
-    "W=gGg-glg-gGgW",
-    "W-=g==-g==-g-W",
-    "WWWWWWWWWWWWWW"],
+    "WWWWWWWWWWWWW",
+    "Wg=-g==l=g=-W",
+    "Wlgl=gGg=lgGW",
+    "WgGg-glg-gGgW",
+    "W=g==-g==-g-W",
+    "WWWWWWWWWWWWW"],
   'arch': [
     "..lgglggGl..",
     ".gGlg..GlgG.",
@@ -428,6 +427,24 @@ SPR = {
     ".rFrFrFrF.",
     ".P......P.",
     "PP......PP"],
+  'tablets2': [
+    "WWWWWWWWWW",
+    "WtLasaeatW",
+    "WtLqsaeStW",
+    "WWWWWWWWWW",
+    "WtttaaLqaW",
+    "WssssaLqtW",
+    "WWWWWWWWWW"],
+  'tablets3': [
+    "WWWWWWWWWW",
+    "WtLsaaeStW",
+    "WtLsqaeStW",
+    "WtLsqaeStW",
+    "WWWWWWWWWW",
+    "WaaaaaLatW",
+    "WtttaaLqtW",
+    "WsssSaLqtW",
+    "WWWWWWWWWW"],
 }
 
 def load_png_sprites(folder):
@@ -515,7 +532,7 @@ def fl_ruin(im, x, y, w, h, rnd, vines=False):
 
 # ── 집터 배치 (모든 집터 같은 뼈대: 위 거처, 가운데 마당, 오른쪽 작업실, 왼쪽 고유 칸) ──
 W, H = 146, 110
-ROOMS = {'live': (49, 6, 48, 29), 'own': (6, 39, 40, 44), 'yard': (49, 39, 48, 47), 'work': (101, 39, 41, 44)}
+ROOMS = {'live': (49, 6, 48, 29), 'own': (6, 40, 40, 43), 'yard': (49, 40, 48, 46), 'work': (100, 40, 40, 43)}
 
 def base(rnd, grassy=1.0):
     im = Image.new('RGB', (W, H), RGB['1'])
