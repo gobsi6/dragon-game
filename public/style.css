@@ -5193,3 +5193,11 @@ body.chat-off #say, body.chat-off #chat-view { display: none; }
 #home-ui.hm-e .lk-seg button + button { border-left-color: #DCCDB2; }
 #home-ui.hm-e .lk-seg button.on { border-color: var(--ha); }
 #home-ui.hm-e .lk-seg button.pv { border-color: #6E5A48; }
+
+/* ── 내 집터: 팩 그림 도면 (320×240 도트). 창을 넓혀 도면이 정수 배율(1도트 = 2픽셀)로 그려지게, 크기는 fitHP()가 맞춤 ── */
+#city-home-dlg.dlg.wide, #city-visit-dlg.dlg.wide { width: min(720px, calc(100% - 32px)); }
+#home-ui .hp { aspect-ratio: 320 / 240; margin-left: auto; margin-right: auto; }
+#home-ui .hp .hp-cv, #home-ui .hp .dk-fx { image-rendering: pixelated; }
+#home-ui .dk-cats { margin: 14px 0 8px; }
+#home-ui .dk-cats small { opacity: .6; font-size: 11px; }
+#home-ui .lk-tile canvas { aspect-ratio: 32 / 20; }
