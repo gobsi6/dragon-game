@@ -15480,7 +15480,7 @@
   const DK_LIST = Object.keys(DK_NAME);
   const dkDone = (h) => h.rooms.filter((r) => r.state === 'done').map((r) => r.id);
   const dkDefaults = (h) => HP.defaults(h.plot, dkDone(h), h.decoRules?.grid || 4).map((o) => ({ ...o })); // 칸을 되살릴 때 생기는 처음 배치
-  const dkN = (o) => (o.r ? `${o.s}@r` : o.s); // 놓인 장식의 그림 이름 (90도 돌렸으면 @r)
+  const dkN = (o) => (o.r && HP.canRot(o.s) ? `${o.s}@r` : o.s); // 놓인 장식의 그림 이름 (90도 돌렸으면 @r)
   const dkPickN = (dk) => (dk.pickR ? `${dk.pick}@r` : dk.pick);
   const dkLeft = (h, n) => (h.furn?.[n] || 0) - (CT.dk ? CT.dk.list.filter((o) => o.s === n).length : 0); // 가진 가구 − 놓은 가구
   function dkState(h) { // 편집 중인 사본 (저장 전까지는 화면에만)
@@ -15696,7 +15696,7 @@
     const ANIM = {}; for (const k of Object.keys(SPR)) { const m = /^(.*)_f(\d+)$/.exec(k); if (m && SPR[m[1]]) (ANIM[m[1]] = ANIM[m[1]] || [m[1]]).push(k); }
     let frame = 0;
     // 90도 돌려 놓기: 이름 뒤에 @r를 붙이면 돌린 그림. 따로 그린 이름_r 그림이 있으면 그것(침대), 없으면 시계 방향으로 돌림
-    const ROT = new Set(['rug', 'mosaic', 'bedplot', 'crate', 'stepstone', 'nestbed', 'pond', 'bed']);
+    const ROT = new Set(['rug', 'mosaic', 'bedplot', 'crate', 'stepstone', 'bed']); // 둥근 것(둥지 쿠션, 연못)은 세우면 서 있는 것처럼 보여 뺌
     const rotRows = (rows) => { const h = rows.length, w = Math.max(0, ...rows.map((r) => r.length)), out = []; for (let i = 0; i < w; i++) { let t = ''; for (let j = h - 1; j >= 0; j--) t += rows[j][i] || '.'; out.push(t); } return out; };
     const rowsOf = (name) => { if (name.endsWith('@r')) { const b = name.slice(0, -2); return SPR[b + '_r'] || rotRows(SPR[b] || []); } return SPR[name] || []; };
     Object.assign(PAL, { '¦': '#e2d7bf', '¬': '#caaf83', '¤': '#b7a689' }); // 바닥 줄눈·판자 이음을 바탕에 가깝게 (그림 데이터 D와 따로 둠)
@@ -15906,10 +15906,10 @@
       // 칸 안 사물 → 아랫벽(앞에 있는 벽) → 바깥 뜰 사물 순서: 아랫벽 쪽에 붙인 사물은 벽 뒤로 살짝 가려진다
       const front = ['live', 'own', 'work'].filter((id) => rooms[id] && rooms[id].state !== 'lock');
       const inside = (o) => front.some((id) => { const [x, y, w, h] = ROOMS[id]; return o.x >= x && o.x < x + w && o.y >= y && o.y < y + h; });
-      if (custom) deco.filter(inside).forEach((o) => put(c, o.x, o.y, o.r ? `${o.s}@r` : o.s, o.f));
+      if (custom) deco.filter(inside).forEach((o) => put(c, o.x, o.y, o.r && ROT.has(o.s) ? `${o.s}@r` : o.s, o.f));
       front.forEach((id) => { const [x, y, w, h] = ROOMS[id]; southWall(c, id, x, y, w, h); });
       doors(c, rooms);                              // 아랫벽을 다시 그렸으니 문 자리도 다시 뚫음
-      if (custom) deco.filter((o) => !inside(o)).forEach((o) => put(c, o.x, o.y, o.r ? `${o.s}@r` : o.s, o.f));
+      if (custom) deco.filter((o) => !inside(o)).forEach((o) => put(c, o.x, o.y, o.r && ROT.has(o.s) ? `${o.s}@r` : o.s, o.f));
       return c;
     }
     function stage(kind, plot) { // 한 칸이 되살아나는 모습 (33×21)

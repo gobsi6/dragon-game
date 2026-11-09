@@ -190,7 +190,7 @@ const DECO = {
   out: { x0: 5, y0: 5, x1: 141, y1: 105, path: [64, 86, 18, 24] },
   rooms: { live: [49, 6, 48, 29], own: [6, 40, 40, 43], yard: [49, 40, 48, 46], work: [100, 40, 40, 43] },
   oldRooms: { own: [6, 39, 40, 44], work: [101, 39, 41, 44], yard: [49, 39, 48, 47] }, // 2026-11 칸을 줄이기 전 크기: 그때 놓은 장식을 새 칸 안으로 당겨 넣을 때만 씀
-  rot: ['rug', 'mosaic', 'bedplot', 'crate', 'stepstone', 'nestbed', 'pond', 'bed'], // 90도 돌려 놓을 수 있는 장식 (돌리면 가로·세로가 바뀜, 화면 HP와 같음)
+  rot: ['rug', 'mosaic', 'bedplot', 'crate', 'stepstone', 'bed'], // 90도 돌려 놓을 수 있는 장식 (돌리면 가로·세로가 바뀜, 화면 HP와 같음)
   behind: { rooms: ['live', 'own', 'work'], depth: 3, doors: [[70, 34, 7, 7]] }, // 지붕 있는 칸은 아랫벽 뒤로 사물을 이만큼(줄) 숨겨 놓을 수 있음. 거처 아래 문 자리는 비움 (화면 HP.BEHIND와 같음)
   size: {"planter":[11,8],"bench":[10,4],"lamp":[7,10],"bed":[12,8],"rug":[14,8],"table":[10,7],"shelf":[12,5],"workbench":[14,8],"crate":[6,5],"barrel":[5,6],"pond":[20,14],"steps":[10,10],"tablets":[10,6],"carvedesk":[12,9],"hearth":[14,10],"anvil":[8,5],"telescope":[8,8],"bell":[7,7],"well":[12,13],"signpost":[5,7],"pot":[4,5],"bedplot":[13,6],"arch":[12,8],"brazier":[7,8],"bush":[10,6],"chair":[6,7],"fence":[13,5],"flowerbed":[10,5],"flowers":[11,9],"jar":[5,6],"mushroom":[9,7],"stepstone":[12,8],"stonelamp":[6,9],"tree":[11,16],"bookcase":[12,11],"crystallamp":[6,10],"fountain":[14,12],"glowpatch":[12,6],"goldlamp":[7,10],"mosaic":[14,8],"nestbed":[14,8],"tapestry":[10,12],"tablets2":[10,7],"tablets3":[10,9],"candle":[3,8],"chest":[9,7],"goldpile":[10,5],"sofa":[12,7],"cactus":[7,10],"orb":[7,9]}, // 장식마다 [가로, 세로] 도트
 };
