@@ -15521,8 +15521,8 @@
   function dkFit(h, name, px, py, skip) {
     const [w, hh] = HP.size(name), x = Math.round(px - w / 2), y = Math.round(py - hh / 2);
     const why = HP.where(name, x, y, dkDone(h)); if (why) return { x, y, w, h: hh, ok: false, why };
-    const L = HP.layer(name);
-    if (L !== 'flat' && CT.dk.list.some((o, i) => i !== skip && HP.layer(o.s) === L && HP.hit(x, y, w, hh, [o.x, o.y, ...HP.size(o.s)]))) return { x, y, w, h: hh, ok: false, why: '다른 장식과 겹친다.' };
+    const others = CT.dk.list.filter((o, i) => i !== skip), me = { s: name, x, y }, L = HP.effLayer(me, others); // 화분·등·촛대·책은 가구 위에 올리면 'top' 층
+    if (L !== 'flat' && others.some((o) => HP.effLayer(o, others) === L && HP.hit(x, y, w, hh, [o.x, o.y, ...HP.size(o.s)]))) return { x, y, w, h: hh, ok: false, why: '다른 장식과 겹친다.' };
     return { x, y, w, h: hh, ok: true };
   }
   // 놓인 장식 방향 바꾸기 (의자 앞·뒤·옆, 긴 탁자 가로·세로): 가운데를 축으로, 그 자리에 못 놓으면 그대로 두고 알림
@@ -15589,16 +15589,18 @@
       ${sel || dk.pick ? `<div class="dk-sel"><b>${sel ? `${dkName(sel.s)}${sel.f ? ' (좌우 반전)' : ''}` : `놓을 장식: ${dkName(dkPickN(dk))}${dk.pickF ? ' (좌우 반전)' : ''}`}</b>${turnable ? '<button type="button" class="btn sm" data-ct="dk:turn">방향 바꾸기</button>' : ''}<button type="button" class="btn sm" data-ct="dk:flip">좌우 반전</button>${sel ? '<button type="button" class="btn sm" data-ct="dk:del">치우기</button>' : ''}<button type="button" class="btn sm" data-ct="dk:none">선택 취소</button></div>` : ''}
       <div class="lk-tabs dk-cats" role="tablist" aria-label="가구 분류">${DK_CATS.map(([k, n]) => `<button type="button" role="tab" aria-selected="${cat === k}" class="${cat === k ? 'on' : ''}" data-ct="dkc:${k}">${n} <small>${cnt(k)}</small></button>`).join('')}</div>
       <div class="dk-pal" role="list">${list.map((n) => { const left = dkLeft(h, n), own = h.furn?.[n] || 0; return `<button type="button" role="listitem" class="dk-it${dk.pick === n ? ' on' : ''}${left > 0 ? '' : ' none'}" data-ct="dk:pick:${n}" aria-pressed="${dk.pick === n}"><canvas class="dk-th" data-s="${n}" aria-hidden="true"></canvas><span>${dkName(n)}</span><em class="dk-n">${own ? `${Math.max(0, left)} / ${own}` : '없음'}</em></button>`; }).join('')}</div>
-      <small class="note">되살린 칸 안과, 마당을 되살린 뒤에는 돌 마당과 담 안 모래밭에도 놓을 수 있다. 방 아랫벽 쪽에 붙이면 앞쪽 벽 뒤로 살짝 가려진다. 창문·깃발은 벽에 걸려 가구 뒤에, 책은 탁자 위에 놓인다.</small>`;
+      <small class="note">되살린 칸 안과, 마당을 되살린 뒤에는 돌 마당과 담 안 모래밭에도 놓을 수 있다. 방 아랫벽 쪽에 붙이면 앞쪽 벽 뒤로 살짝 가려진다. 창문·깃발은 벽에 걸려 가구 뒤에 보인다. 화분·등·촛대·책은 탁자나 걸상 같은 가구 위에 올려 둘 수 있고, 가구를 옮기면 함께 따라간다.</small>`;
   }
   function dkDraw(body, h, ghost) { // 도면은 편집 중인 배치로, 위 덧칠 캔버스에는 아직 못 쓰는 곳·고른 장식·놓을 자리
     const dk = CT.dk, cv = body.querySelector('.hp.dk .hp-cv'), fx = body.querySelector('.dk-fx'); if (!cv || !fx) return;
-    const skip = ghost && ghost.move != null ? ghost.move : -1;
-    HP.paint(cv, HP.plan(h.plot, Object.fromEntries(h.rooms.map((r) => [r.id, { state: r.state, p: roomFrac(r) }])), dk.list.filter((_, i) => i !== skip), h.look));
+    const skip = ghost && ghost.move != null ? ghost.move : -1, carry = (ghost && ghost.carry) || [];
+    HP.paint(cv, HP.plan(h.plot, Object.fromEntries(h.rooms.map((r) => [r.id, { state: r.state, p: roomFrac(r) }])), dk.list.filter((_, i) => i !== skip && !carry.includes(i)), h.look));
     const g = fx.getContext('2d'), S = 3; g.clearRect(0, 0, fx.width, fx.height); g.imageSmoothingEnabled = false;
     if (dk.sel != null && dk.list[dk.sel] && skip !== dk.sel) { const o = dk.list[dk.sel], [w, hh] = HP.size(o.s); g.strokeStyle = '#C8553D'; g.lineWidth = 3; g.strokeRect(o.x * S - 2, o.y * S - 2, w * S + 4, hh * S + 4); }
     if (ghost && ghost.at) {
-      const { at, name } = ghost; g.globalAlpha = at.ok ? 0.85 : 0.45; g.save(); g.scale(S, S); HP.drawSprite(g, name, at.x, at.y, ghost.flip); g.restore();
+      const { at, name } = ghost; g.globalAlpha = at.ok ? 0.85 : 0.45; g.save(); g.scale(S, S); HP.drawSprite(g, name, at.x, at.y, ghost.flip);
+      if (carry.length && skip >= 0) { const o0 = dk.list[skip], dx = at.x - o0.x, dy = at.y - o0.y; carry.forEach((j) => { const q = dk.list[j]; HP.drawSprite(g, q.s, q.x + dx, q.y + dy, q.f); }); } // 위에 올려 둔 소품도 같이
+      g.restore();
       g.globalAlpha = 1; g.strokeStyle = at.ok ? '#FFFFFF' : '#C8553D'; g.lineWidth = 2; g.setLineDash(at.ok ? [] : [6, 4]); g.strokeRect(at.x * S - 1, at.y * S - 1, at.w * S + 2, at.h * S + 2); g.setLineDash([]);
     }
   }
@@ -15608,11 +15610,11 @@
     dkDraw(body, h);
     const hit = body.querySelector('.dk-hit'); if (!hit) return;
     const dot = (e) => { const r = hit.getBoundingClientRect(); return [((e.clientX - r.left) / r.width) * HP.W, ((e.clientY - r.top) / r.height) * HP.H]; };
-    const at = (x, y) => { const L = CT.dk.list, ord = L.map((o, i) => i).sort((a, b) => HP.order(L[b]) - HP.order(L[a])); for (const i of ord) { const o = L[i], [w, hh] = HP.size(o.s); if (x >= o.x && x < o.x + w && y >= o.y && y < o.y + hh) return i; } return -1; }; // 위에 그려진 것부터
+    const at = (x, y) => { const L = CT.dk.list, ord = L.map((o, i) => i).sort((a, b) => HP.order(L[b], L) - HP.order(L[a], L)); for (const i of ord) { const o = L[i], [w, hh] = HP.size(o.s); if (x >= o.x && x < o.x + w && y >= o.y && y < o.y + hh) return i; } return -1; }; // 위에 그려진 것부터
     let drag = null;
     hit.addEventListener('pointermove', (e) => {
       const [x, y] = dot(e), dk = CT.dk;
-      if (drag) { drag.moved = drag.moved || Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 4; if (drag.moved) { const o = dk.list[drag.i]; drag.at = dkFit(h, o.s, x - drag.ox, y - drag.oy, drag.i); dkDraw(body, h, { move: drag.i, name: o.s, flip: o.f, at: drag.at }); } return; }
+      if (drag) { drag.moved = drag.moved || Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 4; if (drag.moved) { const o = dk.list[drag.i]; drag.at = dkFit(h, o.s, x - drag.ox, y - drag.oy, drag.i); dkDraw(body, h, { move: drag.i, carry: drag.carry, name: o.s, flip: o.f, at: drag.at }); } return; }
       if (dk.pick) dkDraw(body, h, { name: dkPickN(dk), flip: dk.pickF, at: dkFit(h, dkPickN(dk), x, y, -1) });
       else hit.style.cursor = at(x, y) >= 0 ? 'grab' : 'default';
     });
@@ -15635,12 +15637,18 @@
         dk.list.push({ s: nm, x: f.x, y: f.y, ...(dk.pickF ? { f: 1 } : {}) }); dk.dirty = true; dk.sel = null; return renderHome();
       }
       const i = at(x, y); if (i < 0) { if (dk.sel != null) { dk.sel = null; renderHome(); } return; }
-      const o = dk.list[i], [w, hh] = HP.size(o.s); drag = { i, ox: x - (o.x + w / 2), oy: y - (o.y + hh / 2), sx: e.clientX, sy: e.clientY, moved: false, at: null };
+      const o = dk.list[i], [w, hh] = HP.size(o.s), carry = dk.list.map((q, j) => (j !== i && HP.support(q, dk.list) === o ? j : -1)).filter((j) => j >= 0); // 이 가구 위에 올려 둔 소품
+      drag = { i, carry, ox: x - (o.x + w / 2), oy: y - (o.y + hh / 2), sx: e.clientX, sy: e.clientY, moved: false, at: null };
       hit.setPointerCapture(e.pointerId); hit.style.cursor = 'grabbing';
     });
     const end = () => {
       if (!drag) return; const d = drag, dk = CT.dk; drag = null;
-      if (d.moved && d.at) { if (d.at.ok) { dk.list[d.i].x = d.at.x; dk.list[d.i].y = d.at.y; dk.dirty = true; } else toast(d.at.why); }
+      if (d.moved && d.at) {
+        if (!d.at.ok) toast(d.at.why);
+        else { const o = dk.list[d.i], dx = d.at.x - o.x, dy = d.at.y - o.y, done = dkDone(h);
+          const bad = d.carry.find((j) => { const q = dk.list[j]; return HP.where(q.s, q.x + dx, q.y + dy, done); }); // 올려 둔 소품이 옮긴 자리에서도 놓일 수 있어야 함
+          if (bad != null) toast(`위에 올려 둔 ${dkName(dk.list[bad].s)}${ctJ(dkName(dk.list[bad].s), '이', '가')} 놓일 자리가 없다. ${HP.where(dk.list[bad].s, dk.list[bad].x + dx, dk.list[bad].y + dy, done)}`);
+          else { o.x = d.at.x; o.y = d.at.y; d.carry.forEach((j) => { dk.list[j].x += dx; dk.list[j].y += dy; }); dk.dirty = true; } } }
       dk.sel = d.i; renderHome();
     };
     hit.addEventListener('pointerup', end); hit.addEventListener('pointercancel', end);
@@ -15695,12 +15703,17 @@
       }
       if (!done.includes('yard')) return '마당을 되살린 뒤에 놓을 수 있다.';
       const [yx, yy, yw, yh] = ROOMS.yard;
-      if (hit(x, y, w, h, ROOMS.yard)) return x >= yx + 2 && y >= yy + 2 && x + w <= yx + yw - 2 && y + h <= yy + yh - 2 ? null : '마당 돌 안쪽에 놓아야 한다.';
+      if (hit(x, y, w, h, ROOMS.yard)) return x >= yx + 2 && y >= yy - 10 && y + h >= yy + 6 && x + w <= yx + yw - 2 && y + h <= yy + yh - 2 ? null : '마당 돌 안쪽에 놓아야 한다.'; // 위쪽은 발이 마당 안이면 윗부분이 담(돌 테두리)을 가려도 됨 (서버와 같음)
       if (!(x >= 9 && y >= 9 && x + w <= W - 9 && y + h <= H - 9)) return '바깥 담 안에 놓아야 한다.';
       if (P.block.some((b) => hit(x, y, w, h, b))) return '건물이나 길 위에는 놓을 수 없다.';
       return null;
     }
-    const order = (o) => { const L = layer(o.s); return L === 'flat' ? -1e4 : L === 'wall' ? -5e3 + o.y : L === 'top' ? 1e4 + o.y : o.y + size(o.s)[1]; }; // 그리는 순서: 깔개 → 벽 장식 → 가구(아래쪽이 앞) → 탁상 소품
+    // 올려 둔 소품: 발(아래 가운데)이 바닥 가구 위에 있으면 그 가구 위에 올린 것 (서버 decoSupport와 같음)
+    const support = (o, list) => { if (!(sp(o.s) && sp(o.s).stack)) return null; const [w, h] = size(o.s), fx = o.x + w / 2, fy = o.y + h - 1;
+      return list.find((q) => q !== o && layer(q.s) === '' && !(sp(q.s) && sp(q.s).stack) && (() => { const [qw, qh] = size(q.s); return fx >= q.x && fx < q.x + qw && fy >= q.y && fy < q.y + qh; })()) || null; };
+    const effLayer = (o, list) => (support(o, list) ? 'top' : layer(o.s));
+    // 그리는 순서: 깔개 → 벽 장식 → 가구(아래쪽이 앞) · 올려 둔 소품은 받친 가구 바로 다음
+    const order = (o, list = []) => { const L = layer(o.s); if (L === 'flat') return -1e4; if (L === 'wall') return -5e3 + o.y; const b = support(o, list); return b ? b.y + size(b.s)[1] + 0.5 + (o.y + size(o.s)[1]) / 1e3 : o.y + size(o.s)[1]; };
     function drawSprite(g, k, x, y, f) {
       const s = sp(k); if (!s) return; const im = FR[k] ? FR[k][frame % FR[k].length] : IMG[k]; if (!im) return;
       if (f) { g.save(); g.translate(x + s.w, y); g.scale(-1, 1); g.drawImage(im, 0, 0); g.restore(); } else g.drawImage(im, x, y);
@@ -15738,14 +15751,14 @@
         if (d.t === 'wall') { const t = WT[d.k]; if (t) for (let x = 0; x < 32; x += 16) g.drawImage(t.im, 0, 8, 16, 20, x, 0, 16, 20); }
         else { const t = FT[d.k]; if (t) for (let y = 0; y < 20; y += t.s) for (let x = 0; x < 32; x += t.s) g.drawImage(t.im, x, y); } return; }
       cv.width = W; cv.height = H; g.imageSmoothingEnabled = false; g.drawImage(baseFor(d.look), 0, 0);
-      const items = [...d.deco].sort((a, b) => order(a) - order(b)); items.forEach((o) => drawSprite(g, o.s, o.x, o.y, o.f));
+      const items = [...d.deco].sort((a, b) => order(a, d.deco) - order(b, d.deco)); items.forEach((o) => drawSprite(g, o.s, o.x, o.y, o.f));
       g.drawImage(IMG.__front, 0, 0); veil(g, d.rooms);
       cv._hpAnim = items.some((o) => FR[o.s]) ? d : null; // 움직이는 가구(벽난로)가 있으면 다시 그릴 재료를 기억
     }
     if (!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) setInterval(() => { if (!ok) return; let any = false; document.querySelectorAll('canvas').forEach((cv) => { if (cv._hpAnim && cv.isConnected && cv.offsetParent) { if (!any) { frame++; any = true; } paint(cv, cv._hpAnim); } }); }, 160);
     const defaults = (plot, done) => (P && P.defaults[plot] ? P.defaults[plot].filter((o) => done.includes(o.room)).map(({ room, ...o }) => o) : []);
     const catalog = () => (P ? Object.keys(P.cat).sort((a, b) => DK_CATS.findIndex(([c]) => c === P.cat[a].cat) - DK_CATS.findIndex(([c]) => c === P.cat[b].cat)) : []);
-    return { W, H, ROOMS, ready: () => ok, onReady: (f) => (ok ? f() : wait.push(f)), plan, paint, sprite, swatch, size, defaults, where, hit, layer, order, baseOf, drawSprite, catalog,
+    return { W, H, ROOMS, ready: () => ok, onReady: (f) => (ok ? f() : wait.push(f)), plan, paint, sprite, swatch, size, defaults, where, hit, layer, order, effLayer, support, baseOf, drawSprite, catalog,
       name: (k) => (sp(k) ? sp(k).name : k), cat: (k) => (P && P.cat[k] ? P.cat[k].cat : ''),
       group: (b) => (P && P.groups[b]) || null, variant: (b, i) => { const g = P && P.groups[b]; return g ? g[i % g.length] : b; },
       floors: () => (P ? P.floors : []), walls: () => (P ? P.walls : []), yardFloors: () => (P ? P.yardFloors.map((id) => (id === 'cobble' ? { id, name: '회색 자갈' } : P.floors.find((f) => f.id === id))) : []),

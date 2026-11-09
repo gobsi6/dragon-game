@@ -13,7 +13,7 @@ def where(s,x,y,done):
         return None
     if 'yard' not in done: return '마당을 되살린 뒤에 놓을 수 있다.'
     Y=P['yard']
-    if hit(x,y,w,h,Y): return None if inb(x,y,w,h,[Y[0]+2,Y[1]+2,Y[2]-4,Y[3]-4]) else '마당 돌 안쪽에 놓아야 한다.'
+    if hit(x,y,w,h,Y): return None if (x>=Y[0]+2 and y>=Y[1]-10 and y+h>=Y[1]+6 and x+w<=Y[0]+Y[2]-2 and y+h<=Y[1]+Y[3]-2) else '마당 돌 안쪽에 놓아야 한다.'
     if not (x>=9 and y>=9 and x+w<=W-9 and y+h<=H-9): return '바깥 담 안에 놓아야 한다.'
     if any(hit(x,y,w,h,b) for b in P['block']): return '건물이나 길 위에는 놓을 수 없다.'
     return None

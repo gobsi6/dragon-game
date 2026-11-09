@@ -18,7 +18,7 @@ CAT={'bed':'live','cabinet':'live','table':'live','chair':'live','stool':'live',
 LAYER={'rug':'flat'}
 for k,v in CAT.items():
     if v=='wall': LAYER[k]='wall'
-for k in ['book_open','book_red','book_stack','book_tall']: LAYER[k]='top'
+STACK=['pot','lamp','candle','book_open','book_red','book_stack','book_tall']  # 가구 위에 올려 둘 수 있는 소품
 groups={rn(b):[rn(x) for x in v] for b,v in D['groups'].items()}
 base_of={x:b for b,v in groups.items() for x in v}
 spr={}
@@ -27,6 +27,7 @@ for k,v in D['sprites'].items():
     spr[K]={'name':v['name'],'w':v['w'],'h':v['h'],'src':v['src']}
     if K in base_of and base_of[K]!=K: spr[K]['of']=b
     if b in LAYER: spr[K]['layer']=LAYER[b]
+    if b in STACK: spr[K]['stack']=1
 for k,fr in D.get('anim',{}).items(): spr[rn(k)]['frames']=fr
 MATID={'룬이 새겨진 돌':'rune_stone','살아 있는 나무껍질':'living_bark','바랜 천 조각':'faded_cloth','낡은 두루마리':'old_scroll','태양가루':'sun_dust','흑요석':'obsidian','붉은 점토':'red_clay','옛 타일 조각':'old_tile','동굴 수정':'cave_crystal','늑대 가죽':'wolf_pelt','종유석 가루':'drip_dust','짐승 가죽':'beast_hide','늪철':'bog_iron','조개껍데기':'sea_shell','금광석':'gold_ore','빛버섯 포자':'shroom_spore','빛나는 이끼':'glow_moss'}
 cat={}
@@ -54,6 +55,10 @@ for o in defaults['spring']:
     if o['s']=='pot' and o.get('f'): o['x']=78
 for o in defaults['forge']:
     if o['s']=='workbench' and o['room']=='own': o['x']=49
+# 마당 윗줄 가구는 8도트 올려 윗부분이 마당 담(돌 테두리)을 가리게
+for plot,items in defaults.items():
+    for o in items:
+        if o['room']=='yard' and o['y']<D['yard'][1]+24: o['y']-=8
 gift={plot:{} for plot in defaults}
 for plot,items in defaults.items():
     for it in items:

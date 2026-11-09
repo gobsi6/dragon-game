@@ -124,7 +124,12 @@ const LOOK = { floors: Object.fromEntries(PACK.floors.map((f) => [f.id, f.name])
 const DECO = { max: 30, W: PACK.W, H: PACK.H, rooms: PACK.rooms, yard: PACK.yard, block: PACK.block, door: PACK.door,
   size: Object.fromEntries(Object.entries(PACK.sprites).map(([k, s]) => [k, [s.w, s.h]])),
   base: Object.fromEntries(Object.entries(PACK.sprites).map(([k, s]) => [k, s.of || k])), // 방향 그림(의자 뒤·옆 등)은 같은 가구로 셈
-  layer: Object.fromEntries(Object.entries(PACK.sprites).map(([k, s]) => [k, s.layer || ''])) }; // flat: 깔개(위에 다른 것을 놓음), wall: 벽 장식, top: 탁상 소품
+  layer: Object.fromEntries(Object.entries(PACK.sprites).map(([k, s]) => [k, s.layer || ''])), // flat: 깔개(위에 다른 것을 놓음), wall: 벽 장식
+  stack: Object.fromEntries(Object.entries(PACK.sprites).map(([k, s]) => [k, !!s.stack])) }; // 화분·등·촛대·책: 가구 위에 올려 둘 수 있음
+// 올려 둔 소품인지: 소품의 발(아래 가운데)이 다른 가구(바닥 가구, 소품 아님) 위에 있으면 그 가구 위에 올린 것 → 'top' 층 (소품끼리만 겹침 검사, 받친 가구 바로 앞에 그림)
+const decoSupport = (it, list) => { if (!DECO.stack[it.s]) return null; const [w, h] = DECO.size[it.s], fx = it.x + w / 2, fy = it.y + h - 1;
+  return list.find((o) => o !== it && DECO.layer[o.s] === '' && !DECO.stack[o.s] && (() => { const [ow, oh] = DECO.size[o.s]; return fx >= o.x && fx < o.x + ow && fy >= o.y && fy < o.y + oh; })()) || null; };
+const decoLayer = (it, list) => (decoSupport(it, list) ? 'top' : DECO.layer[it.s]);
 // 2026-11 팩 그림으로 바꾸기 전 가구·도면 → 새 가구 (가진 수를 그대로 옮김. 짝이 없는 것은 석공 인장으로 돌려줌)
 const OLD_FURN = { pot: 'pot', crate: 'crate', barrel: 'barrel', signpost: 'signpost', bedplot: 'bedplot', planter: 'planter', bench: 'bench', lamp: 'lamp', table: 'table', shelf: 'shelf', rug: 'rug', steps: 'rock', bed: 'bed', workbench: 'workbench',
   tablets: 'bookcase', tablets2: 'bookcase', tablets3: 'bookcase', arch: 'planter', carvedesk: 'lectern', anvil: 'anvil', bell: 'bellstand', hearth: 'hearth', telescope: 'clock', pond: 'pond', well: 'well', jar: 'pot', chair: 'chair',
@@ -797,7 +802,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     }
     if (!done.includes('yard')) return '마당을 되살린 뒤에 놓을 수 있다.';
     const [yx, yy, yw, yh] = DECO.yard;
-    if (decoBox(x, y, w, h, DECO.yard)) return x >= yx + 2 && y >= yy + 2 && x + w <= yx + yw - 2 && y + h <= yy + yh - 2 ? null : '마당 돌 안쪽에 놓아야 한다.';
+    if (decoBox(x, y, w, h, DECO.yard)) return x >= yx + 2 && y >= yy - 10 && y + h >= yy + 6 && x + w <= yx + yw - 2 && y + h <= yy + yh - 2 ? null : '마당 돌 안쪽에 놓아야 한다.'; // 위쪽은 발이 마당 안이면 윗부분이 담(돌 테두리)을 가려도 됨
     if (!(x >= 9 && y >= 9 && x + w <= DECO.W - 9 && y + h <= DECO.H - 9)) return '바깥 담 안에 놓아야 한다.';
     if (DECO.block.some((b) => decoBox(x, y, w, h, b))) return '건물이나 길 위에는 놓을 수 없다.';
     return null;
@@ -809,14 +814,19 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     if (list === null) { m.deco = null; return { ok: true, lines: ['장식을 처음 모습으로 되돌렸다.'] }; }
     if (!Array.isArray(list)) return err('장식 배치를 다시 해 보자.');
     if (list.length > DECO.max) return err(`장식은 ${DECO.max}개까지 놓을 수 있다.`);
-    const done = plotRooms(m).slice(0, curIdx(m)).map((r) => r.id), boxes = [];
+    const done = plotRooms(m).slice(0, curIdx(m)).map((r) => r.id), items = [];
     for (const it of list) {
       const s = it && typeof it.s === 'string' && own(DECO.size, it.s) ? it.s : null; if (!s) return err('모르는 장식이다.');
-      const x = Math.floor(Number(it.x)), y = Math.floor(Number(it.y)), [w, h] = DECO.size[s], L = DECO.layer[s];
+      const x = Math.floor(Number(it.x)), y = Math.floor(Number(it.y));
       if (!Number.isFinite(x) || !Number.isFinite(y)) return err('장식 배치를 다시 해 보자.');
-      const why = decoWhere(s, x, y, done); if (why) return err(`${FURN[DECO.base[s]]?.name || '장식'}: ${why}`);
-      if (L !== 'flat' && boxes.some((b) => b.L === L && decoBox(x, y, w, h, [b.x, b.y, b.w, b.h]))) return err('장식끼리 겹친다.');
-      boxes.push({ s, x, y, w, h, L, f: it.f ? 1 : 0 });
+      items.push({ s, x, y, f: it.f ? 1 : 0 });
+    }
+    const boxes = [];
+    for (const it of items) { // 올려 둔 소품은 받친 가구가 목록 어디에 있든 알아야 해서, 다 읽은 뒤에 검사
+      const [w, h] = DECO.size[it.s], L = decoLayer(it, items);
+      const why = decoWhere(it.s, it.x, it.y, done); if (why) return err(`${FURN[DECO.base[it.s]]?.name || '장식'}: ${why}`);
+      if (L !== 'flat' && boxes.some((b) => b.L === L && decoBox(it.x, it.y, w, h, [b.x, b.y, b.w, b.h]))) return err('장식끼리 겹친다.');
+      boxes.push({ ...it, w, h, L });
     }
     grantFurn(d);
     const used = {}; boxes.forEach((b) => { const k = DECO.base[b.s]; used[k] = (used[k] || 0) + 1; });

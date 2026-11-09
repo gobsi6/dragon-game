@@ -7,6 +7,21 @@ SRC = sys.argv[1] if len(sys.argv) > 1 else 'tools/house-pack/src/pond.png'
 PACK = sys.argv[2] if len(sys.argv) > 2 else 'public/house/pack.json'
 WATER = (79, 164, 184, 255)
 pond = Image.open(SRC).convert('RGBA'); W, H = pond.size; px = pond.load()
+# 돌 테두리 대비 낮추기: 물빛(파랑·청록이 짙은 색)이 아닌 돌 색만, 돌 평균 색 쪽으로 ROCK배 (1이면 그대로)
+ROCK = 0.72
+isrock = lambda c: c[3] and not (c[2] > c[0] + 25 and c[2] >= c[1] - 60) and not c[1] > c[0] + 20  # 물빛·연잎(초록) 빼고
+rocks = [(x, y) for y in range(H) for x in range(W) if isrock(px[x, y])]
+if rocks and ROCK != 1:
+    mean = [sum(px[x, y][i] for x, y in rocks) / len(rocks) for i in range(3)]
+    for (x, y) in rocks:
+        c = px[x, y]
+        px[x, y] = tuple(int(round(mean[i] + (c[i] - mean[i]) * ROCK)) for i in range(3)) + (c[3],)
+# 물가의 짙은 남색(돌 밑 그늘·깊은 물가)을 물빛 쪽으로 NAVY만큼 옅게
+NAVY = 0.3
+for y in range(H):
+    for x in range(W):
+        c = px[x, y]
+        if c[:3] in ((58, 63, 94), (76, 104, 133)): px[x, y] = tuple(int(round(c[i] + (WATER[i] - c[i]) * NAVY)) for i in range(3)) + (c[3],)
 # 물 위에 떠 있는 것 찾기: 물빛이 아닌 점들을 이웃끼리 묶어서, 그림 가장자리(돌 테두리)에 닿지 않고 둘레가 모두 물인 작은 덩어리
 seen, objs = set(), []
 for y in range(H):
@@ -30,11 +45,12 @@ for comp in objs:
 # 연잎은 물결보다 조금 늦게 따라 움직임 (연잎끼리는 같이)
 STEP = [0, 0, 0, 1, 1, 1, 0, 0, 0, -1, -1, -1]
 LAG = lambda comp: 2 if len(comp) > 6 else 0
+SHIFT = 1  # 물결·연잎의 기본 자리를 원본보다 오른쪽으로 1도트
 frames = []
 for f in range(len(STEP)):
     im = base.copy(); ip = im.load()
     for k, comp in enumerate(objs):
-        dx = STEP[(f - LAG(comp)) % len(STEP)]
+        dx = SHIFT + STEP[(f - LAG(comp)) % len(STEP)]
         for (x, y) in comp:
             u = x + dx
             if 0 <= u < W and bp[u, y] == WATER: ip[u, y] = px[x, y]
