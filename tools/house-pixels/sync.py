@@ -20,7 +20,7 @@ a, b = src.index('SPR = {'), src.index('\ndef load_png_sprites')
 open(gp, 'w', encoding='utf-8').write(src[:a] + body + src[b:])
 
 data = json.dumps({'pal': {k: '#%02x%02x%02x' % v for k, v in RGB.items()}, 'spr': SPR}, ensure_ascii=False, separators=(',', ':'))
-size = json.dumps({k: [max(len(r) for r in v), len(v)] for k, v in SPR.items() if k not in FIXED}, separators=(',', ':'))
+size = json.dumps({k: [max(len(r) for r in v), len(v)] for k, v in SPR.items() if k not in FIXED and not re.search(r'_(f\d+|r)$', k)}, separators=(',', ':'))  # 움직임 장면(이름_f2…)과 돌린 그림(이름_r)은 따로 놓는 장식이 아님
 
 def patch(path, pattern, repl, what):
     s = open(path, encoding='utf-8').read()

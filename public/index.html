@@ -15476,10 +15476,12 @@
     return `${chips.length ? `<div class="hp-strip">${chips.join('')}</div>` : ''}<div class="hp${CT.hpClean ? ' hp-clean' : ''}"><canvas class="hp-cv" width="146" height="110" aria-hidden="true"></canvas>${rooms}<span class="hp-door">입구</span>${eye}</div>`;
   }
   // ════ 꾸미기: 되살린 칸 안에 1도트 단위로, 벽·옆 장식에 자석처럼 붙여 장식을 직접 놓는다 ════
-  const DK_NAME = { planter: '빛나는 꽃 화분', pot: '작은 화분', bench: '벤치', lamp: '등', bed: '침대', rug: '깔개', table: '탁자', shelf: '선반', workbench: '작업대', crate: '나무 상자', barrel: '통', pond: '작은 연못', steps: '돌계단', tablets: '돌판 서가', tablets2: '두 칸 돌판 서가', tablets3: '높은 돌판 서가', carvedesk: '새김 책상', hearth: '화덕', anvil: '모루', telescope: '망원경', bell: '작은 종', well: '우물', signpost: '방명록 받침', bedplot: '텃밭 두둑', arch: '덩굴 아치', jar: '항아리', chair: '의자', flowers: '들꽃 무리', mushroom: '빛버섯 무리', bush: '덤불', stepstone: '디딤돌', fence: '나무 울타리', flowerbed: '꽃 상자', stonelamp: '석등', brazier: '화로', tree: '작은 나무', mosaic: '모자이크 깔개', crystallamp: '수정 등', goldlamp: '금박 등', glowpatch: '빛버섯 정원', bookcase: '책장', nestbed: '둥지 쿠션', tapestry: '용 태피스트리', fountain: '작은 분수' };
+  const DK_NAME = { planter: '빛나는 꽃 화분', pot: '작은 화분', bench: '벤치', lamp: '등', bed: '침대', rug: '깔개', table: '탁자', shelf: '선반', workbench: '작업대', crate: '나무 상자', barrel: '통', pond: '작은 연못', steps: '돌계단', tablets: '돌판 서가', tablets2: '두 칸 돌판 서가', tablets3: '높은 돌판 서가', carvedesk: '새김 책상', hearth: '화덕', anvil: '모루', telescope: '망원경', bell: '작은 종', well: '우물', signpost: '방명록 받침', bedplot: '텃밭 두둑', arch: '덩굴 아치', jar: '항아리', chair: '의자', flowers: '들꽃 무리', mushroom: '빛버섯 무리', bush: '덤불', stepstone: '디딤돌', fence: '나무 울타리', flowerbed: '꽃 상자', stonelamp: '석등', brazier: '화로', tree: '작은 나무', mosaic: '모자이크 깔개', crystallamp: '수정 등', goldlamp: '금박 등', glowpatch: '빛버섯 정원', bookcase: '책장', nestbed: '둥지 쿠션', tapestry: '용 태피스트리', fountain: '작은 분수', candle: '촛대', cactus: '선인장 화분', chest: '보물 상자', sofa: '긴 의자', goldpile: '금화 더미', orb: '수정구' };
   const DK_LIST = Object.keys(DK_NAME);
   const dkDone = (h) => h.rooms.filter((r) => r.state === 'done').map((r) => r.id);
   const dkDefaults = (h) => HP.defaults(h.plot, dkDone(h), h.decoRules?.grid || 4).map((o) => ({ ...o })); // 칸을 되살릴 때 생기는 처음 배치
+  const dkN = (o) => (o.r ? `${o.s}@r` : o.s); // 놓인 장식의 그림 이름 (90도 돌렸으면 @r)
+  const dkPickN = (dk) => (dk.pickR ? `${dk.pick}@r` : dk.pick);
   const dkLeft = (h, n) => (h.furn?.[n] || 0) - (CT.dk ? CT.dk.list.filter((o) => o.s === n).length : 0); // 가진 가구 − 놓은 가구
   function dkState(h) { // 편집 중인 사본 (저장 전까지는 화면에만)
     const saved = JSON.stringify(h.deco || null);
@@ -15501,7 +15503,7 @@
     if (x1 - x0 < w || y1 - y0 < hh) return { x: x0, y: y0, w, h: hh, ok: false, why: '이 칸에는 너무 크다.' };
     let x = Math.max(x0, Math.min(x1 - w, Math.round(px - w / 2))), y = Math.max(y0, Math.min(y1 - hh, Math.round(py - hh / 2)));
     const rawX = x, rawY = y; // 자석으로 붙인 자리가 겹치면 손으로 둔 자리로
-    const near = CT.dk.list.filter((o, i) => i !== skip).map((o) => { const [ow, oh] = HP.size(o.s); return { x: o.x, y: o.y, w: ow, h: oh }; });
+    const near = CT.dk.list.filter((o, i) => i !== skip).map((o) => { const [ow, oh] = HP.size(dkN(o)); return { x: o.x, y: o.y, w: ow, h: oh }; });
     const R = 8; // 이만큼(도트) 떨어진 장식까지만 줄 맞추기 대상으로
     const xs = [x0, x1], ys = [y0, y1, ...extraYs];
     for (const o of near) {
@@ -15538,6 +15540,13 @@
       return f;
     }
     return { x: Math.round(px - w / 2), y: Math.round(py - hh / 2), w, h: hh, ok: false, why: dkDone(h).includes('yard') ? '되살린 칸 안이나 바깥 뜰에만 놓을 수 있다.' : '마당을 되살리면 바깥 뜰에도 놓을 수 있다.' };
+  }
+  // 놓인 장식 90도 돌리기: 가운데를 축으로 돌리고, 그 자리에 못 놓으면 그대로 두고 알림
+  function dkTurn(h, o) {
+    const i = CT.dk.list.indexOf(o), [w, hh] = HP.size(dkN(o)), cx = o.x + w / 2, cy = o.y + hh / 2, n = { ...o, r: o.r ? 0 : 1 };
+    const f = dkFit(h, dkN(n), cx, cy, i);
+    if (!f.ok) return toast(`돌릴 자리가 없다. ${f.why}`);
+    if (n.r) o.r = 1; else delete o.r; o.x = f.x; o.y = f.y; CT.dk.dirty = true;
   }
   // 가구 만들기: 석공 인장 + 재료로 만들어 가구 보관함에 넣는다 (city:craft)
   function furnMaker(h) {
@@ -15591,11 +15600,11 @@
   }
   function decoEditor(h) {
     const dk = dkState(h), max = h.decoRules?.max || 30, sel = dk.sel != null ? dk.list[dk.sel] : null;
-    const hint = dk.pick ? '도면을 누르면 그 자리에 놓인다. 오른쪽 클릭이나 Esc로 선택 취소, F로 좌우 반전.' : sel ? '끌어서 옮긴다. 오른쪽 클릭이나 Esc로 선택 취소, F로 좌우 반전.' : '아래에서 장식을 고르거나, 놓인 장식을 끌어 옮긴다.';
+    const hint = dk.pick ? '도면을 누르면 그 자리에 놓인다. 오른쪽 클릭이나 Esc로 선택 취소, F로 좌우 반전, R로 90° 돌리기(되는 가구만).' : sel ? '끌어서 옮긴다. 오른쪽 클릭이나 Esc로 선택 취소, F로 좌우 반전, R로 90° 돌리기(되는 가구만).' : '아래에서 장식을 고르거나, 놓인 장식을 끌어 옮긴다.';
     return `<div class="dk-top"><span>장식 <b>${dk.list.length}</b> / ${max}${dk.dirty ? ' · <em>저장하지 않음</em>' : ''}</span><small>${hint}</small></div>
       <div class="dk-acts"><button type="button" class="btn primary" data-ct="dk:save"${dk.dirty ? '' : ' disabled'}>저장</button><button type="button" class="btn" data-ct="dk:undo"${dk.dirty ? '' : ' disabled'}>되돌리기</button><button type="button" class="btn" data-ct="dk:reset">처음 모습으로</button></div>
       <div class="hp dk"><canvas class="hp-cv" width="146" height="110" aria-hidden="true"></canvas><canvas class="dk-fx" width="584" height="440" aria-hidden="true"></canvas><div class="dk-hit" role="application" aria-label="장식 놓는 도면"></div></div>
-      ${sel || dk.pick ? `<div class="dk-sel"><b>${sel ? `${DK_NAME[sel.s] || sel.s}${sel.f ? ' (좌우 반전)' : ''}` : `놓을 장식: ${DK_NAME[dk.pick]}${dk.pickF ? ' (좌우 반전)' : ''}`}</b><button type="button" class="btn sm" data-ct="dk:flip">좌우 반전</button>${sel ? '<button type="button" class="btn sm" data-ct="dk:del">치우기</button>' : ''}<button type="button" class="btn sm" data-ct="dk:none">선택 취소</button></div>` : ''}
+      ${sel || dk.pick ? `<div class="dk-sel"><b>${sel ? `${DK_NAME[sel.s] || sel.s}${sel.r ? ' (돌림)' : ''}${sel.f ? ' (좌우 반전)' : ''}` : `놓을 장식: ${DK_NAME[dk.pick]}${dk.pickR ? ' (돌림)' : ''}${dk.pickF ? ' (좌우 반전)' : ''}`}</b><button type="button" class="btn sm" data-ct="dk:flip">좌우 반전</button>${HP.canRot(sel ? sel.s : dk.pick) ? '<button type="button" class="btn sm" data-ct="dk:rot">90° 돌리기</button>' : ''}${sel ? '<button type="button" class="btn sm" data-ct="dk:del">치우기</button>' : ''}<button type="button" class="btn sm" data-ct="dk:none">선택 취소</button></div>` : ''}
       <div class="dk-pal" role="list">${DK_LIST.map((n) => { const left = dkLeft(h, n); return `<button type="button" role="listitem" class="dk-it${dk.pick === n ? ' on' : ''}${left > 0 ? '' : ' none'}" data-ct="dk:pick:${n}" aria-pressed="${dk.pick === n}"><canvas class="dk-th" data-s="${n}" aria-hidden="true"></canvas><span>${DK_NAME[n]}</span><em class="dk-n">${left > 0 ? `${left}개` : '없음'}</em></button>`; }).join('')}</div>
       <small class="note">되살린 칸 안과, 마당을 되살린 뒤에는 담 안 바깥 뜰(풀밭)에도 놓을 수 있다. 칸을 더 되살리면 놓을 곳이 넓어진다.</small>`;
   }
@@ -15620,7 +15629,7 @@
         g.fillRect(x * S - 1, y * S - 1, 2, 2);
       }
     }
-    if (dk.sel != null && dk.list[dk.sel] && skip !== dk.sel) { const o = dk.list[dk.sel], [w, hh] = HP.size(o.s); g.strokeStyle = '#C8553D'; g.lineWidth = 3; g.strokeRect(o.x * S - 2, o.y * S - 2, w * S + 4, hh * S + 4); }
+    if (dk.sel != null && dk.list[dk.sel] && skip !== dk.sel) { const o = dk.list[dk.sel], [w, hh] = HP.size(dkN(o)); g.strokeStyle = '#C8553D'; g.lineWidth = 3; g.strokeRect(o.x * S - 2, o.y * S - 2, w * S + 4, hh * S + 4); }
     if (ghost && ghost.at) {
       const { at, name } = ghost, sp = HP.sprite(name, ghost.flip);
       g.globalAlpha = at.ok ? 0.8 : 0.45;
@@ -15634,12 +15643,12 @@
     dkDraw(body, h);
     const hit = body.querySelector('.dk-hit'); if (!hit) return;
     const dot = (e) => { const r = hit.getBoundingClientRect(); return [((e.clientX - r.left) / r.width) * HP.W, ((e.clientY - r.top) / r.height) * HP.H]; };
-    const at = (x, y) => CT.dk.list.findIndex((o) => { const [w, hh] = HP.size(o.s); return x >= o.x && x < o.x + w && y >= o.y && y < o.y + hh; });
+    const at = (x, y) => CT.dk.list.findIndex((o) => { const [w, hh] = HP.size(dkN(o)); return x >= o.x && x < o.x + w && y >= o.y && y < o.y + hh; });
     let drag = null;
     hit.addEventListener('pointermove', (e) => {
       const [x, y] = dot(e), dk = CT.dk;
-      if (drag) { drag.moved = drag.moved || Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 4; if (drag.moved) { drag.at = dkFit(h, dk.list[drag.i].s, x - drag.ox, y - drag.oy, drag.i); dkDraw(body, h, { move: drag.i, name: dk.list[drag.i].s, flip: dk.list[drag.i].f, at: drag.at }); } return; }
-      if (dk.pick) dkDraw(body, h, { name: dk.pick, flip: dk.pickF, at: dkFit(h, dk.pick, x, y) });
+      if (drag) { drag.moved = drag.moved || Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 4; if (drag.moved) { drag.at = dkFit(h, dkN(dk.list[drag.i]), x - drag.ox, y - drag.oy, drag.i); dkDraw(body, h, { move: drag.i, name: dkN(dk.list[drag.i]), flip: dk.list[drag.i].f, at: drag.at }); } return; }
+      if (dk.pick) dkDraw(body, h, { name: dkPickN(dk), flip: dk.pickF, at: dkFit(h, dkPickN(dk), x, y) });
       else hit.style.cursor = at(x, y) >= 0 ? 'grab' : 'default';
     });
     hit.addEventListener('pointerleave', () => { if (!drag) dkDraw(body, h); });
@@ -15648,19 +15657,20 @@
     hit.addEventListener('contextmenu', (e) => { e.preventDefault(); if (!drag) cancel(); });
     if (!CT.dkEsc) { CT.dkEsc = true; document.addEventListener('keydown', (e) => { if (CT.tab !== 'deco' || !$('city-home-dlg').open || !CT.dk || !(CT.dk.pick || CT.dk.sel != null) || /input|textarea/i.test(e.target.tagName)) return;
       if (e.key === 'Escape') { e.preventDefault(); CT.dk.pick = null; CT.dk.sel = null; renderHome(); }
+      else if (e.key === 'r' || e.key === 'R' || e.key === 'ㄱ') { e.preventDefault(); const dk = CT.dk, o = dk.sel != null ? dk.list[dk.sel] : null; if (o && HP.canRot(o.s)) { dkTurn(CT.v.me, o); } else if (!o && dk.pick && HP.canRot(dk.pick)) dk.pickR = !dk.pickR; renderHome(); }
       else if (e.key === 'f' || e.key === 'F' || e.key === 'ㄹ') { e.preventDefault(); const dk = CT.dk; if (dk.sel != null && dk.list[dk.sel]) { const o = dk.list[dk.sel]; if (o.f) delete o.f; else o.f = 1; dk.dirty = true; } else dk.pickF = !dk.pickF; renderHome(); } }); }
     hit.addEventListener('pointerdown', (e) => {
       if (e.button === 2) return; // 오른쪽 버튼은 놓지 않음 (contextmenu에서 취소)
       const [x, y] = dot(e), dk = CT.dk;
       if (dk.pick) {
-        const f = dkFit(h, dk.pick, x, y), max = h.decoRules?.max || 30;
+        const f = dkFit(h, dkPickN(dk), x, y), max = h.decoRules?.max || 30;
         if (dk.list.length >= max) return toast(`장식은 ${max}개까지 놓을 수 있다.`);
         if (dkLeft(h, dk.pick) <= 0) { const n = DK_NAME[dk.pick]; dk.pick = null; renderHome(); return toast(`가진 ${n}${ctJ(n, '을', '를')} 모두 놓았다. 만들기에서 더 만들 수 있다.`); }
         if (!f.ok) return toast(f.why);
-        dk.list.push(dk.pickF ? { s: dk.pick, x: f.x, y: f.y, f: 1 } : { s: dk.pick, x: f.x, y: f.y }); dk.dirty = true; dk.sel = null; return renderHome();
+        dk.list.push({ s: dk.pick, x: f.x, y: f.y, ...(dk.pickF ? { f: 1 } : {}), ...(dk.pickR ? { r: 1 } : {}) }); dk.dirty = true; dk.sel = null; return renderHome();
       }
       const i = at(x, y); if (i < 0) { if (dk.sel != null) { dk.sel = null; renderHome(); } return; }
-      const o = dk.list[i]; drag = { i, ox: x - (o.x + HP.size(o.s)[0] / 2), oy: y - (o.y + HP.size(o.s)[1] / 2), sx: e.clientX, sy: e.clientY, moved: false, at: null };
+      const o = dk.list[i]; drag = { i, ox: x - (o.x + HP.size(dkN(o))[0] / 2), oy: y - (o.y + HP.size(dkN(o))[1] / 2), sx: e.clientX, sy: e.clientY, moved: false, at: null };
       hit.setPointerCapture(e.pointerId); hit.style.cursor = 'grabbing';
     });
     const end = () => {
@@ -15680,8 +15690,15 @@
   }
   // ════ 내 집터 도트 그림 (house-pixels/gen.py와 같은 규칙. 가구 그림은 SPR, 색은 PAL에서 고친다) ════
   const HP = (() => {
-    const D = {"pal":{"a":"#5e4f38","b":"#7d6a4c","w":"#b08e62","W":"#806644","v":"#c8aa7e","s":"#c8b898","S":"#968464","t":"#ded2ba","g":"#7a9c68","G":"#587a50","l":"#a4c488","y":"#f6e7a8","h":"#f3eac8","p":"#8a7556","P":"#68573e","c":"#d6be96","C":"#ba9e72","n":"#f6efe0","q":"#96b2b0","Q":"#769496","e":"#c4d6ce","f":"#e89646","F":"#f6cc70","r":"#b65c2e","k":"#6c6256","K":"#847e74","L":"#b0aa9e","j":"#7b7467","u":"#967242","1":"#ede3d0","2":"#e4d8c2","3":"#f4ecdd","4":"#e2d6bf","5":"#d6c8ae","6":"#a8926c","7":"#efe6d3","8":"#d6c8ac","9":"#dcc39a","0":"#b89a6c","+":"#e8d4b0","-":"#e6dac2","=":"#cebea0","#":"#c4b498","%":"#aa987a","A":"#eedda7","B":"#4e7238","D":"#eea6b0","E":"#ce7a88","H":"#b1a288"},"spr":{"planter":["..y..y...y.",".lgl.gl.lg.","lgGglgGglgG",".gGgGgGgGg.","vvvvvvvvvvv","wwwwwwwwwww","wwWwwwwwWww","WWWWWWWWWWW"],"bench":["vvvvvvvvvv","wwwwwwwwww",".W......W.",".W......W."],"lamp":["..PPP..",".PyyyP.",".PyFyP.",".PyyyP.","..PPP..","...P...","...P...","...P...","...P...","..PPP.."],"bed":["WWWWWWWWWWWW","WnntCcCccccW","WnntCcCccccW","WnntCcCccccW","WtttCcCccccW","WnnnCcCccccW","WWWWWWWWWWWW","W..........W"],"rug":[".WWWWWWWWWWWW.","WccccccccccccW","WcCCCCCCCCCCcW","WcCccccccccCcW","WcCccccccccCcW","WcCCCCCCCCCCcW","WccccccccccccW",".WWWWWWWWWWWW."],"table":["WWWWWWWWWW","WvvvvvvvvW","WwwwwwwwwW","WWWWWWWWWW",".W......W.",".W......W.",".W......W."],"shelf":["..c..q.nn.K.",".cCC.qQnnKk.","WWWWWWWWWWWW",".sS.CcC.qQq.","WWWWWWWWWWWW"],"workbench":["...SS....kK...","...SS...kK....","WWWWWWWWWWWWWW","WvvvvvvvvvvvvW","WwwwwwwwwwwwwW","WWWWWWWWWWWWWW",".W..........W.",".W..........W."],"crate":["WWWWWW","WvwwvW","WwvvwW","WvwwvW","WWWWWW"],"barrel":[".WWW.","WwvwW","WuuuW","WwvwW","WuuuW",".WWW."],"pond":[".....SSSSSSSSSS.....","...SStsssssssstSS...","..StsSqqqqqqqqSstS..",".StSqqqeqqqqqqqqStS.","StSqqqqqqqqQqqeqqStS","SsqqeqqqqqQQqqqqqqsS","SsqqqqqgqqqqqqqqeqsS","SsqqqqglgqqqqqqqqqsS","SsQqqqqgqqqqeqqqqQsS","StSQqqqqqqqqqqqQQStS",".StSQQqqqqqqqQQQStS.","..StsSSQQQQQQSSstS..","...SStsssssssstSS...",".....SSSSSSSSSS....."],"steps":["SSSSSSSSSS","SttttttltS","SssssssssS","SSSSSSSSSS","StttgttttS","SssssssssS","SSSSSSSSSS","SttttttgtS","SssssssssS","SSSSSSSSSS"],"tablets":["WWWWWWWWWW","WtLsaaeSaW","WtLsqaeSaW","WtLsqaeSKW","WtLsqaeStW","WWWWWWWWWW"],"carvedesk":["..SSSSSSS...","..St6t6tS.K.","..StttttS.K.","WWWWWWWWWWWW","WvvvvvvvvvvW","WwwwwwwwwwwW","WWWWWWWWWWWW",".W........W.",".W........W."],"hearth":["..aaaaaaaaaa..",".abbbbbbbbbba.","abkkkkkkkkkkba","abk...FF...kba","abk..FyyF..kba","abk.fFyFff.kba","abkrfffffrrkba","abkrrrrrrrrkba","abbbbbbbbbbbba","aaaaaaaaaaaaaa"],"anvil":["jjjjjjj.",".jKKKKjj","..kjjk..","..kKKk..",".kkkkkk."],"telescope":["......KK",".....KKk","....KKk.","...KKk..","..pKk...",".ppP.p..","pp.P..p.","p..P...."],"bell":["...P...","..LKj..",".LLKKj.",".LKKKj.",".LKKKj.","LKKKKjk","...k..."],"window":["aaaaaaaaaa","aeeqqeqqea","aqqQqqqQqa","aaaaaaaaaa"],"well":["...WWWWWW...",".WWvvvvvvWW.","WWWWWWWWWWWW",".P...P....P.",".P...P....P.",".P..jKKj..P.",".P..jjjj..P.",".tttttttttt.","tSkkkkkkkkSt","sssSssssSsss","SsssssSsssSs","sssSssssSsss","SSSSSSSSSSSS"],"signpost":["vvvvv","wnnnw","wnanw","wwwww","..W..","..W..",".WWW."],"pot":[".lg.","lgGg","vvvv","wwww",".WW."],"bedplot":["WWWWWWWWWWWWW","Wg=-g==l=g=-W","Wlgl=gGg=lgGW","WgGg-glg-gGgW","W=g==-g==-g-W","WWWWWWWWWWWWW"],"arch":["..lgglggGl..",".gGlg..GlgG.","gGy......ygg","gl........lG","p..........p","p..........p","p..........p","P..........P"],"rubble":[".tts..","tsssS.","ssSSSS"],"rubble2":[".ts","sSS"],"brazier":["..FfF..",".FfyfF.",".fFyFf.","KKKKKKK",".KjjjK.","..KjK..","..KjK..",".KKKKK."],"bush":["...GgG....","..GglgGg..",".GglggggG.","GllgGglgGG","GgglgggGgG",".GGgGGgGG."],"chair":["W.....","W.....","W.....","Wvvvvv","Wwwwww","W....W","W....W"],"fence":["W...W...W...W","WvvvWvvvWvvvW","WwwwWwwwWwwwW","W...W...W...W","W...W...W...W"],"flowerbed":[".y..F..y..","glgGglgGgl","WwwwwwwwwW","WvvvvvvvvW","WWWWWWWWWW"],"flowers":["..D.....q..",".DyD...qyq.","..Eg.D..Q..","...gDyD.g..",".F.g.Eg.g..","FyFgg.gl.l.",".Fglgggglg.","lgGgGlgGgGl",".=========."],"jar":[".CCC.","..C..",".CtC.","CtccC","CcccC",".CCC."],"mushroom":["..rrr....",".rfyfr...","rfffffr..","..CnC.rr.","..CnCrfyr","..CnC.Cn.",".=======."],"stepstone":[".SSS....SSS.","SttsS..SttsS","SsssS..SsssS",".SSS....SSS.","....SSS.....","...SttsS....","...SsssS....","....SSS....."],"stonelamp":["..SS..",".SttS.","SSSSSS","SyhhyS","SyyyyS","SSSSSS",".StsS.",".StsS.","SSSSSS"],"tree":[".....G.....","....GlG....","...GlggG...","..GlggggG..","...GlggG...","..GllgggG..",".GlgglgggG.","GllggggGgGG","..GlggGGG..",".GllgggggG.","GggglggGgGG","GgggggGgGGG","..GGGGGGG..","....WwW....","....WwW....","...=====..."],"bookcase":["WWWWWWWWWWWW","WrfAgBqrfgAW","WrfAgBqrfgAW","WWWWWWWWWWWW","WgqrAfgAqrfW","WgqrAfgAqrfW","WWWWWWWWWWWW","WBrgfqAgrBqW","WBrgfqAgrBqW","WWWWWWWWWWWW","W..........W"],"crystallamp":["..eQ..",".eqqQ.","eqeqQQ",".eqqQ.","..QQ..","..PP..","..PP..","..PP..",".PPPP.","PPPPPP"],"fountain":["......ee......",".....eQQe.....","......HH......","....HHttHH....","...HqqeqqqS...","....HHSSSS....","......SS......","..HHHHSSHHHH..",".HqqeqSSqeqqS.",".HHQQqqqqQQSS.",".HHHHSSSSSSSS.","..HSSSSSSSSS.."],"glowpatch":["..e.....e...",".eqe.e.eqe..","..P.eqe.P.e.",".gPg.P.gPgqe","glglgPglglP.","GGGGGGGGGGGG"],"goldlamp":["..FFF..",".FyyyF.",".FyhyF.",".FyyyF.","..FFF..","...F...","...u...","...u...","..uuu..",".uuuuu."],"mosaic":[".SSSSSSSSSSSS.","SttqqttqqttqqS","SttqqttqqttqqS","SqqttqqttqqttS","SqqttqqttqqttS","SttqqttqqttqqS","SttqqttqqttqqS",".SSSSSSSSSSSS."],"nestbed":["...uuuuuuuu...",".uuWuuWuuWuuu.","uWuccccccccuWu","uucchhhhhhccuu","uWchhhhhhhhcWu","uuuchhhhhhcuuu",".uuWuuWuuWuuu.","...uuuuuuuu..."],"tapestry":["PPPPPPPPPP",".rrrrrrrr.",".rFrrrrFr.",".rrFFFFrr.",".rFFrrFFr.",".rrFFFFrr.",".rrrFFrrr.",".rrFrrFrr.",".rrrrrrrr.",".rFrFrFrF.",".P......P.","PP......PP"],"tablets2":["WWWWWWWWWW","WtLasaeatW","WtLqsaeStW","WWWWWWWWWW","WtttaaLqaW","WssssaLqtW","WWWWWWWWWW"],"tablets3":["WWWWWWWWWW","WtLsaaeStW","WtLsqaeStW","WtLsqaeStW","WWWWWWWWWW","WaaaaaLatW","WtttaaLqtW","WsssSaLqtW","WWWWWWWWWW"]}};
+    const D = {"pal":{"a":"#5e4f38","b":"#7d6a4c","w":"#b08e62","W":"#806644","v":"#c8aa7e","s":"#c8b898","S":"#968464","t":"#ded2ba","g":"#7a9c68","G":"#587a50","l":"#a4c488","y":"#f6e7a8","h":"#f3eac8","p":"#8a7556","P":"#68573e","c":"#d6be96","C":"#ba9e72","n":"#f6efe0","q":"#96b2b0","Q":"#769496","e":"#c4d6ce","f":"#e89646","F":"#f6cc70","r":"#b65c2e","k":"#6c6256","K":"#847e74","L":"#b0aa9e","j":"#7b7467","u":"#967242","1":"#ede3d0","2":"#e4d8c2","3":"#f4ecdd","4":"#e2d6bf","5":"#d6c8ae","6":"#a8926c","7":"#efe6d3","8":"#d6c8ac","9":"#dcc39a","0":"#b89a6c","+":"#e8d4b0","-":"#e6dac2","=":"#cebea0","#":"#c4b498","%":"#aa987a","A":"#eedda7","B":"#4e7238","D":"#eea6b0","E":"#ce7a88","H":"#b1a288","I":"#2a221c"},"spr":{"planter":["..y..y...y.",".lgl.gl.lg.","lgGglgGglgG",".gGgGgGgGg.","vvvvvvvvvvv","wwwwwwwwwww","wwWwwwwwWww","WWWWWWWWWWW"],"bench":["vvvvvvvvvv","wwwwwwwwww",".W......W.",".W......W."],"lamp":["..666..",".6yyy6.",".6yFy6.",".6yyy6.","..666..","...P...","...P...","...P...","...P...","..PPP.."],"bed":["WWWWWWWWWWWW","WnntCcCccccW","WnntCcCccccW","WnntCcCccccW","WtttCcCccccW","WnnnCcCccccW","WWWWWWWWWWWW","W..........W"],"rug":[".WWWWWWWWWWWW.","WccccccccccccW","WcCCCCCCCCCCcW","WcCccccccccCcW","WcCccccccccCcW","WcCCCCCCCCCCcW","WccccccccccccW",".WWWWWWWWWWWW."],"table":["WWWWWWWWWW","WvvvvvvvvW","WwwwwwwwwW","WWWWWWWWWW",".W......W.",".W......W.",".W......W."],"shelf":["..c..q.nn.K.",".cCC.qQnnKk.","WWWWWWWWWWWW",".sS.CcC.qQq.","WWWWWWWWWWWW"],"workbench":["...SS....kK...","...SS...kK....","WWWWWWWWWWWWWW","WvvvvvvvvvvvvW","WwwwwwwwwwwwwW","WWWWWWWWWWWWWW",".W..........W.",".W..........W."],"crate":["WWWWWW","WvwwvW","WwvvwW","WvwwvW","WWWWWW"],"barrel":[".WWW.","WwvwW","WuuuW","WwvwW","WuuuW",".WWW."],"pond":[".....SSSSSSSSSS.....","...SStsssssssstSS...","..StsSqqqqqqqqSstS..",".StSqqqeqqqqqqqqStS.","StSqqqqqqqqQqqeqqStS","SsqqeqqqqqQQqqqqqqsS","SsqqqqqgqqqqqqqqeqsS","SsqqqqglgqqqqqqqqqsS","SsQqqqqgqqqqeqqqqQsS","StSQqqqqqqqqqqqQQStS",".StSQQqqqqqqqQQQStS.","..StsSSQQQQQQSSstS..","...SStsssssssstSS...",".....SSSSSSSSSS....."],"steps":["SSSSSSSSSS","SttttttltS","SssssssssS","SSSSSSSSSS","StttgttttS","SssssssssS","SSSSSSSSSS","SttttttgtS","SssssssssS","SSSSSSSSSS"],"tablets":["WWWWWWWWWW","WtLsaaeSaW","WtLsqaeSaW","WtLsqaeSKW","WtLsqaeStW","WWWWWWWWWW"],"carvedesk":["..SSSSSSS...","..St6t6tS.K.","..StttttS.K.","WWWWWWWWWWWW","WvvvvvvvvvvW","WwwwwwwwwwwW","WWWWWWWWWWWW",".W........W.",".W........W."],"hearth":["..aaaaaaaaaa..",".abbbbbbbbbba.","abkkkkkkkkkkba","abkIIIFFIIIkba","abkIIFyyFIIkba","abkIfFyFffIkba","abkrfffffrrkba","abkrrrrrrrrkba","abbbbbbbbbbbba","aaaaaaaaaaaaaa"],"anvil":["jjjjjjj.",".jKKKKjj","..kjjk..","..kKKk..",".kkkkkk."],"telescope":["......KK",".....KKk","....KKk.","...KKk..","..pKk...",".ppP.p..","pp.P..p.","p..P...."],"bell":["...P...","..LKj..",".LLKKj.",".LKKKj.",".LKKKj.","LKKKKjk","...k..."],"window":["aaaaaaaaaa","aeeqqeqqea","aqqQqqqQqa","aaaaaaaaaa"],"well":["...WWWWWW...",".WWvvvvvvWW.","WWWWWWWWWWWW",".P...P....P.",".P...P....P.",".P..jKKj..P.",".P..jjjj..P.",".tttttttttt.","tSkkkkkkkkSt","sssSssssSsss","SsssssSsssSs","sssSssssSsss","SSSSSSSSSSSS"],"signpost":["vvvvv","wnnnw","wnanw","wwwww","..W..","..W..",".WWW."],"pot":[".lg.","lgGg","vvvv","wwww",".WW."],"bedplot":["WWWWWWWWWWWWW","Wg=-g==l=g=-W","Wlgl=gGg=lgGW","WgGg-glg-gGgW","W=g==-g==-g-W","WWWWWWWWWWWWW"],"arch":["..lgglggGl..",".gGlg..GlgG.","gGy......ygg","gl........lG","p..........p","p..........p","p..........p","P..........P"],"rubble":[".tts..","tsssS.","ssSSSS"],"rubble2":[".ts","sSS"],"brazier":["..FfF..",".FfyfF.",".fFyFf.","KKKKKKK",".KjjjK.","..KjK..","..KjK..",".KKKKK."],"bush":["...GgG....","..GglgGg..",".GglggggG.","GllgGglgGG","GgglgggGgG",".GGgGGgGG."],"chair":["W.....","W.....","W.....","Wvvvvv","Wwwwww","W....W","W....W"],"fence":["W...W...W...W","WvvvWvvvWvvvW","WwwwWwwwWwwwW","W...W...W...W","W...W...W...W"],"flowerbed":[".y..F..y..","glgGglgGgl","WwwwwwwwwW","WvvvvvvvvW","WWWWWWWWWW"],"flowers":["..D.....q..",".DyD...qyq.","..Eg.D..Q..","...gDyD.g..",".F.g.Eg.g..","FyFgg.gl.l.",".Fglgggglg.","lgGgGlgGgGl",".=========."],"jar":[".CCC.","..C..",".CtC.","CtccC","CcccC",".CCC."],"mushroom":["..rrr....",".rfyfr...","rfffffr..","..CnC.rr.","..CnCrfyr","..CnC.Cn.",".=======."],"stepstone":[".SSS....SSS.","SttsS..SttsS","SsssS..SsssS",".SSS....SSS.","....SSS.....","...SttsS....","...SsssS....","....SSS....."],"stonelamp":["..SS..",".SttS.","SSSSSS","SyhhyS","SyyyyS","SSSSSS",".StsS.",".StsS.","SSSSSS"],"tree":[".....G.....","....GlG....","...GlggG...","..GlggggG..","...GlggG...","..GllgggG..",".GlgglgggG.","GllggggGgGG","..GlggGGG..",".GllgggggG.","GggglggGgGG","GgggggGgGGG","..GGGGGGG..","....WwW....","....WwW....","...=====..."],"bookcase":["WWWWWWWWWWWW","WrfAgBqrfgAW","WrfAgBqrfgAW","WWWWWWWWWWWW","WgqrAfgAqrfW","WgqrAfgAqrfW","WWWWWWWWWWWW","WBrgfqAgrBqW","WBrgfqAgrBqW","WWWWWWWWWWWW","W..........W"],"crystallamp":["..eQ..",".eqqQ.","eqeqQQ",".eqqQ.","..QQ..","..PP..","..PP..","..PP..",".PPPP.","PPPPPP"],"fountain":["......ee......",".....eQQe.....","......HH......","....HHttHH....","...HqqeqqqS...","....HHSSSS....","......SS......","..HHHHSSHHHH..",".HqqeqSSqeqqS.",".HHQQqqqqQQSS.",".HHHHSSSSSSSS.","..HSSSSSSSSS.."],"glowpatch":["..e.....e...",".eqe.e.eqe..","..P.eqe.P.e.",".gPg.P.gPgqe","glglgPglglP.","GGGGGGGGGGGG"],"goldlamp":["..FFF..",".FyyyF.",".FyhyF.",".FyyyF.","..FFF..","...F...","...u...","...u...","..uuu..",".uuuuu."],"mosaic":[".SSSSSSSSSSSS.","SttqqttqqttqqS","SttqqttqqttqqS","SqqttqqttqqttS","SqqttqqttqqttS","SttqqttqqttqqS","SttqqttqqttqqS",".SSSSSSSSSSSS."],"nestbed":["...uuuuuuuu...",".uuWuuWuuWuuu.","uWuccccccccuWu","uucchhhhhhccuu","uWchhhhhhhhcWu","uuuchhhhhhcuuu",".uuWuuWuuWuuu.","...uuuuuuuu..."],"tapestry":["PPPPPPPPPP",".rrrrrrrr.",".rFrrrrFr.",".rrFFFFrr.",".rFFrrFFr.",".rrFFFFrr.",".rrrFFrrr.",".rrFrrFrr.",".rrrrrrrr.",".rFrFrFrF.",".P......P.","PP......PP"],"tablets2":["WWWWWWWWWW","WtLasaeatW","WtLqsaeStW","WWWWWWWWWW","WtttaaLqaW","WssssaLqtW","WWWWWWWWWW"],"tablets3":["WWWWWWWWWW","WtLsaaeStW","WtLsqaeStW","WtLsqaeStW","WWWWWWWWWW","WaaaaaLatW","WtttaaLqtW","WsssSaLqtW","WWWWWWWWWW"],"candle":[".F.",".y.",".n.",".n.","6n6",".6.",".6.","666"],"chest":[".WWWWWWW.","WvvvvvvvW","WwwwwwwwW","WFFFyFFFW","WwwwFwwwW","WwwwwwwwW","WWWWWWWWW"],"goldpile":["....yF....","..yFFF6F..",".FyF6FFyF.","yFF6FyF6FF","6F66F66F66"],"sofa":[".QQQQQQQQQQ.","QqqqqqqqqqqQ","QQQQQQQQQQQQ","WqqqqqqqqqqW","WQQQQQQQQQQW","WWWWWWWWWWWW",".W........W."],"cactus":["...D...","..lgG..","l.lgG.G","l.lgG.G","lglgGgG","..lgG..","..lgG..",".cCCCu.","..cCu..","..uuu.."],"orb":["..qqq..",".qneqQ.",".qeeqQ.",".qqqQQ.","..QQQ..",".tssSS.","..tsS..","..tsS..","tsssSSS"],"hearth_f2":["..aaaaaaaaaa..",".abbbbbbbbbba.","abkkkkkkkkkkba","abkIIIFIIIIkba","abkIIFyyFIIkba","abkIfFyFffIkba","abkrffFffrrkba","abkrrrrrrrrkba","abbbbbbbbbbbba","aaaaaaaaaaaaaa"],"hearth_f3":["..aaaaaaaaaa..",".abbbbbbbbbba.","abkkkkkkkkkkba","abkIIIFFIIIkba","abkIIFyyFIIkba","abkIfFyyffIkba","abkrfffffrrkba","abkrrrfrrrrkba","abbbbbbbbbbbba","aaaaaaaaaaaaaa"],"hearth_f4":["..aaaaaaaaaa..",".abbbbbbbbbba.","abkkkkkkkkkkba","abkIIIIFIIIkba","abkIIFyyFIIkba","abkIfFyFffIkba","abkrfffffrrkba","abkrrrrrrfrkba","abbbbbbbbbbbba","aaaaaaaaaaaaaa"],"bed_r":["WWWWWWWW","WnnnnntW","WnnnnntW","WttttttW","WCCCCCCW","WccccccW","WCCCCCCW","WccccccW","WccccccW","WccccccW","WWWWWWWW","W......W"],"lamp_f2":["..000..",".0yyy0.",".0yFy0.",".0yyy0.","..000..","...P...","...P...","...P...","...P...","..PPP.."],"lamp_f3":["..000..",".0yyy0.",".0yFy0.",".0yyy0.","..000..","...P...","...P...","...P...","...P...","..PPP.."],"lamp_f4":["..666..",".6yyy6.",".6yFy6.",".6yyy6.","..666..","...P...","...P...","...P...","...P...","..PPP.."]}};
     const PAL = D.pal, SPR = D.spr, W = 146, H = 110;
+    // 움직이는 장식: 그림 이름_f2, 이름_f3…가 있으면 장면을 차례로 바꿔 그림 (화덕 불꽃 등). frame은 HP.tick()이 올림
+    const ANIM = {}; for (const k of Object.keys(SPR)) { const m = /^(.*)_f(\d+)$/.exec(k); if (m && SPR[m[1]]) (ANIM[m[1]] = ANIM[m[1]] || [m[1]]).push(k); }
+    let frame = 0;
+    // 90도 돌려 놓기: 이름 뒤에 @r를 붙이면 돌린 그림. 따로 그린 이름_r 그림이 있으면 그것(침대), 없으면 시계 방향으로 돌림
+    const ROT = new Set(['rug', 'mosaic', 'bedplot', 'crate', 'stepstone', 'nestbed', 'pond', 'bed']);
+    const rotRows = (rows) => { const h = rows.length, w = Math.max(0, ...rows.map((r) => r.length)), out = []; for (let i = 0; i < w; i++) { let t = ''; for (let j = h - 1; j >= 0; j--) t += rows[j][i] || '.'; out.push(t); } return out; };
+    const rowsOf = (name) => { if (name.endsWith('@r')) { const b = name.slice(0, -2); return SPR[b + '_r'] || rotRows(SPR[b] || []); } return SPR[name] || []; };
     Object.assign(PAL, { '¦': '#e2d7bf', '¬': '#caaf83', '¤': '#b7a689' }); // 바닥 줄눈·판자 이음을 바탕에 가깝게 (그림 데이터 D와 따로 둠)
     const ROOMS = { live: [49, 6, 48, 29], own: [6, 40, 40, 43], yard: [49, 40, 48, 46], work: [100, 40, 40, 43] }; // 고유 칸·작업실은 위쪽 1도트 내림, 작업실은 고유 칸과 좌우 대칭 (바깥 담과 1도트 띄움), 마당은 위쪽 1도트 내려 두 칸과 윗선을 맞춤
     const seedOf = (s) => [...s].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
@@ -15691,7 +15708,7 @@
     const shade = (c, x, y, a) => { if (x >= 0 && y >= 0 && x < c.w && y < c.h && c.sh) c.sh[y * c.w + x] = Math.max(c.sh[y * c.w + x], a); };
     const rect = (c, x, y, w, h, ch) => { for (let i = x; i < x + w; i++) for (let j = y; j < y + h; j++) px(c, i, j, ch); };
     const border = (c, x, y, w, h, ch = 'b') => { for (let i = x; i < x + w; i++) { px(c, i, y, ch); px(c, i, y + h - 1, ch); } for (let j = y; j < y + h; j++) { px(c, x, j, ch); px(c, x + w - 1, j, ch); } };
-    const put = (c, x, y, name, flip) => { const rows = SPR[name] || [], w = Math.max(0, ...rows.map((r) => r.length)); rows.forEach((row, j) => [...row].forEach((ch, i) => { if (ch !== '.') px(c, x + (flip ? w - 1 - i : i), y + j, ch); })); }; // flip: 좌우 반전
+    const put = (c, x, y, name, flip) => { if (ANIM[name]) { c.anim = true; name = ANIM[name][frame % ANIM[name].length]; } const rows = rowsOf(name), w = Math.max(0, ...rows.map((r) => r.length)); rows.forEach((row, j) => [...row].forEach((ch, i) => { if (ch !== '.') px(c, x + (flip ? w - 1 - i : i), y + j, ch); })); }; // flip: 좌우 반전
     const pave = (c, x, y, w, h, a = '7', b = '¦') => { rect(c, x, y, w, h, a); for (let j = y; j < y + h; j++) { const row = Math.floor((j - y) / 4); for (let i = x; i < x + w; i++) if ((j - y) % 4 === 0 || (i - x + (row % 2 ? 3 : 0)) % 7 === 0) px(c, i, j, b); } };
     const plank = (c, x, y, w, h) => { for (let j = y; j < y + h; j++) { const r = Math.floor((j - y) / 3); for (let i = x; i < x + w; i++) px(c, i, j, (j - y) % 3 === 2 || (i - x + r * 5) % 13 === 0 ? '¬' : (j - y) % 3 === 0 ? '+' : '9'); } };
     const dirt = (c, x, y, w, h, R) => { rect(c, x, y, w, h, '-'); for (let i = x; i < x + w; i++) for (let j = y; j < y + h; j++) if (R() < 0.1) px(c, i, j, '='); };
@@ -15842,7 +15859,7 @@
     }
     let custom = false, curLook = {};
     const FIXED = new Set(['window']); // 꾸미기로 옮길 수 없는 벽 장식
-    const size = (n) => { const r = SPR[n] || []; return [Math.max(0, ...r.map((x) => x.length)), r.length]; };
+    const size = (n) => { const r = rowsOf(n); return [Math.max(0, ...r.map((x) => x.length)), r.length]; };
     // 기본 배치를 눈금에 맞춘 목록으로 (꾸미기를 처음 열 때의 시작 모습)
     function defaults(plot, doneIds, grid = 4) {
       const out = [];
@@ -15854,7 +15871,7 @@
       return out;
     }
     function plan(plot, rooms, deco, look) { // rooms: { yard: {state, p}, ... } state = 'done' | 'cur' | 'lock'. deco: 직접 꾸민 배치 [{s, x, y}] (없으면 기본 가구). look: { floor: {칸: 바닥}, wall: 마당 담 }
-      const R = rng(seedOf(plot)), c = mk(W, H); custom = Array.isArray(deco); curLook = look || {};
+      const R = rng(seedOf(plot)), c = mk(W, H); custom = Array.isArray(deco); curLook = look || {}; c.args = [plot, rooms, deco, look];
       rect(c, 0, 0, W, H, '1');
       for (let i = 0; i < W * H; i++) { const r = R(); if (r < 0.03) c.px[i] = '2'; else if (r < 0.045) c.px[i] = '3'; }
       { // 잡초: 바둑판 대신 아무 데나 흩뿌리되 서로 너무 붙지 않게, 바깥 뜰의 돌·꽃 자리는 비워 둠 (모양도 세 가지)
@@ -15889,10 +15906,10 @@
       // 칸 안 사물 → 아랫벽(앞에 있는 벽) → 바깥 뜰 사물 순서: 아랫벽 쪽에 붙인 사물은 벽 뒤로 살짝 가려진다
       const front = ['live', 'own', 'work'].filter((id) => rooms[id] && rooms[id].state !== 'lock');
       const inside = (o) => front.some((id) => { const [x, y, w, h] = ROOMS[id]; return o.x >= x && o.x < x + w && o.y >= y && o.y < y + h; });
-      if (custom) deco.filter(inside).forEach((o) => put(c, o.x, o.y, o.s, o.f));
+      if (custom) deco.filter(inside).forEach((o) => put(c, o.x, o.y, o.r ? `${o.s}@r` : o.s, o.f));
       front.forEach((id) => { const [x, y, w, h] = ROOMS[id]; southWall(c, id, x, y, w, h); });
       doors(c, rooms);                              // 아랫벽을 다시 그렸으니 문 자리도 다시 뚫음
-      if (custom) deco.filter((o) => !inside(o)).forEach((o) => put(c, o.x, o.y, o.s, o.f));
+      if (custom) deco.filter((o) => !inside(o)).forEach((o) => put(c, o.x, o.y, o.r ? `${o.s}@r` : o.s, o.f));
       return c;
     }
     function stage(kind, plot) { // 한 칸이 되살아나는 모습 (33×21)
@@ -15903,7 +15920,7 @@
       return c;
     }
     function paint(canvas, c) {
-      canvas.width = c.w; canvas.height = c.h;
+      canvas.width = c.w; canvas.height = c.h; canvas._hp = c.args && c.anim ? c.args : null; // 움직이는 장식이 있는 도면이면 다시 그릴 재료를 기억
       const g = canvas.getContext('2d'), img = g.createImageData(c.w, c.h);
       c.px.forEach((ch, i) => { const hex = PAL[ch]; if (!hex) return; img.data[i * 4] = parseInt(hex.slice(1, 3), 16); img.data[i * 4 + 1] = parseInt(hex.slice(3, 5), 16); img.data[i * 4 + 2] = parseInt(hex.slice(5, 7), 16); img.data[i * 4 + 3] = 255; const a = c.sh ? c.sh[i] : 0; if (a) { img.data[i * 4] = Math.round(img.data[i * 4] * (1 - a) + 70 * a); img.data[i * 4 + 1] = Math.round(img.data[i * 4 + 1] * (1 - a) + 52 * a); img.data[i * 4 + 2] = Math.round(img.data[i * 4 + 2] * (1 - a) + 44 * a); } });
       g.putImageData(img, 0, 0);
@@ -15919,7 +15936,9 @@
       return c;
     }
     const BEHIND = { rooms: ['live', 'own', 'work'], depth: 3, doors: [DOORS.live] }; // 아랫벽 뒤로 숨길 수 있는 줄 수 (서버 DECO.behind와 같음)
-    return { W, H, ROOMS, PAL, plan, stage, paint, size, sprite, defaults, BEHIND, swatch };
+    const tick = () => { frame++; document.querySelectorAll('canvas').forEach((cv) => { if (cv._hp && cv.isConnected && cv.offsetParent) paint(cv, plan(...cv._hp)); }); }; // 보이는 도면만 다음 장면으로
+    if (typeof window !== 'undefined' && !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) setInterval(tick, 420);
+    return { W, H, ROOMS, PAL, plan, stage, paint, size, sprite, defaults, BEHIND, swatch, tick, canRot: (n) => ROT.has(n) };
   })();
 
   function homePlan(h) {
@@ -16198,10 +16217,11 @@
     if (k === 'trade') { if (!confirm('석공 인장으로 바꿀까?')) return; return cityCall('city:trade', { i: +x }); }
     if (k === 'dkm') { CT.dkMode = x; CT.lookPv = null; if (CT.dk) { CT.dk.pick = null; CT.dk.sel = null; } return renderHome(); }
     if (k === 'dk' && CT.dk) { const dk = CT.dk;
-      if (x === 'pick') { if (dk.pick !== y && dkLeft(CT.v.me, y) <= 0) { CT.dkMode = 'make'; CT.dkFocus = y; toast(`가진 ${DK_NAME[y]}${ctJ(DK_NAME[y], '이', '가')} 없다. 만들기에서 만든다.`); return renderHome(); } dk.pick = dk.pick === y ? null : y; dk.pickF = false; dk.sel = null; return renderHome(); }
+      if (x === 'pick') { if (dk.pick !== y && dkLeft(CT.v.me, y) <= 0) { CT.dkMode = 'make'; CT.dkFocus = y; toast(`가진 ${DK_NAME[y]}${ctJ(DK_NAME[y], '이', '가')} 없다. 만들기에서 만든다.`); return renderHome(); } dk.pick = dk.pick === y ? null : y; dk.pickF = false; dk.pickR = false; dk.sel = null; return renderHome(); }
       if (x === 'del') { if (dk.sel != null) { dk.list.splice(dk.sel, 1); dk.sel = null; dk.dirty = true; } return renderHome(); }
       if (x === 'none') { dk.sel = null; dk.pick = null; return renderHome(); }
       if (x === 'flip') { if (dk.sel != null && dk.list[dk.sel]) { const o = dk.list[dk.sel]; if (o.f) delete o.f; else o.f = 1; dk.dirty = true; } else if (dk.pick) dk.pickF = !dk.pickF; return renderHome(); }
+      if (x === 'rot') { const o = dk.sel != null ? dk.list[dk.sel] : null; if (o && HP.canRot(o.s)) dkTurn(CT.v.me, o); else if (!o && dk.pick && HP.canRot(dk.pick)) dk.pickR = !dk.pickR; return renderHome(); }
       if (x === 'undo') { CT.dk = null; return renderHome(); }
       if (x === 'save') { const h = CT.v.me, def = JSON.stringify(dkDefaults(h)), same = JSON.stringify(dk.list) === def; return cityCall('city:deco', { list: same ? null : dk.list }, () => { CT.dk = null; }); } // 처음 모습 그대로면 '기본 배치'로 저장
       if (x === 'reset') { dk.list = dkDefaults(CT.v.me); dk.pick = null; dk.sel = null; dk.dirty = true; toast('처음 모습을 불러왔다. 저장을 눌러야 바뀌고, 되돌리기로 취소할 수 있다.'); return renderHome(); } // 바로 저장하지 않고 편집 중인 배치에만 불러옴
