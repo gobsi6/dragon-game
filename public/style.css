@@ -41,18 +41,26 @@ body {
   font: 15px/1.6 var(--sans);
   word-break: keep-all;
   background-color: #DDE1E3;
-  background-image:
+  --bg-img:
     radial-gradient(ellipse 110% 60% at 50% 0%, #F7F8F8 0%, rgba(247, 248, 248, 0) 65%),
     radial-gradient(ellipse 70% 50% at 100% 100%, rgba(148, 166, 184, .28) 0%, rgba(148, 166, 184, 0) 70%),
     linear-gradient(180deg, #ECEEEE 0%, #E1E4E5 50%, #D2D8DC 100%);
+  background-image: var(--bg-img); /* 바탕 그림은 --bg-img에 (멸망한 대륙·축제·정신 낮음은 이 값만 바꿈) */
   background-attachment: fixed;
+}
+/* 폰: background-attachment: fixed는 스크롤할 때마다 바탕 전체를 다시 칠하게 만들어(일부 안드로이드) 버벅였음.
+   고대도시처럼 화면에 붙은 판(::before)에 그리고, 판 높이는 주소창이 다 접힌 가장 큰 화면(100lvh)에 맞춤 */
+@media (max-width: 860px) {
+  body:not(.realm-city) { background-image: none; }
+  body:not(.realm-city)::before { content: ""; position: fixed; left: 0; right: 0; top: 0; z-index: -1; pointer-events: none;
+    height: calc(100vh + 160px); height: 100lvh; background-image: var(--bg-img); }
 }
 /* 정신이 10% 아래: 화면 바탕(틀 밖)이 어두워진다. 카드·글은 그대로 */
 body { transition: background-color 1.2s ease; }
 /* 멸망한 대륙: 바탕이 잿빛으로 조금 어두워지고, 뒤로 재가 대각선으로 흩날림 (정신이 낮으면 아래 mind-low가 더 어둡게 덮음) */
 body.realm-ruin {
   background-color: #B6B5BA; /* 잿빛에 보라~파랑이 아주 옅게 */
-  background-image:
+  --bg-img:
     radial-gradient(ellipse 110% 60% at 50% 0%, rgba(212, 211, 217, .9) 0%, rgba(212, 211, 217, 0) 65%),
     radial-gradient(ellipse 70% 50% at 100% 100%, rgba(92, 88, 116, .22) 0%, rgba(92, 88, 116, 0) 70%),
     radial-gradient(ellipse 60% 45% at 0% 100%, rgba(84, 92, 112, .1) 0%, rgba(84, 92, 112, 0) 70%),
@@ -60,6 +68,7 @@ body.realm-ruin {
 }
 .ash-fx { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; opacity: 0; transition: opacity 1.2s ease; }
 body.realm-ruin .ash-fx { opacity: 1; }
+body:not(.realm-ruin) .ash-fx { display: none; } /* 떠난 뒤에도 투명한 채로 재가 계속 날리며 힘을 쓰던 것을 멈춤 */
 .ash-fx i { position: absolute; top: -6vh; left: var(--x); width: var(--s); height: var(--s); border-radius: 50%;
   background: radial-gradient(circle, rgba(32, 31, 38, var(--o)) 0%, rgba(32, 31, 38, 0) 70%); /* 흐린 점: blur 필터 대신 그라데이션이라 가벼움 */
   animation: ash-fall var(--d) linear var(--w) infinite; will-change: transform, opacity; }
@@ -73,7 +82,7 @@ body.realm-ruin .ash-fx { opacity: 1; }
 /* 왕도 축제 중 왕도에 있으면: 바탕이 연분홍으로 물들고, 흐린 꽃잎이 천천히 흔들리며 날아감 (정신이 낮으면 아래 mind-low가 덮음) */
 body.realm-fest {
   background-color: #EBDADD;
-  background-image:
+  --bg-img:
     radial-gradient(ellipse 110% 60% at 50% 0%, rgba(253, 244, 246, .95) 0%, rgba(253, 244, 246, 0) 65%),
     radial-gradient(ellipse 70% 50% at 100% 100%, rgba(214, 150, 170, .26) 0%, rgba(214, 150, 170, 0) 70%),
     radial-gradient(ellipse 60% 45% at 0% 100%, rgba(232, 176, 190, .18) 0%, rgba(232, 176, 190, 0) 70%),
@@ -81,6 +90,7 @@ body.realm-fest {
 }
 .petal-fx { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; opacity: 0; transition: opacity 1.2s ease; }
 body.realm-fest .petal-fx { opacity: 1; }
+body:not(.realm-fest) .petal-fx { display: none; } /* 축제가 끝나거나 왕도를 떠나면 꽃잎 층을 끔 */
 .petal-fx i { position: absolute; top: -8vh; left: var(--x); width: var(--s); height: var(--s); border-radius: 50%;
   background: radial-gradient(circle, rgba(232, 140, 166, var(--o)) 0%, rgba(240, 168, 188, calc(var(--o) * .5)) 38%, rgba(240, 168, 188, 0) 70%); /* 흐린 분홍 점 */
   animation: petal-drift var(--d) ease-in-out var(--w) infinite; will-change: transform, opacity; }
@@ -98,7 +108,7 @@ body.realm-fest .petal-fx { opacity: 1; }
 body > #game, body > .wrap, body > main { position: relative; z-index: 1; }
 body.mind-low {
   background-color: #2A262E;
-  background-image:
+  --bg-img:
     radial-gradient(ellipse 110% 60% at 50% 0%, rgba(90, 80, 104, .45) 0%, rgba(90, 80, 104, 0) 65%),
     radial-gradient(ellipse 80% 50% at 50% 100%, rgba(0, 0, 0, .55) 0%, rgba(0, 0, 0, 0) 70%);
 }
@@ -2798,6 +2808,7 @@ html { scrollbar-gutter: stable; }
 .map .halo { transform-box: fill-box; transform-origin: center; animation: halo 2.2s ease-out infinite; pointer-events: none; }
 @keyframes halo { 0% { transform: scale(1); opacity: .55; } 80%, 100% { transform: scale(2.1); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .map .halo { animation: none; opacity: .3; } }
+@media (max-width: 860px) { .map .halo { animation: none; opacity: .3; } } /* 폰: 지형 그림 안에서 고리가 퍼지면 지도 전체를 쉬지 않고 다시 그려 버벅였음 */
 .map .node:focus { outline: none; }
 
 .here { display: flex; flex-direction: column; gap: 14px; padding: 16px 10px 18px; border-bottom: 1px solid var(--line-in); }
@@ -2901,6 +2912,10 @@ button.cnt { width: 100%; padding: 0; border: 0; background: none; font-family: 
   border-top: 3px double var(--line);
 }
 #game { padding-bottom: var(--dock-h, 56px); }
+/* 폰: 흐림(backdrop-filter)은 스크롤할 때마다 아래 내용을 다시 흐리게 계산해 버벅였음 → 흐림 없이 거의 불투명한 바탕 */
+@media (max-width: 860px) {
+  .top, .dock { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(250, 250, 249, .97); }
+}
 /* 메뉴는 같은 폭의 칸으로 나눠 정확히 가운데에 둔다. 메뉴 수가 바뀌어도 칸이 알아서 늘어남 */
 .dock .in { max-width: 680px; margin: 0 auto; padding: 4px 16px; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 0 4px; }
 .dock button {
@@ -4066,6 +4081,7 @@ html:has(dialog.dlg:modal) { overflow: hidden; overscroll-behavior: none; } /* �
 @media (prefers-reduced-motion: reduce) {
 .cc-map .halo { animation: none; opacity: 0; }
 }
+@media (max-width: 860px) { .cc-map .halo { animation: none; opacity: 0; } } /* 폰: 대륙 지도와 같은 까닭 */
 .cc-maphint { margin: -6px 0 0; font-size: 12px; color: var(--muted); }
 .cc-maphint i { display: inline-block; width: 9px; height: 9px; margin: 0 3px -1px 6px; border: 2px solid #9E3A35; border-radius: 50%; background: #EFE3C4; }
 .cc-maphint i.ok { border-color: #4E6B45; background: #4E6B45; }
@@ -4649,7 +4665,11 @@ body.realm-city::before {
   80% { opacity: var(--o); }
   100% { transform: translateY(-105vh); opacity: 0; }
 }
-@keyframes moss-sway { from { margin-left: 0; } to { margin-left: var(--sw); } }
+@keyframes moss-sway { from { translate: 0 0; } to { translate: var(--sw) 0; } } /* margin으로 흔들면 매 프레임 배치를 다시 계산했음 */
+@media (max-width: 860px) {
+  .moss-fx i { filter: none; }
+  .moss-fx i:nth-child(n+16) { display: none; } /* 폰은 15개만 */
+}
 .cc-wrow.sweep::after { content: none !important; }
 @media (prefers-reduced-motion: no-preference) {
 .cc-slot.shine { position: relative; overflow: hidden; }
