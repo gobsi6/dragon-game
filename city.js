@@ -127,11 +127,11 @@ const DECO = { max: 30, W: PACK.W, H: PACK.H, rooms: PACK.rooms, yard: PACK.yard
   layer: Object.fromEntries(Object.entries(PACK.sprites).map(([k, s]) => [k, s.layer || ''])) }; // flat: 깔개(위에 다른 것을 놓음), wall: 벽 장식, top: 탁상 소품
 // 2026-11 팩 그림으로 바꾸기 전 가구·도면 → 새 가구 (가진 수를 그대로 옮김. 짝이 없는 것은 석공 인장으로 돌려줌)
 const OLD_FURN = { pot: 'pot', crate: 'crate', barrel: 'barrel', signpost: 'signpost', bedplot: 'bedplot', planter: 'planter', bench: 'bench', lamp: 'lamp', table: 'table', shelf: 'shelf', rug: 'rug', steps: 'rock', bed: 'bed', workbench: 'workbench',
-  tablets: 'bookcase', tablets2: 'bookcase', tablets3: 'bookcase', arch: 'planter', carvedesk: 'lectern', anvil: 'anvil', bell: 'bellstand', hearth: 'hearth', telescope: 'clock', pond: 'fountain', well: 'well', jar: 'pot', chair: 'chair',
+  tablets: 'bookcase', tablets2: 'bookcase', tablets3: 'bookcase', arch: 'planter', carvedesk: 'lectern', anvil: 'anvil', bell: 'bellstand', hearth: 'hearth', telescope: 'clock', pond: 'pond', well: 'well', jar: 'pot', chair: 'chair',
   flowers: 'flowers', mushroom: 'mushroom', bush: 'bush', stepstone: 'rock', flowerbed: 'planter', stonelamp: 'lamp', brazier: 'torch', tree: 'bush', candle: 'candle', cactus: 'pot', chest: 'chest', sofa: 'bench',
   mosaic: 'rug', crystallamp: 'lamp', goldlamp: 'lamp', glowpatch: 'bedplot3', bookcase: 'bookcase', nestbed: 'rug', tapestry: 'banner', fountain: 'fountain', goldpile: 'chest', orb: 'lamp' };
 const OLD_FURN_SEALS = { fence: 4 }; // 짝이 없어 인장으로 돌려주는 가구 (만들 때 든 인장)
-const OLD_BP = { hearth: 'hearth', bookcase: 'bookcase', well: 'well', fountain: 'fountain', pond: 'fountain', bell: 'bellstand', carvedesk: 'lectern', tapestry: 'banner', telescope: 'clock' };
+const OLD_BP = { hearth: 'hearth', bookcase: 'bookcase', well: 'well', fountain: 'fountain', pond: 'pond', bell: 'bellstand', carvedesk: 'lectern', tapestry: 'banner', telescope: 'clock' };
 const OLD_BP_SEALS = { stonelamp: 30, brazier: 30, arch: 40, mosaic: 40, crystallamp: 40, goldlamp: 50, glowpatch: 50, nestbed: 60, goldpile: 50, orb: 50 };
 // 오르딘 교환: 하루 3번까지(희귀·도시 재료 통틀어), 석공 인장으로 귀한 재료나 도시 재료 묶음을 바꿈. 날마다 희귀 1가지 + 도시 재료 3가지가 나옴 [물건, 인장, 개수]
 const TRADE = { perDay: 3, rare: [['ancient_relic', 50, 1], ['sun_stone', 40, 1], ['bog_pearl', 35, 1]],
@@ -262,7 +262,12 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
   };
   // 팩 그림으로 바꾸기 전 집터: 가진 가구·도면은 새 가구로 옮기고, 배치는 새 기본 배치로, 산 바닥·담·벽지는 인장으로 돌려줌 (한 번만)
   function packMigrate(m) {
-    if (m.packV === PACK.v) return; m.packV = PACK.v;
+    if (m.packV === PACK.v) return;
+    if (m.packV === 1) { // 1 → 2: 작은 연못이 다시 생김. 첫 옮기기 때 연못을 샘물 분수로 받은 샘가 집에 연못을 줌 (분수는 그대로)
+      m.packV = PACK.v; if (m.plot === 'spring' && curIdx(m) > plotRooms(m).findIndex((r) => r.id === 'own')) m.furn.pond = Math.max(m.furn.pond || 0, 1);
+      return;
+    }
+    m.packV = PACK.v;
     if (!m.plot) { m.deco = null; m.look = null; return; }
     let back = 0; const furn = {};
     for (const [k, n] of Object.entries(m.furn || {})) { const to = OLD_FURN[k]; if (to && FURN[to]) furn[to] = (furn[to] || 0) + n; else back += (OLD_FURN_SEALS[k] || 0) * n; }
@@ -539,7 +544,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     const rs = ROOMS(m.plot), ci = curIdx(m), today = dayIdx();
     return { ok: true, visit: { id: o.id, name: o.name, me: o.id === d.id, plot: { id: m.plot, name: PI[m.plot].name, mood: PI[m.plot].mood, perk: PI[m.plot].perk },
       rooms: rs.map((r, i) => { const st = m.rooms[r.id], need = Object.values(r.mats).reduce((a, n) => a + n, 0), put = Object.entries(r.mats).reduce((a, [k, n]) => a + Math.min(n, (st.mats || {})[k] || 0), 0); return { id: r.id, name: r.name, hours: r.hours, h: Math.min(r.hours, st.h), matsFrac: need ? put / need : 1, state: i < ci ? 'done' : i === ci ? 'cur' : 'lock' }; }),
-      deco: m.packV === PACK.v && Array.isArray(m.deco) ? m.deco : null, look: m.packV === PACK.v ? m.look || null : null, book: hasBook(m), guest: bookOf(o.name), // 아직 집터를 열지 않아 팩 그림으로 옮기지 않은 집은 새 기본 모습으로 보여 줌
+      deco: m.packV >= 1 && Array.isArray(m.deco) ? m.deco : null, look: m.packV >= 1 ? m.look || null : null, book: hasBook(m), guest: bookOf(o.name), // 아직 집터를 열지 않아 팩 그림으로 옮기지 않은 집은 새 기본 모습으로 보여 줌
       canWrite: hasBook(m) && o.id !== d.id && W.bookDay[`${d.name}>${o.name}`] !== today, phrases: BOOK.phrases, len: BOOK.len } };
   }
   function guestWrite(d, name, text) {
