@@ -42,7 +42,7 @@ for f in range(len(STEP)):
 def uri(im):
     b = io.BytesIO(); im.save(b, 'PNG'); return 'data:image/png;base64,' + base64.b64encode(b.getvalue()).decode()
 P = json.load(open(PACK, encoding='utf-8'))
-P['v'] = 2
+P['v'] = 3  # 3: 먼저 올린 판에서 분수로 바뀐 연못을 돌려줌 (city.js packMigrate)
 P['sprites']['pond'] = {'name': '작은 연못', 'w': W, 'h': H, 'src': uri(frames[0]), 'frames': [uri(f) for f in frames]}
 P['cat']['pond'] = {'name': '작은 연못', 'seals': 15, 'mats': {'sea_shell': 8, 'cave_crystal': 4}, 'bp': 60, 'cat': 'out'}
 own = [o for o in P['defaults']['spring'] if o['room'] == 'own' and o['s'] not in ('fountain', 'pond')]

@@ -263,8 +263,14 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
   // 팩 그림으로 바꾸기 전 집터: 가진 가구·도면은 새 가구로 옮기고, 배치는 새 기본 배치로, 산 바닥·담·벽지는 인장으로 돌려줌 (한 번만)
   function packMigrate(m) {
     if (m.packV === PACK.v) return;
-    if (m.packV === 1) { // 1 → 2: 작은 연못이 다시 생김. 첫 옮기기 때 연못을 샘물 분수로 받은 샘가 집에 연못을 줌 (분수는 그대로)
-      m.packV = PACK.v; if (m.plot === 'spring' && curIdx(m) > plotRooms(m).findIndex((r) => r.id === 'own')) m.furn.pond = Math.max(m.furn.pond || 0, 1);
+    if (m.packV === 1 || m.packV === 2) { // 먼저 올린 판(1)에서 옮겨진 집: 연못이 샘물 분수로, 연못 도면이 분수 도면으로 바뀌었음
+      // 그때 예전 목록을 남기지 않아 어느 분수가 원래 연못이었는지 모르므로 넉넉하게: 가진 분수 수만큼 연못을, 분수 도면이 있으면 연못 도면을 줌 (분수·분수 도면은 그대로)
+      m.packV = PACK.v; if (!m.plot) return; if (!m.bp) m.bp = {};
+      const before = m.furn.pond || 0; let want = Math.max(before, m.furn.fountain || 0);
+      if (m.plot === 'spring' && curIdx(m) > plotRooms(m).findIndex((r) => r.id === 'own')) want = Math.max(want, 1); // 샘가 집 고유 칸 기본 연못
+      const bp = !!m.bp.fountain && !m.bp.pond;
+      m.furn.pond = want; if (bp) m.bp.pond = 1;
+      if (want > before || bp) m.pondBack = { at: Date.now(), n: want - before, bp };
       return;
     }
     m.packV = PACK.v;
@@ -852,7 +858,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
         plot: m.plot, plots: PLOTS.map((p) => ({ id: p.id, name: p.name, mood: p.mood, room: p.room, perk: p.perk })),
         rooms: rs.map((r, i) => ({ id: r.id, name: r.name, hours: r.hours, h: m.rooms[r.id].h, mats: Object.entries(r.mats).map(([k, n]) => ({ id: k, name: ITEMS[k].name, need: n, put: m.rooms[r.id].mats[k] || 0 })), opens: r.opens, state: i < ci ? 'done' : i === ci ? 'cur' : 'lock' })),
         golems: m.golems.map((g, i) => ({ i, name: g.name, named: !!g.named, awake: g.awake, job: g.job, hours: g.hours, start: g.start, until: g.until, report: g.report, last: g.last || null, gate: g.awake ? null : gateOf(m, i), dur: g.dur ?? R.wear.max })),
-        deco: m.deco || null, decoRules: { max: DECO.max }, packNote: m.packNote && m.packNote.at > Date.now() - 7 * 864e5 ? m.packNote : null,
+        deco: m.deco || null, decoRules: { max: DECO.max }, packNote: m.packNote && m.packNote.at > Date.now() - 7 * 864e5 ? m.packNote : null, pondBack: m.pondBack && m.pondBack.at > Date.now() - 7 * 864e5 ? m.pondBack : null,
         furn: m.furn, furnCat: Object.entries(FURN).map(([k, f]) => ({ s: k, name: f.name, cat: f.cat, seals: sealCost(f), base: f.seals, bp: own(BLUEPRINT, k) ? !!(m.bp || {})[k] : null, mats: Object.entries(f.mats).map(([id, n]) => ({ id, name: ITEMS[id].name, need: n })) })),
         zday: Object.fromEntries(Object.entries(m.zday || {}).filter(([, v]) => v === dayIdx())), springLeft: ZF.springTimes - (m.spring && m.spring.day === dayIdx() ? m.spring.n : 0), bell: (() => { const bt = bellToday(), by = Array.isArray(bt.by) ? bt.by : []; return { n: by.length, need: ZF.bellNeed, mine: by.includes(d.name), on: by.length >= ZF.bellNeed }; })(), forgeOff: done('forge') ? ZF.forgeOff : 0,
         bp: Object.entries(BLUEPRINT).map(([k, c]) => ({ s: k, name: FURN[k].name, seals: c, have: !!(m.bp || {})[k] })),
