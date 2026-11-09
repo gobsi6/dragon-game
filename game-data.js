@@ -1031,7 +1031,7 @@ const TRADE = {
   intimidateCost: 2,                // 위협하기에 드는 행동력
   // 위협하기에 성공했을 때 받는 공물: 금화 = (gold 범위 + 위엄 × majK + 레벨 × lvK) × 적대 배수 × 특성,
   // item 확률로 그 마을 시장 물건(itemTwo 확률로 2개), special 확률로 우호 성향만 사는 귀한 물건까지, 왕도는 닭고기를 우리째 (chicken)
-  intimidate: { gold: [140, 220], majK: 2, lvK: 2, item: 0.75, itemTwo: 0.3, special: 0.08, chicken: [2, 4] }, // 금화 = (gold + 위엄×majK + 레벨×lvK) × 1.5: 위엄 30·레벨 25면 평균 430쯤
+  intimidate: { gold: [60, 120], majK: 2, lvK: 2, item: 0.75, itemTwo: 0.3, special: 0.08, chicken: [2, 4] }, // 금화 = (gold + 위엄×majK + 레벨×lvK) × 1.5: 위엄 30·레벨 25면 255~345 (평균 300쯤. 예전 140~220은 평균 430쯤이라 레이드 보상보다 후했음)
 };
 
 // ── 둥지 식구: 인간 아이와 새끼 드래곤 ─────────────
