@@ -18,7 +18,7 @@ CAT={'bed':'live','cabinet':'live','table':'live','chair':'live','stool':'live',
 LAYER={'rug':'flat'}
 for k,v in CAT.items():
     if v=='wall': LAYER[k]='wall'
-STACK=['pot','lamp','candle','book_open','book_red','book_stack','book_tall']  # 가구 위에 올려 둘 수 있는 소품
+STACK=['pot','lamp','candle','bell','book_open','book_red','book_stack','book_tall']  # 가구 위에 올려 둘 수 있는 소품
 groups={rn(b):[rn(x) for x in v] for b,v in D['groups'].items()}
 base_of={x:b for b,v in groups.items() for x in v}
 spr={}

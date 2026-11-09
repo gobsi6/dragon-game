@@ -130,14 +130,21 @@ const DECO = { max: 30, W: PACK.W, H: PACK.H, rooms: PACK.rooms, yard: PACK.yard
 const decoSupport = (it, list) => { if (!DECO.stack[it.s]) return null; const [w, h] = DECO.size[it.s], fx = it.x + w / 2, fy = it.y + h - 1;
   return list.find((o) => o !== it && DECO.layer[o.s] === '' && !DECO.stack[o.s] && (() => { const [ow, oh] = DECO.size[o.s]; return fx >= o.x && fx < o.x + ow && fy >= o.y && fy < o.y + oh; })()) || null; };
 const decoLayer = (it, list) => (decoSupport(it, list) ? 'top' : DECO.layer[it.s]);
+// 텃밭: 놓아 둔 텃밭(두둑)에 금화로 씨앗을 사서 심고, 물을 주며 기르고, 다 자라면 거둬 금화와 재료를 얻는다
+// hours: 물을 계속 줄 때 다 자라는 시간. 물을 안 주면 dry 배 속도. 물 한 번은 자라는 시간의 wet 만큼 촉촉함 (촉촉할 때는 또 줄 수 없음)
+const GARDEN = { dry: 0.5, wet: 0.5, crops: {
+  carrot:    { name: '당근',     hours: 4,  seed: 30,  gold: [45, 60],   mat: ['red_clay', 3, 5] },
+  berry:     { name: '산딸기',   hours: 8,  seed: 60,  gold: [90, 120],  mat: ['glow_moss', 2, 4] },
+  sunflower: { name: '해바라기', hours: 16, seed: 100, gold: [150, 200], mat: ['sun_dust', 3, 5] } } };
+const GSTAGE = ['씨앗', '새싹', '다 자람', '거둔 뒤'];
 // 2026-11 팩 그림으로 바꾸기 전 가구·도면 → 새 가구 (가진 수를 그대로 옮김. 짝이 없는 것은 석공 인장으로 돌려줌)
 const OLD_FURN = { pot: 'pot', crate: 'crate', barrel: 'barrel', signpost: 'signpost', bedplot: 'bedplot', planter: 'planter', bench: 'bench', lamp: 'lamp', table: 'table', shelf: 'shelf', rug: 'rug', steps: 'rock', bed: 'bed', workbench: 'workbench',
-  tablets: 'bookcase', tablets2: 'bookcase', tablets3: 'bookcase', arch: 'planter', carvedesk: 'lectern', anvil: 'anvil', bell: 'bellstand', hearth: 'hearth', telescope: 'clock', pond: 'pond', well: 'well', jar: 'pot', chair: 'chair',
+  tablets: 'bookcase', tablets2: 'bookcase', tablets3: 'bookcase', arch: 'arch', carvedesk: 'lectern', anvil: 'anvil', bell: 'bell', hearth: 'hearth', telescope: 'clock', pond: 'pond', well: 'well', jar: 'pot', chair: 'chair',
   flowers: 'flowers', mushroom: 'mushroom', bush: 'bush', stepstone: 'rock', flowerbed: 'planter', stonelamp: 'lamp', brazier: 'torch', tree: 'bush', candle: 'candle', cactus: 'pot', chest: 'chest', sofa: 'bench',
-  mosaic: 'rug', crystallamp: 'lamp', goldlamp: 'lamp', glowpatch: 'bedplot3', bookcase: 'bookcase', nestbed: 'rug', tapestry: 'banner', fountain: 'fountain', goldpile: 'chest', orb: 'lamp' };
+  mosaic: 'rug', crystallamp: 'lamp', goldlamp: 'lamp', glowpatch: 'bedplot', bookcase: 'bookcase', nestbed: 'rug', tapestry: 'banner', fountain: 'fountain', goldpile: 'chest', orb: 'lamp' };
 const OLD_FURN_SEALS = { fence: 4 }; // 짝이 없어 인장으로 돌려주는 가구 (만들 때 든 인장)
-const OLD_BP = { hearth: 'hearth', bookcase: 'bookcase', well: 'well', fountain: 'fountain', pond: 'pond', bell: 'bellstand', carvedesk: 'lectern', tapestry: 'banner', telescope: 'clock' };
-const OLD_BP_SEALS = { stonelamp: 30, brazier: 30, arch: 40, mosaic: 40, crystallamp: 40, goldlamp: 50, glowpatch: 50, nestbed: 60, goldpile: 50, orb: 50 };
+const OLD_BP = { arch: 'arch', hearth: 'hearth', bookcase: 'bookcase', well: 'well', fountain: 'fountain', pond: 'pond', bell: 'bellstand', carvedesk: 'lectern', tapestry: 'banner', telescope: 'clock' };
+const OLD_BP_SEALS = { stonelamp: 30, brazier: 30, mosaic: 40, crystallamp: 40, goldlamp: 50, glowpatch: 50, nestbed: 60, goldpile: 50, orb: 50 };
 // 오르딘 교환: 하루 3번까지(희귀·도시 재료 통틀어), 석공 인장으로 귀한 재료나 도시 재료 묶음을 바꿈. 날마다 희귀 1가지 + 도시 재료 3가지가 나옴 [물건, 인장, 개수]
 const TRADE = { perDay: 3, rare: [['ancient_relic', 50, 1], ['sun_stone', 40, 1], ['bog_pearl', 35, 1]],
   city: [['drip_dust', 15, 5], ['cave_crystal', 12, 5], ['shroom_spore', 12, 5], ['faded_cloth', 8, 5], ['old_tile', 8, 5], ['sun_dust', 8, 8]] }; // 묶음은 작게: 재료함은 골렘이 주로 채우고, 교환은 모자란 것을 메우는 정도
@@ -268,15 +275,22 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
   // 팩 그림으로 바꾸기 전 집터: 가진 가구·도면은 새 가구로 옮기고, 배치는 새 기본 배치로, 산 바닥·담·벽지는 인장으로 돌려줌 (한 번만)
   function packMigrate(m) {
     if (m.packV === PACK.v) return;
-    if (m.packV === 1 || m.packV === 2) { // 먼저 올린 판(1)에서 옮겨진 집: 연못이 샘물 분수로, 연못 도면이 분수 도면으로 바뀌었음
-      // 그때 예전 목록을 남기지 않아 어느 분수가 원래 연못이었는지 모르므로 넉넉하게: 가진 분수 수만큼 연못을, 분수 도면이 있으면 연못 도면을 줌 (분수·분수 도면은 그대로)
-      m.packV = PACK.v; if (!m.plot) return; if (!m.bp) m.bp = {};
-      const before = m.furn.pond || 0; let want = Math.max(before, m.furn.fountain || 0);
-      if (m.plot === 'spring' && curIdx(m) > plotRooms(m).findIndex((r) => r.id === 'own')) want = Math.max(want, 1); // 샘가 집 고유 칸 기본 연못
-      const bp = !!m.bp.fountain && !m.bp.pond;
-      m.furn.pond = want; if (bp) m.bp.pond = 1;
-      if (want > before || bp) m.pondBack = { at: Date.now(), n: want - before, bp };
-      return;
+    if (m.packV >= 1) { // 이미 팩 그림으로 옮긴 집: 그 뒤에 바뀐 것만 차례로
+      if (m.plot && m.packV <= 2) { // 1·2 → 3: 먼저 올린 판(1)에서 연못이 샘물 분수로, 연못 도면이 분수 도면으로 바뀌었음
+        // 그때 예전 목록을 남기지 않아 어느 분수가 원래 연못이었는지 모르므로 넉넉하게: 가진 분수 수만큼 연못을, 분수 도면이 있으면 연못 도면을 줌 (분수·분수 도면은 그대로)
+        if (!m.bp) m.bp = {};
+        const before = m.furn.pond || 0; let want = Math.max(before, m.furn.fountain || 0);
+        if (m.plot === 'spring' && curIdx(m) > plotRooms(m).findIndex((r) => r.id === 'own')) want = Math.max(want, 1); // 샘가 집 고유 칸 기본 연못
+        const bp = !!m.bp.fountain && !m.bp.pond;
+        m.furn.pond = want; if (bp) m.bp.pond = 1;
+        if (want > before || bp) m.pondBack = { at: Date.now(), n: want - before, bp };
+      }
+      if (m.plot && m.packV <= 3) { // 3 → 4: 열매 텃밭·해바라기 화단은 '텃밭' 하나로 (무엇을 심느냐로 모습이 바뀜)
+        for (const k of ['bedplot2', 'bedplot3']) if (m.furn[k]) { m.furn.bedplot = (m.furn.bedplot || 0) + m.furn[k]; delete m.furn[k]; }
+        if (Array.isArray(m.deco)) m.deco.forEach((o) => { if (o.s === 'bedplot2' || o.s === 'bedplot3') o.s = 'bedplot'; });
+      }
+      // 4 → 5: 덩굴 아치가 다시 생김 · 5 → 6: 작은 종이 다시 생김 (새로 옮길 것 없음)
+      m.packV = PACK.v; return;
     }
     m.packV = PACK.v;
     if (!m.plot) { m.deco = null; m.look = null; return; }
@@ -547,6 +561,68 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
   if (!W.books) W.books = {}; if (!W.bookDay) W.bookDay = {};
   const otherDragon = (name) => { const id = db.dragonNameOwner ? db.dragonNameOwner(String(name || '')) : null; if (!id) return null; return (online.get && online.get(id) && online.get(id).dragon) || db.getDragon(id); };
   const cityOf = (o) => { const c = logic.combatJson(o); return c && c.city && typeof c.city === 'object' ? c.city : null; };
+  // ── 텃밭 ──
+  // 기르는 정도: 심은 때부터 지금까지, 촉촉한 동안은 1배, 마른 동안은 GARDEN.dry 배로 자람 (ms 단위로 쌓음)
+  function gInfo(st, now = Date.now()) {
+    const c = GARDEN.crops[st.c], G = c.hours * 36e5, wetLen = G * GARDEN.wet;
+    let prog = 0, t = st.at; const ws = (st.w || []).filter((w) => w >= st.at).sort((a, b) => a - b);
+    for (const w of ws) { if (w > now) break; if (w > t) { prog += (w - t) * GARDEN.dry; t = w; } const e = Math.min(now, w + wetLen); if (e > t) { prog += e - t; t = e; } }
+    if (now > t) prog += (now - t) * GARDEN.dry;
+    const lastW = ws.length ? ws[ws.length - 1] : -Infinity, wetLeft = Math.max(0, lastW + wetLen - now);
+    const grown = prog >= G, rest = Math.max(0, G - prog), left = rest <= wetLeft ? rest : wetLeft + (rest - wetLeft) / GARDEN.dry; // 더 물을 주지 않으면 남은 시간
+    return { c: st.c, stage: st.h ? 3 : grown ? 2 : prog >= G / 3 ? 1 : 0, p: Math.min(1, prog / G), wet: !st.h && !grown && wetLeft > 0, wetLeft: grown ? 0 : wetLeft, left: grown || st.h ? 0 : Math.ceil(left) };
+  }
+  // 텃밭 두둑에 번호(g)를 붙임. 기본 배치(deco가 null)에 두둑이 있으면 그 배치를 그대로 저장해서 번호를 붙임
+  function gBeds(m) {
+    if (!m.plot) return [];
+    if (!Array.isArray(m.deco)) { const done = plotRooms(m).slice(0, curIdx(m)).map((r) => r.id), def = (PACK.defaults[m.plot] || []).filter((o) => done.includes(o.room));
+      if (!def.some((o) => o.s === 'bedplot')) return []; m.deco = def.map(({ room, ...o }) => ({ ...o })); }
+    if (!m.garden) m.garden = {};
+    const beds = m.deco.filter((o) => o.s === 'bedplot'), used = new Set();
+    for (const o of beds) { if (!Number.isInteger(o.g) || used.has(o.g)) o.g = m.gNext = (m.gNext || 0) + 1; used.add(o.g); }
+    for (const g of Object.keys(m.garden)) if (!used.has(+g)) delete m.garden[g]; // 치운 두둑의 작물은 사라짐
+    return beds;
+  }
+  const gView = (m) => Object.fromEntries(gBeds(m).filter((o) => m.garden[o.g]).map((o) => { const i = gInfo(m.garden[o.g]); return [o.g, { c: i.c, stage: i.stage }]; })); // 놀러 가기·그림용
+  function gardenAct(d, p) {
+    const e = ready(d); if (e) return e;
+    const m = ct(d); if (!m.plot) return err('먼저 집터를 골라야 한다.');
+    const beds = gBeds(m); if (!beds.length) return err('놓아 둔 텃밭이 없다. 꾸미기에서 텃밭을 놓을 수 있다.');
+    const act = String(p.act || ''), now = Date.now(), nm = (o) => `텃밭 ${beds.indexOf(o) + 1}`;
+    if (act === 'waterAll' || act === 'harvestAll') {
+      const lines = []; let n = 0, gold = 0; const items = {};
+      for (const o of beds) { const st = m.garden[o.g]; if (!st || st.h) continue; const i = gInfo(st, now);
+        if (act === 'waterAll' && i.stage < 2 && !i.wet) { (st.w = st.w || []).push(now); n++; }
+        if (act === 'harvestAll' && i.stage === 2) { const c = GARDEN.crops[st.c], gg = rnd(...c.gold), q = rnd(c.mat[1], c.mat[2]); gold += gg; items[c.mat[0]] = (items[c.mat[0]] || 0) + q; st.h = 1; n++; } }
+      if (!n) return err(act === 'waterAll' ? '지금 물을 줄 텃밭이 없다.' : '다 자란 텃밭이 없다.');
+      if (act === 'waterAll') return { ok: true, lines: [`텃밭 ${n}곳에 물을 주었다. 한동안 촉촉하게 잘 자란다.`] };
+      d.gold = (d.gold || 0) + gold; const got = Object.entries(items).map(([k, q]) => ({ id: k, qty: q })); db.saveState(d, got);
+      return { ok: true, lines: [`텃밭 ${n}곳을 거두었다: 금화 ${gold.toLocaleString('ko-KR')}, ${got.map((x) => `${ITEMS[x.id].name} ${x.qty}`).join(', ')}.`] };
+    }
+    const o = beds.find((b) => b.g === Math.floor(Number(p.g))); if (!o) return err('그런 텃밭은 없다.');
+    const st = m.garden[o.g];
+    if (act === 'plant') {
+      const c = own(GARDEN.crops, String(p.crop || '')) ? GARDEN.crops[p.crop] : null; if (!c) return err('그런 씨앗은 없다.');
+      if (st && !st.h) return err(`${nm(o)}에는 이미 ${GARDEN.crops[st.c].name}${josa(GARDEN.crops[st.c].name, '이', '가')} 자라고 있다.`);
+      if ((d.gold || 0) < c.seed) return err(`${c.name} 씨앗을 사려면 금화 ${c.seed}이 있어야 한다. (가진 금화 ${Math.floor(d.gold || 0).toLocaleString('ko-KR')})`);
+      d.gold -= c.seed; m.garden[o.g] = { c: p.crop, at: now, w: [] };
+      return { ok: true, lines: [`${nm(o)}에 ${c.name} 씨앗을 심었다. 금화 −${c.seed}. 물을 주면 더 빨리 자란다.`] };
+    }
+    if (!st) return err(`${nm(o)}에는 아무것도 심지 않았다.`);
+    const i = gInfo(st, now), c = GARDEN.crops[st.c];
+    if (act === 'water') {
+      if (st.h) return err('이미 거둔 텃밭이다. 다시 심을 수 있다.'); if (i.stage === 2) return err('다 자랐다. 거두기만 하면 된다.');
+      if (i.wet) return err(`아직 흙이 촉촉하다. (${Math.ceil(i.wetLeft / 6e4)}분 뒤에 다시 줄 수 있다)`);
+      (st.w = st.w || []).push(now); return { ok: true, lines: [`${nm(o)}의 ${c.name}에 물을 주었다.`] };
+    }
+    if (act === 'harvest') {
+      if (i.stage !== 2) return err(st.h ? '이미 거둔 텃밭이다.' : `아직 다 자라지 않았다. (${GSTAGE[i.stage]})`);
+      const gg = rnd(...c.gold), q = rnd(c.mat[1], c.mat[2]); d.gold = (d.gold || 0) + gg; st.h = 1; db.saveState(d, [{ id: c.mat[0], qty: q }]);
+      return { ok: true, lines: [`${nm(o)}의 ${c.name}${josa(c.name, '을', '를')} 거두었다: 금화 ${gg}, ${ITEMS[c.mat[0]].name} ${q}.`] };
+    }
+    if (act === 'clear') { delete m.garden[o.g]; return { ok: true, lines: [`${nm(o)}를 갈아엎었다.`] }; }
+    return err('무엇을 할지 모르겠다.');
+  }
   const hasBook = (m) => { if (!m || !m.plot || !m.rooms) return false; if (Array.isArray(m.deco)) return m.deco.some((o) => o.s === 'signpost'); return m.plot === 'plaza' && curIdx(m) >= 4; }; // 기본 배치에선 광장 앞 집 앞뜰에 받침이 있음
   const bookOf = (name) => (W.books[name] || []).slice(-BOOK.show).reverse();
   function visitView(d, name) {
@@ -555,7 +631,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     const rs = ROOMS(m.plot), ci = curIdx(m), today = dayIdx();
     return { ok: true, visit: { id: o.id, name: o.name, me: o.id === d.id, plot: { id: m.plot, name: PI[m.plot].name, mood: PI[m.plot].mood, perk: PI[m.plot].perk },
       rooms: rs.map((r, i) => { const st = m.rooms[r.id], need = Object.values(r.mats).reduce((a, n) => a + n, 0), put = Object.entries(r.mats).reduce((a, [k, n]) => a + Math.min(n, (st.mats || {})[k] || 0), 0); return { id: r.id, name: r.name, hours: r.hours, h: Math.min(r.hours, st.h), matsFrac: need ? put / need : 1, state: i < ci ? 'done' : i === ci ? 'cur' : 'lock' }; }),
-      deco: m.packV >= 1 && Array.isArray(m.deco) ? m.deco : null, look: m.packV >= 1 ? m.look || null : null, book: hasBook(m), guest: bookOf(o.name), // 아직 집터를 열지 않아 팩 그림으로 옮기지 않은 집은 새 기본 모습으로 보여 줌
+      garden: m.packV >= 1 ? gView(m) : {}, deco: m.packV >= 1 && Array.isArray(m.deco) ? m.deco : null, look: m.packV >= 1 ? m.look || null : null, book: hasBook(m), guest: bookOf(o.name), // 아직 집터를 열지 않아 팩 그림으로 옮기지 않은 집은 새 기본 모습으로 보여 줌
       canWrite: hasBook(m) && o.id !== d.id && W.bookDay[`${d.name}>${o.name}`] !== today, phrases: BOOK.phrases, len: BOOK.len } };
   }
   function guestWrite(d, name, text) {
@@ -819,7 +895,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
       const s = it && typeof it.s === 'string' && own(DECO.size, it.s) ? it.s : null; if (!s) return err('모르는 장식이다.');
       const x = Math.floor(Number(it.x)), y = Math.floor(Number(it.y));
       if (!Number.isFinite(x) || !Number.isFinite(y)) return err('장식 배치를 다시 해 보자.');
-      items.push({ s, x, y, f: it.f ? 1 : 0 });
+      items.push({ s, x, y, f: it.f ? 1 : 0, ...(s === 'bedplot' && Number.isInteger(it.g) ? { g: it.g } : {}) });
     }
     const boxes = [];
     for (const it of items) { // 올려 둔 소품은 받친 가구가 목록 어디에 있든 알아야 해서, 다 읽은 뒤에 검사
@@ -832,7 +908,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     const used = {}; boxes.forEach((b) => { const k = DECO.base[b.s]; used[k] = (used[k] || 0) + 1; });
     const over = Object.entries(used).find(([k, n]) => n > (m.furn[k] || 0));
     if (over) return err(`${FURN[over[0]]?.name || over[0]}${josa(FURN[over[0]]?.name || '가구', '이', '가')} 모자란다. (가진 것 ${m.furn[over[0]] || 0}개) 가구 만들기에서 더 만들 수 있다.`);
-    m.deco = boxes.map(({ s, x, y, f }) => (f ? { s, x, y, f } : { s, x, y })); // f: 좌우 반전 (방향은 그림 이름에 들어 있음: chair_back 등)
+    m.deco = boxes.map(({ s, x, y, f, g }) => ({ s, x, y, ...(f ? { f } : {}), ...(g ? { g } : {}) })); gBeds(m); // f: 좌우 반전 (방향은 그림 이름에 들어 있음: chair_back 등), g: 텃밭 번호
     return { ok: true, lines: [m.deco.length ? `장식 ${m.deco.length}개를 놓았다.` : '장식을 모두 치웠다.'] };
   }
   function handFrag(d, key) {
@@ -868,6 +944,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
         plot: m.plot, plots: PLOTS.map((p) => ({ id: p.id, name: p.name, mood: p.mood, room: p.room, perk: p.perk })),
         rooms: rs.map((r, i) => ({ id: r.id, name: r.name, hours: r.hours, h: m.rooms[r.id].h, mats: Object.entries(r.mats).map(([k, n]) => ({ id: k, name: ITEMS[k].name, need: n, put: m.rooms[r.id].mats[k] || 0 })), opens: r.opens, state: i < ci ? 'done' : i === ci ? 'cur' : 'lock' })),
         golems: m.golems.map((g, i) => ({ i, name: g.name, named: !!g.named, awake: g.awake, job: g.job, hours: g.hours, start: g.start, until: g.until, report: g.report, last: g.last || null, gate: g.awake ? null : gateOf(m, i), dur: g.dur ?? R.wear.max })),
+        garden: m.plot ? { list: gBeds(m).map((o, k) => ({ g: o.g, n: k + 1, ...(m.garden[o.g] ? gInfo(m.garden[o.g]) : { c: null }) })), crops: GARDEN.crops, dry: GARDEN.dry, gold: Math.floor(d.gold || 0) } : null,
         deco: m.deco || null, decoRules: { max: DECO.max }, packNote: m.packNote && m.packNote.at > Date.now() - 7 * 864e5 ? m.packNote : null, pondBack: m.pondBack && m.pondBack.at > Date.now() - 7 * 864e5 ? m.pondBack : null,
         furn: m.furn, furnCat: Object.entries(FURN).map(([k, f]) => ({ s: k, name: f.name, cat: f.cat, seals: sealCost(f), base: f.seals, bp: own(BLUEPRINT, k) ? !!(m.bp || {})[k] : null, mats: Object.entries(f.mats).map(([id, n]) => ({ id, name: ITEMS[id].name, need: n })) })),
         zday: Object.fromEntries(Object.entries(m.zday || {}).filter(([, v]) => v === dayIdx())), springLeft: ZF.springTimes - (m.spring && m.spring.day === dayIdx() ? m.spring.n : 0), bell: (() => { const bt = bellToday(), by = Array.isArray(bt.by) ? bt.by : []; return { n: by.length, need: ZF.bellNeed, mine: by.includes(d.name), on: by.length >= ZF.bellNeed }; })(), forgeOff: done('forge') ? ZF.forgeOff : 0,
@@ -920,6 +997,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     handle('city:give', (d) => give(d));
     handle('city:bp', (d, p) => buyBp(d, String(p.s || '')));
     handle('city:look', (d, p) => setLook(d, p));
+    handle('city:garden', (d, p) => gardenAct(d, p));
     handle('city:trade', (d, p) => doTrade(d, p.i));
     handle('city:visit', (d, p) => visitView(d, String(p.name || '')));
     handle('city:guest', (d, p) => guestWrite(d, String(p.name || ''), p.text));

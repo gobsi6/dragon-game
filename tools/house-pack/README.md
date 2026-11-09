@@ -7,6 +7,7 @@
 ## 그림 출처 (크레딧 표기 필수)
 - Fantasy RPG Interior pack (+ Workshop·Bedroom·School·Music·Alchemy Lab 확장), Fantasy RPG asset pack, RPG Castles asset pack — **Franuka** https://franuka.itch.io/ · https://x.com/franuka_art
 - 라이선스: 상업·비상업 사용 가능, 수정 가능. **팩 원본을 그대로 재배포·재판매하면 안 되고**, itch 페이지나 X 링크를 표기해 달라고 되어 있어요.
+- 덩굴 아치(`src/arch_src.png`)는 직접 그려 온 그림이에요.
 - 종 받침대(`src/bellstand.png`)와 방명록 받침의 종이, 텃밭(흙+작물 조립)은 직접 그리거나 조립한 것이에요.
 
 ## 다시 만들기
@@ -15,9 +16,12 @@
 2. `src/export_mask_y.py` — 바닥·벽·마당 바닥 자리 표시
 3. `src/plots.py` — 여섯 집터 고유 칸 기본 배치
 4. `make_pack.py` — 위 결과를 모아 `public/house/pack.json`으로 (게임 가구 이름으로 바꾸고 기본 가구 수 셈)
+4-1. `make_arch.py` — 덩굴 아치: 직접 그려 온 `src/arch_src.png`의 회색 그림자를 팩 그림자 색으로 바꿔 `src/arch.png`로
+4-2. `make_bell.py` — 작은 종(`src/bell.png`): 종 받침대의 종 + 나무 손잡이
 5. `add_pond.py` — `src/pond.png`(다듬은 연못)을 넣고 연잎·물결 흔들림 장면을 만들고, 샘가 집 기본 배치를 연못으로 (pack.json v2)
-6. `fix_shade.py` — 방 바닥의 벽 밑 그늘이 옆문 쪽에서 끊긴 것을 이어 그림
-7. `rules.py` — 기본 배치가 놓는 규칙에 맞는지 확인
+6. `add_garden.py` — 텃밭: 흙 두둑 그림과 작물 단계 그림(당근·산딸기·해바라기) 넣기, 예전 두 텃밭을 '텃밭'으로 합침 (pack.json v4)
+7. `fix_shade.py` — 방 바닥의 벽 밑 그늘이 옆문 쪽에서 끊긴 것을 이어 그림
+8. `rules.py` — 기본 배치가 놓는 규칙에 맞는지 확인
 
 색 규칙: 붉은·자줏빛만 원목 갈색으로(채도 90%), 벽·바닥은 베이지(채도 70% 안팎), 불 들어가는 가구는 불꽃은 그대로 두고 틀만 살짝,
 깔개는 원래 색. 같은 가구의 색 변형은 한 가지만 넣어요.

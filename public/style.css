@@ -5201,3 +5201,16 @@ body.chat-off #say, body.chat-off #chat-view { display: none; }
 #home-ui .dk-cats { margin: 14px 0 8px; }
 #home-ui .dk-cats small { opacity: .6; font-size: 11px; }
 #home-ui .lk-tile canvas { aspect-ratio: 32 / 20; }
+
+/* 텃밭 */
+#home-ui .hm-garden { margin: 14px 0; padding: 12px 14px; border: 1px solid var(--line, #E3D6C2); background: var(--paper-2, #FBF8F2); }
+#home-ui .hm-garden h4 { margin: 0 0 8px; font-size: 14px; display: flex; justify-content: space-between; align-items: baseline; }
+#home-ui .hm-garden h4 small { font-weight: 400; opacity: .7; }
+#home-ui .hm-garden ul { list-style: none; margin: 0; padding: 0; }
+#home-ui .gd-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 0; border-top: 1px dashed var(--line, #E3D6C2); }
+#home-ui .gd-row:first-child { border-top: 0; }
+#home-ui .gd-st { flex: 1 1 200px; font-size: 13px; }
+#home-ui .gd-act { display: flex; flex-wrap: wrap; gap: 6px; }
+#home-ui .gd-act small { opacity: .7; margin-left: 2px; }
+#home-ui .gd-ok { font-style: normal; color: #4F7A3A; font-weight: 600; }
+#home-ui .gd-dry { font-style: normal; color: #B5653A; }

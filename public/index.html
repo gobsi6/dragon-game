@@ -15391,6 +15391,9 @@
       else if (s === 'due') out.push({ t: `${g.name} 돌아오는 중`, b: '맞이하기', a: 'get' });
       else if (s === 'idle') { const a = againOf(g); out.push({ t: `${g.name} 쉬는 중 → 다음: ${CT.v.rules.jobs[a.job]} ${a.hours}시간`, b: '보내기', a: `golem:${g.i}` }); }
       else if (s === 'off' && !g.gate && Object.entries(CT.v.rules.repair).every(([k, n]) => (h.inv[k] || 0) >= n)) out.push({ t: '쓰러진 골렘을 고칠 수 있다', b: '고치기', a: `golem:${g.i}` }); });
+    const gl = (h.garden && h.garden.list) || [], gReady = gl.filter((b) => b.c && b.stage === 2).length, gDry = gl.filter((b) => b.c && b.stage < 2 && !b.wet).length;
+    if (gReady) out.push({ t: `다 자란 텃밭 ${gReady}곳`, b: '거두기', a: 'gharv' });
+    if (gDry) out.push({ t: `물이 마른 텃밭 ${gDry}곳`, b: '물 주기', a: 'gwater' });
     const r = canPut(h); if (r) out.push({ t: `${r.name}에 재료 넣기`, b: '넣기', a: 'put', pri: !out.some((x) => x.pri) });
     if (!h.req.done && (h.inv[h.req.id] || 0) >= h.req.n) out.push({ t: '오늘의 부탁', b: '채운다', a: 'req' });
     if (h.gifts && h.gifts.length) out.push({ t: `집터에 놓인 선물 ${h.gifts.length}`, b: '보기', a: 'gifts', manual: true });
@@ -15407,6 +15410,8 @@
   function homeAct(a) {
     if (a === 'get') { const due = CT.v.me.golems.filter((g) => gState(g) === 'due').map((g) => g.i); return cityCall('city:get', {}, () => haulToast(due)); }
     if (a === 'put') return cityCall('city:put');
+    if (a === 'gharv') return cityCall('city:garden', { act: 'harvestAll' });
+    if (a === 'gwater') return cityCall('city:garden', { act: 'waterAll' });
     if (a === 'req') return cityCall('city:req');
     if (a === 'give') return cityCall('city:give');
     if (a === 'perk') return cityCall('city:perk');
@@ -15433,6 +15438,8 @@
       if (k === 'get') { ev = 'city:get'; t.due = h.golems.filter((o) => gState(o) === 'due').map((o) => o.i); }
       else if (k === 'mend') { const by = canPay(h, mendCostOf(g, 'seal')) ? 'seal' : canPay(h, mendCostOf(g, 'mat')) ? 'mat' : null; if (!by) { fail.push(`${g.name} 손질: 인장이나 재료가 모자란다`); continue; } ev = 'city:mend'; p = { i: +x, by }; }
       else if (k === 'put') ev = 'city:put';
+      else if (k === 'gharv') { ev = 'city:garden'; p = { act: 'harvestAll' }; }
+      else if (k === 'gwater') { ev = 'city:garden'; p = { act: 'waterAll' }; }
       else if (k === 'req') ev = 'city:req';
       else if (k === 'give') ev = 'city:give';
       else if (k === 'perk') ev = 'city:perk';
@@ -15460,7 +15467,7 @@
     const gAtt = h.golems.some((g) => ['back', 'due', 'idle'].includes(gState(g)));
     const tabs = [['plan', '집터', ''], ['todo', '할 일', todo.length ? `<em class="hm-n">${todo.length}</em>` : ''], ['golems', '골렘', gAtt ? '<i class="hm-dot" aria-label="할 일 있음"></i>' : ''], ['deco', '꾸미기', '']];
     let main = '';
-    if (tab === 'plan') main = `${housePlan(h)}<section class="detail">${CT.sel === 'golems' ? roomD(h, cur || h.rooms[3]) : homeDetail(h)}</section>${homeGiftBox(h)}${bookBox(h)}`;
+    if (tab === 'plan') main = `${housePlan(h)}${gardenBox(h)}<section class="detail">${CT.sel === 'golems' ? roomD(h, cur || h.rooms[3]) : homeDetail(h)}</section>${homeGiftBox(h)}${bookBox(h)}`;
     else if (tab === 'todo') main = `${todo.length ? `<section class="hm-todo"><div class="hm-todo-h"><b>할 일 ${todo.length}</b><button type="button" class="btn sm primary" data-ct="all"${CT.busy ? ' disabled' : ''}>${CT.busy ? '처리하는 중…' : '모두 처리'}</button></div>${todo.map((t) => `<div class="tr"><span class="dot"></span><b>${t.t}</b><button type="button" class="btn sm" data-ct="act:${t.a}">${t.b}</button></div>`).join('')}</section>` : '<p class="hm-empty">지금은 할 일이 없다. 골렘이 돌아오면 다시 들러 보자.</p>'}<section class="detail">${reqD(h)}</section>${tradeBox(h)}`;
     else if (tab === 'golems') main = `<section class="detail">${golemsD(h)}</section>`;
     else { const md = CT.dkMode || 'place'; main = `<nav class="seg dk-mode" aria-label="꾸미기">${[['place', '가구 놓기'], ['make', '가구 만들기'], ['bp', '도면'], ['look', '바닥·담']].map(([k, n]) => `<button type="button" data-ct="dkm:${k}" class="${md === k ? 'on' : ''}">${n}</button>`).join('')}</nav>${md === 'make' ? furnMaker(h) : md === 'bp' ? bpShop(h) : md === 'look' ? lookEditor(h) : decoEditor(h)}`; }
@@ -15589,12 +15596,12 @@
       ${sel || dk.pick ? `<div class="dk-sel"><b>${sel ? `${dkName(sel.s)}${sel.f ? ' (좌우 반전)' : ''}` : `놓을 장식: ${dkName(dkPickN(dk))}${dk.pickF ? ' (좌우 반전)' : ''}`}</b>${turnable ? '<button type="button" class="btn sm" data-ct="dk:turn">방향 바꾸기</button>' : ''}<button type="button" class="btn sm" data-ct="dk:flip">좌우 반전</button>${sel ? '<button type="button" class="btn sm" data-ct="dk:del">치우기</button>' : ''}<button type="button" class="btn sm" data-ct="dk:none">선택 취소</button></div>` : ''}
       <div class="lk-tabs dk-cats" role="tablist" aria-label="가구 분류">${DK_CATS.map(([k, n]) => `<button type="button" role="tab" aria-selected="${cat === k}" class="${cat === k ? 'on' : ''}" data-ct="dkc:${k}">${n} <small>${cnt(k)}</small></button>`).join('')}</div>
       <div class="dk-pal" role="list">${list.map((n) => { const left = dkLeft(h, n), own = h.furn?.[n] || 0; return `<button type="button" role="listitem" class="dk-it${dk.pick === n ? ' on' : ''}${left > 0 ? '' : ' none'}" data-ct="dk:pick:${n}" aria-pressed="${dk.pick === n}"><canvas class="dk-th" data-s="${n}" aria-hidden="true"></canvas><span>${dkName(n)}</span><em class="dk-n">${own ? `${Math.max(0, left)} / ${own}` : '없음'}</em></button>`; }).join('')}</div>
-      <small class="note">되살린 칸 안과, 마당을 되살린 뒤에는 돌 마당과 담 안 모래밭에도 놓을 수 있다. 방 아랫벽 쪽에 붙이면 앞쪽 벽 뒤로 살짝 가려진다. 창문·깃발은 벽에 걸려 가구 뒤에 보인다. 화분·등·촛대·책은 탁자나 걸상 같은 가구 위에 올려 둘 수 있고, 가구를 옮기면 함께 따라간다.</small>`;
+      <small class="note">되살린 칸 안과, 마당을 되살린 뒤에는 돌 마당과 담 안 모래밭에도 놓을 수 있다. 방 아랫벽 쪽에 붙이면 앞쪽 벽 뒤로 살짝 가려진다. 창문·깃발은 벽에 걸려 가구 뒤에 보인다. 화분·등·촛대·작은 종·책은 탁자나 걸상 같은 가구 위에 올려 둘 수 있고, 가구를 옮기면 함께 따라간다.</small>`;
   }
   function dkDraw(body, h, ghost) { // 도면은 편집 중인 배치로, 위 덧칠 캔버스에는 아직 못 쓰는 곳·고른 장식·놓을 자리
     const dk = CT.dk, cv = body.querySelector('.hp.dk .hp-cv'), fx = body.querySelector('.dk-fx'); if (!cv || !fx) return;
     const skip = ghost && ghost.move != null ? ghost.move : -1, carry = (ghost && ghost.carry) || [];
-    HP.paint(cv, HP.plan(h.plot, Object.fromEntries(h.rooms.map((r) => [r.id, { state: r.state, p: roomFrac(r) }])), dk.list.filter((_, i) => i !== skip && !carry.includes(i)), h.look));
+    HP.paint(cv, HP.plan(h.plot, Object.fromEntries(h.rooms.map((r) => [r.id, { state: r.state, p: roomFrac(r) }])), dk.list.filter((_, i) => i !== skip && !carry.includes(i)), h.look, gMap(h)));
     const g = fx.getContext('2d'), S = 3; g.clearRect(0, 0, fx.width, fx.height); g.imageSmoothingEnabled = false;
     if (dk.sel != null && dk.list[dk.sel] && skip !== dk.sel) { const o = dk.list[dk.sel], [w, hh] = HP.size(o.s); g.strokeStyle = '#C8553D'; g.lineWidth = 3; g.strokeRect(o.x * S - 2, o.y * S - 2, w * S + 4, hh * S + 4); }
     if (ghost && ghost.at) {
@@ -15654,6 +15661,21 @@
     hit.addEventListener('pointerup', end); hit.addEventListener('pointercancel', end);
   }
   // 도면 크기: 1도트가 화면 픽셀 정수 배가 되게 (예: 640px = 2배). 화면 밀도가 높은 기기는 창 폭에 맞춰 채움 (이때는 고르지 않음이 눈에 안 띔)
+  const gMap = (h) => Object.fromEntries(((h.garden && h.garden.list) || []).filter((b) => b.c).map((b) => [b.g, { c: b.c, stage: b.stage }])); // 텃밭 번호 → 작물·단계 (그림용)
+  const ctDur = (ms) => { const m = Math.ceil(ms / 6e4); return m >= 60 ? `${Math.floor(m / 60)}시간${m % 60 ? ` ${m % 60}분` : ''}` : `${m}분`; };
+  // 텃밭: 놓아 둔 두둑마다 심기 · 물 주기 · 거두기 (city:garden)
+  function gardenBox(h) {
+    const G = h.garden; if (!G || !G.list.length) return '';
+    const crops = Object.entries(G.crops), stg = ['씨앗', '새싹', '다 자람', '거둔 뒤'];
+    const row = (b) => { const c = b.c && G.crops[b.c];
+      const plant = crops.map(([k, x]) => `<button type="button" class="btn sm" data-ct="gp:${b.g}:${k}"${G.gold < x.seed ? ' disabled' : ''}>${x.name} <small>금화 ${x.seed} · ${x.hours}시간</small></button>`).join('');
+      if (!c) return `<li class="gd-row"><b>텃밭 ${b.n}</b><span class="gd-st">비어 있음</span><div class="gd-act">${plant}</div></li>`;
+      if (b.stage === 3) return `<li class="gd-row"><b>텃밭 ${b.n}</b><span class="gd-st">${c.name} · 거둔 뒤</span><div class="gd-act">${plant}</div></li>`;
+      const st = b.stage === 2 ? '<em class="gd-ok">다 자람</em>' : `${stg[b.stage]} · ${Math.floor(b.p * 100)}% · ${b.wet ? `촉촉함 ${ctDur(b.wetLeft)}` : '<em class="gd-dry">말랐다</em>'} · 다 자라기까지 ${b.wet ? '약 ' : '물 없이 '}${ctDur(b.left)}`;
+      const act = b.stage === 2 ? `<button type="button" class="btn sm primary" data-ct="gh:${b.g}">거두기</button>` : `<button type="button" class="btn sm${b.wet ? '' : ' primary'}" data-ct="gw:${b.g}"${b.wet ? ' disabled' : ''}>물 주기</button>`;
+      return `<li class="gd-row"><b>텃밭 ${b.n}</b><span class="gd-st">${c.name} · ${st}</span><div class="gd-act">${act}<button type="button" class="btn sm" data-ct="gc:${b.g}">갈아엎기</button></div></li>`; };
+    return `<section class="hm-garden"><h4>텃밭 <small>가진 금화 ${G.gold.toLocaleString('ko-KR')}</small></h4><ul>${G.list.map(row).join('')}</ul><small class="note">물을 주면 한동안 촉촉해서 제 속도로 자라고, 마르면 절반 속도로 자란다. 다 자라면 거둬서 금화와 재료를 얻는다.</small></section>`;
+  }
   function fitHP(root) {
     (root || document).querySelectorAll('#home-ui .hp').forEach((hp) => { const avail = hp.parentElement.clientWidth, dpr = window.devicePixelRatio || 1, r = (avail * dpr) / HP.W, k = Math.max(1, Math.floor(r)); hp.style.width = `${r >= 2.5 ? avail : (HP.W * k) / dpr}px`; });
   }
@@ -15662,7 +15684,7 @@
     const cv = body.querySelector('.hp-cv');
     let look = h.look; const pv = CT.lookPv; // 바닥·벽 미리 보기: 아직 바꾸지 않은 모습을 그림에만 입힘
     if (pv && CT.tab === 'deco' && CT.dkMode === 'look') { const L = look || {}; look = pv.kind === 'wall' ? { ...L, wall: { ...(L.wall || {}), [pv.room]: pv.k } } : { ...L, floor: { ...(L.floor || {}), [pv.room]: pv.k } }; }
-    if (cv && !(CT.tab === 'deco' && (CT.dkMode || 'place') === 'place')) HP.paint(cv, HP.plan(h.plot, Object.fromEntries(h.rooms.map((r) => [r.id, { state: r.state, p: roomFrac(r) }])), h.deco || HP.defaults(h.plot, dkDone(h)), look));
+    if (cv && !(CT.tab === 'deco' && (CT.dkMode || 'place') === 'place')) HP.paint(cv, HP.plan(h.plot, Object.fromEntries(h.rooms.map((r) => [r.id, { state: r.state, p: roomFrac(r) }])), h.deco || HP.defaults(h.plot, dkDone(h)), look, gMap(h)));
     fitHP(body);
     if (!HP.ready()) HP.onReady(() => { if ($('city-home-dlg').open) renderHome(); });
   }
@@ -15670,7 +15692,7 @@
   const HP = (() => {
     const W = 320, H = 240;
     const ROOMS = { live: [96, 16, 128, 80], own: [16, 112, 80, 96], yard: [112, 112, 96, 96], work: [224, 112, 80, 96] }; // 칸 안쪽 (도트). 서버 PACK.rooms·yard와 같음
-    let P = null, ok = false, frame = 0; const wait = [], IMG = {}, FR = {}, FT = {}, WT = {};
+    let P = null, ok = false, frame = 0; const wait = [], IMG = {}, FR = {}, FT = {}, WT = {}, CROP = {};
     const load = (src) => new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(i); i.src = src; });
     const pix = (im, w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.drawImage(im, 0, 0); return g.getImageData(0, 0, w, h).data; };
     const u32 = (b64) => { const s = atob(b64), a = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; };
@@ -15681,6 +15703,7 @@
       for (const f of d.floors) jobs.push(load(f.src).then((i) => { FT[f.id] = { s: f.s, px: pix(i, f.s, f.s), im: i }; }));
       jobs.push(load(d.cobble).then((i) => { FT.cobble = { s: 16, px: pix(i, 16, 16), im: i }; }));
       for (const f of d.walls) jobs.push(load(f.src).then((i) => { WT[f.id] = { px: pix(i, 16, 32), im: i }; }));
+      for (const [c, cr] of Object.entries((d.garden || {}).crops || {})) jobs.push(Promise.all(cr.frames.map(load)).then((a) => { CROP[c] = a; }));
       await Promise.all(jobs);
       const M = (m) => ({ idx: new Uint32Array(u32(m.idx).buffer), a: m.a ? u32(m.a) : null, y: m.y });
       P.FM = Object.fromEntries(Object.entries(d.fmask).map(([k, m]) => [k, M(m)])); P.WM = Object.fromEntries(Object.entries(d.wmask).map(([k, m]) => [k, M(m)])); P.YM = M(d.ymask);
@@ -15740,7 +15763,9 @@
       for (const a of areas) for (const [x0, y0, w, h] of a.rects) for (let y = y0; y < Math.min(y0 + h, a.top, H); y++) for (let x = x0; x < x0 + w; x++) { const q = (y * W + x) * 4, L = px[q] * 0.299 + px[q + 1] * 0.587 + px[q + 2] * 0.114; px[q] = L * 0.35 + 246 * 0.65; px[q + 1] = L * 0.35 + 240 * 0.65; px[q + 2] = L * 0.35 + 229 * 0.65; }
       g.putImageData(img, 0, 0);
     }
-    const plan = (plot, rooms, deco, look) => ({ kind: 'plan', plot, rooms, deco: deco || [], look });
+    const plan = (plot, rooms, deco, look, garden) => ({ kind: 'plan', plot, rooms, deco: deco || [], look, garden: garden || {} });
+    // 텃밭 두둑 위 작물 3포기 (garden: 두둑 번호 g → { c: 작물, stage: 0 씨앗 · 1 새싹 · 2 다 자람 · 3 거둔 뒤 })
+    function drawCrops(g, o, garden) { const st = o.s === 'bedplot' && o.g != null && garden[o.g]; if (!st || !CROP[st.c]) return; const G = P.garden, im = CROP[st.c][st.stage]; if (!im) return; G.xs.forEach((cx) => g.drawImage(im, o.x + cx - 8, o.y + G.base - G.ground)); }
     const sprite = (s, f) => ({ kind: 'sprite', s, f });
     const swatch = (t, k) => ({ kind: 'swatch', t, k });
     function paint(cv, d) {
@@ -15751,7 +15776,7 @@
         if (d.t === 'wall') { const t = WT[d.k]; if (t) for (let x = 0; x < 32; x += 16) g.drawImage(t.im, 0, 8, 16, 20, x, 0, 16, 20); }
         else { const t = FT[d.k]; if (t) for (let y = 0; y < 20; y += t.s) for (let x = 0; x < 32; x += t.s) g.drawImage(t.im, x, y); } return; }
       cv.width = W; cv.height = H; g.imageSmoothingEnabled = false; g.drawImage(baseFor(d.look), 0, 0);
-      const items = [...d.deco].sort((a, b) => order(a, d.deco) - order(b, d.deco)); items.forEach((o) => drawSprite(g, o.s, o.x, o.y, o.f));
+      const items = [...d.deco].sort((a, b) => order(a, d.deco) - order(b, d.deco)); items.forEach((o) => { drawSprite(g, o.s, o.x, o.y, o.f); drawCrops(g, o, d.garden); });
       g.drawImage(IMG.__front, 0, 0); veil(g, d.rooms);
       cv._hpAnim = items.some((o) => FR[o.s]) ? d : null; // 움직이는 가구(벽난로)가 있으면 다시 그릴 재료를 기억
     }
@@ -15939,7 +15964,7 @@
       $('city-visit-body').innerHTML = `<div id="home-ui" class="hm-e"><div class="cv-top"><p class="hd-s">${ctEsc(v.plot.name)} · ${ctEsc(v.plot.mood)} · ${stg} / 4단계</p>${v.me ? '' : '<button type="button" class="btn sm cv-gift" data-ct="vgift"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="9" width="17" height="11" rx="1"/><path d="M2.5 9h19M12 9v11M12 9c-2-4-6-4-6-1.5S10 9 12 9zm0 0c2-4 6-4 6-1.5S14 9 12 9z"/></svg>선물</button>'}</div>
         <div class="hp hp-clean"><canvas class="hp-cv" width="320" height="240" aria-hidden="true"></canvas></div>
         <section class="hm-book"><h4>방명록${v.book ? '' : ' (받침 없음)'}</h4>${guest}${write}</section></div>`;
-      HP.paint($('city-visit-body').querySelector('.hp-cv'), HP.plan(v.plot.id, rooms, v.deco || HP.defaults(v.plot.id, v.rooms.filter((x) => x.state === 'done').map((x) => x.id)), v.look));
+      HP.paint($('city-visit-body').querySelector('.hp-cv'), HP.plan(v.plot.id, rooms, v.deco || HP.defaults(v.plot.id, v.rooms.filter((x) => x.state === 'done').map((x) => x.id)), v.look, v.garden));
       if (!d.open) d.showModal();
       fitHP($('city-visit-body'));
     });
@@ -16036,6 +16061,10 @@
     if (k === 'bp') return cityCall('city:bp', { s: x });
     if (k === 'lkr') { CT.lkRoom = x; return renderHome(); } // 바닥·벽·담: 바꿀 곳 고르기 (미리 보기는 그대로 둠)
     if (k === 'dkc') { CT.dkCat = x; return renderHome(); } // 가구 놓기 분류
+    if (k === 'gp') { const c = CT.v.me.garden.crops[y]; if (!confirm(`금화 ${c.seed}으로 ${c.name} 씨앗을 사서 심을까?`)) return; return cityCall('city:garden', { act: 'plant', g: +x, crop: y }); } // 텃밭
+    if (k === 'gw') return cityCall('city:garden', { act: 'water', g: +x });
+    if (k === 'gh') return cityCall('city:garden', { act: 'harvest', g: +x });
+    if (k === 'gc') { if (!confirm('이 텃밭을 갈아엎을까? 자라던 작물은 사라진다.')) return; return cityCall('city:garden', { act: 'clear', g: +x }); }
     if (k === 'lkp') { const [, room, kind, id] = a.split(':'), L = CT.v.me.look || {}, cur = kind === 'wall' ? ((L.wall || {})[room] || HP.wallDef(room)) : ((L.floor || {})[room] || (room === 'yard' ? 'cobble' : HP.floorDef(room))); CT.lookPv = cur === id ? null : { room, kind, k: id }; return renderHome(); } // 누르면 미리 보기만
     if (a === 'lkno') { CT.lookPv = null; return renderHome(); }
     if (a === 'lkok') { const pv = CT.lookPv; if (!pv) return; const ow = (CT.v.me.look || {}).own || { floor: [], wall: [] }, isW = pv.kind === 'wall';
