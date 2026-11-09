@@ -2658,6 +2658,11 @@
     r.className = `itag r-${it.rarity || 'common'}`;
     r.textContent = RARITY_NAME[it.rarity] || '흔함';
     w.append(c, r);
+    if (itemCat(it) === 'meal') { // 식구 요리: 누가 먹는 음식인지 (인간 식구 / 드래곤 식구 / 둘 다)
+      const id = Object.keys(S.items).find((k) => S.items[k] === it), R = S.kinRules || {};
+      const h = !!(id && R.care?.[id]) || !!it.kin, d = !!(id && R.drakeFood?.items?.[id]) || !!it.kin?.drake;
+      if (h || d) { const k = document.createElement('span'); k.className = 'itag'; k.textContent = h && d ? '인간·드래곤' : h ? '인간' : '드래곤'; k.title = h && d ? '인간 식구와 드래곤 식구 모두 먹는다' : h ? '인간 식구가 먹는다' : '드래곤 식구가 먹는다'; w.append(k); }
+    }
     if (it.exotic) { const x = document.createElement('span'); x.className = 'itag ex'; x.textContent = '이국'; x.title = '안개 너머의 행상인에게서 온 물건'; w.append(x); }
     return w;
   }
@@ -6929,6 +6934,7 @@
         if (r.hidden) { const t = document.createElement('span'); t.className = 'rc-found'; t.textContent = '찾아낸 제작법'; row.querySelector('b').appendChild(t); }
         if (r.awaken) { const t = document.createElement('span'); t.className = 'rc-found rc-awaken'; t.textContent = '각성'; t.title = '레이드에서 얻은 희귀 장비를 그 레이드 조각으로 깨운다'; row.querySelector('b').appendChild(t); }
         row.querySelector('.eff').textContent = effectText(it);
+        { const lv = lvReqTag(it); if (lv) { const ef = row.querySelector('.eff'); if (ef.textContent) ef.append(' · '); ef.appendChild(lv); } } // 장신구 착용 레벨 (모자라면 붉게)
         const needs = row.querySelector('.needs');
         let ok = true;
         const add = (text, lack) => { const n = document.createElement('span'); n.className = `need${lack ? ' lack' : ''}`; n.textContent = text; needs.appendChild(n); if (lack) ok = false; };
