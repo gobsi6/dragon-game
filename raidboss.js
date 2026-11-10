@@ -7,7 +7,7 @@
 // - GM은 혼자서도 시험으로 들어갈 수 있음 (보상·기록 없음)
 // 상태는 world 표의 'raidboss'에 저장 (주간 보상 횟수, 안전판, 첫 처치와 가장 빠른 기록)
 const numJosa = (n, a, b) => ('013678'.includes(String(n).replace(/[^0-9]/g, '').slice(-1)) ? a : b); // 숫자 뒤 조사: 끝자리를 읽은 소리에 받침이 있으면 a (영·일·삼·육·칠·팔, 0으로 끝나면 십·백·천)
-const { RAIDBOSS, REGIONS, ITEMS, SKILLS, STATUS, BREATHS, isTestDragon, SIGNATURE } = require('./game-data');
+const { RAIDBOSS, REGIONS, ITEMS, SKILLS, STATUS, BREATHS, isTestDragon, SIGNATURE, COMBAT } = require('./game-data');
 
 const DAY = 86400000;
 const weekIdx = (now = Date.now()) => Math.floor((Math.floor((now + 9 * 3600000) / DAY) + 3) / 7); // 한국 시각 월요일 0시에 바뀜
@@ -387,13 +387,14 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
     const hit = K.damage(att, recv, k, { armorK: R.armorK });
     // 비늘이 아무리 두꺼워도 레이드 보스의 공격은 최대 체력에 비례한 몫이 더 들어감 (만렙 드래곤에게도 아프게)
     // 거기에도 방어·비늘 세우기·돌 비늘·받는 피해 줄이기는 똑같이 통함. 부하(기사·허수아비)는 공격 세기만큼만
-    const red = (recv.guarding ? 0.5 : 1) * ((recv.st.harden || 0) > 0 ? 0.5 : 1) * ((recv.st.stone || 0) > 0 ? 0.7 : 1) * (recv.taken || 1);
+    const red = (recv.guarding ? 0.5 : 1) * ((recv.st.harden || 0) > 0 ? 0.5 : 1) * ((recv.st.stone || 0) > 0 ? 0.7 : 1) * ((recv.st.counter || 0) > 0 ? COMBAT.counter.cut : 1) * (recv.taken || 1); // 응수도 이 몫을 줄임
     // 보통은 공격 세기 비율이 1을 넘지 않게(부하는 약하게), 균열에서 잿빛으로 기운 보스는 그 배율만큼 이 몫도 커짐
     const atkK = att === fg.boss && fg.B.scale ? att.atk / fg.B.atk : Math.min(1, att.atk / fg.B.atk); // 균열: 기울기에 따른 배율이 이 몫에도 (부하는 1을 넘지 않음)
     const extra = Math.round(recv.hpMax * (fg.B.hitPct ?? R.hitPct) * k * atkK * red); // 보스마다 이 몫을 따로 둘 수 있음 (균열은 낮게)
     const dmg = hit.dmg + extra, note = hit.note;
     recv.hp = Math.max(0, recv.hp - dmg);
     lines.push(`${verb} ${recv.name}에게 ${dmg}의 피해를 입혔다.${note}`);
+    K.counterBack(att, recv, dmg, lines); // 응수: 보스에게는 한 번에 최대 체력의 일부까지
   }
   function earsOff(p, n, lines) {
     if (!p.ears || n <= 0) return;
@@ -448,7 +449,7 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
     if (!foe) return;
     if (SC(fg).beforeAct(fg, p, a, foe, lines)) return; // 보스마다의 행동 (우회 등)을 다 처리했으면 끝
     if (a.type === 'flank') a = { type: 'attack' };
-    const b = { kind: 'raid', a: p, b: foe, foes: fg.foes, target: fg.foes.indexOf(foe), allies: fg.players }; // allies: 혼의 기술(방어·치유)가 동료에게도
+    const b = { kind: 'raid', a: p, b: foe, foes: fg.foes, target: fg.foes.indexOf(foe), allies: fg.players, sigCap: Math.round(B.hp * SIGNATURE.types.atk.raidCap) }; // allies: 혼의 기술(방어·치유)가 동료에게도 · sigCap: 공격 혼의 기술 상한 (GM 시험·지난주 상처로 줄어든 체력과 상관없이 본래 체력 기준)
     const usedN = (p.used || []).length;
     const earsBefore = p.ears;
     const bossHp = fg.boss.hp;
@@ -525,7 +526,7 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
     for (const p of livePlayers(fg)) acts.push({ p, a: fg.pending[p.id] || autoPick(fg, p), auto: !fg.pending[p.id] });
     fg.pending = {};
     // 막는 행동이 먼저, 그다음 빠른 쪽
-    const guardish = (p, a) => a.type === 'guard' || a.type === 'cover' || (a.type === 'skill' && ['harden'].includes(a.id) && !combat.blocked(p, a));
+    const guardish = (p, a) => a.type === 'guard' || a.type === 'cover' || (a.type === 'skill' && ['harden', 'counter'].includes(a.id) && !combat.blocked(p, a));
     for (const x of acts) { x.pri = guardish(x.p, x.a) ? 1 : 0; x.sp = (x.p.spd || 0) + rand(0, 3); }
     acts.sort((p, q) => q.pri - p.pri || q.sp - p.sp);
     for (const x of acts) {

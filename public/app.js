@@ -11043,7 +11043,7 @@
     const usesAlly = p.type === 'cover' || (p.type === 'skill' && p.id === 'mend');
     let tgt = '';
     if (usesAlly) tgt = p.ally ? (v.allies || []).find((a) => a.id === p.ally)?.name || '' : p.type === 'skill' ? '나' : '';
-    else if (['attack', 'flank'].includes(p.type) || (p.type === 'skill' && !['harden', 'focus', 'roar', 'quake'].includes(p.id))) tgt = (v.foes ? v.foes[v.target]?.name : v.foe?.name) || '';
+    else if (['attack', 'flank'].includes(p.type) || (p.type === 'skill' && !['harden', 'focus', 'roar', 'quake', 'counter'].includes(p.id))) tgt = (v.foes ? v.foes[v.target]?.name : v.foe?.name) || '';
     return { name, tgt, usesAlly, foe: !usesAlly && !!tgt };
   }
   // 레이드: 함께 싸우는 동료. 누르면 치유·막아서기 대상으로 고름 (다시 누르면 풀림). 행동을 고른 뒤에는 그 행동의 대상만 바꿈
@@ -12026,9 +12026,9 @@
         for (const [t, T] of Object.entries(SG.types)) {
           if (cur && cur !== t) continue;
           const K = SG.kinds[me.kind]?.[t] || [T.label, ''];
-          const c = card(K[0], cur ? `${T.label} · 내 혼의 기술` : T.label, T.desc, cur ? '한 싸움에 한 번' : '눌러서 고르기', `sig${cur ? ' on' : ''}`, cur ? 'div' : 'button');
+          const c = card(K[0], cur ? `${T.label} · 내 혼의 기술` : T.label, T.desc, cur ? (T.gateNote ? `한 싸움에 한 번 · ${T.gateNote}` : '한 싸움에 한 번') : (T.gateNote ? `${T.gateNote} · 눌러서 고르기` : '눌러서 고르기'), `sig${cur ? ' on' : ''}`, cur ? 'div' : 'button');
           if (!cur) c.addEventListener('click', () => {
-            if (!confirm(`'${K[0]}'(${T.label})${josa(K[0], '을', '를')} 혼의 기술로 삼을까?\n\n바꾸려면 금화 ${SG.runePrice.toLocaleString()}의 ${rune}이 필요하다.`)) return;
+            if (!confirm(`'${K[0]}'(${T.label})${josa(K[0], '을', '를')} 혼의 기술로 삼을까?${T.gateNote ? '\n\n사냥·강적·레이드에서는 체력이 절반 이하로 떨어져야 쓸 수 있다.' : ''}\n\n바꾸려면 금화 ${SG.runePrice.toLocaleString()}의 ${rune}이 필요하다.`)) return;
             socket.emit('sig:choose', { type: t }, (res) => { if (res.error) return toast(res.error); toast(res.lines?.[0] || '혼의 기술을 새겼다.'); });
           });
           row.appendChild(c);
