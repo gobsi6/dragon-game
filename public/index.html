@@ -15531,7 +15531,8 @@
     const [w, hh] = HP.size(name), x = Math.round(px - w / 2), y = Math.round(py - hh / 2);
     const why = HP.where(name, x, y, dkDone(h)); if (why) return { x, y, w, h: hh, ok: false, why };
     const others = CT.dk.list.filter((o, i) => i !== skip), me = { s: name, x, y }, L = HP.effLayer(me, others); // 화분·등·촛대·책은 가구 위에 올리면 'top' 층
-    if (L !== 'flat' && others.some((o) => HP.effLayer(o, others) === L && HP.hit(x, y, w, hh, [o.x, o.y, ...HP.size(o.s)]))) return { x, y, w, h: hh, ok: false, why: '다른 장식과 겹친다.' };
+    const Z = HP.zone(me); // 방 안과 바깥뜰 가구는 서로 겹쳐도 됨 (서버와 같음)
+    if (L !== 'flat' && others.some((o) => HP.effLayer(o, others) === L && HP.zone(o) === Z && HP.hit(x, y, w, hh, [o.x, o.y, ...HP.size(o.s)]))) return { x, y, w, h: hh, ok: false, why: '다른 장식과 겹친다.' };
     return { x, y, w, h: hh, ok: true };
   }
   // 놓인 장식 방향 바꾸기 (의자 앞·뒤·옆, 긴 탁자 가로·세로): 가운데를 축으로, 그 자리에 못 놓으면 그대로 두고 알림
@@ -15598,7 +15599,7 @@
       ${sel || dk.pick ? `<div class="dk-sel"><b>${sel ? `${dkName(sel.s)}${sel.f ? ' (좌우 반전)' : ''}` : `놓을 장식: ${dkName(dkPickN(dk))}${dk.pickF ? ' (좌우 반전)' : ''}`}</b>${turnable ? `<button type="button" class="btn sm" data-ct="dk:turn">${HP.groupLabel(sel ? HP.baseOf(sel.s) : dk.pick)} 바꾸기</button>` : ''}<button type="button" class="btn sm" data-ct="dk:flip">좌우 반전</button>${sel ? '<button type="button" class="btn sm" data-ct="dk:del">치우기</button>' : ''}<button type="button" class="btn sm" data-ct="dk:none">선택 취소</button></div>` : ''}
       <div class="lk-tabs dk-cats" role="tablist" aria-label="가구 분류">${DK_CATS.map(([k, n]) => `<button type="button" role="tab" aria-selected="${cat === k}" class="${cat === k ? 'on' : ''}" data-ct="dkc:${k}">${n} <small>${cnt(k)}</small></button>`).join('')}</div>
       <div class="dk-pal" role="list">${list.map((n) => { const left = dkLeft(h, n), own = h.furn?.[n] || 0; return `<button type="button" role="listitem" class="dk-it${dk.pick === n ? ' on' : ''}${left > 0 ? '' : ' none'}" data-ct="dk:pick:${n}" aria-pressed="${dk.pick === n}"><canvas class="dk-th" data-s="${n}" aria-hidden="true"></canvas><span>${dkName(n)}</span><em class="dk-n">${own ? `${Math.max(0, left)} / ${own}` : '없음'}</em></button>`; }).join('')}</div>
-      <small class="note">되살린 칸 안과, 마당을 되살린 뒤에는 돌 마당과 담 안 모래밭에도 놓을 수 있다. 방 아랫벽 쪽에 붙이면 앞쪽 벽 뒤로 살짝 가려진다. 창문·깃발은 벽에 걸려 가구 뒤에 보인다. '탁상 소품'은 탁자나 걸상 같은 가구 위에 올려 둘 수 있고, 가구를 옮기면 함께 따라간다.</small>`;
+      <small class="note">되살린 칸 안과, 마당을 되살린 뒤에는 돌 마당과 담 안 바깥뜰에도 놓을 수 있다. 바깥뜰에서는 건물 앞 땅에 세우면 건물 아랫부분에 걸쳐 놓인다. 방 아랫벽 쪽에 붙이면 앞쪽 벽 뒤로 살짝 가려진다. 창문·깃발은 벽에 걸려 가구 뒤에 보인다. '탁상 소품'은 탁자나 걸상 같은 가구 위에 올려 둘 수 있고, 가구를 옮기면 함께 따라간다.</small>`;
   }
   function dkDraw(body, h, ghost) { // 도면은 편집 중인 배치로, 위 덧칠 캔버스에는 아직 못 쓰는 곳·고른 장식·놓을 자리
     const dk = CT.dk, cv = body.querySelector('.hp.dk .hp-cv'), fx = body.querySelector('.dk-fx'); if (!cv || !fx) return;
@@ -15720,7 +15721,7 @@
     function where(s, x, y, done) {
       const [w, h] = size(s);
       for (const [id, [rx, ry, rw, rh]] of Object.entries(ROOMS)) {
-        if (id === 'yard' || !(x + w / 2 >= rx && x + w / 2 < rx + rw && y + h / 2 >= ry && y + h / 2 < ry + rh + 6)) continue;
+        if (id === 'yard' || !(x + w / 2 >= rx && x + w / 2 < rx + rw && y + h / 2 >= ry && y + h / 2 < ry + rh)) continue;
         if (!done.includes(id)) return '아직 되살리지 않은 칸이다.';
         if (!(x >= rx + 5 && x + w <= rx + rw - 5 && y >= ry + 3 && y + h <= ry + rh + 2)) return '방 벽 안쪽에 놓아야 한다.';
         if (id === 'live' && y + h > ry + rh - 7 && x < P.door[1] && P.door[0] < x + w) return '문 앞은 비워 둬야 한다.';
@@ -15730,7 +15731,8 @@
       const [yx, yy, yw, yh] = ROOMS.yard;
       if (hit(x, y, w, h, ROOMS.yard)) return x >= yx + 2 && y >= yy - 10 && y + h >= yy + 6 && x + w <= yx + yw - 2 && y + h <= yy + yh - 2 ? null : '마당 돌 안쪽에 놓아야 한다.'; // 위쪽은 발이 마당 안이면 윗부분이 담(돌 테두리)을 가려도 됨 (서버와 같음)
       if (!(x >= 9 && y >= 9 && x + w <= W - 9 && y + h <= H - 9)) return '바깥 담 안에 놓아야 한다.';
-      if (P.block.some((b) => hit(x, y, w, h, b))) return '건물이나 길 위에는 놓을 수 없다.';
+      for (const [id, [rx, ry, rw, rh]] of Object.entries(ROOMS)) if (id !== 'yard' && hit(x, y, w, h, [rx - 1, ry - 1, rw + 2, rh + 11]) && y + h < ry + rh + 10) return '건물 앞에 놓으려면 벽 아래 땅에 세워야 한다.'; // 바깥뜰: 건물과 겹치면 발이 벽 아래 땅에 (윗부분은 건물 아랫부분에 걸쳐도 됨, 서버와 같음)
+      if (P.block.some((b) => hit(x, y, w, h, b))) return '길 위에는 놓을 수 없다.';
       return null;
     }
     // 올려 둔 소품: 발(아래 가운데)이 바닥 가구 위에 있으면 그 가구 위에 올린 것 (서버 decoSupport와 같음)
@@ -15738,6 +15740,9 @@
       return list.find((q) => q !== o && layer(q.s) === '' && !(sp(q.s) && sp(q.s).stack) && (() => { const [qw, qh] = size(q.s); return fx >= q.x && fx < q.x + qw && fy >= q.y && fy < q.y + qh; })()) || null; };
     const effLayer = (o, list) => (support(o, list) ? 'top' : layer(o.s));
     // 그리는 순서: 깔개 → 벽 장식 → 가구(아래쪽이 앞) · 올려 둔 소품은 받친 가구 바로 다음
+    // 건물 밖(가운데가 어느 방에도 없음)에 선 가구는 앞쪽 벽(방 아랫면)보다 앞에 그림. 깔개처럼 납작한 것은 그대로 아래에
+    const zone = (o) => { const [w, h] = size(o.s), cx = o.x + w / 2, cy = o.y + h / 2; const r = Object.entries(ROOMS).find(([id, [rx, ry, rw, rh]]) => id !== 'yard' && cx >= rx && cx < rx + rw && cy >= ry && cy < ry + rh); return r ? r[0] : 'out'; }; // 서버 decoZone과 같음
+    const outdoor = (o) => layer(o.s) !== 'flat' && zone(o) === 'out';
     const order = (o, list = []) => { const L = layer(o.s); if (L === 'flat') return -1e4; if (L === 'wall') return -5e3 + o.y; const b = support(o, list); return b ? b.y + size(b.s)[1] + 0.5 + (o.y + size(o.s)[1]) / 1e3 : o.y + size(o.s)[1]; };
     // 움직이는 그림: 시각으로 장면을 고름. 가구마다 장면 하나의 길이(ms, 팩에 없으면 0.16초)가 달라도 됨 (불꽃은 조금 느리게)
     const frameOf = (k) => Math.floor(performance.now() / ((sp(k) && sp(k).ms) || 160)) % FR[k].length;
@@ -15786,15 +15791,18 @@
       else {
         const sc = cv._hpStatic || document.createElement('canvas'); sc.width = W; sc.height = H; const sg = sc.getContext('2d'); sg.imageSmoothingEnabled = false;
         sg.drawImage(baseFor(d.look), 0, 0);
-        items.forEach((o) => { if (!FR[o.s]) { drawSprite(sg, o.s, o.x, o.y, o.f); drawCrops(sg, o, d.garden); } });
-        sg.drawImage(IMG.__front, 0, 0); veil(sg, d.rooms);   // 움직이는 가구는 되살린 칸에만 놓이므로 공사 막과 겹치지 않음
+        items.forEach((o) => { if (!FR[o.s] && !outdoor(o)) { drawSprite(sg, o.s, o.x, o.y, o.f); drawCrops(sg, o, d.garden); } });
+        sg.drawImage(IMG.__front, 0, 0); veil(sg, d.rooms);
+        items.forEach((o) => { if (!FR[o.s] && outdoor(o)) { drawSprite(sg, o.s, o.x, o.y, o.f); drawCrops(sg, o, d.garden); } });   // 움직이는 가구는 되살린 칸에만 놓이므로 공사 막과 겹치지 않음
         cv._hpStatic = anim.length ? sc : null; cv._hpStaticOf = anim.length ? d : null; g.drawImage(sc, 0, 0);
       }
       for (const o of anim) { // 움직이는 가구 자리만 다시: 바탕 → 그 자리에 겹치는 가구 모두(그리는 순서대로, 움직이는 것은 지금 장면) → 앞쪽 벽
         const [w, h] = size(o.s); g.save(); g.beginPath(); g.rect(o.x, o.y, w, h); g.clip();
         g.drawImage(baseFor(d.look), 0, 0);
-        items.forEach((q) => { const [qw, qh] = size(q.s); if (hit(o.x, o.y, w, h, [q.x, q.y, qw, qh])) { drawSprite(g, q.s, q.x, q.y, q.f); drawCrops(g, q, d.garden); } });
-        g.drawImage(IMG.__front, 0, 0); g.restore();
+        const near = items.filter((q) => { const [qw, qh] = size(q.s); return hit(o.x, o.y, w, h, [q.x, q.y, qw, qh]); });
+        near.forEach((q) => { if (!outdoor(q)) { drawSprite(g, q.s, q.x, q.y, q.f); drawCrops(g, q, d.garden); } });
+        g.drawImage(IMG.__front, 0, 0);
+        near.forEach((q) => { if (outdoor(q)) { drawSprite(g, q.s, q.x, q.y, q.f); drawCrops(g, q, d.garden); } }); g.restore();
       }
       cv._hpAnim = anim.length ? d : null; if (anim.length) LIVE.add(cv); else LIVE.delete(cv); // 움직이는 가구가 있는 도면만 따로 기억
     }
@@ -15804,7 +15812,7 @@
         const key = cv._hpAnim.deco.filter((o) => FR[o.s]).map((o) => frameOf(o.s)).join(); if (key !== cv._hpKey) { cv._hpKey = key; paint(cv, cv._hpAnim); } } }, 80);
     const defaults = (plot, done) => (P && P.defaults[plot] ? P.defaults[plot].filter((o) => done.includes(o.room)).map(({ room, ...o }) => o) : []);
     const catalog = () => (P ? Object.keys(P.cat).sort((a, b) => DK_CATS.findIndex(([c]) => c === P.cat[a].cat) - DK_CATS.findIndex(([c]) => c === P.cat[b].cat)) : []);
-    return { W, H, ROOMS, ready: () => ok, onReady: (f) => (ok ? f() : wait.push(f)), plan, paint, sprite, swatch, size, defaults, where, hit, layer, order, effLayer, support, baseOf, drawSprite, catalog,
+    return { W, H, ROOMS, ready: () => ok, onReady: (f) => (ok ? f() : wait.push(f)), plan, paint, sprite, swatch, size, defaults, where, hit, layer, order, effLayer, support, baseOf, drawSprite, catalog, zone,
       name: (k) => (sp(k) ? sp(k).name : k), cat: (k) => (P && P.cat[k] ? P.cat[k].cat : ''),
       group: (b) => (P && P.groups[b]) || null, groupLabel: (b) => (P && P.groupLabel && P.groupLabel[b]) || '방향', /* 꽃은 '모양 바꾸기' */ variant: (b, i) => { const g = P && P.groups[b]; return g ? g[i % g.length] : b; },
       floors: () => (P ? P.floors : []), walls: () => (P ? P.walls : []), yardFloors: () => (P ? P.yardFloors.map((id) => (id === 'cobble' ? { id, name: '회색 자갈' } : P.floors.find((f) => f.id === id))) : []),

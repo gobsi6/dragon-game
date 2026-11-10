@@ -322,7 +322,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
         if (m.furn.arch_small) { m.furn.arch = (m.furn.arch || 0) + m.furn.arch_small; delete m.furn.arch_small; }
         if (Array.isArray(m.deco)) m.deco = m.deco.filter((o) => o.s !== 'arch_small');
       }
-      // 4 → 5: 덩굴 아치 · 5 → 6: 작은 종 · 6 → 7: 울타리 네 가지·꽃 · 7 → 8: 촛대 스탠드·초, 불 가구 움직임 · 8 → 9: 부엌·소품 가구, 깔개 색 · 9 → 10: 색유리 창·마법서·마력 수정·파랑 화분대 · 10 → 11: 긴 깔개 색 여섯, 네모 깔개 따로 · 11 → 12: 별밤 벽지·연한 벽돌 바닥·탁상시계·책 선반·은 거울·달 깔개 · 13 → 14: 마법 등불, 횃불 옆모습, 장작 테두리 · 15 → 16: 작은 덩굴 아치 · 16 → 17: 작은 덩굴 아치 뺌 (새로 옮길 것 없음)
+      // 4 → 5: 덩굴 아치 · 5 → 6: 작은 종 · 6 → 7: 울타리 네 가지·꽃 · 7 → 8: 촛대 스탠드·초, 불 가구 움직임 · 8 → 9: 부엌·소품 가구, 깔개 색 · 9 → 10: 색유리 창·마법서·마력 수정·파랑 화분대 · 10 → 11: 긴 깔개 색 여섯, 네모 깔개 따로 · 11 → 12: 별밤 벽지·연한 벽돌 바닥·탁상시계·책 선반·은 거울·달 깔개 · 13 → 14: 마법 등불, 횃불 옆모습, 장작 테두리 · 15 → 16: 작은 덩굴 아치 · 16 → 17: 작은 덩굴 아치 뺌 · 17 → 18: 건물 앞·바깥뜰에 놓기 (새로 옮길 것 없음)
       m.packV = PACK.v; return;
     }
     m.packV = PACK.v;
@@ -901,10 +901,12 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
   }
   // 꾸미기 놓는 자리 (화면 HP.where와 같은 규칙): 되살린 칸의 벽 안쪽(아랫벽 뒤로 조금 숨길 수 있음, 거처 문 앞 제외) · 돌 마당 · 담 안 모래밭
   const decoBox = (x, y, w, h, [bx, by, bw, bh]) => x < bx + bw && bx < x + w && y < by + bh && by < y + h;
+  // 가구가 선 곳: 가운데가 들어 있는 방, 아니면 바깥('out')
+  function decoZone(s, x, y) { const [w, h] = DECO.size[s], cx = x + w / 2, cy = y + h / 2; for (const [id, [rx, ry, rw, rh]] of Object.entries(DECO.rooms)) if (cx >= rx && cx < rx + rw && cy >= ry && cy < ry + rh) return id; return 'out'; }
   function decoWhere(s, x, y, done) {
     const [w, h] = DECO.size[s];
     for (const [id, [rx, ry, rw, rh]] of Object.entries(DECO.rooms)) {
-      if (!(x + w / 2 >= rx && x + w / 2 < rx + rw && y + h / 2 >= ry && y + h / 2 < ry + rh + 6)) continue;
+      if (!(x + w / 2 >= rx && x + w / 2 < rx + rw && y + h / 2 >= ry && y + h / 2 < ry + rh)) continue; // 가운데가 방 안이면 방 가구 (아래쪽 앞면에 걸친 바깥 가구는 아래 '건물 앞'으로)
       if (!done.includes(id)) return '아직 되살리지 않은 칸이다.';
       if (!(x >= rx + 5 && x + w <= rx + rw - 5 && y >= ry + 3 && y + h <= ry + rh + 2)) return '방 벽 안쪽에 놓아야 한다.';
       if (id === 'live' && y + h > ry + rh - 7 && x < DECO.door[1] && DECO.door[0] < x + w) return '문 앞은 비워 둬야 한다.';
@@ -914,7 +916,9 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     const [yx, yy, yw, yh] = DECO.yard;
     if (decoBox(x, y, w, h, DECO.yard)) return x >= yx + 2 && y >= yy - 10 && y + h >= yy + 6 && x + w <= yx + yw - 2 && y + h <= yy + yh - 2 ? null : '마당 돌 안쪽에 놓아야 한다.'; // 위쪽은 발이 마당 안이면 윗부분이 담(돌 테두리)을 가려도 됨
     if (!(x >= 9 && y >= 9 && x + w <= DECO.W - 9 && y + h <= DECO.H - 9)) return '바깥 담 안에 놓아야 한다.';
-    if (DECO.block.some((b) => decoBox(x, y, w, h, b))) return '건물이나 길 위에는 놓을 수 없다.';
+    // 바깥뜰(담 안 모래·잔디): 건물(아래쪽 앞면 8줄 + 그림자 2줄까지)과 겹치면, 발이 그 아래 땅에 있어야 함. 그러면 윗부분이 건물 아랫부분에 걸쳐도 됨 (그 가구는 건물보다 앞에 그려짐)
+    for (const [rx, ry, rw, rh] of Object.values(DECO.rooms)) if (decoBox(x, y, w, h, [rx - 1, ry - 1, rw + 2, rh + 11]) && y + h < ry + rh + 10) return '건물 앞에 놓으려면 벽 아래 땅에 세워야 한다.';
+    if (DECO.block.some((b) => decoBox(x, y, w, h, b))) return '길 위에는 놓을 수 없다.';
     return null;
   }
   // 장식 배치 저장. list가 null이면 처음 모습(칸마다 정해진 가구)으로
@@ -935,8 +939,9 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     for (const it of items) { // 올려 둔 소품은 받친 가구가 목록 어디에 있든 알아야 해서, 다 읽은 뒤에 검사
       const [w, h] = DECO.size[it.s], L = decoLayer(it, items);
       const why = decoWhere(it.s, it.x, it.y, done); if (why) return err(`${FURN[DECO.base[it.s]]?.name || '장식'}: ${why}`);
-      if (L !== 'flat' && boxes.some((b) => b.L === L && decoBox(it.x, it.y, w, h, [b.x, b.y, b.w, b.h]))) return err('장식끼리 겹친다.');
-      boxes.push({ ...it, w, h, L });
+      const Z = decoZone(it.s, it.x, it.y); // 벽 안쪽(방)과 바깥뜰은 서로 겹쳐도 됨 (바깥 가구가 건물 아랫부분에 걸칠 때)
+      if (L !== 'flat' && boxes.some((b) => b.L === L && b.Z === Z && decoBox(it.x, it.y, w, h, [b.x, b.y, b.w, b.h]))) return err('장식끼리 겹친다.');
+      boxes.push({ ...it, w, h, L, Z });
     }
     grantFurn(d);
     const used = {}; boxes.forEach((b) => { const k = DECO.base[b.s]; used[k] = (used[k] || 0) + 1; });
