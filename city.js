@@ -115,6 +115,8 @@ const PACK = JSON.parse(require('fs').readFileSync(require('path').join(__dirnam
 const FURN = Object.fromEntries(Object.entries(PACK.cat).map(([k, c]) => [k, { name: c.name, seals: c.seals, mats: c.mats, cat: c.cat }]));
 // 장식 도면: 오르딘에게 석공 인장으로 사면 그 가구를 만들 수 있게 됨 (한 번 사면 계속). 칸을 되살릴 때 생기는 기본 가구는 도면 없이도 받음
 const BLUEPRINT = Object.fromEntries(Object.entries(PACK.cat).filter(([, c]) => c.bp > 0).map(([k, c]) => [k, c.bp]));
+const BPKEY = Object.fromEntries(Object.entries(PACK.cat).map(([k, c]) => [k, c.bpKey || k])); // 색유리 창처럼 여러 색이 도면 하나를 같이 씀
+const bpName = (k) => PACK.cat[k].bpName || PACK.cat[k].name;
 // 칸을 되살릴 때 저절로 생기는 기본 가구 (집터마다, 칸마다 개수). 기본 배치(PACK.defaults)에서 센 값
 const FURN_GIFT = PACK.gift;
 // 바닥·벽 바꾸기: 지붕 있는 칸(거처·고유 칸·작업실)의 바닥과 벽, 마당 안쪽 바닥 (석공 인장, 한 번 사면 어느 칸에서든)
@@ -143,9 +145,9 @@ const GSTAGE = ['씨앗', '새싹', '다 자람', '거둔 뒤'];
 // 2026-11 팩 그림으로 바꾸기 전 가구·도면 → 새 가구 (가진 수를 그대로 옮김. 짝이 없는 것은 석공 인장으로 돌려줌)
 const OLD_FURN = { pot: 'pot', crate: 'crate', barrel: 'barrel', signpost: 'signpost', bedplot: 'bedplot', planter: 'planter', bench: 'bench', lamp: 'lamp', table: 'table', shelf: 'shelf', rug: 'rug', steps: 'rock', bed: 'bed', workbench: 'workbench',
   tablets: 'bookcase', tablets2: 'bookcase', tablets3: 'bookcase', arch: 'arch', carvedesk: 'lectern', anvil: 'anvil', bell: 'bell', hearth: 'hearth', telescope: 'clock', pond: 'pond', well: 'well', jar: 'pot', chair: 'chair',
-  flowers: 'flowers', mushroom: 'mushroom', bush: 'bush', stepstone: 'rock', flowerbed: 'planter', stonelamp: 'lamp', brazier: 'torch', tree: 'bush', candle: 'candle', cactus: 'pot', chest: 'chest', sofa: 'bench',
+  fence: 'fence_wood', flowers: 'flowers', mushroom: 'mushroom', bush: 'bush', stepstone: 'rock', flowerbed: 'planter', stonelamp: 'lamp', brazier: 'torch', tree: 'bush', candle: 'candle', cactus: 'pot', chest: 'chest', sofa: 'bench',
   mosaic: 'rug', crystallamp: 'lamp', goldlamp: 'lamp', glowpatch: 'bedplot', bookcase: 'bookcase', nestbed: 'rug', tapestry: 'banner', fountain: 'fountain', goldpile: 'chest', orb: 'lamp' };
-const OLD_FURN_SEALS = { fence: 4 }; // 짝이 없어 인장으로 돌려주는 가구 (만들 때 든 인장)
+const OLD_FURN_SEALS = {}; // 짝이 없어 인장으로 돌려주는 가구 (만들 때 든 인장). 나무 울타리는 2026-11 v7부터 새 나무 울타리로 옮겨짐
 const OLD_BP = { arch: 'arch', hearth: 'hearth', bookcase: 'bookcase', well: 'well', fountain: 'fountain', pond: 'pond', bell: 'bellstand', carvedesk: 'lectern', tapestry: 'banner', telescope: 'clock' };
 const OLD_BP_SEALS = { stonelamp: 30, brazier: 30, mosaic: 40, crystallamp: 40, goldlamp: 50, glowpatch: 50, nestbed: 60, goldpile: 50, orb: 50 };
 // 오르딘 교환: 하루 3번까지(희귀·도시 재료 통틀어), 석공 인장으로 귀한 재료나 도시 재료 묶음을 바꿈. 날마다 희귀 1가지 + 도시 재료 3가지가 나옴 [물건, 인장, 개수]
@@ -292,7 +294,31 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
         for (const k of ['bedplot2', 'bedplot3']) if (m.furn[k]) { m.furn.bedplot = (m.furn.bedplot || 0) + m.furn[k]; delete m.furn[k]; }
         if (Array.isArray(m.deco)) m.deco.forEach((o) => { if (o.s === 'bedplot2' || o.s === 'bedplot3') o.s = 'bedplot'; });
       }
-      // 4 → 5: 덩굴 아치가 다시 생김 · 5 → 6: 작은 종이 다시 생김 (새로 옮길 것 없음)
+      if (m.plot && m.packV <= 10 && Array.isArray(m.deco)) { // 10 → 11: 네모 깔개가 '깔개'의 색에서 따로 '네모 깔개'가 됨. 놓아 둔 네모 깔개 수만큼 깔개에서 네모 깔개로 옮김
+        const n = m.deco.filter((o) => ['rug_red', 'rug_blue', 'rug_orange', 'rug_teal'].includes(o.s)).length;
+        if (n) { const mv = Math.min(n, m.furn.rug || 0); m.furn.rug = (m.furn.rug || 0) - mv; m.furn.rug_red = (m.furn.rug_red || 0) + n; }
+      }
+      if (m.plot && m.packV <= 12) { // 12 → 13: 색이 여러 개인 가구를 색마다 따로 · 둥근 걸상은 걸상으로 · 새로 도면이 생긴 가구는 이미 가졌으면 도면도 줌
+        if (m.furn.stool2) { m.furn.stool = (m.furn.stool || 0) + m.furn.stool2; delete m.furn.stool2; }
+        if (!m.bp) m.bp = {}; for (const k of ['chair_red', 'mirror', 'rug_moon', 'fence_iron', 'glasswin']) if (m.furn[k] > 0) m.bp[k] = 1; // 나누기 전에 (색유리 창은 어느 색이든 가졌으면)
+        const SPLIT = { rug: ['rug_long_blue', 'rug_long_orange', 'rug_long_green', 'rug_long_magenta', 'rug_long_teal'], rug_red: ['rug_blue', 'rug_orange', 'rug_green', 'rug_magenta', 'rug_teal'],
+          glasswin: ['glasswin_1', 'glasswin_2', 'glasswin_3', 'glasswin_4', 'glasswin_5'], planter: ['planter_blue'], crystal: ['crystal_2', 'crystal_3', 'crystal_4', 'crystal_5', 'crystal_6', 'crystal_7'] };
+        const CRYS = { crystal_3: 'crystal_2', crystal_5: 'crystal_4', crystal_7: 'crystal_6' };
+        if (Array.isArray(m.deco)) {
+          for (const o of m.deco) if (o.s === 'stool2') o.s = 'stool';
+          for (const [old, vs] of Object.entries(SPLIT)) for (const v of vs) {
+            const nb = CRYS[v] || v, n = m.deco.filter((o) => o.s === v).length; if (!n) continue;
+            const mv = Math.min(n, m.furn[old] || 0); m.furn[old] = (m.furn[old] || 0) - mv; m.furn[nb] = (m.furn[nb] || 0) + n;
+          }
+        }
+      }
+      if (m.plot && m.packV <= 14 && Array.isArray(m.deco)) { // 14 → 15: '모양'으로 묶었던 꽃·접시·그릇 더미·마법서·수정을 따로. 놓아 둔 모양 수만큼 그 가구로 옮김
+        const SPLIT = { flower1: ['flower2', 'flower3', 'flower4', 'flower5', 'flower6', 'flower7', 'flower8', 'flower9'], plate: ['plate_s', 'plate_b'], dishes: ['dishes_s'], spellbook: ['spellbook_1'],
+          crystal: ['crystal_1'], crystal_2: ['crystal_3'], crystal_4: ['crystal_5'], crystal_6: ['crystal_7'] };
+        for (const [old, vs] of Object.entries(SPLIT)) for (const v of vs) { const n = m.deco.filter((o) => o.s === v).length; if (!n) continue;
+          const mv = Math.min(n, m.furn[old] || 0); m.furn[old] = (m.furn[old] || 0) - mv; m.furn[v] = (m.furn[v] || 0) + n; }
+      }
+      // 4 → 5: 덩굴 아치 · 5 → 6: 작은 종 · 6 → 7: 울타리 네 가지·꽃 · 7 → 8: 촛대 스탠드·초, 불 가구 움직임 · 8 → 9: 부엌·소품 가구, 깔개 색 · 9 → 10: 색유리 창·마법서·마력 수정·파랑 화분대 · 10 → 11: 긴 깔개 색 여섯, 네모 깔개 따로 · 11 → 12: 별밤 벽지·연한 벽돌 바닥·탁상시계·책 선반·은 거울·달 깔개 · 13 → 14: 마법 등불, 횃불 옆모습, 장작 테두리 (새로 옮길 것 없음)
       m.packV = PACK.v; return;
     }
     m.packV = PACK.v;
@@ -412,7 +438,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     const e = ready(d); if (e) return e;
     const m = ct(d); if (!m.plot) return err('먼저 집터를 골라야 한다.');
     if (!own(FURN, s)) return err('모르는 가구다.'); const f = { ...FURN[s], seals: sealCost(FURN[s]) };
-    if (own(BLUEPRINT, s) && !(m.bp || {})[s]) return err(`${f.name} 도면이 있어야 만들 수 있다. 꾸미기의 '도면'에서 살 수 있다.`);
+    if (own(BLUEPRINT, BPKEY[s]) && !(m.bp || {})[BPKEY[s]]) return err(`${bpName(BPKEY[s])} 도면이 있어야 만들 수 있다. 꾸미기의 '도면'에서 살 수 있다.`);
     n = Math.max(1, Math.min(5, Math.floor(Number(n) || 1)));
     if (m.seals < f.seals * n) return err(`석공 인장 ${f.seals * n}개가 있어야 한다. (가진 것 ${m.seals})`);
     const lack = Object.entries(f.mats).filter(([k, q]) => have(d, k) < q * n);
@@ -949,9 +975,9 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
         golems: m.golems.map((g, i) => ({ i, name: g.name, named: !!g.named, awake: g.awake, job: g.job, hours: g.hours, start: g.start, until: g.until, report: g.report, last: g.last || null, gate: g.awake ? null : gateOf(m, i), dur: g.dur ?? R.wear.max })),
         garden: m.plot ? { list: gBeds(m).map((o, k) => ({ g: o.g, n: k + 1, ...(m.garden[o.g] ? gInfo(m.garden[o.g]) : { c: null }) })), crops: GARDEN.crops, dry: GARDEN.dry, gold: Math.floor(d.gold || 0) } : null,
         deco: m.deco || null, decoRules: { max: DECO.max }, packNote: m.packNote && m.packNote.at > Date.now() - 7 * 864e5 ? m.packNote : null, pondBack: m.pondBack && m.pondBack.at > Date.now() - 7 * 864e5 ? m.pondBack : null,
-        furn: m.furn, furnCat: Object.entries(FURN).map(([k, f]) => ({ s: k, name: f.name, cat: f.cat, seals: sealCost(f), base: f.seals, bp: own(BLUEPRINT, k) ? !!(m.bp || {})[k] : null, mats: Object.entries(f.mats).map(([id, n]) => ({ id, name: ITEMS[id].name, need: n })) })),
+        furn: m.furn, furnCat: Object.entries(FURN).map(([k, f]) => ({ s: k, name: f.name, cat: f.cat, seals: sealCost(f), base: f.seals, bp: own(BLUEPRINT, BPKEY[k]) ? !!(m.bp || {})[BPKEY[k]] : null, mats: Object.entries(f.mats).map(([id, n]) => ({ id, name: ITEMS[id].name, need: n })) })),
         zday: Object.fromEntries(Object.entries(m.zday || {}).filter(([, v]) => v === dayIdx())), springLeft: ZF.springTimes - (m.spring && m.spring.day === dayIdx() ? m.spring.n : 0), bell: (() => { const bt = bellToday(), by = Array.isArray(bt.by) ? bt.by : []; return { n: by.length, need: ZF.bellNeed, mine: by.includes(d.name), on: by.length >= ZF.bellNeed }; })(), forgeOff: done('forge') ? ZF.forgeOff : 0,
-        bp: Object.entries(BLUEPRINT).map(([k, c]) => ({ s: k, name: FURN[k].name, seals: c, have: !!(m.bp || {})[k] })),
+        bp: Object.entries(BLUEPRINT).map(([k, c]) => ({ s: k, name: bpName(k), seals: c, have: !!(m.bp || {})[k] })),
         look: { floor: (m.look && m.look.floor) || {}, wall: (m.look && m.look.wall) || {}, own: m.plot ? lookOwn(m) : { floor: [], wall: [] }, cost: LOOK.cost },
         trade: { left: tradeLeft(m), per: TRADE.perDay, offers: tradeOffers().map(([k, c, q], i) => ({ i, id: k, name: ITEMS[k].name, rarity: ITEMS[k].rarity, seals: c, qty: q || 1, city: TRADE.city.some((x) => x[0] === k) })) },
         perk: m.plot ? (() => { const on = perkOn(m), pd = perkDaily(m), max = perkMax(m); return { on, up: perkUp(m), kind: m.plot === 'forge' ? 'passive' : m.plot === 'belfry' ? 'recall' : 'daily', text: PI[m.plot].perk, left: on ? Math.max(0, max - pd.n) : 0, max, off: m.plot === 'forge' ? PERK.forgeOff[perkLv(m)] : 0 }; })() : null,

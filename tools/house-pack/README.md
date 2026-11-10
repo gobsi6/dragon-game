@@ -18,9 +18,20 @@
 4. `make_pack.py` — 위 결과를 모아 `public/house/pack.json`으로 (게임 가구 이름으로 바꾸고 기본 가구 수 셈)
 4-1. `make_arch.py` — 덩굴 아치: 직접 그려 온 `src/arch_src.png`의 회색 그림자를 팩 그림자 색으로 바꿔 `src/arch.png`로
 4-2. `make_bell.py` — 작은 종(`src/bell.png`): 종 받침대의 종 + 나무 손잡이
+4-3. `add_fences.py` — 울타리 네 가지(가로·세로·기둥)와 꽃 아홉 가지 (pack.json v7)
+4-4. `fix_anim.py` — 화덕·촛대·등·횃불 움직이는 장면, 촛대 스탠드·초, 우물 지붕 갈색 (pack.json v8)
+4-5. `add_more.py` — 부엌·소품 가구, 붉은 방석 의자, 깔개 색 (pack.json v9)
+4-6. `add_alchemy.py` — 색유리 창·펼친 마법서·마력 수정·파랑 화분대 (pack.json v10)
+4-7. `add_rugs.py` — 긴 깔개(src/rug_long.png 기준) 색 여섯 · 네모 깔개 색 여섯 (pack.json v11)
+4-8. `add_bedroom.py` — 별밤 벽지·연한 벽돌 바닥·탁상시계·책 바구니·은 거울·달 깔개 (pack.json v12)
+4-9. `split_colors.py` — 색마다 따로 사는 가구로 나누기, 이름 바꾸기, 도면 가구 (pack.json v13)
+4-10. `add_lanterns.py` — 마법 등불(노랑·파랑, 앞·옆), 횃불 옆모습, 장작 테두리 (pack.json v14)
+4-10-1. `split_shapes.py` — 모양 묶음을 따로 사는 가구로, 탁상 소품 분류 (pack.json v15)
+4-11. `order_cat.py` — 가구 목록 순서: 색만 다른 가구와 깔개 종류를 한데 모음 (가구를 더한 뒤 마지막에 돌림)
 5. `add_pond.py` — `src/pond.png`(다듬은 연못)을 넣고 연잎·물결 흔들림 장면을 만들고, 샘가 집 기본 배치를 연못으로 (pack.json v2)
 6. `add_garden.py` — 텃밭: 흙 두둑 그림과 작물 단계 그림(당근·산딸기·해바라기) 넣기, 예전 두 텃밭을 '텃밭'으로 합침 (pack.json v4)
 6-1. `fix_soil.py` — 텃밭 흙(두둑·작물 둔덕)을 베이지 갈색으로
+6-2. `apply_preview_edit.py` — 직접 고친 집터 미리보기 그림(바탕+앞쪽 벽 겹친 것)과 다른 점만 pack.json에 옮김
 7. `fix_shade.py` — 방 바닥의 벽 밑 그늘이 옆문 쪽에서 끊긴 것을 이어 그림
 8. `rules.py` — 기본 배치가 놓는 규칙에 맞는지 확인
 

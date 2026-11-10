@@ -1209,6 +1209,7 @@
       craft: () => { tone(330, 0.06, { type: 'square', gain: 0.04 }); tone(330, 0.06, { type: 'square', gain: 0.04, at: 0.1 }); tone(660, 0.18, { type: 'triangle', gain: 0.07, at: 0.2 }); },
       drop: () => tone(320, 0.18, { to: 120, type: 'triangle', gain: 0.08 }),
       notice: () => { tone(880, 0.09, { gain: 0.05 }); tone(1174, 0.16, { gain: 0.05, at: 0.08 }); },
+      tp: () => { tone(1046, 0.12, { type: 'sine', gain: 0.045 }); tone(1568, 0.2, { type: 'sine', gain: 0.04, at: 0.1 }); tone(1318, 0.28, { type: 'sine', gain: 0.03, at: 0.22 }); }, // 텔레파시가 왔을 때: 맑게 울리는 세 음
       win: () => [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.16, { type: 'triangle', gain: 0.07, at: i * 0.09 })),
       rested: () => { [587, 740, 880].forEach((f, i) => tone(f, 0.22, { gain: 0.06, at: i * 0.16 })); tone(1175, 0.7, { gain: 0.05, at: 0.5 }); }, // 둥지에서 쉬다 다 찼을 때: 느린 종소리
       lose: () => [392, 330, 262].forEach((f, i) => tone(f, 0.22, { type: 'triangle', gain: 0.07, at: i * 0.13 })),
@@ -9307,6 +9308,7 @@
   $('tp-close').addEventListener('click', () => $('tp-dlg').close());
   $('tp-dlg').addEventListener('close', () => { tpWith = null; });
   function onTelepathy(m) {
+    SFX.play('tp'); // 텔레파시가 오면 알림 소리 (효과음을 끄면 나지 않음)
     if ($('tp-dlg').open && tpWith === m.from.id) {
       const box = $('tp-msgs');
       box.querySelector('.tp-empty')?.remove();
@@ -15474,7 +15476,7 @@
     if (tab === 'plan' && h.book && h.book.unread) { socket.emit('city:book:seen', {}, () => {}); setTimeout(() => { if (h.book) h.book.unread = 0; }, 0); } // 집터 탭을 열면 새 글을 읽은 것으로 (이번 화면에는 새 글 표시를 남김)
     body.innerHTML = `<div id="home-ui" class="hm-e">
       <header class="hd"><div class="hd-t"><h3>${plot.name}</h3><span class="hd-r"><span class="seal">인장 <b>${h.seals}</b></span><span class="tag">${stg} / 4단계</span></span></div>
-        <p class="hd-s">${plot.mood} · 오늘 보탠 재건도 ${h.daySon} / ${v.rules.dayCap}${h.bank ? ` · 다음 날로 넘긴 재건도 ${h.bank}` : ''}</p>${h.perk ? `<p class="hd-perk${h.perk.on ? ' on' : ''}"><b>집터 덤</b> ${ctEsc(h.perk.text)}${h.perk.on ? (h.perk.up ? ' · <em>구역이 재건되어 한 단계 커짐</em>' : '') + (h.perk.kind !== 'passive' ? ` · 오늘 ${h.perk.left} / ${h.perk.max}` : ` · ${Math.round(h.perk.off * 100)}%`) : (() => { const rn = h.plots.find((p) => p.id === h.plot).room; return ` · ${ctEsc(rn)}${ctJ(rn, '을', '를')} 되살리면 열린다`; })()}</p>` : ''}${h.pondBack ? `<p class="hd-perk on"><b>작은 연못</b> 분수로 바뀌었던 연못을 돌려받았다${h.pondBack.n ? ` (연못 ${h.pondBack.n}개)` : ''}${h.pondBack.bp ? ' · 연못 도면도 함께' : ''}. 꾸미기에서 놓을 수 있다.</p>` : ''}</header>
+        <p class="hd-s">${plot.mood} · 오늘 보탠 재건도 ${h.daySon} / ${v.rules.dayCap}${h.bank ? ` · 다음 날로 넘긴 재건도 ${h.bank}` : ''}</p>${h.perk ? `<p class="hd-perk${h.perk.on ? ' on' : ''}"><b>집터 덤</b> ${ctEsc(h.perk.text)}${h.perk.on ? (h.perk.up ? ' · <em>구역이 재건되어 한 단계 커짐</em>' : '') + (h.perk.kind !== 'passive' ? ` · 오늘 ${h.perk.left} / ${h.perk.max}` : ` · ${Math.round(h.perk.off * 100)}%`) : (() => { const rn = h.plots.find((p) => p.id === h.plot).room; return ` · ${ctEsc(rn)}${ctJ(rn, '을', '를')} 되살리면 열린다`; })()}</p>` : ''}${h.pondBack ? `<p class="hd-perk on"><b>연못</b> 분수로 바뀌었던 연못을 돌려받았다${h.pondBack.n ? ` (연못 ${h.pondBack.n}개)` : ''}${h.pondBack.bp ? ' · 연못 도면도 함께' : ''}. 꾸미기에서 놓을 수 있다.</p>` : ''}</header>
       <nav class="hm-tabs" aria-label="내 집터 화면">${tabs.map(([k, n, x]) => `<button type="button" data-ct="tab:${k}" class="${tab === k ? 'on' : ''}"${tab === k ? ' aria-current="page"' : ''}>${n}${x}</button>`).join('')}</nav>
       ${main}</div>`;
     paintHouse(body, h);
@@ -15513,7 +15515,7 @@
     return `${chips.length ? `<div class="hp-strip">${chips.join('')}</div>` : ''}<div class="hp${CT.hpClean ? ' hp-clean' : ''}"><canvas class="hp-cv" width="320" height="240" aria-hidden="true"></canvas>${rooms}<span class="hp-door">입구</span>${eye}</div>`;
   }
   // ════ 꾸미기: 되살린 칸 안과 마당·모래밭에 1도트 단위로 장식을 놓는다 (그림·크기·규칙은 HP, 서버 city.js와 같음) ════
-  const DK_CATS = [['all', '전체'], ['mine', '가진 것'], ['live', '침실·거실'], ['store', '수납'], ['work', '작업'], ['study', '책·책상'], ['light', '빛'], ['green', '식물·정원'], ['wall', '벽 장식'], ['out', '바깥·특별']];
+  const DK_CATS = [['all', '전체'], ['mine', '가진 것'], ['live', '침실·거실'], ['store', '수납'], ['work', '작업'], ['study', '책·책상'], ['kitchen', '부엌·소품'], ['top', '탁상 소품'], ['light', '빛'], ['green', '식물·정원'], ['fence', '울타리'], ['wall', '벽 장식'], ['out', '바깥·특별']];
   const dkName = (s) => HP.name(s);
   const dkDone = (h) => h.rooms.filter((r) => r.state === 'done').map((r) => r.id);
   const dkDefaults = (h) => HP.defaults(h.plot, dkDone(h)); // 칸을 되살릴 때 생기는 처음 배치
@@ -15593,10 +15595,10 @@
     return `<div class="dk-top"><span>장식 <b>${dk.list.length}</b> / ${max}${dk.dirty ? ' · <em>저장하지 않음</em>' : ''}</span><small>${hint}</small></div>
       <div class="dk-acts"><button type="button" class="btn primary" data-ct="dk:save"${dk.dirty ? '' : ' disabled'}>저장</button><button type="button" class="btn" data-ct="dk:undo"${dk.dirty ? '' : ' disabled'}>되돌리기</button><button type="button" class="btn" data-ct="dk:reset">처음 모습으로</button></div>
       <div class="hp dk"><canvas class="hp-cv" width="320" height="240" aria-hidden="true"></canvas><canvas class="dk-fx" width="960" height="720" aria-hidden="true"></canvas><div class="dk-hit" role="application" aria-label="장식 놓는 도면"></div></div>
-      ${sel || dk.pick ? `<div class="dk-sel"><b>${sel ? `${dkName(sel.s)}${sel.f ? ' (좌우 반전)' : ''}` : `놓을 장식: ${dkName(dkPickN(dk))}${dk.pickF ? ' (좌우 반전)' : ''}`}</b>${turnable ? '<button type="button" class="btn sm" data-ct="dk:turn">방향 바꾸기</button>' : ''}<button type="button" class="btn sm" data-ct="dk:flip">좌우 반전</button>${sel ? '<button type="button" class="btn sm" data-ct="dk:del">치우기</button>' : ''}<button type="button" class="btn sm" data-ct="dk:none">선택 취소</button></div>` : ''}
+      ${sel || dk.pick ? `<div class="dk-sel"><b>${sel ? `${dkName(sel.s)}${sel.f ? ' (좌우 반전)' : ''}` : `놓을 장식: ${dkName(dkPickN(dk))}${dk.pickF ? ' (좌우 반전)' : ''}`}</b>${turnable ? `<button type="button" class="btn sm" data-ct="dk:turn">${HP.groupLabel(sel ? HP.baseOf(sel.s) : dk.pick)} 바꾸기</button>` : ''}<button type="button" class="btn sm" data-ct="dk:flip">좌우 반전</button>${sel ? '<button type="button" class="btn sm" data-ct="dk:del">치우기</button>' : ''}<button type="button" class="btn sm" data-ct="dk:none">선택 취소</button></div>` : ''}
       <div class="lk-tabs dk-cats" role="tablist" aria-label="가구 분류">${DK_CATS.map(([k, n]) => `<button type="button" role="tab" aria-selected="${cat === k}" class="${cat === k ? 'on' : ''}" data-ct="dkc:${k}">${n} <small>${cnt(k)}</small></button>`).join('')}</div>
       <div class="dk-pal" role="list">${list.map((n) => { const left = dkLeft(h, n), own = h.furn?.[n] || 0; return `<button type="button" role="listitem" class="dk-it${dk.pick === n ? ' on' : ''}${left > 0 ? '' : ' none'}" data-ct="dk:pick:${n}" aria-pressed="${dk.pick === n}"><canvas class="dk-th" data-s="${n}" aria-hidden="true"></canvas><span>${dkName(n)}</span><em class="dk-n">${own ? `${Math.max(0, left)} / ${own}` : '없음'}</em></button>`; }).join('')}</div>
-      <small class="note">되살린 칸 안과, 마당을 되살린 뒤에는 돌 마당과 담 안 모래밭에도 놓을 수 있다. 방 아랫벽 쪽에 붙이면 앞쪽 벽 뒤로 살짝 가려진다. 창문·깃발은 벽에 걸려 가구 뒤에 보인다. 화분·등·촛대·작은 종·책은 탁자나 걸상 같은 가구 위에 올려 둘 수 있고, 가구를 옮기면 함께 따라간다.</small>`;
+      <small class="note">되살린 칸 안과, 마당을 되살린 뒤에는 돌 마당과 담 안 모래밭에도 놓을 수 있다. 방 아랫벽 쪽에 붙이면 앞쪽 벽 뒤로 살짝 가려진다. 창문·깃발은 벽에 걸려 가구 뒤에 보인다. '탁상 소품'은 탁자나 걸상 같은 가구 위에 올려 둘 수 있고, 가구를 옮기면 함께 따라간다.</small>`;
   }
   function dkDraw(body, h, ghost) { // 도면은 편집 중인 배치로, 위 덧칠 캔버스에는 아직 못 쓰는 곳·고른 장식·놓을 자리
     const dk = CT.dk, cv = body.querySelector('.hp.dk .hp-cv'), fx = body.querySelector('.dk-fx'); if (!cv || !fx) return;
@@ -15692,7 +15694,7 @@
   const HP = (() => {
     const W = 320, H = 240;
     const ROOMS = { live: [96, 16, 128, 80], own: [16, 112, 80, 96], yard: [112, 112, 96, 96], work: [224, 112, 80, 96] }; // 칸 안쪽 (도트). 서버 PACK.rooms·yard와 같음
-    let P = null, ok = false, frame = 0; const wait = [], IMG = {}, FR = {}, FT = {}, WT = {}, CROP = {};
+    let P = null, ok = false; const wait = [], IMG = {}, FR = {}, FT = {}, WT = {}, CROP = {}, LIVE = new Set();
     const load = (src) => new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(i); i.src = src; });
     const pix = (im, w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.drawImage(im, 0, 0); return g.getImageData(0, 0, w, h).data; };
     const u32 = (b64) => { const s = atob(b64), a = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; };
@@ -15737,8 +15739,10 @@
     const effLayer = (o, list) => (support(o, list) ? 'top' : layer(o.s));
     // 그리는 순서: 깔개 → 벽 장식 → 가구(아래쪽이 앞) · 올려 둔 소품은 받친 가구 바로 다음
     const order = (o, list = []) => { const L = layer(o.s); if (L === 'flat') return -1e4; if (L === 'wall') return -5e3 + o.y; const b = support(o, list); return b ? b.y + size(b.s)[1] + 0.5 + (o.y + size(o.s)[1]) / 1e3 : o.y + size(o.s)[1]; };
+    // 움직이는 그림: 시각으로 장면을 고름. 가구마다 장면 하나의 길이(ms, 팩에 없으면 0.16초)가 달라도 됨 (불꽃은 조금 느리게)
+    const frameOf = (k) => Math.floor(performance.now() / ((sp(k) && sp(k).ms) || 160)) % FR[k].length;
     function drawSprite(g, k, x, y, f) {
-      const s = sp(k); if (!s) return; const im = FR[k] ? FR[k][frame % FR[k].length] : IMG[k]; if (!im) return;
+      const s = sp(k); if (!s) return; const im = FR[k] ? FR[k][frameOf(k)] : IMG[k]; if (!im) return;
       if (f) { g.save(); g.translate(x + s.w, y); g.scale(-1, 1); g.drawImage(im, 0, 0); g.restore(); } else g.drawImage(im, x, y);
     }
     // 바탕(바닥·벽·마당 바닥 바꾼 모습)은 고른 바닥·벽이 바뀔 때만 새로 만듦
@@ -15775,60 +15779,39 @@
       if (d.kind === 'swatch') { cv.width = 32; cv.height = 20; g.imageSmoothingEnabled = false;
         if (d.t === 'wall') { const t = WT[d.k]; if (t) for (let x = 0; x < 32; x += 16) g.drawImage(t.im, 0, 8, 16, 20, x, 0, 16, 20); }
         else { const t = FT[d.k]; if (t) for (let y = 0; y < 20; y += t.s) for (let x = 0; x < 32; x += t.s) g.drawImage(t.im, x, y); } return; }
-      cv.width = W; cv.height = H; g.imageSmoothingEnabled = false; g.drawImage(baseFor(d.look), 0, 0);
-      const items = [...d.deco].sort((a, b) => order(a, d.deco) - order(b, d.deco)); items.forEach((o) => { drawSprite(g, o.s, o.x, o.y, o.f); drawCrops(g, o, d.garden); });
-      g.drawImage(IMG.__front, 0, 0); veil(g, d.rooms);
-      cv._hpAnim = items.some((o) => FR[o.s]) ? d : null; // 움직이는 가구(벽난로)가 있으면 다시 그릴 재료를 기억
+      if (cv.width !== W) cv.width = W; if (cv.height !== H) cv.height = H; g.imageSmoothingEnabled = false;
+      const items = [...d.deco].sort((a, b) => order(a, d.deco) - order(b, d.deco)), anim = items.filter((o) => FR[o.s]);
+      // 움직이지 않는 부분(바탕·가구·앞쪽 벽·공사 막)은 한 번만 그려 두고, 장면이 바뀔 때는 그 위에 움직이는 가구만 다시 얹음 (폰에서 가볍게)
+      if (cv._hpStatic && cv._hpStaticOf === d) g.drawImage(cv._hpStatic, 0, 0);
+      else {
+        const sc = cv._hpStatic || document.createElement('canvas'); sc.width = W; sc.height = H; const sg = sc.getContext('2d'); sg.imageSmoothingEnabled = false;
+        sg.drawImage(baseFor(d.look), 0, 0);
+        items.forEach((o) => { if (!FR[o.s]) { drawSprite(sg, o.s, o.x, o.y, o.f); drawCrops(sg, o, d.garden); } });
+        sg.drawImage(IMG.__front, 0, 0); veil(sg, d.rooms);   // 움직이는 가구는 되살린 칸에만 놓이므로 공사 막과 겹치지 않음
+        cv._hpStatic = anim.length ? sc : null; cv._hpStaticOf = anim.length ? d : null; g.drawImage(sc, 0, 0);
+      }
+      for (const o of anim) { // 움직이는 가구 자리만 다시: 바탕 → 그 자리에 겹치는 가구 모두(그리는 순서대로, 움직이는 것은 지금 장면) → 앞쪽 벽
+        const [w, h] = size(o.s); g.save(); g.beginPath(); g.rect(o.x, o.y, w, h); g.clip();
+        g.drawImage(baseFor(d.look), 0, 0);
+        items.forEach((q) => { const [qw, qh] = size(q.s); if (hit(o.x, o.y, w, h, [q.x, q.y, qw, qh])) { drawSprite(g, q.s, q.x, q.y, q.f); drawCrops(g, q, d.garden); } });
+        g.drawImage(IMG.__front, 0, 0); g.restore();
+      }
+      cv._hpAnim = anim.length ? d : null; if (anim.length) LIVE.add(cv); else LIVE.delete(cv); // 움직이는 가구가 있는 도면만 따로 기억
     }
-    if (!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) setInterval(() => { if (!ok) return; let any = false; document.querySelectorAll('canvas').forEach((cv) => { if (cv._hpAnim && cv.isConnected && cv.offsetParent) { if (!any) { frame++; any = true; } paint(cv, cv._hpAnim); } }); }, 160);
+    if (!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) setInterval(() => { // 움직이는 가구가 있는 도면만, 보이는 동안, 장면이 바뀌었을 때만 다시 그림 (화면 전체를 뒤지거나 배치를 읽지 않음)
+      if (!ok || document.hidden || !LIVE.size) return;
+      for (const cv of LIVE) { if (!cv.isConnected || !cv._hpAnim) { LIVE.delete(cv); continue; } const dl = cv.closest('dialog'); if (dl && !dl.open) continue;
+        const key = cv._hpAnim.deco.filter((o) => FR[o.s]).map((o) => frameOf(o.s)).join(); if (key !== cv._hpKey) { cv._hpKey = key; paint(cv, cv._hpAnim); } } }, 80);
     const defaults = (plot, done) => (P && P.defaults[plot] ? P.defaults[plot].filter((o) => done.includes(o.room)).map(({ room, ...o }) => o) : []);
     const catalog = () => (P ? Object.keys(P.cat).sort((a, b) => DK_CATS.findIndex(([c]) => c === P.cat[a].cat) - DK_CATS.findIndex(([c]) => c === P.cat[b].cat)) : []);
     return { W, H, ROOMS, ready: () => ok, onReady: (f) => (ok ? f() : wait.push(f)), plan, paint, sprite, swatch, size, defaults, where, hit, layer, order, effLayer, support, baseOf, drawSprite, catalog,
       name: (k) => (sp(k) ? sp(k).name : k), cat: (k) => (P && P.cat[k] ? P.cat[k].cat : ''),
-      group: (b) => (P && P.groups[b]) || null, variant: (b, i) => { const g = P && P.groups[b]; return g ? g[i % g.length] : b; },
+      group: (b) => (P && P.groups[b]) || null, groupLabel: (b) => (P && P.groupLabel && P.groupLabel[b]) || '방향', /* 꽃은 '모양 바꾸기' */ variant: (b, i) => { const g = P && P.groups[b]; return g ? g[i % g.length] : b; },
       floors: () => (P ? P.floors : []), walls: () => (P ? P.walls : []), yardFloors: () => (P ? P.yardFloors.map((id) => (id === 'cobble' ? { id, name: '회색 자갈' } : P.floors.find((f) => f.id === id))) : []),
       floorName: (k) => (k === 'cobble' ? '회색 자갈' : (P.floors.find((f) => f.id === k) || {}).name || k), wallName: (k) => (P.walls.find((f) => f.id === k) || {}).name || k,
       floorDef: (r) => (P ? P.fdef[r] : ''), wallDef: (r) => (P ? P.wdef[r] : ''), floorDefault: (k) => k === 'cobble' || (P && Object.values(P.fdef).includes(k)), wallDefault: (k) => !!(P && Object.values(P.wdef).includes(k)) };
   })();
 
-  function homePlan(h) {
-    const R = Object.fromEntries(h.rooms.map((r) => [r.id, r])), G = h.golems;
-    const selRoom = CT.sel.startsWith('room:') ? (CT.sel === 'room:cur' ? (h.rooms.find((r) => r.state === 'cur') || h.rooms[3]).id : CT.sel.slice(5)) : null;
-    const tone = (g) => { const s = gState(g); return s === 'back' || s === 'idle' || s === 'due' ? 'att' : s === 'work' ? 'prog' : 'off'; };
-    const objs = [
-      { key: 'golems:0', g: 0, room: 'yard', kind: 'golem', pos: [134, 140] },
-      { key: 'golems:1', g: 1, room: 'own', kind: 'golem', pos: [60, 186] },
-      { key: 'golems:2', g: 2, room: 'work', kind: 'golem', pos: [277, 160] },
-      { key: 'req', room: 'yard', kind: 'note', pos: [206, 140], todo: !h.req.done },
-    ];
-    const todoIn = (id) => objs.filter((o) => o.room === id && (o.kind === 'golem' ? tone(G[o.g]) === 'att' : o.todo)).length;
-    const room = (id, x, y, w, hgt, door) => {
-      const r = R[id], s = selRoom === id, lock = r.state === 'lock', p = roomFrac(r), t = todoIn(id), nm = id === 'own' ? r.name.replace('작은 ', '') : r.name;
-      return `<g class="hit" data-ct="sel:room:${id}" role="button" tabindex="0" aria-label="${r.name} ${pctTxt(r)}">
-        <rect x="${x}" y="${y}" width="${w}" height="${hgt}" fill="#fff"/>${lock ? `<rect x="${x}" y="${y}" width="${w}" height="${hgt}" fill="#F3F4F4"/>` : `<rect x="${x}" y="${y}" width="${w}" height="${hgt}" fill="${r.state === 'done' ? '#F1F3F5' : PC.steelL}"/>`}
-        <rect x="${x}" y="${y}" width="${w}" height="${hgt}" fill="none" stroke="${s ? PC.steel : lock ? '#D3D7DA' : '#8E959B'}" stroke-width="${s ? 1.8 : lock ? 1 : 1.2}"/>
-        ${door ? `<line x1="${door[0]}" y1="${door[1]}" x2="${door[2]}" y2="${door[3]}" stroke="#FAFAF9" stroke-width="3"/>` : ''}
-        ${roomLabel(x + 7, y + 15, nm, pctTxt(r), r.state === 'cur' ? 'on' : lock ? 'lock' : '', x + w)}</g>`;
-    };
-    const yard = R.yard, ys = selRoom === 'yard', ycur = yard.state === 'cur';
-    const icon = (o) => { const [x, y] = o.pos, on = CT.sel === o.key || (o.kind === 'golem' && CT.sel === 'golems' && CT.gopen === o.g);
-      const tn = o.kind === 'golem' ? tone(G[o.g]) : o.todo ? 'att' : 'off';
-      const col = on ? PC.steel : tn === 'att' ? PC.att : tn === 'prog' ? PC.prog : PC.line, ic = on ? PC.steel : tn === 'att' ? PC.att : tn === 'prog' ? PC.prog : PC.sub;
-      return `<g class="hit obj" data-ct="${o.kind === 'golem' ? `gopen:${o.g}` : 'sel:req'}" role="button" tabindex="0"><circle cx="${x}" cy="${y}" r="10" fill="${on ? PC.steelL : '#fff'}" stroke="${col}" stroke-width="${on ? 2.2 : 1.2}" />
-        <g transform="translate(${x - 7.2} ${y - 7.2}) scale(.6)" fill="none" stroke="${ic}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${GL[o.kind]}</g>${tn === 'att' ? `<circle cx="${x + 7}" cy="${y - 7}" r="3" fill="${PC.att}" stroke="#fff" stroke-width="1"/>` : ''}</g>`; };
-    const grass = [[30,40],[52,52],[78,38],[44,78],[70,92],[90,64],[36,108],[88,112],[252,34],[276,48],[300,36],[316,60],[262,72],[292,80],[258,204],[284,216],[310,206],[270,238],[300,240],[318,226],[28,232],[52,240],[80,232],[96,244]].map(([x, y]) => `<path d="M${x - 1.2},${y} l-1.6,-3.4 M${x},${y - 0.3} v-4.4 M${x + 1.2},${y} l1.6,-3.4"/>`).join('');
-    const done = h.rooms.filter((r) => r.state === 'done').length, cur = h.rooms.find((r) => r.state === 'cur');
-    return `<svg viewBox="0 0 340 262" class="bp" aria-label="집터 배치도"><rect width="340" height="262" fill="#FAFAF9"/>
-      <path d="M150,250 H12 V12 H328 V250 H190" fill="none" stroke="#8E959B" stroke-width="2"/>
-      <g pointer-events="none" fill="none" stroke="#DDE2DA" stroke-width="1" stroke-linecap="round">${grass}</g>
-      <text x="170" y="259.5" class="t-sub" text-anchor="middle" paint-order="stroke" stroke="#FAFAF9" stroke-width="3">입구</text>
-      <path d="M170,246 V100 M170,152 H242 M170,170 H98" fill="none" stroke="#D3D7DA" stroke-width="6" stroke-linecap="round"/>
-      ${room('live', 108, 22, 124, 78, [160, 100, 180, 100])}${room('work', 242, 92, 76, 96, [242, 142, 242, 162])}${room('own', 22, 128, 76, 92)}
-      <g class="hit" data-ct="sel:room:yard" role="button" tabindex="0">${ycur ? `<rect x="108" y="112" width="124" height="126" fill="${PC.steelL}" opacity=".75"/>` : ''}
-        <rect x="108" y="112" width="124" height="126" fill="transparent" stroke="${ys ? PC.steel : ycur ? '#8E959B' : '#A3A9AE'}" stroke-width="${ys ? 1.8 : 1}"/>
-        ${roomLabel(116, 226, '마당', pctTxt(yard), ycur ? 'on' : '', 232)}</g>
-      ${objs.filter((o) => o.kind !== 'golem' || G[o.g]).map(icon).join('')}</svg>`;
-  }
   function homeDetail(h) {
     if (CT.sel === 'golems') return golemsD(h);
     if (CT.sel === 'req') return reqD(h);

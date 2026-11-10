@@ -1450,7 +1450,7 @@ dialog.trip-dlg {
 .duel-row .res { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 2px; font: 600 11.5px/1.6 var(--sans); }
 .duel-row .res.win { background: #E5F1EA; color: #2F6B4A; }
 .duel-row .res.lose { background: #F6E5E7; color: #A63E4B; }
-.duel-row .new { margin-left: 6px; padding: 0 5px; border-radius: 2px; background: #B8913A; color: #fff; font: 600 10.5px/1.6 var(--sans); }
+.duel-row .new { display: inline-block; white-space: nowrap; vertical-align: 2px; margin-left: 6px; padding: 0 5px; border-radius: 2px; background: #B8913A; color: #fff; font: 600 10.5px/1.6 var(--sans); } /* 좁은 화면에서 '새 / 기록'으로 끊기지 않게 한 덩어리로 */
 .duel-row .btn { min-height: 34px; padding: 0 12px; font-size: 13px; }
 .duel-more { align-self: flex-start; }
 /* 이곳의 드래곤: 접속하지 않은 드래곤도 흐리게 남김 */
