@@ -1671,7 +1671,7 @@ const STANCE_RULES = {
     sell: 0.4, buy: 1.3,              // 파는 값 40%, 사는 값 130%
     expUncommon: 0.08, expRare: 0.04, // 원정에서 드문·귀한 물건 확률 추가
     rest: { hp: 6, en: 6, ap: 3 },    // 둥지에서 쉴 때 회복 배수 (보통은 NEST.rest)
-    exploreWisdom: 2,                 // 탐사할 때 지혜에 더해서 계산
+    gatherWisdom: 2,                  // 채집할 때 지혜에 더해서 계산 (하나 더 찾을 확률·귀한 물건이 조금 오름)
     townApExtra: 1,                   // 인간 마을에서 탐사·채집할 때 행동력 추가 소모
   },
   hostile: {

@@ -797,6 +797,7 @@ function gather(d) {
   if (err) return err;
   spendAp(d, actionCost(d, 'gather'));
   const st = statsOf(d);
+  if (d.stance === 'hermit') st.wisdom += SR.hermit.gatherWisdom; // 은둔: 풀숲과 바위틈을 꼼꼼히 살핌
 
   const wx = weatherFx(d.region);
   const tg = titleMods(d); // 칭호: 채집 (gatherExtra 하나 더 찾을 확률 · gatherRare 귀한 물건)
@@ -830,7 +831,6 @@ function explore(d) {
   if (err) return err;
   spendAp(d, actionCost(d, 'explore'));
   const st = statsOf(d);
-  if (d.stance === 'hermit') st.wisdom += SR.hermit.exploreWisdom; // 은둔: 숨은 것을 잘 찾음
 
   const lines = [pick((d.stance !== 'hostile' && SCENES_HUMAN[d.region]) || SCENES[d.region])]; // 마을에선 우호·은둔이면 사람 모습 장면
   let items = [];
@@ -1898,7 +1898,6 @@ function keptFor(d, id) {
   for (const p of presetsOf(d)) if (p?.eq) need = Math.max(need, Object.values(p.eq).filter((x) => x === id).length);
   return Math.max(0, need - worn);
 }
-const isWorn = (d, id) => Object.values(equipOf(d)).includes(id);
 // 판매 잠금: 소지품·시장에서 자물쇠를 건 물건은 팔 수 없음 (시장 팔기·야시장 노점)
 const sellLocked = (d, id) => (combatJson(d).favs?.lock || []).includes(id);
 function sell(d, id, qty, have) {

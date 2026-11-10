@@ -21,7 +21,7 @@ const ORIGINS = { abandoned: '버려진 아기', lost: '길 잃은 아이', trib
 const ANNOUNCE_MAX = 300;
 const GIVE = { maxKinds: 20, maxQty: 9999, msgMax: 100 }; // 일괄 지급: 한 번에 고를 수 있는 물건 종류, 종류당 개수, 함께 보낼 말
 
-module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, refreshKin, teleport, kick, arena, presence, nestSync }) {
+module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, refreshKin, teleport, kick, arena, presence, nestSync, fightsNow }) {
   // 대상 드래곤을 불러 고치고 저장. 접속 중이면 화면도 새로 고침
   // fn(d, kin, now) → { error } 또는 { log, tell, items, kinChanged }
   function withTarget(id, notify, fn) {
@@ -107,6 +107,20 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
       if (r.error) return r;
       const nm = TITLES.find((t) => t.id === id)?.name || id; // 받는 쪽 알림에는 칭호 이름만
       return { log: `이벤트 칭호 '${nm}' ${p.give !== false ? '줌' : '뺌'}`, tell: p.give !== false ? `칭호 '${nm}'${josa(nm, '을', '를')} 받았다.` : null };
+    },
+    // 여러 물건을 한 번에 주기: p.list = [{ item, qty }] (같은 물건은 합침)
+    items(d, kin, now, p) {
+      const m = new Map();
+      for (const x of Array.isArray(p.list) ? p.list : []) {
+        const id = str(x?.item), n = int(x?.qty);
+        if (!ITEMS[id] || !(n > 0)) continue;
+        m.set(id, Math.min(GIVE.maxQty, (m.get(id) || 0) + n));
+      }
+      const list = [...m].map(([id, qty]) => ({ id, qty }));
+      if (!list.length) return { error: '줄 물건을 골라야 한다.' };
+      if (list.length > GIVE.maxKinds) return { error: `한 번에 ${GIVE.maxKinds}가지까지 줄 수 있다.` };
+      const txt = list.map((x) => `${ITEMS[x.id].name} ${x.qty}개`).join(', ');
+      return { items: list, ledger: { itemsIn: list }, log: list.map((x) => `${ITEMS[x.id].name} +${x.qty}`).join(', '), tell: `하늘에서 ${txt}가 내려왔다.` };
     },
     gold(d, kin, now, p) {
       const n = int(p.n);
@@ -397,6 +411,16 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
       }
     });
 
+    // 진행 중인 싸움: 레이드 팀·모집, 그 밖의 싸움(사냥·강적·결투·진정)을 하는 드래곤. 파일을 올리기 전에 확인하려고
+    on('gm:fights', () => {
+      const f = fightsNow ? fightsNow() : { live: {}, lobbies: [], fights: [] };
+      const KIND = { hunt: '사냥', elite: '강적', duel: '결투', bet: '내기 결투', calm: '광폭화 진정', raid: '레이드' };
+      const others = Object.entries(f.live || {}).filter(([, k]) => k !== 'raid').map(([id, k]) => {
+        const d = online.get(Number(id))?.dragon || db.getDragon(Number(id));
+        return { name: d?.name || `#${id}`, kind: KIND[k] || k, online: online.has(Number(id)) };
+      });
+      return { ok: true, at: Date.now(), others, raids: f.fights || [], lobbies: f.lobbies || [] };
+    });
     on('gm:meta', () => ({
       ok: true,
       events: EVENTS.map((e) => ({ id: e.id, title: e.title, when: e.when })),

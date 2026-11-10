@@ -106,12 +106,12 @@ const tries = new Map(); // 열쇠 → [시각, ...]
 const hit = (key, windowMs) => { const now = Date.now(); const a = (tries.get(key) || []).filter((t) => now - t < windowMs); a.push(now); tries.set(key, a); return a.length; };
 const count = (key, windowMs) => { const now = Date.now(); const a = (tries.get(key) || []).filter((t) => now - t < windowMs); tries.set(key, a); return a.length; };
 setInterval(() => { const now = Date.now(); for (const [k, a] of tries) if (!a.some((t) => now - t < 60 * 60 * 1000)) tries.delete(k); }, 10 * 60 * 1000).unref?.();
-app.use(compression()); // 화면 파일을 압축해서 보냄 (index.html 480KB → 약 120KB)
+app.use(compression()); // 화면 파일을 압축해서 보냄 (index.html · style.css · app.js)
 app.use(express.json({ limit: '10kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 화면 파일(public/index.html · public/style.css)의 버전: 둘 중 하나라도 내용이 바뀌면 값이 바뀜. 열려 있는 창은 이 값으로 새 버전을 알아챔
-const CLIENT_FILES = ['index.html', 'style.css'].map((f) => path.join(__dirname, 'public', f));
+// 화면 파일(public/index.html · public/style.css · public/app.js)의 버전: 셋 중 하나라도 내용이 바뀌면 값이 바뀜. 열려 있는 창은 이 값으로 새 버전을 알아챔
+const CLIENT_FILES = ['index.html', 'style.css', 'app.js'].map((f) => path.join(__dirname, 'public', f));
 let verCache = { key: '', v: '' };
 function clientVersion() {
   try {
@@ -1284,7 +1284,9 @@ const liveFights = (() => {
   db.worldSet('liveFights', st);
   let t = null;
   const save = () => { if (t) return; t = setTimeout(() => { t = null; db.worldSet('liveFights', st); }, 1000); t.unref?.(); };
-  return (id, kind) => { if (kind) st[id] = kind; else delete st[id]; save(); };
+  const fn = (id, kind) => { if (kind) st[id] = kind; else delete st[id]; save(); };
+  fn.now = () => ({ ...st }); // GM 도구: 지금 싸우는 드래곤 { id: 종류 }
+  return fn;
 })();
 arena.setTrack(liveFights);
 raidBoss = require('./raidboss')({ io, db, online, logic, combat, arena, sendMe, track: liveFights,
@@ -1513,6 +1515,7 @@ const FALLEN = '쓰러져 있다. 일어설지, 긴 잠에 들지 먼저 정해�
 // GM 도구 (gm.js)
 const gm = require('./gm')({
   io, db, online, logic, life, meOf, sendMe, refreshKin, arena, nestSync,
+  fightsNow: () => ({ live: liveFights.now(), ...(raidBoss?.gmView?.() || { lobbies: [], fights: [] }) }), // GM 도구: 진행 중인 싸움
   presence: (d) => broadcastPresence(d.region), // 이름·종족이 바뀌면 이곳의 드래곤 목록을 다시 보냄
   // 순간이동: d.region은 이미 바뀐 상태. 접속 중이면 방을 옮기고 양쪽에 알림
   teleport(d, from) {
@@ -1681,6 +1684,8 @@ function onConnect(socket) {
     const { hpMax, enMax } = derive(final);
     const created = db.createDragon(user.id, name, kind, KINDS[kind].home, final, hpMax, enMax);
     logic.chooseTraits(created, good, bad);
+    // 인간을 대하는 방식: 만들 때 고름 (처음 고르는 것이라 바꾸기 대기 시간은 붙지 않음. 안 보내면 은둔)
+    { const st = str(payload?.stance); if (STANCES[st]) created.stance = st; }
     // 성별과 특징: 처음부터 적어 둘 수 있음 (비워도 됨, 나중에 설정에서 바꿈. 규칙은 bio:set과 같음)
     {
       const gender = str(payload?.bio?.gender).replace(/\s+/g, ' ').slice(0, BIO.genderMax);

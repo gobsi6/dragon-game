@@ -28,6 +28,7 @@ function josa(word, a, b) {
 }
 const ga = (n) => `${n}${josa(n, '이', '가')}`;
 const GIFT_MSG_MAX = 100; // 선물과 함께 보내는 말 (글자 수)
+const GIFT_KINDS_MAX = 10; // 선물 한 번에 보낼 수 있는 물건 가짓수
 const HOME_GIFT_MAX = 30; // 한 집터에 받지 않고 쌓여 있을 수 있는 선물 수
 const MEMO_MAX = 200;     // 관계 메모 (글자 수, 상대도 볼 수 있음)
 const itemText = (items) => items.map(({ id, qty }) => `${ITEMS[id].name}${qty > 1 ? ` ${qty}개` : ''}`).join(', ');
@@ -540,10 +541,13 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       for (const [a, b] of pairs) { keep.add(a); keep.add(b); }
       const dragons = all.filter((x) => keep.has(x.id))
         .map((x) => ({ id: x.id, name: x.name, kind: x.kind, level: x.level, av: x.has_avatar ? x.avatar_ver : 0, pub: !!x.map_public }));
-      return { ok: true, dragons, pairs, mine: db.mapPublic(d.id) };
+      return { ok: true, dragons, pairs, mine: db.mapPublic(d.id), asked: db.mapAsked(d.id) };
     });
+    // 관계도 공개를 처음 한 번 물어봤다고 적어 둠 (계정마다 한 번)
+    on('rel:mapAsked', (d) => { db.setMapAsked(d.id); return { ok: true }; });
     on('rel:mapPublic', (d, p) => {
       db.setMapPublic(d.id, !!p.on);
+      db.setMapAsked(d.id); // 직접 바꿔 본 적이 있으면 따로 묻지 않음
       return { ok: true, on: !!p.on };
     });
 
@@ -887,6 +891,8 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       }
       const gold = Math.floor(Number(p.gold) || 0);
       const items = cleanItems(p.items);
+      if (items.length > GIFT_KINDS_MAX) return { error: `물건은 한 번에 ${GIFT_KINDS_MAX}가지까지 보낼 수 있다.` };
+      if (new Set(items.map((x) => x.id)).size !== items.length) return { error: '같은 물건이 두 번 골라졌다. 다시 골라 보자.' };
       const msg = (typeof p.msg === 'string' ? p.msg : '').replace(/\s+/g, ' ').trim().slice(0, GIFT_MSG_MAX); // 함께 보내는 말
       // 함께 끼운 그림 한 장: 내가 올려 두고 아직 보내지 않은 것만. 그림만 보내도 됨
       const gi = Number(p.img) || 0, gm = gi ? db.giftImg.meta(gi) : null;

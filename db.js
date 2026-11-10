@@ -68,6 +68,8 @@ if (!db.prepare('PRAGMA table_info(users)').all().some((c) => c.name === 'legacy
 if (!db.prepare('PRAGMA table_info(users)').all().some((c) => c.name === 'link_account')) db.exec('ALTER TABLE users ADD COLUMN link_account TEXT');
 // 환영 공지를 몇 번째 판까지 읽었는지 (계정마다)
 if (!db.prepare('PRAGMA table_info(users)').all().some((c) => c.name === 'welcome_seen')) db.exec('ALTER TABLE users ADD COLUMN welcome_seen INTEGER NOT NULL DEFAULT 0');
+// 관계도 공개를 한 번 물어봤는지 (계정마다 한 번. 공개 설정을 직접 바꾼 적이 있어도 물어본 것으로 침)
+if (!db.prepare('PRAGMA table_info(users)').all().some((c) => c.name === 'map_asked')) db.exec('ALTER TABLE users ADD COLUMN map_asked INTEGER NOT NULL DEFAULT 0');
 const addCol = (name, def) => {
   if (dragonCols.includes(name)) return false;
   db.exec(`ALTER TABLE dragons ADD COLUMN ${name} ${def}`);
@@ -326,6 +328,8 @@ db.exec(`
     PRIMARY KEY (dragon_id, item)
   );
 `);
+// 소지품 획득순: 물건을 마지막으로 얻은 시각 (0이면 이 열이 생기기 전부터 가진 것)
+if (!db.prepare('PRAGMA table_info(inventory)').all().some((c) => c.name === 'got_at')) db.exec('ALTER TABLE inventory ADD COLUMN got_at INTEGER NOT NULL DEFAULT 0');
 
 // 그림(avatar)을 뺀 드래곤 정보 열
 const DRAGON_FIELDS = `id, name, kind, region, avatar_ver, level, xp, hp, hp_max, en, en_max,
@@ -484,9 +488,10 @@ const q = {
                             ON CONFLICT(dragon_id, item) DO UPDATE SET qty = qty + excluded.qty`),
   hoardList:    db.prepare('SELECT item, qty FROM hoard WHERE dragon_id = ? AND qty > 0'),
   hoardCount:   db.prepare('SELECT qty FROM hoard WHERE dragon_id = ? AND item = ?'),
-  invAdd:       db.prepare(`INSERT INTO inventory (dragon_id, item, qty) VALUES (?, ?, ?)
-                            ON CONFLICT(dragon_id, item) DO UPDATE SET qty = qty + excluded.qty`),
-  invList:      db.prepare('SELECT item, qty FROM inventory WHERE dragon_id = ? AND qty > 0'),
+  invAdd:       db.prepare(`INSERT INTO inventory (dragon_id, item, qty, got_at) VALUES (?, ?, ?, ?)
+                            ON CONFLICT(dragon_id, item) DO UPDATE SET qty = qty + excluded.qty,
+                              got_at = CASE WHEN excluded.qty > 0 THEN excluded.got_at ELSE got_at END`), // 늘어날 때만 얻은 시각을 새로
+  invList:      db.prepare('SELECT item, qty, got_at AS got FROM inventory WHERE dragon_id = ? AND qty > 0'),
   setRegion:    db.prepare('UPDATE dragons SET region = ? WHERE id = ?'),
   touch:        db.prepare('UPDATE dragons SET last_seen = ? WHERE id = ?'),
   addChat:      db.prepare('INSERT INTO chat (region, dragon_id, name, kind, text, at) VALUES (?, ?, ?, ?, ?, ?)'),
@@ -543,6 +548,8 @@ const q = {
                             WHERE r.kind IN ('rival', 'nemesis') AND x.dead_at IS NULL AND y.dead_at IS NULL`),
   mapPublicGet: db.prepare('SELECT map_public FROM dragons WHERE id = ?'),
   mapPublicSet: db.prepare('UPDATE dragons SET map_public = ? WHERE id = ?'),
+  mapAskedGet:  db.prepare('SELECT u.map_asked FROM users u JOIN dragons d ON d.user_id = u.id WHERE d.id = ?'),
+  mapAskedSet:  db.prepare('UPDATE users SET map_asked = 1 WHERE id = (SELECT user_id FROM dragons WHERE id = ?)'),
   mapBonds:     db.prepare(`SELECT r.from_id AS a, r.to_id AS b, r.bond FROM relations r
                             JOIN dragons x ON x.id = r.from_id JOIN dragons y ON y.id = r.to_id
                             WHERE r.kind = 'friend' AND r.from_id < r.to_id AND x.dead_at IS NULL AND y.dead_at IS NULL`),
@@ -712,7 +719,7 @@ function saveStateRaw(d, items = [], hoardItems = []) {
     berserk: d.berserk ? (typeof d.berserk === 'string' ? d.berserk : JSON.stringify(d.berserk)) : null,
   });
 
-  for (const { id, qty } of items) q.invAdd.run(d.id, id, qty);
+  { const now = Date.now(); for (const { id, qty } of items) q.invAdd.run(d.id, id, qty, now); }
   for (const { id, qty } of hoardItems) q.hoardAdd.run(d.id, id, qty);
 }
 
@@ -833,7 +840,8 @@ module.exports = {
   // 접속하지 않은 동료에게 보내는 선물
   giftOffline: db.transaction((toId, gold, items) => {
     if (gold) q.addGold.run(gold, toId);
-    for (const { id, qty } of items) q.invAdd.run(toId, id, qty);
+    const now = Date.now();
+    for (const { id, qty } of items) q.invAdd.run(toId, id, qty, now);
   }),
   getDragon: (id) => q.dragonById.get(id),
   // 결투 기록 (30일이 지난 것은 지움)
@@ -860,6 +868,8 @@ module.exports = {
   mapMarks: () => q.mapMarks.all(),
   mapPublic: (id) => !!q.mapPublicGet.get(id)?.map_public,
   setMapPublic: (id, on) => q.mapPublicSet.run(on ? 1 : 0, id),
+  mapAsked: (id) => !!q.mapAskedGet.get(id)?.map_asked,
+  setMapAsked: (id) => q.mapAskedSet.run(id),
   // 내가 입양 보낸 식구 (다른 둥지에서 아직 함께 사는)
   kinAdoptedOut: (id) => q.kinAdoptedOut.all(id).map((r) => { let data = {}; try { data = JSON.parse(r.data); } catch {} return { ...r, data }; }),
   // 관계 메모: a가 b에 대해 쓴 글. 상대(b)도 볼 수 있음 (예전에 쓴 비공개 메모는 다시 저장하기 전까지 a만 봄). 비우면 지워짐

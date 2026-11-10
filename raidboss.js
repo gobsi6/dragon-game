@@ -1513,5 +1513,13 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
   // 모집에 들어간 드래곤이 떠나면 (접속 끊김은 그대로 둠. 들어갈 때 다시 살핌)
   const cleared = (key) => !!st.first[key];
 
-  return { attach, view, meView, busy: (id) => inFight.has(id), resume, get, cleared, _state: () => st };
+  // GM: 지금 모집 중인 팀과 싸우는 중인 레이드
+  const gmView = () => ({
+    lobbies: [...lobbies.values()].map((lb) => ({ key: lb.key, name: R.bosses[lb.key]?.name || lb.key, names: lb.ids.map((id) => load(id)?.name || ''), size: R.size, ready: lb.ready.length, until: lb.until, gm: !!lb.gm })),
+    fights: [...fights.values()].filter((f) => !f.over).map((f) => ({
+      key: f.key, name: f.B.name, boss: f.B.boss.name, turn: f.turn, maxTurns: turnsOf(f), test: f.test,
+      members: f.ids.map((id, i) => ({ name: load(id)?.name || '', down: !(f.players[i]?.hp > 0), left: !!f.players[i]?.left })),
+    })),
+  });
+  return { attach, view, meView, busy: (id) => inFight.has(id), resume, get, cleared, gmView, _state: () => st };
 };
