@@ -5218,8 +5218,8 @@ body.chat-off #say, body.chat-off #chat-view { display: none; }
 #home-ui .gd-ok { font-style: normal; color: #4F7A3A; font-weight: 600; }
 #home-ui .gd-dry { font-style: normal; color: #B5653A; }
 
-/* 놀러 간 집터: 골렘 이름 */
-.cv-golems { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 4px 0 10px; font-size: 13px; }
-.cv-golems b { font-weight: 600; color: var(--hm, #7D6A55); margin-right: 2px; }
-.cv-golems span { white-space: nowrap; }
-.cv-golems small { color: var(--hm, #7D6A55); }
+/* 놀러 간 집터: 골렘 이름 (집터 정보 줄 바로 아래, 작은 이름표로) */
+#city-visit-body .cv-golems { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: -16px 0 0; font-size: 13px; line-height: 1.4; } /* 창 안 칸 사이 간격(24px)보다 붙여서, 위 집터 정보에 딸린 줄로 */
+#city-visit-body .cv-golems b { font-size: 12px; font-weight: 600; color: var(--hm, #7D6A55); margin-right: 2px; }
+#city-visit-body .cv-golems span { display: inline-flex; align-items: baseline; gap: 5px; padding: 2px 9px; border: 1px solid #E2D6C1; border-radius: 999px; background: #FBF7EF; color: var(--hk, #4A3B2E); white-space: nowrap; }
+#city-visit-body .cv-golems small { font-size: 11px; color: var(--hm, #7D6A55); }
