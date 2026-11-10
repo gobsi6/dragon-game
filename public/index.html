@@ -16057,7 +16057,10 @@
     if (k === 'trade') { if (!confirm('석공 인장으로 바꿀까?')) return; return cityCall('city:trade', { i: +x }); }
     if (k === 'dkm') { CT.dkMode = x; CT.lookPv = null; if (CT.dk) { CT.dk.pick = null; CT.dk.sel = null; } return renderHome(); }
     if (k === 'dk' && CT.dk) { const dk = CT.dk;
-      if (x === 'pick') { if (dk.pick !== y && dkLeft(CT.v.me, y) <= 0) { CT.dkMode = 'make'; CT.dkFocus = y; toast(`가진 ${dkName(y)}${ctJ(dkName(y), '이', '가')} 없다. 만들기에서 만든다.`); return renderHome(); } dk.pick = dk.pick === y ? null : y; dk.pickF = false; dk.pickD = 0; dk.sel = null; return renderHome(); }
+      if (x === 'pick') { if (dk.pick !== y && dkLeft(CT.v.me, y) <= 0) { CT.dkMode = 'make'; CT.dkFocus = y; toast(`가진 ${dkName(y)}${ctJ(dkName(y), '이', '가')} 없다. 만들기에서 만든다.`); renderHome();
+        requestAnimationFrame(() => { const row = document.querySelector('#city-home-dlg .mk-row.focus'); if (!row) return; // 가구 만들기의 그 가구 줄로 바로 (가운데에 오게, 잠깐 반짝)
+          row.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); row.classList.add('flash'); row.querySelector('button')?.focus({ preventScroll: true }); });
+        return; } dk.pick = dk.pick === y ? null : y; dk.pickF = false; dk.pickD = 0; dk.sel = null; return renderHome(); }
       if (x === 'del') { if (dk.sel != null) { dk.list.splice(dk.sel, 1); dk.sel = null; dk.dirty = true; } return renderHome(); }
       if (x === 'none') { dk.sel = null; dk.pick = null; return renderHome(); }
       if (x === 'flip') { if (dk.sel != null && dk.list[dk.sel]) { const o = dk.list[dk.sel]; if (o.f) delete o.f; else o.f = 1; dk.dirty = true; } else if (dk.pick) dk.pickF = !dk.pickF; return renderHome(); }
