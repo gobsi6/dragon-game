@@ -542,6 +542,7 @@ const ITEMS = {
   salted_fish:  { name: '절인 생선',        rarity: 'common',   type: 'use', use: { ap: 2 },  value: 25, desc: '어촌에서 말린 짭짤한 생선이다.' },
   // 시장 요리 재료 (왕도·남쪽 해안 시장)
   hen_egg:      { name: '달걀',             rarity: 'common',   value: 4,  desc: '닭장에서 갓 꺼내 아직 따뜻한 달걀. 시장 아주머니가 지푸라기에 싸서 내준다.' },
+  rice:         { name: '쌀',               rarity: 'common',   value: 3,  desc: '햇볕에 잘 말린 흰 쌀. 자루에 손을 넣으면 사락사락 소리가 난다.' },
   wheat_flour:  { name: '밀가루',           rarity: 'common',   value: 3,  desc: '왕도 방앗간에서 곱게 빻은 하얀 밀가루. 자루를 열면 고소한 냄새가 훅 올라온다.' },
   cane_sugar:   { name: '설탕',             rarity: 'common',   value: 4,  desc: '남쪽 바닷가 사탕수수로 만든 누런 설탕. 한 꼬집이면 아이들 얼굴이 환해진다.' },
   raspberry:    { name: '산딸기',           rarity: 'common',   type: 'use', use: { en: 20, mind: 10 }, value: 4,  desc: '해안 언덕 덤불이나 집터 텃밭에서 딴 새빨간 산딸기. 손끝이 금세 붉게 물든다. (먹으면 기력 +20 · 정신 +10)' },
@@ -552,6 +553,8 @@ const ITEMS = {
   // 시장 재료로 만드는 요리
   egg_bread:    { name: '달걀빵',           rarity: 'common',   cat: 'meal', value: 12, desc: '밀가루 반죽에 달걀을 통째로 얹어 구운 빵. 갈라진 틈으로 노른자가 보인다. (대장장이 쪽)' },
   berry_tart:   { name: '산딸기 타르트',    rarity: 'uncommon', cat: 'meal', value: 18, desc: '바삭한 반죽 위에 설탕에 졸인 산딸기를 소복이 올렸다. 아이들이 입가를 빨갛게 물들인다. (약초꾼 쪽)' },
+  rice_ball:    { name: '주먹밥',           rarity: 'common',   cat: 'meal', value: 9,  desc: '갓 지은 밥에 소금을 살짝 쳐서 꼭꼭 뭉쳤다. 손에 쥐고 다니며 먹기 좋다. (대장장이 쪽)' },
+  fish_rice:    { name: '생선 덮밥',        rarity: 'common',   cat: 'meal', value: 14, desc: '밥 위에 노릇하게 구운 고등어를 통째로 올렸다. 아이도 새끼 드래곤도 고개를 박고 먹는다. (파수꾼 쪽)' },
   egg_stirfry:  { name: '닭고기 달걀볶음',  rarity: 'common',   cat: 'meal', value: 16, desc: '닭고기를 잘게 썰어 달걀과 함께 볶았다. 새끼 드래곤이 접시째 핥아 먹는다.' },
   fruit_punch:  { name: '과일 화채',        rarity: 'common',   type: 'use', use: { en: 25, mind: 8 }, value: 14, desc: '포도알과 배를 썰어 설탕물에 띄웠다. 시원하게 들이켜면 기운이 돌고 머리가 맑아진다.' },
   chicken_meat: { name: '닭고기',           rarity: 'common',   value: 8,  desc: '왕도 시장 정육점에서 끈으로 묶어 내주는 통통한 닭고기. 사람 아이도 새끼 드래곤도 잘 먹는다.' }, // 시장에서 파는 고기 (식구 먹이)
@@ -685,6 +688,8 @@ const RECIPES = [
   { out: 'feast_plate',   needs: { wild_honey: 1, salted_fish: 1, grass_seed: 3 },      en: 6,  wis: 0 },
   { out: 'egg_bread',     needs: { wheat_flour: 2, hen_egg: 1, cane_sugar: 1 },        en: 3,  wis: 0 }, // 시장 재료 요리
   { out: 'berry_tart',    needs: { wheat_flour: 1, cane_sugar: 1, raspberry: 2 },      en: 4,  wis: 0 },
+  { out: 'rice_ball',     needs: { rice: 2, salt_crystal: 1 },                          en: 2,  wis: 0 }, // 쌀 요리
+  { out: 'fish_rice',     needs: { rice: 2, fish_mackerel: 1 },                         en: 3,  wis: 0 },
   { out: 'egg_stirfry',   needs: { hen_egg: 2, chicken_meat: 1 },                      en: 3,  wis: 0 }, // 새끼 먹이
   { out: 'fruit_punch',   needs: { grape: 2, pear: 1, cane_sugar: 1 },                 en: 3,  wis: 0 },
   { out: 'honey_salve',   needs: { wild_honey: 1, grass_seed: 2 },                     en: 4,  wis: 0 },
@@ -799,8 +804,8 @@ for (const it of Object.values(ITEMS)) if (it.value == null) it.value = RARITY_V
 // ── 인간 마을 ──────────────────────────────────────
 // 시장이 있는 지역과 파는 물건
 const SHOPS = {
-  capital: ['herbal_ointment', 'strong_wine', 'silver_chain', 'travel_map', 'holy_water', 'chicken_meat', 'hen_egg', 'wheat_flour', 'cane_sugar', 'grape'],
-  coast:   ['herbal_ointment', 'salted_fish', 'bait_worm', 'silver_chain', 'sea_compass', 'salt_crystal', 'hen_egg', 'wheat_flour', 'cane_sugar', 'raspberry', 'pear'],
+  capital: ['herbal_ointment', 'strong_wine', 'silver_chain', 'travel_map', 'holy_water', 'chicken_meat', 'hen_egg', 'wheat_flour', 'rice', 'cane_sugar', 'grape'],
+  coast:   ['herbal_ointment', 'salted_fish', 'bait_worm', 'silver_chain', 'sea_compass', 'salt_crystal', 'hen_egg', 'wheat_flour', 'rice', 'cane_sugar', 'raspberry', 'pear'],
 };
 
 // 우호 성향이고 마을 평판이 '호의'(20) 이상일 때만 파는 물건
@@ -1027,7 +1032,7 @@ const RUIN = {
 
 const TRADE = {
   // 시장에서 하루(한국 날짜)에 살 수 있는 개수. 적지 않은 물건은 제한 없음
-  dailyBuy: { salted_fish: 5, holy_water: 5, herbal_ointment: 10, strong_wine: 10, bait_worm: 10, salt_crystal: 5, chicken_meat: 10, hen_egg: 10, wheat_flour: 10, cane_sugar: 10, raspberry: 10, grape: 10, pear: 10 },
+  dailyBuy: { salted_fish: 5, holy_water: 5, herbal_ointment: 10, strong_wine: 10, bait_worm: 10, salt_crystal: 5, chicken_meat: 10, hen_egg: 10, wheat_flour: 10, rice: 10, cane_sugar: 10, raspberry: 10, grape: 10, pear: 10 },
   stanceCooldown: 12 * 60 * 60 * 1000, // 성향을 바꾼 뒤 다시 바꾸기까지 (12시간)
   refuseBelow: -40,                 // 평판이 이보다 낮으면 상인이 거래를 거절
   intimidateCost: 2,                // 위협하기에 드는 행동력
@@ -1110,6 +1115,8 @@ const KIN = {
     pear:          { bond: 3,  talent: 'guard',     sat: 15, eat: '배를 두 손으로 들고 크게 베어 물자 턱으로 물이 줄줄 흐른다.' },
     egg_bread:     { bond: 8,  talent: 'smith',     sat: 45, eat: '달걀빵을 반으로 갈라 노른자 쪽을 먼저 먹고, 빵은 나중에 아껴 먹는다.' },
     berry_tart:    { bond: 11, talent: 'herbalist', sat: 40, eat: '타르트 위의 산딸기를 하나하나 세어 보더니 한입에 넣고 눈을 꼭 감는다.' },
+    rice_ball:     { bond: 7,  talent: 'smith',     sat: 45, eat: '주먹밥을 두 손으로 꼭 쥐고 동그랗게 돌려 가며 야금야금 먹는다.' },
+    fish_rice:     { bond: 9,  talent: 'guard',     sat: 55, eat: '생선 살을 밥 위에 골고루 펴 놓고, 한 숟갈에 하나씩 얹어 먹는다.' },
     chicken_meat:  { bond: 4,  talent: 'guard',     sat: 30, eat: '닭다리를 구워 주자 두 손으로 붙잡고 뜯는다. 기름 묻은 손을 옷에 쓱 닦았다.' },
     fish_flyingfish:{ bond: 6, talent: 'guard',     sat: 30, eat: '날치 지느러미를 펼쳐 보며 "나도 날 수 있을까?" 하고 묻는다. 구워 주자 맛있게 먹는다.' },
     fish_bream:    { bond: 12, talent: null,        sat: 60, eat: '금빛 비늘에 눈이 휘둥그레진다. 한 점 한 점 아껴 가며 먹는다.' },
@@ -1195,7 +1202,7 @@ const KIN = {
       fish_mackerel: { bond: 3, sat: 25 }, fish_flounder: { bond: 3, sat: 25 }, fish_salmon: { bond: 6, sat: 45 }, fish_eel: { bond: 6, sat: 40 }, fish_marlin: { bond: 12, sat: 90 },
       bait_meat: { bond: 4, sat: 30 }, salted_fish: { bond: 4, sat: 30 },
       roast_meat: { bond: 8, sat: 60 }, ember_snack: { bond: 7, sat: 45 }, fish_skewer: { bond: 8, sat: 55 }, dragon_feast: { bond: 14, sat: 100 },
-      wyvern_meat: { bond: 6, sat: 40 }, wyvern_steak: { bond: 12, sat: 80 }, chicken_meat: { bond: 3, sat: 25 }, hen_egg: { bond: 2, sat: 15 }, egg_stirfry: { bond: 9, sat: 60 }, // 와이번 고기 · 시장 닭고기·달걀
+      wyvern_meat: { bond: 6, sat: 40 }, wyvern_steak: { bond: 12, sat: 80 }, chicken_meat: { bond: 3, sat: 25 }, hen_egg: { bond: 2, sat: 15 }, egg_stirfry: { bond: 9, sat: 60 }, fish_rice: { bond: 7, sat: 50 }, // 와이번 고기 · 시장 닭고기·달걀
       // 늘어난 물고기 (가시 복어는 독이 있어 빼고, 오로라 해파리·달빛 가오리는 먹이가 아니라 재료)
       fish_mullet: { bond: 3, sat: 25 }, fish_gizzard: { bond: 3, sat: 25 }, fish_anchovy: { bond: 2, sat: 15 },
       fish_rockfish: { bond: 3, sat: 25 }, fish_jack: { bond: 3, sat: 20 }, fish_filefish: { bond: 3, sat: 20 }, fish_greenling: { bond: 3, sat: 25 }, fish_hairtail: { bond: 5, sat: 40 },
@@ -1418,7 +1425,7 @@ const FREE = {
     // 행상인 재료: 과일은 이 대륙 것보다 성질이 진함, 양념은 기운(바다꽃 소금 얼음 · 붉은 후추 불 · 향나무 껍질 혼)을 덧입힘
     sunset_apple: {food: 2, clear: 3}, honey_date: {food: 2, vigor: 2, life: 1}, star_lemon: {food: 1, vigor: 3},
     sea_salt_flower: {food: 1, frost: 2}, red_peppercorn: {food: 1, fire: 2}, cedar_bark: {food: 1, soul: 2},
-    hen_egg: {food: 2, life: 1}, wheat_flour: {food: 2}, cane_sugar: {food: 1, vigor: 1}, raspberry: {food: 1, clear: 1}, carrot: {food: 1, vigor: 1}, sunflower: {food: 1, shine: 1}, grape: {food: 1, vigor: 1}, pear: {food: 2, clear: 1},
+    hen_egg: {food: 2, life: 1}, wheat_flour: {food: 2}, rice: {food: 2}, cane_sugar: {food: 1, vigor: 1}, raspberry: {food: 1, clear: 1}, carrot: {food: 1, vigor: 1}, sunflower: {food: 1, shine: 1}, grape: {food: 1, vigor: 1}, pear: {food: 2, clear: 1},
     moss_flower: {food: 2, clear: 2},
     snow_flower: {food: 2, clear: 2, frost: 2},
     glow_moss: {food: 2, clear: 2},
