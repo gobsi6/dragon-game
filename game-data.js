@@ -544,7 +544,9 @@ const ITEMS = {
   hen_egg:      { name: '달걀',             rarity: 'common',   value: 4,  desc: '닭장에서 갓 꺼내 아직 따뜻한 달걀. 시장 아주머니가 지푸라기에 싸서 내준다.' },
   wheat_flour:  { name: '밀가루',           rarity: 'common',   value: 3,  desc: '왕도 방앗간에서 곱게 빻은 하얀 밀가루. 자루를 열면 고소한 냄새가 훅 올라온다.' },
   cane_sugar:   { name: '설탕',             rarity: 'common',   value: 4,  desc: '남쪽 바닷가 사탕수수로 만든 누런 설탕. 한 꼬집이면 아이들 얼굴이 환해진다.' },
-  raspberry:    { name: '산딸기',           rarity: 'common',   value: 4,  desc: '해안 언덕 덤불에서 딴 새빨간 산딸기. 손끝이 금세 붉게 물든다.' },
+  raspberry:    { name: '산딸기',           rarity: 'common',   type: 'use', use: { en: 20, mind: 10 }, value: 4,  desc: '해안 언덕 덤불이나 집터 텃밭에서 딴 새빨간 산딸기. 손끝이 금세 붉게 물든다. (먹으면 기력 +20 · 정신 +10)' },
+  carrot:       { name: '당근',             rarity: 'common',   type: 'use', use: { hp: 30, en: 15 }, value: 4,  desc: '집터 텃밭에서 뽑은 당근. 흙을 털고 한 입 베어 물면 아삭하고 달다. (먹으면 체력 +30 · 기력 +15)' },
+  sunflower:    { name: '해바라기',         rarity: 'common',   type: 'use', use: { mind: 20, en: 10 }, value: 6,  desc: '집터 텃밭에서 거둔 해바라기 꽃송이. 빼곡한 씨를 까먹다 보면 머리가 맑아진다. (먹으면 정신 +20 · 기력 +10)' },
   grape:        { name: '포도',             rarity: 'common',   value: 5,  desc: '왕도 남쪽 비탈에서 자란 보랏빛 포도 한 송이. 알이 탱탱하고 달다.' },
   pear:         { name: '배',               rarity: 'common',   value: 5,  desc: '해안 마을 과수원의 둥글고 큼직한 배. 한 입 베어 물면 시원한 물이 흐른다.' },
   // 시장 재료로 만드는 요리
@@ -1102,6 +1104,8 @@ const KIN = {
     fish_cod:      { bond: 7,  talent: 'herbalist', sat: 40, eat: '뽀얗게 끓인 대구 국물을 후후 불어 마시고는 볼이 발그레해진다.' },
     hen_egg:       { bond: 2,  talent: 'guard',     sat: 15, eat: '삶은 달걀을 탁자에 콩 찧어 까더니, 노른자부터 쏙 빼 먹는다.' },
     raspberry:     { bond: 3,  talent: 'herbalist', sat: 10, eat: '산딸기를 손가락마다 하나씩 끼우고 하나씩 빼 먹는다.' },
+    carrot:        { bond: 3,  talent: 'guard',     sat: 15, eat: '당근을 두 손으로 쥐고 토끼처럼 앞니로 아작아작 갉아 먹는다.' },
+    sunflower:     { bond: 3,  talent: 'herbalist', sat: 8,  eat: '해바라기 씨를 하나씩 까서 먹더니, 껍질을 모아 줄줄이 늘어놓는다.' },
     grape:         { bond: 3,  talent: 'herbalist', sat: 12, eat: '포도알을 하나씩 떼어 입에 넣고, 씨는 멀리 뱉기 내기를 한다.' },
     pear:          { bond: 3,  talent: 'guard',     sat: 15, eat: '배를 두 손으로 들고 크게 베어 물자 턱으로 물이 줄줄 흐른다.' },
     egg_bread:     { bond: 8,  talent: 'smith',     sat: 45, eat: '달걀빵을 반으로 갈라 노른자 쪽을 먼저 먹고, 빵은 나중에 아껴 먹는다.' },
@@ -1414,7 +1418,7 @@ const FREE = {
     // 행상인 재료: 과일은 이 대륙 것보다 성질이 진함, 양념은 기운(바다꽃 소금 얼음 · 붉은 후추 불 · 향나무 껍질 혼)을 덧입힘
     sunset_apple: {food: 2, clear: 3}, honey_date: {food: 2, vigor: 2, life: 1}, star_lemon: {food: 1, vigor: 3},
     sea_salt_flower: {food: 1, frost: 2}, red_peppercorn: {food: 1, fire: 2}, cedar_bark: {food: 1, soul: 2},
-    hen_egg: {food: 2, life: 1}, wheat_flour: {food: 2}, cane_sugar: {food: 1, vigor: 1}, raspberry: {food: 1, clear: 1}, grape: {food: 1, vigor: 1}, pear: {food: 2, clear: 1},
+    hen_egg: {food: 2, life: 1}, wheat_flour: {food: 2}, cane_sugar: {food: 1, vigor: 1}, raspberry: {food: 1, clear: 1}, carrot: {food: 1, vigor: 1}, sunflower: {food: 1, shine: 1}, grape: {food: 1, vigor: 1}, pear: {food: 2, clear: 1},
     moss_flower: {food: 2, clear: 2},
     snow_flower: {food: 2, clear: 2, frost: 2},
     glow_moss: {food: 2, clear: 2},

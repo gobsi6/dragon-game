@@ -15674,7 +15674,7 @@
       const st = b.stage === 2 ? '<em class="gd-ok">다 자람</em>' : `${stg[b.stage]} · ${Math.floor(b.p * 100)}% · ${b.wet ? `촉촉함 ${ctDur(b.wetLeft)}` : '<em class="gd-dry">말랐다</em>'} · 다 자라기까지 ${b.wet ? '약 ' : '물 없이 '}${ctDur(b.left)}`;
       const act = b.stage === 2 ? `<button type="button" class="btn sm primary" data-ct="gh:${b.g}">거두기</button>` : `<button type="button" class="btn sm${b.wet ? '' : ' primary'}" data-ct="gw:${b.g}"${b.wet ? ' disabled' : ''}>물 주기</button>`;
       return `<li class="gd-row"><b>텃밭 ${b.n}</b><span class="gd-st">${c.name} · ${st}</span><div class="gd-act">${act}<button type="button" class="btn sm" data-ct="gc:${b.g}">갈아엎기</button></div></li>`; };
-    return `<section class="hm-garden"><h4>텃밭 <small>가진 금화 ${G.gold.toLocaleString('ko-KR')}</small></h4><ul>${G.list.map(row).join('')}</ul><small class="note">물을 주면 한동안 촉촉해서 제 속도로 자라고, 마르면 절반 속도로 자란다. 다 자라면 거둬서 금화와 재료를 얻는다.</small></section>`;
+    return `<section class="hm-garden"><h4>텃밭 <small>가진 금화 ${G.gold.toLocaleString('ko-KR')}</small></h4><ul>${G.list.map(row).join('')}</ul><small class="note">물을 주면 한동안 촉촉해서 제 속도로 자라고, 마르면 절반 속도로 자란다. 다 자라면 거둬서 작물(먹으면 회복 · 둥지 아이 먹이 · 자유 제작 재료)과 재료 조금을 얻는다.</small></section>`;
   }
   function fitHP(root) {
     (root || document).querySelectorAll('#home-ui .hp').forEach((hp) => { const avail = hp.parentElement.clientWidth, dpr = window.devicePixelRatio || 1, r = (avail * dpr) / HP.W, k = Math.max(1, Math.floor(r)); hp.style.width = `${r >= 2.5 ? avail : (HP.W * k) / dpr}px`; });

@@ -132,10 +132,13 @@ const decoSupport = (it, list) => { if (!DECO.stack[it.s]) return null; const [w
 const decoLayer = (it, list) => (decoSupport(it, list) ? 'top' : DECO.layer[it.s]);
 // 텃밭: 놓아 둔 텃밭(두둑)에 금화로 씨앗을 사서 심고, 물을 주며 기르고, 다 자라면 거둬 금화와 재료를 얻는다
 // hours: 물을 계속 줄 때 다 자라는 시간. 물을 안 주면 dry 배 속도. 물 한 번은 자라는 시간의 wet 만큼 촉촉함 (촉촉할 때는 또 줄 수 없음)
+// 거두면 작물 아이템(item, got개)과 재료 조금(mat). 작물은 먹으면 회복, 둥지 아이 먹이, 자유 제작 재료로 쓰임 (game-data.js)
 const GARDEN = { dry: 0.5, wet: 0.5, crops: {
-  carrot:    { name: '당근',     hours: 4,  seed: 30,  gold: [45, 60],   mat: ['red_clay', 3, 5] },
-  berry:     { name: '산딸기',   hours: 8,  seed: 60,  gold: [90, 120],  mat: ['glow_moss', 2, 4] },
-  sunflower: { name: '해바라기', hours: 16, seed: 100, gold: [150, 200], mat: ['sun_dust', 3, 5] } } };
+  carrot:    { name: '당근',     hours: 4,  seed: 15, item: 'carrot',    got: [3, 4], mat: ['red_clay', 1, 2] },
+  berry:     { name: '산딸기',   hours: 8,  seed: 25, item: 'raspberry', got: [4, 6], mat: ['glow_moss', 1, 2] },
+  sunflower: { name: '해바라기', hours: 16, seed: 40, item: 'sunflower', got: [3, 4], mat: ['sun_dust', 1, 2] } } };
+const gRnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const gYield = (c) => [{ id: c.item, qty: gRnd(...c.got) }, { id: c.mat[0], qty: gRnd(c.mat[1], c.mat[2]) }];
 const GSTAGE = ['씨앗', '새싹', '다 자람', '거둔 뒤'];
 // 2026-11 팩 그림으로 바꾸기 전 가구·도면 → 새 가구 (가진 수를 그대로 옮김. 짝이 없는 것은 석공 인장으로 돌려줌)
 const OLD_FURN = { pot: 'pot', crate: 'crate', barrel: 'barrel', signpost: 'signpost', bedplot: 'bedplot', planter: 'planter', bench: 'bench', lamp: 'lamp', table: 'table', shelf: 'shelf', rug: 'rug', steps: 'rock', bed: 'bed', workbench: 'workbench',
@@ -590,14 +593,14 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     const beds = gBeds(m); if (!beds.length) return err('놓아 둔 텃밭이 없다. 꾸미기에서 텃밭을 놓을 수 있다.');
     const act = String(p.act || ''), now = Date.now(), nm = (o) => `텃밭 ${beds.indexOf(o) + 1}`;
     if (act === 'waterAll' || act === 'harvestAll') {
-      const lines = []; let n = 0, gold = 0; const items = {};
+      const lines = []; let n = 0; const items = {};
       for (const o of beds) { const st = m.garden[o.g]; if (!st || st.h) continue; const i = gInfo(st, now);
         if (act === 'waterAll' && i.stage < 2 && !i.wet) { (st.w = st.w || []).push(now); n++; }
-        if (act === 'harvestAll' && i.stage === 2) { const c = GARDEN.crops[st.c], gg = rnd(...c.gold), q = rnd(c.mat[1], c.mat[2]); gold += gg; items[c.mat[0]] = (items[c.mat[0]] || 0) + q; st.h = 1; n++; } }
+        if (act === 'harvestAll' && i.stage === 2) { for (const y of gYield(GARDEN.crops[st.c])) items[y.id] = (items[y.id] || 0) + y.qty; st.h = 1; n++; } }
       if (!n) return err(act === 'waterAll' ? '지금 물을 줄 텃밭이 없다.' : '다 자란 텃밭이 없다.');
       if (act === 'waterAll') return { ok: true, lines: [`텃밭 ${n}곳에 물을 주었다. 한동안 촉촉하게 잘 자란다.`] };
-      d.gold = (d.gold || 0) + gold; const got = Object.entries(items).map(([k, q]) => ({ id: k, qty: q })); db.saveState(d, got);
-      return { ok: true, lines: [`텃밭 ${n}곳을 거두었다: 금화 ${gold.toLocaleString('ko-KR')}, ${got.map((x) => `${ITEMS[x.id].name} ${x.qty}`).join(', ')}.`] };
+      const got = Object.entries(items).map(([k, q]) => ({ id: k, qty: q })); db.saveState(d, got);
+      return { ok: true, lines: [`텃밭 ${n}곳을 거두었다: ${got.map((x) => `${ITEMS[x.id].name} ${x.qty}`).join(', ')}.`] };
     }
     const o = beds.find((b) => b.g === Math.floor(Number(p.g))); if (!o) return err('그런 텃밭은 없다.');
     const st = m.garden[o.g];
@@ -612,15 +615,15 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     const i = gInfo(st, now), c = GARDEN.crops[st.c];
     if (act === 'water') {
       if (st.h) return err('이미 거둔 텃밭이다. 다시 심을 수 있다.'); if (i.stage === 2) return err('다 자랐다. 거두기만 하면 된다.');
-      if (i.wet) return err(`아직 흙이 촉촉하다. (${Math.ceil(i.wetLeft / 6e4)}분 뒤에 다시 줄 수 있다)`);
+      if (i.wet) { const mm = Math.ceil(i.wetLeft / 6e4); return err(`아직 흙이 촉촉하다. (${mm >= 60 ? `${Math.floor(mm / 60)}시간${mm % 60 ? ` ${mm % 60}분` : ''}` : `${mm}분`} 뒤에 다시 줄 수 있다)`); }
       (st.w = st.w || []).push(now); return { ok: true, lines: [`${nm(o)}의 ${c.name}에 물을 주었다.`] };
     }
     if (act === 'harvest') {
       if (i.stage !== 2) return err(st.h ? '이미 거둔 텃밭이다.' : `아직 다 자라지 않았다. (${GSTAGE[i.stage]})`);
-      const gg = rnd(...c.gold), q = rnd(c.mat[1], c.mat[2]); d.gold = (d.gold || 0) + gg; st.h = 1; db.saveState(d, [{ id: c.mat[0], qty: q }]);
-      return { ok: true, lines: [`${nm(o)}의 ${c.name}${josa(c.name, '을', '를')} 거두었다: 금화 ${gg}, ${ITEMS[c.mat[0]].name} ${q}.`] };
+      const got = gYield(c); st.h = 1; db.saveState(d, got);
+      return { ok: true, lines: [`${nm(o)}의 ${c.name}${josa(c.name, '을', '를')} 거두었다: ${got.map((x) => `${ITEMS[x.id].name} ${x.qty}`).join(', ')}.`] };
     }
-    if (act === 'clear') { delete m.garden[o.g]; return { ok: true, lines: [`${nm(o)}를 갈아엎었다.`] }; }
+    if (act === 'clear') { delete m.garden[o.g]; return { ok: true, lines: [`${nm(o)}의 흙을 갈아엎었다.`] }; }
     return err('무엇을 할지 모르겠다.');
   }
   const hasBook = (m) => { if (!m || !m.plot || !m.rooms) return false; if (Array.isArray(m.deco)) return m.deco.some((o) => o.s === 'signpost'); return m.plot === 'plaza' && curIdx(m) >= 4; }; // 기본 배치에선 광장 앞 집 앞뜰에 받침이 있음
