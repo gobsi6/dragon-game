@@ -943,7 +943,7 @@ const FISHING = {
     chance: { perfect: 0, good: 0.03, ok: 0.1, auto: 0.1 },
     items: [
       { id: 'old_boot', w: 25 }, { id: 'driftwood', w: 25 }, { id: 'tangled_net', w: 15 },
-      { id: 'rusty_hook', w: 15 }, { id: 'sea_glass', w: 15 }, { id: 'bottle_letter', w: 6 },
+      { id: 'rusty_hook', w: 15 }, { id: 'sea_glass', w: 30 }, { id: 'bottle_letter', w: 6 }, // 바다 유리 15 → 30 (집터·제작에 많이 쓰여 너무 귀했음)
     ],
     letters: [
       '이 편지를 줍는 이에게. 해안 마을 세 번째 집의 개 이름은 \'구름\'이다. 지나가거든 쓰다듬어 주길.',
