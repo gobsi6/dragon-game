@@ -5214,3 +5214,9 @@ body.chat-off #say, body.chat-off #chat-view { display: none; }
 #home-ui .gd-act small { opacity: .7; margin-left: 2px; }
 #home-ui .gd-ok { font-style: normal; color: #4F7A3A; font-weight: 600; }
 #home-ui .gd-dry { font-style: normal; color: #B5653A; }
+
+/* 놀러 간 집터: 골렘 이름 */
+.cv-golems { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 4px 0 10px; font-size: 13px; }
+.cv-golems b { font-weight: 600; color: var(--hm, #7D6A55); margin-right: 2px; }
+.cv-golems span { white-space: nowrap; }
+.cv-golems small { color: var(--hm, #7D6A55); }

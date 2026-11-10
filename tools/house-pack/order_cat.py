@@ -6,7 +6,7 @@ P = json.load(open(PACK, encoding='utf-8'))
 def fam(k):  # 한데 모을 묶음: 이름이 같은 것(색만 다른 것)과, 깔개·꽃·접시·그릇·마법서·수정은 종류끼리
     n = P['cat'][k]['name'].split(' (')[0]
     if k.startswith('flower') and k != 'flowers': return '꽃'
-    for w in ('깔개', '접시', '그릇', '마법서', '수정'):
+    for w in ('깔개', '접시', '그릇', '마법서', '수정', '덩굴 아치'):
         if w in n: return w
     return n
 order, seen = [], set()

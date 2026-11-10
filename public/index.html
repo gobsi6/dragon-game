@@ -15587,12 +15587,12 @@
     return `<div class="dk-top"><span>석공 인장 <b>${h.seals}</b></span><small>견본을 누르면 그림에 먼저 미리 보인다. 인장은 처음 쓸 때만 들고, 한 번 산 바닥·벽은 어느 칸에서든 다시 쓸 수 있다.</small></div>${plan}${bar}${tabs}<div class="lk-body">${body}</div>`;
   }
   function decoEditor(h) {
-    const dk = dkState(h), max = h.decoRules?.max || 30, sel = dk.sel != null ? dk.list[dk.sel] : null, cat = CT.dkCat || 'all';
+    const dk = dkState(h), sel = dk.sel != null ? dk.list[dk.sel] : null, cat = CT.dkCat || 'all';
     const hint = dk.pick ? '도면을 누르면 그 자리에 놓인다. 오른쪽 클릭이나 Esc로 선택 취소, F로 좌우 반전, R로 방향 바꾸기(되는 가구만).' : sel ? '끌어서 옮긴다. 오른쪽 클릭이나 Esc로 선택 취소, F로 좌우 반전, R로 방향 바꾸기(되는 가구만).' : '아래에서 장식을 고르거나, 놓인 장식을 끌어 옮긴다.';
     const turnable = HP.group(sel ? HP.baseOf(sel.s) : dk.pick);
     const list = HP.catalog().filter((s) => cat === 'all' || (cat === 'mine' ? (h.furn?.[s] || 0) > 0 : HP.cat(s) === cat));
     const cnt = (c) => (c === 'all' ? HP.catalog().length : c === 'mine' ? HP.catalog().filter((s) => (h.furn?.[s] || 0) > 0).length : HP.catalog().filter((s) => HP.cat(s) === c).length);
-    return `<div class="dk-top"><span>장식 <b>${dk.list.length}</b> / ${max}${dk.dirty ? ' · <em>저장하지 않음</em>' : ''}</span><small>${hint}</small></div>
+    return `<div class="dk-top"><span>장식 <b>${dk.list.length}</b>개${dk.dirty ? ' · <em>저장하지 않음</em>' : ''}</span><small>${hint}</small></div>
       <div class="dk-acts"><button type="button" class="btn primary" data-ct="dk:save"${dk.dirty ? '' : ' disabled'}>저장</button><button type="button" class="btn" data-ct="dk:undo"${dk.dirty ? '' : ' disabled'}>되돌리기</button><button type="button" class="btn" data-ct="dk:reset">처음 모습으로</button></div>
       <div class="hp dk"><canvas class="hp-cv" width="320" height="240" aria-hidden="true"></canvas><canvas class="dk-fx" width="960" height="720" aria-hidden="true"></canvas><div class="dk-hit" role="application" aria-label="장식 놓는 도면"></div></div>
       ${sel || dk.pick ? `<div class="dk-sel"><b>${sel ? `${dkName(sel.s)}${sel.f ? ' (좌우 반전)' : ''}` : `놓을 장식: ${dkName(dkPickN(dk))}${dk.pickF ? ' (좌우 반전)' : ''}`}</b>${turnable ? `<button type="button" class="btn sm" data-ct="dk:turn">${HP.groupLabel(sel ? HP.baseOf(sel.s) : dk.pick)} 바꾸기</button>` : ''}<button type="button" class="btn sm" data-ct="dk:flip">좌우 반전</button>${sel ? '<button type="button" class="btn sm" data-ct="dk:del">치우기</button>' : ''}<button type="button" class="btn sm" data-ct="dk:none">선택 취소</button></div>` : ''}
@@ -15639,7 +15639,7 @@
       if (e.button === 2) return; // 오른쪽 버튼은 놓지 않음 (contextmenu에서 취소)
       const [x, y] = dot(e), dk = CT.dk;
       if (dk.pick) {
-        const nm = dkPickN(dk), f = dkFit(h, nm, x, y, -1), max = h.decoRules?.max || 30;
+        const nm = dkPickN(dk), f = dkFit(h, nm, x, y, -1), max = h.decoRules?.max || 500;
         if (dk.list.length >= max) return toast(`장식은 ${max}개까지 놓을 수 있다.`);
         if (dkLeft(h, dk.pick) <= 0) { const n = dkName(dk.pick); dk.pick = null; renderHome(); return toast(`가진 ${n}${ctJ(n, '을', '를')} 모두 놓았다. 만들기에서 더 만들 수 있다.`); }
         if (!f.ok) return toast(f.why);
@@ -15942,9 +15942,10 @@
       const stg = v.rooms.filter((x) => x.state === 'done').length;
       const guest = v.guest.length ? `<ul class="cv-book">${v.guest.map((g) => `<li><b>${ctEsc(g.by)}</b><span>${ctEsc(g.t)}</span></li>`).join('')}</ul>` : '<p class="note">아직 남긴 글이 없다.</p>';
       const write = v.me ? '<p class="note">내 집터다. 방명록은 내 집터 창에서 볼 수 있다.</p>' : !v.book ? '<p class="note">이 집에는 방명록 받침이 없어 글을 남길 수 없다.</p>' : !v.canWrite ? '<p class="note">이 집 방명록에는 오늘 이미 글을 남겼다. 내일 다시 남길 수 있다.</p>'
-        : `<div class="cv-write"><div class="cv-phr">${v.phrases.map((t) => `<button type="button" class="btn sm" data-ct="gphrase" data-t="${ctEsc(t)}">${ctEsc(t)}</button>`).join('')}</div><div class="cv-row"><input type="text" class="input" id="cv-guest-t" maxlength="${v.len}" placeholder="짧게 한마디 (${v.len}자까지)"><button type="button" class="btn primary" data-ct="guest">남기기</button></div><small class="note">한 집에 하루 한 번 남길 수 있다.</small></div>`;
+        : `<div class="cv-write"><div class="cv-row"><input type="text" class="input" id="cv-guest-t" maxlength="${v.len}" placeholder="짧게 한마디 (${v.len}자까지)"><button type="button" class="btn primary" data-ct="guest">남기기</button></div><small class="note">한 집에 하루 한 번 남길 수 있다.</small></div>`;
+      const gl = (v.golems || []).length ? `<p class="cv-golems"><b>골렘</b> ${v.golems.map((g) => `<span>${ctEsc(g.name)}${g.job ? `<small> · ${ctEsc(g.job)} 중</small>` : ''}</span>`).join('')}</p>` : ''; // 이 집 골렘 이름
       $('city-visit-t').textContent = `${v.name}의 집터`;
-      $('city-visit-body').innerHTML = `<div id="home-ui" class="hm-e"><div class="cv-top"><p class="hd-s">${ctEsc(v.plot.name)} · ${ctEsc(v.plot.mood)} · ${stg} / 4단계</p>${v.me ? '' : '<button type="button" class="btn sm cv-gift" data-ct="vgift"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="9" width="17" height="11" rx="1"/><path d="M2.5 9h19M12 9v11M12 9c-2-4-6-4-6-1.5S10 9 12 9zm0 0c2-4 6-4 6-1.5S14 9 12 9z"/></svg>선물</button>'}</div>
+      $('city-visit-body').innerHTML = `<div id="home-ui" class="hm-e"><div class="cv-top"><p class="hd-s">${ctEsc(v.plot.name)} · ${ctEsc(v.plot.mood)} · ${stg} / 4단계</p>${v.me ? '' : '<button type="button" class="btn sm cv-gift" data-ct="vgift"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="9" width="17" height="11" rx="1"/><path d="M2.5 9h19M12 9v11M12 9c-2-4-6-4-6-1.5S10 9 12 9zm0 0c2-4 6-4 6-1.5S14 9 12 9z"/></svg>선물</button>'}</div>${gl}
         <div class="hp hp-clean"><canvas class="hp-cv" width="320" height="240" aria-hidden="true"></canvas></div>
         <section class="hm-book"><h4>방명록${v.book ? '' : ' (받침 없음)'}</h4>${guest}${write}</section></div>`;
       HP.paint($('city-visit-body').querySelector('.hp-cv'), HP.plan(v.plot.id, rooms, v.deco || HP.defaults(v.plot.id, v.rooms.filter((x) => x.state === 'done').map((x) => x.id)), v.look, v.garden));

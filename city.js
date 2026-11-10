@@ -123,7 +123,7 @@ const FURN_GIFT = PACK.gift;
 const LOOK = { floors: Object.fromEntries(PACK.floors.map((f) => [f.id, f.name])), walls: Object.fromEntries(PACK.walls.map((f) => [f.id, f.name])),
   yard: PACK.yardFloors, rooms: ['live', 'own', 'work'], fdef: PACK.fdef, wdef: PACK.wdef, cost: 25 };
 // 꾸미기: 도면 320×240 도트. 칸 좌표·놓는 규칙은 화면(index.html HP)과 같음
-const DECO = { max: 30, W: PACK.W, H: PACK.H, rooms: PACK.rooms, yard: PACK.yard, block: PACK.block, door: PACK.door,
+const DECO = { max: 500, /* 놓는 수 제한은 사실상 없음 (저장 크기만 막는 안전선) */ W: PACK.W, H: PACK.H, rooms: PACK.rooms, yard: PACK.yard, block: PACK.block, door: PACK.door,
   size: Object.fromEntries(Object.entries(PACK.sprites).map(([k, s]) => [k, [s.w, s.h]])),
   base: Object.fromEntries(Object.entries(PACK.sprites).map(([k, s]) => [k, s.of || k])), // 방향 그림(의자 뒤·옆 등)은 같은 가구로 셈
   layer: Object.fromEntries(Object.entries(PACK.sprites).map(([k, s]) => [k, s.layer || ''])), // flat: 깔개(위에 다른 것을 놓음), wall: 벽 장식
@@ -318,7 +318,11 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
         for (const [old, vs] of Object.entries(SPLIT)) for (const v of vs) { const n = m.deco.filter((o) => o.s === v).length; if (!n) continue;
           const mv = Math.min(n, m.furn[old] || 0); m.furn[old] = (m.furn[old] || 0) - mv; m.furn[v] = (m.furn[v] || 0) + n; }
       }
-      // 4 → 5: 덩굴 아치 · 5 → 6: 작은 종 · 6 → 7: 울타리 네 가지·꽃 · 7 → 8: 촛대 스탠드·초, 불 가구 움직임 · 8 → 9: 부엌·소품 가구, 깔개 색 · 9 → 10: 색유리 창·마법서·마력 수정·파랑 화분대 · 10 → 11: 긴 깔개 색 여섯, 네모 깔개 따로 · 11 → 12: 별밤 벽지·연한 벽돌 바닥·탁상시계·책 선반·은 거울·달 깔개 · 13 → 14: 마법 등불, 횃불 옆모습, 장작 테두리 (새로 옮길 것 없음)
+      if (m.plot && m.packV === 16) { // 16 → 17: 잠깐 있던 작은 덩굴 아치를 뺌. 만든 것은 덩굴 아치로, 놓아 둔 것은 치움
+        if (m.furn.arch_small) { m.furn.arch = (m.furn.arch || 0) + m.furn.arch_small; delete m.furn.arch_small; }
+        if (Array.isArray(m.deco)) m.deco = m.deco.filter((o) => o.s !== 'arch_small');
+      }
+      // 4 → 5: 덩굴 아치 · 5 → 6: 작은 종 · 6 → 7: 울타리 네 가지·꽃 · 7 → 8: 촛대 스탠드·초, 불 가구 움직임 · 8 → 9: 부엌·소품 가구, 깔개 색 · 9 → 10: 색유리 창·마법서·마력 수정·파랑 화분대 · 10 → 11: 긴 깔개 색 여섯, 네모 깔개 따로 · 11 → 12: 별밤 벽지·연한 벽돌 바닥·탁상시계·책 선반·은 거울·달 깔개 · 13 → 14: 마법 등불, 횃불 옆모습, 장작 테두리 · 15 → 16: 작은 덩굴 아치 · 16 → 17: 작은 덩굴 아치 뺌 (새로 옮길 것 없음)
       m.packV = PACK.v; return;
     }
     m.packV = PACK.v;
@@ -661,7 +665,8 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     return { ok: true, visit: { id: o.id, name: o.name, me: o.id === d.id, plot: { id: m.plot, name: PI[m.plot].name, mood: PI[m.plot].mood, perk: PI[m.plot].perk },
       rooms: rs.map((r, i) => { const st = m.rooms[r.id], need = Object.values(r.mats).reduce((a, n) => a + n, 0), put = Object.entries(r.mats).reduce((a, [k, n]) => a + Math.min(n, (st.mats || {})[k] || 0), 0); return { id: r.id, name: r.name, hours: r.hours, h: Math.min(r.hours, st.h), matsFrac: need ? put / need : 1, state: i < ci ? 'done' : i === ci ? 'cur' : 'lock' }; }),
       garden: m.packV >= 1 ? gView(m) : {}, deco: m.packV >= 1 && Array.isArray(m.deco) ? m.deco : null, look: m.packV >= 1 ? m.look || null : null, book: hasBook(m), guest: bookOf(o.name), // 아직 집터를 열지 않아 팩 그림으로 옮기지 않은 집은 새 기본 모습으로 보여 줌
-      canWrite: hasBook(m) && o.id !== d.id && W.bookDay[`${d.name}>${o.name}`] !== today, phrases: BOOK.phrases, len: BOOK.len } };
+      golems: (m.golems || []).filter((g) => g.awake).map((g) => ({ name: g.name, job: g.job && g.until > Date.now() ? JOBS[g.job] : null })), // 놀러 온 이에게 보이는 골렘 이름 (일하는 중이면 그 일)
+      canWrite: hasBook(m) && o.id !== d.id && W.bookDay[`${d.name}>${o.name}`] !== today, len: BOOK.len } };
   }
   function guestWrite(d, name, text) {
     const e = ready(d); if (e) return e;

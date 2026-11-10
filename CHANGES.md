@@ -1,3 +1,17 @@
+# 놀러 가기: 골렘 이름, 방명록 예시 문구 빼기 (2026-11-10)
+
+바뀐 파일: `city.js`, `public/index.html`, `public/style.css`
+
+- 다른 드래곤의 집터에 놀러 가면 도면 위에 그 집 골렘 이름이 보인다(깨어 있는 골렘만, 일하는 중이면 '도시 일손 중'처럼 그 일도).
+- 방명록 쓰기 칸 위의 예시 문구 버튼(멋진 집이에요! 등)을 뺐다.
+
+# 가구 놓는 수 제한 풀기 (2026-11-10)
+
+바뀐 파일: `city.js`, `public/index.html`
+
+- 집터에 놓을 수 있는 가구 30개 제한을 풀었다. 저장 크기만 막는 안전선(500개)은 남겨 두었다.
+- 꾸미기 위쪽 표시는 '장식 n / 30' 대신 '장식 n개'로.
+
 # 고유 칸·작업실 옆문 벽 끝 (2026-11-10)
 
 바뀐 파일: `public/house/pack.json`, `tools/house-pack/apply_preview_edit.py`, `tools/house-pack/src/house_preview_edit.png`
