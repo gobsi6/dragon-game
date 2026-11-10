@@ -11,7 +11,7 @@ function josa(word, a, b) {
   if (c < 0 || c > 11171) return `${a}(${b})`;
   return c % 28 ? a : b;
 }
-const ACTS = ['attack', 'skill', 'guard', 'flee'];
+const ACTS = ['attack', 'skill', 'guard', 'flee', 'sig']; // sig: 혼의 기술 (결투에서는 막힘)
 const itemText = (items) => items.map(({ id, qty }) => `${ITEMS[id]?.name || id}${qty > 1 ? ` ${qty}개` : ''}`).join(', ');
 const stakeText = (s) => [s.gold ? `금화 ${s.gold}닢` : '', itemText(s.items)].filter(Boolean).join(', ');
 const stakeEmpty = (s) => !s || (!s.gold && !s.items.length);
@@ -454,6 +454,7 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
     // 설정과 스킬 구성
     on('settings:set', (d, p) => { const r = combat.setSettings(d, p); db.saveState(d); sendMe(socket, d); io.emit('arena:changed'); return r; }); // 결투 받기·자동 결투 설정도 바로 보이게
     on('skills:set', (d, p) => { const r = combat.setSkills(d, p.list); if (r.error) return r; db.saveState(d); sendMe(socket, d); return r; });
+    on('sig:choose', (d, p) => { const r = combat.setSig(d, String(p.type || '')); if (r.error) return r; db.saveState(d); sendMe(socket, d); return r; });
 
     // 지금 싸우는 중인 전투 (창을 다시 열 때)
     on('battle:get', (d) => {

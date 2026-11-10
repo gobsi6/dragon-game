@@ -7,6 +7,7 @@ const {
   REGIONS, ITEMS, REGION_LOOT, CREATURES, SCENES, SCENES_HUMAN, RULES, RECIPES, SLOTS, STANCES, SHOPS, REP_TIERS, repTier, TRADE, NEST, hoardTier, RAID, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, ELEMENTS,
   HOARD_TIERS, CRAFT, SHOPS_SPECIAL, STANCE_RULES, fameTier, KIN, SKILLS, FISHING, RUIN, FACILITY, TRAITS, TRAIT_EARN, STAT_POINTS, STATS, MIND, PLACES, REGION_PLACES, PLACE_RULES, BUFFS, TITLES, TITLE_COUNT_NAMES, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG, EXP_FULL, BOSSES, RAIDBOSS, ACHIEVEMENTS, KEEPSAKES, TALENTS,
   FREE, FESTIVAL, DAY, BOSS, PEDDLER,
+ SIGNATURE,
 } = require('./game-data');
 
 const SR = STANCE_RULES;
@@ -732,6 +733,7 @@ function gainXp(d, xp) {
     for (const s of Object.values(SKILLS)) {
       if (s.lv > lvBefore && s.lv <= d.level) chron(d, 'mark', `새 스킬 '${s.name}'${josa(s.name, '을', '를')} 배웠다.`);
     }
+    if (SIGNATURE && lvBefore < SIGNATURE.minLv && d.level >= SIGNATURE.minLv) chron(d, 'mark', '혼의 기술을 고를 수 있게 되었다. 스킬 창에서 공격·방어·치유 중 하나를 고르자.');
     if (apCap(d) > apBefore) chron(d, 'mark', `최대 행동력이 ${apCap(d)}${[0, 3, 6].includes(apCap(d) % 10) ? '으로' : '로'} 늘었다.`);
     d.hp = hpCap(d);
     d.en = enCap(d);
@@ -801,7 +803,7 @@ function gather(d) {
 
   const wx = weatherFx(d.region);
   const tg = titleMods(d); // 칭호: 채집 (gatherExtra 하나 더 찾을 확률 · gatherRare 귀한 물건)
-  const n = Math.random() < 0.35 + st.wisdom * 0.01 + traitMods(d).gatherExtra + wx.gatherExtra + (tg.gatherExtra || 0) ? 2 : 1;
+  const n = Math.random() < 0.35 + st.wisdom * 0.01 + traitMods(d).gatherExtra + wx.gatherExtra + (tg.gatherExtra || 0) + napGather(d) ? 2 : 1;
   const ids = [];
   for (let i = 0; i < n; i++) {
     const pl = placeLoot(d);
@@ -1504,6 +1506,8 @@ function giveBuff(d, id, minutes, now = Date.now()) {
   if (!BUFFS[id]) return;
   combatJson(d).buff = { id, until: now + minutes * 60000 };
 }
+// 거처의 단잠 (고대도시): 몇 시간 동안 채집에서 하나 더 찾을 확률 (요리 버프와 따로)
+const napGather = (d, now = Date.now()) => { const n = combatJson(d).nap; return n && n.until > now ? (n.gather || 0) : 0; };
 function buffOf(d, now = Date.now()) {
   const b = combatJson(d).buff;
   if (!b || !BUFFS[b.id] || b.until <= now) return null;
@@ -1575,6 +1579,12 @@ function useItem(d, id, have, opts = {}) {
     chron(d, 'mark', `옛 샘의 정수로 ${st ? st.name : key}의 상흔을 씻어 냈다.`);
     lines.push(`차가운 물이 목을 타고 내려가자 ${st ? st.name : key}의 상흔이 희미해지더니 사라졌다. (${st ? st.name : key} +1)`, sc.length ? `남은 상흔 ${sc.length}개.` : '이제 몸에 상흔이 하나도 없다.', '다음 정수는 7일 뒤에 받아들일 수 있다.');
     return { title: it.name, lines, items: [{ id, qty: -1 }] };
+  }
+  if (u.sigReset) { // 혼을 비우는 돌: 혼의 기술을 내려놓음 (스킬 창에서 다시 고름)
+    const c = combatJson(d);
+    if (!c.sig?.type) return { error: '내려놓을 혼의 기술이 없다.' };
+    delete c.sig;
+    return { title: it.name, lines: ['돌을 쥐자 서늘한 기운이 스며들며, 혼에 새겨 둔 기술이 조용히 빠져나갔다.', '혼의 기술을 내려놓았다. 스킬 창에서 다시 고를 수 있다.'], items: [{ id, qty: -1 }] };
   }
   if (u.recipe) {
     const r = readRecipeScroll(d);

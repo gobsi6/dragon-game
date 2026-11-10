@@ -121,7 +121,8 @@ const MOBS = {
     trades: [
       { give: { rune_stone: 5 }, get: { old_scroll: 1 } },
       { give: { old_scroll: 3 }, get: { recipe_scroll: 1 }, weekly: 1, needStory: true }, // 이야기를 끝까지 들은 뒤, 일주일에 1번
-      { give: { ancient_relic: 1 }, get: { sage_tea: 1 } },
+      { give: { owl_quill: 2 }, get: { sage_tea: 1 } }, // 예전엔 고대의 유물 1 (너무 귀해서 고대 유적에서 흔히 나는 깃펜으로)
+      { gold: 200000, get: { oath_rune: 1 } }, // 혼을 비우는 돌: 혼의 기술을 내려놓고 다시 고름 (game-data SIGNATURE.runePrice와 같게)
     ],
     story: {
       title: '봉인된 제단의 비문',
@@ -725,7 +726,7 @@ function trade(d, mobId, i, have, now = Date.now()) {
   const key = `${mobId}:${i}`;
   const cap = o.weekly || o.daily || MOB_RULES.tradeDaily;
   if ((used[key] || 0) >= cap) return { error: o.weekly ? '이번 주에는 더 바꿔 줄 수 없다고 한다.' : '오늘은 더 바꿔 줄 수 없다고 한다.' };
-  if (o.gold && d.gold < o.gold) return { error: `금화가 모자란다. (${o.gold}닢 필요)` };
+  if (o.gold && d.gold < o.gold) return { error: `금화가 모자란다. (${o.gold.toLocaleString()}닢 필요)` };
   const lack = lacking(o.give || {}, have);
   if (lack.length) return { error: `${lack.map(([id, n]) => `${ITEMS[id].name} ${n}개`).join(', ')}가 있어야 한다.` };
   used[key] = (used[key] || 0) + 1;
@@ -733,7 +734,7 @@ function trade(d, mobId, i, have, now = Date.now()) {
   if (o.gold) d.gold -= o.gold;
   if (o.getGold) d.gold += o.getGold;
   for (const [id, n] of Object.entries(o.get || {})) items.push({ id, qty: n });
-  const gave = [...Object.entries(o.give || {}).map(([id, n]) => `${ITEMS[id].name} ${n}개`), ...(o.gold ? [`금화 ${o.gold}닢`] : [])].join(', ');
+  const gave = [...Object.entries(o.give || {}).map(([id, n]) => `${ITEMS[id].name} ${n}개`), ...(o.gold ? [`금화 ${o.gold.toLocaleString()}닢`] : [])].join(', ');
   const got = [...Object.entries(o.get || {}).map(([id, n]) => `${ITEMS[id].name} ${n}개`), ...(o.getGold ? [`금화 ${o.getGold}닢`] : [])].join(', ');
   return { title: `${mb.name}${josa(mb.name, '과', '와')}의 교환`, lines: [`${gave}${josa(gave, '을', '를')} 내주고 ${got}${josa(got, '을', '를')} 받았다.`], items, gold: (o.getGold || 0) - (o.gold || 0) };
 }

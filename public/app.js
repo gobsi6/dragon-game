@@ -497,6 +497,7 @@
     renderStatusTag();
     for (const k of ['claw', 'scale', 'wing', 'wisdom', 'majesty']) { const on = (me.scars || []).includes(k); const p2 = $(`st-${k}`).parentElement; p2.classList.toggle('scar', on); if (on) p2.title = p2.title ? `${p2.title} · 상흔 (영구 −1)` : '상흔이 남았다 (영구 −1)'; } // 상흔: 타고난 값·장신구 몫 안내 뒤에 덧붙임 (예전엔 덮어써서 안 보였음)
     renderBuff();
+    renderNap();
     $('pts-row').hidden = !me.statPts;
     $('pts-n').textContent = me.statPts || 0;
     renderGear();
@@ -1816,7 +1817,18 @@
     $('buff-row').querySelector('span').textContent = `${B.desc} · ${leftMin(b.until)}분`;
     $('buff-row').title = '강화 음식 효과 · 사냥·강적 전용 · 결투장 제외';
   }
-  setInterval(() => { if (S.me) renderBuff(); }, 30000);
+  // 거처의 단잠 (요리 버프와 따로 걸림): 남은 시간이 길어서 '몇 시간 몇 분'으로
+  function renderNap() {
+    const n = S.me?.nap, row = $('nap-row'); if (!row) return;
+    const left = n ? n.until - Date.now() : 0;
+    row.hidden = !(left > 0);
+    if (!(left > 0)) return;
+    const m = Math.ceil(left / 60000), hh = Math.floor(m / 60), mm = m % 60;
+    row.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg><b>단잠</b><span></span>';
+    row.querySelector('span').textContent = `채집에서 하나 더 찾을 확률 +${Math.round((n.gather || 0) * 100)}% · ${hh ? `${hh}시간 ` : ''}${mm}분`;
+    row.title = '고대도시 거처에서 잔 단잠 · 강화 음식과 함께 걸린다';
+  }
+  setInterval(() => { if (S.me) { renderBuff(); renderNap(); } }, 30000);
 
   // ── 소지품 ──
   let invCache = {}, invSrc = {}, invReady = false, invGot = {}; // invGot: 물건마다 마지막으로 얻은 시각 (획득순 정렬)
@@ -5275,7 +5287,7 @@
       const sp = document.createElement('span'); sp.textContent = `${S.items[x.id]?.name || x.id} ${x.have ?? 0}/${x.n}`; if ((x.have ?? 0) < x.n) sp.className = 'lack'; cl.appendChild(sp);
       if (host) srcChip(sp, x.id, host, anchor || cl);
     }
-    if (gold) { const sp = document.createElement('span'); sp.textContent = `금화 ${S.me.gold}/${gold}`; if (S.me.gold < gold) sp.className = 'lack'; cl.appendChild(sp); }
+    if (gold) { const sp = document.createElement('span'); sp.textContent = `금화 ${Math.floor(S.me.gold).toLocaleString()}/${gold.toLocaleString()}`; if (S.me.gold < gold) sp.className = 'lack'; cl.appendChild(sp); }
     return cl;
   };
   const mobReward = (rw, item) => {
@@ -5411,7 +5423,7 @@
         for (const o of m.trades) {
           const c = document.createElement('div'); c.className = `mob-card${o.left <= 0 || o.locked ? ' done' : ''}`;
           const top = document.createElement('div'); top.className = 'mc-top';
-          const give = [...o.give.map((x) => `${S.items[x.id].name} ${x.n}개`), ...(o.gold ? [`금화 ${o.gold}닢`] : [])].join(' + ');
+          const give = [...o.give.map((x) => `${S.items[x.id].name} ${x.n}개`), ...(o.gold ? [`금화 ${o.gold.toLocaleString()}닢`] : [])].join(' + ');
           const get = [...o.get.map((x) => `${S.items[x.id].name}${x.n > 1 ? ` ${x.n}개` : ''}`), ...(o.getGold ? [`금화 ${o.getGold}닢`] : [])].join(' + ');
           const g = document.createElement('span'); g.className = 'mc-goal'; g.textContent = get;
           const ar = document.createElement('span'); ar.className = 'mob-arrow'; ar.textContent = `← ${give}`;
@@ -11282,7 +11294,7 @@
         const add = (label, sub, act, opts = {}) => {
           const b = document.createElement('button');
           b.type = 'button';
-          b.className = `btn${opts.primary ? ' primary' : ''}${opts.combo ? ' combo' : ''}${opts.suggest ? ' suggest' : ''}${opts.flee ? ' flee' : ''}${opts.ally ? ' ally' : ''}${opts.armed ? ' armed' : ''}`;
+          b.className = `btn${opts.primary ? ' primary' : ''}${opts.combo ? ' combo' : ''}${opts.suggest ? ' suggest' : ''}${opts.flee ? ' flee' : ''}${opts.ally ? ' ally' : ''}${opts.armed ? ' armed' : ''}${opts.sig ? ' sig' : ''}`;
           b.innerHTML = `<span></span><small></small>`;
           b.querySelector('span').textContent = label;
           b.querySelector('small').textContent = sub;
@@ -11299,6 +11311,11 @@
           const cb = !why && sk.combo;
           const healPal = sk.id === 'mend' && pal && !pal.left && pal.id !== 'boss' && !(pal.tags || []).some((g) => g.t === '균열 아래로'); // 가라앉는 고룡·끌려간 동료는 치유 대상이 아님
           add(sk.name, why || (healPal ? (pal.down ? `${pal.name} 일으키기` : `${pal.name}에게`) : cb ? `연계! ${sk.combo}` : `기력 ${sk.en}`), { type: 'skill', id: sk.id }, { disabled: !!why, title: [def?.desc, ...comboHints(sk.id)].filter(Boolean).join('\n'), combo: !!cb && !healPal, ally: !!healPal && !why });
+        }
+        // 혼의 기술: 한 싸움에 한 번 (결투에는 없음)
+        if (v.me.sig && v.kind !== 'duel' && v.kind !== 'bet') {
+          const sg = v.me.sig, T = S.combat.sig?.types?.[sg.type];
+          add(sg.name, sg.used ? '이미 썼다' : '혼의 기술 · 한 번', { type: 'sig' }, { sig: true, disabled: !!sg.used || !!frozen, title: T?.desc || '' });
         }
         const bigHit = v.intent && ['heavy', 'multi', 'debuff'].includes(v.intent.kind);
         add('방어', v.kind === 'raid' ? '피해 절반, 기력 +3' : bigHit ? '특기 피해 ¼ · 반격' : '피해 절반, 기력 +3', { type: 'guard' }, { suggest: bigHit && v.kind !== 'raid' });
@@ -11992,6 +12009,31 @@
       c.querySelector('.cost').textContent = cost;
       return c;
     };
+    // 혼의 기술 (레벨 20부터 하나 고름 · 처음은 무료 · 바꾸려면 고대 유적 오르딘의 혼을 비우는 돌)
+    const SG = S.combat.sig;
+    if (SG) {
+      const sec = document.createElement('div'); sec.className = 'sig-pick';
+      const h = document.createElement('div'); h.className = 'sig-h';
+      const cur = me.combat?.sig, rune = S.items?.[SG.rune]?.name || '혼을 비우는 돌';
+      h.innerHTML = '<b>혼의 기술</b><small></small>';
+      h.querySelector('small').textContent = me.level < SG.minLv ? `레벨 ${SG.minLv}이 되면 공격·방어·치유 중 하나를 골라 나만의 혼의 기술로 삼는다.` : cur ? `한 싸움에 한 번 쓴다 (결투 제외). 바꾸려면 고대 유적의 오르딘과 교환해 ${rune}을 구해 쓴다.` : '하나를 골라 나만의 혼의 기술로 삼는다. 처음 고를 때는 무료이고, 한 싸움에 한 번 쓴다 (결투 제외).';
+      sec.appendChild(h);
+      if (me.level >= SG.minLv) {
+        const row = document.createElement('div'); row.className = 'sig-row';
+        for (const [t, T] of Object.entries(SG.types)) {
+          if (cur && cur !== t) continue;
+          const K = SG.kinds[me.kind]?.[t] || [T.label, ''];
+          const c = card(K[0], cur ? `${T.label} · 내 혼의 기술` : T.label, T.desc, cur ? '한 싸움에 한 번' : '눌러서 고르기', `sig${cur ? ' on' : ''}`, cur ? 'div' : 'button');
+          if (!cur) c.addEventListener('click', () => {
+            if (!confirm(`'${K[0]}'(${T.label})${josa(K[0], '을', '를')} 혼의 기술로 삼을까?\n\n바꾸려면 금화 ${SG.runePrice.toLocaleString()}의 ${rune}이 필요하다.`)) return;
+            socket.emit('sig:choose', { type: t }, (res) => { if (res.error) return toast(res.error); toast(res.lines?.[0] || '혼의 기술을 새겼다.'); });
+          });
+          row.appendChild(c);
+        }
+        sec.appendChild(row);
+      }
+      box.appendChild(sec);
+    }
     const br = S.combat.breaths[me.kind];
     if (br) box.appendChild(card(br.name, '숨결', br.desc, `기력 ${S.combat.breathCost.en} · ${S.combat.breathCost.cd}턴마다 · ${S.combat.elements[br.element]} 속성`, 'breath'));
     for (const [id, sk] of Object.entries(S.combat.skills)) {
@@ -14497,6 +14539,7 @@
       if (pk.kind === 'daily') out.push({ t: `집터 덤 · ${({ spring: '샘물 긷기', green: '정원 거두기', archive: '새김', plaza: '앞뜰 쓸기' })[h.plot] || '덤'}`, b: '받기', a: 'perk' });
       else if (pk.kind === 'recall' && h.golems.some((g) => g.job && g.until > Date.now())) out.push({ t: '망루에서 골렘 불러들이기', b: '불러들이기', a: 'perk', manual: true });
     }
+    if (h.nap && h.nap.open && !h.nap.done) out.push({ t: '거처에서 단잠', b: '자기', a: 'nap' }); // 하루 한 번
     const z = CT.v.zones.find((x) => x.state === 'going'); // 지금 재건 중인 구역 재료함에 넣을 도시 재료가 있으면
     if (z && z.box.some((m) => m.id !== 'gold' && m.put < m.need && (h.inv[m.id] || 0) > 0)) out.push({ t: `${z.name} 재료함에 넣기`, b: '넣기', a: 'give' });
     return out;
@@ -14509,6 +14552,7 @@
     if (a === 'req') return cityCall('city:req');
     if (a === 'give') return cityCall('city:give');
     if (a === 'perk') return cityCall('city:perk');
+    if (a === 'nap') return cityCall('city:nap');
     if (a === 'book') { CT.tab = 'plan'; return renderHome(); }
     if (a === 'gifts') { CT.tab = 'plan'; renderHome(); setTimeout(() => document.querySelector('#city-home-dlg .hm-gifts')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50); return; }
     const [k, i] = a.split(':');
@@ -14537,6 +14581,7 @@
       else if (k === 'req') ev = 'city:req';
       else if (k === 'give') ev = 'city:give';
       else if (k === 'perk') ev = 'city:perk';
+      else if (k === 'nap') ev = 'city:nap';
       else if (k === 'again') { ev = 'city:send'; p = { i: +x, ...againOf(g) }; }
       else if (k === 'golem' && gState(g) === 'off') { ev = 'city:repair'; p = { i: +x }; }
       else if (k === 'golem') { ev = 'city:send'; p = { i: +x, ...againOf(g) }; } // 쉬는 골렘도 지난번에 보낸 일 그대로
@@ -14562,7 +14607,7 @@
     const tabs = [['plan', '집터', ''], ['todo', '할 일', todo.length ? `<em class="hm-n">${todo.length}</em>` : ''], ['golems', '골렘', gAtt ? '<i class="hm-dot" aria-label="할 일 있음"></i>' : ''], ['deco', '꾸미기', '']];
     let main = '';
     if (tab === 'plan') main = `${housePlan(h)}${gardenBox(h)}<section class="detail">${CT.sel === 'golems' ? roomD(h, cur || h.rooms[3]) : homeDetail(h)}</section>${homeGiftBox(h)}${bookBox(h)}`;
-    else if (tab === 'todo') main = `${todo.length ? `<section class="hm-todo"><div class="hm-todo-h"><b>할 일 ${todo.length}</b><button type="button" class="btn sm primary" data-ct="all"${CT.busy ? ' disabled' : ''}>${CT.busy ? '처리하는 중…' : '모두 처리'}</button></div>${todo.map((t) => `<div class="tr"><span class="dot"></span><b>${t.t}</b><button type="button" class="btn sm" data-ct="act:${t.a}">${t.b}</button></div>`).join('')}</section>` : '<p class="hm-empty">지금은 할 일이 없다. 골렘이 돌아오면 다시 들러 보자.</p>'}<section class="detail">${reqD(h)}</section>${tradeBox(h)}`;
+    else if (tab === 'todo') main = `${todo.length ? `<section class="hm-todo"><div class="hm-todo-h"><b>할 일 ${todo.length}</b><button type="button" class="btn sm primary" data-ct="all"${CT.busy ? ' disabled' : ''}>${CT.busy ? '처리하는 중…' : '모두 처리'}</button></div>${todo.map((t) => `<div class="tr"><span class="dot"></span><b>${t.t}</b><button type="button" class="btn sm" data-ct="act:${t.a}">${t.b}</button></div>`).join('')}</section>` : '<p class="hm-empty">지금은 할 일이 없다. 골렘이 돌아오면 다시 들러 보자.</p>'}<section class="detail">${reqD(h)}</section>${napBox(h)}${tradeBox(h)}${workshopBox(h)}`;
     else if (tab === 'golems') main = `<section class="detail">${golemsD(h)}</section>`;
     else { const md = CT.dkMode || 'place'; main = `<nav class="seg dk-mode" aria-label="꾸미기">${[['place', '가구 놓기'], ['make', '가구 만들기'], ['bp', '도면'], ['look', '바닥·담']].map(([k, n]) => `<button type="button" data-ct="dkm:${k}" class="${md === k ? 'on' : ''}">${n}</button>`).join('')}</nav>${md === 'make' ? furnMaker(h) : md === 'bp' ? bpShop(h) : md === 'look' ? lookEditor(h) : decoEditor(h)}`; }
     if (tab === 'plan' && h.book && h.book.unread) { socket.emit('city:book:seen', {}, () => {}); setTimeout(() => { if (h.book) h.book.unread = 0; }, 0); } // 집터 탭을 열면 새 글을 읽은 것으로 (이번 화면에는 새 글 표시를 남김)
@@ -14573,6 +14618,18 @@
       ${main}</div>`;
     paintHouse(body, h);
     if (tab === 'deco') decoBind(body, h);
+    homeSrcBind(body);
+  }
+  // 고대도시 재료(가구 만들기·칸 되살리기)를 누르면 제작 탭처럼 얻는 곳을 펼침. 화면이 다시 그려져도 펼쳐 둔 것은 그대로
+  function homeSrcBind(body) {
+    for (const el of body.querySelectorAll('[data-src]')) {
+      const id = el.dataset.src, key = el.dataset.srcKey || id;
+      const list = el.closest('ul.mats');
+      const row = list ? list.parentElement : el.closest('.mk-b') || el.parentElement;
+      srcChip(el, id, row, list || null);
+      el.addEventListener('click', () => { CT.srcOpen = el.getAttribute('aria-expanded') === 'true' ? key : null; });
+      if (CT.srcOpen === key) el.click();
+    }
   }
   // 도트 도면 + 칸마다 이름·꼬리표·골렘/부탁 이름표 (도면은 HP가 그리고, 글자는 HTML로 위에 얹음)
   function housePlan(h) {
@@ -14607,7 +14664,7 @@
     return `${chips.length ? `<div class="hp-strip">${chips.join('')}</div>` : ''}<div class="hp${CT.hpClean ? ' hp-clean' : ''}"><canvas class="hp-cv" width="320" height="240" aria-hidden="true"></canvas>${rooms}<span class="hp-door">입구</span>${eye}</div>`;
   }
   // ════ 꾸미기: 되살린 칸 안과 마당·모래밭에 1도트 단위로 장식을 놓는다 (그림·크기·규칙은 HP, 서버 city.js와 같음) ════
-  const DK_CATS = [['all', '전체'], ['mine', '가진 것'], ['live', '침실·거실'], ['store', '수납'], ['work', '작업'], ['study', '책·책상'], ['kitchen', '부엌·소품'], ['top', '탁상 소품'], ['light', '빛'], ['green', '식물·정원'], ['fence', '울타리'], ['wall', '벽 장식'], ['out', '바깥·특별']];
+  const DK_CATS = [['all', '전체'], ['mine', '가진 것'], ['live', '침실·거실'], ['store', '수납'], ['work', '작업'], ['study', '책·책상'], ['kitchen', '부엌·소품'], ['light', '빛'], ['green', '식물·정원'], ['fence', '울타리'], ['wall', '벽 장식'], ['out', '바깥·특별']];
   const dkName = (s) => HP.name(s);
   const dkDone = (h) => h.rooms.filter((r) => r.state === 'done').map((r) => r.id);
   const dkDefaults = (h) => HP.defaults(h.plot, dkDone(h)); // 칸을 되살릴 때 생기는 처음 배치
@@ -14642,7 +14699,7 @@
       const okSeal = h.seals >= f.seals, okMats = f.mats.every((m) => (h.inv[m.id] || 0) >= m.need), needBp = f.bp === false, ok = okSeal && okMats && !needBp;
       return `<li class="mk-row${CT.dkFocus === f.s ? ' focus' : ''}"><canvas class="dk-th" data-s="${f.s}" aria-hidden="true"></canvas>
         <div class="mk-b"><b>${f.name}</b><small>가진 것 ${own}개${placed ? ` · 놓은 것 ${placed}개` : ''}</small>
-          <div class="mk-cost"><span class="it${okSeal ? '' : ' lack'}">인장 <b>${h.seals}</b><small> / ${f.seals}</small></span>${f.mats.map((m) => `<span class="it${(h.inv[m.id] || 0) >= m.need ? '' : ' lack'}">${m.name} <b>${h.inv[m.id] || 0}</b><small> / ${m.need}</small></span>`).join('')}</div></div>
+          <div class="mk-cost"><span class="it${okSeal ? '' : ' lack'}">인장 <b>${h.seals}</b><small> / ${f.seals}</small></span>${f.mats.map((m) => `<span class="it${(h.inv[m.id] || 0) >= m.need ? '' : ' lack'}" data-src="${m.id}" data-src-key="mk:${f.s}:${m.id}">${m.name} <b>${h.inv[m.id] || 0}</b><small> / ${m.need}</small></span>`).join('')}</div></div>
         ${needBp ? '<button type="button" class="btn sm" data-ct="dkm:bp">도면 필요</button>' : `<button type="button" class="btn sm${ok ? ' primary' : ''}" data-ct="mk:${f.s}:1" ${ok ? '' : 'disabled'}>만들기</button>`}</li>`; }).join('');
     CT.dkFocus = null;
     return `<div class="dk-top"><span>석공 인장 <b>${h.seals}</b></span><small>만든 가구는 '가구 놓기'에서 되살린 칸에 놓는다. 칸을 되살리면 그 칸의 기본 가구가 저절로 생긴다.</small></div>
@@ -14691,7 +14748,7 @@
       ${sel || dk.pick ? `<div class="dk-sel"><b>${sel ? `${dkName(sel.s)}${sel.f ? ' (좌우 반전)' : ''}` : `놓을 장식: ${dkName(dkPickN(dk))}${dk.pickF ? ' (좌우 반전)' : ''}`}</b>${turnable ? `<button type="button" class="btn sm" data-ct="dk:turn">${HP.groupLabel(sel ? HP.baseOf(sel.s) : dk.pick)} 바꾸기</button>` : ''}<button type="button" class="btn sm" data-ct="dk:flip">좌우 반전</button>${sel ? '<button type="button" class="btn sm" data-ct="dk:del">치우기</button>' : ''}<button type="button" class="btn sm" data-ct="dk:none">선택 취소</button></div>` : ''}
       <div class="lk-tabs dk-cats" role="tablist" aria-label="가구 분류">${DK_CATS.map(([k, n]) => `<button type="button" role="tab" aria-selected="${cat === k}" class="${cat === k ? 'on' : ''}" data-ct="dkc:${k}">${n} <small>${cnt(k)}</small></button>`).join('')}</div>
       <div class="dk-pal" role="list">${list.map((n) => { const left = dkLeft(h, n), own = h.furn?.[n] || 0; return `<button type="button" role="listitem" class="dk-it${dk.pick === n ? ' on' : ''}${left > 0 ? '' : ' none'}" data-ct="dk:pick:${n}" aria-pressed="${dk.pick === n}"><canvas class="dk-th" data-s="${n}" aria-hidden="true"></canvas><span>${dkName(n)}</span><em class="dk-n">${own ? `${Math.max(0, left)} / ${own}` : '없음'}</em></button>`; }).join('')}</div>
-      <small class="note">되살린 칸 안과, 마당을 되살린 뒤에는 돌 마당과 담 안 바깥뜰에도 놓을 수 있다. 바깥뜰에서는 건물 앞 땅에 세우면 건물 아랫부분에 걸쳐 놓인다. 방 아랫벽 쪽에 붙이면 앞쪽 벽 뒤로 살짝 가려진다. 창문·깃발은 벽에 걸려 가구 뒤에 보인다. '탁상 소품'은 탁자나 걸상 같은 가구 위에 올려 둘 수 있고, 가구를 옮기면 함께 따라간다.</small>`;
+      <small class="note">되살린 칸 안과, 마당을 되살린 뒤에는 돌 마당과 담 안 바깥뜰에도 놓을 수 있다. 바깥뜰에서는 건물 앞 땅에 세우면 건물 아랫부분에 걸쳐 놓인다. 방 아랫벽 쪽에 붙이면 앞쪽 벽 뒤로 살짝 가려진다. 창문·깃발은 벽에 걸려 가구 뒤에 보인다. 빵·접시·촛대·책·화분 같은 작은 소품은 탁자나 걸상 같은 가구 위에 올려 둘 수 있고, 가구를 옮기면 함께 따라간다.</small>`;
   }
   function dkDraw(body, h, ghost) { // 도면은 편집 중인 배치로, 위 덧칠 캔버스에는 아직 못 쓰는 곳·고른 장식·놓을 자리
     const dk = CT.dk, cv = body.querySelector('.hp.dk .hp-cv'), fx = body.querySelector('.dk-fx'); if (!cv || !fx) return;
@@ -14922,11 +14979,15 @@
   function roomD(h, r) {
     const lack = r.mats.filter((m) => m.put < m.need), left = r.hours - r.h, hh = r.state === 'done' ? r.hours : r.h;
     const mt = r.mats.reduce((x, m) => x + m.need, 0), mp = r.state === 'done' ? mt : r.mats.reduce((x, m) => x + Math.min(m.put, m.need), 0);
+    // 다 되살린 칸은 공사 시간·재료 같은 지난 정보 없이, 열린 것만
+    if (r.state === 'done') return `<div class="dh"><b>${r.name}</b>${stTag(r.state)}</div>
+      <p class="note">공사를 마쳤다. 이 칸은 다 되살아났다.</p>
+      <p class="opens">열린 것: ${r.opens}</p>`;
     return `<div class="dh"><b>${r.name}</b>${stTag(r.state)}</div>
       ${r.state === 'lock' ? '<p class="note">앞 칸을 되살리면 공사를 시작할 수 있다.</p>' : ''}
       <div class="hm-stats"><div><span>공사 시간 (골렘)</span><b>${hh} <small>/ ${r.hours}시간</small></b><i><s style="width:${(hh / r.hours) * 100}%"></s></i>${r.state === 'cur' && left > 0 ? `<small>골렘 1기로 약 ${left}시간${left > 2 ? ` · 2기면 약 ${Math.ceil(left / 2)}시간` : ''}</small>` : ''}</div>
         <div><span>재료</span><b>${mp} <small>/ ${mt}개</small></b><i><s style="width:${(mp / mt) * 100}%"></s></i><small>${lack.length && r.state !== 'done' ? `${lack.length}종 남음` : '다 모음'}</small></div></div>
-      <ul class="mats">${r.mats.map((m) => { const ok = m.put >= m.need; const hv = h.inv[m.id] || 0, can = Math.min(hv, m.need - m.put); return `<li class="${ok ? 'ok' : 'lack'}"><span>${m.name}</span><b>${ok ? '다 모음' : `${m.put} / ${m.need}`}</b>${!ok && r.state === 'cur' ? `<small class="${can > 0 ? 'can' : ''}">가진 것 ${hv}${can > 0 ? ` · ${can}개 넣을 수 있다` : ''}</small>` : ''}</li>`; }).join('')}</ul>
+      <ul class="mats">${r.mats.map((m) => { const ok = m.put >= m.need; const hv = h.inv[m.id] || 0, can = Math.min(hv, m.need - m.put); return `<li class="${ok ? 'ok' : 'lack'}"><span data-src="${m.id}" data-src-key="room:${m.id}">${m.name}</span><b>${ok ? '다 모음' : `${m.put} / ${m.need}`}</b>${!ok && r.state === 'cur' ? `<small class="${can > 0 ? 'can' : ''}">가진 것 ${hv}${can > 0 ? ` · ${can}개 넣을 수 있다` : ''}</small>` : ''}</li>`; }).join('')}</ul>
       <p class="opens">${r.state === 'done' ? '열린 것' : '되살리면'}: ${r.opens}</p>
       ${r.state === 'cur' ? (() => { const put = r.mats.map((m) => [m.name, Math.min(h.inv[m.id] || 0, m.need - m.put)]).filter(([, n]) => n > 0); return `<div class="acts"><button type="button" class="btn primary put-btn" data-ct="act:put" ${put.length ? '' : 'disabled'}>${put.length ? `<span class="pb-t">재료 넣기</span><small class="pb-s">${put.map(([nm, n]) => `${nm} ${n}`).join(' · ')}</small>` : '넣을 재료가 없다'}</button></div><button type="button" class="lnk" data-ct="sel:golems">골렘에게 공사 맡기기 →</button>`; })() : ''}
       <small class="note">재료 10개를 넣을 때마다 석공 인장 1, 넣은 재료는 도시 재건도도 올린다.</small>`;
@@ -14935,7 +14996,7 @@
     const q = h.req, hv = h.inv[q.id] || 0;
     return `<div class="dh"><b>${dhIc('note')}오늘의 부탁</b><span class="tg">오르딘</span></div>
       <p class="quote">"${ctEsc(q.name)} ${q.n}개만 구해 줄 수 있겠나. 도시를 고치는 데 쓰려네."</p>
-      <ul class="mats"><li class="${hv >= q.n ? 'ok' : 'lack'}"><span>${ctEsc(q.name)}</span><b>${hv} / ${q.n}</b></li></ul>
+      <ul class="mats"><li class="${hv >= q.n ? 'ok' : 'lack'}"><span data-src="${q.id}" data-src-key="req:${q.id}">${ctEsc(q.name)}</span><b>${hv} / ${q.n}</b></li></ul>
       <div class="acts"><button type="button" class="btn primary" data-ct="act:req" ${q.done || hv < q.n ? 'disabled' : ''}>${q.done ? '오늘은 들어줬다' : '채운다'}</button></div><small class="note">매일 새 부탁이 붙는다. 들어주면 석공 인장 3, 재건도 2.</small>`;
   }
   const GST = { back: ['돌아옴', 'ok'], due: ['돌아오는 중', 'ok'], work: ['일하는 중', 'cur'], idle: ['쉬는 중', ''], off: ['쓰러짐', 'lk'] };
@@ -15065,6 +15126,26 @@
       ${list.length ? `<div class="bd-grid">${cards}</div>` : '<p class="note">찾는 이름이 없다.</p>'}</div>`;
   }
   document.addEventListener('input', (e) => { if (e.target && e.target.id === 'bd-q') { CT.boardQ = e.target.value; const pos = e.target.selectionStart; renderCityMap(); const inp = document.getElementById('bd-q'); if (inp) { inp.focus(); try { inp.setSelectionRange(pos, pos); } catch {} } } });
+  // 거처의 단잠: 거처를 되살리면 하루 한 번
+  function napBox(h) {
+    const n = h.nap; if (!n) return '';
+    const pct = Math.round(n.gather * 100);
+    if (!n.open) return `<section class="hm-book"><h4>거처의 단잠</h4><p class="note">거처를 되살리면 하루 한 번 단잠을 잘 수 있다. 자고 나면 ${n.hours}시간 동안 채집에서 물건을 하나 더 찾을 확률이 ${pct}% 오른다.</p></section>`;
+    const left = n.until > Date.now() ? Math.ceil((n.until - Date.now()) / 60000) : 0;
+    return `<section class="hm-book"><h4>거처의 단잠 <small class="note">하루 한 번 · 자정에 다시</small></h4><p class="note">${n.done ? (left ? `단잠의 기운이 남아 있다 · ${Math.floor(left / 60) ? `${Math.floor(left / 60)}시간 ` : ''}${left % 60}분 동안 채집에서 하나 더 찾을 확률 +${pct}%` : '오늘은 단잠을 잤다. 내일 다시 잘 수 있다.') : `자고 나면 ${n.hours}시간 동안 채집에서 물건을 하나 더 찾을 확률이 ${pct}% 오른다. 강화 음식과 함께 걸린다.`}</p>${n.done ? '' : `<div class="nap-act"><button type="button" class="btn primary" data-ct="act:nap">단잠 자기</button></div>`}</section>`;
+  }
+  // 작업실 생산대: 작업실을 되살리면, 골렘이 모아 온 도시 재료로 일반 제작 재료를 바로 만든다 (하루 몇 번)
+  function workshopBox(h) {
+    const w = h.make; if (!w) return '';
+    if (!w.open) return `<section class="hm-book"><h4>작업실 생산대</h4><p class="note">작업실을 되살리면 골렘이 모아 온 도시 재료로 태양석·고대의 유물 같은 귀한 재료를 만들 수 있다.</p></section>`;
+    const rows = w.list.map((r) => {
+      const ok = w.left > 0 && r.needs.every((m) => (h.inv[m.id] || 0) >= m.need);
+      return `<li class="mk-row ws-row"><div class="mk-b"><b><span data-src="${r.id}" data-src-key="ws:${r.id}">${ctEsc(r.name)}</span>${r.qty > 1 ? ` ×${r.qty}` : ''}</b><small>가진 것 ${h.inv[r.id] || 0}개</small>
+        <div class="mk-cost">${r.needs.map((m) => `<span class="it${(h.inv[m.id] || 0) >= m.need ? '' : ' lack'}" data-src="${m.id}" data-src-key="ws:${r.id}:${m.id}">${ctEsc(m.name)} <b>${h.inv[m.id] || 0}</b><small> / ${m.need}</small></span>`).join('')}</div></div>
+        <button type="button" class="btn sm${ok ? ' primary' : ''}" data-ct="wmake:${r.i}" ${ok ? '' : 'disabled'}>만들기</button></li>`;
+    }).join('');
+    return `<section class="hm-book"><h4>작업실 생산대 <small class="note">오늘 ${w.left} / ${w.per}번 · 자정에 다시</small></h4><p class="note">골렘이 모아 온 도시 재료로 바로 만든다. 재료 이름을 누르면 얻는 곳이 보인다.</p><ul class="mk-list">${rows}</ul></section>`;
+  }
   // 오르딘 교환: 일주일에 몇 번, 인장으로 대륙의 귀한 재료를
   function tradeBox(h) {
     const t = h.trade; if (!t) return '';
@@ -15155,6 +15236,7 @@
       const have = isW ? (HP.wallDefault(pv.k) || ow.wall.includes(pv.k)) : (HP.floorDefault(pv.k) || ow.floor.includes(pv.k));
       return cityCall('city:look', isW ? { room: pv.room, wall: pv.k, buy: !have } : { room: pv.room, floor: pv.k, buy: !have }, () => { CT.lookPv = null; }); }
     if (k === 'trade') { if (!confirm('석공 인장으로 바꿀까?')) return; return cityCall('city:trade', { i: +x }); }
+    if (k === 'wmake') return cityCall('city:make', { i: +x });
     if (k === 'dkm') { CT.dkMode = x; CT.lookPv = null; if (CT.dk) { CT.dk.pick = null; CT.dk.sel = null; } return renderHome(); }
     if (k === 'dk' && CT.dk) { const dk = CT.dk;
       if (x === 'pick') { if (dk.pick !== y && dkLeft(CT.v.me, y) <= 0) { CT.dkMode = 'make'; CT.dkFocus = y; toast(`가진 ${dkName(y)}${ctJ(dkName(y), '이', '가')} 없다. 만들기에서 만든다.`); renderHome();

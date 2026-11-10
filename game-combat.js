@@ -3,7 +3,7 @@
 // - 강적·결투장: 매 턴 직접 고름 (실시간 결투에서 시간을 넘기면 자동으로 고름)
 // 전투 하나 = battle { kind, turn, a, b, log, over, winner }. a·b는 싸우는 쪽(fighter)
 const {
-  KIN, KIN_GROW, COMBAT, CRAFT, ELEMENTS, BREATHS, BREATH_COST, SKILLS, STATUS, ITEMS, RULES, STANCE_RULES, MIND, PLACES, PLACE_RULES, COMBOS, ENRAGE, RAID, BOSSES, BOSS, RUIN, REGIONS,
+  KIN, KIN_GROW, COMBAT, CRAFT, ELEMENTS, BREATHS, BREATH_COST, SKILLS, SIGNATURE, STATUS, ITEMS, RULES, STANCE_RULES, MIND, PLACES, PLACE_RULES, COMBOS, ENRAGE, RAID, BOSSES, BOSS, RUIN, REGIONS,
 } = require('./game-data');
 const logic = require('./game-logic');
 
@@ -49,6 +49,16 @@ function setSkills(d, list) {
   combatOf(d).skills = ids;
   return { ok: true };
 }
+// 혼의 기술 고르기: 레벨 20부터, 처음 한 번은 무료. 바꾸려면 혼을 비우는 돌로 내려놓은 뒤 다시 고름
+function setSig(d, type) {
+  if ((d.level || 1) < SIGNATURE.minLv) return { error: `레벨 ${SIGNATURE.minLv}이 되어야 고를 수 있다.` };
+  const T = SIGNATURE.types[type]; if (!T) return { error: '그런 혼의 기술은 없다.' };
+  const c = combatOf(d);
+  if (c.sig?.type) return { error: `이미 혼의 기술을 골랐다. 바꾸려면 고대 유적의 오르딘과 교환해 ${ITEMS[SIGNATURE.rune]?.name || '혼을 비우는 돌'}을 구해 써야 한다.` };
+  c.sig = { type, at: Date.now() };
+  const K = SIGNATURE.kinds[d.kind]?.[type];
+  return { ok: true, lines: [`혼의 기술로 '${K ? K[0] : T.label}'${josa(K ? K[0] : T.label, '을', '를')} 새겼다. (${T.label})`] };
+}
 function setSettings(d, p) {
   const c = combatOf(d);
   if (typeof p.duelOn === 'boolean') c.duelOn = p.duelOn;
@@ -93,7 +103,23 @@ function fromDragon(d, context) {
     weak: [], resist: [],
     st: {}, cd: {},
     ally,
+    sig: hunt ? sigOf(d) : null, // 혼의 기술 (결투에는 없음)
   };
+}
+// 혼의 기술: 레벨 20부터, 고른 갈래와 종류에 따른 이름·문장. 한 싸움에 한 번 (used)
+function sigOf(d) {
+  const t = logic.combatJson(d).sig?.type, K = SIGNATURE.kinds[d.kind]?.[t];
+  if (!t || !K || !SIGNATURE.types[t] || (d.level || 1) < SIGNATURE.minLv) return null;
+  const st = logic.statsOf(d);
+  return { type: t, name: K[0], line: K[1], used: false, claw: st.claw, wis: st.wisdom, lvAtk: (d.level || 1) * 1.5 }; // 혼의 기술 피해에 쓰는 본래 발톱·지혜 (40을 넘은 만큼은 덜 셈)
+}
+// 혼의 기술(공격)의 공격력·숨결 힘: 발톱·지혜가 soft.from을 넘은 만큼은 soft.k만 셈. 강화 음식·칭호 같은 배율은 그대로
+function sigPower(f) {
+  const g = f.sig, S = SIGNATURE.types.atk.soft;
+  if (!g || g.claw == null || !S) return { atk: f.atk, mag: f.mag };
+  const soft = (x) => (x <= S.from ? x : S.from + (x - S.from) * S.k);
+  const atkMul = f.atk / Math.max(1, g.claw + g.lvAtk), magMul = f.mag / Math.max(1, g.wis);
+  return { atk: (soft(g.claw) + g.lvAtk) * atkMul, mag: soft(g.wis) * magMul };
 }
 // 레벨별 사냥감 기본 세기. Lv12를 넘으면 레벨당 hpHigh·atkHigh가 더 붙음 (고레벨 구역)
 const creatureMaj = (lv) => (COMBAT.creatureMaj ? COMBAT.creatureMaj.base + lv * COMBAT.creatureMaj.per : 6 + lv * 2);
@@ -256,6 +282,7 @@ function skillOf(f, id) {
 }
 // 이 행동을 지금 쓸 수 있는지 (안 되면 이유)
 function blocked(f, act) {
+  if (act.type === 'sig') return !f.sig ? '쓸 수 있는 혼의 기술이 없다.' : f.sig.used ? '혼의 기술은 이번 싸움에서 이미 썼다.' : null;
   if (act.type !== 'skill') return null;
   const s = skillOf(f, act.id);
   if (!s) return '쓸 수 없는 스킬이다.';
@@ -274,18 +301,20 @@ const STATUS_LIST = (ks) => ks.map((k) => STATUS[k]).join('·');
 // 피해 계산. magic: 숨결처럼 비늘을 덜 타는 공격
 function damage(att, def, power, opt = {}) {
   const { magic = false, element = null, armorK = 0.5 } = opt; // armorK: 상대 비늘을 얼마나 받는지 (보통 공격 0.5, 함께 싸우는 새끼는 덜)
-  let atk = att.atk * (has(att, 'weaken') ? 0.7 : 1) * (has(att, 'fury') ? 1.35 : 1); // 역린
+  const SP = opt.sig ? sigPower(att) : null; // 혼의 기술: 40을 넘은 발톱·지혜는 덜 셈
+  let atk = (SP ? SP.atk : att.atk) * (has(att, 'weaken') ? 0.7 : 1) * (has(att, 'fury') ? 1.35 : 1); // 역린
   let armor = def.def * (has(def, 'acid') ? 0.5 : 1);
-  let raw = magic ? (att.mag * 1.0 + atk * 0.5) * power - armor * 0.25 : atk * power - armor * armorK;
+  let raw = opt.sig ? Math.max((SP.mag * 1.0 + atk * 0.5) * power - armor * 0.25, atk * power - armor * 0.5) // 혼의 기술(공격): 숨결 계산과 발톱 계산 중 높은 쪽
+    : magic ? (att.mag * 1.0 + atk * 0.5) * power - armor * 0.25 : atk * power - armor * armorK;
   raw *= att.swing ? rand(1 - att.swing, 1 + att.swing) : rand(0.85, 1.15); // 결투는 흔들림이 더 커서 약한 쪽에도 기회가 생김
   let note = '';
   if (element && att.elemW?.[element]) raw *= att.elemW[element]; // 날씨: 비에는 불이 약해지고 번개가 세짐
   if (element && att.engrave?.[element]) raw *= att.engrave[element]; // 장신구 각인
   if (def.corrupted && att.vsCorrupt) raw *= att.vsCorrupt; // 희귀 장비: 오염된 적에게
   if (element && def.weak.includes(element)) { raw *= 1.5; note = ' 약점을 찔렀다!'; }
-  if (element && def.resist.includes(element)) { raw *= COMBAT.resist.dmg; note = ' 잘 통하지 않는다.'; } // 저항: 피해가 줄어듦
+  if (element && def.resist.includes(element) && !opt.sig) { raw *= COMBAT.resist.dmg; note = ' 잘 통하지 않는다.'; } // 저항: 피해가 줄어듦 (혼의 기술은 무시)
   const WC = att.duel || def.duel ? COMBAT.wingDuel.crit : COMBAT.wingCrit;
-  const crit = !magic && (opt.crit || Math.random() < WC.base + Math.max(0, spdOf(att) - spdOf(def)) * WC.per + (att.critK || 0)); // 날개(속도)가 높을수록 급소 (결투는 따로) · 칭호 '결투장의 전설'
+  const crit = !magic && !opt.sig && (opt.crit || Math.random() < WC.base + Math.max(0, spdOf(att) - spdOf(def)) * WC.per + (att.critK || 0)); // 날개(속도)가 높을수록 급소 (결투는 따로) · 칭호 '결투장의 전설'
   if (crit) { raw *= 1.5; note += ' 급소를 찔렀다!'; }
   if (def.guarding) raw *= opt.special ? 0.25 : 0.5; // 예고된 특기를 방어하면 4분의 1
   if (has(def, 'harden')) raw *= 0.5;
@@ -293,7 +322,9 @@ function damage(att, def, power, opt = {}) {
   if (has(def, 'acid')) raw *= 1.15; // 비늘이 녹으면 받는 피해도 늘어남 (산 숨결)
   if (has(def, 'fury')) raw *= 1.1;    // 역린: 받는 피해도 늘어남
   if (has(def, 'exposed')) raw *= 1.25; // 하늘 낙하 뒤의 빈틈
+  if (has(def, 'bulwark')) raw *= 0.7; // 혼의 기술(방어)가 레이드 동료에게 건 성벽
   raw *= def.taken;
+  if (opt.cap != null) raw = Math.min(raw, opt.cap); // 혼의 기술: 강적에게는 최대 체력의 일정 비율까지
   return { dmg: Math.max(1, Math.round(raw)), note };
 }
 // 피하기: 날개(속도) 차이와 안개·돌풍
@@ -360,24 +391,35 @@ function setSelf(b, f, self, s) {
   const duel = b && b.kind === 'duel' && s && s.isBreath ? DUEL_SELF[f.breath] : null;
   for (const [k, n0] of Object.entries(self)) { const n = duel && duel[k] != null ? duel[k] : n0; f.st[k] = n + (late && ON_FOE_HIT.includes(k) ? 1 : 0); }
 }
-function applyDebuff(att, def, debuff, chance, element, lines) {
+function applyDebuff(att, def, debuff, chance, element, lines, opt = {}) {
   if (!debuff) return;
-  if (chance != null && Math.random() >= chance) return;
+  // 혼의 기술: 레이드 보스에게는 '두 번 굴려 한 번이라도 걸리면' (평소 규칙대로 굴리되 실패하면 한 번 더)
+  if (opt.tries > 1) {
+    const before = JSON.stringify(def.st);
+    for (let i = 0; i < opt.tries; i++) {
+      const tmp = [];
+      applyDebuff(att, def, debuff, chance, element, tmp);
+      if (JSON.stringify(def.st) !== before || i === opt.tries - 1) { lines.push(...tmp); return; }
+    }
+    return;
+  }
+  const force = !!opt.force; // 혼의 기술: 확률·저항·위엄을 모두 뚫고 반드시
+  if (!force && chance != null && Math.random() >= chance) return;
   // 저항: 그 속성에 강하면 상태 이상을 확률로 막음 (완전 면역은 아님)
-  if (element && def.resist.includes(element) && Math.random() < COMBAT.resist.block) {
+  if (!force && element && def.resist.includes(element) && Math.random() < COMBAT.resist.block) {
     lines.push(`${ga(def)} ${ELEMENTS[element] || ''}에 강해 ${STATUS[Object.keys(debuff)[0]] || '상태 이상'}에 빠지지 않았다.`);
     return;
   }
-  if (pressed(att, def, lines, Object.keys(debuff)[0])) return; // 위압: 위엄이 높은 쪽은 상태 이상을 떨쳐 냄
+  if (!force && pressed(att, def, lines, Object.keys(debuff)[0])) return; // 위압: 위엄이 높은 쪽은 상태 이상을 떨쳐 냄
   // 위엄: 드래곤은 기세로 얼어붙음·마비를 떨쳐 내고, 지속 피해를 한 턴 짧게 버팀
   const MR = COMBAT.majResist;
   const resist = !def.creature && MR ? Math.min(MR.max, (def.maj || 0) * MR.per) : 0;
   for (let [k, n] of Object.entries(debuff)) {
-    if ((k === 'freeze' || k === 'stun') && resisted(def, lines, k, att)) continue;
+    if (!force && (k === 'freeze' || k === 'stun') && resisted(def, lines, k, att)) continue;
     // 상대가 이번 턴에 이미 움직였으면 한 턴 더: 안 그러면 이번 턴 끝에 한 턴이 그냥 줄어 상대 차례를 그만큼 덜 막음
     // (얼어붙음·마비는 한 턴도 못 빼앗고, 움츠러듦은 세 번이 아니라 두 번만 꺾음. 물살 휩쓸기 연계와 같은 처리)
     if (ON_FOE_TURN.includes(k) && att && att.turnNow != null && def.acted === att.turnNow) n += 1;
-    if (resist && (k === 'burn' || k === 'poison' || k === 'bleed') && n > 1 && Math.random() < resist) n -= 1;
+    if (!force && resist && (k === 'burn' || k === 'poison' || k === 'bleed') && n > 1 && Math.random() < resist) n -= 1;
     // 지혜: 드래곤이 거는 상태 이상이 확률로 한 턴 더 감 (확률 = 지혜 × per, 최대 max. 얼어붙음·마비는 빼고)
     const WL = COMBAT.wisLinger;
     const longer = !!WL && !att.creature && !WL.skip.includes(k) && Math.random() < Math.min(WL.max, (att.mag || 0) * WL.per) + (att.lingerK || 0); // 심연을 본 눈 (희귀 장비)
@@ -404,7 +446,7 @@ function endureHit(f, dmg, after) {
 }
 const endureLines = (after, lines) => { for (const x of after) lines.push(typeof x === 'function' ? x() : x); };
 function hit(att, def, power, opt, lines, verb) {
-  if (dodged(att, def, lines)) return 0;
+  if (!opt.sure && dodged(att, def, lines)) return 0; // sure: 혼의 기술은 피하지 못함
   let extra = '';
   if (has(att, 'opening')) { power *= 1.5; att.st.opening = 0; extra = ' 틈을 찔렀다!'; } // 방어로 얻은 반격 기회
   const { dmg, note } = damage(att, def, power, opt);
@@ -436,6 +478,7 @@ function perform(b, f, foe, act, lines) {
     lines.push(`${ga(f)} 몸을 웅크리고 방어 자세를 취했다.`);
     return;
   }
+  if (act.type === 'sig') { if (sigPerform(b, f, foe, lines)) return; act = { type: 'attack' }; }
   if (act.type === 'special') {
     const s = f.special;
     if (s.self) { setSelf(b, f, s.self, s); lines.push(`${ga(f)} ${s.name}${josa(s.name, '으로', '로')} 몸을 단단히 했다.`); return; }
@@ -516,6 +559,41 @@ function perform(b, f, foe, act, lines) {
   if (cb) lines.push(`연계! ${cb.name}`);
   const dealt = hit(f, foe, 1, { crit: cb?.key === 'vital' }, lines, `${ga(f)} 할퀴어`);
   if (dealt && cb) comboAfter(f, foe, cb, lines);
+}
+// 혼의 기술 (한 싸움에 한 번). 썼으면 true
+const SIG_BAD = ['burn', 'poison', 'bleed', 'weaken', 'acid', 'soak', 'blind', 'dazed', 'brittle', 'exposed'];
+function sigPerform(b, f, foe, lines) {
+  const g = f.sig; if (!g || g.used) return false;
+  g.used = true; (f.used ||= []).push(g.name);
+  const T = SIGNATURE.types[g.type];
+  const raid = b.kind === 'raid' || b.kind === 'boss'; // 여럿이 함께 싸우는 보스
+  const mates = raid ? (b.allies || []).filter((x) => x !== f && x.hp > 0 && !x.left && !x.pulled) : [];
+  lines.push(`혼의 기술! ${ga(f)} ${g.line}`);
+  if (g.type === 'atk') {
+    const br = BREATHS[f.breath] || {};
+    const cap = foe && foe.elite && !foe.boss && T.eliteCap ? Math.floor(foe.hpMax * T.eliteCap) : null; // 강적은 한 방에 쓰러지지 않게
+    const dealt = foe && foe.hp > 0 ? hit(f, foe, T.power, { magic: true, element: br.element || null, sig: true, sure: true, cap }, lines, `${g.name}${josa(g.name, '이', '가')}`) : 0;
+    if (dealt) {
+      if (br.debuff) applyDebuff(f, foe, br.debuff, br.chance, br.element, lines, raid && foe.boss ? { tries: 2 } : { force: true });
+      if (br.self) { setSelf(b, f, br.self, null); lines.push(`${ga(f)} ${Object.keys(br.self).map((k) => STATUS[k]).join('·')} 상태가 되었다.`); }
+      if (br.cleanse) { const gone = SIG_BAD.filter((k) => has(f, k)); for (const k of gone) f.st[k] = 0; if (gone.length) lines.push(`보랏빛 결정이 ${STATUS_LIST(gone)}${josa(STATUS[gone[gone.length - 1]], '을', '를')} 씻어 냈다.`); }
+    }
+  } else if (g.type === 'def') {
+    for (const [k, n] of Object.entries(T.self)) f.st[k] = Math.max(f.st[k] || 0, n);
+    lines.push(`${ga(f)} ${STATUS.harden} 상태가 되었다. (${T.self.harden}턴 동안 받는 피해 절반)`);
+    if (mates.length) { for (const m of mates) for (const [k, n] of Object.entries(T.ally)) m.st[k] = Math.max(m.st[k] || 0, n); lines.push(`곁의 동료들에게도 기운이 번진다. (${T.ally.bulwark}턴 동안 받는 피해 −30%)`); }
+  } else if (g.type === 'heal') {
+    const cure = (t, pct) => {
+      const before = Math.max(0, t.hp);
+      t.hp = Math.min(t.hpMax, before + Math.round(t.hpMax * pct + (t === f ? (f.mag || 0) * T.wis : 0)));
+      const gone = SIG_BAD.filter((k) => has(t, k)); for (const k of gone) t.st[k] = 0;
+      return { n: Math.round(t.hp - before), gone };
+    };
+    const me = cure(f, T.pct);
+    lines.push(`${me.n > 0 ? `${ga(f)} 체력을 ${me.n} 되찾았다.` : `${ga(f)} 이미 기운이 넘친다.`}${me.gone.length ? ` ${STATUS_LIST(me.gone)}${josa(STATUS[me.gone[me.gone.length - 1]], '이', '가')} 씻겨 나갔다.` : ''}`);
+    if (mates.length) { const got = mates.map((m) => [m.name, cure(m, T.allyPct).n]).filter(([, n]) => n > 0); lines.push(got.length ? `곁의 동료들에게도 기운이 번진다. (체력 ${got.map(([nm, n]) => `${nm} +${n}`).join(' · ')})` : '곁의 동료들에게도 기운이 번진다.'); }
+  }
+  return true;
 }
 // 연계의 뒤따르는 효과
 function comboAfter(f, foe, cb, lines) {
@@ -710,6 +788,7 @@ function fighterView(f, mine) {
     enraged: !!f.enraged, down: f.hp <= 0, minion: !!f.minion,
   };
   if (mine) {
+    v.sig = f.sig ? { type: f.sig.type, name: f.sig.name, used: !!f.sig.used } : null; // 혼의 기술
     v.skills = [
       ...(f.breath ? [{ id: 'breath', name: BREATHS[f.breath].name, en: BREATH_COST.en, cd: f.cd.breath || 0 }] : []),
       ...f.skills.map((id) => ({ id, name: SKILLS[id].name, en: SKILLS[id].en, cd: f.cd[id] || 0 })),
@@ -1090,7 +1169,7 @@ function raidReward(d, b, c, raid) {
 }
 
 module.exports = {
-  combatOf, loadout, learned, setSkills, setSettings,
+  combatOf, loadout, learned, setSkills, setSettings, setSig, sigOf,
   fromDragon, fromCreature, newBattle, round, aiPick, autoAct, runAuto, blocked, view, comboOf, intentOf, targetOf,
   hunt, huntReward, eliteReward, creatureBase, raidBattle, raidReward, fromBoss, bossBattle, weatherize, debug,
   raidKit: { perform, endOfTurn, damage, dodged, healAmount, fighterView }, // 레이드(raidboss.js)가 넷이 함께 싸우는 턴을 직접 짤 때 씀

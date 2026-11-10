@@ -103,8 +103,8 @@ const OLD_MATS = { yard: { rune_stone: 12, red_clay: 8 }, work: { rune_stone: 8,
   own: { spring: { sea_shell: 12, glow_moss: 6, cave_crystal: 4 }, green: { shroom_spore: 10, red_clay: 8, glow_moss: 6 }, archive: { old_tile: 10, rune_stone: 10, drip_dust: 6 }, forge: { bog_iron: 10, obsidian: 6, sun_dust: 6 }, belfry: { bog_iron: 6, faded_cloth: 8, cave_crystal: 4 }, plaza: { old_tile: 8, wolf_pelt: 6, red_clay: 8 } } };
 const ROOMS = (plot) => [
   { id: 'yard', name: '마당', hours: 6, mats: { rune_stone: 40, red_clay: 30, beast_hide: 15, drip_dust: 15 }, opens: '꾸미기 · 바깥 뜰 · 기본 가구' },
-  { id: 'work', name: '작업실', hours: 12, mats: { rune_stone: 40, old_tile: 30, wolf_pelt: 25, bog_iron: 25, sun_dust: 20 }, opens: '세 번째 골렘 고치기 · 기본 가구' },
-  { id: 'live', name: '거처', hours: 20, mats: { faded_cloth: 35, obsidian: 25, glow_moss: 25, sea_glass: 20, cave_crystal: 20, bog_pearl: 5 }, opens: '기본 가구' },
+  { id: 'work', name: '작업실', hours: 12, mats: { rune_stone: 40, old_tile: 30, wolf_pelt: 25, bog_iron: 25, sun_dust: 20 }, opens: '세 번째 골렘 고치기 · 작업실 생산대 · 기본 가구' },
+  { id: 'live', name: '거처', hours: 20, mats: { faded_cloth: 35, obsidian: 25, glow_moss: 25, sea_glass: 20, cave_crystal: 20, bog_pearl: 5 }, opens: '단잠 · 기본 가구' },
   { id: 'own', name: PI[plot].room, hours: 30, mats: PI[plot].ownMats, opens: '집터 덤 · 기본 가구' },
 ];
 
@@ -155,6 +155,15 @@ const TRADE = { perDay: 3, rare: [['ancient_relic', 50, 1], ['sun_stone', 40, 1]
   city: [['drip_dust', 15, 5], ['cave_crystal', 12, 5], ['shroom_spore', 12, 5], ['faded_cloth', 8, 5], ['old_tile', 8, 5], ['sun_dust', 8, 8]] }; // 묶음은 작게: 재료함은 골렘이 주로 채우고, 교환은 모자란 것을 메우는 정도
 const ZF_NAMES = { spring: 1, archive: 1, green: 1, belfry: 1, sanctum: 1 }; // 구역 기능 중 직접 하는 것 (대장간 거리는 늘 켜지는 효과)
 const JOBS = { build: '집터 공사', city: '도시 일손', gather: '채집', dig: '잔해 뒤지기' };
+// 작업실 생산대: 작업실을 되살리면 열림. 골렘이 가져온 도시 재료를 일반 제작에 쓰이는 재료로 바꿈 (바로 나옴, 하루 perDay번까지 · 한국 시간 자정에 다시)
+// 거처의 단잠: 거처를 되살리면 하루 한 번. 몇 시간 동안 채집에서 하나 더 찾을 확률이 오름 (요리 버프와 따로 걸림)
+const NAP = { hours: 6, gather: 0.10 };
+const WORKSHOP = { perDay: 3, list: [
+  { out: 'sun_stone', qty: 1, needs: { sun_dust: 12, cave_crystal: 2 } },
+  { out: 'living_bark', qty: 1, needs: { shroom_spore: 5, drip_dust: 2 } },
+  { out: 'ancient_relic', qty: 1, needs: { old_tile: 10, faded_cloth: 6 } },
+  { out: 'glow_moss', qty: 2, needs: { shroom_spore: 4, drip_dust: 1 } },
+] };
 const GOLEM_NAMES = ['유적 골렘 1', '유적 골렘 2', '유적 골렘 3']; // 기본 이름 (내 집터 골렘 탭에서 바꿀 수 있음)
 const OLD_GOLEM_NAMES = ['돌멩이', '이끼등', '모래발'];
 const GOLEM_NAME_RE = /^[가-힣A-Za-z0-9 ·'\-]{1,12}$/;
@@ -744,6 +753,34 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     return { ok: true, lines: [`오르딘과 바꿨다: ${ITEMS[o[0]].name} ${q}. 석공 인장 −${o[1]}. (오늘 남은 교환 ${tradeLeft(m)})`] };
   }
 
+  // 거처의 단잠
+  const liveOpen = (m) => { if (!m.plot) return false; const rs = plotRooms(m), at = rs.findIndex((r) => r.id === 'live'); return at >= 0 && curIdx(m) > at; };
+  const napToday = (m) => m.napDay === dayIdx();
+  function doNap(d) {
+    const e = ready(d); if (e) return e;
+    const m = ct(d); if (!m.plot) return err('먼저 집터를 골라야 한다.');
+    if (!liveOpen(m)) return err('거처를 되살려야 단잠을 잘 수 있다.');
+    if (napToday(m)) return err('오늘은 이미 단잠을 잤다. 내일 다시 잘 수 있다.');
+    m.napDay = dayIdx();
+    logic.combatJson(d).nap = { until: Date.now() + NAP.hours * 3600000, gather: NAP.gather };
+    return { ok: true, lines: [`거처의 낡은 침상에 몸을 누이고 단잠을 잤다. 개운하다.`, `${NAP.hours}시간 동안 채집에서 물건을 하나 더 찾을 확률이 ${Math.round(NAP.gather * 100)}% 오른다.`] };
+  }
+  // 작업실 생산대
+  const workOpen = (m) => { if (!m.plot) return false; const rs = plotRooms(m), at = rs.findIndex((r) => r.id === 'work'); return at >= 0 && curIdx(m) > at; };
+  const workLeft = (m) => { if (!m.make || m.make.day !== dayIdx()) m.make = { day: dayIdx(), n: 0 }; return Math.max(0, WORKSHOP.perDay - m.make.n); };
+  function doMake(d, i) {
+    const e = ready(d); if (e) return e;
+    const m = ct(d); if (!m.plot) return err('먼저 집터를 골라야 한다.');
+    if (!workOpen(m)) return err('작업실을 되살려야 생산대를 쓸 수 있다.');
+    const w = WORKSHOP.list[Number(i)]; if (!w || !ITEMS[w.out]) return err('그런 것은 만들 수 없다.');
+    if (workLeft(m) <= 0) return err(`오늘은 생산대를 ${WORKSHOP.perDay}번 다 썼다. 내일 다시 쓸 수 있다.`);
+    const lack = Object.entries(w.needs).filter(([k, n]) => have(d, k) < n);
+    if (lack.length) return err(`${lack.map(([k, n]) => `${ITEMS[k].name} ${n}개`).join(', ')}가 있어야 한다.`);
+    m.make.n += 1;
+    db.saveState(d, [...Object.entries(w.needs).map(([k, n]) => ({ id: k, qty: -n })), { id: w.out, qty: w.qty }]);
+    return { ok: true, lines: [`작업실 생산대에서 ${ITEMS[w.out].name} ${w.qty}개를 만들었다. (오늘 남은 횟수 ${workLeft(m)})`] };
+  }
+
   // ── 동작 ──
   function ready(d) {
     if (!isOpen()) return err(W.closed && pathOpen() ? '고대도시는 잠시 닫혀 있다. (점검 중)' : '고대도시로 가는 길은 아직 열리지 않았다.');
@@ -972,6 +1009,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     const rs = plotRooms(m), ci = m.plot ? curIdx(m) : -1;
     const need = new Set(); rs.forEach((r) => Object.keys(r.mats).forEach((k) => need.add(k))); Object.keys(R.repair).forEach((k) => need.add(k));
     const q = reqOf(d); need.add(q.id);
+    WORKSHOP.list.forEach((w) => { need.add(w.out); Object.keys(w.needs).forEach((k) => need.add(k)); });
     Object.values(ZONE_MATS).forEach((b) => Object.keys(b).forEach((k) => need.add(k)));
     grantFurn(d); Object.values(FURN).forEach((f) => Object.keys(f.mats).forEach((k) => need.add(k)));
     return {
@@ -989,6 +1027,8 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
         zday: Object.fromEntries(Object.entries(m.zday || {}).filter(([, v]) => v === dayIdx())), springLeft: ZF.springTimes - (m.spring && m.spring.day === dayIdx() ? m.spring.n : 0), bell: (() => { const bt = bellToday(), by = Array.isArray(bt.by) ? bt.by : []; return { n: by.length, need: ZF.bellNeed, mine: by.includes(d.name), on: by.length >= ZF.bellNeed }; })(), forgeOff: done('forge') ? ZF.forgeOff : 0,
         bp: Object.entries(BLUEPRINT).map(([k, c]) => ({ s: k, name: bpName(k), seals: c, have: !!(m.bp || {})[k] })),
         look: { floor: (m.look && m.look.floor) || {}, wall: (m.look && m.look.wall) || {}, own: m.plot ? lookOwn(m) : { floor: [], wall: [] }, cost: LOOK.cost },
+        nap: { open: liveOpen(m), done: napToday(m), hours: NAP.hours, gather: NAP.gather, until: (() => { const n = logic.combatJson(d).nap; return n && n.until > now ? n.until : 0; })() },
+        make: { open: workOpen(m), left: workLeft(m), per: WORKSHOP.perDay, list: WORKSHOP.list.filter((w) => ITEMS[w.out]).map((w, i) => ({ i: WORKSHOP.list.indexOf(w), id: w.out, name: ITEMS[w.out].name, qty: w.qty, needs: Object.entries(w.needs).map(([k, n]) => ({ id: k, name: ITEMS[k].name, need: n })) })) },
         trade: { left: tradeLeft(m), per: TRADE.perDay, offers: tradeOffers().map(([k, c, q], i) => ({ i, id: k, name: ITEMS[k].name, rarity: ITEMS[k].rarity, seals: c, qty: q || 1, city: TRADE.city.some((x) => x[0] === k) })) },
         perk: m.plot ? (() => { const on = perkOn(m), pd = perkDaily(m), max = perkMax(m); return { on, up: perkUp(m), kind: m.plot === 'forge' ? 'passive' : m.plot === 'belfry' ? 'recall' : 'daily', text: PI[m.plot].perk, left: on ? Math.max(0, max - pd.n) : 0, max, off: m.plot === 'forge' ? PERK.forgeOff[perkLv(m)] : 0 }; })() : null,
         book: { has: hasBook(m), list: bookOf(d.name), unread: bookNew(d, m) },
@@ -1038,6 +1078,8 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     handle('city:look', (d, p) => setLook(d, p));
     handle('city:garden', (d, p) => gardenAct(d, p));
     handle('city:trade', (d, p) => doTrade(d, p.i));
+    handle('city:make', (d, p) => doMake(d, p.i));
+    handle('city:nap', (d) => doNap(d));
     handle('city:visit', (d, p) => visitView(d, String(p.name || '')));
     handle('city:guest', (d, p) => guestWrite(d, String(p.name || ''), p.text));
     handle('city:book:seen', (d) => { ct(d).bookSeen = Date.now(); return { ok: true }; });
@@ -1093,3 +1135,6 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
 };
 module.exports.CITY_RULES = CITY_RULES;
 module.exports.CITY_ZONES = ZONES;
+module.exports.CITY_TRADE = TRADE; // 재료 얻는 곳 안내(server.js ITEM_SOURCES)에 씀
+module.exports.CITY_WORKSHOP = WORKSHOP;
+module.exports.CITY_JOBS = JOBS;

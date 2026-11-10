@@ -23,7 +23,7 @@ function josa(word, a, b) {
 }
 const ga = (n) => `${n}${josa(n, '이', '가')}`;
 const eul = (n) => `${n}${josa(n, '을', '를')}`;
-const ACTS = ['attack', 'skill', 'guard', 'flee', 'cover', 'flank', 'kindle']; // flank: 우회 (카르넴) · kindle: 기억 깨우기 (균열)
+const ACTS = ['attack', 'skill', 'guard', 'flee', 'cover', 'flank', 'kindle', 'sig']; // sig: 혼의 기술 // flank: 우회 (카르넴) · kindle: 기억 깨우기 (균열)
 
 module.exports = function setupRaidBoss({ io, db, online, logic, combat, arena, sendMe, isOpen, fall, purify, news, presence, track }) {
   const R = RAIDBOSS;
@@ -447,7 +447,7 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
     if (!foe) return;
     if (SC(fg).beforeAct(fg, p, a, foe, lines)) return; // 보스마다의 행동 (우회 등)을 다 처리했으면 끝
     if (a.type === 'flank') a = { type: 'attack' };
-    const b = { kind: 'raid', a: p, b: foe, foes: fg.foes, target: fg.foes.indexOf(foe) };
+    const b = { kind: 'raid', a: p, b: foe, foes: fg.foes, target: fg.foes.indexOf(foe), allies: fg.players }; // allies: 혼의 기술(방어·치유)가 동료에게도
     const usedN = (p.used || []).length;
     const earsBefore = p.ears;
     const bossHp = fg.boss.hp;

@@ -542,6 +542,7 @@ const meOf = (d) => ({
   mob: mobs.summary(d),                     // 맡은 모브 드래곤 의뢰와 진행도
   craft: logic.craftView(d),                // 찾아낸 제작법, 대성공 확률, 공방, 장신구 강화·각인
   buff: (() => { const b = logic.buffOf(d); return b ? { id: b.id, until: b.until } : null; })(),
+  nap: (() => { const n = logic.combatJson(d).nap; return n && n.until > Date.now() ? { until: n.until, gather: n.gather } : null; })(), // 거처의 단잠
   scars: death.scarsOf(d),
   bio: bioOf(d),
   statBonus: logic.bonusOf(d).stats,       // 그중 장신구 몫
@@ -576,7 +577,7 @@ const meOf = (d) => ({
   tpUnread: db.tpUnread(d.id),        // 아직 듣지 않은 텔레파시 수
   kin: d.kinSummary || { home: [], lineage: 0 },
   traits: (() => { const t = logic.traitsOf(d); return { list: t.list, chosen: !!t.chosen, counts: t.counts, done: t.done, mark: t.mark || {} }; })(), // mark: 없애기만 하는 규칙을 다시 세기 시작한 횟수
-  combat: (() => { const c = combat.combatOf(d); return { skills: combat.loadout(d), w: c.w, l: c.l, duelOn: c.duelOn, autoDuel: c.autoDuel }; })(),
+  combat: (() => { const c = combat.combatOf(d); return { skills: combat.loadout(d), w: c.w, l: c.l, duelOn: c.duelOn, autoDuel: c.autoDuel, sig: c.sig?.type || null }; })(),
   battle: arena ? arena.inBattle(d.id) : false,
   raidBoss: raidBoss ? raidBoss.meView(d) : null, // 레이드: 이번 주 보상 횟수
   perks: d.perks || {},
@@ -873,6 +874,18 @@ const death = require('./death')({ io, db, online, logic, life, sendMe, broadcas
 const maze = require('./maze')({ io, db, online, logic, sendMe, system, death });
 // 고대도시: 지하 회랑을 모두 밝히면 고대 유적 아래로 열리는 도시 (city.js)
 const city = require('./city')({ io, db, online, logic, sendMe });
+// 고대도시 재료를 얻는 곳도 '얻는 곳' 안내에 더함 (제작·가구 만들기·칸 되살리기에서 재료를 누르면 보임)
+{
+  const { CITY_RULES: CR, CITY_TRADE: CTR, CITY_JOBS: CJ, CITY_WORKSHOP: CW } = require('./city');
+  const add = (id, text) => { if (!ITEMS[id]) return; (ITEM_SOURCES[id] ||= []); if (!ITEM_SOURCES[id].includes(text)) ITEM_SOURCES[id].push(text); };
+  const often = (p) => (p >= 0.5 ? '' : p >= 0.3 ? ' (가끔)' : ' (드물게)');
+  for (const [id, p] of CR.gather || []) add(id, `고대도시 골렘 일감 '${CJ.gather}'${often(p)}`);
+  for (const [id, p] of CR.dig || []) add(id, `고대도시 골렘 일감 '${CJ.dig}'${often(p)}`);
+  for (const [id, seals, qty] of CTR.city || []) add(id, `오르딘(고대도시)과 교환 (석공 인장 ${seals}에 ${qty}개, 날마다 바뀜)`);
+  for (const [id, seals] of CTR.rare || []) add(id, `오르딘(고대도시)과 교환 (석공 인장 ${seals}, 날마다 바뀜)`);
+  for (const w of CW.list || []) add(w.out, `고대도시 작업실 생산대 (${Object.entries(w.needs).map(([k, n]) => `${ITEMS[k]?.name || k} ${n}`).join(' · ')})`);
+  add('shroom_spore', '온실 옆 집의 집터 덤 (하루 한 번 정원 거두기)'); add('cave_crystal', '온실 옆 집의 집터 덤 (하루 한 번 정원 거두기)');
+}
 // ── 계절과 날씨: 시각으로 정해짐. 바뀌면 모두에게 알리고, 그 지역 이야기 창에도 한 줄 ──
 function weatherAll(now = Date.now()) {
   const se = logic.seasonAt(now);
@@ -1633,7 +1646,7 @@ function onConnect(socket) {
     craftRules: { enhance: CRAFT.enhance, forgeRate: CRAFT.forgeRate, engrave: CRAFT.engrave, experimentEn: CRAFT.experiment.en, forge: CRAFT.forge, hidden: RECIPES.filter((r) => r.hidden).map((r) => r.out) },
     statPerLevel: require('./game-data').STAT_POINTS.perLevel,
     places: PLACES, regionPlaces: REGION_PLACES, placeRules: PLACE_RULES,
-    combat: { breaths: BREATHS, breathCost: BREATH_COST, elements: ELEMENTS, skills: SKILLS, status: STATUS, combos: require('./game-data').COMBOS, maxSkills: COMBAT.maxSkills, turnSeconds: COMBAT.turnSeconds,
+    combat: { breaths: BREATHS, breathCost: BREATH_COST, elements: ELEMENTS, skills: SKILLS, status: STATUS, sig: require('./game-data').SIGNATURE, combos: require('./game-data').COMBOS, maxSkills: COMBAT.maxSkills, turnSeconds: COMBAT.turnSeconds,
       creatures: Object.fromEntries(Object.entries(CREATURE_COMBAT).map(([r, c]) => [r, { weak: c.weak, resist: c.resist, special: c.special.name }])) },
   });
   if (dragon) enterWorld(socket, dragon);

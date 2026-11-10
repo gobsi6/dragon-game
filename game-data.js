@@ -342,6 +342,7 @@ const ITEMS = {
   elder_ember:    { name: '고룡의 불씨',       rarity: 'rare', cat: 'trophy', value: 95, desc: '꺼지지 않는 붉은 불씨. 쥐고 있으면 먼 옛날 드래곤의 포효가 들리는 듯하다.' },
 
   // ── 만든 물건: 회복약 (use: 사용 효과) ──
+  oath_rune:    { name: '혼을 비우는 돌', rarity: 'rare', type: 'use', use: { sigReset: true }, value: 0, desc: '고대 유적의 오르딘이 옛 용들이 혼에 새긴 기술을 비워 내던 돌이라며 내준 것. 쥐면 손끝이 서늘하다. 쓰면 혼의 기술을 내려놓고, 스킬 창에서 다시 고를 수 있다.' },
   honey_salve:  { name: '꿀 고약',          rarity: 'common',   type: 'use', use: { hp: 55 },  desc: '상처에 바르면 금세 아문다.' },
   moss_salve:   { name: '이끼 고약',        rarity: 'uncommon', type: 'use', use: { hp: 70 },  desc: '빛나는 이끼가 상처를 차갑게 덮는다.' },
   ember_tea:    { name: '불씨 차',          rarity: 'common',   type: 'use', use: { en: 25 },  desc: '마시면 속이 뜨거워지고 기운이 돈다.' },
@@ -2290,12 +2291,74 @@ const SKILLS = {
   dive:   { name: '하늘 낙하',    lv: 16, en: 14, cd: 5, power: 1.9, self: { exposed: 2 }, desc: '높이 솟구쳤다가 내리꽂아 피해 ×1.9. 내려앉은 뒤 한동안 빈틈이 생겨 받는 피해 +25%. 눈이 먼 적에게는 반드시 급소.' },
 };
 // 상태 이름 (화면 표시용)
+// ── 혼의 기술: 레벨 20에 공격·방어·치유 중 하나를 고름 (처음은 무료, 바꾸려면 고대 유적 오르딘에게서 혼을 비우는 돌)
+// 한 싸움에 한 번 · 기력 없음 · 결투에서는 쓸 수 없음. 이름과 문장은 종류마다 (문장 앞에 '○○이(가)'가 붙음)
+const SIGNATURE = {
+  minLv: 20,
+  rune: 'oath_rune', runePrice: 200000,
+  types: {
+    atk: { label: '공격', power: 3,
+      soft: { from: 40, k: 0.25 }, // 발톱·지혜가 40을 넘은 만큼은 4분의 1만 셈 (고르게 키운 드래곤이 크게 밀리지 않게)
+      eliteCap: 0.85,              // 강적에게는 한 번에 최대 체력의 85%까지 (한 방에 쓰러뜨리지 못하게)
+      desc: '내 숨결의 속성으로 큰 피해를 준다. 숨결 계산과 발톱 계산 중 높은 쪽으로 들어가고, 저항을 무시하며 피하지 못한다. 숨결의 상태 이상이 반드시 걸린다 (레이드 보스는 버텨 내기도 하지만 평소보다 훨씬 잘 걸린다). 발톱·지혜가 아주 높아도 피해는 완만하게만 오르고, 강적은 한 방에 쓰러뜨리지 못한다.' },
+    def: { label: '방어', self: { harden: 3 }, ally: { bulwark: 2 }, desc: '세 턴 동안 받는 피해가 절반이 된다. 레이드에서는 동료 모두가 두 턴 동안 받는 피해 −30%.' },
+    heal: { label: '치유', pct: 0.4, allyPct: 0.25, wis: 1, desc: '최대 체력의 40%와 지혜만큼 체력을 되찾고 해로운 상태를 모두 씻어 낸다. 레이드에서는 쓰러지지 않은 동료 모두가 최대 체력의 25%를 되찾고 해로운 상태가 씻긴다.' },
+  },
+  kinds: {
+    black: {
+      atk: ['녹아내리는 늪', '늪 바닥의 독기를 한꺼번에 끌어올려 쏟아부었다. 닿는 곳마다 비늘이 녹아내린다.'],
+      def: ['잿빛 비늘 갑옷', '잿빛 비늘을 겹겹이 곤두세웠다. 늪안개가 갑옷처럼 몸을 감싼다.'],
+      heal: ['늪안개의 숨', '깊은 늪의 숨을 들이켰다가 내쉬었다. 상처가 아물고 독기가 씻겨 나간다.'],
+    },
+    gold: {
+      atk: ['심판의 낙뢰', '하늘을 향해 포효하자 구름이 갈라지며 낙뢰가 내리꽂혔다.'],
+      def: ['태양의 방패', '날개를 펼치자 금빛 비늘이 햇빛을 받아 방패처럼 빛났다.'],
+      heal: ['햇살의 은총', '따스한 빛을 머금은 숨을 내쉬었다. 지친 몸에 햇살이 스며든다.'],
+    },
+    white: {
+      atk: ['백색 폭풍', '설원의 바람을 모두 불러 모아 하얀 폭풍으로 덮쳤다.'],
+      def: ['만년설의 장벽', '얼음 결정을 둘러 세웠다. 녹지 않는 눈이 벽이 되어 막아선다.'],
+      heal: ['고요한 설원', '눈을 감자 주위가 설원처럼 고요해졌다. 아픔이 차갑게 가라앉는다.'],
+    },
+    green: {
+      atk: ['독안개의 송곳니', '짙은 독안개 속에서 송곳니를 드러내며 달려들었다.'],
+      def: ['고목의 껍질', '숲의 기운을 둘렀다. 비늘이 천 년 고목의 껍질처럼 단단해진다.'],
+      heal: ['약초꾼의 숨결', '숲의 약초 내음을 실은 숨을 내쉬었다. 상처마다 푸른 기운이 번진다.'],
+    },
+    red: {
+      atk: ['재의 왕관', '하늘 높이 솟구쳐 불의 관을 이고 내리꽂았다. 땅이 재로 뒤덮인다.'],
+      def: ['용암 비늘', '몸속의 불을 비늘 밖으로 끌어냈다. 붉게 달아오른 비늘이 공격을 녹여 낸다.'],
+      heal: ['잉걸불의 온기', '꺼지지 않는 잉걸불 같은 숨을 내쉬었다. 식어 가던 몸에 온기가 돈다.'],
+    },
+    silver: {
+      atk: ['은빛 장막의 일격', '안개 속으로 사라졌다가, 은빛 장막을 찢고 나타나 일격을 날렸다.'],
+      def: ['안개 성벽', '짙은 안개를 성벽처럼 둘렀다. 공격이 안개 속에서 길을 잃는다.'],
+      heal: ['달빛 안개', '달빛을 머금은 안개를 흩뿌렸다. 안개가 닿은 곳마다 상처가 옅어진다.'],
+    },
+    blue: {
+      atk: ['심해의 포효', '깊은 바다의 포효를 내지르자 거대한 해일이 일어 덮쳤다.'],
+      def: ['파도의 장벽', '물결을 일으켜 몸을 감쌌다. 부서지는 파도가 공격을 흘려보낸다.'],
+      heal: ['조수의 숨결', '밀물처럼 차오르는 숨을 내쉬었다. 썰물에 실려 아픔이 빠져나간다.'],
+    },
+    purple: {
+      atk: ['자수정 파쇄', '자수정 조각을 소용돌이처럼 일으켜 한꺼번에 터뜨렸다.'],
+      def: ['수정 갑주', '비늘 위로 자수정을 돋아나게 했다. 보랏빛 갑주가 몸을 감싼다.'],
+      heal: ['자수정의 치유', '자수정빛 숨을 내쉬었다. 은은한 빛이 상처를 감싸 낫게 한다.'],
+    },
+    bronze: {
+      atk: ['사막의 진노', '모래 폭풍을 일으켜 하늘을 가리고, 그 한가운데로 덮쳐 들었다.'],
+      def: ['대지의 맹세', '앞발로 땅을 짚고 버텼다. 대지가 맹세처럼 몸을 받쳐 준다.'],
+      heal: ['모래 위의 샘', '메마른 땅에서 샘을 끌어올리듯 숨을 내쉬었다. 마른 몸에 생기가 돈다.'],
+    },
+  },
+};
 const STATUS = {
   burn: '화상', poison: '중독', bleed: '출혈', acid: '비늘 녹음', freeze: '얼어붙음', stun: '마비',
   weaken: '움츠러듦', harden: '비늘 세움', evade: '안개', dodge: '돌풍',
   brittle: '얼음 금', dazed: '휘청임', opening: '반격 기회',
   soak: '흠뻑 젖음', stone: '돌 비늘',
   blind: '눈 멂', fury: '역린', exposed: '빈틈',
+  bulwark: '성벽', // 혼의 기술(방어)가 레이드 동료에게 거는 것: 받는 피해 −30%
 };
 // 연계: 상대의 상태에 맞는 스킬을 쓰면 추가 효과
 // (얼어붙음·마비가 풀린 다음 턴에도 '얼음 금'·'휘청임'이 남아 연계를 이을 수 있다)
@@ -3153,5 +3216,5 @@ module.exports = {
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, FESTIVAL, NIGHT_MARKET, KIN_FEST, TITLES, TITLE_COUNT_NAMES, ACHIEVEMENTS, YABAWI, PEDDLER, KEEPSAKES,
   PURIFY, CRAFT, SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, FISHING, RUIN, FACILITY, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
   DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, MATE_DRAKE_NAMES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, KIN_GROW, KIN_PLAY, KIN_TOUCH, KIN_BOND, FREE, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,
-  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, HEAL_OTHER, BOSSES, BOSS, RAIDBOSS, DEPART, departPts, BONDS, MARKS, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG, EXP_FULL,
+  COMBAT, BREATHS, BREATH_COST, ELEMENTS, SKILLS, SIGNATURE, HEAL_OTHER, BOSSES, BOSS, RAIDBOSS, DEPART, departPts, BONDS, MARKS, BOND_RULES, SEASONS, SEASON_RULES, WEATHERS, W_BASE, W_REGION, STATUS, CREATURE_COMBAT, ELITES, COMBOS, ENRAGE, EXP_GOALS, EXP_FORKS, EXP_RULES, EXP_LONG, EXP_FULL,
 };
