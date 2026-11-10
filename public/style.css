@@ -2367,8 +2367,18 @@ button.trait.bad.on { background: #FBF1F2; box-shadow: inset 0 0 0 1px #A63E4B; 
 .bt-mini .it.heavy, .bt-mini .it.multi { color: #A63E4B; font-weight: 600; }
 .bt-mini .it.debuff { color: #8A6516; font-weight: 600; }
 .bt-intent small.more { display: block; margin-top: 3px; color: #A63E4B; }
-/* 폰: 무리와 싸울 때는 나를 위에, 적 목록을 아래에 넓게 */
-@media (max-width: 620px) { .bt-sides.multi { grid-template-columns: minmax(0, 1fr); } .bt-sides.multi .bt-vs { display: none; } }
+/* 폰: 무리와 싸울 때도 나와 적을 나란히 (적 목록 쪽을 조금 넓게, 작은 카드는 글씨를 줄여 한 칸에) */
+@media (max-width: 620px) {
+  .bt-sides.multi { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 6px; }
+  .bt-sides.multi .bt-vs { display: none; }
+  .bt-sides.multi .bt-f.many { padding: 6px; gap: 4px; }
+  .bt-sides.multi .bt-mini { padding: 5px 6px 6px; gap: 2px 6px; }
+  .bt-sides.multi .bt-mini .nm { flex-wrap: wrap; gap: 0 4px; }
+  .bt-sides.multi .bt-mini .nm b { font-size: 12px; white-space: normal; }
+  .bt-sides.multi .bt-mini .nm em { font-size: 10px; }
+  .bt-sides.multi .bt-mini .num { font-size: 10.5px; align-self: start; }
+  .bt-sides.multi .bt-many-n { font-size: 10.5px; }
+}
 .bt-acts .btn.auto { grid-column: 1 / -1; min-height: 40px; background: #EEF2F6; border: 1px solid #9DB3C6; color: var(--steel-d); } /* 자동: 푸른 칸 (아래 물러나기와 헷갈리지 않게) */
 .bt-acts .btn.auto span { font-weight: 600; }
 .bt-acts .btn.auto small { color: #4A6478; }
@@ -4060,7 +4070,10 @@ html:has(dialog.dlg:modal) { overflow: hidden; overscroll-behavior: none; } /* �
 /* 결투장: 규칙은 접어 둠 */
 .arena-rules { margin: 2px 0 4px; }
 .arena-rules > summary { cursor: pointer; min-height: 28px; display: list-item; line-height: 28px; font-size: 12.5px; font-weight: 600; color: var(--steel-d); }
-.arena-rules > .note { margin: 2px 0 6px; }
+.arena-rules-b { margin: 2px 0 8px; padding: 10px 14px; background: #fff; border: 1px solid var(--line-in); border-radius: 3px; font-size: 13px; line-height: 1.65; color: var(--ink-2); }
+.arena-rules-b p { margin: 0 0 6px; }
+.arena-rules-b ul { margin: 8px 0 0; padding: 8px 0 0 1.1em; border-top: 1px solid var(--line-in); display: flex; flex-direction: column; gap: 5px; }
+.arena-rules-b li b { margin-right: 6px; color: var(--ink); font-weight: 700; }
 /* 석판 목록: 투표 글 제목 옆의 진행 상태 */
 .sl-card .t .sl-st { flex: none; padding: 0 6px; font-size: 10.5px; line-height: 18px; border-radius: 9px; font-weight: 600; white-space: nowrap; }
 .sl-card .t .sl-st.todo { background: #FBF1E4; color: #7A4E12; }
@@ -5156,3 +5169,18 @@ body.chat-off #say, body.chat-off #chat-view { display: none; }
 .gm-fight span { color: var(--ink-2); }
 .gm-fight.warn { border-color: #E6C3C7; background: #FBF5F5; }
 .gm-val.gm-ok { color: var(--forest); font-weight: 600; }
+
+/* 폰 전투 카드: 체력·기력 막대를 촘촘하게 붙이고 빈 줄을 없애 카드 높이를 줄임 */
+@media (max-width: 520px) {
+  #battle-dlg .bt-f { padding: 7px 8px; gap: 2px; }
+  #battle-dlg .bt-f .bt-who { margin-bottom: 2px; }
+  #battle-dlg .bt-f .bt-who b { font-size: 13.5px; }
+  #battle-dlg .bt-f .bt-who small { font-size: 11px; }
+  #battle-dlg .bt-f .num { font-size: 11px; line-height: 1.35; }
+  #battle-dlg .bt-f .bar { height: 6px; margin-bottom: 3px; }
+  #battle-dlg .bt-f .sts { min-height: 0; }
+  #battle-dlg .bt-f .sts:empty { display: none; }
+  #battle-dlg .bt-f .el { font-size: 10.5px; line-height: 1.4; }
+  #battle-dlg .bt-f .el:empty { display: none; }
+  #battle-dlg .bt-sides { align-items: start; } /* 상대 카드는 제 내용만큼만 (내 카드 높이에 맞춰 늘어나며 생기던 빈자리 없앰) */
+}

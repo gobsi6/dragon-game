@@ -11421,6 +11421,7 @@
   }
   $('battle-dlg').addEventListener('cancel', (e) => { if (BT && !BT.view.over && !BT.replay) e.preventDefault(); });
   let ARENA_MORE = false; // 결투 기록 '지난 기록 더 보기'를 펼쳤는지 (결투장을 열어 둔 동안 기억)
+  let ARENA_RULES_OPEN = false; // 결투 규칙을 펼쳐 두었는지 (새로 그려도 유지)
   let ARENA_BACK = false; // 결투장에서 전투 창을 열었으면, 닫을 때 결투장으로 돌아감
   $('battle-dlg').addEventListener('close', () => {
     clearInterval(btTimer);
@@ -11606,13 +11607,21 @@
     set.addEventListener('click', openSettings);
     me.appendChild(set);
     body.appendChild(me);
-    // 규칙은 접어 두고 필요할 때만 펼침
+    // 규칙은 접어 두고 필요할 때만 펼침 (펼친 채로 두면 결투장이 다시 그려져도 펼친 채로)
     const rules = document.createElement('details'); rules.className = 'arena-rules';
+    rules.open = ARENA_RULES_OPEN;
+    rules.addEventListener('toggle', () => { ARENA_RULES_OPEN = rules.open; });
     rules.appendChild(Object.assign(document.createElement('summary'), { textContent: '결투 규칙 보기' }));
-    const n = document.createElement('p');
-    n.className = 'note';
-    n.textContent = '결투에서는 다치지 않는다. 둘 다 접속해 있으면 직접 턴을 골라 싸우고, 상대가 자동 결투를 허용했다면 접속하지 않았어도 스킬 구성대로 싸운다. 이기면 용족 명성과 경험치가 오른다. 결투는 하루에 15번, 같은 상대와는 하루에 3번까지 할 수 있다(직접·자동·내기 모두, 신청한 쪽과 받은 쪽 모두 한 번씩 센다). 내기 결투는 둘 다 접속해 있고 레벨 차이가 5 이하일 때, 서로 금화나 물건을 걸고 겨뤄 진 쪽이 건 것을 이긴 쪽이 가져간다.';
-    rules.appendChild(n);
+    const rb = document.createElement('div'); rb.className = 'arena-rules-b';
+    rb.innerHTML = `<p>결투에서는 두 드래곤의 능력치가 평균에 가깝도록 보정됩니다. 각 능력치는 두 드래곤의 평균을 기준으로 조정되며, 기존 능력치와 평균의 차이는 일부만 반영됩니다. 따라서 능력치가 높은 쪽이 조금 유리하지만, 전투력 차이는 크게 줄어듭니다.</p>
+      <p>피해량은 일반 전투보다 변동 폭이 크며, 양측 모두 체력과 기력이 가득 찬 상태로 결투를 시작합니다. 또한 결투 중에는 부상을 입지 않습니다.</p>
+      <ul>
+        <li><b>진행 방식</b> 두 드래곤이 모두 접속 중이라면 직접 턴을 선택해 결투를 진행할 수 있습니다. 상대가 자동 결투를 허용한 경우에는 상대가 접속하지 않았더라도 설정된 스킬 구성에 따라 자동으로 결투가 진행됩니다.</li>
+        <li><b>보상</b> 결투에서 승리하면 용족 명성과 경험치를 획득합니다.</li>
+        <li><b>횟수 제한</b> 결투는 하루 최대 15회, 동일한 상대와는 하루 최대 3회까지 가능합니다. 직접 결투, 자동 결투, 내기 결투가 모두 횟수에 포함되며, 신청한 쪽과 신청받은 쪽 모두 각각 1회로 계산됩니다.</li>
+        <li><b>내기 결투</b> 두 드래곤이 모두 접속 중이고 레벨 차이가 5 이하일 때 이용할 수 있습니다. 서로 금화나 아이템을 걸고 결투하며, 승리한 쪽이 패배한 쪽이 건 물품을 가져갑니다.</li>
+      </ul>`;
+    rules.appendChild(rb);
     body.appendChild(rules);
     const box = document.createElement('div');
     for (const x of res.list) {

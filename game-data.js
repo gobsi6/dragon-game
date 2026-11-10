@@ -342,7 +342,7 @@ const ITEMS = {
   elder_ember:    { name: '고룡의 불씨',       rarity: 'rare', cat: 'trophy', value: 95, desc: '꺼지지 않는 붉은 불씨. 쥐고 있으면 먼 옛날 드래곤의 포효가 들리는 듯하다.' },
 
   // ── 만든 물건: 회복약 (use: 사용 효과) ──
-  honey_salve:  { name: '꿀 고약',          rarity: 'common',   type: 'use', use: { hp: 30 },  desc: '상처에 바르면 금세 아문다.' },
+  honey_salve:  { name: '꿀 고약',          rarity: 'common',   type: 'use', use: { hp: 55 },  desc: '상처에 바르면 금세 아문다.' },
   moss_salve:   { name: '이끼 고약',        rarity: 'uncommon', type: 'use', use: { hp: 70 },  desc: '빛나는 이끼가 상처를 차갑게 덮는다.' },
   ember_tea:    { name: '불씨 차',          rarity: 'common',   type: 'use', use: { en: 25 },  desc: '마시면 속이 뜨거워지고 기운이 돈다.' },
   // ── 잘 안 쓰이던 재료로 만드는 회복약 (기력·체력) ──
@@ -350,11 +350,11 @@ const ITEMS = {
   snow_tea:     { name: '눈꽃 얼음차',      rarity: 'common',   type: 'use', use: { en: 30, hp: 10 },   desc: '녹지 않는 눈꽃을 얼음 결정과 함께 띄웠다. 이가 시릴 만큼 차고 정신이 번쩍 든다.' },
   bindweed_drink: { name: '갯메꽃 꿀물',    rarity: 'common',   type: 'use', use: { en: 25 },           desc: '바닷가 갯메꽃을 꿀물에 띄웠다. 짭조름하고 달다.' },
   ash_cookie:   { name: '잿불 과자',        rarity: 'common',   type: 'use', use: { en: 35 },           desc: '잿빛 먼지에 불도마뱀 꼬리의 열을 입혀 구웠다. 씹을수록 속이 뜨거워진다. 멸망한 대륙에서 버티는 이들의 간식.' },
-  heartwood_sap:{ name: '고목 수액',        rarity: 'uncommon', type: 'use', use: { en: 50, hp: 30 },   desc: '천 년 고목의 심재에서 짜낸 수액. 빛나는 이끼로 맑혀 마시면 오래 버틸 힘이 난다.' },
+  heartwood_sap:{ name: '고목 수액',        rarity: 'uncommon', type: 'use', use: { en: 80, hp: 50 },   desc: '천 년 고목의 심재에서 짜낸 수액. 빛나는 이끼로 맑혀 마시면 오래 버틸 힘이 난다.' },
   star_honey:   { name: '별빛 꿀',          rarity: 'rare',     type: 'use', use: { en: 70, mind: 10 }, desc: '별조각을 꿀에 재워 두었더니 꿀이 희미하게 빛나기 시작했다.' },
   flower_poultice:{ name: '들꽃 찜질',      rarity: 'common',   type: 'use', use: { hp: 25 },           desc: '들꽃을 찧어 따뜻하게 덮는 찜질. 쓰라린 데가 금세 가라앉는다.' },
   bitter_brew:  { name: '쓴 약초 탕',       rarity: 'common',   type: 'use', use: { hp: 40 },           desc: '독초를 오래 달여 독기를 뺐다. 지독하게 쓰지만 상처에는 잘 듣는다.' },
-  pearl_salve:  { name: '진주 가루 고약',   rarity: 'uncommon', type: 'use', use: { hp: 90 },           desc: '늪 진주를 곱게 갈아 빛나는 이끼에 갰다. 바르면 상처 자리가 은은하게 빛난다.' },
+  pearl_salve:  { name: '진주 가루 고약',   rarity: 'uncommon', type: 'use', use: { hp: 140 },           desc: '늪 진주를 곱게 갈아 빛나는 이끼에 갰다. 바르면 상처 자리가 은은하게 빛난다.' },
   glacier_pack: { name: '만년설 찜질',      rarity: 'uncommon', type: 'use', use: { hp: 80, en: 20 },   desc: '녹지 않는 얼음을 감싸 올려 두는 찜질. 열이 내리고 몸이 가벼워진다.' },
   clover_tonic: { name: '은빛 토끼풀 진액', rarity: 'rare',     type: 'use', use: { hp: 100, mind: 10 }, desc: '은빛 토끼풀 네 잎을 꿀에 녹였다. 마시면 몸과 마음이 함께 개운해진다.' },
   sun_breath:   { name: '태양의 숨결',      rarity: 'rare',     type: 'use', use: { ap: 4 },   desc: '한 모금 들이켜면 날개에 힘이 솟는다.' },
@@ -948,7 +948,7 @@ const FISHING = {
     chance: { perfect: 0, good: 0.03, ok: 0.1, auto: 0.1 },
     items: [
       { id: 'old_boot', w: 25 }, { id: 'driftwood', w: 25 }, { id: 'tangled_net', w: 15 },
-      { id: 'rusty_hook', w: 15 }, { id: 'sea_glass', w: 30 }, { id: 'bottle_letter', w: 6 }, // 바다 유리 15 → 30 (집터·제작에 많이 쓰여 너무 귀했음)
+      { id: 'rusty_hook', w: 15 }, { id: 'sea_glass', w: 38 }, { id: 'bottle_letter', w: 6 }, // 바다 유리 15 → 30 → 38 (집터·제작에 많이 쓰여 너무 귀했음)
     ],
     letters: [
       '이 편지를 줍는 이에게. 해안 마을 세 번째 집의 개 이름은 \'구름\'이다. 지나가거든 쓰다듬어 주길.',
@@ -1032,7 +1032,7 @@ const RUIN = {
 
 const TRADE = {
   // 시장에서 하루(한국 날짜)에 살 수 있는 개수. 적지 않은 물건은 제한 없음
-  dailyBuy: { salted_fish: 5, holy_water: 5, herbal_ointment: 10, strong_wine: 10, bait_worm: 10, salt_crystal: 5, chicken_meat: 10, hen_egg: 10, wheat_flour: 10, rice: 10, cane_sugar: 10, raspberry: 10, grape: 10, pear: 10 },
+  dailyBuy: { salted_fish: 5, holy_water: 5, herbal_ointment: 10, strong_wine: 10, bait_worm: 50, salt_crystal: 5, chicken_meat: 10, hen_egg: 10, wheat_flour: 10, rice: 10, cane_sugar: 10, raspberry: 10, grape: 10, pear: 10 },
   stanceCooldown: 12 * 60 * 60 * 1000, // 성향을 바꾼 뒤 다시 바꾸기까지 (12시간)
   refuseBelow: -40,                 // 평판이 이보다 낮으면 상인이 거래를 거절
   intimidateCost: 2,                // 위협하기에 드는 행동력
