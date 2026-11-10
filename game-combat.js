@@ -282,7 +282,7 @@ function skillOf(f, id) {
 }
 // 이 행동을 지금 쓸 수 있는지 (안 되면 이유)
 function blocked(f, act) {
-  if (act.type === 'sig') return !f.sig ? '쓸 수 있는 혼의 기술이 없다.' : f.sig.used ? '혼의 기술은 이번 싸움에서 이미 썼다.' : null;
+  if (act.type === 'sig') return !f.sig ? '쓸 수 있는 혼의 기술이 없다.' : f.sig.used ? '혼의 기술은 이번 싸움에서 이미 썼다.' : sigAsleep(f) ? `아직 혼이 깨어나지 않았다. (체력 ${Math.round(f.sig.gate * 100)}% 이하에서)` : null;
   if (act.type !== 'skill') return null;
   const s = skillOf(f, act.id);
   if (!s) return '쓸 수 없는 스킬이다.';
@@ -291,6 +291,9 @@ function blocked(f, act) {
   return null;
 }
 const has = (f, k) => (f.st[k] || 0) > 0;
+// 혼의 기술(공격)이 아직 잠들어 있음: 사냥·강적에서 체력이 gate(최대 체력 비율)보다 많을 때.
+// 한 번 깨어나면 그 싸움 동안은 깨어 있음 (치유로 체력이 다시 올라도 잠기지 않게)
+const sigAsleep = (f) => { const g = f.sig; if (!g?.gate || g.woke) return false; if (f.hp <= f.hpMax * g.gate) { g.woke = true; return false; } return true; };
 // 흠뻑 젖으면 굼떠짐 (속도 −30%: 늦게 움직이고, 잘 못 피하고, 급소를 잘 맞음)
 const spdOf = (f) => f.spd * (has(f, 'soak') ? 0.7 : 1);
 
@@ -322,7 +325,7 @@ function damage(att, def, power, opt = {}) {
   if (has(def, 'acid')) raw *= 1.15; // 비늘이 녹으면 받는 피해도 늘어남 (산 숨결)
   if (has(def, 'fury')) raw *= 1.1;    // 역린: 받는 피해도 늘어남
   if (has(def, 'exposed')) raw *= 1.25; // 하늘 낙하 뒤의 빈틈
-  if (has(def, 'bulwark')) raw *= 0.7; // 혼의 기술(방어)가 레이드 동료에게 건 성벽
+  if (has(def, 'bulwark')) raw *= 1 - (def.st.bulwarkK || 0.3); // 혼의 기술(방어)가 레이드 동료에게 건 성벽 (건 쪽의 비늘에 따라 30~40%)
   raw *= def.taken;
   if (opt.cap != null) raw = Math.min(raw, opt.cap); // 혼의 기술: 강적에게는 최대 체력의 일정 비율까지
   return { dmg: Math.max(1, Math.round(raw)), note };
@@ -478,7 +481,7 @@ function perform(b, f, foe, act, lines) {
     lines.push(`${ga(f)} 몸을 웅크리고 방어 자세를 취했다.`);
     return;
   }
-  if (act.type === 'sig') { if (sigPerform(b, f, foe, lines)) return; act = { type: 'attack' }; }
+  if (act.type === 'sig') { if (!blocked(f, act) && sigPerform(b, f, foe, lines)) return; act = { type: 'attack' }; } // 잠든 혼의 기술은 할퀴기로
   if (act.type === 'special') {
     const s = f.special;
     if (s.self) { setSelf(b, f, s.self, s); lines.push(`${ga(f)} ${s.name}${josa(s.name, '으로', '로')} 몸을 단단히 했다.`); return; }
@@ -579,9 +582,19 @@ function sigPerform(b, f, foe, lines) {
       if (br.cleanse) { const gone = SIG_BAD.filter((k) => has(f, k)); for (const k of gone) f.st[k] = 0; if (gone.length) lines.push(`보랏빛 결정이 ${STATUS_LIST(gone)}${josa(STATUS[gone[gone.length - 1]], '을', '를')} 씻어 냈다.`); }
     }
   } else if (g.type === 'def') {
-    for (const [k, n] of Object.entries(T.self)) f.st[k] = Math.max(f.st[k] || 0, n);
-    lines.push(`${ga(f)} ${STATUS.harden} 상태가 되었다. (${T.self.harden}턴 동안 받는 피해 절반)`);
-    if (mates.length) { for (const m of mates) for (const [k, n] of Object.entries(T.ally)) m.st[k] = Math.max(m.st[k] || 0, n); lines.push(`곁의 동료들에게도 기운이 번진다. (${T.ally.bulwark}턴 동안 받는 피해 −30%)`); }
+    const scale = f.def || 0; // 비늘
+    const longer = !!T.linger && Math.random() < Math.min(T.linger.max, scale * T.linger.per); // 비늘: 확률로 한 턴 더
+    const turns = T.self.harden + (longer ? 1 : 0);
+    f.st.harden = Math.max(f.st.harden || 0, turns);
+    lines.push(`${ga(f)} ${STATUS.harden} 상태가 되었다. (${turns}턴 동안 받는 피해 절반${longer ? ' · 단단한 비늘 덕에 한 턴 더' : ''})`);
+    if (mates.length) {
+      const W = T.wall, wk = W ? Math.min(W.max, W.base + Math.max(0, scale - W.from) * W.per) : 0.3; // 비늘: 성벽의 세기
+      for (const m of mates) {
+        m.st.bulwarkK = has(m, 'bulwark') ? Math.max(m.st.bulwarkK || 0, wk) : wk; // 이미 성벽이 있으면 센 쪽
+        for (const [k, n] of Object.entries(T.ally)) m.st[k] = Math.max(m.st[k] || 0, n);
+      }
+      lines.push(`곁의 동료들에게도 기운이 번진다. (${T.ally.bulwark}턴 동안 받는 피해 −${Math.round(wk * 100)}%)`);
+    }
   } else if (g.type === 'heal') {
     const cure = (t, pct) => {
       const before = Math.max(0, t.hp);
@@ -634,6 +647,7 @@ function endOfTurn(f, lines) {
   for (const k of Object.keys(STATUS)) if (f.st[k] > 0 && k !== 'dodge') f.st[k] -= 1;
   for (const k of Object.keys(f.cd)) if (f.cd[k] > 0) f.cd[k] -= 1;
   if (!f.creature) f.en = Math.min(f.enMax, f.en + COMBAT.enPerTurn);
+  if (f.sig) sigAsleep(f); // 혼의 기술(공격): 이번 턴에 체력이 절반 이하로 떨어졌으면 깨어남 (치유로 다시 올라도 깨어 있음)
 }
 
 // 쓰러진 쪽을 알리고, 싸움이 끝났는지 봄
@@ -788,7 +802,7 @@ function fighterView(f, mine) {
     enraged: !!f.enraged, down: f.hp <= 0, minion: !!f.minion,
   };
   if (mine) {
-    v.sig = f.sig ? { type: f.sig.type, name: f.sig.name, used: !!f.sig.used } : null; // 혼의 기술
+    v.sig = f.sig ? { type: f.sig.type, name: f.sig.name, used: !!f.sig.used, gate: f.sig.gate || 0, asleep: sigAsleep(f) } : null; // 혼의 기술 (gate·asleep: 사냥·강적의 공격은 체력 절반 이하에서 깨어남)
     v.skills = [
       ...(f.breath ? [{ id: 'breath', name: BREATHS[f.breath].name, en: BREATH_COST.en, cd: f.cd.breath || 0 }] : []),
       ...f.skills.map((id) => ({ id, name: SKILLS[id].name, en: SKILLS[id].en, cd: f.cd[id] || 0 })),
@@ -837,6 +851,7 @@ function hunt(d) {
   const chance = corrupted ? (logic.isRuin(d.region) ? RUIN.eliteChance : MIND.eliteChance) : COMBAT.eliteChance;
   const eliteRoll = debug.forceElite ?? (d.level >= COMBAT.eliteFrom && Math.random() < chance * (logic.titleMods(d).eliteFind || 1)); // 칭호 '강적을 부르는 자'
   const me = fromDragon(d, 'hunt');
+  if (me.sig?.type === 'atk' && SIGNATURE.types.atk.hpGate) me.sig.gate = SIGNATURE.types.atk.hpGate; // 혼의 기술(공격): 사냥·강적에서는 체력이 절반 이하일 때만
   { const ti = logic.titleMods(d); if (ti.endure != null) { me.endure = ti.endure; me.endureHeal = ti.endureHeal || 0; } } // 칭호 '불굴의 의지'·'꺾이지 않는 마음' (사냥·강적, bossBattle에도 같은 줄)
   if (eliteRoll) {
     const foe = fromCreature(place, true, corrupted);

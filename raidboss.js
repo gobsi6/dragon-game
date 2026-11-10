@@ -7,7 +7,7 @@
 // - GM은 혼자서도 시험으로 들어갈 수 있음 (보상·기록 없음)
 // 상태는 world 표의 'raidboss'에 저장 (주간 보상 횟수, 안전판, 첫 처치와 가장 빠른 기록)
 const numJosa = (n, a, b) => ('013678'.includes(String(n).replace(/[^0-9]/g, '').slice(-1)) ? a : b); // 숫자 뒤 조사: 끝자리를 읽은 소리에 받침이 있으면 a (영·일·삼·육·칠·팔, 0으로 끝나면 십·백·천)
-const { RAIDBOSS, REGIONS, ITEMS, SKILLS, STATUS, BREATHS, isTestDragon } = require('./game-data');
+const { RAIDBOSS, REGIONS, ITEMS, SKILLS, STATUS, BREATHS, isTestDragon, SIGNATURE } = require('./game-data');
 
 const DAY = 86400000;
 const weekIdx = (now = Date.now()) => Math.floor((Math.floor((now + 9 * 3600000) / DAY) + 3) / 7); // 한국 시각 월요일 0시에 바뀜
@@ -226,6 +226,7 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
       logic.regen(d);
       const f = combat.fromDragon(d, 'raid'); // 레이드 장신구의 특별한 효과는 여기서만
       f.ally = null; // 곁에 둔 새끼는 레이드에 따라오지 않음
+      if (f.sig?.type === 'atk' && SIGNATURE.types.atk.hpGate) f.sig.gate = SIGNATURE.types.atk.hpGate; // 혼의 기술(공격): 레이드에서도 체력이 절반 이하일 때 깨어남 (한 번 깨어나면 치유를 받아도 유지)
       f.atk *= (logic.titleMods(d).eliteAtk || 1) * logic.gearMods(d).eliteAtk; // 레이드 보스도 강적: '강적과 싸울 때 공격' 칭호·희귀 장비가 듦 (강적 전투와 같은 방식)
       f.hp = Math.min(f.hp, f.hpMax); f.hp0 = f.hp;
       f.ears = 0; f.reaped = 0; f.mindLoss = 0; f.erosion = 0; f.consumed = false; f.pulled = false; // erosion·consumed·pulled: 균열 (잿빛 침식, 잿빛에 먹힘, 균열 아래로 끌려감)

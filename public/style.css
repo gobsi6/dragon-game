@@ -5202,6 +5202,9 @@ body.chat-off #say, body.chat-off #chat-view { display: none; }
 .bt-acts .btn.sig:hover:not(:disabled) { background: #4A2133; }
 .bt-acts .btn.sig:disabled { background: #EDE6E9; border-color: #D7C9CF; color: #8A7A82; box-shadow: none; }
 .bt-acts .btn.sig:disabled small { color: #8A7A82; }
+.bt-acts .btn.sig.woke:not(:disabled) { animation: sig-woke 1.6s ease-in-out infinite; } /* 혼의 기술(공격)이 깨어남: 체력 절반 이하 */
+@keyframes sig-woke { 0%, 100% { box-shadow: inset 0 0 0 1px #B8913A, 0 0 0 0 rgba(184, 145, 58, 0); } 50% { box-shadow: inset 0 0 0 1px #F2D58A, 0 0 10px 2px rgba(184, 145, 58, .55); } }
+@media (prefers-reduced-motion: reduce) { .bt-acts .btn.sig.woke:not(:disabled) { animation: none; box-shadow: inset 0 0 0 2px #F2D58A; } }
 .sig-pick { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; margin-bottom: 4px; background: #FBF5F7; border: 1px solid #E3CFD6; border-radius: 3px; }
 .sig-pick .sig-h b { display: block; font: 700 15px var(--serif); color: #5A2A3E; }
 .sig-pick .sig-h small { font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
@@ -5212,3 +5215,7 @@ body.chat-off #say, body.chat-off #chat-view { display: none; }
 .sig-pick .trait.skill.sig b em { color: #5A2A3E; }
 .sig-pick button.trait.skill.sig:hover { background: #F6ECEF; }
 .sig-pick .trait.skill.sig.on { background: #fff; box-shadow: inset 0 0 0 1px #5A2A3E; }
+
+.sig-pick .sig-guide { display: inline-block; margin-top: 2px; font-size: 12px; font-weight: 600; color: #5A2A3E; text-decoration: none; }
+.sig-pick .sig-guide:hover { text-decoration: underline; text-underline-offset: 3px; }
+.sig-pick .trait.skill small { line-height: 1.6; }

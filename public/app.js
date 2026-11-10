@@ -11294,7 +11294,7 @@
         const add = (label, sub, act, opts = {}) => {
           const b = document.createElement('button');
           b.type = 'button';
-          b.className = `btn${opts.primary ? ' primary' : ''}${opts.combo ? ' combo' : ''}${opts.suggest ? ' suggest' : ''}${opts.flee ? ' flee' : ''}${opts.ally ? ' ally' : ''}${opts.armed ? ' armed' : ''}${opts.sig ? ' sig' : ''}`;
+          b.className = `btn${opts.primary ? ' primary' : ''}${opts.combo ? ' combo' : ''}${opts.suggest ? ' suggest' : ''}${opts.flee ? ' flee' : ''}${opts.ally ? ' ally' : ''}${opts.armed ? ' armed' : ''}${opts.sig ? ' sig' : ''}${opts.woke ? ' woke' : ''}`;
           b.innerHTML = `<span></span><small></small>`;
           b.querySelector('span').textContent = label;
           b.querySelector('small').textContent = sub;
@@ -11315,7 +11315,8 @@
         // 혼의 기술: 한 싸움에 한 번 (결투에는 없음)
         if (v.me.sig && v.kind !== 'duel' && v.kind !== 'bet') {
           const sg = v.me.sig, T = S.combat.sig?.types?.[sg.type];
-          add(sg.name, sg.used ? '이미 썼다' : '혼의 기술 · 한 번', { type: 'sig' }, { sig: true, disabled: !!sg.used || !!frozen, title: T?.desc || '' });
+          const asleep = !sg.used && sg.asleep; // 공격: 사냥·강적에서는 체력이 절반 이하가 되어야 깨어남
+          add(sg.name, sg.used ? '이미 썼다' : asleep ? `체력 ${Math.round(sg.gate * 100)}% 이하에서 깨어남` : sg.gate ? '혼이 깨어났다 · 한 번' : '혼의 기술 · 한 번', { type: 'sig' }, { sig: true, woke: !sg.used && !asleep && !!sg.gate, disabled: !!sg.used || asleep || !!frozen, title: T?.desc || '' });
         }
         const bigHit = v.intent && ['heavy', 'multi', 'debuff'].includes(v.intent.kind);
         add('방어', v.kind === 'raid' ? '피해 절반, 기력 +3' : bigHit ? '특기 피해 ¼ · 반격' : '피해 절반, 기력 +3', { type: 'guard' }, { suggest: bigHit && v.kind !== 'raid' });
@@ -12017,6 +12018,8 @@
       const cur = me.combat?.sig, rune = S.items?.[SG.rune]?.name || '혼을 비우는 돌';
       h.innerHTML = '<b>혼의 기술</b><small></small>';
       h.querySelector('small').textContent = me.level < SG.minLv ? `레벨 ${SG.minLv}이 되면 공격·방어·치유 중 하나를 골라 나만의 혼의 기술로 삼는다.` : cur ? `한 싸움에 한 번 쓴다 (결투 제외). 바꾸려면 고대 유적의 오르딘과 교환해 ${rune}을 구해 쓴다.` : '하나를 골라 나만의 혼의 기술로 삼는다. 처음 고를 때는 무료이고, 한 싸움에 한 번 쓴다 (결투 제외).';
+      const gl = document.createElement('a'); gl.href = '/guide.html#sig'; gl.target = '_blank'; gl.rel = 'noopener'; gl.className = 'sig-guide'; gl.textContent = '자세한 규칙은 길잡이에서';
+      h.appendChild(gl);
       sec.appendChild(h);
       if (me.level >= SG.minLv) {
         const row = document.createElement('div'); row.className = 'sig-row';
