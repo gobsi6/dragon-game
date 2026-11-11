@@ -158,7 +158,7 @@ const JOBS = { build: '집터 공사', city: '도시 일손', gather: '채집', 
 // 작업실 생산대: 작업실을 되살리면 열림. 골렘이 가져온 도시 재료를 일반 제작에 쓰이는 재료로 바꿈 (바로 나옴, 하루 perDay번까지 · 한국 시간 자정에 다시)
 // 거처의 단잠: 거처를 되살리면 하루 한 번. 몇 시간 동안 채집에서 하나 더 찾을 확률이 오름 (요리 버프와 따로 걸림)
 const NAP = { hours: 6, gather: 0.10 };
-const WORKSHOP = { perDay: 3, list: [
+const WORKSHOP = { perDay: 5, list: [ // 하루 3 → 5번 (2026-11-11)
   { out: 'sun_stone', qty: 1, needs: { sun_dust: 12, cave_crystal: 2 } },
   { out: 'living_bark', qty: 1, needs: { shroom_spore: 5, drip_dust: 2 } },
   { out: 'ancient_relic', qty: 1, needs: { old_tile: 10, faded_cloth: 6 } },
