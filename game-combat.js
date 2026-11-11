@@ -111,7 +111,7 @@ function sigOf(d) {
   const t = logic.combatJson(d).sig?.type, K = SIGNATURE.kinds[d.kind]?.[t];
   if (!t || !K || !SIGNATURE.types[t] || (d.level || 1) < SIGNATURE.minLv) return null;
   const st = logic.statsOf(d);
-  return { type: t, name: K[0], line: K[1], used: false, claw: st.claw, wis: st.wisdom, lvAtk: (d.level || 1) * 1.5 }; // 혼의 기술 피해에 쓰는 본래 발톱·지혜 (40을 넘은 만큼은 덜 셈)
+  return { type: t, name: K[0], line: K[1], used: false, claw: st.claw, wis: st.wisdom, lvAtk: (d.level || 1) * 1.5, gate: t === 'atk' ? (SIGNATURE.types.atk.hpGate || 0) : 0 }; // gate: 공격은 모든 싸움(사냥·강적·레이드·대륙의 재앙·보물 도둑)에서 체력이 절반 이하일 때만 깨어남 // 혼의 기술 피해에 쓰는 본래 발톱·지혜 (40을 넘은 만큼은 덜 셈)
 }
 // 혼의 기술(공격)의 공격력·숨결 힘: 발톱·지혜가 soft.from을 넘은 만큼은 soft.k만 셈. 강화 음식·칭호 같은 배율은 그대로
 function sigPower(f) {
@@ -291,7 +291,7 @@ function blocked(f, act) {
   return null;
 }
 const has = (f, k) => (f.st[k] || 0) > 0;
-// 혼의 기술(공격)이 잠들어 있음: 사냥·강적·레이드에서 체력이 gate(최대 체력 비율)보다 많을 때.
+// 혼의 기술(공격)이 잠들어 있음: 모든 싸움에서 체력이 gate(최대 체력 비율)보다 많을 때.
 // 치유로 체력이 다시 절반을 넘으면 도로 잠듦. 다만 절반 이하일 때 고른 행동(act.sigOk)은 그 턴에 반드시 나감 (같은 턴에 먼저 치유받아도)
 const sigAsleep = (f) => !!f.sig?.gate && f.hp > f.hpMax * f.sig.gate;
 // 흠뻑 젖으면 굼떠짐 (속도 −30%: 늦게 움직이고, 잘 못 피하고, 급소를 잘 맞음)

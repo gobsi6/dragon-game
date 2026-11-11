@@ -11422,7 +11422,7 @@
         // 혼의 기술: 한 싸움에 한 번 (결투에는 없음)
         if (v.me.sig && v.kind !== 'duel' && v.kind !== 'bet') {
           const sg = v.me.sig, T = S.combat.sig?.types?.[sg.type];
-          const asleep = !sg.used && sg.asleep; // 공격: 사냥·강적에서는 체력이 절반 이하가 되어야 깨어남
+          const asleep = !sg.used && sg.asleep; // 공격: 모든 싸움에서 체력이 절반 이하가 되어야 깨어남
           add(sg.name, sg.used ? '이미 썼다' : asleep ? `체력 ${Math.round(sg.gate * 100)}% 이하에서 깨어남` : sg.gate ? '혼이 깨어났다 · 한 번' : '혼의 기술 · 한 번', { type: 'sig' }, { sig: true, woke: !sg.used && !asleep && !!sg.gate, disabled: !!sg.used || asleep || !!frozen, title: T?.desc || '' });
         }
         const bigHit = v.intent && ['heavy', 'multi', 'debuff'].includes(v.intent.kind);
@@ -12135,7 +12135,7 @@
           const K = SG.kinds[me.kind]?.[t] || [T.label, ''];
           const c = card(K[0], cur ? `${T.label} · 내 혼의 기술` : T.label, T.desc, cur ? (T.gateNote ? `한 싸움에 한 번 · ${T.gateNote}` : '한 싸움에 한 번') : (T.gateNote ? `${T.gateNote} · 눌러서 고르기` : '눌러서 고르기'), `sig${cur ? ' on' : ''}`, cur ? 'div' : 'button');
           if (!cur) c.addEventListener('click', () => {
-            if (!confirm(`'${K[0]}'(${T.label})${josa(K[0], '을', '를')} 혼의 기술로 삼을까?${T.gateNote ? '\n\n사냥·강적·레이드에서는 체력이 절반 이하일 때만 쓸 수 있다. 치유를 받아 절반을 넘으면 다시 잠든다.' : ''}\n\n바꾸려면 금화 ${SG.runePrice.toLocaleString()}의 ${rune}이 필요하다.`)) return;
+            if (!confirm(`'${K[0]}'(${T.label})${josa(K[0], '을', '를')} 혼의 기술로 삼을까?${T.gateNote ? '\n\n체력이 절반 이하일 때만 쓸 수 있다. 치유를 받아 절반을 넘으면 다시 잠든다.' : ''}\n\n바꾸려면 금화 ${SG.runePrice.toLocaleString()}의 ${rune}이 필요하다.`)) return;
             socket.emit('sig:choose', { type: t }, (res) => { if (res.error) return toast(res.error); toast(res.lines?.[0] || '혼의 기술을 새겼다.'); });
           });
           row.appendChild(c);
