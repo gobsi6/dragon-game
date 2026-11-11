@@ -14613,7 +14613,7 @@
     const tabs = [['plan', '집터', ''], ['todo', '할 일', todo.length ? `<em class="hm-n">${todo.length}</em>` : ''], ['golems', '골렘', gAtt ? '<i class="hm-dot" aria-label="할 일 있음"></i>' : ''], ['deco', '꾸미기', '']];
     let main = '';
     if (tab === 'plan') main = `${housePlan(h)}${gardenBox(h)}<section class="detail">${CT.sel === 'golems' ? roomD(h, defRoom(h)) : homeDetail(h)}</section>${homeGiftBox(h)}${bookBox(h)}`;
-    else if (tab === 'todo') main = `${todo.length ? `<section class="hm-todo"><div class="hm-todo-h"><b>할 일 ${todo.length}</b><button type="button" class="btn sm primary" data-ct="all"${CT.busy ? ' disabled' : ''}>${CT.busy ? '처리하는 중…' : '모두 처리'}</button></div>${todo.map((t) => `<div class="tr"><span class="dot"></span><b>${t.t}</b><button type="button" class="btn sm" data-ct="act:${t.a}">${t.b}</button></div>`).join('')}</section>` : '<p class="hm-empty">지금은 할 일이 없다. 골렘이 돌아오면 다시 들러 보자.</p>'}`; // 오늘의 부탁 내용·단잠·생산대·오르딘 교환은 집터 그림에서 그 구역을 누르면
+    else if (tab === 'todo') main = `${todo.length ? `<section class="hm-todo"><div class="hm-todo-h"><b>할 일 ${todo.length}</b><button type="button" class="btn sm primary" data-ct="all"${CT.busy ? ' disabled' : ''}>${CT.busy ? '처리하는 중…' : '모두 처리'}</button></div>${todo.map((t) => `<div class="tr"><span class="dot"></span><b>${t.t}</b><button type="button" class="btn sm" data-ct="act:${t.a}">${t.b}</button></div>`).join('')}</section>` : '<p class="hm-empty">지금은 할 일이 없다. 골렘이 돌아오면 다시 들러 보자.</p>'}<section class="detail">${reqD(h)}</section>${tradeBox(h)}`; // 오늘의 부탁과 오르딘과 바꾸기(석공 인장 교환)는 할 일 탭에 (입구 옆 오르딘 쪽지로도 바꾸기를 열 수 있음). 단잠·생산대는 집터 그림에서 그 구역을 누르면
     else if (tab === 'golems') main = `<section class="detail">${golemsD(h)}</section>`;
     else { const md = CT.dkMode || 'place'; main = `<nav class="seg dk-mode" aria-label="꾸미기">${[['place', '가구 놓기'], ['make', '가구 만들기'], ['bp', '도면'], ['look', '바닥·담']].map(([k, n]) => `<button type="button" data-ct="dkm:${k}" class="${md === k ? 'on' : ''}">${n}</button>`).join('')}</nav>${md === 'make' ? furnMaker(h) : md === 'bp' ? bpShop(h) : md === 'look' ? lookEditor(h) : decoEditor(h)}`; }
     if (tab === 'plan' && h.book && h.book.unread) { socket.emit('city:book:seen', {}, () => {}); setTimeout(() => { if (h.book) h.book.unread = 0; }, 0); } // 집터 탭을 열면 새 글을 읽은 것으로 (이번 화면에는 새 글 표시를 남김)
@@ -14645,7 +14645,6 @@
     const chips = [], icons = [];
     // 아이콘 자리: 칸 이름 아래쪽의 후보 자리 중, 이미 놓인 아이콘과 겹치지 않는 가장 가운데 자리. 칸이 차면 마당으로
     const placed = [], MIN = 28; // 도트 단위 (320×240 도면에서 아이콘 지름 약 20도트 + 여유)
-    const NOTE_AT = [124, 216]; // 입구 길 왼쪽 if (!h.req.done) placed.push(NOTE_AT);
     const free = ([x, y]) => placed.every(([a, b]) => Math.hypot(a - x, b - y) >= MIN);
     const spots = (room) => { const [x, y, w, hh] = HP.ROOMS[room], cx = x + w / 2, cy = y + hh * 0.66, out = [];
       for (let fy = 0.45; fy <= 0.86; fy += 0.2) for (let fx = 0.18; fx <= 0.83; fx += 0.13) out.push([x + w * fx, y + hh * fy]);
@@ -14661,8 +14660,6 @@
       if (!room) chips.push(`<button type="button" class="hp-chip ${tone}" data-ct="gopen:${g.i}"><i></i>${g.name} · ${txt}</button>`); // 그림 밖(나가서 일함)만 칩으로. 그림 안의 골렘은 아이콘으로
       if (room) icons.push(ico('golem', tone, `gopen:${g.i}`, `${g.name} ${txt}`, at(room)));
     });
-    if (!h.req.done) { icons.push(ico('note', 'hp-att', 'sel:req', '오르딘의 부탁', NOTE_AT)); } // 부탁: 입구 옆
-    else icons.push(ico('note', 'hp-calm', 'sel:req', '오르딘과 바꾸기', NOTE_AT)); // 부탁을 마쳐도 오르딘과 바꾸기를 하러 누를 수 있게
     const useTag = (r) => (r.id === 'live' && h.nap && h.nap.open && !h.nap.done ? '<em class="hp-tag act">단잠</em>' : r.id === 'work' && h.make && h.make.open && h.make.left > 0 ? `<em class="hp-tag act">생산 ${h.make.left}</em>` : ''); // 그 칸에서 지금 할 수 있는 일
     const tagOf = (r) => useTag(r) || (r.state === 'done' ? '<em class="hp-tag done">되살아남</em>' : r.state === 'cur' ? `<em class="hp-tag cur">${Math.floor(roomFrac(r) * 100)}%</em>` : '<em class="hp-tag lock">무너짐</em>');
     const pc = (v, t) => `${((v / t) * 100).toFixed(3)}%`;
@@ -14980,7 +14977,7 @@
 
   function homeDetail(h) {
     if (CT.sel === 'golems') return golemsD(h);
-    if (CT.sel === 'req') return `${reqD(h)}${tradeBox(h)}`; // 오르딘: 오늘의 부탁과 바꾸기를 함께
+    if (CT.sel === 'req') CT.sel = 'room:cur'; // 예전 오르딘 쪽지 (지금은 할 일 탭에 부탁과 바꾸기가 있음)
     const id = CT.sel === 'room:cur' ? defRoom(h).id : CT.sel.slice(5);
     return roomD(h, h.rooms.find((r) => r.id === id));
   }
