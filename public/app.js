@@ -14971,7 +14971,7 @@
       for (const [c, cr] of Object.entries((d.garden || {}).crops || {})) jobs.push(Promise.all(cr.frames.map(load)).then((a) => { CROP[c] = a; }));
       await Promise.all(jobs);
       const M = (m) => ({ idx: new Uint32Array(u32(m.idx).buffer), a: m.a ? u32(m.a) : null, y: m.y });
-      P.FM = Object.fromEntries(Object.entries(d.fmask).map(([k, m]) => [k, M(m)])); P.WM = Object.fromEntries(Object.entries(d.wmask).map(([k, m]) => [k, M(m)])); P.YM = M(d.ymask); P.SC = Object.fromEntries(Object.entries(d.stoneCopy || {}).map(([k, m]) => [k, { b: new Uint32Array(u32(m.b).buffer), f: new Uint32Array(u32(m.f).buffer) }]));
+      P.FM = Object.fromEntries(Object.entries(d.fmask).map(([k, m]) => [k, M(m)])); P.WM = Object.fromEntries(Object.entries(d.wmask).map(([k, m]) => [k, M(m)])); P.YM = M(d.ymask); P.WC = Object.fromEntries(Object.entries(d.woodCopy || {}).map(([k, m]) => [k, { b: new Uint32Array(u32(m.b).buffer), f: new Uint32Array(u32(m.f).buffer) }])); P.SC = Object.fromEntries(Object.entries(d.stoneCopy || {}).map(([k, m]) => [k, { b: new Uint32Array(u32(m.b).buffer), f: new Uint32Array(u32(m.f).buffer) }]));
       ok = true; wait.splice(0).forEach((f) => f());
     }).catch(() => {});
     const sp = (k) => (P && P.sprites[k]) || null;
@@ -15018,31 +15018,35 @@
       const fl = (look && look.floor) || {}, wl = (look && look.wall) || {}, key = JSON.stringify([fl, wl]);
       if (key === bKey && bCv) return bCv;
       const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'); g.drawImage(IMG.__base, 0, 0);
-      const img = g.getImageData(0, 0, W, H), px = img.data;
+      const img = g.getImageData(0, 0, W, H), px = img.data, orig = px.slice(); // orig: 돌 테두리 색을 가져올 원본
       for (const r of ['live', 'own', 'work']) { const id = fl[r]; const t = id && id !== P.fdef[r] && FT[id]; if (t) { const { idx, a } = P.FM[r]; for (let i = 0; i < idx.length; i++) { const p = idx[i], y = (p / W) | 0, x = p % W, q = ((y % t.s) * t.s + (x % t.s)) * 4, s = a[i] / 255; px[p * 4] = t.px[q] * (1 - s) + 50 * s; px[p * 4 + 1] = t.px[q + 1] * (1 - s) + 30 * s; px[p * 4 + 2] = t.px[q + 2] * (1 - s) + 40 * s; } }
         const wid = wl[r]; const wt = wid && wid !== P.wdef[r] && WT[wid]; if (wt) { const { idx, y: ry } = P.WM[r]; for (let i = 0; i < idx.length; i++) { const p = idx[i], y = (p / W) | 0, x = p % W, q = ((y - ry) * 16 + (x % 16)) * 4; px[p * 4] = wt.px[q]; px[p * 4 + 1] = wt.px[q + 1]; px[p * 4 + 2] = wt.px[q + 2]; } }
       }
-      ['live', 'work'].forEach((r) => stoneFrame(px, r, wl[r] || P.wdef[r], 'b'));
+      ['live', 'own', 'work'].forEach((r) => stoneFrame(px, orig, r, wl[r] || P.wdef[r], 'b'));
       { const t = fl.yard && fl.yard !== 'cobble' && FT[fl.yard]; if (t) { const { idx } = P.YM; for (let i = 0; i < idx.length; i++) { const p = idx[i], y = (p / W) | 0, x = p % W, q = ((y % t.s) * t.s + (x % t.s)) * 4; px[p * 4] = t.px[q]; px[p * 4 + 1] = t.px[q + 1]; px[p * 4 + 2] = t.px[q + 2]; } } }
       g.putImageData(img, 0, 0); bKey = key; bCv = c; return c;
     }
-    // 돌벽이면 그 칸의 테두리·아랫벽 앞면을 고유 칸(팩 그림부터 돌 테두리)의 그림 그대로 옮겨 붙임. 붉은·밝은 돌 벽돌벽은 옮긴 그림의 색만 그 벽 무늬 색으로 (pack.json stoneCopy · stoneTint)
+    // 돌벽이면 그 칸의 테두리·아랫벽 앞면을 고유 칸 돌 테두리 그림으로 (각 면에서 블록을 고르게 나눈 결과를 [바꿀 점, 원본에서 같은 색 점] 쌍으로 pack.json stoneCopy에 담아 둠). 붉은·밝은 돌 벽돌벽은 그 색만 벽 무늬 색으로 (stoneTint)
     const STONE = ['brick', 'redbrick', 'lightbrick'], isStone = (wid) => STONE.includes(wid);
-    function stoneFrame(px, r, wid, which) {
-      const sc = P.SC && P.SC[r]; if (!sc || !isStone(wid)) return;
+    function stoneFrame(px, orig, r, wid, which) {
+      if (!isStone(wid)) { // 돌이 아닌 벽: 고유 칸은 작업실 나무 테두리를 뒤집어 옮겨 붙임 (거처·작업실은 원래 나무 테두리 그대로)
+        const wc = P.WC && P.WC[r]; if (!wc) return; const pr = wc[which];
+        for (let i = 0; i < pr.length; i += 2) { const o = pr[i] * 4, s = pr[i + 1] * 4; px[o] = orig[s]; px[o + 1] = orig[s + 1]; px[o + 2] = orig[s + 2]; px[o + 3] = orig[s + 3]; }
+        return;
+      }
+      const sc = P.SC && P.SC[r]; if (!sc) return;
       const pr = sc[which], tint = P.stoneTint && P.stoneTint[wid];
       for (let i = 0; i < pr.length; i += 2) {
-        const o = pr[i] * 4, s = pr[i + 1] * 4; px[o] = px[s]; px[o + 1] = px[s + 1]; px[o + 2] = px[s + 2]; px[o + 3] = px[s + 3];
+        const o = pr[i] * 4, s = pr[i + 1] * 4; px[o] = orig[s]; px[o + 1] = orig[s + 1]; px[o + 2] = orig[s + 2]; px[o + 3] = orig[s + 3];
         if (tint) { const t = tint[`${px[o]},${px[o + 1]},${px[o + 2]}`]; if (t) { px[o] = t[0]; px[o + 1] = t[1]; px[o + 2] = t[2]; } }
       }
     }
     let fKey = '', fCv = null;
     function frontFor(look) { // 앞쪽 벽 층도 돌벽이면 고유 칸 앞면 그림으로 (바뀔 게 없으면 원래 그림 그대로)
-      const wl = (look && look.wall) || {}, eff = ['live', 'work'].map((r) => wl[r] || P.wdef[r]), key = eff.join();
-      if (!eff.some(isStone)) return IMG.__front;
+      const wl = (look && look.wall) || {}, eff = ['live', 'own', 'work'].map((r) => wl[r] || P.wdef[r]), key = eff.join();
       if (key === fKey && fCv) return fCv;
       const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'); g.drawImage(IMG.__front, 0, 0);
-      const img = g.getImageData(0, 0, W, H); ['live', 'work'].forEach((r, i) => stoneFrame(img.data, r, eff[i], 'f')); g.putImageData(img, 0, 0);
+      const img = g.getImageData(0, 0, W, H), orig = img.data.slice(); ['live', 'own', 'work'].forEach((r, i) => stoneFrame(img.data, orig, r, eff[i], 'f')); g.putImageData(img, 0, 0);
       fKey = key; fCv = c; return c;
     }
     // 공사 상태: 되살리지 않은 칸은 색 빠진 연한 밑그림, 공사 중이면 진행만큼 아래에서부터 원래 색 (마당은 돌길 전체)
