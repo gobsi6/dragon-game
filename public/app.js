@@ -15196,10 +15196,16 @@
     const act = ({ spring: '샘물 긷기', green: '정원 거두기', archive: '새김', plaza: '앞뜰 쓸기' })[h.plot] || '받기';
     const text = `<p class="note">${ctEsc(pk.text)}${pk.up ? ' · <em>구역이 재건되어 한 단계 커졌다</em>' : ''}</p>`;
     let foot = '';
-    if (pk.kind === 'daily') foot = pk.left > 0
+    const locked = '<p class="note">이 집터의 네 칸을 모두 되살리면 열린다.</p>'; // 고유 칸만 되살렸을 때 (덤은 네 칸을 다 되살려야 켜짐)
+    if (pk.kind === 'daily') foot = !pk.on ? locked : pk.left > 0
       ? `<div class="nap-act"><button type="button" class="btn primary" data-ct="act:perk">${act}</button> <small class="note">오늘 ${pk.left} / ${pk.max}번 남음</small></div>`
       : '<p class="note">오늘은 다 받았다. 한국 시간 자정에 다시 받을 수 있다.</p>';
-    else if (pk.kind === 'recall') foot = `<div class="nap-act"><button type="button" class="btn" data-ct="tab:golems">골렘 탭으로</button> <small class="note">일하러 간 골렘 줄의 '불러들이기' · 오늘 ${pk.left} / ${pk.max}번 남음</small></div>`;
+    else if (pk.kind === 'recall') { // 망루: 일하러 간 골렘을 여기서 바로 불러들임 (골렘 탭의 '불러들이기'와 같은 일)
+      const work = (h.golems || []).filter((g) => gState(g) === 'work');
+      foot = !pk.on ? locked : pk.left <= 0 ? '<p class="note">오늘은 다 불러들였다. 한국 시간 자정에 다시 쓸 수 있다.</p>'
+        : !work.length ? `<p class="note">지금 일하러 간 골렘이 없다. 골렘을 보낸 뒤에 불러들일 수 있다. (오늘 ${pk.left} / ${pk.max}번 남음)</p>`
+        : `<ul class="pk-recall">${work.map((g) => `<li><span><b>${ctEsc(g.name)}</b> <small>${ctEsc(CT.v.rules.jobs[g.job] || '')} · ${ctLeft(g.until - Date.now())} 남음</small></span><button type="button" class="btn sm" data-ct="perkg:${g.i}">불러들이기</button></li>`).join('')}</ul><small class="note">오늘 ${pk.left} / ${pk.max}번 남음</small>`;
+    }
     else foot = '<p class="note">따로 받을 것 없이 늘 켜져 있는 덤이다.</p>';
     return `<section class="hm-book"><h4>집터 덤${pk.kind === 'daily' ? ` · ${act}` : ''}</h4>${text}${foot}</section>`;
   }

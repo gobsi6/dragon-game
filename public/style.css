@@ -5269,3 +5269,8 @@ body.chat-off #say, body.chat-off #chat-view { display: none; }
 @media (max-width: 560px) {
   #nest-body .row > button { flex: 1 1 calc(50% - 4px); min-width: 0; padding-left: 10px; padding-right: 10px; }
 }
+
+/* 망루 덤: 일하러 간 골렘을 집터 덤 칸에서 바로 불러들이기 */
+#home-ui .pk-recall { list-style: none; margin: 6px 0 4px; padding: 0; display: grid; gap: 6px; }
+#home-ui .pk-recall li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 10px; border: 1px solid #E2D6C1; border-radius: 4px; background: #FBF7EF; }
+#home-ui .pk-recall small { color: var(--hm, #7D6A55); }
