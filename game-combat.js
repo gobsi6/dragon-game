@@ -282,7 +282,7 @@ function skillOf(f, id) {
 }
 // 이 행동을 지금 쓸 수 있는지 (안 되면 이유)
 function blocked(f, act) {
-  if (act.type === 'sig') return !f.sig ? '쓸 수 있는 혼의 기술이 없다.' : f.sig.used ? '혼의 기술은 이번 싸움에서 이미 썼다.' : sigAsleep(f) ? `아직 혼이 깨어나지 않았다. (체력 ${Math.round(f.sig.gate * 100)}% 이하에서)` : null;
+  if (act.type === 'sig') return !f.sig ? '쓸 수 있는 혼의 기술이 없다.' : f.sig.used ? '혼의 기술은 이번 싸움에서 이미 썼다.' : sigAsleep(f) ? `혼이 잠들어 있다. (체력 ${Math.round(f.sig.gate * 100)}% 이하에서 깨어남)` : null;
   if (act.type !== 'skill') return null;
   const s = skillOf(f, act.id);
   if (!s) return '쓸 수 없는 스킬이다.';
@@ -291,9 +291,9 @@ function blocked(f, act) {
   return null;
 }
 const has = (f, k) => (f.st[k] || 0) > 0;
-// 혼의 기술(공격)이 아직 잠들어 있음: 사냥·강적에서 체력이 gate(최대 체력 비율)보다 많을 때.
-// 한 번 깨어나면 그 싸움 동안은 깨어 있음 (치유로 체력이 다시 올라도 잠기지 않게)
-const sigAsleep = (f) => { const g = f.sig; if (!g?.gate || g.woke) return false; if (f.hp <= f.hpMax * g.gate) { g.woke = true; return false; } return true; };
+// 혼의 기술(공격)이 잠들어 있음: 사냥·강적·레이드에서 체력이 gate(최대 체력 비율)보다 많을 때.
+// 치유로 체력이 다시 절반을 넘으면 도로 잠듦. 다만 절반 이하일 때 고른 행동(act.sigOk)은 그 턴에 반드시 나감 (같은 턴에 먼저 치유받아도)
+const sigAsleep = (f) => !!f.sig?.gate && f.hp > f.hpMax * f.sig.gate;
 // 흠뻑 젖으면 굼떠짐 (속도 −30%: 늦게 움직이고, 잘 못 피하고, 급소를 잘 맞음)
 const spdOf = (f) => f.spd * (has(f, 'soak') ? 0.7 : 1);
 
@@ -506,7 +506,7 @@ function perform(b, f, foe, act, lines) {
     lines.push(`${ga(f)} 몸을 웅크리고 방어 자세를 취했다.`);
     return;
   }
-  if (act.type === 'sig') { if (!blocked(f, act) && sigPerform(b, f, foe, lines)) return; act = { type: 'attack' }; } // 잠든 혼의 기술은 할퀴기로
+  if (act.type === 'sig') { if ((act.sigOk || !blocked(f, act)) && sigPerform(b, f, foe, lines)) return; act = { type: 'attack' }; } // 잠든 혼의 기술은 할퀴기로 (sigOk: 고를 때 깨어 있었음 → 그 턴에 먼저 치유받아도 나감. sigPerform이 한 번만 쓰게 막음)
   if (act.type === 'special') {
     const s = f.special;
     if (s.self) { setSelf(b, f, s.self, s); lines.push(`${ga(f)} ${s.name}${josa(s.name, '으로', '로')} 몸을 단단히 했다.`); return; }
@@ -672,7 +672,6 @@ function endOfTurn(f, lines) {
   for (const k of Object.keys(STATUS)) if (f.st[k] > 0 && k !== 'dodge') f.st[k] -= 1;
   for (const k of Object.keys(f.cd)) if (f.cd[k] > 0) f.cd[k] -= 1;
   if (!f.creature) f.en = Math.min(f.enMax, f.en + COMBAT.enPerTurn);
-  if (f.sig) sigAsleep(f); // 혼의 기술(공격): 이번 턴에 체력이 절반 이하로 떨어졌으면 깨어남 (치유로 다시 올라도 깨어 있음)
 }
 
 // 쓰러진 쪽을 알리고, 싸움이 끝났는지 봄

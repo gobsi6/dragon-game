@@ -475,6 +475,7 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
       const f = s.b[k];
       const why = combat.blocked(f, act);
       if (why) return { error: why };
+      if (type === 'sig') act.sigOk = true; // 고를 때 혼이 깨어 있었으면 그 턴에는 나감
       if (s.kind === 'elite' || s.kind === 'calm' || s.kind === 'hunt') {
         const lines = combat.round(s.b, act, combat.aiPick(s.b.b, s.b.a));
         if (s.b.over) { ({ calm: finishCalm, elite: finishElite, hunt: finishHunt })[s.kind](s); return { ok: true, lines, over: true }; }

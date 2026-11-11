@@ -1446,6 +1446,7 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
       }
       const why2 = combat.blocked(me2, a);
       if (why2) return { error: why2 };
+      if (type === 'sig') a.sigOk = true; // 고를 때 혼이 깨어 있었으면, 같은 턴에 동료가 먼저 치유해도 그 턴에는 나감
       fg.pending[d.id] = a;
       if (needs(fg).every((x) => fg.pending[x.id])) { setImmediate(() => resolve(fg)); return { ok: true, waiting: true }; }
       const chosen = Object.fromEntries(fg.players.map((x) => [x.id, !!fg.pending[x.id] || !alive(x) || !!x.reaped || !!x.consumed || held(x)]));
