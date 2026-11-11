@@ -378,6 +378,7 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
   function coverOf(fg, t) { return livePlayers(fg).find((p) => p !== t && p.covering === t.id) || null; }
   function bossStrike(fg, att, t, power, lines, verb, opt = {}) {
     if (!t || !alive(t)) return;
+    if (att && typeof att.hp === 'number' && att.hp <= 0) return; // 응수로 되레 쓰러진 보스·부하는 남은 공격을 하지 않음 (돌격처럼 여럿을 차례로 칠 때)
     let recv = t;
     const cv = coverOf(fg, t);
     if (cv) { recv = cv; lines.push(`${ga(cv.name)} ${t.name} 앞을 막아섰다!`); fg.guards[cv.id] = (fg.guards[cv.id] || 0) + 1; }
