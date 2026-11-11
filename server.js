@@ -2247,7 +2247,27 @@ function onConnect(socket) {
     const l = logic.combatJson(d).myRecipes || [];
     const m = l[Number(p.idx)];
     if (!m) return { error: '그런 제작법이 없다.' };
-    return countMade(d, logic.experiment(d, m.mats, have, { gift: !!m.gift, meal: !!m.meal }));
+    // 여러 개 한꺼번에 (일반 제작의 craftMany처럼). 장신구는 하나씩
+    let n = Math.max(1, Math.min(99, Math.floor(Number(p.qty)) || 1));
+    if (m.id && ITEMS[m.id]?.type === 'equip') n = 1;
+    if (n === 1) return countMade(d, logic.experiment(d, m.mats, have, { gift: !!m.gift, meal: !!m.meal }));
+    const delta = {}, haveNow = (id) => have(id) + (delta[id] || 0), items = [], made = {};
+    let done = 0, stop = null, last = null; const qual = { good: 0, great: 0, mw: 0 }; // 하나씩 굴린 품질을 셈 (알림에 함께)
+    for (let i = 0; i < n; i++) {
+      const r = logic.experiment(d, m.mats, haveNow, { gift: !!m.gift, meal: !!m.meal });
+      if (r.error) { stop = r.error; break; }
+      done++; last = r;
+      for (const x of r.items || []) { items.push(x); delta[x.id] = (delta[x.id] || 0) + x.qty; }
+      for (const x of r.made || []) { made[x.id] = (made[x.id] || 0) + x.qty; const cq = ITEMS[x.id]?.custom; if (cq?.quality === 'good') qual.good += x.qty; if (cq?.quality === 'great') qual.great += x.qty; if (cq?.mw) qual.mw += x.qty; }
+      if (!r.made || !r.made.length) break; // 제작법과 어긋나 재료만 잃은 경우 등: 더 돌지 않음
+    }
+    if (!done) return { error: stop };
+    const kinds = Object.keys(made), total = Object.values(made).reduce((a, b) => a + b, 0);
+    const name = kinds.length === 1 ? ITEMS[kinds[0]]?.name : (ITEMS[m.id]?.name || '물건');
+    const qs = [qual.good && `좋음 ${qual.good}`, qual.great && `빼어남 ${qual.great}`, qual.mw && `걸작 ${qual.mw}`].filter(Boolean).join(' · ');
+    const lines = [`${name}${josa(name, '을', '를')} ${done}번 빚어 ${total}개를 얻었다.${kinds.length > 1 ? ` (${kinds.map((k) => `${ITEMS[k]?.name} ${made[k]}`).join(', ')})` : ''}${qs ? ` (${qs})` : ''}`];
+    if (done < n) lines.push(`${n}번 중 ${done}번만 빚었다. ${stop || ''}`.trim());
+    return countMade(d, { title: last.title || '실험', lines, items, made: kinds.map((k) => ({ id: k, qty: made[k] })), free: last.free });
   });
   itemAction('gear:enhance', (d, p, have) => logic.enhanceGear(d, str(p.item), have));
   itemAction('gear:engrave', (d, p, have) => logic.engraveGear(d, str(p.item), str(p.elem), have));

@@ -1870,7 +1870,7 @@
       SFX.play({ 'item:drop': 'drop', craft: 'craft' }[event] || 'use');
       if (res.result?.lines) toast(res.result.lines.join(' '));
       // 다시 그려도 보던 자리에 머물게 (쓰고 나서 맨 위로 올라가지 않게)
-      fetchInv(() => { if ($('inv-dlg').open) keepScroll($('inv-dlg'), renderInv); if ($('craft-dlg').open) keepScroll($('craft-dlg'), renderCraft); if (bagOpen) renderBag(); });
+      fetchInv(() => { if ($('inv-dlg').open) keepScroll($('inv-dlg'), renderInv); if ($('craft-dlg').open) keepScroll($('craft-dlg'), renderCraft); if (bagOpen) renderBag(); if ($('fx-mine-dlg')?.open) keepScroll($('fx-mine-dlg'), drawMineDlg); }); // 내 제작법 창도 남은 재료로 다시 그림
     });
   }
   let gearSumOpen = false;
@@ -3773,6 +3773,7 @@
     }
   }
   let HOARD_SUB = 'in';  // 보물더미 탭 안: 쌓인 보물(in) / 소지품(out)
+  let HOARD_CAT = 'all', HOARD_Q = ''; // 보물더미 목록 분류 · 이름 찾기 (소지품 창과 같은 모양)
   let NEST_LAST = null;  // 마지막으로 받은 둥지 정보 (시설 탭에서 식구를 고를 때 서버를 다시 부르지 않고 그림)
   const renderNestAgain = () => { if (NEST_LAST) keepScroll($('nest-dlg'), () => drawNest(NEST_LAST)); };
   function openNest() {
@@ -4499,6 +4500,19 @@
             };
             sub.append(subBtn('in', '쌓인 보물', items.length), subBtn('out', '소지품', own.length));
             host.appendChild(sub);
+            // 분류 · 이름 찾기 (소지품 창처럼). 두 목록에 같이 걸림
+            const HCATS = ['treasure', 'equip', 'use', 'buff', 'gift', 'meal', 'fish', 'trophy', 'mat'];
+            const hasCat = new Set([...items.map((x) => x.item), ...own.map(([id]) => id)].filter((id) => S.items[id]).map((id) => itemCat(S.items[id])));
+            if (HOARD_CAT !== 'all' && !hasCat.has(HOARD_CAT)) HOARD_CAT = 'all';
+            const hkeys = ['all', ...HCATS.filter((c) => hasCat.has(c))];
+            const { wrap: hbar, tabs: htabs } = buildTabs(hkeys.map((k) => (k === 'all' ? ['all', '전체'] : [k, INV_TAB_NAME[k], true])), HOARD_CAT, (k) => { HOARD_CAT = k; applyHoard(); }, '보물더미 물건 분류');
+            hbar.classList.add('inv-bar', 'hoard-bar');
+            const hq = document.createElement('input');
+            hq.type = 'search'; hq.className = 'input inv-q hoard-q'; hq.placeholder = '물건 이름으로 찾기'; hq.setAttribute('aria-label', '보물더미에서 찾기'); hq.autocomplete = 'off'; hq.value = HOARD_Q;
+            hq.addEventListener('input', () => { HOARD_Q = hq.value; applyHoard(); });
+            const hfind = document.createElement('div'); hfind.className = 'inv-sort hoard-find'; hfind.appendChild(hq);
+            const hnone = document.createElement('p'); hnone.className = 'note hoard-none'; hnone.hidden = true;
+            host.append(hbar, hfind, hnone);
             if (!items.length) {
               const e = document.createElement('div');
               e.className = 'empty';
@@ -4508,7 +4522,7 @@
             for (const x of items) {
               const it = S.items[x.item];
               const r2 = document.createElement('div');
-              r2.className = `it ${it.rarity}`;
+              r2.className = `it ${it.rarity}`; r2.dataset.cat = itemCat(it); r2.dataset.nm = it.name;
               r2.innerHTML = '<b><span class="nm"></span><span class="q"></span></b><small></small><div class="acts"></div>';
               r2.querySelector('.nm').textContent = it.name;
               r2.querySelector('.nm').append(itemTags(it));
@@ -4532,7 +4546,7 @@
             for (const [id, q] of own) {
               const it = S.items[id];
               const r3 = document.createElement('div');
-              r3.className = `it ${it.rarity}`;
+              r3.className = `it ${it.rarity}`; r3.dataset.cat = itemCat(it); r3.dataset.nm = it.name;
               r3.innerHTML = '<b><span class="nm"></span><span class="q"></span></b><small></small><div class="acts"></div>';
               r3.querySelector('.nm').textContent = it.name;
               r3.querySelector('.nm').append(itemTags(it));
@@ -4543,10 +4557,23 @@
               inv.appendChild(r3);
             }
             host.appendChild(inv);
+            function applyHoard() { // 분류·찾기를 두 목록에 걸고, 지금 보는 목록에서 하나도 안 남으면 알림
+              [...htabs.children].forEach((b, k) => { const on = hkeys[k] === HOARD_CAT; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
+              const q = HOARD_Q.trim();
+              let shown = 0;
+              for (const box of [list, inv]) for (const r of box.querySelectorAll('.it')) {
+                const ok = (HOARD_CAT === 'all' || r.dataset.cat === HOARD_CAT) && (!q || (r.dataset.nm || '').includes(q));
+                r.hidden = !ok; if (ok && box === (HOARD_SUB === 'in' ? list : inv)) shown++;
+              }
+              const cur = HOARD_SUB === 'in' ? items.length : own.length;
+              hnone.hidden = !cur || shown > 0;
+              hnone.textContent = q ? `'${q}'${josa(q, '이', '가')} 들어간 물건이 없다.` : '이 분류의 물건이 없다.';
+            }
             const showSub = () => {
               for (const b of sub.children) { const on = b.dataset.k === HOARD_SUB; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); }
               list.hidden = HOARD_SUB !== 'in';
               inv.hidden = HOARD_SUB !== 'out';
+              applyHoard();
             };
             sub.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { HOARD_SUB = b.dataset.k; showSub(); } });
             showSub();
@@ -6002,11 +6029,16 @@
       const mi = m.id && S.items[m.id] && !S.items[m.id].gone ? S.items[m.id] : null;
       if (mi) { const ef = effectText(mi); if (ef) t.appendChild(el('span', 'fx-ef', ef)); }
       const mt = el('small'); m.mats.forEach((x, k) => { if (k) mt.append(' · '); const sp = el('span', (invCache[x] || 0) > 0 ? '' : 'lack', `${nm(x)} ${invCache[x] || 0}`); mt.appendChild(sp); }); t.appendChild(mt);
-      const go = el('button', 'btn primary', '다시 빚기'); go.type = 'button'; go.disabled = !ok || !!S.me.exp;
-      go.addEventListener('click', () => { d.close(); itemAct('craft:mine', { idx: i }); }); // 빚은 결과는 실험 화면 위쪽에 뜸
+      const gear = !!(mi && mi.type === 'equip'), can = Math.min(99, ...m.mats.map((x) => invCache[x] || 0)); // 재료로 빚을 수 있는 횟수 (장신구는 하나씩)
+      const act = el('div', 'fx-go');
+      let qn = null;
+      if (!gear && can > 1) { qn = el('input', 'input fx-qty'); qn.type = 'number'; qn.min = 1; qn.max = can; qn.value = 1; qn.setAttribute('aria-label', '빚을 개수'); qn.title = `재료로 ${can}번까지 빚을 수 있다`; act.appendChild(qn); }
+      const go = el('button', 'btn primary', '빚기'); go.type = 'button'; go.disabled = !ok || !!S.me.exp;
+      go.addEventListener('click', () => itemAct('craft:mine', { idx: i, qty: qn ? Math.max(1, Math.min(can, +qn.value || 1)) : 1 })); // 창을 닫지 않음: 이어서 여러 번 빚을 수 있게 (결과는 알림, 실험 화면 위쪽에도)
+      act.appendChild(go);
       const del = el('button', 'btn', '지우기'); del.type = 'button';
       del.addEventListener('click', () => { if (confirm('이 제작법을 지울까?')) socket.emit('craft:forget', { idx: i }, (res) => { if (res.error) return toast(res.error); FREE_DATA = { ...FREE_DATA, mine: res.mine }; drawMineDlg(); if ($('craft-dlg').open) renderCraft(); }); });
-      r.append(t, go, del); list.appendChild(r);
+      r.append(t, act, del); list.appendChild(r);
     }
   }
   function drawFreeParts(box, el, part = 'all') { // part: 'top' 방금 빚은 것만 · 'bottom' 내 제작법·노트·도감만
@@ -16110,4 +16142,12 @@ function renderEcho() {
     });
     socket.on('maze:end', (p) => { MZ.floor = null; MZ.rows = null; showResult({ title: '지하 회랑', lines: p.lines }); renderMazeBar(); renderCity(); });
   }
+})();
+
+// 폰(특히 아이폰): 숫자 칸을 누르면 글자 자판 대신 숫자 자판이 뜨게. 숫자 칸이 새로 그려질 때마다 inputmode를 붙임
+(() => {
+  const SEL = 'input[type="number"]:not([inputmode])';
+  const fix = (root) => { if (root.matches?.(SEL)) root.setAttribute('inputmode', 'numeric'); root.querySelectorAll?.(SEL).forEach((i) => i.setAttribute('inputmode', 'numeric')); };
+  const start = () => { fix(document); new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1) fix(n); }).observe(document.body, { childList: true, subtree: true }); };
+  if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
 })();

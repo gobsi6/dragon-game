@@ -362,10 +362,10 @@ dialog.frame:not(.as-panel) > .bl { bottom: 2px; left: 2px; } dialog.frame:not(.
 .routes.locked ~ svg .halo { display: none; }
 .chip .next { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
-.dlg { position: fixed; width: min(440px, calc(100% - 32px)); max-height: calc(100vh - 48px); padding: 18px 18px 16px; color: var(--ink); overflow: auto; }
+.dlg { position: fixed; width: min(440px, calc(100% - 32px)); max-height: calc(100vh - 48px); max-height: calc(100dvh - 48px); padding: 18px 18px 16px; color: var(--ink); overflow: auto; }
 /* 창은 아래 메뉴 위 공간에 가운데로: 메뉴의 선택 표시가 가려지지 않게 */
 .dlg, .cropdlg { inset: 0 0 var(--dock-h, 56px) 0; margin: auto; }
-.dlg { max-height: calc(100vh - var(--dock-h, 56px) - 32px); }
+.dlg { max-height: calc(100vh - var(--dock-h, 56px) - 32px); max-height: calc(100dvh - var(--dock-h, 56px) - 32px); }
 .dlg::backdrop { background: rgba(31, 35, 38, .55); }
 .dlg .body { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
 /* 팝업: 팝업 자체는 스크롤하지 않고 내용(.body)만 스크롤. 그래야 모서리 장식이 늘 팝업의 진짜 모서리에 붙어 있고,
@@ -3728,7 +3728,7 @@ body.mz-drag, body.mz-drag * { user-select: none !important; -webkit-user-select
 @media (max-width: 520px) { .top .chip + .chip { margin-right: auto; } } /* 사람 단추가 빠진 자리: 금화 다음부터 오른쪽으로 */
 /* 폰 이야기 창을 더 크게: 화면 폭 거의 가득, 높이는 상단바 아래부터 아래 탭 줄 위까지 */
 @media (max-width: 860px) {
-  .chat { right: 8px; width: min(520px, calc(100vw - 16px)); height: calc(100vh - var(--dock-h, 56px) - var(--top-h, 52px) - 20px); height: calc(100svh - var(--dock-h, 56px) - var(--top-h, 52px) - 20px); } /* 상단바 바로 아래부터 아래 탭 줄 위까지 가득 */
+  .chat { right: 8px; width: min(520px, calc(100vw - 16px)); height: calc(100vh - var(--dock-h, 56px) - var(--top-h, 52px) - 20px); height: calc(100dvh - var(--dock-h, 56px) - var(--top-h, 52px) - 20px); height: calc(100svh - var(--dock-h, 56px) - var(--top-h, 52px) - 20px); } /* 상단바 바로 아래부터 아래 탭 줄 위까지 가득 */
   .chat .here.in-chat .here-list { max-height: min(220px, 32svh); }
 }
 
@@ -5292,3 +5292,26 @@ body.chat-off #say, body.chat-off #chat-view { display: none; }
 #hgift-body .dk-it:hover:not(.on) { border-color: #A8926C; }
 #hgift-body .hg-pick input[type="number"] { width: 56px; height: 32px; min-height: 0; padding: 0 8px; } /* 개수 칸도 작은 단추 높이에 맞춤 */
 #hgift-body #hg-fg-go { height: 32px; min-height: 0; padding: 0 12px; font-size: 13px; line-height: 1; } /* 가구 보내기 단추: 작게 */
+
+/* 내 제작법 창: 개수 + 빚기 (창을 닫지 않고 이어서 빚음) */
+.fx-mine-dlg .fx-go { display: flex; align-items: center; gap: 6px; }
+.fx-mine-dlg .fx-qty { width: 56px; height: 34px; min-height: 0; padding: 0 6px; }
+
+/* 보물더미: 분류 · 이름 찾기 (소지품 창과 같은 모양) */
+.hoard-bar { margin-top: 10px; }
+.hoard-find { justify-content: flex-start; margin: 6px 0 8px; }
+.hoard-find .hoard-q { flex: 1 1 auto; max-width: 320px; }
+.hoard-none { margin: 4px 0 8px; }
+
+/* 아이폰·사파리: 가로로 돌리면 글자를 제멋대로 키우지 않게 */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+/* 아이폰: 글자 칸이 16px보다 작으면 누를 때 화면이 확대됨 → 아이폰에서만 입력 칸 글자를 16px 이상으로 */
+@supports (-webkit-touch-callout: none) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select { font-size: max(16px, 1em) !important; }
+}
+/* 내 제작법: 폰에서는 이름·효과를 한 줄 다 쓰고, 개수·빚기·지우기는 그 아래 오른쪽에 (이름이 좁은 칸에 갇혀 여러 줄로 접히지 않게) */
+@media (max-width: 560px) {
+  .fx-mine-dlg .fx-row { flex-wrap: wrap; }
+  .fx-mine-dlg .fx-row .fx-t { flex: 1 1 100%; }
+  .fx-mine-dlg .fx-row .fx-go { margin-left: auto; }
+}
