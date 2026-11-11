@@ -15038,8 +15038,8 @@
     const lack = r.mats.filter((m) => m.put < m.need), left = r.hours - r.h, hh = r.state === 'done' ? r.hours : r.h;
     const mt = r.mats.reduce((x, m) => x + m.need, 0), mp = r.state === 'done' ? mt : r.mats.reduce((x, m) => x + Math.min(m.put, m.need), 0);
     // 다 되살린 칸은 공사 시간·재료 같은 지난 정보 없이, 열린 것만
-    const fac = r.state === 'done' ? (r.id === 'live' ? napBox(h) : r.id === 'work' ? workshopBox(h) : '') : '';
-    if (fac) return `<div class="dh"><b>${r.name}</b>${stTag(r.state)}</div>${fac}`; // 거처는 단잠, 작업실은 생산대를 바로
+    const fac = r.state === 'done' ? (r.id === 'live' ? napBox(h) : r.id === 'work' ? workshopBox(h) : r.id === 'own' ? perkBox(h) : '') : '';
+    if (fac) return `<div class="dh"><b>${r.name}</b>${stTag(r.state)}</div>${fac}`; // 거처는 단잠, 작업실은 생산대, 고유 칸은 집터 덤을 바로
     if (r.state === 'done') return `<div class="dh"><b>${r.name}</b>${stTag(r.state)}</div>
       <p class="note">공사를 마쳤다. 이 칸은 다 되살아났다.</p>
       <p class="opens">열린 것: ${r.opens}</p>`;
@@ -15186,6 +15186,19 @@
       ${list.length ? `<div class="bd-grid">${cards}</div>` : '<p class="note">찾는 이름이 없다.</p>'}</div>`;
   }
   document.addEventListener('input', (e) => { if (e.target && e.target.id === 'bd-q') { CT.boardQ = e.target.value; const pos = e.target.selectionStart; renderCityMap(); const inp = document.getElementById('bd-q'); if (inp) { inp.focus(); try { inp.setSelectionRange(pos, pos); } catch {} } } });
+  // 고유 칸의 집터 덤: 그림에서 고유 칸을 누르면 바로 받기 (할 일 목록의 '받기'와 같은 일)
+  function perkBox(h) {
+    const pk = h.perk; if (!pk) return '';
+    const act = ({ spring: '샘물 긷기', green: '정원 거두기', archive: '새김', plaza: '앞뜰 쓸기' })[h.plot] || '받기';
+    const text = `<p class="note">${ctEsc(pk.text)}${pk.up ? ' · <em>구역이 재건되어 한 단계 커졌다</em>' : ''}</p>`;
+    let foot = '';
+    if (pk.kind === 'daily') foot = pk.left > 0
+      ? `<div class="nap-act"><button type="button" class="btn primary" data-ct="act:perk">${act}</button> <small class="note">오늘 ${pk.left} / ${pk.max}번 남음</small></div>`
+      : '<p class="note">오늘은 다 받았다. 한국 시간 자정에 다시 받을 수 있다.</p>';
+    else if (pk.kind === 'recall') foot = `<div class="nap-act"><button type="button" class="btn" data-ct="tab:golems">골렘 탭으로</button> <small class="note">일하러 간 골렘 줄의 '불러들이기' · 오늘 ${pk.left} / ${pk.max}번 남음</small></div>`;
+    else foot = '<p class="note">따로 받을 것 없이 늘 켜져 있는 덤이다.</p>';
+    return `<section class="hm-book"><h4>집터 덤${pk.kind === 'daily' ? ` · ${act}` : ''}</h4>${text}${foot}</section>`;
+  }
   // 거처의 단잠: 거처를 되살리면 하루 한 번
   function napBox(h) {
     const n = h.nap; if (!n) return '';
