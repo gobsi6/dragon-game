@@ -319,22 +319,24 @@ function damage(att, def, power, opt = {}) {
   const WC = att.duel || def.duel ? COMBAT.wingDuel.crit : COMBAT.wingCrit;
   const crit = !magic && !opt.sig && (opt.crit || Math.random() < WC.base + Math.max(0, spdOf(att) - spdOf(def)) * WC.per + (att.critK || 0)); // 날개(속도)가 높을수록 급소 (결투는 따로) · 칭호 '결투장의 전설'
   if (crit) { raw *= 1.5; note += ' 급소를 찔렀다!'; }
-  if (def.guarding) raw *= opt.special ? 0.25 : 0.5; // 예고된 특기를 방어하면 4분의 1
+  if (def.guarding) raw *= opt.guardK ?? (opt.special ? 0.25 : 0.5); // 예고된 특기를 방어하면 4분의 1 (guardK: 레이드 보스의 예고된 큰 공격은 RAIDBOSS.guardHeavy)
   if (has(def, 'harden')) raw *= 0.5;
   if (has(def, 'stone')) raw *= 0.7; // 브론즈: 돌 비늘
   if (has(def, 'acid')) raw *= 1.15; // 비늘이 녹으면 받는 피해도 늘어남 (산 숨결)
   if (has(def, 'fury')) raw *= 1.1;    // 역린: 받는 피해도 늘어남
   if (has(def, 'exposed')) raw *= 1.25; // 하늘 낙하 뒤의 빈틈
-  if (has(def, 'counter')) raw *= COMBAT.counter.cut; // 응수: 버티고 서서 받아 냄
-  if (has(def, 'bulwark')) raw *= 1 - (def.st.bulwarkK || 0.3); // 혼의 기술(방어)가 레이드 동료에게 건 성벽 (건 쪽의 비늘에 따라 30~40%)
+  if (has(def, 'counter')) raw *= COMBAT.counter.cut; // 응수: 맞받는 그 한 번은 덜 아픔
+  if (has(def, 'bulwark')) raw *= 1 - (def.st.bulwarkK || 0.4); // 혼의 기술(방어)가 레이드 동료에게 건 성벽 (건 쪽의 비늘에 따라 40~50%)
   raw *= def.taken;
   if (opt.cap != null) raw = Math.min(raw, opt.cap); // 혼의 기술: 강적에게는 최대 체력의 일정 비율까지
   return { dmg: Math.max(1, Math.round(raw)), note };
 }
-// 응수: def가 받은 피해(taken)의 일부를 공격한 att가 되레 입음. 위엄이 높을수록 많이 (COMBAT.counter)
-// 쓰러진 채로는 받아치지 못함. 되돌린 피해는 hit을 거치지 않아 다시 응수되지 않음. 결투장은 도박처럼 (드물게, 크게)
+// 응수: 단발성. 그 턴에 처음 맞은 공격 한 번에만 피해를 줄이고(cut), 받은 피해(taken)의 일부를 공격한 att가 되레 입음. 맞으면 응수는 끝남
+// 위엄이 높을수록 많이 (COMBAT.counter). 쓰러진 채로는 받아치지 못함. 되돌린 피해는 hit을 거치지 않아 다시 응수되지 않음. 결투장은 도박처럼 (드물게, 크게)
 function counterBack(att, def, taken, lines) {
-  if (!has(def, 'counter') || !att || att === def || taken <= 0 || att.hp <= 0 || def.hp <= 0) return 0;
+  if (!has(def, 'counter') || !att || att === def) return 0;
+  def.st.counter = 0; // 한 번 맞받으면 끝 (받아치지 못해도)
+  if (taken <= 0 || att.hp <= 0 || def.hp <= 0) return 0;
   const C = COMBAT.counter;
   let k = Math.min(C.max, C.base + (def.maj || 0) * C.per);
   const duel = att.duel || def.duel;
@@ -611,7 +613,7 @@ function sigPerform(b, f, foe, lines) {
     f.st.harden = Math.max(f.st.harden || 0, turns);
     lines.push(`${ga(f)} ${STATUS.harden} 상태가 되었다. (${turns}턴 동안 받는 피해 절반${longer ? ' · 단단한 비늘 덕에 한 턴 더' : ''})`);
     if (mates.length) {
-      const W = T.wall, wk = W ? Math.min(W.max, W.base + Math.max(0, scale - W.from) * W.per) : 0.3; // 비늘: 성벽의 세기
+      const W = T.wall, wk = W ? Math.min(W.max, W.base + Math.max(0, scale - W.from) * W.per) : 0.4; // 비늘: 성벽의 세기
       for (const m of mates) {
         m.st.bulwarkK = has(m, 'bulwark') ? Math.max(m.st.bulwarkK || 0, wk) : wk; // 이미 성벽이 있으면 센 쪽
         for (const [k, n] of Object.entries(T.ally)) m.st[k] = Math.max(m.st[k] || 0, n);
@@ -790,7 +792,7 @@ function aiPick(f, foe, { reserve = 0, flee = 0, danger: danger0, many = false }
   if (can('quake') && (many || Math.random() < 0.3)) return { type: 'skill', id: 'quake' };
   if (can('focus') && f.en < 8) return { type: 'skill', id: 'focus' };
   if (can('fury') && !has(f, 'fury') && hpr > 0.6) return { type: 'skill', id: 'fury' };
-  if (can('counter') && !has(f, 'counter') && hpr > 0.5 && Math.random() < 0.4) return { type: 'skill', id: 'counter' };
+  if (can('counter') && !has(f, 'counter') && hpr > 0.5 && (!foe.creature || ['attack', 'special'].includes(foe.next?.type)) && Math.random() < 0.3) return { type: 'skill', id: 'counter' };
   if (can('dive') && (has(foe, 'blind') || foe.hp / foe.hpMax < 0.5) && hpr > 0.35) return { type: 'skill', id: 'dive' };
   if (can('dust') && !has(foe, 'blind') && Math.random() < 0.6) return { type: 'skill', id: 'dust' };
   if (can('headbutt') && !has(foe, 'stun') && !has(foe, 'dazed') && Math.random() < 0.6) return { type: 'skill', id: 'headbutt' };
