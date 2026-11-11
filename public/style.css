@@ -5290,3 +5290,5 @@ body.chat-off #say, body.chat-off #chat-view { display: none; }
 #hgift-body .hg-pick .hg-name { flex: 1 1 auto; font-weight: 600; }
 #hgift-body .dk-it.on { border: 2px solid #C8553D; padding: 7px 3px 5px; background: #FCF1EE; }
 #hgift-body .dk-it:hover:not(.on) { border-color: #A8926C; }
+#hgift-body .hg-pick input[type="number"] { width: 56px; height: 32px; min-height: 0; padding: 0 8px; } /* 개수 칸도 작은 단추 높이에 맞춤 */
+#hgift-body #hg-fg-go { height: 32px; min-height: 0; padding: 0 12px; font-size: 13px; line-height: 1; } /* 가구 보내기 단추: 작게 */
