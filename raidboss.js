@@ -388,8 +388,8 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
     const gk = opt.heavy ? R.guardHeavy : 0.5; // 예고된 큰 공격은 방어가 더 잘 통함
     const hit = K.damage(att, recv, k, { armorK: R.armorK, guardK: gk });
     // 비늘이 아무리 두꺼워도 레이드 보스의 공격은 최대 체력에 비례한 몫이 더 들어감 (만렙 드래곤에게도 아프게)
-    // 거기에도 방어·비늘 세우기·돌 비늘·응수·성벽·받는 피해 줄이기는 똑같이 통함. 부하(기사·허수아비)는 공격 세기만큼만
-    const red = (recv.guarding ? gk : 1) * ((recv.st.harden || 0) > 0 ? 0.5 : 1) * ((recv.st.stone || 0) > 0 ? 0.7 : 1) * ((recv.st.counter || 0) > 0 ? COMBAT.counter.cut : 1) * ((recv.st.bulwark || 0) > 0 ? 1 - (recv.st.bulwarkK || 0.4) : 1) * (recv.taken || 1); // 응수·성벽도 이 몫을 줄임
+    // 거기에도 방어·비늘 세우기·돌 비늘·응수·장벽·받는 피해 줄이기는 똑같이 통함. 부하(기사·허수아비)는 공격 세기만큼만
+    const red = (recv.guarding ? gk : 1) * ((recv.st.harden || 0) > 0 ? 0.5 : 1) * ((recv.st.stone || 0) > 0 ? 0.7 : 1) * ((recv.st.counter || 0) > 0 ? COMBAT.counter.cut : 1) * ((recv.st.bulwark || 0) > 0 ? 1 - (recv.st.bulwarkK || 0.4) : 1) * (recv.taken || 1); // 응수·장벽도 이 몫을 줄임
     // 보통은 공격 세기 비율이 1을 넘지 않게(부하는 약하게), 균열에서 잿빛으로 기운 보스는 그 배율만큼 이 몫도 커짐
     const atkK = att === fg.boss && fg.B.scale ? att.atk / fg.B.atk : Math.min(1, att.atk / fg.B.atk); // 균열: 기울기에 따른 배율이 이 몫에도 (부하는 1을 넘지 않음)
     const extra = Math.round(recv.hpMax * (fg.B.hitPct ?? R.hitPct) * k * atkK * red); // 보스마다 이 몫을 따로 둘 수 있음 (균열은 낮게)
