@@ -4034,7 +4034,7 @@
           const wild = town ? (S.regions[S.region]?.links || []).filter((id) => S.regions[id] && !S.shops.includes(id) && realmOf(id) === realmOf(S.region)).map((id) => S.regions[id].name) : [];
           note.textContent = ruinHere ? '오염된 이 땅에는 둥지를 틀 수 없다. 바다를 건너 본 대륙의 야생에서 둥지를 틀자.' : town ? `인간의 땅에는 둥지를 틀 수 없다. ${wild.length ? `길로 이어진 야생의 땅(${wild.join('·')})으로 가자.` : '야생의 땅으로 가자.'}` : `처음 둥지를 트는 데는 아무것도 들지 않는다.`;
           if (!town && !ruinHere) row.appendChild(btn(`${S.regions[S.region].name}에 둥지 틀기`, () => nestAct('nest:build'), true, !!me.exp));
-          if (me.city?.warp && !ruinHere && !me.city.inside) row.appendChild(btn(`내 집터로 가기${me.city.warpAp > 0 ? ` −${me.city.warpAp}` : ''}`, () => nestAct('nest:city'), false, !!me.exp || !!me.restAt || me.ap < (me.city.warpAp || 0))); // 귀환 주문진을 집터에 놓아 두었을 때 (둥지가 없어도)
+          if (me.city?.warp && !me.city.inside) { const wc = ruinHere ? me.city.warpApRuin : me.city.warpAp; row.appendChild(btn(`내 집터로 가기${wc > 0 ? ` −${wc}` : ''}`, () => nestAct('nest:city'), false, !!me.exp || !!me.restAt || me.ap < (wc || 0))); } // 귀환 주문진을 집터에 놓아 두었을 때 (둥지가 없어도)
         } else {
           st.querySelector('.where').textContent = `${S.regions[n.region].name}의 둥지`;
           FAC_LAST = { n, me }; // 시설 창이 쓸 둥지 정보 (가장 먼저)
@@ -4043,7 +4043,7 @@
             note.textContent = me.restAt ? '지금 둥지에서 쉬고 있다.' : '둥지에서 쉬면 회복이 빨라진다. 쉬는 동안에는 채팅과 제작, 보물더미 정리만 할 수 있다.';
             row.appendChild(me.restAt ? btn('깨어나기', () => nestAct('rest:stop'), true) : btn('둥지에서 쉬기', () => nestAct('rest:start'), true, !!me.exp));
             { const pn2 = me.partnerNest; if (pn2 && pn2.region !== S.region) row.appendChild(btn(`반려 ${pn2.name}의 둥지로 날아가기${S.nestRules.homeFlightAp > 0 ? ` −${S.nestRules.homeFlightAp}` : ''}`, () => nestAct('nest:partner'), false, !!me.exp || !!me.restAt || me.ap < S.nestRules.homeFlightAp)); }
-            if (me.city?.warp && !ruinHere && !me.city.inside) row.appendChild(btn(`내 집터로 가기${me.city.warpAp > 0 ? ` −${me.city.warpAp}` : ''}`, () => nestAct('nest:city'), false, !!me.exp || !!me.restAt || me.ap < (me.city.warpAp || 0))); // 귀환 주문진을 집터에 놓아 두었을 때
+            if (me.city?.warp && !me.city.inside) { const wc = ruinHere ? me.city.warpApRuin : me.city.warpAp; row.appendChild(btn(`내 집터로 가기${wc > 0 ? ` −${wc}` : ''}`, () => nestAct('nest:city'), false, !!me.exp || !!me.restAt || me.ap < (wc || 0))); } // 귀환 주문진을 집터에 놓아 두었을 때
           } else {
             note.textContent = ruinHere ? '오염된 이 땅에는 둥지를 틀 수 없다. 둥지로 돌아가려면 바다를 건너 본 대륙으로 가야 한다.' : S.nestRules.homeFlightAp > 0 ? `어디서든 둥지로 곧장 날아갈 수 있다. 행동력 ${S.nestRules.homeFlightAp}${numJosa(S.nestRules.homeFlightAp, '이', '가')} 든다.` : '어디서든 둥지로 곧장 날아갈 수 있다. 행동력은 들지 않는다.';
             // 반려의 둥지에 와 있으면 그곳에서도 쉴 수 있음
@@ -4051,7 +4051,7 @@
             if (pn && pn.region === S.region) row.appendChild(me.restAt ? btn('깨어나기', () => nestAct('rest:stop'), true) : btn(`반려 ${pn.name}의 둥지에서 쉬기`, () => nestAct('rest:start'), true, !!me.exp));
             if (pn && pn.region === S.region) note.textContent += ` 반려 ${pn.name}의 식구는 '식구' 탭에서 함께 돌볼 수 있다.`;
             if (!ruinHere) row.appendChild(btn(`둥지로 날아가기${S.nestRules.homeFlightAp > 0 ? ` −${S.nestRules.homeFlightAp}` : ''}`, () => { nestAct('nest:home'); }, true, !!me.exp || !!me.restAt || me.ap < S.nestRules.homeFlightAp));
-            if (me.city?.warp && !ruinHere && !me.city.inside) row.appendChild(btn(`내 집터로 가기${me.city.warpAp > 0 ? ` −${me.city.warpAp}` : ''}`, () => nestAct('nest:city'), false, !!me.exp || !!me.restAt || me.ap < (me.city.warpAp || 0))); // 귀환 주문진을 집터에 놓아 두었을 때
+            if (me.city?.warp && !me.city.inside) { const wc = ruinHere ? me.city.warpApRuin : me.city.warpAp; row.appendChild(btn(`내 집터로 가기${wc > 0 ? ` −${wc}` : ''}`, () => nestAct('nest:city'), false, !!me.exp || !!me.restAt || me.ap < (wc || 0))); } // 귀환 주문진을 집터에 놓아 두었을 때
             if (pn && pn.region !== S.region && !ruinHere) row.appendChild(btn(`반려의 둥지로 날아가기${S.nestRules.homeFlightAp > 0 ? ` −${S.nestRules.homeFlightAp}` : ''}`, () => nestAct('nest:partner'), false, !!me.exp || !!me.restAt || me.ap < S.nestRules.homeFlightAp));
             if (!town && !ruinHere) row.appendChild(btn(`여기로 둥지 옮기기 (금화 ${S.nestRules.moveCost})`, () => {
               const tierNote = (n.tier || 0) > 0 ? ` 넓혀 둔 둥지는 한 단계 낮아져 ${S.nestRules.tiers[n.tier - 1].name}${ro(S.nestRules.tiers[n.tier - 1].name)} 된다.` : '';
@@ -7382,7 +7382,26 @@
   window.__openGiftTo = (id, name) => fetchInv(() => {
     const body = $('hgift-body');
     $('hgift-title').textContent = `${name}의 집터에 선물 두기`;
-    body.replaceChildren(buildGiftBox({ id, name }, true, () => { if ($('hgift-dlg').open) $('hgift-dlg').close(); }));
+    const box = buildGiftBox({ id, name }, true, () => { if ($('hgift-dlg').open) $('hgift-dlg').close(); });
+    const fgv = CT.visit && CT.visit.id === id ? CT.visit.fgift : null; // 놀러 간 집터면 '가구' 칸도 (내가 놓지 않고 남은 가구)
+    if (!fgv) body.replaceChildren(box);
+    else {
+      const wrap = document.createElement('div');
+      wrap.innerHTML = `<div class="mk-tabs hg-tabs" role="tablist"><button type="button" role="tab" class="on" aria-selected="true" data-hg="items">물건·금화</button><button type="button" role="tab" aria-selected="false" data-hg="furn">가구${fgv.spare.length ? `<span class="mk-n">${fgv.spare.reduce((n, x) => n + x.n, 0)}</span>` : ''}</button></div><div class="hg-pane" data-hg="items"></div><div class="hg-pane" data-hg="furn" hidden></div>`;
+      wrap.querySelector('.hg-pane[data-hg="items"]').appendChild(box);
+      const fp = wrap.querySelector('.hg-pane[data-hg="furn"]');
+      fp.innerHTML = !fgv.spare.length ? '<p class="note">놓지 않고 남은 가구가 없다. 꾸미기에서 치우거나 더 만들면 보낼 수 있다.</p>'
+        : `<div class="dk-pal hg-pal" role="listbox" aria-label="보낼 가구">${fgv.spare.map((x, k) => `<button type="button" class="dk-it${k ? '' : ' on'}" role="option" aria-selected="${k ? 'false' : 'true'}" data-s="${ctEsc(x.s)}" data-n="${x.n}"><canvas class="dk-th" data-s="${ctEsc(x.s)}" aria-hidden="true"></canvas><span>${ctEsc(x.name)}</span><em class="dk-n">남은 ${x.n}개</em></button>`).join('')}</div>
+          <div class="cv-fg-row hg-pick"><b class="hg-name">${ctEsc(fgv.spare[0].name)}</b><input id="hg-fg-n" class="input" type="number" min="1" max="${fgv.spare[0].n}" value="1" aria-label="개수"><button type="button" class="btn primary" id="hg-fg-go"${fgv.left ? '' : ' disabled'}>가구 보내기</button></div>
+          <p class="note">놓지 않고 남은 가구만 보낼 수 있다. 하루 ${fgv.per}개까지 (오늘 남은 ${fgv.left}개). 받은 가구는 도면이 없어도 꾸미기에서 놓을 수 있다.</p>`; // 아이템 목록처럼 그림을 눌러 고름
+      let pick = fgv.spare[0] ? fgv.spare[0].s : null; const num = fp.querySelector('#hg-fg-n');
+      fp.querySelectorAll('.dk-it').forEach((b) => b.addEventListener('click', () => { pick = b.dataset.s; fp.querySelectorAll('.dk-it').forEach((x) => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-selected', on); }); fp.querySelector('.hg-name').textContent = b.querySelector('span').textContent; num.max = +b.dataset.n || 1; num.value = 1; }));
+      const paintTh = () => fp.querySelectorAll('.dk-th').forEach((c) => { HP.paint(c, HP.sprite(c.dataset.s)); const [w, hh] = HP.size(c.dataset.s), k = Math.min(3, 64 / w, 40 / hh); c.style.width = `${Math.round(w * k)}px`; c.style.height = `${Math.round(hh * k)}px`; });
+      HP.onReady(paintTh); // 그림 팩을 아직 안 불러왔으면 다 불러온 뒤에 그림
+      fp.querySelector('#hg-fg-go')?.addEventListener('click', () => { if (pick) cityCall('city:fgift', { name, s: pick, n: +num.value || 1 }, () => { if ($('hgift-dlg').open) $('hgift-dlg').close(); cityVisit(name); }); });
+      wrap.querySelectorAll('[data-hg]').forEach((t) => { if (t.tagName !== 'BUTTON') return; t.addEventListener('click', () => { wrap.querySelectorAll('button[data-hg]').forEach((b) => { const on = b === t; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); }); wrap.querySelectorAll('.hg-pane').forEach((p) => { p.hidden = p.dataset.hg !== t.dataset.hg; }); }); });
+      body.replaceChildren(wrap);
+    }
     if (!$('hgift-dlg').open) $('hgift-dlg').showModal();
   });
   // 프로필은 동료 목록 위에 겹쳐 뜸. 닫으면 보던 목록이 그대로 남아 있음
@@ -15169,9 +15188,10 @@
       const write = v.me ? '<p class="note">내 집터다. 방명록은 내 집터 창에서 볼 수 있다.</p>' : !v.book ? '<p class="note">이 집에는 방명록 받침이 없어 글을 남길 수 없다.</p>' : !v.canWrite ? '<p class="note">이 집 방명록에는 오늘 이미 글을 남겼다. 내일 다시 남길 수 있다.</p>'
         : `<div class="cv-write"><div class="cv-row"><input type="text" class="input" id="cv-guest-t" maxlength="${v.len}" placeholder="짧게 한마디 (${v.len}자까지)"><button type="button" class="btn primary" data-ct="guest">남기기</button></div><small class="note">한 집에 하루 한 번 남길 수 있다.</small></div>`;
       const gl = (v.golems || []).length ? `<p class="cv-golems"><b>골렘</b> ${v.golems.map((g) => `<span>${ctEsc(g.name)}${g.job ? `<small>${ctEsc(g.job)} 중</small>` : ''}</span>`).join('')}</p>` : ''; // 이 집 골렘 이름
+      const fg = ''; // 가구 보내기는 '선물' 창의 '가구' 칸으로 옮김
       $('city-visit-t').textContent = `${v.name}의 집터`;
       $('city-visit-body').innerHTML = `<div id="home-ui" class="hm-e"><div class="cv-top"><p class="hd-s">${ctEsc(v.plot.name)} · ${ctEsc(v.plot.mood)} · ${stg} / 4단계</p>${v.me ? '' : '<button type="button" class="btn sm cv-gift" data-ct="vgift"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="9" width="17" height="11" rx="1"/><path d="M2.5 9h19M12 9v11M12 9c-2-4-6-4-6-1.5S10 9 12 9zm0 0c2-4 6-4 6-1.5S14 9 12 9z"/></svg>선물</button>'}</div>${gl}
-        <div class="hp hp-clean"><canvas class="hp-cv" width="320" height="240" aria-hidden="true"></canvas></div>
+        <div class="hp hp-clean"><canvas class="hp-cv" width="320" height="240" aria-hidden="true"></canvas></div>${fg}
         <section class="hm-book"><h4>방명록${v.book ? '' : ' (받침 없음)'}</h4>${guest}${write}</section></div>`;
       HP.paint($('city-visit-body').querySelector('.hp-cv'), HP.plan(v.plot.id, rooms, v.deco || HP.defaults(v.plot.id, v.rooms.filter((x) => x.state === 'done').map((x) => x.id)), v.look, v.garden));
       if (!d.open) d.showModal();
@@ -15189,6 +15209,7 @@
       <small class="bd-s">집터가 있는 이부터 가나다 순 · 이름을 누르면 그 집터에 놀러 간다${all.some((x) => x.book) ? ` · <i class="bd-bk">${BOOK_ICO}</i> 방명록을 받는 집` : ''}</small>
       ${list.length ? `<div class="bd-grid">${cards}</div>` : '<p class="note">찾는 이름이 없다.</p>'}</div>`;
   }
+  document.addEventListener('change', (e) => { if (e.target && e.target.id === 'cv-fg-s') { const o = e.target.selectedOptions[0], inp = document.getElementById('cv-fg-n'); if (o && inp) { inp.max = +o.dataset.n || 1; inp.value = 1; } } }); // 가구 보내기: 고른 가구의 남은 수로 개수 칸 맞춤
   document.addEventListener('input', (e) => { if (e.target && e.target.id === 'bd-q') { CT.boardQ = e.target.value; const pos = e.target.selectionStart; renderCityMap(); const inp = document.getElementById('bd-q'); if (inp) { inp.focus(); try { inp.setSelectionRange(pos, pos); } catch {} } } });
   // 고유 칸의 집터 덤: 그림에서 고유 칸을 누르면 바로 받기 (할 일 목록의 '받기'와 같은 일)
   function perkBox(h) {
@@ -15296,6 +15317,7 @@
     if (a === 'hpview') { CT.hpClean = !CT.hpClean; return renderHome(); }
     if (a === 'visit') return cityVisit(n.dataset.name);
     if (a.startsWith('gtake:')) return cityCall('city:gift:take', { id: +a.slice(6) }); // 집터에 놓인 선물 받기 (받은 선물 창이 뜸)
+    if (a === 'fgift') { const name = CT.visit && CT.visit.name, s = document.getElementById('cv-fg-s')?.value, n = +(document.getElementById('cv-fg-n')?.value || 1); if (!name || !s) return; return cityCall('city:fgift', { name, s, n }, () => cityVisit(name)); }
     if (a === 'vgift') { const id = CT.visit && CT.visit.id; if (S.region !== 'ruins') return toast('선물을 두고 가려면 고대 유적에 직접 와 있어야 한다.'); if (id && window.__openGiftTo) window.__openGiftTo(id, CT.visit.name); return; }
     if (a === 'gphrase') { const inp = document.getElementById('cv-guest-t'); if (inp) { inp.value = n.dataset.t; inp.focus(); } return; }
     if (a === 'guest') { const t = document.getElementById('cv-guest-t')?.value || '', name = CT.visit && CT.visit.name; if (!name) return; return cityCall('city:guest', { name, text: t }, () => cityVisit(name)); }

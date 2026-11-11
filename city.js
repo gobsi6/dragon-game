@@ -2,7 +2,7 @@
 // 숫자는 이 파일 위쪽 CITY_RULES에서 고친다.
 // 도시 기록(재건도·재료함·기억의 벽·보탠 이)은 world 표의 'city'에, 드래곤마다 집터·골렘은 combat JSON의 city에 둔다.
 // 1단계: 도시 지도·구역·재건도(하루 상한)·재료함, 내 집터(네 칸)·골렘(공사·도시 일손·채집·잔해 뒤지기), 오늘의 부탁, 기억의 벽
-const { ITEMS, MIND } = require('./game-data');
+const { ITEMS, MIND, RUIN } = require('./game-data');
 
 const CITY_RULES = {
   region: 'ruins',                 // 입구가 있는 지역 (지하 회랑과 같은 곳)
@@ -11,6 +11,7 @@ const CITY_RULES = {
   hours: [1, 2, 4, 8],             // 골렘을 보낼 수 있는 시간
   sealPerHour: 1,                  // 골렘이 일하고 돌아올 때 1시간마다 석공 인장
   warpAp: 1,                       // 귀환 주문진으로 내 집터에 갈 때 드는 행동력
+  // 멸망한 대륙(에레보스)에서 주문진으로 올 때는 바다를 건널 때와 같은 행동력 (RUIN.crossAp)
   matSon: { common: 1, uncommon: 3, rare: 8 }, // 재료 10개마다 재건도 (등급별 배수)
   matSeal: 10,                     // 재료 몇 개마다 석공 인장 1
   repair: { bog_iron: 4, obsidian: 2 }, // 쓰러진 골렘 고치기
@@ -608,6 +609,32 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
   if (!W.books) W.books = {}; if (!W.bookDay) W.bookDay = {};
   const otherDragon = (name) => { const id = db.dragonNameOwner ? db.dragonNameOwner(String(name || '')) : null; if (!id) return null; return (online.get && online.get(id) && online.get(id).dragon) || db.getDragon(id); };
   const cityOf = (o) => { const c = logic.combatJson(o); return c && c.city && typeof c.city === 'object' ? c.city : null; };
+  // ── 가구 선물: 놓지 않고 남은 가구를 다른 드래곤의 집터로 보냄 (고대 유적에 와 있어야 함, 하루 FGIFT.perDay개까지) ──
+  const FGIFT = { perDay: 10 };
+  const decoNow = (m) => { if (Array.isArray(m.deco)) return m.deco; const done = plotRooms(m).slice(0, curIdx(m)).map((r) => r.id); return (PACK.defaults[m.plot] || []).filter((o) => done.includes(o.room)); };
+  const spareOf = (m, s) => Math.max(0, ((m.furn || {})[s] || 0) - decoNow(m).filter((o) => DECO.base[o.s] === s).length);
+  const fgDaily = (m) => { if (!m.fgift || m.fgift.day !== dayIdx()) m.fgift = { day: dayIdx(), n: 0 }; return m.fgift; };
+  function giveFurn(d, name, s, n) {
+    const m = ct(d); if (!m.plot) return err('먼저 집터를 골라야 한다.');
+    if (d.exp_end) return err('원정을 떠나 있는 동안에는 할 수 없다.');
+    if (d.region !== R.region) return err('가구를 보내려면 고대 유적에 직접 와 있어야 한다.');
+    const o = otherDragon(name); if (!o) return err('그런 드래곤은 없다.');
+    if (o.id === d.id) return err('내 집터에는 보낼 수 없다.');
+    if (o.dead_at) return err(`${ga(o.name)} 긴 잠에 들었다.`);
+    if (db.relGet && db.relGet(o.id, d.id) === 'wary') return err(`${o.name}의 집터 문이 굳게 닫혀 있다.`);
+    const om = cityOf(o); if (!om || !om.plot) return err(`${ga(o.name)} 아직 집터를 고르지 않았다.`);
+    if (!FURN[s]) return err('그런 가구는 없다.');
+    n = Math.floor(Number(n) || 0); if (n < 1) return err('보낼 개수를 골라야 한다.');
+    const sp = spareOf(m, s); if (sp < n) return err(sp ? `놓지 않고 남은 ${FURN[s].name}${josa(FURN[s].name, '은', '는')} ${sp}개뿐이다.` : `놓지 않고 남은 ${FURN[s].name}${josa(FURN[s].name, '이', '가')} 없다. 놓아 둔 가구는 먼저 치워야 보낼 수 있다.`);
+    if (FURN_CAP[s] && ((om.furn || {})[s] || 0) + n > FURN_CAP[s]) return err(`${o.name}의 집터에는 ${FURN[s].name}${josa(FURN[s].name, '을', '를')} 더 둘 자리가 없다. (${FURN_CAP[s]}개까지)`);
+    const fd = fgDaily(m); if (fd.n + n > FGIFT.perDay) return err(`가구는 하루 ${FGIFT.perDay}개까지 보낼 수 있다. (오늘 남은 ${Math.max(0, FGIFT.perDay - fd.n)}개)`);
+    m.furn[s] -= n; fd.n += n;
+    if (!om.furn) om.furn = {}; om.furn[s] = (om.furn[s] || 0) + n;
+    db.saveState(d); db.saveState(o);
+    const what = `${FURN[s].name}${n > 1 ? ` ${n}개` : ''}`, tell = `${ga(d.name)} 집터로 가구를 보내왔다: ${what}. 꾸미기에서 놓을 수 있다.`;
+    const oe = online.get && online.get(o.id); if (oe && oe.socket) { try { oe.socket.emit('notice', { title: '가구 선물', lines: [tell] }); sendMe(oe.socket, oe.dragon); } catch {} } else if (db.noteAdd) db.noteAdd(o.id, tell);
+    return { ok: true, lines: [`${o.name}의 집터로 ${what}${josa(what, '을', '를')} 보냈다. (오늘 보낼 수 있는 가구 ${FGIFT.perDay - fd.n}개 남음)`] };
+  }
   // ── 텃밭 ──
   // 기르는 정도: 심은 때부터 지금까지, 촉촉한 동안은 1배, 마른 동안은 GARDEN.dry 배로 자람 (ms 단위로 쌓음)
   function gInfo(st, now = Date.now()) {
@@ -675,10 +702,12 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
   function visitView(d, name) {
     const o = otherDragon(name); if (!o) return err('그런 드래곤은 없다.');
     const m = cityOf(o); if (!m || !m.plot || !m.rooms) return err(`${ga(o.name)} 아직 집터를 고르지 않았다.`);
+    const mm = ct(d), spare = o.id !== d.id && mm.plot ? Object.keys(FURN).map((s) => ({ s, name: FURN[s].name, n: spareOf(mm, s) })).filter((x) => x.n > 0) : [];
     const rs = ROOMS(m.plot), ci = curIdx(m), today = dayIdx();
     return { ok: true, visit: { id: o.id, name: o.name, me: o.id === d.id, plot: { id: m.plot, name: PI[m.plot].name, mood: PI[m.plot].mood, perk: PI[m.plot].perk },
       rooms: rs.map((r, i) => { const st = m.rooms[r.id], need = Object.values(r.mats).reduce((a, n) => a + n, 0), put = Object.entries(r.mats).reduce((a, [k, n]) => a + Math.min(n, (st.mats || {})[k] || 0), 0); return { id: r.id, name: r.name, hours: r.hours, h: Math.min(r.hours, st.h), matsFrac: need ? put / need : 1, state: i < ci ? 'done' : i === ci ? 'cur' : 'lock' }; }),
       garden: m.packV >= 1 ? gView(m) : {}, deco: m.packV >= 1 && Array.isArray(m.deco) ? m.deco : null, look: m.packV >= 1 ? m.look || null : null, book: hasBook(m), guest: bookOf(o.name), // 아직 집터를 열지 않아 팩 그림으로 옮기지 않은 집은 새 기본 모습으로 보여 줌
+      fgift: o.id !== d.id ? { spare, left: Math.max(0, FGIFT.perDay - fgDaily(mm).n), per: FGIFT.perDay } : null, // 가구 보내기: 내가 놓지 않고 남은 가구
       golems: (m.golems || []).filter((g) => g.awake).map((g) => ({ name: g.name, job: g.job && g.until > Date.now() ? JOBS[g.job] : null })), // 놀러 온 이에게 보이는 골렘 이름 (일하는 중이면 그 일)
       canWrite: hasBook(m) && o.id !== d.id && W.bookDay[`${d.name}>${o.name}`] !== today, len: BOOK.len } };
   }
@@ -802,7 +831,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     return { ok: true, intro, lines: ['무너진 회랑의 마지막 계단을 내려갔다. 동굴 천장 아래, 잠든 도시가 펼쳐진다.'] };
   }
   function leave(d) { const m = ct(d); m.inside = false; return { ok: true, lines: ['회랑을 거슬러 고대 유적으로 올라왔다.'] }; }
-  // 귀환 주문진: 내 집터에 놓아 두면 본 대륙 어디서든 고대도시(집터가 있는 도시 안)로 곧장 날아옴. 행동력 R.warpAp (고대 유적에 둥지를 둔 이는 둥지로 날아가기로 공짜)
+  // 귀환 주문진: 내 집터에 놓아 두면 어디서든 고대도시(집터가 있는 도시 안)로 곧장 날아옴. 행동력 본 대륙 R.warpAp, 멸망한 대륙 RUIN.crossAp (고대 유적에 둥지를 둔 이는 둥지로 날아가기로 공짜)
   const hasWarp = (m) => Array.isArray(m.deco) && m.deco.some((o) => o.s === 'warp_circle');
   function warpTo(d) {
     if (!isOpen()) return { error: W.closed && pathOpen() ? '고대도시는 잠시 닫혀 있다. (점검 중)' : '고대도시로 가는 길은 아직 열리지 않았다.' };
@@ -811,13 +840,13 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
     if (d.rest_at) return { error: '둥지에서 쉬는 중이다. 먼저 깨어나야 한다.' };
     if (logic.isFallen(d)) return { error: '쓰러져 있어 움직일 수 없다.' };
-    if (logic.isRuin(d.region)) return { error: '바다 건너에서는 주문진의 부름이 닿지 않는다. 먼저 본 대륙으로 건너와야 한다.' };
+    const ruin = logic.isRuin(d.region), cost = ruin ? RUIN.crossAp : R.warpAp; // 에레보스에서는 바다를 건너는 것과 같은 값
     if (d.region === R.region && m.inside) return { error: '이미 고대도시에 있다.' };
     logic.regen(d, Date.now());
-    if (d.ap < R.warpAp) return { error: `행동력이 모자란다. (${R.warpAp} 필요)` };
-    logic.spendAp(d, R.warpAp);
+    if (d.ap < cost) return { error: `행동력이 모자란다. (${cost} 필요)` };
+    logic.spendAp(d, cost);
     const from = d.region; d.region = R.region; m.inside = true;
-    return { title: '고대도시', from, lines: ['집터에 그려 둔 주문진이 희미하게 빛나며 부른다. 눈 깜짝할 새 고대도시의 집터 앞에 내려섰다.'] };
+    return { title: '고대도시', from, lines: [ruin ? '바다 건너까지 닿은 주문진의 빛이 잿빛 하늘을 가른다. 파도를 넘어 고대도시의 집터 앞에 내려섰다.' : '집터에 그려 둔 주문진이 희미하게 빛나며 부른다. 눈 깜짝할 새 고대도시의 집터 앞에 내려섰다.'] };
   }
   function choose(d, id) {
     const e = ready(d); if (e) return e;
@@ -1025,7 +1054,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     return { bookNew: bookNew(d, m), open: isOpen(), closed: !!W.closed && pathOpen(), inside: inside(d), plot: m.plot || null, stage: m.plot ? stage(m) : 0,
       back: awake.filter((g) => !g.job && g.report).length, idle: awake.filter((g) => !g.job).length, work: awake.filter((g) => g.job).length,
       next: (() => { const t = awake.filter((g) => g.job).reduce((a, g) => Math.min(a, g.until), Infinity); return Number.isFinite(t) ? t : null; })(), son: W.son, need: CITY_NEED,
-      warp: hasWarp(m) && isOpen(), warpAp: R.warpAp }; // 귀환 주문진을 놓아 두었으면 '내 집터로 가기' (행동력 warpAp)
+      warp: hasWarp(m) && isOpen(), warpAp: R.warpAp, warpApRuin: RUIN.crossAp }; // 귀환 주문진을 놓아 두었으면 '내 집터로 가기' (행동력 warpAp)
   }
   function view(d) {
     const m = ct(d), now = Date.now();
@@ -1107,6 +1136,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     handle('city:guest', (d, p) => guestWrite(d, String(p.name || ''), p.text));
     handle('city:book:seen', (d) => { ct(d).bookSeen = Date.now(); return { ok: true }; });
     handle('city:gift:take', (d, p) => takeGift(d, Number(p.id), socket));
+    handle('city:fgift', (d, p) => giveFurn(d, String(p.name || ''), String(p.s || ''), p.n));
     handle('city:gold', (d, p) => giveGold(d, p.n));
     handle('city:perk', (d, p) => perkUse(d, p.i));
     handle('city:zone', (d, p) => zoneAct(d, String(p.id || '')));
