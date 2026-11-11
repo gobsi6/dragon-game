@@ -14520,6 +14520,9 @@
   // 칸 진행: 공사 시간과 재료를 반반으로 셈 (시간만 다 차도 재료가 모자라면 100%가 아님)
   const roomFrac = (r) => { if (r.state === 'done') return 1; if (r.state !== 'cur') return 0; const t = Math.min(1, r.h / r.hours); const need = (r.mats || []).reduce((a, m) => a + m.need, 0); const put = (r.mats || []).reduce((a, m) => a + Math.min(m.put, m.need), 0); const mf = need ? put / need : r.matsFrac ?? 1; return Math.min(0.99, (t + mf) / 2); };
   const pctTxt = (r) => (r.state === 'done' ? '완성' : r.state === 'cur' ? `${Math.floor(roomFrac(r) * 100)}%` : '잠김');
+  // 집터를 열었을 때 먼저 보여 줄 칸: 공사 중인 칸, 다 지었으면 지금 할 일이 있는 칸 (단잠 → 생산대), 그것도 없으면 고유 칸
+  const defRoom = (h) => { const cur = h.rooms.find((r) => r.state === 'cur'); if (cur) return cur; const R = (id) => h.rooms.find((r) => r.id === id && r.state === 'done');
+    if (h.nap && h.nap.open && !h.nap.done && R('live')) return R('live'); if (h.make && h.make.open && h.make.left > 0 && R('work')) return R('work'); return h.rooms[3]; };
   const canPut = (h) => { const r = h.rooms.find((x) => x.state === 'cur'); return r && r.mats.some((m) => m.put < m.need && (h.inv[m.id] || 0) > 0) ? r : null; };
   function homeTodo() {
     const h = CT.v?.me; if (!h || !h.plot) return [];
@@ -14556,7 +14559,7 @@
     if (a === 'give') return cityCall('city:give');
     if (a === 'perk') return cityCall('city:perk');
     if (a === 'nap') return cityCall('city:nap');
-    if (a === 'book') { CT.tab = 'plan'; return renderHome(); }
+    if (a === 'book') { CT.tab = 'plan'; CT.bookOpen = true; return renderHome(); }
     if (a === 'gifts') { CT.tab = 'plan'; renderHome(); setTimeout(() => document.querySelector('#city-home-dlg .hm-gifts')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50); return; }
     const [k, i] = a.split(':');
     if (k === 'golem') { CT.sel = 'golems'; CT.gopen = +i; CT.tab = 'golems'; return renderHome(); }
@@ -14606,20 +14609,21 @@
     }
     const plot = h.plots.find((p) => p.id === h.plot), stg = h.rooms.filter((r) => r.state === 'done').length;
     const todo = homeTodo(), tab = CT.tab || 'plan', cur = h.rooms.find((r) => r.state === 'cur');
-    const gAtt = h.golems.some((g) => ['back', 'due', 'idle'].includes(gState(g)));
+    const gAtt = h.golems.some((g) => ['back', 'due'].includes(gState(g))); // 돌아온 골렘이 있을 때만 (쉬는 골렘까지 넣으면 점이 늘 켜져 있어 눈에 안 띔)
     const tabs = [['plan', '집터', ''], ['todo', '할 일', todo.length ? `<em class="hm-n">${todo.length}</em>` : ''], ['golems', '골렘', gAtt ? '<i class="hm-dot" aria-label="할 일 있음"></i>' : ''], ['deco', '꾸미기', '']];
     let main = '';
-    if (tab === 'plan') main = `${housePlan(h)}${gardenBox(h)}<section class="detail">${CT.sel === 'golems' ? roomD(h, cur || h.rooms[3]) : homeDetail(h)}</section>${homeGiftBox(h)}${bookBox(h)}`;
-    else if (tab === 'todo') main = `${todo.length ? `<section class="hm-todo"><div class="hm-todo-h"><b>할 일 ${todo.length}</b><button type="button" class="btn sm primary" data-ct="all"${CT.busy ? ' disabled' : ''}>${CT.busy ? '처리하는 중…' : '모두 처리'}</button></div>${todo.map((t) => `<div class="tr"><span class="dot"></span><b>${t.t}</b><button type="button" class="btn sm" data-ct="act:${t.a}">${t.b}</button></div>`).join('')}</section>` : '<p class="hm-empty">지금은 할 일이 없다. 골렘이 돌아오면 다시 들러 보자.</p>'}<section class="detail">${reqD(h)}</section>${napBox(h)}${tradeBox(h)}${workshopBox(h)}`;
+    if (tab === 'plan') main = `${housePlan(h)}${gardenBox(h)}<section class="detail">${CT.sel === 'golems' ? roomD(h, defRoom(h)) : homeDetail(h)}</section>${homeGiftBox(h)}${bookBox(h)}`;
+    else if (tab === 'todo') main = `${todo.length ? `<section class="hm-todo"><div class="hm-todo-h"><b>할 일 ${todo.length}</b><button type="button" class="btn sm primary" data-ct="all"${CT.busy ? ' disabled' : ''}>${CT.busy ? '처리하는 중…' : '모두 처리'}</button></div>${todo.map((t) => `<div class="tr"><span class="dot"></span><b>${t.t}</b><button type="button" class="btn sm" data-ct="act:${t.a}">${t.b}</button></div>`).join('')}</section>` : '<p class="hm-empty">지금은 할 일이 없다. 골렘이 돌아오면 다시 들러 보자.</p>'}`; // 오늘의 부탁 내용·단잠·생산대·오르딘 교환은 집터 그림에서 그 구역을 누르면
     else if (tab === 'golems') main = `<section class="detail">${golemsD(h)}</section>`;
     else { const md = CT.dkMode || 'place'; main = `<nav class="seg dk-mode" aria-label="꾸미기">${[['place', '가구 놓기'], ['make', '가구 만들기'], ['bp', '도면'], ['look', '바닥·담']].map(([k, n]) => `<button type="button" data-ct="dkm:${k}" class="${md === k ? 'on' : ''}">${n}</button>`).join('')}</nav>${md === 'make' ? furnMaker(h) : md === 'bp' ? bpShop(h) : md === 'look' ? lookEditor(h) : decoEditor(h)}`; }
     if (tab === 'plan' && h.book && h.book.unread) { socket.emit('city:book:seen', {}, () => {}); setTimeout(() => { if (h.book) h.book.unread = 0; }, 0); } // 집터 탭을 열면 새 글을 읽은 것으로 (이번 화면에는 새 글 표시를 남김)
     body.innerHTML = `<div id="home-ui" class="hm-e">
-      <header class="hd"><div class="hd-t"><h3>${plot.name}</h3><span class="hd-r"><span class="seal">인장 <b>${h.seals}</b></span><span class="tag">${stg} / 4단계</span></span></div>
-        <p class="hd-s">${plot.mood} · 오늘 보탠 재건도 ${h.daySon} / ${v.rules.dayCap}${h.bank ? ` · 다음 날로 넘긴 재건도 ${h.bank}` : ''}</p>${h.perk ? `<p class="hd-perk${h.perk.on ? ' on' : ''}"><b>집터 덤</b> ${ctEsc(h.perk.text)}${h.perk.on ? (h.perk.up ? ' · <em>구역이 재건되어 한 단계 커짐</em>' : '') + (h.perk.kind !== 'passive' ? ` · 오늘 ${h.perk.left} / ${h.perk.max}` : ` · ${Math.round(h.perk.off * 100)}%`) : (() => { const rn = h.plots.find((p) => p.id === h.plot).room; return ` · ${ctEsc(rn)}${ctJ(rn, '을', '를')} 되살리면 열린다`; })()}</p>` : ''}${h.pondBack ? `<p class="hd-perk on"><b>연못</b> 분수로 바뀌었던 연못을 돌려받았다${h.pondBack.n ? ` (연못 ${h.pondBack.n}개)` : ''}${h.pondBack.bp ? ' · 연못 도면도 함께' : ''}. 꾸미기에서 놓을 수 있다.</p>` : ''}</header>
+      <header class="hd"><div class="hd-t"><h3>${plot.name}</h3><span class="hd-r"><span class="seal" title="오늘 보탠 재건도${h.bank ? ` · 다음 날로 넘긴 재건도 ${h.bank}` : ''}">재건도 <b>${h.daySon} / ${v.rules.dayCap}</b></span><span class="seal">인장 <b>${h.seals}</b></span><span class="tag">${stg} / 4단계</span></span></div>
+        <p class="hd-s">${plot.mood}</p>${h.perk ? `<p class="hd-perk${h.perk.on ? ' on' : ''}" title="${ctEsc(h.perk.text)}"><b>집터 덤</b> ${ctEsc(String(h.perk.text).split(' (')[0])}${h.perk.on ? (h.perk.up ? ' · <em>구역이 재건되어 한 단계 커짐</em>' : '') + (h.perk.kind !== 'passive' ? ` · 오늘 ${h.perk.left} / ${h.perk.max}` : ` · ${Math.round(h.perk.off * 100)}%`) : (() => { const rn = h.plots.find((p) => p.id === h.plot).room; return ` · ${ctEsc(rn)}${ctJ(rn, '을', '를')} 되살리면 열린다`; })()}</p>` : ''}${h.pondBack ? `<p class="hd-perk on"><b>연못</b> 분수로 바뀌었던 연못을 돌려받았다${h.pondBack.n ? ` (연못 ${h.pondBack.n}개)` : ''}${h.pondBack.bp ? ' · 연못 도면도 함께' : ''}. 꾸미기에서 놓을 수 있다.</p>` : ''}</header>
       <nav class="hm-tabs" aria-label="내 집터 화면">${tabs.map(([k, n, x]) => `<button type="button" data-ct="tab:${k}" class="${tab === k ? 'on' : ''}"${tab === k ? ' aria-current="page"' : ''}>${n}${x}</button>`).join('')}</nav>
       ${main}</div>`;
     paintHouse(body, h);
+    body.querySelector('.hm-fold')?.addEventListener('toggle', (e) => { CT.bookOpen = e.target.open; }); // 방명록 펼침을 기억
     if (tab === 'deco') decoBind(body, h);
     homeSrcBind(body);
   }
@@ -14637,7 +14641,7 @@
   // 도트 도면 + 칸마다 이름·꼬리표·골렘/부탁 이름표 (도면은 HP가 그리고, 글자는 HTML로 위에 얹음)
   function housePlan(h) {
     const R = Object.fromEntries(h.rooms.map((r) => [r.id, r])), cur = h.rooms.find((r) => r.state === 'cur');
-    const selRoom = CT.sel.startsWith('room:') ? (CT.sel === 'room:cur' ? (cur || h.rooms[3]).id : CT.sel.slice(5)) : null;
+    const selRoom = CT.sel.startsWith('room:') ? (CT.sel === 'room:cur' ? defRoom(h).id : CT.sel.slice(5)) : null;
     const chips = [], icons = [];
     // 아이콘 자리: 칸 이름 아래쪽의 후보 자리 중, 이미 놓인 아이콘과 겹치지 않는 가장 가운데 자리. 칸이 차면 마당으로
     const placed = [], MIN = 28; // 도트 단위 (320×240 도면에서 아이콘 지름 약 20도트 + 여유)
@@ -14654,11 +14658,13 @@
       else if (s === 'work' && g.job === 'build' && cur) { room = cur.id; txt = `${ctLeft(g.until - Date.now())} 남음`; tone = 'hp-work'; } // 공사: 공사 중인 칸에서 일함
       else if (s === 'work') { txt = `${CT.v.rules.jobs[g.job]} · ${ctLeft(g.until - Date.now())} 남음`; tone = 'hp-out'; } // 도시 일손·채집·잔해 뒤지기: 집터 밖 (도면에 없음)
       else { room = 'yard'; txt = s === 'idle' ? '쉬는 중' : '돌아옴'; }                          // 돌아옴·쉬는 중: 마당에서 기다림
-      chips.push(`<button type="button" class="hp-chip ${tone}" data-ct="gopen:${g.i}"><i></i>${g.name} · ${txt}</button>`);
+      if (!room) chips.push(`<button type="button" class="hp-chip ${tone}" data-ct="gopen:${g.i}"><i></i>${g.name} · ${txt}</button>`); // 그림 밖(나가서 일함)만 칩으로. 그림 안의 골렘은 아이콘으로
       if (room) icons.push(ico('golem', tone, `gopen:${g.i}`, `${g.name} ${txt}`, at(room)));
     });
-    if (!h.req.done) { chips.push('<button type="button" class="hp-chip hp-att" data-ct="sel:req"><i></i>오르딘의 부탁</button>'); icons.push(ico('note', 'hp-att', 'sel:req', '오르딘의 부탁', NOTE_AT)); } // 부탁: 입구 옆
-    const tagOf = (r) => (r.state === 'done' ? '<em class="hp-tag done">되살아남</em>' : r.state === 'cur' ? `<em class="hp-tag cur">${Math.floor(roomFrac(r) * 100)}%</em>` : '<em class="hp-tag lock">무너짐</em>');
+    if (!h.req.done) { icons.push(ico('note', 'hp-att', 'sel:req', '오르딘의 부탁', NOTE_AT)); } // 부탁: 입구 옆
+    else icons.push(ico('note', 'hp-calm', 'sel:req', '오르딘과 바꾸기', NOTE_AT)); // 부탁을 마쳐도 오르딘과 바꾸기를 하러 누를 수 있게
+    const useTag = (r) => (r.id === 'live' && h.nap && h.nap.open && !h.nap.done ? '<em class="hp-tag act">단잠</em>' : r.id === 'work' && h.make && h.make.open && h.make.left > 0 ? `<em class="hp-tag act">생산 ${h.make.left}</em>` : ''); // 그 칸에서 지금 할 수 있는 일
+    const tagOf = (r) => useTag(r) || (r.state === 'done' ? '<em class="hp-tag done">되살아남</em>' : r.state === 'cur' ? `<em class="hp-tag cur">${Math.floor(roomFrac(r) * 100)}%</em>` : '<em class="hp-tag lock">무너짐</em>');
     const pc = (v, t) => `${((v / t) * 100).toFixed(3)}%`;
     const rooms = Object.entries(HP.ROOMS).map(([id, [x0, y0, w0, h0]]) => { const r = R[id];
       const [x, y, w, hh] = id !== 'yard' ? [x0, y0, w0, h0 + 8] : [x0, y0, w0, h0]; // 지붕 있는 칸은 아랫벽 앞면까지 감싸게 (선택 꺾쇠가 건물에 맞게)
@@ -14974,8 +14980,8 @@
 
   function homeDetail(h) {
     if (CT.sel === 'golems') return golemsD(h);
-    if (CT.sel === 'req') return reqD(h);
-    const id = CT.sel === 'room:cur' ? (h.rooms.find((r) => r.state === 'cur') || h.rooms[3]).id : CT.sel.slice(5);
+    if (CT.sel === 'req') return `${reqD(h)}${tradeBox(h)}`; // 오르딘: 오늘의 부탁과 바꾸기를 함께
+    const id = CT.sel === 'room:cur' ? defRoom(h).id : CT.sel.slice(5);
     return roomD(h, h.rooms.find((r) => r.id === id));
   }
   const stTag = (st) => (st === 'done' ? '<span class="tg ok">되살아남</span>' : st === 'cur' ? '<span class="tg cur">공사 중</span>' : '<span class="tg lk">아직</span>');
@@ -14983,6 +14989,8 @@
     const lack = r.mats.filter((m) => m.put < m.need), left = r.hours - r.h, hh = r.state === 'done' ? r.hours : r.h;
     const mt = r.mats.reduce((x, m) => x + m.need, 0), mp = r.state === 'done' ? mt : r.mats.reduce((x, m) => x + Math.min(m.put, m.need), 0);
     // 다 되살린 칸은 공사 시간·재료 같은 지난 정보 없이, 열린 것만
+    const fac = r.state === 'done' ? (r.id === 'live' ? napBox(h) : r.id === 'work' ? workshopBox(h) : '') : '';
+    if (fac) return `<div class="dh"><b>${r.name}</b>${stTag(r.state)}</div>${fac}`; // 거처는 단잠, 작업실은 생산대를 바로
     if (r.state === 'done') return `<div class="dh"><b>${r.name}</b>${stTag(r.state)}</div>
       <p class="note">공사를 마쳤다. 이 칸은 다 되살아났다.</p>
       <p class="opens">열린 것: ${r.opens}</p>`;
@@ -15164,8 +15172,10 @@
   }
   function bookBox(h) {
     const b = h.book; if (!b) return '';
-    if (!b.has) return '<section class="hm-book"><h4>방명록</h4><p class="note">꾸미기에서 \'방명록 받침\'을 놓으면 놀러 온 이웃이 글을 남길 수 있다.</p></section>';
-    return `<section class="hm-book"><h4>방명록${b.unread ? ` <em class="hm-n">${b.unread}</em>` : ''}</h4>${b.list.length ? `<ul class="cv-book">${b.list.map((g) => `<li><b><button type="button" class="cc-visit" data-ct="visit" data-name="${ctEsc(g.by)}">${ctEsc(g.by)}</button></b><span>${ctEsc(g.t)}</span></li>`).join('')}</ul>` : '<p class="note">아직 남긴 글이 없다. 도시 게시판에서 이웃의 집터에 놀러 갈 수 있다.</p>'}</section>`;
+    if (b.unread) CT.bookOpen = true; // 새 글이 있으면 펼쳐 둠 (집터 탭을 열면 읽은 것으로 바뀌어도 이번에는 펼친 채로)
+    const fold = (title, inner) => `<details class="hm-book hm-fold"${CT.bookOpen ? ' open' : ''}><summary><h4>${title}</h4></summary>${inner}</details>`;
+    if (!b.has) return fold('방명록', '<p class="note">꾸미기에서 \'방명록 받침\'을 놓으면 놀러 온 이웃이 글을 남길 수 있다.</p>');
+    return fold(`방명록${b.unread ? ` <em class="hm-n">${b.unread}</em>` : b.list.length ? ` <small class="note">${b.list.length}</small>` : ''}`, b.list.length ? `<ul class="cv-book">${b.list.map((g) => `<li><b><button type="button" class="cc-visit" data-ct="visit" data-name="${ctEsc(g.by)}" title="${ctEsc(g.by)}의 집터에 놀러 가기">${ctEsc(g.by)}</button></b><span>${ctEsc(g.t)}</span></li>`).join('')}</ul>` : '<p class="note">아직 남긴 글이 없다. 도시 게시판에서 이웃의 집터에 놀러 갈 수 있다.</p>');
   }
 
   // ════ 기억의 벽 (팝업) ════
@@ -15217,7 +15227,7 @@
     if (a === 'vgift') { const id = CT.visit && CT.visit.id; if (S.region !== 'ruins') return toast('선물을 두고 가려면 고대 유적에 직접 와 있어야 한다.'); if (id && window.__openGiftTo) window.__openGiftTo(id, CT.visit.name); return; }
     if (a === 'gphrase') { const inp = document.getElementById('cv-guest-t'); if (inp) { inp.value = n.dataset.t; inp.focus(); } return; }
     if (a === 'guest') { const t = document.getElementById('cv-guest-t')?.value || '', name = CT.visit && CT.visit.name; if (!name) return; return cityCall('city:guest', { name, text: t }, () => cityVisit(name)); }
-    if (a === 'book') { CT.tab = 'plan'; renderHome(); setTimeout(() => document.querySelector('#city-home-dlg .hm-book:not(.hm-gifts)')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50); return; }
+    if (a === 'book') { CT.tab = 'plan'; CT.bookOpen = true; renderHome(); setTimeout(() => document.querySelector('#city-home-dlg .hm-fold')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50); return; }
     if (a === 'give') return cityCall('city:give');
     if (a === 'gold') { const n = Number(document.getElementById('cc-gold-n')?.value || 0); if (!(n >= 100)) return toast('금화는 100 이상 녹여 넣을 수 있다.'); if (!confirm(`금화 ${ctNum(n)}을 녹여 넣을까? 되돌릴 수 없다.`)) return; return cityCall('city:gold', { n }); }
     if (a.startsWith('goldq:')) { const inp = document.getElementById('cc-gold-n'); if (!inp) return; const z = CT.v.zones.find((x) => x.state === 'going'), gb = z && z.box.find((m) => m.id === 'gold'), left = gb ? gb.need - gb.put : 0, mine = Math.floor(S.me.gold || 0); const q = a.slice(6); inp.value = q === 'max' ? Math.min(left, mine) : Math.min(left, mine, (Number(inp.value) || 0) + Number(q)); return; }

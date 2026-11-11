@@ -5218,3 +5218,27 @@ body.chat-off #say, body.chat-off #chat-view { display: none; }
 .sig-pick .sig-guide { display: inline-block; margin-top: 2px; font-size: 12px; font-weight: 600; color: #5A2A3E; text-decoration: none; }
 .sig-pick .sig-guide:hover { text-decoration: underline; text-underline-offset: 3px; }
 .sig-pick .trait.skill small { line-height: 1.6; }
+
+/* 내 집터 그림: 지금 쓸 수 있는 시설이 있는 칸 (거처 단잠 · 작업실 생산) · 부탁을 마친 뒤의 오르딘 쪽지 */
+.hp-tag.act { background: var(--ht); color: #FFFBF3; }
+.hp-ico.hp-calm { border-color: #C9B796; color: var(--hm); }
+#home-ui .detail .hm-book { margin-top: 10px; }
+/* 오르딘 바꾸기 줄: 이름이 남는 자리를 차지해 버튼이 오른쪽 끝에 나란히 (작업실 생산대와 같게) */
+#home-ui .cv-book li.tr-row b { flex: 1; min-width: 0; }
+#home-ui .cv-book li.tr-row .btn { flex: none; min-width: 64px; }
+/* 시설이 바로 붙는 칸 머리 아래 첫 상자 */
+#home-ui .detail .dh + .hm-book { margin-top: 4px; padding-top: 4px; border-top: 0; }
+/* 방명록: 접어 두고 제목을 눌러 펼침 */
+#home-ui details.hm-fold > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+#home-ui details.hm-fold > summary::-webkit-details-marker { display: none; }
+#home-ui details.hm-fold > summary::after { content: ""; width: 7px; height: 7px; margin-left: auto; border-right: 1.5px solid #9A8A76; border-bottom: 1.5px solid #9A8A76; transform: rotate(45deg); transition: transform .15s; }
+#home-ui details.hm-fold[open] > summary::after { transform: rotate(-135deg); }
+#home-ui details.hm-fold > summary h4 { flex: 1; }
+/* 방명록에 글을 남긴 이웃 이름: 링크처럼 파랗게·밑줄 대신 글과 같은 색 (누르면 놀러 감. 마우스를 올리면 밑줄) */
+#home-ui .cv-book .cc-visit { color: #5B4A35; font-weight: 600; text-decoration: none; }
+#home-ui .cv-book .cc-visit:hover, #home-ui .cv-book .cc-visit:focus-visible { color: #3A2E26; text-decoration: underline; }
+/* 그림 속 칸에 마우스를 올리면: 누를 수 있다는 걸 알 수 있게 테두리를 진하게 */
+#home-ui .hp:not(.hp-clean) .hp-room:not(.hp-sel):hover { box-shadow: inset 0 0 0 2px var(--ha); background: rgba(107, 85, 54, .07); }
+/* 머리의 재건도 표시 */
+#home-ui .hd-r .seal + .seal { margin-left: 0; }
+
