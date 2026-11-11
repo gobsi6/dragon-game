@@ -2874,6 +2874,7 @@
       }
       if (big) { $('fac-dlg').close(); $('nest-dlg').close(); showResult(res.result); return; }
       toast(res.result.lines.join(' '));
+      if (event === 'nest:city') [...document.querySelectorAll('nav button')].find((b) => b.textContent.includes('대륙'))?.click(); // 주문진으로 날아오면 대륙 화면(고대도시)으로
       if ($('nest-dlg').open) openNest();
       if (res.result.event) openEvent(res.result.event);
     });
@@ -4033,6 +4034,7 @@
           const wild = town ? (S.regions[S.region]?.links || []).filter((id) => S.regions[id] && !S.shops.includes(id) && realmOf(id) === realmOf(S.region)).map((id) => S.regions[id].name) : [];
           note.textContent = ruinHere ? '오염된 이 땅에는 둥지를 틀 수 없다. 바다를 건너 본 대륙의 야생에서 둥지를 틀자.' : town ? `인간의 땅에는 둥지를 틀 수 없다. ${wild.length ? `길로 이어진 야생의 땅(${wild.join('·')})으로 가자.` : '야생의 땅으로 가자.'}` : `처음 둥지를 트는 데는 아무것도 들지 않는다.`;
           if (!town && !ruinHere) row.appendChild(btn(`${S.regions[S.region].name}에 둥지 틀기`, () => nestAct('nest:build'), true, !!me.exp));
+          if (me.city?.warp && !ruinHere && !me.city.inside) row.appendChild(btn('내 집터로 가기', () => nestAct('nest:city'), false, !!me.exp || !!me.restAt)); // 귀환 주문진을 집터에 놓아 두었을 때 (둥지가 없어도)
         } else {
           st.querySelector('.where').textContent = `${S.regions[n.region].name}의 둥지`;
           FAC_LAST = { n, me }; // 시설 창이 쓸 둥지 정보 (가장 먼저)
@@ -4041,6 +4043,7 @@
             note.textContent = me.restAt ? '지금 둥지에서 쉬고 있다.' : '둥지에서 쉬면 회복이 빨라진다. 쉬는 동안에는 채팅과 제작, 보물더미 정리만 할 수 있다.';
             row.appendChild(me.restAt ? btn('깨어나기', () => nestAct('rest:stop'), true) : btn('둥지에서 쉬기', () => nestAct('rest:start'), true, !!me.exp));
             { const pn2 = me.partnerNest; if (pn2 && pn2.region !== S.region) row.appendChild(btn(`반려 ${pn2.name}의 둥지로 날아가기${S.nestRules.homeFlightAp > 0 ? ` −${S.nestRules.homeFlightAp}` : ''}`, () => nestAct('nest:partner'), false, !!me.exp || !!me.restAt || me.ap < S.nestRules.homeFlightAp)); }
+            if (me.city?.warp && !ruinHere && !me.city.inside) row.appendChild(btn('내 집터로 가기', () => nestAct('nest:city'), false, !!me.exp || !!me.restAt)); // 귀환 주문진을 집터에 놓아 두었을 때
           } else {
             note.textContent = ruinHere ? '오염된 이 땅에는 둥지를 틀 수 없다. 둥지로 돌아가려면 바다를 건너 본 대륙으로 가야 한다.' : S.nestRules.homeFlightAp > 0 ? `어디서든 둥지로 곧장 날아갈 수 있다. 행동력 ${S.nestRules.homeFlightAp}${numJosa(S.nestRules.homeFlightAp, '이', '가')} 든다.` : '어디서든 둥지로 곧장 날아갈 수 있다. 행동력은 들지 않는다.';
             // 반려의 둥지에 와 있으면 그곳에서도 쉴 수 있음
@@ -4048,6 +4051,7 @@
             if (pn && pn.region === S.region) row.appendChild(me.restAt ? btn('깨어나기', () => nestAct('rest:stop'), true) : btn(`반려 ${pn.name}의 둥지에서 쉬기`, () => nestAct('rest:start'), true, !!me.exp));
             if (pn && pn.region === S.region) note.textContent += ` 반려 ${pn.name}의 식구는 '식구' 탭에서 함께 돌볼 수 있다.`;
             if (!ruinHere) row.appendChild(btn(`둥지로 날아가기${S.nestRules.homeFlightAp > 0 ? ` −${S.nestRules.homeFlightAp}` : ''}`, () => { nestAct('nest:home'); }, true, !!me.exp || !!me.restAt || me.ap < S.nestRules.homeFlightAp));
+            if (me.city?.warp && !ruinHere && !me.city.inside) row.appendChild(btn('내 집터로 가기', () => nestAct('nest:city'), false, !!me.exp || !!me.restAt)); // 귀환 주문진을 집터에 놓아 두었을 때
             if (pn && pn.region !== S.region && !ruinHere) row.appendChild(btn(`반려의 둥지로 날아가기${S.nestRules.homeFlightAp > 0 ? ` −${S.nestRules.homeFlightAp}` : ''}`, () => nestAct('nest:partner'), false, !!me.exp || !!me.restAt || me.ap < S.nestRules.homeFlightAp));
             if (!town && !ruinHere) row.appendChild(btn(`여기로 둥지 옮기기 (금화 ${S.nestRules.moveCost})`, () => {
               const tierNote = (n.tier || 0) > 0 ? ` 넓혀 둔 둥지는 한 단계 낮아져 ${S.nestRules.tiers[n.tier - 1].name}${ro(S.nestRules.tiers[n.tier - 1].name)} 된다.` : '';
@@ -14950,7 +14954,7 @@
     // 건물 밖(가운데가 어느 방에도 없음)에 선 가구는 앞쪽 벽(방 아랫면)보다 앞에 그림. 깔개처럼 납작한 것은 그대로 아래에
     const zone = (o) => { const [w, h] = size(o.s), cx = o.x + w / 2, cy = o.y + h / 2; const r = Object.entries(ROOMS).find(([id, [rx, ry, rw, rh]]) => id !== 'yard' && cx >= rx && cx < rx + rw && cy >= ry && cy < ry + rh); return r ? r[0] : 'out'; }; // 서버 decoZone과 같음
     const outdoor = (o) => layer(o.s) !== 'flat' && zone(o) === 'out';
-    const order = (o, list = []) => { const L = layer(o.s); if (L === 'flat') return -1e4; if (L === 'wall') return -5e3 + o.y; const b = support(o, list); return b ? b.y + size(b.s)[1] + 0.5 + (o.y + size(o.s)[1]) / 1e3 : o.y + size(o.s)[1]; };
+    const order = (o, list = []) => { const L = layer(o.s); if (L === 'flat') return sp(o.s)?.under ? -2e4 : -1e4; /* under: 깔개보다도 아래 (귀환 주문진) */ if (L === 'wall') return -5e3 + o.y; const b = support(o, list); return b ? b.y + size(b.s)[1] + 0.5 + (o.y + size(o.s)[1]) / 1e3 : o.y + size(o.s)[1]; };
     // 움직이는 그림: 시각으로 장면을 고름. 가구마다 장면 하나의 길이(ms, 팩에 없으면 0.16초)가 달라도 됨 (불꽃은 조금 느리게)
     const frameOf = (k) => Math.floor(performance.now() / ((sp(k) && sp(k).ms) || 160)) % FR[k].length;
     function drawSprite(g, k, x, y, f) {

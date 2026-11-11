@@ -5264,3 +5264,8 @@ body.chat-off #say, body.chat-off #chat-view { display: none; }
 .fx-mine-list { display: flex; flex-direction: column; gap: 6px; }
 .fx-mine-list .fx-row.lack .fx-t b { color: var(--muted); }
 .fx-mine-list small .lack { color: #A63E4B; }
+
+/* 둥지 창 단추 줄: 폰처럼 좁은 화면에서는 한 줄에 둘씩 (셋씩 놓으면 '반려의 둥지로 날아가기'가 세 줄로 접혀 넘침). 홀수면 마지막 단추가 한 줄을 다 씀 */
+@media (max-width: 560px) {
+  #nest-body .row > button { flex: 1 1 calc(50% - 4px); min-width: 0; padding-left: 10px; padding-right: 10px; }
+}

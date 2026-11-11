@@ -801,6 +801,20 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     return { ok: true, intro, lines: ['무너진 회랑의 마지막 계단을 내려갔다. 동굴 천장 아래, 잠든 도시가 펼쳐진다.'] };
   }
   function leave(d) { const m = ct(d); m.inside = false; return { ok: true, lines: ['회랑을 거슬러 고대 유적으로 올라왔다.'] }; }
+  // 귀환 주문진: 내 집터에 놓아 두면 본 대륙 어디서든 고대도시(집터가 있는 도시 안)로 곧장 날아옴. 둥지로 날아가기처럼 행동력은 들지 않음
+  const hasWarp = (m) => Array.isArray(m.deco) && m.deco.some((o) => o.s === 'warp_circle');
+  function warpTo(d) {
+    if (!isOpen()) return { error: W.closed && pathOpen() ? '고대도시는 잠시 닫혀 있다. (점검 중)' : '고대도시로 가는 길은 아직 열리지 않았다.' };
+    const m = ct(d);
+    if (!hasWarp(m)) return { error: '내 집터에 귀환 주문진을 놓아 두어야 한다.' };
+    if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
+    if (d.rest_at) return { error: '둥지에서 쉬는 중이다. 먼저 깨어나야 한다.' };
+    if (logic.isFallen(d)) return { error: '쓰러져 있어 움직일 수 없다.' };
+    if (logic.isRuin(d.region)) return { error: '바다 건너에서는 주문진의 부름이 닿지 않는다. 먼저 본 대륙으로 건너와야 한다.' };
+    if (d.region === R.region && m.inside) return { error: '이미 고대도시에 있다.' };
+    const from = d.region; d.region = R.region; m.inside = true;
+    return { title: '고대도시', from, lines: ['집터에 그려 둔 주문진이 희미하게 빛나며 부른다. 눈 깜짝할 새 고대도시의 집터 앞에 내려섰다.'] };
+  }
   function choose(d, id) {
     const e = ready(d); if (e) return e;
     const m = ct(d); if (m.plot) return err('이미 집터를 골랐다.');
@@ -1006,7 +1020,8 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     const awake = m.golems.filter((g) => g.awake);
     return { bookNew: bookNew(d, m), open: isOpen(), closed: !!W.closed && pathOpen(), inside: inside(d), plot: m.plot || null, stage: m.plot ? stage(m) : 0,
       back: awake.filter((g) => !g.job && g.report).length, idle: awake.filter((g) => !g.job).length, work: awake.filter((g) => g.job).length,
-      next: (() => { const t = awake.filter((g) => g.job).reduce((a, g) => Math.min(a, g.until), Infinity); return Number.isFinite(t) ? t : null; })(), son: W.son, need: CITY_NEED };
+      next: (() => { const t = awake.filter((g) => g.job).reduce((a, g) => Math.min(a, g.until), Infinity); return Number.isFinite(t) ? t : null; })(), son: W.son, need: CITY_NEED,
+      warp: hasWarp(m) && isOpen() }; // 귀환 주문진을 놓아 두었으면 '고대도시로 날아가기'
   }
   function view(d) {
     const m = ct(d), now = Date.now();
@@ -1135,7 +1150,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     });
   }
   const bind0 = bind;
-  return { RULES: R, meView, bind: (socket, entry) => { bind0(socket, entry); bindGm(socket); }, isOpen };
+  return { RULES: R, meView, warpTo, bind: (socket, entry) => { bind0(socket, entry); bindGm(socket); }, isOpen };
 };
 module.exports.CITY_RULES = CITY_RULES;
 module.exports.CITY_ZONES = ZONES;

@@ -2389,6 +2389,15 @@ function onConnect(socket) {
     sendRegionState(socket, d);
     social.onMove(d.id);
   });
+  // 귀환 주문진: 내 집터에 놓아 두었으면 고대도시로 곧장 (city.js warpTo)
+  itemAction('nest:city', (d) => city.warpTo(d), (d, res) => {
+    const ga = josa(d.name, '이', '가');
+    if (res.from !== d.region) { socket.leave(res.from); system(res.from, `${d.name}${ga} 주문진의 빛에 싸여 사라졌다.`); socket.join(d.region); system(d.region, `${d.name}${ga} 주문진을 타고 고대도시로 날아왔다.`, socket); broadcastPresence(res.from); }
+    broadcastPresence(d.region);
+    broadcastCounts();
+    sendRegionState(socket, d);
+    social.onMove(d.id);
+  });
   // 반려의 둥지로 날아가기
   itemAction('nest:partner', (d) => logic.flyPartner(d), (d, res) => {
     const ga = josa(d.name, '이', '가');
