@@ -10,6 +10,7 @@ const CITY_RULES = {
   golemEn: 3,                      // 골렘 1시간에 드는 기력
   hours: [1, 2, 4, 8],             // 골렘을 보낼 수 있는 시간
   sealPerHour: 1,                  // 골렘이 일하고 돌아올 때 1시간마다 석공 인장
+  warpAp: 1,                       // 귀환 주문진으로 내 집터에 갈 때 드는 행동력
   matSon: { common: 1, uncommon: 3, rare: 8 }, // 재료 10개마다 재건도 (등급별 배수)
   matSeal: 10,                     // 재료 몇 개마다 석공 인장 1
   repair: { bog_iron: 4, obsidian: 2 }, // 쓰러진 골렘 고치기
@@ -801,7 +802,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     return { ok: true, intro, lines: ['무너진 회랑의 마지막 계단을 내려갔다. 동굴 천장 아래, 잠든 도시가 펼쳐진다.'] };
   }
   function leave(d) { const m = ct(d); m.inside = false; return { ok: true, lines: ['회랑을 거슬러 고대 유적으로 올라왔다.'] }; }
-  // 귀환 주문진: 내 집터에 놓아 두면 본 대륙 어디서든 고대도시(집터가 있는 도시 안)로 곧장 날아옴. 둥지로 날아가기처럼 행동력은 들지 않음
+  // 귀환 주문진: 내 집터에 놓아 두면 본 대륙 어디서든 고대도시(집터가 있는 도시 안)로 곧장 날아옴. 행동력 R.warpAp (고대 유적에 둥지를 둔 이는 둥지로 날아가기로 공짜)
   const hasWarp = (m) => Array.isArray(m.deco) && m.deco.some((o) => o.s === 'warp_circle');
   function warpTo(d) {
     if (!isOpen()) return { error: W.closed && pathOpen() ? '고대도시는 잠시 닫혀 있다. (점검 중)' : '고대도시로 가는 길은 아직 열리지 않았다.' };
@@ -812,6 +813,9 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     if (logic.isFallen(d)) return { error: '쓰러져 있어 움직일 수 없다.' };
     if (logic.isRuin(d.region)) return { error: '바다 건너에서는 주문진의 부름이 닿지 않는다. 먼저 본 대륙으로 건너와야 한다.' };
     if (d.region === R.region && m.inside) return { error: '이미 고대도시에 있다.' };
+    logic.regen(d, Date.now());
+    if (d.ap < R.warpAp) return { error: `행동력이 모자란다. (${R.warpAp} 필요)` };
+    logic.spendAp(d, R.warpAp);
     const from = d.region; d.region = R.region; m.inside = true;
     return { title: '고대도시', from, lines: ['집터에 그려 둔 주문진이 희미하게 빛나며 부른다. 눈 깜짝할 새 고대도시의 집터 앞에 내려섰다.'] };
   }
@@ -1021,7 +1025,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     return { bookNew: bookNew(d, m), open: isOpen(), closed: !!W.closed && pathOpen(), inside: inside(d), plot: m.plot || null, stage: m.plot ? stage(m) : 0,
       back: awake.filter((g) => !g.job && g.report).length, idle: awake.filter((g) => !g.job).length, work: awake.filter((g) => g.job).length,
       next: (() => { const t = awake.filter((g) => g.job).reduce((a, g) => Math.min(a, g.until), Infinity); return Number.isFinite(t) ? t : null; })(), son: W.son, need: CITY_NEED,
-      warp: hasWarp(m) && isOpen() }; // 귀환 주문진을 놓아 두었으면 '고대도시로 날아가기'
+      warp: hasWarp(m) && isOpen(), warpAp: R.warpAp }; // 귀환 주문진을 놓아 두었으면 '내 집터로 가기' (행동력 warpAp)
   }
   function view(d) {
     const m = ct(d), now = Date.now();
