@@ -349,7 +349,7 @@ function counterBack(att, def, taken, lines) {
   if (n < 1) return 0;
   const after = [];
   att.hp = Math.max(0, att.hp - endureHit(att, n, after));
-  lines.push(`${ga(def)} 기세로 응수했다! ${ga(att)} ${n}의 피해를 되레 입었다.${duel ? ' 제대로 받아쳤다!' : ''}`);
+  lines.push(`${ga(def)} 기세로 응수했다! ${ga(att)} ${n}의 피해를 되레 입었다.`);
   endureLines(after, lines);
   return n;
 }
@@ -357,6 +357,7 @@ function counterBack(att, def, taken, lines) {
 // 빗나감: 돌풍(다음 한 번) · 흙먼지(공격하는 쪽이 앞을 못 봄) · 속도와 안개로 피하기가 겹쳐도
 // 한 번 공격이 빗나갈 확률은 모두 합쳐 COMBAT.dodgeCap까지 (겹쳐 쌓여 한 대도 못 맞히는 일이 없게)
 function dodged(att, def, lines) {
+  if (has(def, 'counter')) return false; // 응수 자세: 피하지 않고 맞받음 (돌풍도 아껴 둠)
   const gust = has(def, 'dodge') ? COMBAT.gustDodge : 0;
   if (gust) def.st.dodge = 0; // 돌풍: 다음 공격 한 번
   const blind = has(att, 'blind') ? 0.25 : 0; // 흙먼지
