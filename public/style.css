@@ -5242,3 +5242,24 @@ body.chat-off #say, body.chat-off #chat-view { display: none; }
 /* 머리의 재건도 표시 */
 #home-ui .hd-r .seal + .seal { margin-left: 0; }
 
+
+/* 자유 제작: 내 제작법 · 실험 노트 · 창작 도감 접기 */
+.fx-fold-h { gap: 8px; }
+.fx-fold { display: inline-flex; align-items: center; gap: 6px; padding: 2px 4px 2px 0; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; }
+.fx-fold:hover { color: var(--ink); }
+.fx-fold-ic { display: inline-block; width: 10px; font-size: 11px; color: var(--muted); }
+
+/* 자유 제작: 화로 머리의 '내 제작법' 단추와 따로 뜨는 창 */
+.xa-forge .h { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.xa-forge .h .fx-mine-open { margin-left: auto; align-self: center; }
+.fx-mine-dlg { width: min(640px, calc(100vw - 24px)); }
+.fx-mine-cats { display: flex; flex-wrap: wrap; gap: 6px; }
+.fx-cat { min-height: 32px; padding: 0 12px; border: 1px solid var(--line-soft); border-radius: 3px; background: #fff; font: 500 13px var(--sans); color: var(--ink); cursor: pointer; }
+.fx-cat small { color: var(--muted); font-size: 11.5px; }
+.fx-cat:hover { border-color: var(--steel); }
+.fx-cat.on { background: var(--steel-d); border-color: var(--steel-d); color: #F4F7FA; }
+.fx-cat.on small { color: #C8D4DE; }
+.fx-mine-sum { margin: 0; }
+.fx-mine-list { display: flex; flex-direction: column; gap: 6px; }
+.fx-mine-list .fx-row.lack .fx-t b { color: var(--muted); }
+.fx-mine-list small .lack { color: #A63E4B; }

@@ -5625,6 +5625,18 @@
   // ── 제작 ──
   // 제작 창: 만들기 / 실험 / 다듬기(강화·각인)
   let craftMode = 'make', mixPick = [];
+  // 자유 제작: 접어 둔 칸 (내 제작법 · 실험 노트 · 창작 도감). 이 기기에 기억
+  const FX_FOLD = (() => { try { return JSON.parse(localStorage.getItem('fx-fold') || '{}') || {}; } catch { return {}; } })();
+  const FX_FOLD_DEF = { cr: true }; // 처음엔 접어 둠: 창작 도감 (잘 안 보는 칸)
+  const fxFold = (key, title, count, box, el) => {
+    const folded = FX_FOLD[key] ?? !!FX_FOLD_DEF[key];
+    const h = el('h3', 'inv-h fx-fold-h'); const b = el('button', 'fx-fold'); b.type = 'button';
+    b.setAttribute('aria-expanded', String(!folded)); b.title = folded ? '펼치기' : '접기';
+    b.append(el('span', 'fx-fold-ic', folded ? '▸' : '▾'), title);
+    b.addEventListener('click', () => { FX_FOLD[key] = !folded; try { localStorage.setItem('fx-fold', JSON.stringify(FX_FOLD)); } catch {} renderCraft(); });
+    h.appendChild(b); if (count != null) h.appendChild(el('span', 'inv-hn', count)); box.appendChild(h);
+    return !folded; // 펼쳐져 있으면 true
+  };
   let FREE_LAST = null, FREE_DATA = null, FREE_STALE = false, FREE_LOADING = false, mixTag = '', mixGift = false, mixMeal = false; // mixMeal: 식구 요리로 빚기 (선물로 빚기와 함께 켜지지 않음) // mixTag: 성질로 거르기 · mixGift: 선물로 빚기 // 자유 제작: 마지막 결과, 노트·내 제작법·도감
   const ELEM_NAME = { fire: '화염', ice: '얼음', lightning: '번개', earth: '대지', poison: '독', mist: '안개', acid: '산', water: '물', spirit: '정화' };
   // 제작 재료를 누르면, 그 재료를 얻는 곳을 재료 줄 아래에 펼침 (한 번 더 누르면 접힘)
@@ -5942,6 +5954,57 @@
   }
   // 실험: 가진 재료 중 2~3가지를 골라 화로에 넣어 봄. 위는 화로 세 칸(누르면 뺌), 아래는 분류별 재료 칸(누르면 넣음)
   // 자유 제작: 방금 빚은 것(이름 짓기·남기기), 내 제작법, 실험 노트, 창작 도감
+  // ── 내 제작법 창: 종류별(먹을거리·장신구·식구 요리·선물)로 나눠 보고, 바로 다시 빚거나 지움 ──
+  let FX_MINE_CAT = (() => { try { return localStorage.getItem('fx-mine-cat') || 'all'; } catch { return 'all'; } })();
+  const FX_CATS = [['all', '전체'], ['food', '먹을거리'], ['gear', '장신구'], ['meal', '식구 요리'], ['gift', '선물']];
+  const mineCat = (m) => { if (m.gift) return 'gift'; if (m.meal) return 'meal'; const it = m.id && S.items[m.id]; if (!it || it.gone) return 'etc'; return it.type === 'equip' ? 'gear' : 'food'; };
+  function mineDlg() {
+    let d = $('fx-mine-dlg');
+    if (d) return d;
+    d = document.createElement('dialog'); d.className = 'frame dlg fx-mine-dlg'; d.id = 'fx-mine-dlg'; d.setAttribute('aria-labelledby', 'fx-mine-title');
+    d.innerHTML = '<i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i><div class="orn-h"><h2 id="fx-mine-title">내 제작법</h2></div><div class="body"><div class="fx-mine-cats" role="tablist" aria-label="종류"></div><p class="note fx-mine-sum"></p><div class="fx-mine-list"></div></div><div class="row"><button type="button" class="btn" data-close>닫기</button></div>';
+    d.querySelector('[data-close]').addEventListener('click', () => d.close());
+    d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
+    document.body.appendChild(d);
+    return d;
+  }
+  function openMineDlg() {
+    const d = mineDlg(); drawMineDlg(); if (!d.open) d.showModal();
+    if (!FREE_DATA && !FREE_LOADING) { FREE_LOADING = true; socket.emit('craft:free:get', {}, (res) => { FREE_LOADING = false; if (!res?.error) { FREE_DATA = res; drawMineDlg(); } }); }
+  }
+  function drawMineDlg() {
+    const d = $('fx-mine-dlg'); if (!d) return;
+    const el = (tag, cls, txt) => { const x = document.createElement(tag); if (cls) x.className = cls; if (txt != null) x.textContent = txt; return x; };
+    const cats = d.querySelector('.fx-mine-cats'), list = d.querySelector('.fx-mine-list'), sum = d.querySelector('.fx-mine-sum');
+    cats.replaceChildren(); list.replaceChildren();
+    if (!FREE_DATA) { sum.textContent = '불러오는 중이다…'; return; }
+    const mine = (FREE_DATA.mine || []).map((m, i) => ({ m, i, cat: mineCat(m), ok: m.mats.every((x) => (invCache[x] || 0) > 0) }));
+    const has = new Set(mine.map((x) => x.cat));
+    if (FX_MINE_CAT !== 'all' && !has.has(FX_MINE_CAT)) FX_MINE_CAT = 'all';
+    for (const [k, label] of FX_CATS) {
+      if (k !== 'all' && !has.has(k)) continue;
+      const n = k === 'all' ? mine.length : mine.filter((x) => x.cat === k).length;
+      const b = el('button', `fx-cat${FX_MINE_CAT === k ? ' on' : ''}`); b.type = 'button'; b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', String(FX_MINE_CAT === k));
+      b.append(label, el('small', '', ` ${n}`));
+      b.addEventListener('click', () => { FX_MINE_CAT = k; try { localStorage.setItem('fx-mine-cat', k); } catch {} drawMineDlg(); });
+      cats.appendChild(b);
+    }
+    const shown = mine.filter((x) => FX_MINE_CAT === 'all' || x.cat === FX_MINE_CAT).sort((a, b) => (b.ok - a.ok) || (a.i - b.i)); // 지금 빚을 수 있는 것부터
+    sum.textContent = mine.length ? `${mine.length}/${FREE_DATA.mineMax}개 남김 · 재료가 다 있는 제작법이 위에 온다.${S.me.exp ? ' 원정 중에는 빚을 수 없다.' : ''}` : '마음에 드는 물건을 빚으면 그 조합을 남겨 두고 여기서 다시 빚을 수 있다. 실험에서 빚은 뒤 \'이 조합을 내 제작법으로 남기기\'를 누르자.';
+    const nm = (id) => S.items[id]?.name || id;
+    for (const { m, i, ok } of shown) {
+      const r = el('div', `fx-row${ok ? '' : ' lack'}`);
+      const t = el('div', 'fx-t'); t.appendChild(el('b', '', `${m.id && S.items[m.id] ? S.items[m.id].name : '이름 없는 조합'}${m.gift ? ' (선물)' : m.meal ? ' (식구 요리)' : ''}`));
+      const mi = m.id && S.items[m.id] && !S.items[m.id].gone ? S.items[m.id] : null;
+      if (mi) { const ef = effectText(mi); if (ef) t.appendChild(el('span', 'fx-ef', ef)); }
+      const mt = el('small'); m.mats.forEach((x, k) => { if (k) mt.append(' · '); const sp = el('span', (invCache[x] || 0) > 0 ? '' : 'lack', `${nm(x)} ${invCache[x] || 0}`); mt.appendChild(sp); }); t.appendChild(mt);
+      const go = el('button', 'btn primary', '다시 빚기'); go.type = 'button'; go.disabled = !ok || !!S.me.exp;
+      go.addEventListener('click', () => { d.close(); itemAct('craft:mine', { idx: i }); }); // 빚은 결과는 실험 화면 위쪽에 뜸
+      const del = el('button', 'btn', '지우기'); del.type = 'button';
+      del.addEventListener('click', () => { if (confirm('이 제작법을 지울까?')) socket.emit('craft:forget', { idx: i }, (res) => { if (res.error) return toast(res.error); FREE_DATA = { ...FREE_DATA, mine: res.mine }; drawMineDlg(); if ($('craft-dlg').open) renderCraft(); }); });
+      r.append(t, go, del); list.appendChild(r);
+    }
+  }
   function drawFreeParts(box, el, part = 'all') { // part: 'top' 방금 빚은 것만 · 'bottom' 내 제작법·노트·도감만
     if ((!FREE_DATA || FREE_STALE) && !FREE_LOADING) { FREE_LOADING = true; FREE_STALE = false; socket.emit('craft:free:get', {}, (res) => { FREE_LOADING = false; if (!res?.error) { FREE_DATA = res; if ($('craft-dlg').open && craftMode === 'exp') renderCraft(); } }); }
     const Q = { good: '좋음', great: '빼어남' };
@@ -5970,25 +6033,9 @@
     if (!FREE_DATA || part === 'top') return;
     const nm = (id) => S.items[id]?.name || id;
     box.appendChild(el('div', 'fx-sep'));
-    // 내 제작법
-    const mine = FREE_DATA.mine || [];
-    const mh = el('h3', 'inv-h', '내 제작법'); mh.appendChild(el('span', 'inv-hn', `${mine.length}/${FREE_DATA.mineMax}`)); box.appendChild(mh);
-    if (!mine.length) box.appendChild(el('p', 'note', '마음에 드는 물건을 빚으면 그 조합을 여기에 남겨 두고 다시 빚을 수 있다.'));
-    mine.forEach((m, i) => {
-      const r = el('div', 'fx-row'); r.dataset.anchor = `mine-${i}`;
-      const t = el('div', 'fx-t'); t.appendChild(el('b', '', `${m.id && S.items[m.id] ? S.items[m.id].name : '이름 없는 조합'}${m.gift ? ' (선물)' : m.meal ? ' (식구 요리)' : ''}`));
-      const mi = m.id && S.items[m.id] && !S.items[m.id].gone ? S.items[m.id] : null; // 남길 때 빚은 물건의 효과 (다시 빚으면 운에 따라 조금 달라질 수 있음)
-      if (mi) { const ef = effectText(mi); if (ef) t.appendChild(el('span', 'fx-ef', ef)); } t.appendChild(el('small', '', m.mats.map((x) => `${nm(x)} ${invCache[x] || 0}`).join(' · ')));
-      const go = el('button', 'btn primary', '다시 빚기'); go.type = 'button'; go.disabled = m.mats.some((x) => !(invCache[x] > 0)) || !!S.me.exp;
-      go.addEventListener('click', () => { CRAFT_ANCHOR = { key: `mine-${i}`, top: r.getBoundingClientRect().top, at: Date.now() }; itemAct('craft:mine', { idx: i }); });
-      const del = el('button', 'btn', '지우기'); del.type = 'button';
-      del.addEventListener('click', () => { if (confirm('이 제작법을 지울까?')) socket.emit('craft:forget', { idx: i }, (res) => { if (res.error) return toast(res.error); FREE_DATA = { ...FREE_DATA, mine: res.mine }; renderCraft(); }); });
-      r.append(t, go, del); box.appendChild(r);
-    });
     // 실험 노트 (최근 8줄)
     const notes = (FREE_DATA.notes || []).slice(0, 8);
-    if (notes.length) {
-      box.appendChild(el('h3', 'inv-h', '실험 노트'));
+    if (notes.length && fxFold('notes', '실험 노트', null, box, el)) {
       const ul = el('ul', 'fx-notes');
       for (const n of notes) {
         const li = el('li');
@@ -6000,8 +6047,9 @@
     }
     // 창작 도감
     const cr = FREE_DATA.creations || [];
-    const ch = el('h3', 'inv-h', '창작 도감'); ch.appendChild(el('span', 'inv-hn', `${cr.length}가지`)); box.appendChild(ch);
-    if (!cr.length) box.appendChild(el('p', 'note', '아직 아무도 새로운 물건을 빚지 않았다. 처음 빚은 드래곤의 이름이 여기에 영원히 남는다.'));
+    const crOpen = fxFold('cr', '창작 도감', `${cr.length}가지`, box, el);
+    if (!crOpen) { /* 접힘 */ }
+    else if (!cr.length) box.appendChild(el('p', 'note', '아직 아무도 새로운 물건을 빚지 않았다. 처음 빚은 드래곤의 이름이 여기에 영원히 남는다.'));
     else {
       // 칸마다: 무엇 · 누가 언제 · 효과 · 성질 합 · (공개했으면) 넣은 재료
       const order = Object.keys(S.free?.names || {});
@@ -6036,6 +6084,10 @@
     const f = el('div', 'xa-forge');
     const h = el('div', 'h');
     h.append(el('b', '', '화로'), el('small', '', '재료 2~3가지 · 기력 4~14'));
+    { // 내 제작법: 따로 뜨는 창으로 (목록이 길어 실험 화면 아래까지 내려가지 않게)
+      const mb = el('button', 'btn sm fx-mine-open', FREE_DATA ? `내 제작법 ${(FREE_DATA.mine || []).length}/${FREE_DATA.mineMax}` : '내 제작법');
+      mb.type = 'button'; mb.addEventListener('click', openMineDlg); h.appendChild(mb);
+    }
     f.appendChild(h);
     const slots = el('div', 'xa-slots');
     for (let i = 0; i < 3; i++) {
@@ -14702,11 +14754,11 @@
     dkState(h);
     const rows = (h.furnCat || []).map((f) => {
       const own = h.furn?.[f.s] || 0, placed = CT.dk.list.filter((o) => HP.baseOf(o.s) === f.s).length;
-      const okSeal = h.seals >= f.seals, okMats = f.mats.every((m) => (h.inv[m.id] || 0) >= m.need), needBp = f.bp === false, ok = okSeal && okMats && !needBp;
+      const okSeal = h.seals >= f.seals, okMats = f.mats.every((m) => (h.inv[m.id] || 0) >= m.need), needBp = f.bp === false, full = !!f.cap && own >= f.cap, ok = okSeal && okMats && !needBp && !full; // full: 가질 수 있는 수를 다 채움 (텃밭 6개)
       return `<li class="mk-row${CT.dkFocus === f.s ? ' focus' : ''}"><canvas class="dk-th" data-s="${f.s}" aria-hidden="true"></canvas>
-        <div class="mk-b"><b>${f.name}</b><small>가진 것 ${own}개${placed ? ` · 놓은 것 ${placed}개` : ''}</small>
+        <div class="mk-b"><b>${f.name}</b><small>가진 것 ${own}${f.cap ? ` / ${f.cap}` : ''}개${placed ? ` · 놓은 것 ${placed}개` : ''}</small>
           <div class="mk-cost"><span class="it${okSeal ? '' : ' lack'}">인장 <b>${h.seals}</b><small> / ${f.seals}</small></span>${f.mats.map((m) => `<span class="it${(h.inv[m.id] || 0) >= m.need ? '' : ' lack'}" data-src="${m.id}" data-src-key="mk:${f.s}:${m.id}">${m.name} <b>${h.inv[m.id] || 0}</b><small> / ${m.need}</small></span>`).join('')}</div></div>
-        ${needBp ? '<button type="button" class="btn sm" data-ct="dkm:bp">도면 필요</button>' : `<button type="button" class="btn sm${ok ? ' primary' : ''}" data-ct="mk:${f.s}:1" ${ok ? '' : 'disabled'}>만들기</button>`}</li>`; }).join('');
+        ${needBp ? '<button type="button" class="btn sm" data-ct="dkm:bp">도면 필요</button>' : full ? `<button type="button" class="btn sm" disabled>최대 ${f.cap}개</button>` : `<button type="button" class="btn sm${ok ? ' primary' : ''}" data-ct="mk:${f.s}:1" ${ok ? '' : 'disabled'}>만들기</button>`}</li>`; }).join('');
     CT.dkFocus = null;
     return `<div class="dk-top"><span>석공 인장 <b>${h.seals}</b></span><small>만든 가구는 '가구 놓기'에서 되살린 칸에 놓는다. 칸을 되살리면 그 칸의 기본 가구가 저절로 생긴다.</small></div>
       <ul class="mk-list">${rows}</ul>`;

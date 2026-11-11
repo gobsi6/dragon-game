@@ -119,6 +119,8 @@ const BPKEY = Object.fromEntries(Object.entries(PACK.cat).map(([k, c]) => [k, c.
 const bpName = (k) => PACK.cat[k].bpName || PACK.cat[k].name;
 // 칸을 되살릴 때 저절로 생기는 기본 가구 (집터마다, 칸마다 개수). 기본 배치(PACK.defaults)에서 센 값
 const FURN_GIFT = PACK.gift;
+// 가진 수에 끝이 있는 가구 (만들기에서 막음). 텃밭: 수확이 개수만큼 곱해져 재료 균형이 무너지지 않게
+const FURN_CAP = { bedplot: 6 };
 // 바닥·벽 바꾸기: 지붕 있는 칸(거처·고유 칸·작업실)의 바닥과 벽, 마당 안쪽 바닥 (석공 인장, 한 번 사면 어느 칸에서든)
 const LOOK = { floors: Object.fromEntries(PACK.floors.map((f) => [f.id, f.name])), walls: Object.fromEntries(PACK.walls.map((f) => [f.id, f.name])),
   yard: PACK.yardFloors, rooms: ['live', 'own', 'work'], fdef: PACK.fdef, wdef: PACK.wdef, cost: 25 };
@@ -453,6 +455,8 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     if (!own(FURN, s)) return err('모르는 가구다.'); const f = { ...FURN[s], seals: sealCost(FURN[s]) };
     if (own(BLUEPRINT, BPKEY[s]) && !(m.bp || {})[BPKEY[s]]) return err(`${bpName(BPKEY[s])} 도면이 있어야 만들 수 있다. 꾸미기의 '도면'에서 살 수 있다.`);
     n = Math.max(1, Math.min(5, Math.floor(Number(n) || 1)));
+    const cap = FURN_CAP[s];
+    if (cap && (m.furn[s] || 0) + n > cap) return err((m.furn[s] || 0) >= cap ? `${f.name}${josa(f.name, '은', '는')} ${cap}개까지만 가질 수 있다. (가진 것 ${m.furn[s] || 0}개)` : `${f.name}${josa(f.name, '은', '는')} ${cap}개까지만 가질 수 있어, ${cap - (m.furn[s] || 0)}개만 더 만들 수 있다.`);
     if (m.seals < f.seals * n) return err(`석공 인장 ${f.seals * n}개가 있어야 한다. (가진 것 ${m.seals})`);
     const lack = Object.entries(f.mats).filter(([k, q]) => have(d, k) < q * n);
     if (lack.length) return err(`${lack.map(([k, q]) => `${ITEMS[k].name} ${q * n}개`).join(', ')}가 있어야 한다.`);
@@ -1023,7 +1027,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
         golems: m.golems.map((g, i) => ({ i, name: g.name, named: !!g.named, awake: g.awake, job: g.job, hours: g.hours, start: g.start, until: g.until, report: g.report, last: g.last || null, gate: g.awake ? null : gateOf(m, i), dur: g.dur ?? R.wear.max })),
         garden: m.plot ? { list: gBeds(m).map((o, k) => ({ g: o.g, n: k + 1, ...(m.garden[o.g] ? gInfo(m.garden[o.g]) : { c: null }) })), crops: GARDEN.crops, dry: GARDEN.dry, gold: Math.floor(d.gold || 0) } : null,
         deco: m.deco || null, decoRules: { max: DECO.max }, packNote: m.packNote && m.packNote.at > Date.now() - 7 * 864e5 ? m.packNote : null, pondBack: m.pondBack && m.pondBack.at > Date.now() - 7 * 864e5 ? m.pondBack : null,
-        furn: m.furn, furnCat: Object.entries(FURN).map(([k, f]) => ({ s: k, name: f.name, cat: f.cat, seals: sealCost(f), base: f.seals, bp: own(BLUEPRINT, BPKEY[k]) ? !!(m.bp || {})[BPKEY[k]] : null, mats: Object.entries(f.mats).map(([id, n]) => ({ id, name: ITEMS[id].name, need: n })) })),
+        furn: m.furn, furnCat: Object.entries(FURN).map(([k, f]) => ({ s: k, name: f.name, cat: f.cat, seals: sealCost(f), base: f.seals, cap: FURN_CAP[k] || null, bp: own(BLUEPRINT, BPKEY[k]) ? !!(m.bp || {})[BPKEY[k]] : null, mats: Object.entries(f.mats).map(([id, n]) => ({ id, name: ITEMS[id].name, need: n })) })),
         zday: Object.fromEntries(Object.entries(m.zday || {}).filter(([, v]) => v === dayIdx())), springLeft: ZF.springTimes - (m.spring && m.spring.day === dayIdx() ? m.spring.n : 0), bell: (() => { const bt = bellToday(), by = Array.isArray(bt.by) ? bt.by : []; return { n: by.length, need: ZF.bellNeed, mine: by.includes(d.name), on: by.length >= ZF.bellNeed }; })(), forgeOff: done('forge') ? ZF.forgeOff : 0,
         bp: Object.entries(BLUEPRINT).map(([k, c]) => ({ s: k, name: bpName(k), seals: c, have: !!(m.bp || {})[k] })),
         look: { floor: (m.look && m.look.floor) || {}, wall: (m.look && m.look.wall) || {}, own: m.plot ? lookOwn(m) : { floor: [], wall: [] }, cost: LOOK.cost },
