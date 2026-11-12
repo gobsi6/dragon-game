@@ -5359,3 +5359,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .gm-su-msg { width: 100%; margin-bottom: 8px; }
 #home-ui .mk-row > .th-fn { justify-self: center; align-self: center; } /* 목록 줄(가구 만들기·도면)에서도 별이 그림 바로 왼쪽 위에 붙게: 감싼 칸이 72px 열 전체로 늘어나지 않게 */
 #home-ui .mk-row > .th-fn .fn-star { left: -2px; top: -5px; } /* 목록 줄은 왼쪽 여백이 좁아, 별이 줄 테두리에 걸치지 않게 그림 쪽으로 조금 */
+/* 내 집터 창: 아래로 내려도 위의 탭(집터·할 일·골렘·꾸미기)과 꾸미기 메뉴(가구 놓기·만들기·도면·바닥·담)가 위에 붙어 있게 */
+#home-ui > .hm-tabs { position: sticky; top: -4px; z-index: 6; background: rgb(252, 250, 246); box-shadow: 0 -6px 0 rgb(252, 250, 246); } /* 창 본문 위쪽 여백(4px)까지 덮음 */
+#home-ui > .dk-mode { position: sticky; top: 40px; z-index: 5; background: rgb(252, 250, 246); box-shadow: 0 -8px 0 rgb(252, 250, 246), 0 8px 0 rgb(252, 250, 246); } /* 위아래 여백까지 덮어 아래 목록이 비치지 않게 */
+#home-ui .mk-row, #home-ui .dk-it { scroll-margin-top: 96px; } /* 그 줄로 데려갈 때 위에 붙은 메뉴에 가리지 않게 */
