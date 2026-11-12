@@ -701,6 +701,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
   const bookOf = (name) => (W.books[name] || []).slice(-BOOK.show).reverse();
   function visitView(d, name) {
     const o = otherDragon(name); if (!o) return err('그런 드래곤은 없다.');
+    if (o.dead_at && o.id !== d.id) return err(`${o.name}의 집터는 이제 비어 있다. 주인이 대륙을 떠났다.`); // 먼 여행·긴 잠
     const m = cityOf(o); if (!m || !m.plot || !m.rooms) return err(`${ga(o.name)} 아직 집터를 고르지 않았다.`);
     const mm = ct(d), spare = o.id !== d.id && mm.plot ? Object.keys(FURN).map((s) => ({ s, name: FURN[s].name, n: spareOf(mm, s) })).filter((x) => x.n > 0) : [];
     const rs = ROOMS(m.plot), ci = curIdx(m), today = dayIdx();
@@ -1094,7 +1095,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
   // 도시 게시판: 재건을 도운 이 (가나다 순). 집터 이름과 방명록 받침이 있는지 함께 (놀러 가기용)
   function board(d) {
     const names = [...new Set([...Object.keys(W.hands), ...Object.keys(W.givers)])].sort((a, b) => a.localeCompare(b, 'ko'));
-    return names.map((n) => { let plot = null, book = false; try { const o = otherDragon(n), m = o && cityOf(o); if (m && m.plot && PI[m.plot]) { plot = PI[m.plot].name; book = hasBook(m); } } catch {} return { name: n, plot, book, me: !!d && n === d.name }; });
+    return names.map((n) => { let plot = null, book = false, gone = false; try { const o = otherDragon(n); gone = !o || !!o.dead_at; const m = !gone && cityOf(o); if (m && m.plot && PI[m.plot]) { plot = PI[m.plot].name; book = hasBook(m); } } catch {} return { name: n, plot, book, gone, me: !!d && n === d.name }; }); // gone: 먼 여행을 떠났거나 긴 잠에 든 이 (이름은 남기고 집터는 보이지 않게)
   }
   function scene(key) { const [zid, i] = String(key).split(':'); const f = own(FRAGS, zid) ? FRAGS[zid][+i] : null; if (!f || !W.wall[key]) return null; return { t: f.t, s: f.s, who: W.wall[key], zone: ZONES.find((z) => z.id === zid).name }; }
 

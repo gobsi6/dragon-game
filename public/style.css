@@ -5357,3 +5357,5 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .gm-su-st { margin: 4px 0 8px; font-weight: 600; color: var(--ok, #2F6B4F); }
 .gm-su-st.closed { color: var(--danger, #9A3B3B); }
 .gm-su-msg { width: 100%; margin-bottom: 8px; }
+#home-ui .mk-row > .th-fn { justify-self: center; align-self: center; } /* 목록 줄(가구 만들기·도면)에서도 별이 그림 바로 왼쪽 위에 붙게: 감싼 칸이 72px 열 전체로 늘어나지 않게 */
+#home-ui .mk-row > .th-fn .fn-star { left: -2px; top: -5px; } /* 목록 줄은 왼쪽 여백이 좁아, 별이 줄 테두리에 걸치지 않게 그림 쪽으로 조금 */

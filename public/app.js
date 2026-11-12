@@ -15063,7 +15063,9 @@
         if (dk.list.length >= max) return toast(`장식은 ${max}개까지 놓을 수 있다.`);
         if (dkLeft(h, dk.pick) <= 0) { const n = dkName(dk.pick); dk.pick = null; renderHome(); return toast(`가진 ${n}${ctJ(n, '을', '를')} 모두 놓았다. 만들기에서 더 만들 수 있다.`); }
         if (!f.ok) return toast(f.why);
-        dk.list.push({ s: nm, x: f.x, y: f.y, ...(dk.pickF ? { f: 1 } : {}) }); dk.dirty = true; dk.sel = null; return renderHome();
+        dk.list.push({ s: nm, x: f.x, y: f.y, ...(dk.pickF ? { f: 1 } : {}) }); dk.dirty = true; dk.sel = null;
+        if (dkLeft(h, dk.pick) <= 0) { const n = dkName(dk.pick); dk.pick = null; toast(`가진 ${n}${ctJ(n, '을', '를')} 모두 놓았다.`); } // 마지막 하나까지 놓으면 선택을 풂 (계속 놓을 수 있는 것처럼 보이지 않게)
+        return renderHome();
       }
       const i = at(x, y); if (i < 0) { if (dk.sel != null) { dk.sel = null; renderHome(); } return; }
       const o = dk.list[i], [w, hh] = HP.size(o.s), carry = dk.list.map((q, j) => (j !== i && HP.support(q, dk.list) === o ? j : -1)).filter((j) => j >= 0); // 이 가구 위에 올려 둔 소품
@@ -15418,7 +15420,7 @@
     const all = [...(CT.board || [])].sort((a, b) => (b.me - a.me) || (!!b.plot - !!a.plot) || a.name.localeCompare(b.name, 'ko')), q = (CT.boardQ || '').trim(), list = q ? all.filter((x) => x.name.includes(q)) : all; // 나 → 집터 있는 이 → 없는 이, 각각 가나다
     const cards = list.map((x) => x.plot && !x.me
       ? `<button type="button" class="bd-it" data-ct="visit" data-name="${ctEsc(x.name)}" title="${ctEsc(x.name)}의 집터에 놀러 간다"><b>${ctEsc(x.name)}</b><small>${ctEsc(x.plot)}</small>${x.book ? `<i class="bd-bk" title="방명록을 받는다">${BOOK_ICO}</i>` : ''}</button>`
-      : `<div class="bd-it${x.me ? ' me' : ' off'}"><b>${ctEsc(x.name)}</b><small>${x.me ? '나' : '집터 없음'}</small></div>`).join('');
+      : `<div class="bd-it${x.me ? ' me' : ' off'}"><b>${ctEsc(x.name)}</b><small>${x.me ? '나' : x.gone ? '대륙을 떠남' : '집터 없음'}</small></div>`).join('');
     return `<div class="cc-board"><div class="bd-h"><b>재건을 도운 이 <em>${all.length}</em></b>${all.length > 8 ? `<input type="search" class="input bd-q" id="bd-q" placeholder="이름 찾기" value="${ctEsc(q)}" aria-label="이름 찾기">` : ''}</div>
       <small class="bd-s">집터가 있는 이부터 가나다 순 · 이름을 누르면 그 집터에 놀러 간다${all.some((x) => x.book) ? ` · <i class="bd-bk">${BOOK_ICO}</i> 방명록을 받는 집` : ''}</small>
       ${list.length ? `<div class="bd-grid">${cards}</div>` : '<p class="note">찾는 이름이 없다.</p>'}</div>`;
