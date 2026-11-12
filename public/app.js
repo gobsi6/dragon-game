@@ -1883,6 +1883,12 @@
   }
   function itemAct(event, payload) {
     if (event === 'item:use' && S.items[payload?.item]?.use?.mistBox) return pdOpenBox(payload.item); // 안개 상자: 여는 모습을 보여 줌
+    if (event === 'item:use' && S.items[payload?.item]?.use?.statReset) { // 태초의 조각: 쓰기 전에 한 번 더 묻기 (되돌릴 수 없음)
+      const me = S.me || {}, base = S.kinds?.[me.kind]?.stats, st = me.stats || {};
+      const back = base ? Object.keys(base).reduce((s, k) => s + ((st[k] || 0) - (base[k] || 0)), 0) : null;
+      const nm = S.items[payload.item].name;
+      if (!confirm(`${nm}${josa(nm, '을', '를')} 쓸까?\n\n발톱·비늘·날개·지혜·위엄이 태어날 때의 모습으로 돌아가고, 그동안 나눈 포인트${back != null ? ` ${back}점` : ''}을 돌려받는다. 드래곤 기록에서 다시 나눠야 한다.\n\n쓴 조각은 사라지고 되돌릴 수 없다.`)) return;
+    }
     socket.emit(event, payload, (res) => {
       if (res.error) { SFX.play('error'); return toast(res.error); }
       if (event === 'craft' || event === 'craft:experiment' || event === 'craft:mine') {
