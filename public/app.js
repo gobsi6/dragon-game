@@ -87,6 +87,7 @@
   function josa(word, a, b) {
     const c = word.charCodeAt(word.length - 1) - 0xac00;
     if (c < 0 || c > 11171) return `${a}(${b})`;
+    if (a === '으로' && c % 28 === 8) return b; // '으로/로': ㄹ 받침 뒤에는 '로' (균열로, 솔로)
     return c % 28 ? a : b;
   }
   const numJosa = (n, a, b) => ('013678'.includes(String(n).replace(/[^0-9]/g, '').slice(-1)) ? a : b); // 숫자 뒤 조사: 끝자리를 읽은 소리에 받침이 있으면 a (영·일·삼·육·칠·팔, 0으로 끝나면 십·백·천)
@@ -3361,6 +3362,7 @@
         const owned = [...Object.keys(R.care), ...Object.keys(invCache).filter((id) => S.items[id]?.kin && !R.care[id])].filter((id) => (invCache[id] || 0) > 0);
         const grown = !!v.talent; // 재주가 정해진 어른: 재주가 더 기울지 않으니 '물건' 줄은 빼고 음식과 일감만
         label(v.careIn > 0 ? `돌보기: ${dur(v.careIn)} 뒤에 다시 할 수 있다` : grown ? '돌보기: 음식을 건네거나, 재주에 맞는 재료로 일감을 맡긴다' : '돌보기: 무엇을 건네느냐에 따라 재주가 달라진다');
+        if (v.selfFeed) label('부엌에서 스스로 끼니를 챙겨 먹는다. 좋아하는 음식을 건네면 기뻐한다.');
         // 먹을 것(배가 차는 것)과 건넬 물건을 나눠 보여 줌
         // 일감: 재주가 정해진 어른에게 재주에 맞는 재료를 건네면 그걸로 만든 것을 돌려줌 (R.work)
         const workOf = (id) => { const w = R.work?.items?.[id]; return w && v.talent && w.talent === v.talent && S.items[w.out] ? w : null; };
@@ -11841,7 +11843,7 @@
     me.querySelector('b').textContent = `${res.me.w}승 ${res.me.l}패`;
     if (res.me.daily) { // 오늘 남은 결투 (하루 n번)
       const lf = document.createElement('span'); lf.className = `ar-left${res.me.left <= 0 ? ' none' : ''}`;
-      lf.textContent = `오늘 남은 결투 ${res.me.left}/${res.me.daily}`;
+      lf.textContent = `오늘 걸 수 있는 결투 ${res.me.left}/${res.me.daily}`;
       me.querySelector('span').after(lf);
     }
     me.querySelector('small').textContent = `결투 받기 ${res.me.duelOn ? '켬' : '끔'} · 자동 결투 ${res.me.autoDuel ? '허용' : '안 함'}`;
@@ -11861,7 +11863,7 @@
       <ul>
         <li><b>진행 방식</b> 두 드래곤이 모두 접속 중이라면 직접 턴을 선택해 결투를 진행할 수 있습니다. 상대가 자동 결투를 허용한 경우에는 상대가 접속하지 않았더라도 설정된 스킬 구성에 따라 자동으로 결투가 진행됩니다.</li>
         <li><b>보상</b> 결투에서 승리하면 용족 명성과 경험치를 획득합니다.</li>
-        <li><b>횟수 제한</b> 결투는 하루 최대 15회, 동일한 상대와는 하루 최대 3회까지 가능합니다. 직접 결투, 자동 결투, 내기 결투가 모두 횟수에 포함되며, 신청한 쪽과 신청받은 쪽 모두 각각 1회로 계산됩니다.</li>
+        <li><b>횟수 제한</b> 결투는 하루 최대 15회까지 신청할 수 있고, 동일한 상대와는 하루 최대 3회까지 가능합니다. 직접 결투, 자동 결투, 내기 결투가 모두 횟수에 포함됩니다. 하루 15회는 신청한 결투만 세고 신청받은 결투는 세지 않으며, 동일한 상대와의 3회는 신청한 쪽과 신청받은 쪽 모두 셉니다.</li>
         <li><b>내기 결투</b> 두 드래곤이 모두 접속 중이고 레벨 차이가 5 이하일 때 이용할 수 있습니다. 서로 금화나 아이템을 걸고 결투하며, 승리한 쪽이 패배한 쪽이 건 물품을 가져갑니다.</li>
       </ul>`;
     rules.appendChild(rb);
@@ -11890,7 +11892,7 @@
         b.addEventListener('click', fn);
         a.appendChild(b);
       };
-      const expWhy = S.me?.exp ? awayMsg('결투할 수 없다.') : res.me.daily && res.me.left <= 0 ? `오늘은 결투를 다 했다. (하루 ${res.me.daily}번)` : null; // 원정 중이거나 오늘 결투를 다 했으면 신청 단추를 막음
+      const expWhy = S.me?.exp ? awayMsg('결투할 수 없다.') : res.me.daily && res.me.left <= 0 ? `오늘은 결투를 다 걸었다. (하루 ${res.me.daily}번)` : null; // 원정 중이거나 오늘 결투를 다 했으면 신청 단추를 막음
       btn('결투 신청', expWhy || x.live, () => challenge(x, 'live'), true);
       // 내기 결투: 실시간 결투로만, 레벨 차이 BET_UI.gap 이하
       const gapWhy = Math.abs((S.me?.level || 0) - x.level) > BET_UI.gap ? `레벨 차이가 ${BET_UI.gap}보다 크면 내기를 걸 수 없다.` : null;

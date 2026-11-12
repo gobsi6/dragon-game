@@ -14,6 +14,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 function josa(word, a, b) {
   const c = word.charCodeAt(word.length - 1) - 0xac00;
   if (c < 0 || c > 11171) return `${a}(${b})`;
+  if (a === '으로' && c % 28 === 8) return b; // '으로/로': ㄹ 받침 뒤에는 '로' (균열로, 솔로)
   return c % 28 ? a : b;
 }
 const ga = (f) => `${f.name}${josa(f.name, '이', '가')}`;

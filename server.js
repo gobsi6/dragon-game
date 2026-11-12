@@ -20,6 +20,8 @@ const mobs = require('./game-mobs'); // 모브 드래곤: 의뢰·이야기·교
 const life = require('./game-life');
 // 예전 첫사랑 기록 채우기: 함께한 날들에 상대 이름이 들어간 줄 (한 번만, 이미 채운 아이는 건너뜀)
 { const n = db.kinFixAll(life.loveDiaryFix); if (n) console.log(`첫사랑 기록 ${n}명 채움`); }
+// 예전 짝 기록 채우기: 마을로 내려간 식구의 짝이 살아 있는지 보려고 짝이 태어난 때·함께 사는지 (한 번만, 이미 채운 아이는 건너뜀)
+{ const n = db.kinFixAll(life.mateLiveFix); if (n) console.log(`짝 기록 ${n}명 채움`); }
 const { REGION_LOOT, SHOPS_SPECIAL, RUIN, FACILITY, KIN_TRAITS, KIN_PLAY, isTestDragon } = require('./game-data');
 
 // ── 물건을 얻는 곳: 제작 화면에서 재료를 누르면 보여 줌. 서버를 켤 때 한 번 정리해 둠 ──
@@ -2483,16 +2485,18 @@ function onConnect(socket) {
     if (ph.error) return ph;
     const pkin = db.kinLoad(ph.id);
     const k = pkin.find((x) => x.id === Number(p.id));
-    const res = fn(d, pkin, p, have);
+    const owner = online.get(ph.id)?.dragon || db.getDragon(ph.id); // 반려 드래곤 (그 둥지의 부엌 등 시설을 볼 때)
+    const res = fn(d, pkin, p, have, owner);
     if (res.error) return res;
     const pe = online.get(ph.id);
     if (pe) refreshKin(pe.dragon, pkin); else db.kinSaveAll(ph.id, pkin);
     res.title = `반려 ${ph.name}의 식구 · ${res.title}`;
     const gain = res.lines.find((l) => /유대 \+/.test(l));
-    social.tellRival(ph.id, `${d.name}${josa(d.name, '이', '가')} 둥지에 들러 ${k ? k.name : '식구'}${josa(k ? k.name : '식구', '을', '를')} ${verb}.${gain ? ` (${gain})` : ''}`, '반려');
+    const fav = res.lines.find((l) => l.includes('가장 좋아하는 것 같다')); // 반려가 알아낸 좋아하는 음식은 둥지 주인에게도 알림
+    social.tellRival(ph.id, `${d.name}${josa(d.name, '이', '가')} 둥지에 들러 ${k ? k.name : '식구'}${josa(k ? k.name : '식구', '을', '를')} ${verb}.${gain ? ` (${gain})` : ''}${fav ? ` ${fav}` : ''}`, '반려');
     return res;
   };
-  itemAction('kin:pcare', partnerKinAct((d, pkin, p, have) => life.care(d, pkin, p.id, str(p.item), have, Date.now(), { away: true }), '돌봐 주었다'));
+  itemAction('kin:pcare', partnerKinAct((d, pkin, p, have, owner) => life.care(d, pkin, p.id, str(p.item), have, Date.now(), { away: true, owner }), '돌봐 주었다'));
   itemAction('kin:ptrain', partnerKinAct((d, pkin, p) => life.train(d, pkin, p.id, str(p.stat), Date.now(), { away: true }), '가르쳐 주었다'));
   itemAction('kin:rename', (d, p, have, kin) => life.rename(kin, p.id, str(p.name)));
   itemAction('kin:path', (d, p, have, kin) => life.choosePath(d, kin, p.id, str(p.path), str(p.town)));
@@ -2563,7 +2567,7 @@ function onConnect(socket) {
         partnerKin: (() => {                     // 반려의 둥지에 와 있으면 그 집 식구 (같이 돌보기)
           const ph = logic.hooks.partnerNest(d);
           if (!ph || ph.region !== d.region || d.exp_end) return null;
-          const v = life.views(db.kinLoad(ph.id), Date.now(), d);
+          const v = life.views(db.kinLoad(ph.id), Date.now(), d, online.get(ph.id)?.dragon || db.getDragon(ph.id)); // 포만감은 반려 둥지의 부엌으로
           return { id: ph.id, name: ph.name, home: v.home };
         })(),
       },

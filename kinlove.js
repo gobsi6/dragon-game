@@ -192,6 +192,7 @@ module.exports = function setupKinLove({ db, online, sendMe, life, logic, news, 
     for (const [ow, mine, other, kinList] of [[o.from.owner, A.k, B.k, A.kin], [d.id, B.k, A.k, B.kin]]) {
       life.diary(mine, `${other.name}, ${o.baby}${josa(o.baby, '과', '와')} 함께 ${tn}에서 새 가정을 꾸렸다.`, now);
       mine.status = 'returned'; mine.data.ended = now; mine.data.family = town; // 지난 식구 목록: '○○에 가정을 꾸렸다'
+      if (mine.data.mate) { mine.data.mate.together = true; mine.data.mate.born ||= other.data.born || null; } // 짝과 같은 마을에 함께 삶
       kinChanged(ow, kinList);
       const e = live(ow); const p = e ? e.dragon : db.getDragon(ow);
       if (p) {
@@ -243,8 +244,8 @@ module.exports = function setupKinLove({ db, online, sendMe, life, logic, news, 
     if (!adult(a, now) || !adult(b, now)) return { error: dk ? '두 용이 모두 젊은 용이 되어야 짝이 될 수 있다.' : '두 아이가 모두 어른이 되어야 맺어질 수 있다.' };
     drop();
     const F = o.from.ownerName, T = d.name;
-    a.data.mate = { name: b.name, at: now, home: T, sex: b.data.sex || null, ref: { owner: d.id, id: b.id } }; // sex: 같은 성별이면 아이 이벤트가 없음
-    b.data.mate = { name: a.name, at: now, home: F, sex: a.data.sex || null, ref: { owner: o.from.owner, id: a.id } };
+    a.data.mate = { name: b.name, at: now, home: T, sex: b.data.sex || null, born: b.data.born || null, ref: { owner: d.id, id: b.id } }; // sex: 같은 성별이면 아이 이벤트가 없음, born: 짝의 나이 (마을에서 다시 만날 때 짝이 살아 있는지)
+    b.data.mate = { name: a.name, at: now, home: F, sex: a.data.sex || null, born: a.data.born || null, ref: { owner: o.from.owner, id: a.id } };
     if (dk) { a.data.mate.kind = b.data.kind; b.data.mate.kind = a.data.kind; } // 짝의 종류 (알의 종류·식구 카드)
     life.addBond(a, 10); life.addBond(b, 10);
     const whom = (x, home) => (o.match ? `중매로 만난 ${home}의 둥지 ${x.name}` : `${home}의 둥지에 사는 ${dk ? '단짝' : '첫사랑'} ${x.name}`);
@@ -340,6 +341,7 @@ module.exports = function setupKinLove({ db, online, sendMe, life, logic, news, 
       } else {
         life.diary(mine, `짝 ${other.name}${josa(other.name, '과', '와')} 함께 ${tn}${josa(tn, '으로', '로')} 내려가 살기로 했다.`, now);
         mine.status = 'returned'; mine.data.ended = now; mine.data.liveIn = town;
+        if (mine.data.mate) { mine.data.mate.together = true; mine.data.mate.born ||= other.data.born || null; } // 짝과 같은 마을에 함께 삶
         logic.addRep(p, town, 15); const f = logic.addFame(p, 2);
         say[ow] = [`${mine.name}${josa(mine.name, '과', '와')} ${other.name}${josa(other.name, '이', '가')} 몇 번이고 뒤돌아보며 손을 흔들었다. 둘은 ${tn}에서 함께 새 삶을 꾸릴 것이다.`, `${tn} 평판 +15, 용족 명성 +2`, ...(f ? [f] : [])];
       }

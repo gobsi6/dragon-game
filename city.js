@@ -172,7 +172,7 @@ const GOLEM_NAMES = ['유적 골렘 1', '유적 골렘 2', '유적 골렘 3']; /
 const OLD_GOLEM_NAMES = ['돌멩이', '이끼등', '모래발'];
 const GOLEM_NAME_RE = /^[가-힣A-Za-z0-9 ·'\-]{1,12}$/;
 
-const josa = (w, a, b) => { w = String(w); const l = w[w.length - 1]; if (/[0-9]/.test(l)) return '013678'.includes(l) ? a : b; const c = w.charCodeAt(w.length - 1); if (c < 0xac00 || c > 0xd7a3) return b; return (c - 0xac00) % 28 ? a : b; }; // 숫자로 끝나면 읽는 소리대로 (일·삼·육·칠·팔·영은 받침)
+const josa = (w, a, b) => { w = String(w); const l = w[w.length - 1]; if (/[0-9]/.test(l)) return '013678'.includes(l) ? a : b; const c = w.charCodeAt(w.length - 1); if (c < 0xac00 || c > 0xd7a3) return b; if (a === '으로' && (c - 0xac00) % 28 === 8) return b; return (c - 0xac00) % 28 ? a : b; }; // 숫자로 끝나면 읽는 소리대로 (일·삼·육·칠·팔·영은 받침)
 const ga = (n) => `${n}${josa(n, '이', '가')}`;
 const ro = (w) => { const c = String(w).charCodeAt(String(w).length - 1); if (c < 0xac00 || c > 0xd7a3) return `${w}로`; const t = (c - 0xac00) % 28; return `${w}${t && t !== 8 ? '으로' : '로'}`; }; // ㄹ 받침은 '로'
 const eul = (n) => `${n}${josa(n, '을', '를')}`;

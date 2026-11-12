@@ -434,6 +434,7 @@ const STANCE_NAME = { hostile: '적대', hermit: '은둔', friendly: '우호' };
 const josa = (w, a, b) => {
   const c = w.charCodeAt(w.length - 1);
   if (c < 0xac00 || c > 0xd7a3) return b;
+  if (a === '으로' && (c - 0xac00) % 28 === 8) return b; // '으로/로': ㄹ 받침 뒤에는 '로' (균열로, 솔로)
   return (c - 0xac00) % 28 ? a : b;
 };
 const isBring = (g) => !!g.bring;

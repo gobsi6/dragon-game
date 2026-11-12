@@ -15,6 +15,7 @@ const numJosa = (n, a, b) => ('013678'.includes(String(n).replace(/[^0-9]/g, '')
 function josa(word, a, b) {
   const c = word.charCodeAt(word.length - 1);
   if (c < 0xac00 || c > 0xd7a3) return `${a}(${b})`;
+  if (a === '으로' && (c - 0xac00) % 28 === 8) return b; // '으로/로': ㄹ 받침 뒤에는 '로' (균열로, 솔로)
   return (c - 0xac00) % 28 ? a : b;
 }
 const ORIGINS = { abandoned: '버려진 아기', lost: '길 잃은 아이', tribute: '공물로 바쳐진 아이' };

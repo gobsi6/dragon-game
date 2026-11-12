@@ -21,6 +21,7 @@ const clamp = (v, a = 0, b = 100) => Math.max(a, Math.min(b, v));
 function josa(word, a, b) {
   const c = word.charCodeAt(word.length - 1) - 0xac00;
   if (c < 0 || c > 11171) return `${a}(${b})`;
+  if (a === '으로' && c % 28 === 8) return b; // '으로/로': ㄹ 받침 뒤에는 '로' (균열로, 솔로)
   return c % 28 ? a : b;
 }
 const ga = (k) => `${k.name}${josa(k.name, '이', '가')}`;
@@ -91,6 +92,18 @@ const ORIGIN_LINE = { abandoned: '성문 곁 바구니에서 발견되어 둥지
 function diaryStart(k) {
   if (k.data.diary || k.status === 'egg' || k.status === 'cold') return;
   k.data.diary = [{ at: k.data.born || Date.now(), t: k.type === 'drake' ? '알에서 깨어났다.' : (ORIGIN_LINE[k.data.origin] || '둥지 식구가 되었다.') }];
+}
+// 예전 짝 기록 채우기: 마을로 내려간 인간 식구의 짝이 다른 둥지 식구면, 짝이 태어난 때와 같은 마을에 함께 사는지를 적음
+// (마을에서 다시 만날 때 짝이 살아 있는지 봄. 서버를 켤 때 한 번, 이미 채운 아이는 건너뜀)
+function mateLiveFix(k, byId) {
+  const m = k?.data?.mate;
+  if (k?.type !== 'human' || k.status !== 'returned' || !m?.ref || m.born) return false;
+  const o = byId.get(m.ref.id);
+  if (!o || o.owner !== m.ref.owner || o.name !== m.name || !o.data.born) return false;
+  const at = (x) => x.data.family || x.data.liveIn || x.data.town || null;
+  m.born = o.data.born;
+  if (o.status === 'returned' && at(o) && at(o) === at(k)) m.together = true;
+  return true;
 }
 // 예전 첫사랑 기록 채우기: 이름이 들어간 줄이 생기기 전에 첫사랑이 정해진 아이에게 한 번만 (서버를 켤 때)
 // 날짜는 예전에 남은 "'아이의 첫사랑' — …" 줄과 같게, 그 줄이 없으면 청소년이 된 날. 바뀌었으면 true
@@ -300,6 +313,10 @@ const DF = KIN.drakeFood;
 const drakeFloor = (k, now) => (DF.selfFeed.includes(stageOf(k, now).name) ? DF.selfFloor : 0); // 젊은 용부터는 스스로 사냥
 const drakeFull = (k) => (k.data.sat ?? 0) >= DF.full;
 const hasKeeper = (kin, k) => kin.some((x) => x !== k && x.type === 'human' && x.status === 'home' && x.data.path === 'stay' && x.data.talent === 'herbalist');
+// 다 큰 인간 식구(어른·노년)는 둥지에 부엌이 있으면 스스로 끼니를 챙겨 먹음 (원정에 따라갔거나 둥지를 나갔을 때는 빼고)
+const selfCook = (d, k, now) => !!d && !!logic.facOf(d).kitchen && HG.selfFeed.includes(stageOf(k, now).name) && !k.data.onExp && !k.data.runaway;
+// 인간 식구의 포만감이 떨어지지 않는 선: 약초꾼이 돌봐 주는 선과 스스로 챙겨 먹는 선 가운데 높은 것
+const humanFloor = (d, kin, k, now) => Math.max(hasKeeper(kin, k) ? HG.keeperFloor : 0, selfCook(d, k, now) ? HG.selfFloor : 0);
 
 // ── 새 식구 ────────────────────────────────────────
 // 함께 사는 식구와 겹치지 않는 이름 (다 겹치면 아무거나)
@@ -371,11 +388,20 @@ function topLean(k) {
   return best;
 }
 // 세상을 떠나며 남기는 유품: 함께한 깊이에 따라
-function keepsakeOf(k) {
+// 유품: 유대에 따른 것 하나에, 재주에 따른 것과 (마을에서 생을 마쳤으면) 마을 살이에 따른 것을 더해 그 가운데 하나
+// opt.town: 마을에서 생을 마침, opt.ng: 둥지에 맡기고 간 아이가 있음
+function keepsakeOf(k, opt = {}) {
   if (k.data.path === 'knight') return 'keepsake_sword';
-  if (k.data.bond >= 70) return 'keepsake_scale';
-  if (k.data.bond >= 40) return 'keepsake_toy';
-  return 'keepsake_cloth';
+  const c = [k.data.bond >= 70 ? 'keepsake_scale' : k.data.bond >= 40 ? 'keepsake_toy' : 'keepsake_cloth'];
+  const tl = { herbalist: 'keepsake_herbs', smith: 'keepsake_hammer', guard: 'keepsake_horn' }[k.data.talent];
+  if (tl) c.push(tl);
+  if (opt.town) {
+    c.push('keepsake_lantern');
+    if (k.data.mate) c.push('keepsake_ring');
+    if (opt.ng) c.push('keepsake_letters');
+    if ((k.data.bond || 0) >= 60) c.push('keepsake_journal');
+  }
+  return pick(c);
 }
 // 새끼의 성격: 가장 오래 지켜본 어미의 성향
 function personalityOf(k) {
@@ -479,7 +505,12 @@ function tick(d, kin, now = Date.now()) {
         if (!wk.adult && tl && !k.data.talent && k.data.lean) k.data.lean[tl] = (k.data.lean[tl] || 0) + 2;
       }
       const wasHungry = k.data.sat != null && k.data.sat < HG.hungry;
-      satUpdate(k, now, hasKeeper(kin, k));
+      satUpdate(k, now, false, HG, humanFloor(d, kin, k, now));
+      // 부엌이 있는 둥지의 어른·노년: 배가 그 선 아래로 내려가 있으면(부엌을 막 지었거나, 어른이 되었거나, 원정에서 돌아옴) 알아서 끼니를 챙겨 먹음
+      if (selfCook(d, k, now) && k.data.sat < HG.selfFloor) {
+        k.data.sat = HG.selfFloor;
+        out.lines.push(`${ga(k)} 부엌에서 제 끼니를 챙겨 먹었다.`);
+      }
       if (!wasHungry && k.data.sat < HG.hungry) {
         out.lines.push(`${ga(k)} 배가 고픈지 자꾸 둥지 입구를 기웃거린다.`);
         growAdd(k, 'hungry');
@@ -592,6 +623,18 @@ function tick(d, kin, now = Date.now()) {
       }
     }
   }
+  // 마을로 내려간 인간 식구가 수명을 다하면 둥지 소식으로 알리고 함께한 날들에 남김 (한 번만)
+  // 상태는 마을로 떠난 채(returned) 둠: 그래야 그 마을에서 무덤 장면('마을에서 다시 만난 얼굴')이 뜸
+  // 이미 마을에서 무덤을 보고 온 식구(metEnd)는 소식 없이 함께한 날들에만 남김 (이 기능 전에 무덤을 본 식구의 소식이 한꺼번에 뜨지 않게)
+  for (const k of kin) {
+    if (k.type !== 'human' || k.status !== 'returned' || k.data.lifeTold || !k.data.born) continue;
+    if (ageOf(k, now) < H.lifespan) continue;
+    k.data.lifeTold = true;
+    const at = Math.min(now, k.data.born + H.lifespan * DAY); // 수명이 다한 날 (오래 접속하지 않았으면 그날로)
+    const t = k.data.family || k.data.liveIn || k.data.town, tn = REGIONS[t]?.name || '인간 마을';
+    diary(k, `${tn}에서 긴 잠에 들었다. ${H.lifespan}일의 생이었다.`, at);
+    if (!k.data.metEnd) out.lines.push(`${tn}에서 소식이 날아왔다. 마을로 내려간 ${ga(k)} ${H.lifespan}일의 생을 마치고 긴 잠에 들었다고 한다.`);
+  }
   // 독립한 새끼들이 가끔 선물을 보냄
   const gone = kin.filter((k) => k.type === 'drake' && k.status === 'independent')
     .sort((a, b) => b.data.ended - a.data.ended).slice(0, R.giftFrom);
@@ -660,7 +703,7 @@ function summary(kin, now) {
 }
 
 // 둥지 창에 보여 줄 식구 정보
-function view(k, now, d) {
+function view(k, now, d, owner = d) { // owner: 식구가 사는 둥지의 주인 (반려의 둥지에 와서 볼 때는 반려)
   const v = { id: k.id, type: k.type, status: k.status, name: k.name };
   const st = stageOf(k, now);
   v.stage = st.name;
@@ -678,8 +721,10 @@ function view(k, now, d) {
   // 포만감과 기분 (인간 식구)
   if (k.type === 'human' && k.status === 'home' && k.data.sat != null) {
     const hrs = Math.max(0, (now - (k.data.satAt || now)) / 3600000);
-    const s = Math.max(0, k.data.sat - hrs * HG.perHour * satMul(k));
+    const fl = selfCook(owner, k, now) ? HG.selfFloor : 0; // 부엌에서 스스로 챙겨 먹는 어른·노년
+    const s = Math.max(fl, Math.max(0, k.data.sat - hrs * HG.perHour * satMul(k)));
     v.sat = Math.round(s);
+    if (fl) v.selfFeed = true;
     v.satWord = satWord(s);
     v.mood = s < HG.hungry ? 'hungry' : s >= HG.full && k.data.bond >= 60 ? 'happy' : 'calm';
     if (k.data.favKnown && k.data.favFood) v.favFood = k.data.favFood;
@@ -773,11 +818,11 @@ function view(k, now, d) {
   if (k.data.diary) { const b0 = k.data.born || k.data.diary[0].at; v.diary = k.data.diary.map((x) => ({ d: Math.max(1, Math.floor((x.at - b0) / DAY) + 1), t: x.t })).reverse(); }
   return v;
 }
-function views(kin, now, d) {
+function views(kin, now, d, owner = d) {
   // 동료의 둥지에 맡길 아기: 둥지가 넘쳐 있는 동안 '맡길 곳 찾는 중' (자리가 나면 그냥 식구로)
-  const over = !!d && kin.filter(isHome).length > logic.maxKinOf(d);
+  const over = !!owner && kin.filter(isHome).length > logic.maxKinOf(owner); // 그 둥지의 자리 수로
   return {
-    home: kin.filter(isHome).map((k) => { const v = view(k, now, d); if (over && k.data.entrust) v.entrust = true; return v; }),
+    home: kin.filter(isHome).map((k) => { const v = view(k, now, d, owner); if (over && k.data.entrust) v.entrust = true; return v; }),
     past: kin.filter((k) => !isHome(k)).sort((a, b) => (b.data.ended || 0) - (a.data.ended || 0)).slice(0, 12).map((k) => view(k, now, d)),
     lineage: kin.filter((k) => k.type === 'drake' && k.status === 'independent').length,
   };
@@ -790,7 +835,7 @@ function views(kin, now, d) {
 // 좋은 음식: 식구 요리·정성 들인 요리(cat meal), 가장 좋아하는 음식, 가끔·드물게 낚이는 물고기
 const RP = KIN.repay;
 const goodFood = (item, fav) => fav || ITEMS[item]?.cat === 'meal' || (ITEMS[item]?.cat === 'fish' && ITEMS[item].rarity !== 'common');
-function repay(d, k, item, fav, now) {
+function repay(d, k, item, fav, now, opt = {}) { // opt.away·owner: 반려의 둥지에서 그 집 식구가 갚음 (오랜 보호자가 아니니 말투를 바꿈)
   if (!RP || !goodFood(item, fav)) return null;
   if (k.data.repayAt && now - k.data.repayAt < RP.cooldownH * 3600000) return null;
   const p = RP.chance + (fav ? RP.fav : 0) + ((k.data.bond || 0) >= RP.bondAt ? RP.bond : 0) + (hasT(k, 'glutton') ? RP.glutton : 0);
@@ -825,6 +870,7 @@ function repay(d, k, item, fav, now) {
       return { lines: [k.type === 'drake'
         ? `${ga(k)} 둥지를 박차고 날아갔다 오더니 반짝이는 금화 ${g}닢을 내려놓았다. 어디서 났는지는 묻지 않기로 했다. (금화 +${g})`
         : sh ? `${nm}${josa(nm, '이', '가')} 눈도 못 마주치고 금화 ${g}닢을 쥐여 주고는 도망치듯 나갔다. (금화 +${g})`
+          : opt.away ? `${ga(k)} 일해서 모은 금화 ${g}닢을 쥐여 주었다. "${opt.owner?.name ? `${opt.owner.name}께도 ` : ''}늘 받기만 했는데, 오늘은 제가 드릴게요." (금화 +${g})`
           : `${ga(k)} 그동안 일해서 모은 금화 ${g}닢을 쥐여 주었다. "늘 받기만 했잖아요." (금화 +${g})`], items: [] };
     }
     let id = null, line = '';
@@ -838,7 +884,7 @@ function repay(d, k, item, fav, now) {
   }
   return null;
 }
-function feedDrake(d, kin, k, item, have, now) {
+function feedDrake(d, kin, k, item, have, now, opt = {}) {
   if (k.data.errand) return { error: `${ga(k)} 심부름을 떠나 있다.` };
   const f = drakeFoodOf(item);
   if (!f) return { error: `${k.name}${josa(k.name, '은', '는')} 그건 먹지 않는다. 생선이나 고기를 주자.` };
@@ -864,8 +910,9 @@ function feedDrake(d, kin, k, item, have, now) {
   if (drakeFull(k)) lines.push('배가 든든하니 가르칠 때 더 잘 따를 것이다.');
   lines.push(`유대 +${gain} · ${satWord(k.data.sat)}`);
   const items = [{ id: item, qty: -1 }];
-  const rp = repay(d, k, item, fav, now); // 보답 (드물게)
+  const rp = repay(d, k, item, fav, now, opt); // 보답 (드물게)
   if (rp) { lines.push(...rp.lines); items.push(...rp.items); }
+  helperDiary(k, d, opt, 'feed', now);
   return { title: k.name, lines, items };
 }
 // ── 교감: 쓰다듬기·안아 주기·놀아 주기·이야기·등에 태우기/함께 날기 ──────────
@@ -952,6 +999,61 @@ const TOUCH_LINES = {
   spar: { like: ['{g} 발톱을 세우고 덤벼들다 나뒹굴고는 다시 일어나 으르렁거린다. 지칠 줄을 모른다.', '{g} 꼬리로 한 방 먹이고는 의기양양하게 가슴을 편다.'], ok: ['{g} 한참 엎치락뒤치락 힘을 겨루었다.'], dislike: ['{e} 귀찮다는 듯 날개로 밀어낸다.'] },
   rest: { like: ['{g} 말없이 옆구리에 몸을 기대고 눈을 감는다. 숨소리가 고르게 맞춰진다.', '{g} 나란히 엎드려 해 지는 하늘을 함께 바라본다.'], ok: ['{g} 곁에 엎드려 한동안 쉬었다.'], dislike: ['{e} 혼자 있고 싶은지 둥지 끝으로 가 버린다.'] },
 };
+// 청소년의 고민: 아이의 사정(첫사랑·기울어진 재주·옛 둥지·단짝·태어난 곳·함께 자라는 새끼)에 맞는 고민을 골라 들려줌. 사정이 없으면 사람과 드래곤 사이의 고민이나 원래 문장
+// 같은 고민이 연달아 나오지 않게 지난번 고민(worryLast)은 빼고 고름. 좋아할 때만 고민 이야기가 나오고, 보통·싫을 때는 원래 문장
+const jw = (w, a, b) => `${w}${josa(w, a, b)}`;
+function worryLines(k, kin, now) {
+  const d = k.data, g = ga(k), out = [];
+  const add = (key, ...ls) => { for (const t of ls) out.push({ key, t }); };
+  // 첫사랑
+  const love = d.firstLove && d.firstLove !== '-' ? d.firstLove : null;
+  if (love) {
+    if (d.heartDone || d.loveRef?.ended || d.loveRef?.declined) add('love', `${g} ${love} 이야기를 하다 말고 한참 말이 없다. "이제 괜찮아요. 정말로요." 그 말을 몇 번이나 되뇌었다.`);
+    else add('love', `${g} 한참 망설이다 ${love} 이야기를 꺼낸다. "자꾸 생각나요. 이상한 거죠?" 귀 끝까지 빨개졌다.`,
+      `${g} "${jw(love, '이', '가')} 저를 어떻게 생각할까요?" 하고 묻더니, 대답을 듣기도 전에 얼굴을 감싼다.`);
+  }
+  // 앞으로 무엇이 될지 (재주가 정해지기 전. 한쪽으로 기울어 있으면 그쪽 이야기)
+  if (!d.talent) {
+    const ln = d.lean || {}, top = Object.keys(ln).sort((a, b) => (ln[b] || 0) - (ln[a] || 0))[0];
+    const lean = top && (ln[top] || 0) > 0 && Object.keys(ln).filter((x) => (ln[x] || 0) === ln[top]).length === 1 ? top : null;
+    if (lean === 'herbalist') add('path', `${g} "약초 냄새가 좋아요. 나중에 아픈 사람을 고쳐 주는 일을 해도 될까요?" 하고 조심스레 묻는다.`);
+    else if (lean === 'smith') add('path', `${g} 손바닥에 생긴 굳은살을 보여 주며 "쇠를 두드리면 마음이 편해져요. 이상하죠?" 하고 웃는다.`);
+    else if (lean === 'guard') add('path', `${g} "저도 둥지를 지키고 싶어요. 아직은 약하지만요." 하며 주먹을 꼭 쥐어 보인다.`);
+    else add('path', `${g} "어른이 되면 저는 뭘 하게 될까요?" 하고 묻는다. 둘이서 이것저것 그려 보다 보니 해가 기울었다.`);
+  }
+  // 옛 둥지
+  if (d.adoptedFrom) add('old', `${g} 옛 둥지의 ${d.adoptedFrom} 이야기를 꺼낸다. "가끔 생각나요. 그래도 여기가 싫은 건 아니에요." 서운해할까 봐 눈치를 살핀다.`);
+  // 단짝
+  const bf = bestFriends(k)[0];
+  if (bf?.name) add('friend', `${g} ${jw(bf.name, '과', '와')} 다퉜다며 속상해한다. 이야기를 다 털어놓고 나서야 "내일 먼저 말 걸어 볼래요." 하고 일어난다.`,
+    `${g} "${jw(bf.name, '은', '는')} 저보다 뭐든 잘해요." 하고 시무룩해한다. 잘하는 게 서로 다를 뿐이라고 말해 주자 그제야 웃었다.`);
+  // 태어난 곳 (둥지 밖에서 온 아이)
+  if (['abandoned', 'lost', 'tribute'].includes(d.origin)) add('origin', `${g} "저를 낳아 준 사람은 어떤 사람이었을까요?" 하고 묻는다. 대답 대신 날개로 감싸 주자 조용히 기대 왔다.`);
+  // 함께 자라는 새끼 드래곤 (날 줄 아는 어린 용부터)
+  const dk = (kin || []).find((x) => x.type === 'drake' && x.status === 'home' && stageOf(x, now).name !== '해츨링');
+  if (dk) add('drake', `${g} "${jw(dk.name, '은', '는')} 벌써 하늘을 마음대로 나는데, 저는 아직 아무것도 못 해요." 하고 한숨을 쉰다. 사람은 사람의 걸음으로 자라는 거라고 말해 주자 고개를 끄덕였다.`);
+  // 사람과 드래곤 사이 (언제나)
+  add('kind', `${g} 둥지 끝에서 하늘을 보며 "저는 왜 날개가 없을까요." 하고 중얼거린다. 한참 나란히 앉아 있다 보니 표정이 풀렸다.`,
+    `${g} "마을 사람들은 드래곤이 무섭대요. 저는 하나도 안 무서운데." 하고 고개를 갸웃한다. 그러다 슬쩍 꼬리 끝에 기대앉았다.`);
+  // 원래 문장 (무슨 고민인지는 말하지 않음)
+  add('plain', `${g} 한참 망설이다 속에 담아 둔 이야기를 꺼낸다. 다 털어놓고 나서야 표정이 풀린다.`, `${g} 고민을 털어놓더니 "들어 줘서 고마워요." 하고 작게 웃는다.`);
+  return out;
+}
+function worryLine(k, kin, now) {
+  const all = worryLines(k, kin, now).filter((x) => x.key !== k.data.worryLast);
+  const special = all.filter((x) => x.key !== 'plain' && x.key !== 'kind');
+  const w = pick(special.length && Math.random() < 0.7 ? special : all); // 아이의 사정이 있으면 그 이야기가 더 자주
+  k.data.worryLast = w.key;
+  return w.t;
+}
+// 잠꾸러기의 아침: 말을 거는 교감에 '이불 속에서 오 분만'은 어색해서 교감마다 따로
+const SLEEPY_AM = {
+  worry: '{g} 졸린 눈을 비비며 앉았지만, 이야기를 꺼내다 말고 꾸벅꾸벅 존다. "이따… 이따 말할게요."',
+  talk: '{g} 하품을 하며 "아침엔 머리가 잘 안 돌아가요…" 하고 웅얼거린다.',
+  train: '{g} 몸을 풀자는 말에 이불을 머리끝까지 끌어올린다. "오 분만…"',
+  walk: '{g} 신발을 한 짝만 신은 채 꾸벅꾸벅 존다. 아침 산책은 아직 무리인가 보다.',
+  help: '{g} 일을 거들겠다고 나섰다가 그 자리에 앉아 꾸벅 졸았다.',
+};
 const fillLine = (t, k) => t.replace('{g}', ga(k)).replace('{e}', `${k.name}${josa(k.name, '은', '는')}`).replace('{n}', k.name).replace('{purr}', k.type === 'drake' ? '가르릉 소리를 낸다.' : '눈을 감고 배시시 웃는다.'); // 사람 아이는 가르릉거리지 않음
 const pickLine = (arr) => arr[Math.floor(Math.random() * arr.length)];
 function touch(d, kin, id, act, now = Date.now()) {
@@ -1000,8 +1102,11 @@ function touch(d, kin, id, act, now = Date.now()) {
   let line;
   if (shyNow) line = `${ga(k)} 살짝 몸을 빼다가, 조심스레 다시 다가온다.`;
   else if (mood === 'sleepy' && (act === 'play' || act === 'fly' || act === 'ride')) line = `${ga(k)} 눈을 비비며 꾸벅꾸벅 존다. 지금은 졸린가 보다.`;
-  else if ((hasT(k, 'sleepy') || hasT(k, 'sleepyhead')) && kstHour(now) >= 6 && kstHour(now) < 10 && act !== 'story') line = isTiny(k, now) ? `${ga(k)} 눈을 비비며 칭얼거리다가 다시 잠이 든다.` : `${ga(k)} 이불 속에서 "오 분만…" 하고 웅얼거린다.`;
+  else if ((hasT(k, 'sleepy') || hasT(k, 'sleepyhead')) && kstHour(now) >= 6 && kstHour(now) < 10 && act !== 'story') line = isTiny(k, now) ? `${ga(k)} 눈을 비비며 칭얼거리다가 다시 잠이 든다.`
+    : k.type === 'drake' ? `${ga(k)} 날개 밑에 머리를 파묻고 "오 분만…" 하고 웅얼거린다.` // 새끼 드래곤은 이불이 아니라 날개 밑
+    : SLEEPY_AM[act] ? fillLine(SLEEPY_AM[act], k) : `${ga(k)} 이불 속에서 "오 분만…" 하고 웅얼거린다.`;
   else if (isBabyH(k, now) && TOUCH_BABY[act]) line = fillLine(pickLine(TOUCH_BABY[act][pref] || TOUCH_BABY[act].ok), k);
+  else if (act === 'worry' && pref === 'like' && k.type === 'human') line = worryLine(k, kin, now); // 청소년의 고민: 아이의 사정에 맞게
   else line = fillLine(pickLine(TOUCH_LINES[act][pref]), k);
   if (asked) line = `${ga(k)} 기다렸다는 듯이 활짝 웃는다. ${line}`;
   if (k.data.bond >= 100 && pref === 'like' && !shyNow) line = `${line} 보호자를 세상에서 가장 믿는 얼굴이다.`; // 유대 100
@@ -1078,12 +1183,21 @@ function touchTick(k, now, out) {
   } else if (!k.data.askCheck) k.data.askCheck = now;
 }
 
+// 반려가 처음 돌봐 준 날은 그 식구의 함께한 날들에 (반려마다, 돌보기·먹이·가르치기마다 한 번)
+function helperDiary(k, d, opt, what, now) {
+  if (!opt.away || !k || !d) return;
+  const h = (k.data.helped ||= {}), key = `${d.id}:${what}`;
+  if (h[key]) return;
+  h[key] = now;
+  const who = `보호자의 반려 ${d.name}`;
+  diary(k, what === 'train' ? `${who}에게 처음 가르침을 받았다.` : what === 'feed' ? `${who}${josa(d.name, '이', '가')} 둥지에 들러 처음 먹이를 주었다.` : `${who}${josa(d.name, '이', '가')} 둥지에 들러 처음 돌봐 주었다.`, now);
+}
 function care(d, kin, id, item, have, now = Date.now(), opt = {}) {
   const err = opt.away ? null : atNest(d);
   if (err) return { error: err };
   const k = findKin(kin, id);
   if (k && isRunaway(k)) return { error: `${k.name}${josa(k.name, '은', '는')} 지금 둥지에 없다. 먼저 찾아오자.` };
-  if (k && k.type === 'drake' && k.status === 'home') return feedDrake(d, kin, k, item, have, now);
+  if (k && k.type === 'drake' && k.status === 'home') return feedDrake(d, kin, k, item, have, now, opt);
   if (!k || k.type !== 'human' || k.status !== 'home') return { error: '돌볼 수 있는 식구가 아니다.' };
   const c = careOf(item);
   if (!c) return { error: '그 물건으로는 돌볼 수 없다.' };
@@ -1094,7 +1208,7 @@ function care(d, kin, id, item, have, now = Date.now(), opt = {}) {
     const left = h ? `${h}시간${m % 60 ? ` ${m % 60}분` : ''}` : `${m}분`;
     return { error: `${k.name}${josa(k.name, '은', '는')} 방금 돌봐 줬다. ${left} 뒤에 다시 돌보자.` };
   }
-  satUpdate(k, now, hasKeeper(kin, k));
+  satUpdate(k, now, false, HG, humanFloor(opt.owner || d, kin, k, now)); // 반려의 둥지에서 돌볼 때는 그 둥지의 부엌으로
   const food = isFood(item);
   const hungry = k.data.sat < HG.hungry;
   const fav = (ITEMS[item]?.cooked || ITEMS[item]?.spiced || item) === k.data.favFood; // 정성 들인 것·양념 넣은 것도 같은 음식
@@ -1183,8 +1297,9 @@ function care(d, kin, id, item, have, now = Date.now(), opt = {}) {
     lines.push(`장난꾸러기 ${k.name}${josa(k.name, '이', '가')} 키득거리며 주머니에서 ${gn}${josa(gn, '을', '를')} 꺼내 쥐여 주었다.`);
   }
   lines.push(food ? `유대 +${gain} · ${satWord(k.data.sat)}` : `유대 +${gain}`, ...logic.traitCount(d, 'care'));
-  const rp = food ? repay(d, k, item, fav, now) : null; // 보답 (드물게)
+  const rp = food ? repay(d, k, item, fav, now, opt) : null; // 보답 (드물게)
   if (rp) { lines.push(...rp.lines); items.push(...rp.items); }
+  helperDiary(k, d, opt, 'care', now);
   return { title: k.name, lines, items };
 }
 
@@ -1431,7 +1546,7 @@ function cook(d, kin, recipe, have, now = Date.now()) {
   // 다정한 아이: 둥지의 다른 아이들과 나눠 먹음
   if (c.gentle) {
     const others = kin.filter((x) => x !== k && x.type === 'human' && x.status === 'home');
-    for (const o of others) { satUpdate(o, now, false); o.data.sat = Math.min(100, o.data.sat + F.share.sat); addBond(o, F.share.bond); }
+    for (const o of others) { satUpdate(o, now, false, HG, humanFloor(d, kin, o, now)); o.data.sat = Math.min(100, o.data.sat + F.share.sat); addBond(o, F.share.bond); }
     if (others.length) lines.push(`다정한 ${k.name}${josa(k.name, '은', '는')} 만든 것을 조금씩 덜어 다른 아이들과 나눠 먹었다.`);
   }
   addBond(k, 1);
@@ -1534,6 +1649,7 @@ function train(d, kin, id, stat, now = Date.now(), opt = {}) {
   const bondGot = addBond(k, bondUp);
   const name = STATS.find((s) => s.key === stat).name;
   const how = { claw: '바위를 할퀴는 법', scale: '비늘을 단단히 세우는 법', wing: '바람을 타는 법', wisdom: '별을 읽는 법', majesty: '포효하는 법' }[stat];
+  helperDiary(k, d, opt, 'train', now);
   const lines = [`${k.name}에게 ${how}을 가르쳤다.`];
   if (up > 1) lines.push(`영리한 ${k.name}${josa(k.name, '은', '는')} 한 번 보고 두 가지를 깨우쳤다.`);
   if (clingyish(k)) lines.push(hasT(k, 'dignified') ? `${ga(k)} 끝나자 가만히 머리를 기대 왔다.` : `${ga(k)} 끝나자마자 품으로 파고든다.`);
@@ -1676,6 +1792,7 @@ function ctxOf(d, kin, have, trigger, now, region = d.region) {
     away: kin.filter((x) => x.type === 'human' && x.status === 'returned'), // 마을로 떠난 인간 식구 (마을에서 다시 만남)
     k: (id) => hk.home.find((x) => x.id === id) || null, // 이벤트가 고른 식구 (떠났으면 null)
     kAny: (id) => kin.find((x) => x.id === id) || null, // 떠난 식구까지 (독립한 새끼, 긴 잠에 든 식구)
+    keepsake: (k, opt) => keepsakeOf(k, opt),             // 남긴 유품 (마을의 무덤에서 거둘 때)
     age: (x) => (x && x.data.born ? (now - x.data.born) / DAY : -1),
     stage: (x) => stageOf(x, now).name,          // '아기' '아이' … '어린 용' …
     canTravel: (x) => ageOf(x, now) >= (x.type === 'human' ? H.expeditionFrom : R.expeditionFrom),
@@ -1979,6 +2096,7 @@ module.exports = {
   bornKid, // 짝 사이의 아이를 아기 식구로 (kinlove.js에서도 씀)
   layEgg, // 새끼 드래곤 짝 사이의 알을 둥지에 (kinlove.js)
   loveDiaryFix, // 예전 첫사랑 기록 채우기 (서버를 켤 때 한 번)
+  mateLiveFix, // 예전 짝 기록 채우기 (서버를 켤 때 한 번)
   festKids, festWent, festOuting, setNightCheck, // 왕도 축제에 식구들 데려가기 (낮 한 번 · 야시장 밤 한 번)
   touch, // 교감
   playable, playTogether, bestFriends, growInfo,

@@ -1091,16 +1091,16 @@ module.exports = {
     return { id: r.id, type: r.type, status: r.status, name: r.name, data, _snap: `${r.status}|${r.name}|${r.data}` };
   }),
   // 모든 인간 식구를 한 번씩 훑어 고침 (fn이 true를 돌려준 식구만 저장). 고친 수를 돌려줌
+  // fn(k, byId): byId는 모든 인간 식구 (다른 둥지 식구의 기록을 함께 볼 때)
   kinFixAll: (fn) => {
-    const rows = db.prepare("SELECT id, type, status, name, data FROM kin WHERE type = 'human'").all();
+    const rows = db.prepare("SELECT id, dragon_id, type, status, name, data FROM kin WHERE type = 'human'").all();
     const up = db.prepare('UPDATE kin SET data = ? WHERE id = ?');
+    const list = [];
+    for (const r of rows) { let data; try { data = JSON.parse(r.data || '{}'); } catch { continue; } list.push({ id: r.id, owner: r.dragon_id, type: r.type, status: r.status, name: r.name, data }); }
+    const byId = new Map(list.map((k) => [k.id, k]));
     let n = 0;
     db.transaction(() => {
-      for (const r of rows) {
-        let data; try { data = JSON.parse(r.data || '{}'); } catch { continue; }
-        const k = { id: r.id, type: r.type, status: r.status, name: r.name, data };
-        if (fn(k)) { up.run(JSON.stringify(k.data), r.id); n++; }
-      }
+      for (const k of list) if (fn(k, byId)) { up.run(JSON.stringify(k.data), k.id); n++; }
     })();
     return n;
   },

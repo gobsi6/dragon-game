@@ -514,6 +514,10 @@ const ITEMS = {
   sea_glass_mobile: { name: '바다 유리 모빌', rarity: 'common', type: 'use', use: { keep: 'sea_glass_mobile' }, desc: '바다 유리 조각을 떠내려온 나무에 매달았다. 보물 상자에 간직하거나 누군가에게 선물할 수 있다.' },
   memory_bottle: { name: '바다 유리 추억병', rarity: 'uncommon', type: 'use', use: { keep: 'memory_bottle' }, desc: '병 속 편지를 바다 유리 조각과 함께 다시 담았다. 보물 상자에 간직하거나 누군가에게 선물할 수 있다.' },
   music_box:    { name: '은사슬 오르골',  rarity: 'rare',     type: 'use', use: { keep: 'music_box' },   desc: '은사슬 태엽의 작은 오르골. 보물 상자에 간직하거나 누군가에게 선물할 수 있다.' },
+  // 반지: 연인·반려에게 건네는 선물 (보물 상자에 간직하면 '○○에게 받은 반지'로 남음)
+  silver_ring:  { name: '은 가락지',      rarity: 'uncommon', value: 25, type: 'use', use: { keep: 'silver_ring' }, desc: '은을 두드려 매끈하게 다듬은 가락지. 손가락에 꼭 맞는 크기다. 연인이나 반려에게 건네기 좋다. 보물 상자에 간직하거나 누군가에게 선물할 수 있다.' },
+  pearl_ring:   { name: '심해 진주 반지', rarity: 'rare',     value: 60, type: 'use', use: { keep: 'pearl_ring' },  desc: '깊은 바다의 진주를 은사슬로 감싸 앉힌 반지. 빛에 따라 푸른빛이 일렁인다. 보물 상자에 간직하거나 누군가에게 선물할 수 있다.' },
+  star_ring:    { name: '별빛 언약 반지', rarity: 'rare',     value: 90, type: 'use', use: { keep: 'star_ring' },   desc: '별똥별 조각을 금테에 박아 넣은 반지. 오래전 드래곤들은 평생을 함께할 상대에게 이 반지를 건넸다고 한다. 보물 상자에 간직하거나 누군가에게 선물할 수 있다.' },
   bouquet_wild: { name: '들꽃 꽃다발',    rarity: 'common',   value: 8,  type: 'use', use: { keep: 'bouquet_wild', mind: 10 }, desc: '평원의 들꽃과 해안의 갯메꽃을 묶은 꽃다발. 향을 맡으면 정신이 맑아진다(+10). 선물로 보내거나, 둥지의 보물 상자에 넣어 간직할 수도 있다.' },
   festival_garland: { name: '축제 꽃장식', rarity: 'uncommon', value: 10, type: 'use', use: { keep: 'festival_garland' }, desc: '왕도 축제에서 처음 춤을 춘 드래곤에게 마을 사람들이 걸어 준 꽃장식. 리본 끝에 작은 방울이 달려 있다. 둥지의 보물 상자에 넣어 간직할 수 있다.' },
   // ── 왕도 야시장 (축제 날 밤에만, nightmarket.js) ──
@@ -575,7 +579,16 @@ const ITEMS = {
   keepsake_cloth: { name: '낡은 손수건',     rarity: 'common',   value: 20,  desc: '작은 손이 늘 쥐고 있던 손수건이다.' },
   keepsake_toy:   { name: '손때 묻은 목각 용', rarity: 'uncommon', value: 80,  desc: '어린 날 드래곤을 흉내 내며 깎은 인형이다.' },
   keepsake_scale: { name: '비늘 목걸이',     rarity: 'rare',     value: 200, desc: '드래곤의 비늘을 꿰어 평생 걸고 다닌 목걸이다.' },
-  keepsake_sword: { name: '용기사의 검',     rarity: 'rare',     value: 180, desc: '드래곤과 함께 하늘을 누빈 기사의 검이다.' },  // 모브 드래곤 이야기 퀘스트를 끝까지 하면 받는 장신구 (game-mobs.js)
+  keepsake_sword: { name: '용기사의 검',     rarity: 'rare',     value: 180, desc: '드래곤과 함께 하늘을 누빈 기사의 검이다.' },
+  // 재주에 따라 (둥지에서 떠나든 마을에서 떠나든)
+  keepsake_herbs:  { name: '약초꾼의 약초 주머니', rarity: 'uncommon', value: 90, desc: '말린 약초 냄새가 아직 배어 있는 작은 주머니다. 매듭이 손에 익은 모양으로 닳아 있다.' },
+  keepsake_hammer: { name: '닳은 대장장이 망치', rarity: 'uncommon', value: 90, desc: '손잡이가 손 모양대로 닳은 작은 망치다. 쇠머리에 작은 용 무늬가 새겨져 있다.' },
+  keepsake_horn:   { name: '파수꾼의 뿔나팔',   rarity: 'uncommon', value: 90, desc: '둥지에 위험이 닥칠 때마다 불던 뿔나팔이다. 입 대는 자리가 반들반들하다.' },
+  // 마을로 내려가 생을 마친 식구 (마을의 무덤에서 거두어 옴)
+  keepsake_lantern: { name: '마을 집 등불',     rarity: 'common',   value: 40,  desc: '마을 집 문간에 걸려 있던 작은 등불이다. 드래곤이 오는 밤이면 늘 켜 두었다고 한다.' },
+  keepsake_ring:    { name: '빛바랜 혼인 반지', rarity: 'uncommon', value: 100, desc: '짝과 나눠 낀 반지 한 짝이다. 안쪽에 두 사람의 이름이 새겨져 있다.' },
+  keepsake_letters: { name: '부치지 못한 편지 묶음', rarity: 'uncommon', value: 100, desc: '둥지에 두고 온 아이에게 쓴 편지들이다. 끈으로 묶인 채 한 번도 부쳐지지 않았다.' },
+  keepsake_journal: { name: '둥지 이야기 일기장', rarity: 'rare',   value: 160, desc: '마을에서 지내며 둥지에서의 날들을 적어 둔 일기장이다. 마지막 장에 드래곤 그림이 그려져 있다.' },  // 모브 드래곤 이야기 퀘스트를 끝까지 하면 받는 장신구 (game-mobs.js)
   barg_horn:      { name: '부러진 뿔 부적',   rarity: 'rare', type: 'equip', slot: 'charm', bonus: { claw: 2, majesty: 1 }, value: 150, desc: '늙은 레드 드래곤 바르그가 건넨 뿔 조각. 아직 전장의 열기가 남아 있다.' },
   harsia_mantle:  { name: '서리 비늘 망토',   rarity: 'rare', type: 'equip', slot: 'wing',  bonus: { wing: 2, scale: 1 }, value: 150, desc: '하르시아가 자기 비늘로 엮은 망토. 눈보라 속에서도 날개가 얼지 않는다.' },
   ordin_circlet:  { name: '비문의 관',        rarity: 'rare', type: 'equip', slot: 'head',  bonus: { wisdom: 3 }, value: 150, desc: '오르딘이 완성된 비문의 룬을 새겨 넣은 관. 쓰고 있으면 오래된 글자가 저절로 읽힌다.' },
@@ -633,6 +646,9 @@ const RECIPES = [
   { out: 'shell_chime', needs: { sea_shell: 3, spider_silk: 1 }, en: 3, wis: 2 },               // 선물: 보물 상자에 간직
   { out: 'amber_star',  needs: { amber: 1, gold_ore: 1, silk_scrap: 1 }, en: 5, wis: 7 },
   { out: 'music_box',   needs: { silver_chain: 2, deep_pearl: 1, brass_button: 2 }, en: 8, wis: 12 },
+  { out: 'silver_ring', needs: { silver_ore: 2, cave_crystal: 1 }, en: 4, wis: 4 },              // 반지: 연인·반려에게
+  { out: 'pearl_ring',  needs: { silver_chain: 1, deep_pearl: 1, gold_ore: 1 }, en: 6, wis: 9 },
+  { out: 'star_ring',   needs: { gold_ore: 2, star_fragment: 1, silk_scrap: 1 }, en: 8, wis: 12 },
   { out: 'sea_glass_mobile', needs: { sea_glass: 3, driftwood: 1 }, en: 3, wis: 1 },            // 선물: 바다 유리 (낚시 잡동사니)
   { out: 'memory_bottle',    needs: { bottle_letter: 1, sea_glass: 2 }, en: 4, wis: 3 },
   { out: 'bouquet_wild', needs: { wild_flower: 2, sea_bindweed: 1 }, en: 2, wis: 0 },
@@ -1233,6 +1249,7 @@ const KIN = {
     restFull: 1.5,                    // 배부르면 둥지에서 함께 쉴 때 유대 ×
     favBond: 5,                       // 가장 좋아하는 요리를 받으면 유대 +
     keeperFloor: 40,                  // 둥지에 남은 약초꾼 어른이 있으면 아이들의 포만감이 이 아래로 떨어지지 않음
+    selfFeed: ['어른', '노년'], selfFloor: 60, // 둥지에 부엌이 있으면 다 큰 식구는 스스로 끼니를 챙겨 먹음 (포만감이 이 아래로 떨어지지 않음. 새끼 드래곤의 스스로 사냥과 같은 값)
     meals: ['honey_cake', 'moss_soup', 'fish_porridge', 'hearth_bread'], // 아이마다 이 중 하나를 가장 좋아함
   },
   companionBonus: 0.15,               // 원정에 따라간 식구 하나당 찾는 물건 +15%
@@ -2201,7 +2218,7 @@ const COMBAT = {
   // 내기 결투: 실시간 결투에서만. 둘 다 걸고, 진 쪽이 건 것을 이긴 쪽이 가져감
   bet: { levelGap: 5, goldMax: 200, itemKinds: 3, itemQty: 20, answerSeconds: 60, confirmSeconds: 30 },
   duelPairDaily: 3,      // 같은 상대와는 하루에 3번까지
-  duelDaily: 15,         // 결투는 하루(한국 날짜)에 15번까지 (직접·자동·내기 모두, 이기든 지든 두 드래곤 모두 한 번씩 셈)
+  duelDaily: 15,         // 결투는 하루(한국 날짜)에 15번까지 걸 수 있음 (직접·자동·내기 모두, 이기든 지든 결투를 건 쪽만 셈. 받은 결투는 세지 않음)
   autoCooldown: 10 * 60 * 1000, // 같은 상대에게 자동 결투를 다시 걸 수 있는 간격
   fameWin: 3, fameRival: 2, fameLose: -1,
   // 결투 경험치 = 기본 + 상대 레벨 × 레벨당 (예: 상대가 Lv.5면 이기면 20+5×4=40, 지면 8+5×2=18)
@@ -2878,6 +2895,9 @@ const KEEPSAKES = {
   sea_glass_mobile: { name: '바다 유리 모빌',  value: 14, fmt: 'from', desc: '푸른 바다 유리 조각들이 떠내려온 나무 끝에서 흔들린다. 햇빛이 들면 상자 안이 물속처럼 일렁인다.' },
   memory_bottle: { name: '바다 유리 추억병',  value: 28, fmt: 'from', desc: '바다에서 건진 편지와 유리 조각을 다시 담은 병. 누군가 띄운 마음이 이제 이곳에 머문다.' },
   music_box:     { name: '은사슬 오르골',     value: 60, fmt: 'from', desc: '은사슬을 감아 태엽 삼은 작은 오르골. 뚜껑을 열면 진주가 돌며 낯익은 노래가 흐른다.' },
+  silver_ring:   { name: '은 가락지',         value: 25, fmt: 'from', desc: '매끈하게 다듬은 은 가락지. 생각날 때마다 꺼내 손가락에 끼어 본다.' },
+  pearl_ring:    { name: '심해 진주 반지',    value: 60, fmt: 'from', desc: '깊은 바다의 진주가 박힌 반지. 상자를 열 때마다 푸른빛이 일렁인다.' },
+  star_ring:     { name: '별빛 언약 반지',    value: 90, fmt: 'from', desc: '별똥별 조각이 박힌 금 반지. 평생을 함께하자는 약속이 담겨 있다.' },
   town_drawing:  { name: '마을 집 그림',      value: 6,  fmt: 'of',   say: false, desc: '마을 집 창가에서 건네받은 그림. 지붕 위에 커다란 드래곤 한 마리가 앉아 있고, 그 아래 사람들이 손을 흔든다.' }, // 마을에서 다시 만난 식구 (kin_in_town)
   kid_drawing:   { name: '그림',              value: 8,  fmt: 'of',   say: false, desc: '삐뚤빼뚤한 선으로 그린 그림. 크레용 자국이 손끝에 묻어난다.' },
   kid_letter:    { name: '편지',              value: 8,  fmt: 'of',   desc: '또박또박 눌러 쓴 편지. 군데군데 지우고 다시 쓴 자국이 있다.' },
