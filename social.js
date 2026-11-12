@@ -17,6 +17,7 @@ const ADOPT = { days: 3 };         // 입양 제안을 기다리는 날 (지나�
 
 const TRADE_MAX_ITEMS = 6;            // 한쪽이 올려놓을 수 있는 물건 종류
 const TP_MAX = 500;                   // 텔레파시 한 번의 글자 수
+const TP_PAGE = 60;                   // 대화 창에 한 번에 보이는 텔레파시 수 (더 보기로 그만큼씩 더)
 const TP_COOLDOWN = 1500;             // 텔레파시 간격
 const INVITE_TTL = 60 * 1000;         // 교환 요청이 유효한 시간
 
@@ -972,14 +973,23 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     on('tp:open', (d, p) => {
       const id = target(p);
       if (!id || id === d.id) return { error: '그런 드래곤은 없다.' };
-      const o = db.getDragon(id);
+      const o = db.getDragon(id); let msgs;
       db.tpHear(d.id, id);
       sendMe(socket, d);
       return {
         ok: true,
         with: { id, name: o.name, kind: o.kind, level: o.level, av: o.has_avatar ? o.avatar_ver : 0, online: !!live(id), blocked: db.relGet(id, d.id) === 'wary' },
-        messages: db.tpConvo(d.id, id).map((m) => ({ id: m.id, mine: m.fromId === d.id, text: m.text, at: m.at, heard: !!m.heard })),
+        messages: (msgs = db.tpConvo(d.id, id, TP_PAGE)).map((m) => ({ id: m.id, mine: m.fromId === d.id, text: m.text, at: m.at, heard: !!m.heard })),
+        more: msgs.length === TP_PAGE && db.tpConvoBefore(d.id, id, msgs[0].id, 1).length > 0, // 더 앞의 이야기가 있음
       };
+    });
+    // 지난 텔레파시 더 보기: before(가장 오래 보이는 것)보다 앞의 TP_PAGE개
+    on('tp:more', (d, p) => {
+      const id = target(p);
+      if (!id || id === d.id) return { error: '그런 드래곤은 없다.' };
+      const before = Math.floor(Number(p.before)) || 0; if (!before) return { error: '더 볼 이야기가 없다.' };
+      const msgs = db.tpConvoBefore(d.id, id, before, TP_PAGE);
+      return { ok: true, messages: msgs.map((m) => ({ id: m.id, mine: m.fromId === d.id, text: m.text, at: m.at, heard: !!m.heard })), more: msgs.length === TP_PAGE && db.tpConvoBefore(d.id, id, msgs[0].id, 1).length > 0 };
     });
     on('tp:send', (d, p) => {
       const id = target(p);

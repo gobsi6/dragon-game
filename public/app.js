@@ -8380,6 +8380,27 @@
     d.querySelector('small').textContent = m.mine ? `${ago(m.at)} · ${m.heard ? '닿았다' : '마음에 남겨 둠'}` : ago(m.at);
     return d;
   }
+  // 지난 텔레파시 더 보기: 맨 위 단추를 누르면 그보다 앞의 이야기를 위에 이어 붙임 (보던 자리는 그대로)
+  let tpOldest = 0;
+  function tpMoreBtn(box, more) {
+    box.querySelector('.tp-more')?.remove();
+    if (!more) return;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn sm tp-more'; b.textContent = '지난 생각 더 보기';
+    b.addEventListener('click', () => {
+      const id = tpWith; if (!id || !tpOldest) return; b.disabled = true;
+      socket.emit('tp:more', { id, before: tpOldest }, (res) => {
+        if (res.error) { b.disabled = false; return toast(res.error); }
+        if (tpWith !== id) return;
+        const h0 = box.scrollHeight, top0 = box.scrollTop, frag = document.createDocumentFragment();
+        for (const m of res.messages) frag.appendChild(tpBubble(m));
+        b.after(frag);
+        if (res.messages.length) tpOldest = res.messages[0].id;
+        tpMoreBtn(box, res.more);
+        box.scrollTop = top0 + (box.scrollHeight - h0);
+      });
+    });
+    box.prepend(b);
+  }
   function openTp(id) {
     socket.emit('tp:open', { id }, (res) => {
       if (res.error) return toast(res.error);
@@ -8413,6 +8434,8 @@
         box.appendChild(e);
       }
       for (const m of res.messages) box.appendChild(tpBubble(m));
+      tpOldest = res.messages.length ? res.messages[0].id : 0;
+      tpMoreBtn(box, res.more);
       box.scrollTop = box.scrollHeight;
       $('tp-closed').hidden = !w.blocked;
       $('tp-closed').textContent = `${w.name}의 마음이 굳게 닫혀 있다. 지금은 텔레파시가 닿지 않는다.`;
@@ -13229,11 +13252,21 @@
           const d = document.createElement('label');
           d.className = 'it';
           d.innerHTML = `<span></span><input class="input" type="number" min="0" max="${q}" value="0" data-id="${id}">`;
+          d.dataset.nm = S.items[id].name; // 찾기용
           d.firstChild.textContent = `${S.items[id].name} (가진 것 ${q})`;
           d.firstChild.append(itemTags(S.items[id]));
           if (enhNote(id)) { const w = document.createElement('small'); w.className = 'enh-note'; w.textContent = enhNote(id); d.firstChild.appendChild(w); }
           mine.appendChild(d);
         }
+        // 건넬 물건 찾기: 이름으로 거름 (개수를 넣은 물건은 걸러져도 늘 보임)
+        let q = $('tr-q');
+        if (!q) {
+          q = document.createElement('input'); q.id = 'tr-q'; q.type = 'search'; q.className = 'input tr-q'; q.placeholder = '건넬 물건 이름으로 찾기'; q.setAttribute('aria-label', '건넬 물건 찾기'); q.autocomplete = 'off';
+          mine.before(q);
+          q.addEventListener('input', () => trFilter());
+        }
+        q.value = ''; q.hidden = own.length < 6; // 물건이 적으면 찾기 칸 없이
+        trFilter();
         $('tr-gold').value = 0;
         $('tr-gold-max').textContent = `/ ${S.me.gold}`;
         $('tr-gold').max = S.me.gold;
@@ -13243,6 +13276,13 @@
         }
       });
     }
+  }
+  function trFilter() {
+    const q = ($('tr-q')?.value || '').trim(), mine = $('tr-mine'); if (!mine) return;
+    let shown = 0;
+    for (const r of mine.querySelectorAll('label.it')) { const v = +(r.querySelector('input')?.value || 0); const ok = !q || (r.dataset.nm || '').includes(q) || v > 0; r.hidden = !ok; if (ok) shown++; }
+    let none = mine.querySelector('.tr-none');
+    if (q && !shown) { if (!none) { none = document.createElement('div'); none.className = 'empty tr-none'; mine.appendChild(none); } none.textContent = `'${q}'${josa(q, '이', '가')} 들어간 물건이 없다.`; none.hidden = false; } else if (none) none.hidden = true;
   }
   // 내 쪽 입력이 바뀌면 잠시 뒤 서버에 올려놓음
   function pushOffer() {

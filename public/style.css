@@ -1668,7 +1668,7 @@ dialog.trip-dlg {
 .tr-side h3 { margin: 0; display: flex; justify-content: space-between; gap: 6px; }
 .tr-side h3 small { font: 600 11px/18px var(--sans); color: var(--muted); }
 .tr-side.ready h3 small { color: #2F5D45; }
-.tr-list { display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow: auto; font-size: 13px; }
+.tr-list { display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow: auto; font-size: 13px; padding: 3px 4px 3px 0; } /* 오른쪽·위아래 여유: 스크롤 상자 안에서 개수 칸을 누를 때 푸른 테두리가 잘리지 않게 */
 .tr-list .it { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 3px 0; }
 .tr-list .it span { min-width: 0; overflow-wrap: anywhere; }
 .tr-list .it .input { width: 64px; min-height: 30px; padding: 0 6px; font-size: 13px; }
@@ -5330,3 +5330,10 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .th-fn { position: relative; display: inline-flex; align-items: flex-end; justify-content: center; line-height: 0; }
 .th-fn .fn-star { position: absolute; left: -7px; top: -7px; width: 17px; height: 17px; line-height: 0; pointer-events: none; } /* 금빛 동그라미(흰 테두리) 안에 끝이 둥근 흰 별, 그림자 없음 */
 .th-fn .fn-star svg { display: block; }
+
+/* 교환 창: 건넬 물건 찾기 */
+#trade-dlg .tr-q { width: 100%; height: 32px; min-height: 0; margin: 0 0 8px; padding: 0 10px; font-size: 13px; } /* 낮게 (전 약 46px) */
+#trade-dlg #tr-mine label.it input[type="number"] { flex: 0 0 52px; width: 52px; height: 32px; min-height: 0; padding: 0 6px; text-align: center; } /* 개수 칸: 이름 길이와 상관없이 같은 크기 */
+
+/* 텔레파시: 지난 생각 더 보기 */
+#tp-msgs .tp-more { align-self: center; margin: 2px 0 6px; }

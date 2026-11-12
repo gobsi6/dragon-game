@@ -566,6 +566,8 @@ const q = {
   tpAdd:        db.prepare('INSERT INTO telepathy (from_id, to_id, text, at) VALUES (?, ?, ?, ?)'),
   tpConvo:      db.prepare(`SELECT id, from_id AS fromId, text, at, heard FROM telepathy
                             WHERE (from_id = @a AND to_id = @b) OR (from_id = @b AND to_id = @a) ORDER BY id DESC LIMIT @n`),
+  tpConvoBefore: db.prepare(`SELECT id, from_id AS fromId, text, at, heard FROM telepathy
+                            WHERE ((from_id = @a AND to_id = @b) OR (from_id = @b AND to_id = @a)) AND id < @before ORDER BY id DESC LIMIT @n`), // 지난 텔레파시 더 보기
   tpHear:       db.prepare('UPDATE telepathy SET heard = 1 WHERE to_id = ? AND from_id = ? AND heard = 0'),
   tpUnread:     db.prepare('SELECT COUNT(*) AS n FROM telepathy WHERE to_id = ? AND heard = 0'),
   // 대화 상대별 마지막 텔레파시와 안 들은 수
@@ -580,7 +582,7 @@ const q = {
   // 한 쌍마다 최근 200개만 남김
   tpPrune:      db.prepare(`DELETE FROM telepathy WHERE ((from_id = @a AND to_id = @b) OR (from_id = @b AND to_id = @a))
                             AND id <= (SELECT id FROM telepathy WHERE (from_id = @a AND to_id = @b) OR (from_id = @b AND to_id = @a)
-                                       ORDER BY id DESC LIMIT 1 OFFSET 200)`),
+                                       ORDER BY id DESC LIMIT 1 OFFSET 500)`), // 두 드래곤 사이 최근 500개만 남김 (전 200)
   noteAdd:      db.prepare('INSERT INTO notes (dragon_id, text, at) VALUES (?, ?, ?)'),
   ledgerAdd:    db.prepare(`INSERT INTO ledger (dragon_id, at, kind, other_id, other_name, other_kind, gold_in, gold_out, items_in, items_out, msg, note, img)
                             VALUES (@dragon_id, @at, @kind, @other_id, @other_name, @other_kind, @gold_in, @gold_out, @items_in, @items_out, @msg, @note, @img)`),
@@ -906,6 +908,7 @@ module.exports = {
     return id;
   }),
   tpConvo: (a, b, n = 60) => q.tpConvo.all({ a, b, n }).reverse(),
+  tpConvoBefore: (a, b, before, n = 60) => q.tpConvoBefore.all({ a, b, before, n }).reverse(), // before보다 앞의 것 n개 (오래된 것부터)
   tpHear: (me, other) => q.tpHear.run(me, other),
   tpUnread: (me) => q.tpUnread.get(me).n,
   tpThreads: (me) => q.tpThreads.all({ me }),

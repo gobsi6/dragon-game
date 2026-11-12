@@ -1,3 +1,16 @@
+# 텔레파시: 지난 생각 더 보기 · 기록 500개 (2026-11-11)
+
+바뀐 파일: `db.js`, `social.js`, `public/app.js`, `public/style.css`
+
+- 대화 창에는 최근 60개가 보이고, 그보다 앞의 이야기가 있으면 맨 위에 '지난 생각 더 보기'. 누를 때마다 60개씩 위에 이어 붙고(보던 자리는 그대로), 남은 것이 없으면 단추가 사라진다. (social.js tp:more, db.tpConvoBefore)
+- 서버에 남는 텔레파시: 두 드래곤 사이 최근 200개 → 500개.
+
+# 교환 창: 건넬 물건 찾기 (2026-11-11)
+
+바뀐 파일: `public/app.js`, `public/style.css`
+
+- 교환 창의 '건넬 물건' 위에 '건넬 물건 이름으로 찾기' 칸. 이름에 그 글자가 든 물건만 보이고, 개수를 넣어 둔 물건은 걸러져도 늘 보인다. 찾는 물건이 없으면 알려 준다. 건넬 물건이 5가지 이하면 찾기 칸은 숨김. 찾기 칸은 32px로 낮게, 물건마다 개수 칸은 이름 길이와 상관없이 같은 크기(52×32px, 숫자는 가운데). 스크롤 상자에 여유를 줘서, 개수 칸을 누를 때 생기는 푸른 테두리가 오른쪽에서 잘리지 않음.
+
 # pack.json 가볍게 (2026-11-11)
 
 바뀐 파일: `public/house/pack.json`, `tools/house-pack/add_stone_*.py`, `tools/house-pack/add_wood_own.py`, `tools/house-pack/src/frame_mask.json`(새)
