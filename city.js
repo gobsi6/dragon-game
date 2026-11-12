@@ -180,16 +180,24 @@ const err = (t) => ({ error: t });
 const own = (o, k) => typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k); // '__proto__' 같은 이름을 걸러냄
 
 
-// ═══ 시련의 굴: 샘이 재건되면 열림. 날마다 규칙과 미로가 바뀌는 혼자 걷는 미로 + 끝방의 석상 ═══
-// 미로는 날마다 같은 씨앗으로 서버가 만들어 화면에 보냄 (그날은 모두 같은 미로). 걷기·싸움은 화면에서, 입장·화톳불·표식·기록·보상은 서버에서.
+// ═══ 시련의 굴: 샘이 재건되면 열림. 사흘마다 규칙과 미로가 바뀌는 혼자 걷는 미로 + 끝방의 석상 ═══
+// 한 주기(사흘)의 첫 미로는 모두 같음 (순위는 이 미로에서 끝방에 닿을 때까지 쓴 횃불 총량). 끝방에 닿으면 그 드래곤만 새 미로로(주기마다 두 번까지).
+// 보상은 미로를 깰 때마다: 첫 미로는 많이, 새 미로는 덤으로 적게. 석상은 끝방에 한 번 닿으면 로비에서 몇 번이든 도전, 보상은 깬 미로 하나당 한 번.
+// 입장 횟수·한 번에 드는 횃불 제한 없음 (쓴 횃불이 곧 순위 점수). 걷기·싸움은 화면에서, 입장·화톳불·쓴 횃불·기록·보상은 서버에서.
 const CAVE = {
-  entries: 2,               // 하루 입장 횟수
-  rules: ['keys', 'dark', 'crumble', 'patrol', 'water'], // 날마다 차례로
+  usedMax: 2000,            // 한 번 들어가서 쓸 수 있다고 믿는 횃불의 끝 (이상한 값 막기)
+  rules: ['keys', 'dark', 'crumble', 'patrol', 'water'], // 주기마다 차례로
+  cycleDays: 3,             // 미로·규칙·순위가 바뀌는 주기 (한국 시간 자정 기준)
+  newMazes: 2,              // 첫 미로를 깬 뒤 한 주기에 더 열리는 새 미로 수
   names: { dark: '어둠의 날', crumble: '무너지는 날', keys: '열쇠의 날', patrol: '순찰의 날', water: '물의 날' },
-  lines: { dark: '바로 옆 칸만 보인다. 화톳불도 붙어 서야 보인다.', crumble: '지나온 칸은 다섯 걸음 뒤에 무너진다. 되돌아갈 수 없다.', keys: '흩어진 돌 열쇠 셋을 모아야 끝방이 열린다.', patrol: '파수꾼 둘이 정해진 길을 오간다. 마주치면 지나칠 수 없다.', water: '열 걸음마다 입구 쪽부터 물에 잠긴다. 잠긴 칸은 지나갈 수 없다.' },
-  phrases: ['이쪽은 막혔다', '파수꾼 조심', '화톳불이 가깝다', '열쇠가 있었다', '믿지 마라', '여기서 쉬었다'],
-  marksPerWeek: 3, beatSeals: 10, clearSeals: 3, // marksPerWeek: 하루에 남길 수 있는 표식 (이름은 예전 그대로)
-  echo: { owner: '오래된 용', kind: 'white', sum: 120, hpMax: 480 }, // 아무도 넘지 않았을 때의 석상
+  lines: { dark: '바로 옆 칸만 보인다. 화톳불도 붙어 서야 보인다.', crumble: '지나온 칸은 다섯 걸음 뒤에 무너진다. 되돌아갈 수 없다.', keys: '흩어진 돌 열쇠 셋을 모아야 끝방이 열린다.', patrol: '파수꾼 둘이 정해진 길을 오간다. 마주치면 지나칠 수 없으니 숨죽여 기다려야 한다.', water: '열 걸음마다 입구 쪽부터 물에 잠긴다. 잠긴 칸은 지나갈 수 없다.' },
+  // 깬 미로마다 보상: first = 그 주기 첫 미로, bonus = 그 뒤 새 미로. clear = 끝방에 닿을 때, beat = 그 미로 몫으로 석상을 넘을 때
+  // tab: 그 몫으로 석상을 넘을 때 시련의 돌판이 나올 확률. 돌판을 모두 모았으면 대신 인장 tabFull
+  reward: { first: { clear: 6, beat: 6, tab: 0.15 }, bonus: { clear: 2, beat: 2, tab: 0.05 } }, tabFull: 2,
+  echo: { owner: '오래된 용', kind: 'white', sum: 120, hpMax: 480 }, // 끝방의 석상: 모두 오래된 용, 들어갈 때의 내 능력치 합·굴 체력에 맞춰 섬
+  echoHpMul: 1.6,           // 석상 체력 = 내 굴 체력 × 이 값 (2배면 어떤 수를 써도 이길 수 없었음)
+  carved: 6,                // 받침돌에 새겨 보여 줄, 최근 석상을 넘은 이름 수
+  dmgRef: 250,              // 주고받는 피해를 (내 굴 체력 ÷ 이 값)배로: 체력이 많든 적든 석상전 난이도가 같게
 };
 const TABLETS = [
   { t: '첫 비행', s: '오늘 처음으로 회랑 끝까지 날았다. 날개가 벽에 세 번 부딪혔다.\n시험관은 웃지 않았지만, 꼬리 끝이 흔들렸다.' },
@@ -235,19 +243,8 @@ function gen(seed) {
       if (path.length >= 8) { patrols.push({ path, i: 0, dir: 1 }); break; }
     }
   }
-  // 다른 드래곤이 남긴 표식 (그 주 예시)
-  const marks = {};
-  const deadEnds = cells.filter(([r, c, d]) => d > 4 && D4.filter((dd) => g[r + dd[0]][c + dd[1]] !== '#').length === 1);
-  const de = deadEnds[Math.floor(R() * deadEnds.length)];
-  const [f0r, f0c] = fires[0].split(',').map(Number);
-  const nearFire = cells.find(([r, c, d]) => Math.abs(d - dist[f0r][f0c]) === 3);
-  const mid = pick(0.45, 0.55), late = pick(0.85, 0.95);
-  if (de) marks[`${de[0]},${de[1]}`] = { t: '이쪽은 막혔다', by: '서리발', up: 4 };
-  if (nearFire) marks[`${nearFire[0]},${nearFire[1]}`] = { t: '화톳불이 가깝다', by: '루멘', up: 6 };
-  marks[`${mid[0]},${mid[1]}`] = { t: '믿지 마라', by: '잿빛꼬리', up: 1 };
-  marks[`${late[0]},${late[1]}`] = { t: '여기서 쉬었다', by: '은방울', up: 2 };
   g[1][1] = 'S'; g[E[0]][E[1]] = 'E';
-  return { g, dist, E: [E[0], E[1]], far, fires, keys, patrols, marks };
+  return { g, dist, E: [E[0], E[1]], far, fires, keys, patrols };
 }
 
 
@@ -507,70 +504,116 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
   }
 
   // ── 시련의 굴 ──
-  const weekIdx = () => dayIdx(); // 날마다 바뀜 (한국 시간 자정). 이름은 예전 그대로
+  const weekIdx = () => Math.floor(dayIdx() / CAVE.cycleDays); // 주기 번호 (사흘마다). 이름은 예전 그대로
   const caveRule = (w = weekIdx()) => CAVE.rules[((w % CAVE.rules.length) + CAVE.rules.length) % CAVE.rules.length];
+  const r1 = (x) => Math.round(x * 10) / 10;
+  // 미로 씨앗: 그 주기 첫 미로(n = 0)는 모두 같고, 끝방에 닿을 때마다 드래곤마다 다른 새 미로
+  const caveSeed = (d, n, w = weekIdx()) => (n ? w * 7919 + (Number(d.id) || 0) * 104729 + n * 613 + 17 : w * 7 + 13);
   const MAPS = new Map();
-  const caveMap = (w = weekIdx()) => { if (!MAPS.has(w)) { MAPS.clear(); MAPS.set(w, gen(w * 7 + 13)); } return MAPS.get(w); };
-  function caveSt(d) {
-    const m = ct(d), w = weekIdx();
-    if (!m.cave || m.cave.week !== w) m.cave = { week: w, used: 0, usedDay: dayIdx(), best: null, cleared: false, beat: false, fires: [], keys: [], tabs: (m.cave && m.cave.tabs) || [], marks: 0, upped: [] };
-    if (m.cave.usedDay !== dayIdx()) { m.cave.usedDay = dayIdx(); m.cave.used = 0; m.cave.fin = 0; }
-    return m.cave;
+  const caveMap = (seed) => { if (!MAPS.has(seed)) { if (MAPS.size >= 60) MAPS.clear(); MAPS.set(seed, gen(seed)); } return MAPS.get(seed); };
+  const mazeMax = 1 + CAVE.newMazes; // 한 주기에 깰 수 있는 미로 수
+  // keep: 미로를 걷거나 석상과 싸우는 도중에 새 굴이 열려도, 들어간 굴의 기록으로 끝낼 수 있게 (걷기·싸움 쪽 요청만 true)
+  function caveSt(d, keep = false) {
+    const m = ct(d), w = weekIdx(), o = m.cave;
+    const stale = !o || o.week !== w || o.cyc !== CAVE.cycleDays;
+    if (stale && !(keep && o && o.cyc === CAVE.cycleDays && (o.open || o.echoOpen))) {
+      m.cave = { week: w, cyc: CAVE.cycleDays, n: 0, spent: 0, open: false, score: null, owe: (o && o.cyc === CAVE.cycleDays && o.carry) || [], echoOpen: false, fires: [], keys: [], tabs: (o && o.tabs) || [] };
+    }
+    return m.cave; // n: 이번 주기에 깬 미로 수, owe: 아직 석상으로 받지 않은 미로 몫('first'·'bonus'), carry: 지난 굴에 들어가 새 굴이 열린 뒤 깬 미로의 석상 몫
   }
-  const caveWorld = () => { const w = weekIdx(); if (!W.cave || W.cave.week !== w) { const prevBeat = W.cave && W.cave.firstBeat; W.cave = { week: w, marks: {}, rank: {}, echo: prevBeat || (W.cave && W.cave.echo) || null, firstBeat: null }; } return W.cave; };
+  const myMap = (d, c = caveSt(d)) => caveMap(caveSeed(d, Math.min(c.n, mazeMax - 1), c.week));
+  const caveWorld = () => {
+    const w = weekIdx();
+    if (!W.cave || W.cave.week !== w || W.cave.cyc !== CAVE.cycleDays) W.cave = { week: w, cyc: CAVE.cycleDays, rank: {} };
+    return W.cave;
+  };
+  // ── 석상: 모두 오래된 용. 들어갈 때 찍은 내 능력치 합(장신구·명성 포함)·굴 체력에 맞춰 섬.
+  //    굴 안에서 장신구를 바꿔도 이번 입장의 싸움은 그대로 ──
+  const sumOf = (d) => { const st = (logic.statsOf ? logic.statsOf(d) : null) || {}; return Object.values(st).reduce((a, v) => a + (Number(v) || 0), 0) || 120; };
+  const caveMe = (d) => ({ sum: sumOf(d), hp: logic.hpCap(d) });
+  const echoFor = (me) => ({ ...CAVE.echo, sum: me.sum, hpMax: Math.round(me.hp * CAVE.echoHpMul) });
+  const caveMul = (f) => ({ scale: Math.round(f.me.hp / CAVE.dmgRef * 100) / 100 }); // 주고받는 피해 크기를 내 굴 체력에 맞춤
   function caveView(d) {
-    const c = caveSt(d), cw = caveWorld(), M = caveMap(), rule = caveRule();
-    const rank = Object.entries(cw.rank).sort((a, b) => a[1] - b[1]).slice(0, 3);
-    return { open: done('spring'), week: cw.week, rule, ruleName: CAVE.names[rule], ruleLine: CAVE.lines[rule], phrases: CAVE.phrases, entries: CAVE.entries, left: Math.max(0, CAVE.entries - c.used),
-      echo: cw.echo || CAVE.echo, map: { g: M.g.map((r) => r.join('')), dist: M.dist, E: M.E, far: M.far, fires: M.fires, keys: M.keys, patrols: M.patrols.map((p) => p.path) },
-      marks: Object.fromEntries(Object.entries(cw.marks).map(([k, x]) => [k, { t: x.t, by: x.by, up: x.up.length, mine: x.by === d.name, upped: x.up.includes(d.name) }])),
-      rank: rank.map(([n, v]) => [n, v]), me: { best: c.best, cleared: c.cleared, beat: c.beat, fires: c.fires, keys: c.keys, marksLeft: Math.max(0, CAVE.marksPerWeek - c.marks), tabs: c.tabs.map((i) => TABLETS[i]), tabTotal: TABLETS.length, hpMax: logic.hpCap(d) } };
+    const c = caveSt(d), cw = caveWorld(), M = myMap(d), rule = caveRule();
+    let f = c.echoOpen && c.fight; if (!f) { const me = caveMe(d); f = { me, echo: echoFor(me) }; } // 석상 앞이 아니면 지금 들어갈 때의 미리보기
+    const all = Object.entries(cw.rank).sort((a, b) => a[1] - b[1]), mine = all.findIndex(([n]) => n === d.name);
+    const resetIn = CAVE.cycleDays - (((dayIdx() % CAVE.cycleDays) + CAVE.cycleDays) % CAVE.cycleDays); // 새 굴까지 남은 날 (오늘 포함)
+    return { open: done('spring'), week: cw.week, mapId: `${cw.week}:${c.n}`, n: c.n, mazeMax, closed: c.n >= mazeMax, resetIn, reward: CAVE.reward,
+      rule, ruleName: CAVE.names[rule], ruleLine: CAVE.lines[rule],
+      echo: f.echo, mul: caveMul(f), carved: (W.caveCarved || []).map((x) => x.name), map: { g: M.g.map((r) => r.join('')), dist: M.dist, E: M.E, far: M.far, fires: M.fires, keys: M.keys, patrols: M.patrols.map((p) => p.path) },
+      rank: all.slice(0, 3), myRank: mine >= 0 ? [mine + 1, all[mine][1], all.length] : null,
+      me: { spent: c.spent, score: c.score, owe: c.owe.slice(), fires: c.fires, keys: c.keys, tabs: c.tabs.map((i) => TABLETS[i]), tabTotal: TABLETS.length, hpMax: f.me.hp, sum: f.me.sum } };
   }
+  // 한 번 들어가서 쓴 횃불 (화면이 보냄). 걷는 동안 tick으로 받아 둔 값(live)보다 적게는 셈하지 않음
+  const caveUsed = (p, c) => { const s = r1(Number(p.used)); return s >= 0 ? Math.max(c.live || 0, Math.min(CAVE.usedMax, s)) : null; };
+  function caveTick(d, p) { const c = caveSt(d, true); if (!c.open) return; const s = caveUsed(p, c); if (s != null) c.live = s; }
   function caveEnter(d) {
     const e = ready(d); if (e) return e;
     if (!done('spring')) return err('샘이 재건되어야 굴이 열린다.');
-    const c = caveSt(d); if (c.used >= CAVE.entries) return err(`오늘은 굴에 ${CAVE.entries}번 다 들어갔다. 내일 다시 들어갈 수 있다.`);
-    c.used += 1; return { ok: true };
+    const c = caveSt(d);
+    if (c.n >= mazeMax) return err('이번 굴의 미로를 모두 지났다. 새 굴이 열릴 때까지는 석상과만 겨룰 수 있다.');
+    if (c.open) c.spent = r1(c.spent + (c.live || 0)); // 나간다는 기록 없이 끝난 입장(창을 닫음 등)은 걷는 동안 알려 온 만큼
+    c.open = true; c.live = 0; c.echoOpen = false;
+    return { ok: true };
   }
   function caveFire(d, k) {
-    const c = caveSt(d), M = caveMap(); k = String(k || '');
+    const c = caveSt(d, true), M = myMap(d, c); k = String(k || '');
     if (M.fires.includes(k) && !c.fires.includes(k)) c.fires.push(k);
     if (M.keys.includes(k) && !c.keys.includes(k)) c.keys.push(k);
     return { ok: true };
   }
-  function caveMark(d, k, i) {
-    const c = caveSt(d), cw = caveWorld(), M = caveMap(); k = String(k || ''); i = Number(i);
-    const [r, cc] = k.split(',').map(Number);
-    if (!(r >= 0 && r < N && cc >= 0 && cc < N) || M.g[r][cc] === '#') return err('여기에는 표식을 남길 수 없다.');
-    if (!(i >= 0 && i < CAVE.phrases.length)) return err('남길 말을 골라야 한다.');
-    if (c.marks >= CAVE.marksPerWeek) return err(`오늘은 표식을 ${CAVE.marksPerWeek}개까지 남길 수 있다.`);
-    if (cw.marks[k]) return err('이미 누군가 표식을 남긴 칸이다.');
-    cw.marks[k] = { t: CAVE.phrases[i], by: d.name, up: [] }; c.marks += 1; save();
-    return { ok: true, lines: [`바닥에 "${CAVE.phrases[i]}"라고 새겼다. 오늘 이 칸을 밟는 드래곤에게 보인다.`] };
+  function caveLeave(d, p) {
+    const c = caveSt(d, true); if (!c.open) return { ok: true };
+    const s = caveUsed(p, c); if (s == null) return err('기록이 이상하다.');
+    c.spent = r1(c.spent + s); c.open = false; c.live = 0;
+    return { ok: true };
   }
-  function caveUp(d, k) {
-    const cw = caveWorld(), x = cw.marks[String(k || '')]; if (!x) return err('표식이 없다.');
-    if (x.by === d.name) return err('내가 남긴 표식이다.'); if (x.up.includes(d.name)) return err('이미 눌렀다.');
-    x.up.push(d.name); save(); return { ok: true };
-  }
+  // 끝방에 닿음: 미로를 깸. 보상(첫 미로는 많이, 새 미로는 덤), 첫 미로면 순위, 석상 몫 하나 쌓고 새 미로로
   function caveFinish(d, p) {
-    const c = caveSt(d), cw = caveWorld(), M = caveMap();
-    const steps = Math.round(Number(p.steps) * 10) / 10, cleared = !!p.cleared, beat = !!p.beat && cleared;
-    if (!(steps >= 0)) return err('기록이 이상하다.');
-    if ((c.fin || 0) >= c.used) return err('오늘 굴에 들어간 기록이 없다.'); // 들어간 횟수만큼만 기록을 남김
-    if (cleared && steps < M.dist[M.E[0]][M.E[1]] * 0.5) return err('기록이 이상하다.');
-    c.fin = (c.fin || 0) + 1;
-    const lines = []; const m = ct(d);
-    if (cleared) { if (c.best == null || steps < c.best) c.best = steps; if (!c.cleared) { m.seals += CAVE.clearSeals; lines.push(`끝방에 처음 닿았다. 석공 인장 +${CAVE.clearSeals}.`); } c.cleared = true; if (cw.rank[d.name] == null || steps < cw.rank[d.name]) cw.rank[d.name] = steps; }
-    let tab = null;
-    if (beat && !c.beat) {
-      c.beat = true; m.seals += CAVE.beatSeals;
-      const pool = TABLETS.map((_, i) => i).filter((i) => !c.tabs.includes(i)); const i = pool.length ? pool[Math.floor(Math.random() * pool.length)] : Math.floor(Math.random() * TABLETS.length);
-      if (!c.tabs.includes(i)) c.tabs.push(i); tab = TABLETS[i];
-      const echo = cw.echo || CAVE.echo;
-      if (!cw.firstBeat) { const st = (logic.statsOf ? logic.statsOf(d) : null) || {}; const sum = Object.values(st).reduce((a, v) => a + (Number(v) || 0), 0) || 120; cw.firstBeat = { owner: d.name, kind: d.kind, sum, hpMax: logic.hpCap(d) * 2 }; }
-      news(`${ga(d.name)} 시련의 굴 끝방에서 ${echo.owner}의 석상을 넘었다.`);
-      lines.push(`석상을 넘었다. 시련의 돌판을 얻었다: '${tab.t}'. 석공 인장 +${CAVE.beatSeals}.`);
+    const c = caveSt(d, true), cw = caveWorld(), M = myMap(d, c), late = c.week !== weekIdx(); // late: 지난 굴에 들어가 새 굴이 열린 뒤 닿음
+    if (!c.open) return err('굴에 들어간 기록이 없다.');
+    const s = caveUsed(p, c); if (s == null) return err('기록이 이상하다.');
+    const total = r1(c.spent + s);
+    if (total < M.dist[M.E[0]][M.E[1]] * 0.5) return err('기록이 이상하다.');
+    c.open = false; c.live = 0;
+    const lines = [], m = ct(d), kind = c.n === 0 ? 'first' : 'bonus', R = CAVE.reward[kind];
+    m.seals += R.clear;
+    lines.push(kind === 'first' ? `이번 굴의 첫 미로를 넘었다. 쓴 횃불 ${total}. 석공 인장 +${R.clear}.` : `새 미로를 넘었다. 석공 인장 +${R.clear}.`);
+    if (late) { c.carry = [kind]; lines.push('들어간 굴의 기록으로 남겼다. 그사이 새 굴이 열렸으니, 이 미로 몫의 석상은 새 굴에서 겨룰 수 있다.'); save(); return { ok: true, lines }; } // 순위는 지난 굴과 함께 닫힘
+    if (kind === 'first' && c.score == null) { c.score = total; cw.rank[d.name] = total; }
+    c.owe.push(kind); c.n += 1; c.spent = 0; c.fires = []; c.keys = [];
+    lines.push(c.n < mazeMax ? `굴 안쪽에서 돌이 울렸다. 새 미로가 열렸다. (남은 새 미로 ${mazeMax - c.n})` : '이번 굴의 미로를 모두 지났다.');
+    save();
+    return { ok: true, lines };
+  }
+  // 석상 앞에 섬: 이번 주기에 끝방에 한 번이라도 닿았으면 몇 번이든. 그때의 내 값으로 석상이 맞춰 섬
+  function caveEcho(d) {
+    const e = ready(d); if (e) return e;
+    const c = caveSt(d); if (c.n < 1 && !c.owe.length) return err('끝방에 한 번 닿아야 석상 앞에 설 수 있다.');
+    if (c.open) { c.spent = r1(c.spent + (c.live || 0)); c.open = false; c.live = 0; } // 걷던 입장은 거기서 끝
+    const me = caveMe(d); c.fight = { me, echo: echoFor(me) }; c.echoOpen = true; // 싸우는 동안 장신구를 바꿔도 그대로
+    return { ok: true };
+  }
+  function caveEchoEnd(d, p) {
+    const c = caveSt(d, true); if (!c.echoOpen) return err('석상 앞에 선 기록이 없다.'); // 싸우는 도중 새 굴이 열려도 들어간 굴의 몫으로
+    c.echoOpen = false;
+    const lines = []; let tab = null;
+    if (p.beat) {
+      const kind = c.owe.shift();
+      if (!kind) lines.push('석상을 넘었다. 이번 굴에서 받을 몫은 이미 다 받았다.');
+      else {
+        const R = CAVE.reward[kind], m = ct(d); m.seals += R.beat;
+        lines.push(`석상을 넘었다. 석공 인장 +${R.beat}.`);
+        if (kind === 'first') { // 첫 미로 몫: 대륙 소식과 받침돌
+          news(`${ga(d.name)} 시련의 굴 끝방에서 ${(c.fight && c.fight.echo.owner) || CAVE.echo.owner}의 석상을 넘었다.`);
+          W.caveCarved = [{ name: d.name, day: dayIdx() }, ...(W.caveCarved || []).filter((x) => x.name !== d.name)].slice(0, CAVE.carved); // 받침돌에 새김
+        }
+        if (Math.random() < (R.tab || 0)) { // 시련의 돌판: 낮은 확률로. 모두 모았으면 대신 인장 조금
+          const pool = TABLETS.map((_, i) => i).filter((i) => !c.tabs.includes(i));
+          if (pool.length) { const i = pool[Math.floor(Math.random() * pool.length)]; c.tabs.push(i); tab = TABLETS[i]; lines.push(`석상 발치에서 시련의 돌판을 찾았다: '${tab.t}'.`); }
+          else { m.seals += CAVE.tabFull; lines.push(`석상 발치에 돌판이 하나 있었지만, 시련의 돌판은 이미 모두 모았다. 대신 석공 인장 +${CAVE.tabFull}.`); }
+        }
+      }
     }
     save();
     return { ok: true, lines, tab };
@@ -1144,9 +1187,11 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     handle('city:cave:get', (d) => ({ ok: true, cave: caveView(d) }));
     handle('city:cave:enter', (d) => { const r = caveEnter(d); return r.error ? r : { ok: true, cave: caveView(d) }; });
     handle('city:cave:fire', (d, p) => caveFire(d, p.k));
-    handle('city:cave:mark', (d, p) => { const r = caveMark(d, p.k, p.i); return r.error ? r : { ...r, cave: caveView(d) }; });
-    handle('city:cave:up', (d, p) => { const r = caveUp(d, p.k); return r.error ? r : { ok: true, cave: caveView(d) }; });
+    socket.on('city:cave:tick', (p) => { const e = entry(); if (e && p && typeof p === 'object') try { caveTick(e.dragon, p); } catch {} }); // 걸을 때마다 (답 없음, 저장은 다음 행동 때)
+    handle('city:cave:leave', (d, p) => { const r = caveLeave(d, p); return r.error ? r : { ok: true, cave: caveView(d) }; });
     handle('city:cave:finish', (d, p) => { const r = caveFinish(d, p); return r.error ? r : { ...r, cave: caveView(d) }; });
+    handle('city:cave:echo', (d) => { const r = caveEcho(d); return r.error ? r : { ok: true, cave: caveView(d) }; });
+    handle('city:cave:echoEnd', (d, p) => { const r = caveEchoEnd(d, p); return r.error ? r : { ...r, cave: caveView(d) }; });
     handle('city:deco', (d, p) => setDeco(d, p.list === null ? null : p.list));
     handle('city:craft', (d, p) => craft(d, String(p.s || ''), p.n));
     handle('city:scene', (d, p) => { const s = scene(p.key); return s ? { ok: true, scene: s } : err('아직 아무도 끼우지 않은 조각이다.'); });

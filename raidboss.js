@@ -240,6 +240,7 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
       id: nextId++, key, B, test: !!test, ids: ids.slice(), players, foes: [], phase: 1, phaseAt: 0, turn: 0, plan: null, fire: 0,
       pending: {}, targets: {}, log: [], over: false, outcome: null, guards: {}, heals: {}, deadline: 0, timer: null,
       chat: [], // 레이드 작전 이야기: 함께 싸우는 넷만 보고, 레이드가 끝나면 싸움과 함께 사라짐 (DB에 남기지 않음)
+      week: weekIdx(), okAtStart: Object.fromEntries(ids.map((id) => [id, usedOf(id, key) < weeklyOf(key)])), // 들어간 주와 그때 보상 받을 수 있었는지 (싸우는 도중 월요일 0시가 지나도 들어간 주 기준)
     };
     const opening = SC(fight).setup(fight, total);
     for (const id of ids) inFight.set(id, fight);
@@ -1279,8 +1280,10 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
     const B = fg.B;
     const won = fg.outcome === 'win';
     const now = Date.now();
+    const late = fg.week != null && fg.week !== weekIdx(); // 지난주에 들어가 이번 주에 끝난 싸움
     if (won && !fg.test) {
-      st.cleared[fg.key] = true;
+      if (late) st.nerf[fg.key] = 0; // 지난주에 잡힌 셈이니 체력 낮춤은 없앰 (이번 주 처치로는 치지 않음)
+      else st.cleared[fg.key] = true;
       const names = fg.players.map((p) => p.name);
       if (!st.first[fg.key]) {
         st.first[fg.key] = { at: now, names };
@@ -1312,8 +1315,8 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
           logic.dexWin(d, `raid:${fg.key}`);
           res.lines.push(...logic.traitCount(d, `raidwin_${fg.key}`));
           const first = (logic.traitsOf(d).counts[`raidwin_${fg.key}`] || 0) === 1;
-          if (usedOf(d.id, fg.key) < weeklyOf(fg.key)) {
-            (st.used[fg.key] ||= {})[d.id] = usedOf(d.id, fg.key) + 1;
+          if (late ? fg.okAtStart?.[d.id] : usedOf(d.id, fg.key) < weeklyOf(fg.key)) {
+            if (!late) (st.used[fg.key] ||= {})[d.id] = usedOf(d.id, fg.key) + 1; // 지난주에 들어간 싸움은 지난주 몫으로 (이번 주 횟수는 그대로)
             const W = B.reward;
             const gold = randInt(...W.gold);
             d.gold += gold;
@@ -1335,7 +1338,7 @@ const qualified = (d, key) => (R.bosses[key]?.needs || []).every((t) => logic.ti
             if (first) res.lines.push(`처음 쓰러뜨렸으니 ${eul(ITEM_NAME(W.shard))} 넉넉히 챙겼다. 장신구 하나를 빚을 만큼이다.`);
             if (first) res.lines.push(logic.chestAdd(d, W.keepsake, '', '', now, null, {}) ? B.lines.keepsake : `${B.lines.keepsakeNoNest}`);
             res.lines.push(...purify(d, W.purify));
-            res.lines.push(`이번 주 ${B.boss.name} 보상 ${st.used[fg.key][d.id]}/${weeklyOf(fg.key)}`);
+            res.lines.push(late ? `지난주에 들어간 싸움이라 지난주 보상으로 받았다. 이번 주 ${B.boss.name} 보상은 그대로 ${usedOf(d.id, fg.key)}/${weeklyOf(fg.key)}` : `이번 주 ${B.boss.name} 보상 ${st.used[fg.key][d.id]}/${weeklyOf(fg.key)}`);
             const f = logic.addFame(d, W.fame);
             if (f) res.lines.push(f);
             save();

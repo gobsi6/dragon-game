@@ -14697,7 +14697,7 @@
         <div class="at"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6-5.3-6-10a6 6 0 0 1 12 0c0 4.7-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/></svg><span>광장에 머무는 중</span></div>
         <p class="quote">땅속 깊이 가라앉은 옛 용들의 도시. 무너진 열주 사이로 빛나는 이끼가 길을 밝힌다.</p></div>
       <div class="mob-bar cz-bar${caveOpen ? '' : ' locked'}"><span class="cz-em" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20c2-8 5-13 9-13s7 5 9 13"/><path d="M9 20c.8-3.5 1.8-5 3-5s2.2 1.5 3 5"/></svg></span>
-        <div class="mob-t"><b>시련의 굴</b><small>${caveOpen ? '날마다 규칙과 미로가 바뀜 · 하루 두 번 · 끝방의 석상' : `닫혀 있다 · 샘이 재건되면 열린다 (도시 재건도 ${ctNum(Math.min(v.son, sp.to))} / ${ctNum(sp.to)})`}</small></div>
+        <div class="mob-t"><b>시련의 굴</b><small>${caveOpen ? '사흘마다 규칙이 바뀜 · 끝방에 닿으면 새 미로 · 끝방의 석상' : `닫혀 있다 · 샘이 재건되면 열린다 (도시 재건도 ${ctNum(Math.min(v.son, sp.to))} / ${ctNum(sp.to)})`}</small></div>
         ${caveOpen ? '<button class="btn primary" type="button" data-ct="cave">들어간다</button>' : '<button class="btn" type="button" disabled>닫혀 있음</button>'}</div>
       <div class="actions">
         <button class="btn primary" type="button" data-ct="home"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 20h17"/><path d="M4.5 20V10.5L8.5 6l4 4.5V20"/><path d="M12.5 10.5 16 7l3.5 3.5V20"/><path d="M7 20v-4h3v4"/><path d="M15 13.5h2"/></svg>내 집터${todo ? `<span class="cost">${todo}</span>` : ''}</button>
@@ -15617,7 +15617,7 @@
   let caveOpenFn = null; // 시련의 굴 열기 (아래 묶음 안에서 채움)
   (() => {
 
-  // ════ 시련의 굴 (city.js의 city:cave:*) — 걷기·싸움은 화면에서, 입장·화톳불·표식·기록은 서버에서 ════
+  // ════ 시련의 굴 (city.js의 city:cave:*) — 걷기·싸움은 화면에서, 입장·화톳불·쓴 횃불·기록은 서버에서 ════
   const IC = {
   up: '<svg viewBox="0 0 24 24" style="color:#7E8389"><path d="M4 19h4v-4h4v-4h4V7h4"/></svg>',
   gate: '<svg viewBox="0 0 24 24" style="color:#3C5A73;stroke-width:2"><path d="M5 21V11a7 7 0 0 1 14 0v10"/><path d="M9 21v-6a3 3 0 0 1 6 0v6"/></svg>',
@@ -15631,34 +15631,36 @@
 };
 
 
-  const CV = { v: null, view: 'lobby', B: null, run: null, found: new Set(), hp: 0, steps: 0, ui: { markOpen: false, log: [] } };
+  const CV = { v: null, view: 'lobby', B: null, run: null, found: new Set(), hp: 0, steps: 0, ui: { log: [] } };
   const CK = (r, c) => `${r},${c}`;
   let rule = 'keys', M = null, ME = { name: '', kind: 'white', hpMax: 100 }, ECHO = CAVE_ECHO0();
+  let MUL = { scale: 1 }; // 주고받는 피해 크기: 내 굴 체력에 맞춤 (들어갈 때 찍은 값)
   function CAVE_ECHO0() { return { owner: '오래된 용', kind: 'white', sum: 120, hpMax: 480 }; }
   const D4 = [[-1, 0], [1, 0], [0, -1], [0, 1]];
   const esc = ctEsc;
   const card = { set innerHTML(h) { $('cave-card').innerHTML = h; }, get hidden() { return $('cave-card').hidden; } };
   function caveLoad(v) {
-    CV.v = v; rule = v.rule; ECHO = v.echo || CAVE_ECHO0();
+    const fighting = view === 'echo' && B; // 석상전 결과 화면에서는 싸운 석상·체력을 그대로 둠
+    CV.v = v; rule = v.rule; if (!fighting) ECHO = v.echo || CAVE_ECHO0();
     const mp = v.map; const N0 = mp.g.length;
-    if (!M || M.week !== v.week) { M = { week: v.week, N: N0, g: mp.g.map((r) => r.split('')), dist: mp.dist, E: mp.E, far: mp.far, fires: mp.fires, keys: mp.keys, patrols: mp.patrols.map((path) => ({ path, i: 0, dir: 1 })), marks: {} }; CV.found = new Set(); }
-    M.marks = v.marks;
-    ME = { name: S.me.name, kind: S.me.kind || 'white', hpMax: v.me.hpMax };
+    if (!M || M.id !== v.mapId) { M = { id: v.mapId, N: N0, g: mp.g.map((r) => r.split('')), dist: mp.dist, E: mp.E, far: mp.far, fires: mp.fires, keys: mp.keys, patrols: mp.patrols.map((path) => ({ path, i: 0, dir: 1 })) }; CV.found = new Set(); } // 끝방에 닿으면 새 미로
+    if (!fighting) { ME = { name: S.me.name, kind: S.me.kind || 'white', hpMax: v.me.hpMax }; MUL = v.mul || { scale: 1 }; }
   }
   const N = () => M.N;
   // 미리보기와 같은 이름을 쓰는 상태 (P)
   const P = {
-    get entries() { return CV.v.left; }, get found() { return CV.found; }, get fireFound() { return new Set(CV.v.me.fires); },
-    get steps() { return CV.v.me.best ?? 0; }, get beat() { return CV.v.me.beat; }, get cleared() { return CV.v.me.cleared; },
+    get found() { return CV.found; }, get fireFound() { return new Set(CV.v.me.fires); },
     get tablets() { return CV.v.me.tabs; }, get hp() { return CV.hp; }, set hp(x) { CV.hp = x; }, get run() { return CV.run; },
-    get runs() { return CV.v.entries - CV.v.left; }, get keysKept() { return CV.v.me.keys; }, get upped() { return new Set(Object.entries(M.marks).filter(([, x]) => x.upped).map(([k]) => k)); },
-    myMarks: {},
+    get keysKept() { return CV.v.me.keys; },
   };
+  const usedNow = () => (CV.run ? CV.run.used : 0); // 이번 입장에서 쓴 횃불 (한 번에 드는 양에 끝이 없음)
+  const tick = () => socket.emit('city:cave:tick', { used: usedNow() }); // 쓴 횃불을 서버에 알려 둠 (창을 닫아도 그만큼은 셈)
+  const spentNow = () => Math.round((CV.v.me.spent + usedNow()) * 10) / 10;            // 이 미로에서 쓴 횃불 모두
   let view = 'lobby', B = null; const ui = CV.ui;
   function startRun(from) {
     const [sr, sc] = from === 'S' ? [1, 1] : from.split(',').map(Number);
     CV.hp = ME.hpMax; CV.steps = 0;
-    CV.run = { pos: [sr, sc], torch: 40, rev: new Set(), trod: new Set([CK(sr, sc)]), trail: [CK(sr, sc)], rubble: new Set(), flood: 0, moved: 0, keys: new Set(CV.v.me.keys || []), mob: null, healed: false, marksLeft: CV.v.me.marksLeft };
+    CV.run = { pos: [sr, sc], used: 0, rev: new Set(), trod: new Set([CK(sr, sc)]), trail: [CK(sr, sc)], rubble: new Set(), flood: 0, moved: 0, keys: new Set(CV.v.me.keys || []), mob: null, healed: false };
     M.patrols.forEach((p) => { p.i = 0; p.dir = 1; });
     reveal(); view = 'run';
     ui.log = [{ t: from === 'S' ? '굴 입구의 돌계단을 내려왔다. 공기가 차다.' : '찾아 둔 화톳불 곁에서 다시 걸음을 뗐다.' }];
@@ -15681,48 +15683,64 @@
     if (CV.run.rubble.has(K(r, c)) || flooded(r, c) || guardAt(r, c)) return false;
     return true;
   }
+  // 순찰하는 파수꾼이 한 칸 옮김 (내가 선 칸으로는 들어오지 않음). 걸을 때와 숨죽여 기다릴 때
+  function movePatrols(r, c) { for (const p of M.patrols) { let ni = p.i + p.dir; if (ni < 0 || ni >= p.path.length) { p.dir *= -1; ni = p.i + p.dir; } const [gr, gc] = p.path[ni]; if (!(gr === r && gc === c)) p.i = ni; } }
+  // 갇혔는지: 무너진 칸·잠긴 칸을 빼고 끝방까지 길이 이어지는지 (파수꾼은 기다리면 비키니 지나갈 수 있다고 봄).
+  // 끊겼으면 'crumble'·'water', 이어져도 옆 칸이 모두 파수꾼에 막혔으면 'guard', 아니면 null
+  function trapOf(pr, pc) {
+    const pass = (r, c) => r >= 0 && c >= 0 && r < N() && c < N() && !isWall(r, c) && !CV.run.rubble.has(K(r, c)) && !flooded(r, c);
+    const seen = new Set([K(pr, pc)]), q = [[pr, pc]]; let reach = false;
+    while (q.length && !reach) { const [r, c] = q.shift(); if (M.g[r][c] === 'E') reach = true; for (const [dr, dc] of D4) { const nr = r + dr, nc = c + dc, k = K(nr, nc); if (!seen.has(k) && pass(nr, nc)) { seen.add(k); q.push([nr, nc]); } } }
+    if (!reach) return rule === 'water' ? 'water' : rule === 'crumble' ? 'crumble' : 'none';
+    return D4.some(([dr, dc]) => canStep(pr + dr, pc + dc)) ? null : 'guard';
+  }
   function cost(r, c) { return CV.run.trod.has(K(r, c)) || CV.found.has(K(r, c)) ? 0.5 : 1; }
   function step(r, c) {
     const run = CV.run; if (run.mob) return;
-    const k = K(r, c), cst = cost(r, c); if (run.torch < cst) return;
-    run.torch = Math.round((run.torch - cst) * 10) / 10; run.pos = [r, c]; run.moved++; CV.steps = Math.round((CV.steps + cst) * 10) / 10;
+    const k = K(r, c), cst = cost(r, c);
+    run.used = Math.round((run.used + cst) * 10) / 10; run.pos = [r, c]; run.moved++; CV.steps = Math.round((CV.steps + cst) * 10) / 10;
     const fresh = !run.trod.has(k) && !CV.found.has(k);
     run.trod.add(k); CV.found.add(k); ui.log = [];
     if (rule === 'crumble') { run.trail.push(k); if (run.trail.length > 6) { const gone = run.trail.shift(); if (gone !== k) { run.rubble.add(gone); ui.log.push({ t: '등 뒤에서 돌이 무너지는 소리가 났다.' }); } } }
     if (rule === 'water' && run.moved % 10 === 0) { run.flood++; ui.log.push({ t: '입구 쪽에서 물이 한 칸 더 차올랐다.', c: 'warn' }); }
-    if (rule === 'patrol') for (const p of M.patrols) { let ni = p.i + p.dir; if (ni < 0 || ni >= p.path.length) { p.dir *= -1; ni = p.i + p.dir; } const [gr, gc] = p.path[ni]; if (!(gr === r && gc === c)) p.i = ni; }
+    if (rule === 'patrol') movePatrols(r, c);
     if (rule === 'keys' && M.keys.includes(k) && !run.keys.has(k)) { run.keys.add(k); CV.v.me.keys = [...run.keys]; socket.emit('city:cave:fire', { k }, () => {}); ui.log.push({ t: `돌 열쇠를 주웠다. (${run.keys.size}/3)` }); }
-    if (M.fires.includes(k) && !CV.v.me.fires.includes(k)) { CV.v.me.fires.push(k); socket.emit('city:cave:fire', { k }, () => {}); ui.log.push({ t: '화톳불 자리를 찾았다. 오늘은 여기서 이어 갈 수 있다.' }); }
+    if (M.fires.includes(k) && !CV.v.me.fires.includes(k)) { CV.v.me.fires.push(k); socket.emit('city:cave:fire', { k }, () => {}); ui.log.push({ t: '화톳불 자리를 찾았다. 이 미로에서는 여기서 이어 갈 수 있다.' }); }
     if (fresh && M.g[r][c] === '.' && !M.fires.includes(k) && Math.random() < 0.08) { run.mob = { hp: 3, hpMax: 3, lv: 27 }; ui.log.push({ t: '발소리에 돌 파수꾼이 깨어났다.', c: 'warn' }); }
-    if (M.marks[k]) ui.log.push({ t: '바닥에 누군가 남긴 표식이 있다.' });
-    reveal(); renderCave();
+    reveal(); tick(); renderCave();
   }
   const RULES = new Proxy({}, { get: () => ({ name: CV.v.ruleName, line: CV.v.ruleLine }) });
-  const PHRASES = new Proxy([], { get: (t, k) => (k === 'map' ? (f) => CV.v.phrases.map(f) : CV.v.phrases[k]) });
   function frameOpen() { return '<i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>'; }
-  const RANK_GET = () => CV.v.rank;
 function renderLobby() {
-  const fires = [...(P.fireFound || [])];
-  const fireBtns = fires.map((k, i) => `<button class="btn" type="button" data-cv="enter" data-from="${k}"${P.entries < 1 ? ' disabled' : ''}>화톳불 ${i + 1}에서 이어 간다</button>`).join('');
+  const fires = [...(P.fireFound || [])], me = CV.v.me, n = CV.v.n || 0, max = CV.v.mazeMax || 3, closed = !!CV.v.closed, owe = (me.owe || []).length;
+  const fireBtns = closed ? '' : fires.map((k, i) => `<button class="btn" type="button" data-cv="enter" data-from="${k}">화톳불 ${i + 1}에서 이어 간다</button>`).join('');
+  const rank = CV.v.rank || [], my = CV.v.myRank;
+  const myRow = my && my[0] > 3 ? `<div class="rm-row"><span>${my[0]}. ${esc(S.me.name)} (나)</span><b>횃불 ${my[1]}</b></div>` : '';
+  const tag = closed ? '미로를 모두 지났다' : n ? `새 미로 ${n} / ${max - 1}` : '이번 굴의 첫 미로';
+  const echoBtn = n > 0 || owe ? `<button class="btn${closed || owe ? ' primary' : ''}" type="button" data-cv="echo">석상 앞으로 간다${owe ? `<span class="cost">받을 몫 ${owe}</span>` : ''}</button>` : '';
+  const note = closed ? '이번 굴의 미로를 모두 지났다. 새 굴이 열릴 때까지 석상과는 몇 번이든 겨룰 수 있다.'
+    : n ? '끝방에 닿아 길이 바뀐 새 미로다. 순위에는 들지 않고, 보상은 덤으로 적다.'
+    : '순위는 이번 굴의 첫 미로에서 끝방에 닿을 때까지 쓴 횃불을 모두 더해 정한다. 도중에 나와도 쓴 만큼 더해진다.';
+  const last = CV.v.resetIn === 1; // 오늘 자정에 새 굴이 열림
+  const warn = last && owe ? `오늘 자정에 새 굴이 열리면 아직 받지 않은 석상 몫(${owe})은 사라진다. ` : '';
   card.innerHTML = `${frameOpen()}
-    <div class="where"><span class="k">고대도시 · 샘 곁</span><div class="title"><h1>시련의 굴</h1><span class="tag wild">오늘의 시험</span></div></div>
+    <div class="where"><span class="k">고대도시 · 샘 곁</span><div class="title"><h1>시련의 굴</h1><span class="tag wild">${tag}</span></div></div>
     <div class="cv-week">
-      <div class="cv-rule"><span class="rm-k">오늘의 규칙</span><b>${RULES[rule].name}</b><p>${RULES[rule].line}</p></div>
-      <div class="cv-echo"><span class="rm-k">끝방의 석상</span><b>${ECHO.owner}의 석상</b><p>능력치 합 ${ECHO.sum} · 체력 ${ECHO.hpMax}${ECHO.owner === '오래된 용' ? ' · 아직 아무도 넘지 않았다' : ''}</p></div>
+      <div class="cv-rule"><span class="rm-k">이번 굴의 규칙 · ${last ? '오늘 자정에 새 굴이 열린다' : `새 굴까지 ${CV.v.resetIn}일`}</span><b>${RULES[rule].name}</b><p>${RULES[rule].line}</p></div>
+      <div class="cv-echo"><span class="rm-k">끝방의 석상</span><b>${ECHO.owner}의 석상</b><p>내 능력치(합 ${ECHO.sum})에 맞춰 선다 · 체력 ${ECHO.hpMax}</p></div>
     </div>
     <div class="rm-pair">
-      <div class="rm-box"><span class="rm-k">오늘 나의 기록</span>
-        <div class="rm-row"><span>남은 입장</span><b>${P.entries} / 2</b></div>
-        <div class="rm-row"><span>가장 짧은 기록</span><b>${CV.v.me.best != null ? CV.v.me.best + '걸음' : '아직'}</b></div>
-        <div class="rm-row"><span>찾은 화톳불</span><b>${fires.length} / 2</b></div>
-        <div class="rm-row"><span>끝방</span><b>${P.beat ? '석상을 넘었다' : P.cleared ? '도착했다' : '아직'}</b></div></div>
-      <div class="rm-box"><span class="rm-k">오늘 가장 짧은 길</span>
-        ${RANK_GET().length ? '' : '<div class="rm-row"><span>아직 아무도 끝방에 닿지 않았다</span></div>'}${RANK_GET().map((r, i) => `<div class="rm-row"><span>${i + 1}. ${r[0]}</span><b>${r[1]}걸음</b></div>`).join('')}
-        <span class="rm-k" style="margin-top:4px">돌판 ${P.tablets.length} / ${CV.v.me.tabTotal} 모음</span></div>
+      <div class="rm-box"><span class="rm-k">이번 굴 나의 기록</span>
+        <div class="rm-row"><span>깬 미로</span><b>${n} / ${max}</b></div>
+        ${closed ? '' : `<div class="rm-row"><span>이 미로에 쓴 횃불</span><b>${me.spent}</b></div><div class="rm-row"><span>찾은 화톳불</span><b>${fires.length} / 2</b></div>`}
+        <div class="rm-row"><span>석상을 넘어 받을 몫</span><b>${owe}</b></div>
+        <div class="rm-row"><span>모은 돌판</span><b>${P.tablets.length} / ${me.tabTotal}</b></div></div>
+      <div class="rm-box"><span class="rm-k">이번 굴 순위 · 첫 미로에 쓴 횃불</span>
+        ${rank.length ? '' : '<div class="rm-row"><span>아직 아무도 끝방에 닿지 않았다</span></div>'}${rank.map((r, i) => `<div class="rm-row"><span>${i + 1}. ${esc(r[0])}${r[0] === S.me.name ? ' (나)' : ''}</span><b>횃불 ${r[1]}</b></div>`).join('')}${myRow}</div>
     </div>
     ${P.tablets.length ? `<div class="cv-tabs">${P.tablets.map((t) => `<div class="cv-tablet"><b>${t.t}</b><p>${esc(t.s)}</p></div>`).join('')}</div>` : ''}
-    <div class="actions"><button class="btn primary" type="button" data-cv="enter" data-from="S"${P.entries < 1 ? ' disabled' : ''}>입구에서 들어간다</button>${fireBtns}<button class="btn" type="button" data-cv="back">도시로 돌아간다</button></div>
-    ${P.entries < 1 ? '<p class="note">오늘 입장을 다 썼다. 내일 다시 들어갈 수 있다. 규칙과 미로는 날마다 바뀐다.</p>' : ''}`;
+    <div class="actions">${closed ? '' : '<button class="btn primary" type="button" data-cv="enter" data-from="S">입구에서 들어간다</button>'}${fireBtns}${echoBtn}<button class="btn" type="button" data-cv="back">도시로 돌아간다</button></div>
+    <p class="note">${warn}${note}</p>`;
 }
 
 function renderRun() {
@@ -15738,7 +15756,7 @@ function renderRun() {
     if (run.rubble.has(k)) { cells += '<div class="rm-c cv-rubble" aria-label="무너진 칸"></div>'; continue; }
     if (flooded(r, c) && !(r === pr && c === pc)) { cells += '<div class="rm-c cv-water" aria-label="물에 잠긴 칸"></div>'; continue; }
     const here = r === pr && c === pc;
-    const go = !here && !run.mob && Math.abs(r - pr) + Math.abs(c - pc) === 1 && canStep(r, c) && run.torch >= cost(r, c);
+    const go = !here && !run.mob && Math.abs(r - pr) + Math.abs(c - pc) === 1 && canStep(r, c);
     if (run.trod.has(k) || P.found.has(k)) cls += ' trod';
     if (go) cls += ' go';
     if (here) { inner += `<span class="rm-tok me" style="--c:var(--k-${ME.kind})">${esc(ME.name.slice(0, 1))}</span>`; if (run.mob) inner += `<span class="rm-mobm">${IC.mob}</span>`; }
@@ -15747,38 +15765,35 @@ function renderRun() {
     else if (ch === 'E') inner += (rule === 'keys' && run.keys.size < 3) ? IC.gateShut : IC.gate;
     else if (M.fires.includes(k)) inner += (P.fireFound || new Set()).has(k) ? IC.fire : IC.ember;
     else if (rule === 'keys' && M.keys.includes(k) && !run.keys.has(k)) inner += IC.key;
-    if (!here && M.marks[k]) inner += IC.flag;
     cells += go ? `<button type="button" class="${cls}" data-r="${r}" data-c="${c}" aria-label="${r + 1}행 ${c + 1}열로 이동">${inner}</button>` : `<div class="${cls}">${inner}</div>`;
   }
   const k = K(pr, pc), ch = M.g[pr][pc];
-  const tState = run.torch < 0.5 ? 'out' : run.torch <= 3 ? 'crit' : run.torch <= 10 ? 'low' : '';
-  const tHint = tState === 'out' ? '횃불이 다 탔다. 밖으로 나가야 한다.' : tState === 'crit' ? '곧 꺼진다. 나갈 준비를 하자.' : tState === 'low' ? '횃불이 얼마 남지 않았다.' : '새 길 1걸음 · 내가 밟은 길 반 걸음';
-  const stuck = !run.mob && !D4.some(([dr, dc]) => canStep(pr + dr, pc + dc));
+  const tHint = `새 길 1 · 내가 밟은 길 0.5 · 이번에 ${run.used}${CV.v.n ? '' : ' · 적게 쓸수록 순위가 오른다'}`;
+  const trap = run.mob || ch === 'E' ? null : trapOf(pr, pc), stuck = !!trap && trap !== 'guard'; // stuck: 이번 입장에서는 끝방에 닿을 수 없음
   let hereT = '어두운 굴', hereX = ui.log.length ? ui.log.map((l) => l.t).join(' ') : '주변 한 칸을 눌러 움직인다.';
   if (run.mob) hereT = '깨어난 돌 파수꾼';
   else if (ch === 'S') hereT = '내려온 돌계단';
   else if (ch === 'E') hereT = '끝방의 문';
   else if (M.fires.includes(k)) hereT = '옛 화톳불 자리';
-  if (stuck && !run.mob && ch !== 'E') hereX += ' 더 나아갈 길이 없다.';
-  const mark = M.marks[k];
-  let markBox = '';
-  if (mark) markBox = `<div class="cv-mark"><span class="cv-mark-t">${IC.flag}"${esc(mark.t)}"</span><span class="rm-k">${esc(mark.by)}${mark.by === ME.name ? ' (나)' : ''} · 도움이 됐다 ${mark.up}</span>${mark.by !== ME.name ? `<button class="btn" type="button" data-cv="up"${mark.upped ? ' disabled' : ''}>${mark.upped ? '눌렀다' : '도움이 됐다'}</button>` : ''}</div>`;
+  if (trap && !ui.log.length) hereX = ''; // 갇혔을 때는 '주변 한 칸을 눌러…' 대신 까닭만
+  if (trap === 'guard') hereX += ' 파수꾼이 길을 막고 서 있다. 숨죽여 기다리면 지나간다.';
+  else if (trap) { hereT = '갇혔다'; hereX += trap === 'crumble' ? ' 끝방으로 가는 길이 무너져 끊겼다.' : trap === 'water' ? ' 끝방으로 가는 길이 물에 잠겨 끊겼다.' : ' 끝방으로 가는 길이 끊겼다.'; hereX += ' 이번에는 끝방에 닿을 수 없으니, 굴 밖으로 나가 다시 들어와야 한다.'; }
+  hereX = hereX.trim();
   let acts = '';
   if (run.mob) {
     const pass = Math.round(ME.hpMax * 0.2);
     acts = `<div class="rm-row"><span>남은 힘</span><b class="red">${run.mob.hp} / ${run.mob.hpMax}</b></div><div class="rm-bar"><i style="width:${run.mob.hp / run.mob.hpMax * 100}%"></i></div>
-      <div class="rm-row"><span>한 번 칠 때</span><b>횃불 −2 · 체력 −6</b></div><div class="rm-row"><span>싸우지 않고 빠져나가면</span><b class="red">체력 −${pass}</b></div>`;
+      <div class="rm-row"><span>한 번 칠 때</span><b>횃불 +2 · 체력 −6</b></div><div class="rm-row"><span>싸우지 않고 빠져나가면</span><b class="red">체력 −${pass}</b></div>`;
   }
   const btns = [];
-  if (run.mob) { btns.push(`<button class="btn primary" type="button" data-cv="hit"${run.torch < 2 ? ' disabled' : ''}>파수꾼을 친다<span class="cost">횃불 −2</span></button>`, '<button class="btn" type="button" data-cv="pass">그냥 지나친다</button>'); }
+  if (run.mob) { btns.push(`<button class="btn primary" type="button" data-cv="hit">파수꾼을 친다<span class="cost">횃불 +2</span></button>`, '<button class="btn" type="button" data-cv="pass">그냥 지나친다</button>'); }
   if (ch === 'E' && !run.mob) {
     if (rule === 'keys' && run.keys.size < 3) btns.push(`<button class="btn" type="button" disabled>문이 잠겨 있다 (열쇠 ${run.keys.size}/3)</button>`);
-    else btns.push(P.beat ? '<button class="btn primary" type="button" data-cv="record">끝방에 닿았다 · 기록을 남기고 나간다</button>' : '<button class="btn primary" type="button" data-cv="echo">시험에 든다</button>');
+    else btns.push('<button class="btn primary" type="button" data-cv="record" data-then="echo">기록을 남기고 석상 앞에 선다</button>', '<button class="btn" type="button" data-cv="record">기록을 남기고 굴을 나선다</button>');
   }
-  if (M.fires.includes(k) && !run.mob) btns.push(`<button class="btn" type="button" data-cv="heal"${run.healed || run.torch < 1 ? ' disabled' : ''}>상처를 돌본다<span class="cost">횃불 −1 · 체력 50%</span></button>`);
-  if (!run.mob) btns.push(`<button class="btn" type="button" data-cv="markopen"${run.marksLeft < 1 || mark ? ' disabled' : ''}>표식 남기기<span class="cost">오늘 ${run.marksLeft}개</span></button>`);
-  btns.push('<button class="btn" type="button" data-cv="leave">굴 밖으로 나간다</button>');
-  const markPick = ui.markOpen ? `<div class="cv-pick"><span class="rm-k">남길 말을 고른다</span><div class="cv-phr">${PHRASES.map((p, i) => `<button type="button" class="cv-chip" data-cv="mark" data-i="${i}">${p}</button>`).join('')}</div></div>` : '';
+  if (M.fires.includes(k) && !run.mob) btns.push(`<button class="btn" type="button" data-cv="heal"${run.healed ? ' disabled' : ''}>상처를 돌본다<span class="cost">횃불 +1 · 체력 50%</span></button>`);
+  if (rule === 'patrol' && !run.mob && ch !== 'E') btns.push(`<button class="btn${trap === 'guard' ? ' primary' : ''}" type="button" data-cv="wait">숨죽여 기다린다<span class="cost">횃불 +0.5</span></button>`);
+  btns.push(`<button class="btn${stuck ? ' primary' : ''}" type="button" data-cv="leave">굴 밖으로 나간다</button>`);
   const ruleInfo = rule === 'keys' ? `<div class="rm-row"><span>돌 열쇠</span><span class="rm-pill${run.keys.size === 3 ? ' ok' : ''}">${run.keys.size} / 3</span></div>`
     : rule === 'water' ? `<div class="rm-row"><span>다음 물 차오름까지</span><b>${10 - (run.moved % 10)}걸음</b></div>`
     : rule === 'crumble' ? '<div class="rm-row"><span>지나온 길</span><b>5걸음 뒤 무너짐</b></div>'
@@ -15786,19 +15801,18 @@ function renderRun() {
     : '<div class="rm-row"><span>보이는 거리</span><b>옆 칸</b></div>';
   card.innerHTML = `${frameOpen()}
     <div class="where"><span class="k">지금 머무는 곳</span><div class="title"><h1>시련의 굴</h1><span class="tag wild">${RULES[rule].name}</span></div>
-      <div class="at show">${IC.fire.replace('<svg', '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"')}<span>오늘 ${P.runs}/2번째 · 이번 걸음 ${CV.steps}</span></div></div>
+      <div class="at show">${IC.fire.replace('<svg', '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"')}<span>이번 걸음 ${CV.steps}</span></div></div>
     <div class="rm-top"><div class="rm-meters">
-      <div class="rm-torch ${tState}" role="status"><span class="ic" aria-hidden="true">${IC.fire}</span>
-        <div class="body"><div class="h"><span class="k">남은 횃불</span><span class="num"><b>${run.torch}</b><small> / 40걸음</small></span></div><div class="bar"><i style="width:${run.torch / 40 * 100}%"></i></div><span class="hint">${tHint}</span></div></div>
+      <div class="rm-torch" role="status"><span class="ic" aria-hidden="true">${IC.fire}</span>
+        <div class="body"><div class="h"><span class="k">이 미로에 쓴 횃불</span><span class="num"><b>${spentNow()}</b></span></div><span class="hint">${tHint}</span></div></div>
       <div class="rm-meter"><div class="h"><span>체력</span><b>${P.hp} / ${ME.hpMax}</b></div><div class="bar"><i style="width:${P.hp / ME.hpMax * 100}%;background:linear-gradient(90deg,#8E3340,#CB5A66)"></i></div></div>
     </div></div>
     <div class="rm-map"><div class="rm-grid" style="grid-template-columns:repeat(${VW},minmax(0,1fr))">${cells}</div>
-      <div class="rm-leg"><span>${IC.gate}끝방</span><span>${IC.fire}화톳불</span><span>${IC.flag}표식</span>${rule === 'keys' ? `<span>${IC.key}돌 열쇠</span>` : ''}${rule === 'patrol' ? `<span>${IC.warden}순찰</span>` : ''}${rule === 'water' ? '<span><i class="sw" style="background:#9DB3C6"></i>잠긴 칸</span>' : ''}${rule === 'crumble' ? '<span><i class="sw" style="background:#5E5A52"></i>무너진 칸</span>' : ''}<span><i class="sw" style="background:#E3ECF3;border:1px solid #3C5A73"></i>갈 수 있는 칸</span></div></div>
+      <div class="rm-leg"><span>${IC.gate}끝방</span><span>${IC.fire}화톳불</span>${rule === 'keys' ? `<span>${IC.key}돌 열쇠</span>` : ''}${rule === 'patrol' ? `<span>${IC.warden}순찰</span>` : ''}${rule === 'water' ? '<span><i class="sw" style="background:#9DB3C6"></i>잠긴 칸</span>' : ''}${rule === 'crumble' ? '<span><i class="sw" style="background:#5E5A52"></i>무너진 칸</span>' : ''}<span><i class="sw" style="background:#E3ECF3;border:1px solid #3C5A73"></i>갈 수 있는 칸</span></div></div>
     <div class="rm-pair">
-      <div class="rm-box${run.mob ? ' foe' : ''}"><span class="rm-k">이 칸</span><div class="nm"><b>${hereT}</b>${run.mob ? '<span class="lv" style="font-size:12px;padding:1px 6px;border-radius:3px;background:#8A2E27;color:#fff">Lv.27</span>' : ''}</div><p>${esc(hereX)}</p>${markBox}${acts}</div>
-      <div class="rm-box"><span class="rm-k">오늘의 시험</span><div class="rm-row"><span>규칙</span><b>${RULES[rule].name}</b></div>${ruleInfo}<div class="rm-row"><span>끝방의 석상</span><b>${ECHO.owner}</b></div></div>
+      <div class="rm-box${run.mob ? ' foe' : ''}"><span class="rm-k">이 칸</span><div class="nm"><b>${hereT}</b>${run.mob ? '<span class="lv" style="font-size:12px;padding:1px 6px;border-radius:3px;background:#8A2E27;color:#fff">Lv.27</span>' : ''}</div><p>${esc(hereX)}</p>${acts}</div>
+      <div class="rm-box"><span class="rm-k">이번 시험</span><div class="rm-row"><span>규칙</span><b>${RULES[rule].name}</b></div>${ruleInfo}<div class="rm-row"><span>끝방의 석상</span><b>${ECHO.owner}</b></div></div>
     </div>
-    ${markPick}
     <div class="actions">${btns.join('')}</div>`;
 }
 
@@ -15825,6 +15839,7 @@ function echoAct(a) {
   let dmg = 0;
   if (a === 'claw') { dmg = rnd(42, 50); }
   if (a === 'breath') { dmg = rnd(80, 90); b.cd = 2; }
+  if (dmg) dmg = Math.round(dmg * (MUL.scale || 1));
   if (dmg && b.guardBuff) { dmg = Math.round(dmg * 1.25); b.guardBuff = false; }
   if (dmg && echoGuards) dmg = Math.round(dmg * 0.3);
   if (dmg) { b.ehp = Math.max(0, b.ehp - dmg); lines.push({ t: `${ACT_NAME[a]}. 석상에게 ${dmg}.${echoGuards ? ' (석상이 웅크려 막았다)' : ''}`, c: 'hit' }); }
@@ -15839,11 +15854,12 @@ function echoAct(a) {
     else { in_ = rnd(30, 38); what = '석상이 발톱을 휘둘렀다'; }
   } else if (plan.kind === 'skill') { in_ = rnd(52, 60); what = '석상의 얼어붙은 숨결'; }
   else { in_ = rnd(30, 38); what = '석상의 발톱'; }
+  if (in_) in_ = Math.round(in_ * (MUL.scale || 1));
   if (in_ && a === 'guard') in_ = Math.round(in_ * 0.3);
   if (in_) { P.hp = Math.max(0, P.hp - in_); lines.push({ t: `${what}. 체력 −${in_}`, c: 'hurt' }); } else lines.push({ t: what + '.' });
   b.prev = a; if (b.cd > 0) b.cd--; b.t++;
   b.log = lines.concat(b.log).slice(0, 12);
-  if (P.hp <= 0) { P.hp = Math.round(ME.hpMax * 0.15); b.done = 'lose'; b.log.unshift({ t: '더 버틸 수 없다. 끝방에서 물러났다. 쓰러지지는 않았다. (이번 입장에서는 다시 도전할 수 없다)', c: 'hurt' }); }
+  if (P.hp <= 0) { P.hp = Math.round(ME.hpMax * 0.15); b.done = 'lose'; b.log.unshift({ t: '더 버틸 수 없다. 석상 앞에서 물러났다. 쓰러지지는 않았다. 다시 도전할 수 있다.', c: 'hurt' }); }
 }
 function winEcho() {
   B.done = 'win'; B.tab = null;
@@ -15852,27 +15868,53 @@ function winEcho() {
 function renderEcho() {
   const b = B;
   const pr = P.hp / ME.hpMax * 100, er = b.ehp / ECHO.hpMax * 100;
+  const carved = (CV.v.carved || []).length && !b.done ? `<div class="cv-intent"><span class="rm-k">받침돌에 새겨진 이름</span><p>${CV.v.carved.map(esc).join(', ')}</p></div>` : ''; // 최근 석상을 넘은 드래곤
   const intent = b.done ? '' : `<div class="cv-intent"><span class="rm-k">석상의 다음 움직임</span><p>${esc(intentText(b.t, b.prev))}</p></div>`;
   const acts = b.done
-    ? `<div class="actions"><button class="btn primary" type="button" data-cv="echoout">${b.done === 'win' ? '돌판을 챙겨 굴을 나선다' : '굴 밖으로 나간다'}</button></div>`
+    ? `<div class="actions">${b.done === 'win' ? '' : '<button class="btn primary" type="button" data-cv="echo">다시 도전한다</button>'}<button class="btn${b.done === 'win' ? ' primary' : ''}" type="button" data-cv="echoout">${b.done === 'win' && b.tab ? '돌판을 챙겨 굴을 나선다' : '굴 밖으로 나간다'}</button>${b.done === 'win' && (CV.v.me.owe || []).length ? '<button class="btn" type="button" data-cv="echo">한 번 더 겨룬다</button>' : ''}</div>`
     : `<div class="actions"><button class="btn primary" type="button" data-cv="act" data-a="claw">발톱으로 할퀸다</button><button class="btn primary" type="button" data-cv="act" data-a="breath"${b.cd > 0 ? ' disabled' : ''}>푸른 숨결${b.cd > 0 ? `<span class="cost">${b.cd}턴 뒤</span>` : '<span class="cost">강함</span>'}</button><button class="btn" type="button" data-cv="act" data-a="guard">막는다<span class="cost">받는 피해 −70%</span></button></div>`;
-  const reward = b.done === 'win' ? (b.tab ? `<div class="cv-reward"><span class="rm-k">시련의 돌판을 얻었다 (${CV.v.me.tabs.length}/${CV.v.me.tabTotal})</span><div class="cv-tablet"><b>${b.tab.t}</b><p>${esc(b.tab.s)}</p></div><p class="note">함께 받은 것: 석공 인장 10</p></div>` : (CV.v.me.beat && !b.tabNew ? '<p class="note">오늘은 이미 석상을 넘었다. 돌판은 하루에 한 번 받는다.</p>' : '')) : '';
+  const reward = b.done === 'win' ? `<div class="cv-reward">${b.tab ? `<span class="rm-k">시련의 돌판을 얻었다 (${CV.v.me.tabs.length}/${CV.v.me.tabTotal})</span><div class="cv-tablet"><b>${b.tab.t}</b><p>${esc(b.tab.s)}</p></div>` : ''}${b.msg ? `<p class="note">${esc(b.msg)}</p>` : ''}</div>` : '';
   card.innerHTML = `${frameOpen()}
     <div class="where"><span class="k">시련의 굴 · 끝방</span><div class="title"><h1>${ECHO.owner}의 석상</h1><span class="tag wild">${b.done ? (b.done === 'win' ? '시험을 넘었다' : '물러났다') : `${b.t}턴`}</span></div></div>
     <div class="cv-duel">
       <div class="cv-side"><div class="h"><b>${ME.name}</b><span>${P.hp} / ${ME.hpMax}</span></div><div class="bar"><i style="width:${pr}%;background:linear-gradient(90deg,#8E3340,#CB5A66)"></i></div></div>
       <div class="cv-side"><div class="h"><b>${ECHO.owner}의 석상</b><span>${b.ehp} / ${ECHO.hpMax}</span></div><div class="bar"><i style="width:${er}%;background:linear-gradient(90deg,#5B6066,#9A9C98)"></i></div></div>
     </div>
-    ${intent}${reward}${acts}
+    ${carved}${intent}${reward}${acts}
     <div class="cv-log">${b.log.map((l) => `<div class="${l.c || ''}">${esc(l.t)}</div>`).join('')}</div>`;
 }
 
 
   function renderCave() { if (!CV.v || $('cave-card').hidden) return; view === 'lobby' ? renderLobby() : view === 'run' ? renderRun() : renderEcho(); }
-  function caveFinish(cleared, beat) {
-    socket.emit('city:cave:finish', { cleared, beat, steps: CV.steps }, (r) => { if (r?.error) return toast(r.error); if (r?.cave) caveLoad(r.cave); if (B && r?.tab) { B.tab = r.tab; B.tabNew = true; } if (r?.lines?.length) toast(r.lines[r.lines.length - 1]); renderCave(); });
+  // 끝방에 닿음: 미로를 깬 기록 (then = 'echo'면 이어서 석상 앞으로)
+  function caveFinish(then) {
+    socket.emit('city:cave:finish', { cleared: true, used: usedNow() }, (r) => {
+      if (r?.error) return toast(r.error);
+      if (r?.cave) caveLoad(r.cave); if (r?.lines?.length) toast(r.lines.join(' '));
+      if (then === 'echo') goEcho(); else renderCave();
+    });
+  }
+  // 석상 앞에 섬: 서버가 그때의 내 값으로 석상을 맞춰 세움 (끝방에 한 번 닿았으면 몇 번이든)
+  function goEcho() {
+    B = null; view = 'lobby'; CV.run = null;
+    socket.emit('city:cave:echo', {}, (r) => { if (r?.error) { toast(r.error); return renderCave(); } caveLoad(r.cave); CV.hp = ME.hpMax; startEcho(); renderCave(); $('cave-card').scrollIntoView({ block: 'nearest' }); });
+  }
+  // 석상전이 끝남: 이기면 깬 미로 몫 하나로 보상
+  function echoEnd(win) {
+    socket.emit('city:cave:echoEnd', { beat: win }, (r) => {
+      if (r?.error) return toast(r.error);
+      if (r?.cave) caveLoad(r.cave);
+      if (B && win) { B.tab = r.tab || null; B.msg = (r.lines || []).join(' '); }
+      renderCave();
+    });
+  }
+  // 걷다가 나옴: 이번에 쓴 횃불을 서버에 더함 (보내지 못하면 다음 입장 때 횃불을 다 쓴 것으로 셈)
+  function caveLeave() {
+    const used = usedNow(); CV.run = null; view = 'lobby';
+    socket.emit('city:cave:leave', { used }, (r) => { if (r?.error) return toast(r.error); if (r?.cave) caveLoad(r.cave); renderCave(); });
   }
   function caveOpen(on) {
+    if (!on && CV.run && view === 'run') caveLeave(); // 걷던 중에 도시를 나가면 나온 것으로
     CT.cave = on; const center = document.querySelector('.center');
     if (center) center.classList.toggle('in-cave', on);
     $('cave-card').hidden = !on;
@@ -15885,16 +15927,14 @@ function renderEcho() {
     if (a === 'back') return caveOpen(false);
     if (a === 'enter') { const from = t.dataset.from; socket.emit('city:cave:enter', {}, (r) => { if (r?.error) return toast(r.error); caveLoad(r.cave); startRun(from); renderCave(); $('cave-card').scrollIntoView({ block: 'nearest' }); }); return; }
     const run = CV.run;
-    if (a === 'leave') { view = 'lobby'; CV.run = null; renderCave(); return; }
-    if (a === 'hit') { run.torch -= 2; run.mob.hp--; CV.hp = Math.max(1, CV.hp - 6); ui.log = [{ t: run.mob.hp ? '돌 조각이 튀었다.' : '파수꾼이 무너져 돌무더기가 되었다.' }]; if (!run.mob.hp) run.mob = null; renderCave(); return; }
+    if (a === 'leave') { caveLeave(); renderCave(); return; }
+    if (a === 'hit') { run.used += 2; tick(); run.mob.hp--; CV.hp = Math.max(1, CV.hp - 6); ui.log = [{ t: run.mob.hp ? '돌 조각이 튀었다.' : '파수꾼이 무너져 돌무더기가 되었다.' }]; if (!run.mob.hp) run.mob = null; renderCave(); return; }
     if (a === 'pass') { const d = Math.round(ME.hpMax * 0.2); CV.hp = Math.max(1, CV.hp - d); run.mob = null; ui.log = [{ t: `파수꾼을 지나치다 등을 세게 맞았다. 체력 −${d}` }]; renderCave(); return; }
-    if (a === 'heal') { run.torch -= 1; run.healed = true; CV.hp = Math.min(ME.hpMax, CV.hp + Math.round(ME.hpMax * 0.5)); ui.log = [{ t: '화톳불 곁에서 상처를 돌봤다.' }]; renderCave(); return; }
-    if (a === 'markopen') { ui.markOpen = !ui.markOpen; renderCave(); return; }
-    if (a === 'mark') { const k = K(...run.pos); socket.emit('city:cave:mark', { k, i: +t.dataset.i }, (r) => { if (r?.error) return toast(r.error); caveLoad(r.cave); run.marksLeft = CV.v.me.marksLeft; ui.markOpen = false; ui.log = [{ t: r.lines[0] }]; renderCave(); }); return; }
-    if (a === 'up') { socket.emit('city:cave:up', { k: K(...run.pos) }, (r) => { if (r?.error) return toast(r.error); caveLoad(r.cave); renderCave(); }); return; }
-    if (a === 'echo') { startEcho(); renderCave(); return; }
-    if (a === 'record') { caveFinish(true, false); view = 'lobby'; CV.run = null; renderCave(); return; }
-    if (a === 'act') { echoAct(t.dataset.a); if (B.done) caveFinish(true, B.done === 'win'); renderCave(); return; }
+    if (a === 'wait') { run.used = Math.round((run.used + 0.5) * 10) / 10; movePatrols(...run.pos); ui.log = [{ t: '숨죽여 기다렸다. 파수꾼이 한 걸음 옮겼다.' }]; tick(); renderCave(); return; }
+    if (a === 'heal') { run.used += 1; tick(); run.healed = true; CV.hp = Math.min(ME.hpMax, CV.hp + Math.round(ME.hpMax * 0.5)); ui.log = [{ t: '화톳불 곁에서 상처를 돌봤다.' }]; renderCave(); return; }
+    if (a === 'echo') { goEcho(); return; }
+    if (a === 'record') { const then = t.dataset.then; caveFinish(then); view = 'lobby'; CV.run = null; if (!then) renderCave(); return; }
+    if (a === 'act') { echoAct(t.dataset.a); if (B.done) echoEnd(B.done === 'win'); renderCave(); return; }
     if (a === 'echoout') { view = 'lobby'; CV.run = null; renderCave(); return; }
   });
 
