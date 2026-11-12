@@ -484,6 +484,8 @@ const q = {
                               fallen = @fallen, scars = @scars, titles = @titles, exp_info = @exp_info, chron = @chron, nest_info = @nest_info, ev_recent = @ev_recent
                             WHERE id = @id`),
   invCount:     db.prepare('SELECT qty FROM inventory WHERE dragon_id = ? AND item = ?'),
+  invTotal:     db.prepare('SELECT COALESCE(SUM(qty), 0) AS n FROM inventory WHERE item = ? AND qty > 0'), // 모두가 가진 그 물건 수 (빚은 물건 이름 바꿀 때)
+  hoardTotal:   db.prepare('SELECT COALESCE(SUM(qty), 0) AS n FROM hoard WHERE item = ? AND qty > 0'),
   hoardAdd:     db.prepare(`INSERT INTO hoard (dragon_id, item, qty) VALUES (?, ?, ?)
                             ON CONFLICT(dragon_id, item) DO UPDATE SET qty = qty + excluded.qty`),
   hoardList:    db.prepare('SELECT item, qty FROM hoard WHERE dragon_id = ? AND qty > 0'),
@@ -1061,6 +1063,7 @@ module.exports = {
   kinDelete: (kinId, dragonId) => q.kinDel.run(kinId, dragonId),
   inventory: (dragonId) => q.invList.all(dragonId),
   itemCount: (dragonId, item) => q.invCount.get(dragonId, item)?.qty || 0,
+  itemTotal: (item) => (q.invTotal.get(item)?.n || 0) + (q.hoardTotal.get(item)?.n || 0), // 모든 드래곤의 소지품·보물더미에 있는 그 물건 수
   hoard: (dragonId) => q.hoardList.all(dragonId),
   hoardCount: (dragonId, item) => q.hoardCount.get(dragonId, item)?.qty || 0,
   setRegion: (dragonId, region) => q.setRegion.run(region, dragonId),

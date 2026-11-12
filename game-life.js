@@ -741,6 +741,7 @@ function view(k, now, d) {
     { const cap = (R.statCap || [])[stageOf(k, now).i]; if (cap != null) v.statCap = cap; } // 이 단계의 능력치 합 상한 (식구 카드에 '합 ○○ / ○○')
     v.trains = k.data.trains;
     v.trainLimit = R.trainLimit[Math.max(0, st.i)];
+    v.grown = st.next == null; // 마지막 단계(다 큰 용): 더 자라지 않음 → '조금 더 자라야 한다' 대신 다 배웠다고 알림
     v.trainIn = Math.max(0, (k.data.lastTrain || 0) + trainCd(k) - now);
     v.personality = personalityOf(k);
     // 성격이 선택지로 정해졌는지: 선택지 몫을 빼고 보면 다른 성향이 가장 길었을 때

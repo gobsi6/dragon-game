@@ -1,3 +1,21 @@
+// 창(dialog)을 띄우거나 닫을 때 뒤 화면이 맨 위로 튀지 않게 (특히 아이폰 사파리: 창 안 칸에 초점이 가면서 페이지가 위로 올라가던 것)
+// 띄우기 직전의 스크롤 자리를 기억해 두었다가, 띄운 뒤·닫은 뒤에 화면이 맨 위로 가 있으면 그 자리로 되돌림 (일부러 위로 올리는 '대륙' 단추 등은 부드럽게 올라가므로 건드리지 않음)
+(() => {
+  if (typeof HTMLDialogElement === 'undefined') return;
+  const open0 = HTMLDialogElement.prototype.showModal;
+  const back = (y) => { if (y > 40 && window.scrollY < 4) window.scrollTo(window.scrollX, y); };
+  HTMLDialogElement.prototype.showModal = function (...a) {
+    const y = window.scrollY; this.__keepY = y;
+    const r = open0.apply(this, a);
+    back(y); requestAnimationFrame(() => back(y)); setTimeout(() => back(y), 60);
+    return r;
+  };
+  document.addEventListener('close', (e) => {
+    const d = e.target; if (!(d instanceof HTMLDialogElement) || d.__keepY == null) return;
+    const y = d.__keepY; d.__keepY = null;
+    requestAnimationFrame(() => back(y));
+  }, true);
+})();
 // 용의 대륙 화면 동작 (예전엔 index.html 안에 있던 스크립트를 그대로 옮김)
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -2429,6 +2447,14 @@
     if (tg) return Object.values(tg).reduce((a, v) => a + v, 0);
     return it.value || 0;
   }
+  // 특별한 기능이 있는 가구(텃밭·방명록 받침·귀환 주문진)는 그림 왼쪽 위 귀퉁이에 별 (pack.json cat[].fn: 설명)
+  function markFn(root) {
+    root.querySelectorAll('canvas.dk-th').forEach((c) => {
+      const note = HP.fn(c.dataset.s); if (!note || c.parentElement.classList.contains('th-fn')) return;
+      const w = document.createElement('span'); w.className = 'th-fn'; w.title = note; c.replaceWith(w); w.appendChild(c);
+      const st = document.createElement('i'); st.className = 'fn-star'; st.setAttribute('aria-hidden', 'true'); st.innerHTML = '<svg viewBox="0 0 24 24" width="17" height="17" shape-rendering="geometricPrecision"><circle cx="12" cy="12" r="10.6" fill="#C9922E" stroke="#fff" stroke-width="2"/><path d="M12 6.6l1.6 3.3 3.6.5-2.6 2.5.6 3.6L12 14.8l-3.2 1.7.6-3.6-2.6-2.5 3.6-.5z" fill="#fff" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/></svg>'; w.appendChild(st); // 금빛 동그라미(흰 테두리) 안에 끝이 둥근 흰 별
+    });
+  }
   const INV_TAB_NAME = { treasure: '보물', equip: '장신구', use: '회복약', buff: '강화 음식', gift: '선물·추억', meal: '식구 요리', fish: '낚시', trophy: '전리품', mat: '재료' };
   function openInv() { fetchInv(() => { renderInv(); openPanel('inv-dlg'); }); }
   // ── 쓰임새: 이 재료로 만들 수 있는 것 (숨겨진 제작법은 찾아낸 것만) ──
@@ -3367,7 +3393,7 @@
         const sum = S.stats.reduce((a, x) => a + (v.stats[x.key] || 0), 0);
         const full = v.trains >= v.trainLimit || (v.statCap && sum >= v.statCap); // 횟수를 다 썼거나 이번 단계에서 배울 만큼 다 배움
         const cnt = ` · 가르친 횟수 ${v.trains}/${v.trainLimit}${v.statCap ? ` · 능력치 합 ${sum}/${v.statCap}` : ''}`;
-        label(full ? `이번 단계에서는 더 가르칠 수 없다. 조금 더 자라야 한다.${cnt}`
+        label(full ? (v.grown ? `다 자란 용이라 더 가르칠 것이 없다.${cnt}` : `이번 단계에서는 더 가르칠 수 없다. 조금 더 자라야 한다.${cnt}`)
           : v.trainIn > 0 ? `가르치기: ${dur(v.trainIn)} 뒤에 다시 할 수 있다${cnt}`
           : `가르치기 (행동력 ${R2.trainAp}, 기력 ${R2.trainEn})${S.me.ap < R2.trainAp ? ' · 행동력이 모자라다' : S.me.en < R2.trainEn ? ' · 기력이 모자라다' : ''}${cnt}`);
         const tired = full || v.trainIn > 0 || S.me.ap < R2.trainAp || S.me.en < R2.trainEn;
@@ -5723,6 +5749,17 @@
     els.forEach((e, i) => { e.scrollTop = tops[i]; });
     requestAnimationFrame(() => els.forEach((e, i) => { if (Math.abs(e.scrollTop - tops[i]) > 1) e.scrollTop = tops[i]; }));
   }
+  // 열려 있는 창을 다시 그려도 보던 자리(스크롤)가 맨 위로 튀지 않게: 다시 그리는 함수를 감쌈 (창이 닫혀 있으면 그대로)
+  // 스킬·칭호·상태·동료·야바위·밤 장터 노점·기억의 벽·둥지 시설 창. (소지품·제작·둥지·결투장·떠돌이 상인은 원래 따로 지킴)
+  function keepWrap(fn, id) {
+    return function (...args) {
+      const d = $(id); if (!d || !d.open) return fn.apply(this, args);
+      let r; keepScroll(d, () => { r = fn.apply(this, args); }); return r;
+    };
+  }
+  renderSkills = keepWrap(renderSkills, 'skill-dlg'); renderTitles = keepWrap(renderTitles, 'title-dlg'); renderChar = keepWrap(renderChar, 'char-dlg');
+  renderFriends = keepWrap(renderFriends, 'friends-dlg'); renderYabaInfo = keepWrap(renderYabaInfo, 'yaba-dlg'); renderNmStall = keepWrap(renderNmStall, 'nm-stall-dlg');
+  renderWall = keepWrap(renderWall, 'city-wall-dlg'); drawFacPane = keepWrap(drawFacPane, 'fac-dlg');
   // 제작 창을 다시 그려도 적던 글이 지워지지 않게: 입력칸(data-keep)의 글과 커서를 그대로 옮기고,
   // 한글을 조합하는 도중에는 다시 그리지 않고 조합이 끝난 뒤에 그림 (기력이 차는 등 'me'가 올 때마다 다시 그려지기 때문)
   let CRAFT_COMPOSING = false, CRAFT_PENDING = false;
@@ -6058,7 +6095,7 @@
         const ni = el('input', 'input'); ni.maxLength = 12; ni.placeholder = '이름 (2~12자)'; ni.value = last.custom?.named ? last.name : ''; ni.setAttribute('aria-label', '빚은 물건의 이름'); ni.dataset.keep = `fx-name-${FREE_LAST.id}`;
         const di = el('input', 'input'); di.maxLength = 60; di.placeholder = '한 줄 설명 (60자, 비워도 됨)'; di.setAttribute('aria-label', '빚은 물건의 설명'); di.dataset.keep = `fx-desc-${FREE_LAST.id}`;
         const ok = el('button', 'btn', last.custom?.named ? '이름 바꾸기' : '이름 붙이기'); ok.type = 'button';
-        ok.addEventListener('click', () => socket.emit('craft:name', { id: FREE_LAST.id, name: ni.value, desc: di.value }, (res) => { if (res.error) return toast(res.error); toast(`'${res.item.name}'${josa(res.item.name, '이', '가')} 되었다.`); }));
+        ok.addEventListener('click', () => socket.emit('craft:name', { id: FREE_LAST.id, name: ni.value, desc: di.value, qty: FREE_LAST.qty || 1 }, (res) => { if (res.error) return toast(res.error); if (res.id && res.id !== FREE_LAST.id) FREE_LAST.id = res.id; toast(`'${res.item.name}'${josa(res.item.name, '이', '가')} 되었다.${res.moved ? ' 예전에 빚어 둔 것은 예전 이름 그대로다.' : ''}`); fetchInv(() => { if ($('inv-dlg').open) keepScroll($('inv-dlg'), renderInv); if ($('craft-dlg').open) keepScroll($('craft-dlg'), renderCraft); }); }));
         row.append(ni, di, ok); c.appendChild(row);
       }
       const keep = el('button', 'btn', '이 조합을 내 제작법으로 남기기'); keep.type = 'button';
@@ -7429,7 +7466,7 @@
       let pick = fgv.spare[0] ? fgv.spare[0].s : null; const num = fp.querySelector('#hg-fg-n');
       fp.querySelectorAll('.dk-it').forEach((b) => b.addEventListener('click', () => { pick = b.dataset.s; fp.querySelectorAll('.dk-it').forEach((x) => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-selected', on); }); fp.querySelector('.hg-name').textContent = b.querySelector('span').textContent; num.max = +b.dataset.n || 1; num.value = 1; }));
       const paintTh = () => fp.querySelectorAll('.dk-th').forEach((c) => { HP.paint(c, HP.sprite(c.dataset.s)); const [w, hh] = HP.size(c.dataset.s), k = Math.min(3, 64 / w, 40 / hh); c.style.width = `${Math.round(w * k)}px`; c.style.height = `${Math.round(hh * k)}px`; });
-      HP.onReady(paintTh); // 그림 팩을 아직 안 불러왔으면 다 불러온 뒤에 그림
+      HP.onReady(() => { paintTh(); markFn(fp); }); // 그림 팩을 아직 안 불러왔으면 다 불러온 뒤에 그림
       fp.querySelector('#hg-fg-go')?.addEventListener('click', () => { if (pick) cityCall('city:fgift', { name, s: pick, n: +num.value || 1 }, () => { if ($('hgift-dlg').open) $('hgift-dlg').close(); cityVisit(name); }); });
       wrap.querySelectorAll('[data-hg]').forEach((t) => { if (t.tagName !== 'BUTTON') return; t.addEventListener('click', () => { wrap.querySelectorAll('button[data-hg]').forEach((b) => { const on = b === t; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); }); wrap.querySelectorAll('.hg-pane').forEach((p) => { p.hidden = p.dataset.hg !== t.dataset.hg; }); }); });
       body.replaceChildren(wrap);
@@ -14526,7 +14563,9 @@
   }
   function renderCityAll() {
     if (!CT.v || $('city-card').hidden) return;
+    const y0 = window.scrollY; // 다시 그려도 보던 자리 그대로 (스크롤 고정이 없는 브라우저(사파리 등)에서 내용이 바뀌며 화면이 튀던 것)
     renderCityCard(); renderCityMap();
+    if (Math.abs(window.scrollY - y0) > 1) window.scrollTo(window.scrollX, y0); requestAnimationFrame(() => { if (Math.abs(window.scrollY - y0) > 1 && !document.querySelector('dialog[open]:modal')) window.scrollTo(window.scrollX, y0); });
     if ($('city-home-dlg').open) renderHome();
     if ($('city-wall-dlg').open) renderWall();
   }
@@ -14570,7 +14609,9 @@
     else h += `<div class="cc-total"><div class="t"><b>도시 재건도</b><span><strong>${ctNum(Math.min(v.son, v.total))}</strong> / ${ctNum(v.total)}</span></div>${ctBar(v.son, v.total, 'big' + (v.son >= v.total ? ' done' : ''))}</div>
       <p class="note">${nz ? `${nz.box.length ? `${ctIga(nz.name)} 재건되려면 재건도와 재료함이 둘 다 차야 한다.` : `${ctIga(nz.name)} 재건도만 차면 재건된다. 재료함은 서고부터 생긴다.`} 재건도는 골렘의 공사 시간과 집터에 넣은 재료로 오르고, 한 드래곤이 하루에 보탤 수 있는 양은 ${v.rules.dayCap}까지다. ${nz.box.length ? `재료함은 골렘이 가져온 도시 재료로 채운다. 지도에서 ${nz.name}${ctJ(nz.name, '을', '를')} 눌러 넣을 수 있다.` : ''}` : '일곱 구역이 모두 재건되었다.'}</p>`;
     h += '</div>';
+    const bdTop = document.querySelector('#city-map .bd-grid')?.scrollTop || 0; // 도시 게시판 칸 안의 스크롤: 다시 그려도 그대로 (이웃 집터를 누르면 맨 위로 가던 것)
     $('city-map').innerHTML = h;
+    if (bdTop) { const g = document.querySelector('#city-map .bd-grid'); if (g) g.scrollTop = bdTop; }
   }
   function zonePane(id) {
     const v = CT.v, z = zoneOf(id), st = z.state, inv = v.me.inv || {};
@@ -14879,6 +14920,7 @@
   function decoBind(body, h) {
     body.querySelectorAll('.lk-sw').forEach((c) => HP.paint(c, HP.swatch(c.dataset.t, c.dataset.k))); // 바닥·벽 견본
     body.querySelectorAll('.dk-th').forEach((c) => { HP.paint(c, HP.sprite(c.dataset.s)); const [w, hh] = HP.size(c.dataset.s), k = Math.min(3, 64 / w, 40 / hh); c.style.width = `${Math.round(w * k)}px`; c.style.height = `${Math.round(hh * k)}px`; });
+    markFn(body);
     dkDraw(body, h);
     const hit = body.querySelector('.dk-hit'); if (!hit) return;
     const dot = (e) => { const r = hit.getBoundingClientRect(); return [((e.clientX - r.left) / r.width) * HP.W, ((e.clientY - r.top) / r.height) * HP.H]; };
@@ -15099,7 +15141,7 @@
         const key = cv._hpAnim.deco.filter((o) => FR[o.s]).map((o) => frameOf(o.s)).join(); if (key !== cv._hpKey) { cv._hpKey = key; paint(cv, cv._hpAnim); } } }, 80);
     const defaults = (plot, done) => (P && P.defaults[plot] ? P.defaults[plot].filter((o) => done.includes(o.room)).map(({ room, ...o }) => o) : []);
     const catalog = () => (P ? Object.keys(P.cat).sort((a, b) => DK_CATS.findIndex(([c]) => c === P.cat[a].cat) - DK_CATS.findIndex(([c]) => c === P.cat[b].cat)) : []);
-    return { W, H, ROOMS, ready: () => ok, onReady: (f) => (ok ? f() : wait.push(f)), plan, paint, sprite, swatch, size, defaults, where, hit, layer, order, effLayer, support, baseOf, drawSprite, catalog, zone,
+    return { W, H, ROOMS, fn: (s) => (P && P.cat[s] && P.cat[s].fn) || '', ready: () => ok, onReady: (f) => (ok ? f() : wait.push(f)), plan, paint, sprite, swatch, size, defaults, where, hit, layer, order, effLayer, support, baseOf, drawSprite, catalog, zone,
       name: (k) => (sp(k) ? sp(k).name : k), cat: (k) => (P && P.cat[k] ? P.cat[k].cat : ''),
       group: (b) => (P && P.groups[b]) || null, groupLabel: (b) => (P && P.groupLabel && P.groupLabel[b]) || '방향', /* 꽃은 '모양 바꾸기' */ variant: (b, i) => { const g = P && P.groups[b]; return g ? g[i % g.length] : b; },
       floors: () => (P ? P.floors : []), walls: () => (P ? P.walls : []), yardFloors: () => (P ? P.yardFloors.map((id) => (id === 'cobble' ? { id, name: '회색 자갈' } : P.floors.find((f) => f.id === id))) : []),

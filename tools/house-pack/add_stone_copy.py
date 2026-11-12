@@ -6,12 +6,14 @@ import numpy as np
 from PIL import Image
 PACK = sys.argv[1] if len(sys.argv) > 1 else 'public/house/pack.json'
 P = json.load(open(PACK, encoding='utf-8')); W, H = P['W'], P['H']
+FRAMEMASK = P.get('frameMask') or json.load(open('tools/house-pack/src/frame_mask.json'))   # 칸마다 테두리 점 (게임에는 안 쓰여 pack.json에서 빼고 따로 둠)
 im = lambda u: np.array(Image.open(io.BytesIO(base64.b64decode(u.split(',')[1]))).convert('RGBA'))
 B, F = im(P['base']), im(P['front'])
 dec = lambda s: np.frombuffer(base64.b64decode(s), np.uint32)
 OX, OY, OW, OH = P['rooms']['own']
-ownB = set(dec(P['frameMask']['own']['idx']).tolist()); ownF = set(dec(P['frameMask']['own']['fidx']).tolist())
-def src_of(r, x, y):
+ownB = set(dec(FRAMEMASK['own']['idx']).tolist()); ownF = set(dec(FRAMEMASK['own']['fidx']).tolist())
+def src_plain(r, x, y):
+    # 기본 대응: 왼쪽 끝 8칸은 고유 칸 왼쪽 끝, 오른쪽 끝 8칸은 고유 칸 오른쪽 끝, 그 사이 긴 변은 왼쪽부터 16칸 주기 (위아래도 같은 방식)
     rx, ry, rw, rh = P['rooms'][r]
     dx, dy = x - rx, y - ry
     if dx < 8: sx = OX + dx
@@ -22,10 +24,20 @@ def src_of(r, x, y):
     elif y >= ry + rh - 8: sy = OY + OH + (y - (ry + rh))   # 아래 테·앞면은 아래쪽 끝에서 같은 거리
     else: sy = OY + 8 + ((dy - 8) % 16)
     return sx, sy
+def src_of(r, x, y):
+    rx, ry, rw, rh = P['rooms'][r]
+    dx = x - rx
+    if r == 'work' and (rw, rh) == (OW, OH):
+        # 작업실은 고유 칸과 크기가 같고 문이 반대쪽(왼쪽)에 있음 → 고유 칸 그림을 좌우로 뒤집어 그대로 (문 자리끼리 맞음)
+        return OX + OW - 1 - dx, OY + (y - ry)
+    if r == 'live' and dx <= (rw - 1) / 2 and y - ry >= 8:
+        # 거처: 오른쪽 절반(기본 대응) 그림을 왼쪽 절반에 거울처럼 그대로 → 좌우 대칭. 윗변(위 8줄)은 기본 대응 그대로 둠
+        return src_plain(r, rx + rw - 1 - dx, y)
+    return src_plain(r, x, y)
 P['stoneCopy'] = {}
 for r in ('live', 'work'):
     pb, pf = [], []
-    for p in dec(P['frameMask'][r]['idx']).tolist():
+    for p in dec(FRAMEMASK[r]['idx']).tolist():
         y, x = divmod(p, W); sx, sy = src_of(r, x, y); q = sy * W + sx
         if 0 <= sx < W and 0 <= sy < H and q in ownB: pb += [p, q]
     rx, ry, rw, rh = P['rooms'][r]

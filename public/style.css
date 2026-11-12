@@ -2635,6 +2635,7 @@ button.trait.skill.on { background: #EEF2F6; box-shadow: inset 0 0 0 1px var(--s
 .nest-state .row { flex-wrap: wrap; }
 .btn.nest-btn { gap: 6px; font-size: 13px; line-height: 1.35; font-weight: 500; } /* 둥지 창 버튼: 크기는 그대로, 글씨만 작게 통일 (날아가기·옮기기·쉬기 등) */
 .btn.nest-btn.primary { font-weight: 600; }
+.btn.nest-btn { min-height: 40px; height: auto; padding-top: 0; padding-bottom: 0; } /* 높이를 다른 보통 단추(40px)와 맞춤 (전 42px) */
 .btn.nest-btn .cost { font-size: 11px; white-space: nowrap; }
 .hoard-sum { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; padding: 12px 14px; background: #FBF6E8; border: 1px solid #E2CF9E; }
 .hoard-sum .v { font: 700 26px/1 var(--serif); color: #6B4E12; font-variant-numeric: tabular-nums; }
@@ -5297,9 +5298,18 @@ body.chat-off #say, body.chat-off #chat-view { display: none; }
 .fx-mine-dlg .fx-go { display: flex; align-items: center; gap: 6px; }
 .fx-mine-dlg .fx-qty { width: 56px; height: 34px; min-height: 0; padding: 0 6px; }
 
-/* 보물더미: 분류 · 이름 찾기 (소지품 창과 같은 모양) */
-.hoard-bar { margin-top: 10px; }
-.hoard-find { justify-content: flex-start; margin: 6px 0 8px; }
+/* 보물더미: 분류 · 이름 찾기. 위의 '쌓인 보물 / 소지품'(밑줄 탭)과 헷갈리지 않게, 분류는 작은 알약 칩으로 (하위 메뉴) */
+.nest-pane > .seg.dtabs.hoard-sub { margin-bottom: 0; }   /* 둥지 칸은 칸 사이 간격(12px)이 있으니 따로 여백을 더하지 않음 */
+.hoard-bar.utabs-wrap { margin: 0; }
+.hoard-bar .utabs { margin: 0 !important; border-bottom: 0 !important; background: none !important; flex-wrap: nowrap; gap: 2px; overflow-x: auto; scrollbar-width: none; -webkit-mask-image: none; mask-image: none; }
+.hoard-bar .utabs::-webkit-scrollbar { display: none; }
+/* 분류: 테두리 없는 작은 글자 칩. 고른 것만 옅은 바탕 (위의 밑줄 탭보다 한 단계 가볍게) */
+.hoard-bar .utabs .chipbtn { display: inline-flex !important; align-items: center; flex: none; min-height: 26px; margin: 0 !important; padding: 0 10px; border: 0; border-radius: 3px; background: none; color: var(--muted); font: 500 12.5px/26px var(--sans); }
+.hoard-bar .utabs .chipbtn:hover { color: var(--ink); background: rgba(42, 66, 86, .05); }
+.hoard-bar .utabs .chipbtn.on { background: rgba(42, 66, 86, .1); color: var(--steel-d); font-weight: 600; }
+.hoard-bar .utabs .chipbtn.on::after { display: none; }
+.hoard-bar .utabs .chipbtn.more, .hoard-bar .utabs-menu { display: none !important; }   /* 칩이 줄을 넘겨 다 보이니 '분류' 펼침은 쓰지 않음 */
+.hoard-find { justify-content: flex-start; margin: -6px 0 0; } /* 분류 칩(테두리 없음)과 찾기 칸 사이는 칸 사이 간격 12px에서 6px 줄여 붙임 */
 .hoard-find .hoard-q { flex: 1 1 auto; max-width: 320px; }
 .hoard-none { margin: 4px 0 8px; }
 
@@ -5315,3 +5325,8 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   .fx-mine-dlg .fx-row .fx-t { flex: 1 1 100%; }
   .fx-mine-dlg .fx-row .fx-go { margin-left: auto; }
 }
+
+/* 특별한 기능이 있는 가구: 그림 왼쪽 위 귀퉁이에 별 (꾸미기 목록 · 만들기 · 도면 · 선물 창) */
+.th-fn { position: relative; display: inline-flex; align-items: flex-end; justify-content: center; line-height: 0; }
+.th-fn .fn-star { position: absolute; left: -7px; top: -7px; width: 17px; height: 17px; line-height: 0; pointer-events: none; } /* 금빛 동그라미(흰 테두리) 안에 끝이 둥근 흰 별, 그림자 없음 */
+.th-fn .fn-star svg { display: block; }

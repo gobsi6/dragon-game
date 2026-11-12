@@ -829,7 +829,7 @@ function fighterView(f, mine) {
     enraged: !!f.enraged, down: f.hp <= 0, minion: !!f.minion,
   };
   if (mine) {
-    v.sig = f.sig ? { type: f.sig.type, name: f.sig.name, used: !!f.sig.used, gate: f.sig.gate || 0, asleep: sigAsleep(f) } : null; // 혼의 기술 (gate·asleep: 사냥·강적의 공격은 체력 절반 이하에서 깨어남)
+    v.sig = f.sig ? { type: f.sig.type, name: f.sig.name, used: !!f.sig.used, gate: f.sig.gate || 0, asleep: sigAsleep(f) } : null; // 혼의 기술 (gate·asleep: 공격은 모든 싸움에서 체력 절반 이하에서 깨어남)
     v.skills = [
       ...(f.breath ? [{ id: 'breath', name: BREATHS[f.breath].name, en: BREATH_COST.en, cd: f.cd.breath || 0 }] : []),
       ...f.skills.map((id) => ({ id, name: SKILLS[id].name, en: SKILLS[id].en, cd: f.cd[id] || 0 })),
@@ -878,7 +878,7 @@ function hunt(d) {
   const chance = corrupted ? (logic.isRuin(d.region) ? RUIN.eliteChance : MIND.eliteChance) : COMBAT.eliteChance;
   const eliteRoll = debug.forceElite ?? (d.level >= COMBAT.eliteFrom && Math.random() < chance * (logic.titleMods(d).eliteFind || 1)); // 칭호 '강적을 부르는 자'
   const me = fromDragon(d, 'hunt');
-  if (me.sig?.type === 'atk' && SIGNATURE.types.atk.hpGate) me.sig.gate = SIGNATURE.types.atk.hpGate; // 혼의 기술(공격): 사냥·강적에서는 체력이 절반 이하일 때만
+  if (me.sig?.type === 'atk' && SIGNATURE.types.atk.hpGate) me.sig.gate = SIGNATURE.types.atk.hpGate; // 혼의 기술(공격): 체력이 절반 이하일 때만 (sigOf에서 이미 붙음. 모든 싸움 공통)
   { const ti = logic.titleMods(d); if (ti.endure != null) { me.endure = ti.endure; me.endureHeal = ti.endureHeal || 0; } } // 칭호 '불굴의 의지'·'꺾이지 않는 마음' (사냥·강적, bossBattle에도 같은 줄)
   if (eliteRoll) {
     const foe = fromCreature(place, true, corrupted);

@@ -1355,7 +1355,7 @@ logic.hooks.registerCustom = (d, ids, r) => {
   let id = free.hashId(sig), n = 0;
   const lvReq = r.kind === 'gear' ? (r.def.lvReq || 0) : 0;
   while (all[id] && (all[id].custom?.sig !== sig || (all[id].lvReq || 0) !== lvReq)) id = free.hashId(`${sig}#${++n}`); // 착용 레벨이 다르면 다른 물건
-  if (all[id]) { ITEMS[id] = all[id]; return { id, isNew: false }; }
+  if (all[id]) { for (let k = 0; k < 20 && all[id].custom?.renamedTo && all[all[id].custom.renamedTo]; k++) id = all[id].custom.renamedTo; ITEMS[id] = all[id]; return { id, isNew: false }; } // 이름을 바꿔 새 물건으로 갈라졌으면 가장 새 이름으로
   const mats = ids.map((x) => ITEMS[x].name).join('·');
   const base = { name: r.name, rarity: r.rarity, value: r.value, desc: `${mats}${josa(mats, '을', '를')} 섞어 빚었다.` };
   const def = r.kind === 'gear'
@@ -1403,6 +1403,9 @@ function customGC() {
   }
   for (const c of Object.values(CREATIONS)) keep.add(c.id);
   for (const id of nightMarket.heldItems()) keep.add(id); // 야시장 노점에 맡겨 둔 빚은 물건
+  // 이름을 붙여 새 물건으로 갈라진 예전 물건(renamedTo)은, 새 이름 물건이 남아 있는 동안 지우지 않음 (작은 기록 하나):
+  // 이걸 지우면 같은 조합으로 빚을 때 새 이름을 찾지 못해 이름 없는 물건이 다시 생기므로. 대신 효과 글 등은 그대로라 크기는 물건 하나 몫(약 0.3KB)
+  for (const [id, def] of Object.entries(CUSTOM)) { const to = def.custom?.renamedTo; if (to && CUSTOM[to]) keep.add(id); }
   const now = Date.now(), DAY = 86400000;
   let removed = 0, touched = false;
   for (const [id, def] of Object.entries(CUSTOM)) {
@@ -1870,8 +1873,16 @@ function onConnect(socket) {
     if (!free.NAME_RE.test(name)) return ack({ error: '이름은 한글·영문·숫자로 2~12자까지 쓸 수 있다.' });
     const desc = str(p?.desc).replace(/\s+/g, ' ').replace(/[<>]/g, '').slice(0, 60); // 꺾쇠는 빼 둠 (화면에 그대로 끼어들지 않게)
     const nd = { ...def, name, desc: desc || def.desc, custom: { ...def.custom, named: true } };
-    customSave(id, nd);
-    ack({ ok: true, item: nd });
+    // 같은 조합으로 예전에 빚어 둔 것(내 소지품·보물더미, 남에게 준 것)이 있으면 그것들은 예전 이름 그대로 두고,
+    // 방금 빚은 것(qty)만 새 이름의 물건으로 옮김. 앞으로 같은 조합으로 빚으면 새 이름으로 나옴 (custom.renamedTo)
+    const d = entry.dragon, mine = db.itemCount(d.id, id), qty = Math.max(1, Math.min(999, Math.floor(Number(p?.qty)) || 1)), move = Math.min(qty, mine);
+    if (db.itemTotal(id) <= move) { customSave(id, nd); return ack({ ok: true, item: nd, id }); } // 다른 것이 없음: 그대로 이름만 바꿈
+    let nid = free.hashId(`${def.custom.sig}#name:${name}`), n = 0;
+    while (ITEMS[nid] && !(ITEMS[nid].custom?.sig === def.custom.sig && ITEMS[nid].name === name)) nid = free.hashId(`${def.custom.sig}#name:${name}#${++n}`);
+    customSave(nid, { ...nd, custom: { ...nd.custom, from: id, at: Date.now(), renamedTo: undefined } });
+    customSave(id, { ...def, custom: { ...def.custom, renamedTo: nid } });
+    if (move > 0) db.saveState(d, [{ id, qty: -move }, { id: nid, qty: move }]);
+    ack({ ok: true, item: ITEMS[nid], id: nid, moved: move });
   });
   socket.on('seen:set', (payload, ack) => {
     if (typeof ack !== 'function') ack = () => {};
@@ -2267,7 +2278,7 @@ function onConnect(socket) {
     const qs = [qual.good && `좋음 ${qual.good}`, qual.great && `빼어남 ${qual.great}`, qual.mw && `걸작 ${qual.mw}`].filter(Boolean).join(' · ');
     const lines = [`${name}${josa(name, '을', '를')} ${done}번 빚어 ${total}개를 얻었다.${kinds.length > 1 ? ` (${kinds.map((k) => `${ITEMS[k]?.name} ${made[k]}`).join(', ')})` : ''}${qs ? ` (${qs})` : ''}`];
     if (done < n) lines.push(`${n}번 중 ${done}번만 빚었다. ${stop || ''}`.trim());
-    return countMade(d, { title: last.title || '실험', lines, items, made: kinds.map((k) => ({ id: k, qty: made[k] })), free: last.free });
+    return countMade(d, { title: last.title || '실험', lines, items, made: kinds.map((k) => ({ id: k, qty: made[k] })), free: last.free ? { ...last.free, qty: made[last.free.id] || 1 } : last.free }); // qty: 방금 빚은 그 물건 수 (이름 붙일 때 그만큼만 새 이름으로)
   });
   itemAction('gear:enhance', (d, p, have) => logic.enhanceGear(d, str(p.item), have));
   itemAction('gear:engrave', (d, p, have) => logic.engraveGear(d, str(p.item), str(p.elem), have));

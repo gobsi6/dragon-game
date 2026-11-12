@@ -32,4 +32,5 @@ for r, (rx, ry, rw, rh) in P['rooms'].items():
     P['frameMask'][r] = {'idx': enc(fb), 'fidx': enc(ff)}
     print(r, int(fb.sum()), int(ff.sum()))
 P['v'] = max(P['v'], 27)
+json.dump(P['frameMask'], open('tools/house-pack/src/frame_mask.json', 'w'), separators=(',', ':'))   # 다른 도구가 읽는 사본
 json.dump(P, open(PACK, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
