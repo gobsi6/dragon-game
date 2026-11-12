@@ -1580,6 +1580,17 @@ function useItem(d, id, have, opts = {}) {
     lines.push(`차가운 물이 목을 타고 내려가자 ${st ? st.name : key}의 상흔이 희미해지더니 사라졌다. (${st ? st.name : key} +1)`, sc.length ? `남은 상흔 ${sc.length}개.` : '이제 몸에 상흔이 하나도 없다.', '다음 정수는 7일 뒤에 받아들일 수 있다.');
     return { title: it.name, lines, items: [{ id, qty: -1 }] };
   }
+  if (u.statReset) { // 태초의 조각: 능력치를 종류 기본값으로 되돌리고, 그동안 나눈 포인트(처음 만들 때 나눈 것 포함)를 모두 돌려받음
+    const base = require('./game-data').KINDS[d.kind]?.stats; if (!base) return { error: '지금은 쓸 수 없다.' };
+    let back = 0; const diff = {};
+    for (const { key } of STATS) { diff[key] = (d[key] || 0) - (base[key] || 0); back += diff[key]; }
+    if (back <= 0) return { error: '되돌릴 능력치가 없다. 이미 태어날 때의 모습이다.' };
+    for (const { key } of STATS) d[key] = base[key];
+    d.hp_max -= (diff.scale || 0) * 5; d.en_max -= (diff.wisdom || 0) * 2; // 비늘·지혜로 늘었던 최대 체력·기력도 함께 (spendStats와 같은 셈)
+    d.stat_pts = (d.stat_pts || 0) + back;
+    clampVitals(d);
+    return { title: it.name, lines: ['조각을 쥐고 깨뜨리자 오래된 빛이 온몸으로 번지며, 몸에 새겨진 힘이 태어날 때의 모습으로 돌아갔다.', `능력치 포인트 ${back}점을 돌려받았다. 드래곤 기록에서 다시 나눌 수 있다. (남은 포인트 ${d.stat_pts})`], items: [{ id, qty: -1 }] };
+  }
   if (u.sigReset) { // 혼을 비우는 돌: 혼의 기술을 내려놓음 (스킬 창에서 다시 고름)
     const c = combatJson(d);
     if (!c.sig?.type) return { error: '내려놓을 혼의 기술이 없다.' };
@@ -1824,6 +1835,7 @@ function marketCheck(d) {
 const SHOP_BUYABLE = new Set([...Object.values(SHOPS).flat(), ...Object.values(SHOPS_SPECIAL || {}).flat()]);
 const RESALE = 0.8; // 가장 싼 사는 값의 이만큼까지만
 const sellPrice = (d, id) => {
+  if (ITEMS[id].sellFixed) return ITEMS[id].sellFixed; // 정해 둔 값으로만 팔림 (태초의 조각: 3000닢, 평판·특성과 상관없이)
   const base = Math.max(1, Math.floor(ITEMS[id].value * priceRates(d, d.region).sell * traitMods(d).sell));
   if (!SHOP_BUYABLE.has(id)) return base;
   const cheapest = ITEMS[id].value * (1 - SR.friendly.buyDiscount) * Math.min(1, ...Object.values(TRAITS).map((t) => t.mods?.buy || 1)); // 어떤 특성·평판으로도 이보다 싸게는 못 삼

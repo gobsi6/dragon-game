@@ -238,6 +238,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       if (!ITEMS[it.id] || seen.has(it.id)) return '알 수 없는 물건이다.';
       seen.add(it.id);
       if (!Number.isInteger(it.qty) || it.qty < 1) return '개수를 다시 정해야 한다.';
+      if (ITEMS[it.id].noTrade) { const nm0 = ITEMS[it.id].name; return `${nm0}${josa(nm0, '은', '는')} 다른 드래곤에게 넘길 수 없다.`; } // 태초의 조각 등 (선물·교환·심부름 모두)
       // 프리셋에 넣어 둔 몫과 끼고 있는 장신구는 넘길 수 없음 (끼고 있는 것은 소지품에서 이미 빠져 있음. 시장 팔기·야시장 노점과 같게)
       const have = db.itemCount(d.id, it.id), kept = logic.keptFor ? logic.keptFor(d, it.id) : 0, nm = ITEMS[it.id].name;
       if (have - kept < it.qty) {
@@ -968,6 +969,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       if (!ids.length) return { error: '선물을 받을 드래곤을 골라야 한다.' };
       const gold = Math.max(0, Math.floor(Number(p.gold) || 0)), items = cleanItems(p.items), n = ids.length;
       if (!gold && !items.length) return { error: '보낼 것을 골라야 한다.' };
+      const bad1 = checkOffer(d, gold, items); if (bad1) return { error: bad1 }; // 넘길 수 없는 물건 등은 그대로 알림
       const bad = checkOffer(d, gold * n, items.map((x) => ({ ...x, qty: x.qty * n }))); // 모두에게 줄 만큼 있는지 먼저
       if (bad) return { error: `${n}명에게 모두 주기에는 모자란다. ${bad}` };
       const done = [], fail = [];

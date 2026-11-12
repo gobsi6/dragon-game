@@ -132,6 +132,7 @@ module.exports = function setupNightMarket({ io, db, online, logic, sendMe }) {
     const R = NM.stall;
     if (!ITEMS[id]) return { error: '알 수 없는 물건이다.' };
     if (ITEMS[id].cat === 'treasure') return { error: '보물은 노점에 올릴 수 없다. 둥지의 보물더미에 쌓아 두자.' };
+    if (ITEMS[id].noTrade) return { error: `${ITEMS[id].name}${josa(ITEMS[id].name, '은', '는')} 다른 드래곤에게 넘길 수 없다. 노점에 올릴 수 없다.` };
     if (logic.sellLocked?.(d, id)) return { error: '판매 잠금을 건 물건이다. 자물쇠를 풀어야 노점에 올릴 수 있다.' };
     qty = Math.floor(Number(qty)); price = Math.floor(Number(price));
     if (!Number.isFinite(qty) || qty < 1 || qty > R.qtyMax) return { error: '개수를 다시 정해야 한다.' };

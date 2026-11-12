@@ -342,6 +342,8 @@ const ITEMS = {
   elder_ember:    { name: '고룡의 불씨',       rarity: 'rare', cat: 'trophy', value: 95, desc: '꺼지지 않는 붉은 불씨. 쥐고 있으면 먼 옛날 드래곤의 포효가 들리는 듯하다.' },
 
   // ── 만든 물건: 회복약 (use: 사용 효과) ──
+  // 태초의 조각: GM이 이벤트로 나눠 주는 능력치 초기화권. 다른 드래곤에게 넘길 수 없음(noTrade: 선물·교환·심부름·야시장 노점 막힘), 상점에는 팔 수 있음
+  origin_shard: { name: '태초의 조각', rarity: 'rare', type: 'use', use: { statReset: true }, value: 3000, sellFixed: 3000, noTrade: true, desc: '세상이 처음 빚어질 때 흩어진 빛의 부스러기. 쥐고 깨뜨리면 몸에 새겨진 능력치가 태어날 때의 모습으로 돌아가고, 그동안 나눈 포인트를 모두 돌려받아 다시 나눌 수 있다. 다른 드래곤에게 넘길 수 없다.' },
   oath_rune:    { name: '혼을 비우는 돌', rarity: 'rare', type: 'use', use: { sigReset: true }, value: 0, desc: '고대 유적의 오르딘이 옛 용들이 혼에 새긴 기술을 비워 내던 돌이라며 내준 것. 쥐면 손끝이 서늘하다. 쓰면 혼의 기술을 내려놓고, 스킬 창에서 다시 고를 수 있다.' },
   honey_salve:  { name: '꿀 고약',          rarity: 'common',   type: 'use', use: { hp: 55 },  desc: '상처에 바르면 금세 아문다.' },
   moss_salve:   { name: '이끼 고약',        rarity: 'uncommon', type: 'use', use: { hp: 70 },  desc: '빛나는 이끼가 상처를 차갑게 덮는다.' },

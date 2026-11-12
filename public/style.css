@@ -5353,3 +5353,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 #errand-dlg .er-row small { color: var(--muted); font-size: 11.5px; margin-left: auto; }
 #errand-dlg .er-row.off { opacity: .55; cursor: default; }
 #errand-dlg .er-tools .btn { flex: none; white-space: nowrap; height: 32px; min-height: 0; padding: 0 12px; font-size: 13px; } /* 폰에서 찾기 칸에 밀려 '모두 / 빼기' 두 줄로 접히지 않게 */ /* 옆 찾기 칸과 같은 높이·글자 크기 */
+/* GM: 새 계정 만들기 막기 */
+.gm-su-st { margin: 4px 0 8px; font-weight: 600; color: var(--ok, #2F6B4F); }
+.gm-su-st.closed { color: var(--danger, #9A3B3B); }
+.gm-su-msg { width: 100%; margin-bottom: 8px; }

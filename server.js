@@ -282,6 +282,8 @@ function bioOf(d) {
 
 // ── 계정 (REST) ────────────────────────────────────
 
+// 새 계정 만들기가 열려 있는지 (로그인 화면의 '계정 만들기' 탭에 안내)
+app.get('/api/signup', (req, res) => { const su = db.worldGet('signup', null); res.set('Cache-Control', 'no-store'); res.json({ open: !su?.closed || db.countUsers() === 0, msg: su?.closed ? su.msg || '' : '' }); });
 app.post('/api/register', async (req, res) => {
   const username = str(req.body?.username);
   const password = typeof req.body?.password === 'string' ? req.body.password : '';
@@ -295,6 +297,8 @@ app.post('/api/register', async (req, res) => {
   if (db.getUserByName(username)) {
     return res.status(409).json({ error: '이미 있는 아이디다. 다른 아이디를 골라야 한다.' });
   }
+  // GM이 새 계정 만들기를 막아 두었으면 (gm:signup). 첫 계정(GM)은 늘 만들 수 있음
+  { const su = db.worldGet('signup', null); if (su?.closed && db.countUsers() > 0) return res.status(403).json({ error: su.msg || '지금은 새 계정을 만들 수 없다. 대륙의 문이 잠시 닫혀 있다.' }); }
   hit(`reg:${req.ip}`, LIMIT.register.windowMs);
   const isGm = db.countUsers() === 0; // 처음 만든 계정이 GM
   const link = str(req.body?.link).replace(/\s+/g, ' ').trim().slice(0, 40); // GM과 연결된 계정 (GM 확인용 메모)

@@ -427,7 +427,16 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
       eventTitles: TITLES.filter((t) => t.event).map((t) => ({ id: t.id, name: t.crownText ? `${t.name} (${t.crownText})` : t.name })), // 이름이 같은 칭호는 순위로 구분 // 이벤트 칭호 (GM이 줌)
       origins: ORIGINS,
       log: db.gmLogList(40),
+      signup: (() => { const su = db.worldGet('signup', null) || {}; return { closed: !!su.closed, msg: su.msg || '', at: su.at || 0 }; })(), // 새 계정 만들기 막기
     }));
+
+    // 새 계정 만들기 막기 · 열기 (이미 있는 계정의 로그인과 새 드래곤 만들기는 그대로)
+    on('gm:signup', (p) => {
+      const closed = !!p.closed, msg = str(p.msg).replace(/\s+/g, ' ').slice(0, 100);
+      db.worldSet('signup', { closed, msg: closed ? msg : '', at: Date.now() });
+      db.gmLog(gmName(), '-', closed ? `새 계정 만들기를 막음${msg ? ` (${msg})` : ''}` : '새 계정 만들기를 다시 엶');
+      return { ok: true, signup: { closed, msg: closed ? msg : '', at: Date.now() }, log: db.gmLogList(40) };
+    });
 
     on('gm:list', (p) => ({
       ok: true,

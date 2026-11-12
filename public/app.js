@@ -212,6 +212,10 @@
     $('auth-form').password.autocomplete = mode === 'register' ? 'new-password' : 'current-password';
     $('auth-error').textContent = '';
     $('auth-forgot').hidden = mode !== 'login';
+    if (mode === 'register') fetch('/api/signup').then((r) => r.json()).then((s) => { // GM이 새 계정 만들기를 막아 두었으면 미리 알림
+      if (s && !s.open && $('auth-go').dataset.mode === 'register') { $('auth-error').textContent = s.msg || '지금은 새 계정을 만들 수 없다. 대륙의 문이 잠시 닫혀 있다.'; $('auth-go').disabled = true; }
+    }).catch(() => {});
+    else $('auth-go').disabled = false;
   });
   // 비밀번호를 잊었다면: 로그인 칸 대신 요청 칸
   const showPwReq = (on) => {
@@ -1852,7 +1856,8 @@
   let invCache = {}, invSrc = {}, invReady = false, invGot = {}; // invGot: 물건마다 마지막으로 얻은 시각 (획득순 정렬)
   // 넘길 수 있는 개수: 프리셋에 넣어 둔 몫은 뺌 (끼고 있는 것은 소지품에 없음). 서버 logic.keptFor와 같은 셈 — 거래·선물 목록에 씀
   const presetKept = (id) => { const w = Object.values(S.me?.equip || {}).filter((x) => x === id).length; let need = 0; for (const p of S.me?.presets || []) if (p?.eq) need = Math.max(need, Object.values(p.eq).filter((x) => x === id).length); return Math.max(0, need - w); };
-  const giveable = () => Object.entries(invCache).filter(([id, q]) => S.items[id] && q > 0).map(([id, q]) => [id, q - presetKept(id)]).filter(([, q]) => q > 0);
+  const giveable = () => Object.entries(invCache).filter(([id, q]) => S.items[id] && q > 0 && !S.items[id].noTrade) // 넘길 수 없는 물건(태초의 조각 등)은 선물·교환 목록에서 뺌
+    .map(([id, q]) => [id, q - presetKept(id)]).filter(([, q]) => q > 0);
   // 강화·각인한 장신구를 넘길 때의 안내 (강화는 내 기록이라 넘어가지 않음. 같은 것이 여러 개면 보통 것부터 나감)
   const enhNote = (id) => { const g = S.items[id]?.type === 'equip' && S.me?.craft?.gear?.[id]; if (!g || g.at !== 'inv') return ''; const t = [g.plus ? `+${g.plus}` : '', g.elem ? '각인' : ''].filter(Boolean).join('·') || '강화'; return `강화(${t})한 것은 넘기면 강화가 떨어진다. 같은 것이 여러 개면 강화가 붙지 않은 것부터 나간다.`; };
   function fetchInv(done) {
@@ -12384,6 +12389,7 @@
   }
   // 서버 탭: 고대도시 · 저장 파일 · 내 GM 드래곤 (예전 '기록'·'내 드래곤' 탭에 있던 것)
   function renderGmServer(body) {
+    gmSignupSec(body); // 새 계정 만들기 막기 · 열기 (서버 탭 맨 위)
     renderGmFights(body);
     renderGmCity(body);
     renderGmBackup(body);
@@ -12885,6 +12891,22 @@
     body.appendChild(r);
   }
 
+  // 새 계정 만들기 막기 · 열기
+  function gmSignupSec(body) {
+    const su = GM.meta.signup || { closed: false, msg: '' };
+    const sec = gmSection(body, '새 계정 만들기', su.closed ? '지금 막혀 있다. 이미 있는 계정의 로그인과 드래곤 만들기는 그대로 된다.' : '지금 열려 있다. 막으면 로그인 화면의 \'계정 만들기\'가 닫히고 아래 말이 보인다.');
+    const st = gEl('p', `gm-su-st${su.closed ? ' closed' : ''}`, su.closed ? `막혀 있음${su.at ? (() => { const t = new Date(su.at), p2 = (n) => String(n).padStart(2, '0'); return ` · ${t.getMonth() + 1}월 ${t.getDate()}일 ${p2(t.getHours())}:${p2(t.getMinutes())}부터`; })() : ''}` : '열려 있음');
+    sec.appendChild(st);
+    const inp = gEl('input', 'input gm-su-msg'); inp.maxLength = 100; inp.placeholder = '막을 때 보일 말 (비우면 기본 문구)'; inp.value = su.msg || ''; inp.setAttribute('aria-label', '막을 때 보일 말');
+    if (!su.closed) sec.appendChild(inp);
+    const r = gEl('div', 'gm-r');
+    gBtn(r, su.closed ? '새 계정 만들기 다시 열기' : '새 계정 만들기 막기', () => {
+      const closed = !su.closed;
+      if (!confirm(closed ? '새 계정 만들기를 막을까? 이미 있는 계정은 그대로 들어올 수 있다.' : '새 계정 만들기를 다시 열까?')) return;
+      gmCall('gm:signup', { closed, msg: inp.value }, (res) => { GM.meta.signup = res.signup; toast(closed ? '새 계정 만들기를 막았다.' : '새 계정 만들기를 다시 열었다.'); renderGm(); });
+    }, su.closed ? 'primary' : '');
+    sec.appendChild(r);
+  }
   function renderGmAnnounce(body) {
     body.appendChild(gEl('p', 'note', '접속 중인 모든 드래곤의 화면에 바로 뜨고, 지금 없는 드래곤에게는 다음 접속 때 보인다. 300자까지.'));
     const ta = gEl('textarea', 'input gm-ta');
