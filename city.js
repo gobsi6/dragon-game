@@ -489,6 +489,17 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
       if (n === ZF.bellNeed) { news(`오늘 고대도시 종탑의 종이 ${ZF.bellNeed}번 울렸다. 오늘 모두가 보탤 수 있는 재건도가 ${ZF.bellCap} 늘었다.`); lines.push(`종이 ${ZF.bellNeed}번 모였다. 오늘 모두의 재건도 상한이 ${ZF.bellCap} 늘었다.`); }
       save(); return { ok: true, lines };
     }
+    if (id === 'spring') { // 샘물 마시기: 하루 ZF.springTimes번, 체력·기력·정신 가득 (광폭화 중엔 정신은 그대로)
+      if (!m.spring || m.spring.day !== today) m.spring = { day: today, n: 0 };
+      if (m.spring.n >= ZF.springTimes) return err(`오늘은 샘물을 ${ZF.springTimes}번 다 마셨다. 내일 다시 마실 수 있다.`);
+      const hpMax = logic.hpCap(d), enMax = logic.enCap(d), mindNow = d.mind ?? MIND.max, mindOk = !logic.berserkOf(d);
+      const gain = { hp: Math.max(0, hpMax - d.hp), en: Math.max(0, enMax - d.en), mind: mindOk ? Math.max(0, MIND.max - mindNow) : 0 };
+      if (!gain.hp && !gain.en && !gain.mind) return err(logic.berserkOf(d) && mindNow < MIND.max ? '광폭화한 몸은 샘물로도 가라앉지 않는다. 체력과 기력은 이미 가득하다.' : '체력·기력·정신이 이미 가득하다. 마실 필요가 없다.'); // 횟수는 쓰지 않음
+      m.spring.n += 1;
+      d.hp = Math.max(d.hp, hpMax); d.en = Math.max(d.en, enMax); if (gain.mind) d.mind = MIND.max;
+      const got = [gain.hp && `체력 +${gain.hp}`, gain.en && `기력 +${gain.en}`, gain.mind && `정신 +${gain.mind}`].filter(Boolean).join(', ');
+      return { ok: true, lines: [`차고 맑은 샘물을 들이켰다. ${got}.${!mindOk && mindNow < MIND.max ? ' 광폭화한 정신은 가라앉지 않았다.' : ''} (오늘 ${ZF.springTimes - m.spring.n}번 남음)`] };
+    }
     if (m.zday[id] === today) return err('오늘은 이미 했다. 내일 다시 할 수 있다.');
     m.zday[id] = today;
     if (id === 'archive') {
