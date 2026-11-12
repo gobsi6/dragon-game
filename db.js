@@ -693,6 +693,7 @@ const q = {
   kinMove:      db.prepare('UPDATE kin SET dragon_id = ? WHERE id = ? AND dragon_id = ?'),
   arenaList:    db.prepare(`SELECT id, name, kind, level, combat, last_seen AS lastSeen, avatar_ver, (avatar IS NOT NULL) AS has_avatar, exp_end, exp_info, fallen, dead_at
                             FROM dragons WHERE id != ? AND dead_at IS NULL ORDER BY last_seen DESC LIMIT 60`),
+  plotDragons:  db.prepare('SELECT id, name, kind, level, combat, avatar_ver, (avatar IS NOT NULL) AS has_avatar FROM dragons WHERE id != ? AND dead_at IS NULL ORDER BY name'), // 골렘 심부름 받는 이 고르기 (집터가 있는지는 combat에서 봄)
   kinDel:       db.prepare('DELETE FROM kin WHERE id = ? AND dragon_id = ?'),
   pruneChat:    db.prepare('DELETE FROM chat WHERE region = ? AND id <= (SELECT id FROM chat WHERE region = ? ORDER BY id DESC LIMIT 1 OFFSET ?)'),
 };
@@ -1063,6 +1064,7 @@ module.exports = {
   hoardClear: (dragonId) => { q.hoardClear.run(dragonId); q.hoardGoldSet.run(0, dragonId); },
   kinMove: (kinId, from, to) => q.kinMove.run(to, kinId, from).changes > 0,
   arenaList: (me) => q.arenaList.all(me),
+  plotDragons: (me) => q.plotDragons.all(me),
   kinDelete: (kinId, dragonId) => q.kinDel.run(kinId, dragonId),
   inventory: (dragonId) => q.invList.all(dragonId),
   itemCount: (dragonId, item) => q.invCount.get(dragonId, item)?.qty || 0,

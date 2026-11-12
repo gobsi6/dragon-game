@@ -873,7 +873,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     });
 
     // 선물 보내기 · 집터에 두고 가기(leave): 두고 가기는 상대가 원정 중이든 접속하지 않았든 상관없이, 대신 내가 고대 유적(고대도시 포함)에 와 있어야 함
-    const giftDo = (d, p, leave) => {
+    const giftDo = (d, p, leave, via = '') => { // via: 골렘 심부름이면 그 골렘 이름
       const id = target(p);
       if (!id) return { error: '그런 드래곤은 없다.' };
       // 상대가 나를 경계하면 선물(보내기·두고 가기 모두)이 닿지 않음 — 텔레파시와 같음
@@ -913,8 +913,8 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
         // 집터에 두고 가기: 내 것만 빼고, 받는 쪽 소지품에는 넣지 않음 (주인이 고대도시의 집터에서 받을 때 들어감)
         db.saveState(d, items.map((x) => ({ id: x.id, qty: -x.qty })));
         db.giftIn(id, d, gold, items, msg, img, true);
-        db.ledgerAdd(d.id, { kind: 'gift_out', other: { id, name, kind: (t ? t.dragon : db.getDragon(id))?.kind }, goldOut: gold, itemsOut: items, msg, img, note: '집터' });
-        const tell = `${ga(d.name)} 집터에 선물을 두고 갔다. 고대도시의 내 집터에서 받을 수 있다.`;
+        db.ledgerAdd(d.id, { kind: 'gift_out', other: { id, name, kind: (t ? t.dragon : db.getDragon(id))?.kind }, goldOut: gold, itemsOut: items, msg, img, note: via ? `${via} 골렘 심부름` : '집터' });
+        const tell = via ? `${d.name}의 ${via} 골렘이 선물을 두고 갔다. 고대도시의 내 집터에서 받을 수 있다.` : `${ga(d.name)} 집터에 선물을 두고 갔다. 고대도시의 내 집터에서 받을 수 있다.`;
         if (t) t.socket.emit('notice', { title: '선물', lines: [tell] }); else db.noteAdd(id, tell);
         const st = stripGear(d, items); if (st.length) db.saveState(d);
         const me = live(d.id); if (me) sendMe(me.socket, d);
@@ -942,6 +942,45 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       return { ok: true, lines: [`${name}에게 ${what}${josa(what, '을', '를')} 보냈다.${msg ? ' 함께 적은 말도 전해진다.' : ''}`, ...st] };
     };
     on('gift:send', (d, p) => giftDo(d, p, false));
+
+    // ── 골렘 심부름: 고대도시의 내 골렘이 여러 드래곤의 집터에 같은 선물을 한꺼번에 두고 옴 (곧바로 닿음, 골렘은 묶이지 않음) ──
+    // 받는 쪽에는 '○○의 ○○ 골렘이 선물을 두고 갔다.' 알림. 받는 이마다 같은 꾸러미라, 고른 사람 수만큼 물건·금화가 빠짐
+    const errandGolems = (d) => { const m = logic.combatJson(d).city || {}; return (m.golems || []).map((g, i) => ({ i, name: g.name, awake: !!g.awake })).filter((g) => g.awake); };
+    on('errand:list', (d) => {
+      if (d.region !== 'ruins') return { error: '심부름을 보내려면 고대 유적에 와 있어야 한다.' };
+      const golems = errandGolems(d);
+      if (!golems.length) return { error: '심부름을 보낼 깨어 있는 골렘이 없다.' };
+      const list = [];
+      for (const o of db.plotDragons(d.id)) {
+        let c = null; try { c = typeof o.combat === 'string' ? JSON.parse(o.combat || '{}') : o.combat; } catch { c = null; }
+        if (!c || !c.city || !c.city.plot) continue;
+        const wary = db.relGet(o.id, d.id) === 'wary', full = db.giftHomeList(o.id).length >= HOME_GIFT_MAX;
+        list.push({ id: o.id, name: o.name, kind: o.kind, level: o.level, av: o.has_avatar ? o.avatar_ver : 0, online: !!live(o.id), why: wary ? '집터 문이 닫혀 있다' : full ? '집터 앞에 선물이 가득하다' : '' });
+      }
+      return { ok: true, golems, list };
+    });
+    on('errand:send', (d, p) => {
+      if (d.exp_end) return { error: '원정을 떠나 있는 동안에는 할 수 없다.' };
+      if (d.region !== 'ruins') return { error: '심부름을 보내려면 고대 유적에 와 있어야 한다.' };
+      const g = errandGolems(d).find((x) => x.i === Math.floor(Number(p.golem)));
+      if (!g) return { error: '그 골렘은 깨어 있지 않다.' };
+      const ids = [...new Set((Array.isArray(p.ids) ? p.ids : []).map((x) => Math.floor(Number(x))).filter((x) => x > 0 && x !== d.id))];
+      if (!ids.length) return { error: '선물을 받을 드래곤을 골라야 한다.' };
+      const gold = Math.max(0, Math.floor(Number(p.gold) || 0)), items = cleanItems(p.items), n = ids.length;
+      if (!gold && !items.length) return { error: '보낼 것을 골라야 한다.' };
+      const bad = checkOffer(d, gold * n, items.map((x) => ({ ...x, qty: x.qty * n }))); // 모두에게 줄 만큼 있는지 먼저
+      if (bad) return { error: `${n}명에게 모두 주기에는 모자란다. ${bad}` };
+      const done = [], fail = [];
+      for (const id of ids) {
+        const r = giftDo(d, { id, gold, items, msg: p.msg }, true, g.name);
+        const nm = db.getDragon(id)?.name || '누군가';
+        if (r.error) fail.push(`${nm}(${r.error.replace(/[.。]$/, '')})`); else done.push(nm);
+      }
+      if (!done.length) return { error: `아무 집터에도 두지 못했다. ${fail.join(', ')}` };
+      const lines = [`${g.name} 골렘이 ${done.length}명의 집터에 선물을 두고 왔다. (${done.join(', ')})`];
+      if (fail.length) lines.push(`두지 못한 곳: ${fail.join(', ')}`);
+      return { ok: true, lines };
+    });
     on('gift:leave', (d, p) => giftDo(d, p, true));
 
     // 받은 선물 확인 (상자에서 지움)

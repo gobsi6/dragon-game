@@ -2448,6 +2448,50 @@
     return it.value || 0;
   }
   // 특별한 기능이 있는 가구(텃밭·방명록 받침·귀환 주문진)는 그림 왼쪽 위 귀퉁이에 별 (pack.json cat[].fn: 설명)
+  // ── 골렘 심부름 창: 고대도시의 내 골렘이 고른 드래곤들의 집터에 같은 선물을 한꺼번에 두고 옴 ──
+  function openErrand() {
+    socket.emit('errand:list', {}, (res) => {
+      if (res.error) return toast(res.error);
+      let d = $('errand-dlg');
+      if (!d) {
+        d = document.createElement('dialog'); d.id = 'errand-dlg'; d.className = 'frame dlg wide';
+        d.innerHTML = '<i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i><div class="orn-h"><h2>골렘 심부름</h2></div><div class="body"></div><div class="row"><button type="button" class="btn" data-close>닫기</button></div>';
+        document.body.appendChild(d);
+        d.querySelector('[data-close]').addEventListener('click', () => d.close());
+        d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
+      }
+      const body = d.querySelector('.body'), st = { golem: res.golems[0].i, pick: new Set(), q: '' };
+      const ok = res.list.filter((x) => !x.why);
+      body.innerHTML = `<p class="note">골렘이 고른 드래곤들의 집터에 같은 선물을 곧바로 두고 온다. 받는 이마다 같은 꾸러미라, 고른 수만큼 물건과 금화가 빠진다.</p>
+        <h4 class="er-h">심부름 갈 골렘</h4><div class="er-golems" role="radiogroup" aria-label="심부름 갈 골렘">${res.golems.map((g) => `<button type="button" role="radio" class="chipbtn${g.i === st.golem ? ' on' : ''}" data-g="${g.i}" aria-checked="${g.i === st.golem}">${ctEsc(g.name)}</button>`).join('')}</div>
+        <h4 class="er-h">받는 드래곤 <small class="er-n">0명 고름</small></h4>
+        <div class="er-tools"><input class="input er-q" type="search" placeholder="이름으로 찾기" aria-label="받는 드래곤 찾기" autocomplete="off"><button type="button" class="btn sm er-all">모두 고르기</button></div>
+        <div class="er-list"></div><h4 class="er-h">보낼 선물</h4>`;
+      const list = body.querySelector('.er-list'), nEl = body.querySelector('.er-n'), allB = body.querySelector('.er-all');
+      const draw = () => {
+        list.replaceChildren();
+        const q = st.q.trim();
+        for (const o of res.list) {
+          if (q && !o.name.includes(q) && !st.pick.has(o.id)) continue;
+          const r = document.createElement('label'); r.className = `er-row${o.why ? ' off' : ''}`;
+          r.innerHTML = `<input type="checkbox"${st.pick.has(o.id) ? ' checked' : ''}${o.why ? ' disabled' : ''}><span class="er-nm"></span><small></small>`;
+          r.querySelector('.er-nm').textContent = o.name; r.querySelector('small').textContent = o.why || `Lv. ${o.level}${o.online ? ' · 깨어 있음' : ''}`;
+          r.querySelector('input').addEventListener('change', (e) => { if (e.target.checked) st.pick.add(o.id); else st.pick.delete(o.id); count(); });
+          list.appendChild(r);
+        }
+        if (!list.children.length) { const e = document.createElement('p'); e.className = 'note'; e.textContent = res.list.length ? '찾는 드래곤이 없다.' : '아직 집터를 가진 다른 드래곤이 없다.'; list.appendChild(e); }
+      };
+      const count = () => { nEl.textContent = `${st.pick.size}명 고름`; allB.textContent = ok.length && ok.every((x) => st.pick.has(x.id)) ? '모두 빼기' : '모두 고르기'; };
+      body.querySelector('.er-golems').addEventListener('click', (e) => { const b = e.target.closest('[data-g]'); if (!b) return; st.golem = +b.dataset.g; body.querySelectorAll('.er-golems [data-g]').forEach((x) => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-checked', on); }); });
+      body.querySelector('.er-q').addEventListener('input', (e) => { st.q = e.target.value; draw(); });
+      allB.addEventListener('click', () => { const all = ok.every((x) => st.pick.has(x.id)); for (const x of ok) { if (all) st.pick.delete(x.id); else st.pick.add(x.id); } draw(); count(); });
+      draw(); count();
+      fetchInv(() => {
+        body.appendChild(buildGiftBox({ id: 0, name: '', errand: () => ({ ids: [...st.pick], golem: st.golem }) }, true, () => { st.pick.clear(); draw(); count(); }));
+        if (!d.open) d.showModal();
+      });
+    });
+  }
   function markFn(root) {
     root.querySelectorAll('canvas.dk-th').forEach((c) => {
       const note = HP.fn(c.dataset.s); if (!note || c.parentElement.classList.contains('th-fn')) return;
@@ -7519,7 +7563,8 @@
       <div class="r"><span style="font-size: 13px">금화</span><input class="input num gold" type="number" min="0" value="0" aria-label="금화"><span class="note">가진 금화 ${S.me.gold}</span></div>
       <div class="r"><textarea class="input msg" rows="2" maxlength="100" placeholder="함께 보낼 말 (적지 않아도 된다, 100자까지)" aria-label="함께 보낼 말"></textarea></div>
       <div class="r"><button class="btn primary" type="button">보내기</button></div>`;
-    if (leave) { const sb = [...gift.querySelectorAll('button.btn.primary')].find((x) => x.textContent === '보내기'); if (sb) sb.textContent = '집터에 두고 가기'; const n = document.createElement('p'); n.className = 'note'; n.textContent = `${p.name}의 집터에 두고 간다. 원정 중이거나 접속하지 않았어도 두고 갈 수 있고, 주인이 고대도시의 집터에 들르면 받는다.`; gift.prepend(n); }
+    if (p.errand) { const sb = [...gift.querySelectorAll('button.btn.primary')].find((x) => x.textContent === '보내기'); if (sb) sb.textContent = '심부름 보내기'; } // 골렘 심부름: 받는 이마다 같은 꾸러미
+    else if (leave) { const sb = [...gift.querySelectorAll('button.btn.primary')].find((x) => x.textContent === '보내기'); if (sb) sb.textContent = '집터에 두고 가기'; const n = document.createElement('p'); n.className = 'note'; n.textContent = `${p.name}의 집터에 두고 간다. 원정 중이거나 접속하지 않았어도 두고 갈 수 있고, 주인이 고대도시의 집터에 들르면 받는다.`; gift.prepend(n); }
     own.sort(([a], [b]) => S.items[a].name.localeCompare(S.items[b].name, 'ko'));
     const GIFT_KINDS = 10; // 한 번에 보낼 수 있는 가짓수 (서버 social.js GIFT_KINDS_MAX와 같게)
     const gp = { picks: new Map(), tag: '', q: '' }; // picks: 고른 물건 → 개수 (고른 순서대로)
@@ -7591,13 +7636,15 @@
     };
     gift.querySelector('.gp-q').addEventListener('input', (e) => { gp.q = e.target.value; drawList(); });
     drawTags(); drawList(); drawPick();
-    const gImg = giftImgPick(gift.querySelector('.msg').closest('.r'), gift.querySelector('.msg')); // 그림 한 장 (그림만 보내도 됨)
+    const gImg = p.errand ? { busy: () => false, id: () => 0, title: () => '', clear: () => {} } : giftImgPick(gift.querySelector('.msg').closest('.r'), gift.querySelector('.msg')); // 그림 한 장 (그림만 보내도 됨. 심부름은 여러 집에 같은 것을 두므로 그림 없이)
     gift.querySelector('.btn').addEventListener('click', () => {
       const gold = Number(gift.querySelector('.gold').value) || 0;
       const items = [...gp.picks].map(([id, qty]) => ({ id, qty: Math.min(qty, haveOf(id)) })).filter((x) => x.qty > 0);
       const msg = gift.querySelector('.msg').value.trim();
       if (gImg.busy()) return toast('그림을 올리는 중이다. 잠깐 기다리자.');
-      socket.emit(gift.dataset.leave ? 'gift:leave' : 'gift:send', { id: p.id, gold, items, msg, img: gImg.id(), imgTitle: gImg.id() ? gImg.title() : '' }, (res) => {
+      const er = p.errand ? p.errand() : null;
+      if (er && !er.ids.length) return toast('선물을 받을 드래곤을 골라야 한다.');
+      socket.emit(er ? 'errand:send' : gift.dataset.leave ? 'gift:leave' : 'gift:send', er ? { ...er, gold, items, msg } : { id: p.id, gold, items, msg, img: gImg.id(), imgTitle: gImg.id() ? gImg.title() : '' }, (res) => {
         if (res.error) return toast(res.error);
         toast(res.lines.join(' '));
         gImg.clear(); gift.querySelector('.msg').value = ''; gp.picks.clear(); drawPick();
@@ -14802,7 +14849,7 @@
     let main = '';
     if (tab === 'plan') main = `${housePlan(h)}${gardenBox(h)}<section class="detail">${CT.sel === 'golems' ? roomD(h, defRoom(h)) : homeDetail(h)}</section>${homeGiftBox(h)}${bookBox(h)}`;
     else if (tab === 'todo') main = `${todo.length ? `<section class="hm-todo"><div class="hm-todo-h"><b>할 일 ${todo.length}</b><button type="button" class="btn sm primary" data-ct="all"${CT.busy ? ' disabled' : ''}>${CT.busy ? '처리하는 중…' : '모두 처리'}</button></div>${todo.map((t) => `<div class="tr"><span class="dot"></span><b>${t.t}</b><button type="button" class="btn sm" data-ct="act:${t.a}">${t.b}</button></div>`).join('')}</section>` : '<p class="hm-empty">지금은 할 일이 없다. 골렘이 돌아오면 다시 들러 보자.</p>'}<section class="detail">${reqD(h)}</section>${tradeBox(h)}`; // 오늘의 부탁과 오르딘과 바꾸기(석공 인장 교환)는 할 일 탭에 (입구 옆 오르딘 쪽지로도 바꾸기를 열 수 있음). 단잠·생산대는 집터 그림에서 그 구역을 누르면
-    else if (tab === 'golems') main = `<section class="detail">${golemsD(h)}</section>`;
+    else if (tab === 'golems') main = `<div class="er-open"><button type="button" class="btn sm" data-ct="errand">심부름</button><small class="note">골렘이 다른 드래곤들의 집터에 선물을 두고 온다</small></div><section class="detail">${golemsD(h)}</section>`;
     else { const md = CT.dkMode || 'place'; main = `<nav class="seg dk-mode" aria-label="꾸미기">${[['place', '가구 놓기'], ['make', '가구 만들기'], ['bp', '도면'], ['look', '바닥·담']].map(([k, n]) => `<button type="button" data-ct="dkm:${k}" class="${md === k ? 'on' : ''}">${n}</button>`).join('')}</nav>${md === 'make' ? furnMaker(h) : md === 'bp' ? bpShop(h) : md === 'look' ? lookEditor(h) : decoEditor(h)}`; }
     if (tab === 'plan' && h.book && h.book.unread) { socket.emit('city:book:seen', {}, () => {}); setTimeout(() => { if (h.book) h.book.unread = 0; }, 0); } // 집터 탭을 열면 새 글을 읽은 것으로 (이번 화면에는 새 글 표시를 남김)
     body.innerHTML = `<div id="home-ui" class="hm-e">
@@ -15455,6 +15502,7 @@
     if (a.startsWith('zone:')) return cityCall('city:zone', { id: a.slice(5) }, (r) => { if (a === 'zone:sanctum') CT.story = r.lines; });
     if (a === 'hpview') { CT.hpClean = !CT.hpClean; return renderHome(); }
     if (a === 'visit') return cityVisit(n.dataset.name);
+    if (a === 'errand') return openErrand(); // 골렘 심부름
     if (a.startsWith('gtake:')) return cityCall('city:gift:take', { id: +a.slice(6) }); // 집터에 놓인 선물 받기 (받은 선물 창이 뜸)
     if (a === 'fgift') { const name = CT.visit && CT.visit.name, s = document.getElementById('cv-fg-s')?.value, n = +(document.getElementById('cv-fg-n')?.value || 1); if (!name || !s) return; return cityCall('city:fgift', { name, s, n }, () => cityVisit(name)); }
     if (a === 'vgift') { const id = CT.visit && CT.visit.id; if (S.region !== 'ruins') return toast('선물을 두고 가려면 고대 유적에 직접 와 있어야 한다.'); if (id && window.__openGiftTo) window.__openGiftTo(id, CT.visit.name); return; }
