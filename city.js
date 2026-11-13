@@ -559,17 +559,36 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
       return cv && cv.week === weekIdx() && cv.cyc === CAVE.cycleDays ? (cv.mine ?? cv.beats ?? 0) : 0; // mine이 없는 기록은 업데이트 전에 열린 굴
     } catch { return 0; }
   }
+  // 받침돌 명단: 이번 굴(W.cave)에서 이름별로 이번 굴 미로 몫으로 석상을 넘은 수. 굴과 함께 사흘마다 비워짐.
+  // 굴마다 처음 한 번은 모든 드래곤의 굴 기록(city.cave.mine)에서 채우고(업데이트 전에 넘은 이·순위에 없는 이도), 그 뒤로는 넘을 때마다 올림.
+  // 이름이 키라 지운 드래곤은 이름 지우기 때 키째 지워짐
+  function caveBeatList(cw) {
+    if (!cw.beatFill) {
+      cw.beat ||= {};
+      for (const id of db.dragonIds()) {
+        try {
+          if (db.dragonHeld && db.dragonHeld(id)) continue; // 지워서 맡아 둔 계정
+          const o = (online.get && online.get(id) && online.get(id).dragon) || db.getDragon(id); if (!o) continue;
+          const cv = logic.combatJson(o)?.city?.cave;
+          const n = cv && cv.week === cw.week && cv.cyc === CAVE.cycleDays ? (cv.mine ?? cv.beats ?? 0) : 0;
+          if (n > (cw.beat[o.name] || 0)) cw.beat[o.name] = n;
+        } catch { /* 한 드래곤 기록이 이상해도 나머지는 채움 */ }
+      }
+      cw.beatFill = true; save();
+    }
+    return cw.beat;
+  }
   function caveView(d) {
     const c = caveSt(d), cw = caveWorld(), M = myMap(d), rule = caveRule();
     let f = c.echoOpen && c.fight; if (!f) { const me = caveMe(d); f = { me, echo: echoFor(me, echoTier(c)) }; } // 석상 앞이 아니면 지금 들어갈 때의 미리보기
     const awake = (n) => { if (n === d.name) return true; try { const o = otherDragon(n); return !o || !o.dormant_at; } catch { return true; } }; // 휴면 중인 이는 순위·받침돌에서 빼 둠
     const all = Object.entries(cw.rank).filter(([n]) => awake(n)).sort((a, b) => a[1] - b[1]), mine = all.findIndex(([n]) => n === d.name);
     const resetIn = CAVE.cycleDays - (((dayIdx() % CAVE.cycleDays) + CAVE.cycleDays) % CAVE.cycleDays); // 새 굴까지 남은 날 (오늘 포함)
-    // carved: 받침돌 — 이번 굴에서 석상을 넘은 드래곤 모두(최근 6명만이 아니라)와 넘어 몫을 받은 수 (미로마다 한 번, 사흘마다 새로 셈). 많이 넘은 차례, 같으면 이름 차례.
-    //   이번 굴 첫 미로를 끝낸 드래곤(순위 cw.rank) 가운데 한 번이라도 넘은 이. 석상 몫은 미로를 끝내야 생기므로 넘은 이는 모두 순위에 있음
+    // carved: 받침돌 — 이번 굴에서 석상을 넘은 드래곤 모두와 넘어 몫을 받은 수 (미로마다 한 번, 사흘마다 새로 셈). 많이 넘은 차례, 같으면 이름 차례.
+    //   순위(cw.rank)에 기대지 않음: 순위를 잠시 빼 두었던 동안 첫 미로를 끝낸 이처럼 순위에 이름이 없는 드래곤도 있었음
     return { open: done('spring'), week: cw.week, mapId: `${cw.week}:${c.n}`, n: c.n, mazeMax, closed: c.n >= mazeMax, resetIn, reward: CAVE.reward,
       rule, ruleName: CAVE.names[rule], ruleLine: CAVE.lines[rule],
-      echo: f.echo, mul: caveMul(f), carved: Object.keys(cw.rank).filter(awake).map((n) => ({ name: n, n: caveBeatsOf(n, d) })).filter((x) => x.n > 0).sort((a, b) => b.n - a.n || a.name.localeCompare(b.name, 'ko')), map: { g: M.g.map((r) => r.join('')), dist: M.dist, E: M.E, far: M.far, fires: M.fires, keys: M.keys, patrols: M.patrols.map((p) => p.path) },
+      echo: f.echo, mul: caveMul(f), carved: Object.entries(caveBeatList(cw)).filter(([n, k]) => k > 0 && awake(n)).map(([n, k]) => ({ name: n, n: n === d.name ? Math.max(k, caveBeatsOf(n, d)) : k })).sort((a, b) => b.n - a.n || a.name.localeCompare(b.name, 'ko')), map: { g: M.g.map((r) => r.join('')), dist: M.dist, E: M.E, far: M.far, fires: M.fires, keys: M.keys, patrols: M.patrols.map((p) => p.path) },
       rank: all.slice(0, CAVE.rankShow), myRank: mine >= 0 ? [mine + 1, all[mine][1], all.length] : null,
       me: { spent: c.spent, score: c.score, owe: c.owe.slice(), inRun: !!c.open, inEcho: !!c.echoOpen, fires: c.fires, keys: c.keys, tabs: c.tabs.map((i) => TABLETS[i]), tabTotal: TABLETS.length, hpMax: f.me.hp, sum: f.me.sum } };
   }
@@ -633,6 +652,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
       else {
         if (c.mine == null) c.mine = c.beats || 0; // 이 업데이트 전에 열린 굴: 지금까지 넘은 수에서 시작
         if (c.carryN > 0) c.carryN--; else c.mine++; // 지난 굴에서 넘어온 몫(owe 맨 앞)은 받침돌 수에 세지 않음
+        { const cw = caveWorld(); if (c.week === cw.week) { const b = caveBeatList(cw); b[d.name] = Math.max(b[d.name] || 0, c.mine); } } // 받침돌 명단
         const R = CAVE.reward[kind], m = ct(d); m.seals += R.beat; c.beats = (c.beats || 0) + 1; // 다음 석상은 더 단단하게
         lines.push(`석상을 넘었다. 석공 인장 +${R.beat}.`);
         if (kind === 'first') { // 첫 미로 몫: 대륙 소식과 받침돌

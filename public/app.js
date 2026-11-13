@@ -15848,7 +15848,16 @@
     return true;
   }
   // 순찰하는 파수꾼이 한 칸 옮김 (내가 선 칸으로는 들어오지 않음). 걸을 때와 숨죽여 기다릴 때
-  function movePatrols(r, c) { for (const p of M.patrols) { let ni = p.i + p.dir; if (ni < 0 || ni >= p.path.length) { p.dir *= -1; ni = p.i + p.dir; } const [gr, gc] = p.path[ni]; if (!(gr === r && gc === c)) p.i = ni; } }
+  // 파수꾼 한 걸음: 길 끝이면 돌아서고, 가려는 칸에 내가 서 있으면 그 자리에서 돌아선다(멈춰 서 버리면 좁은 길에서 내 양옆을 막고 영영 비키지 않음)
+  function movePatrols(r, c) {
+    for (const p of M.patrols) {
+      let ni = p.i + p.dir;
+      if (ni < 0 || ni >= p.path.length) { p.dir *= -1; ni = p.i + p.dir; }
+      const [gr, gc] = p.path[ni];
+      if (gr === r && gc === c) { p.dir *= -1; continue; } // 나를 마주쳤다: 이번엔 제자리, 다음부터 반대로 걸어감
+      p.i = ni;
+    }
+  }
   // 갇혔는지: 무너진 칸·잠긴 칸을 빼고 끝방까지 길이 이어지는지 (파수꾼은 기다리면 비키니 지나갈 수 있다고 봄).
   // 끊겼으면 'crumble'·'water', 이어져도 옆 칸이 모두 파수꾼에 막혔으면 'guard', 아니면 null
   function trapOf(pr, pc) {
