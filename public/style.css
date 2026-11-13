@@ -4812,6 +4812,10 @@ body:not(.realm-city) .moss-fx { display: none; }
 .cc-box li b { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink); white-space: nowrap; }
 .cc-box li small { grid-column: 2 / -1; margin-top: -4px; font-size: 11px; color: var(--muted); }
 .cc-box li.ok b { color: #2F5D45; }
+.cc-box li .cc-q { grid-column: 2 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: -2px; font-size: 11px; color: var(--muted); }
+.cc-box li .cc-q span { margin-right: auto; }
+.cc-box li .cc-q .input { width: 6.5em; min-height: 0; height: 30px; padding: 0 8px; font-size: 12.5px; }
+.cc-box li .cc-q .btn { min-height: 30px; padding: 0 10px; font-size: 12px; }
 
 /* 머리줄 골렘 알림: 금화 바로 오른쪽, 아이콘과 점만 (나타나고 사라져도 행동력·금화 자리는 그대로) */
 .city-chip { position: relative; flex: none; width: 32px; height: 32px; box-sizing: border-box; display: inline-grid; place-items: center; margin-left: 0; padding: 0; border: 1px solid #E6C9A8; border-radius: 4px; background: #FFF8F1; color: #B5602A; cursor: pointer; }

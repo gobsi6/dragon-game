@@ -195,8 +195,9 @@ const CAVE = {
   // tab: 그 몫으로 석상을 넘을 때 시련의 돌판이 나올 확률. 돌판을 모두 모았으면 대신 인장 tabFull
   reward: { first: { clear: 6, beat: 6, tab: 0.15 }, bonus: { clear: 2, beat: 2, tab: 0.05 } }, tabFull: 2,
   echo: { owner: '오래된 용', kind: 'white', sum: 120, hpMax: 480 }, // 끝방의 석상: 모두 오래된 용, 들어갈 때의 내 능력치 합·굴 체력에 맞춰 섬
-  echoHpMul: 1.6,           // 석상 체력 = 내 굴 체력 × 이 값 (2배면 어떤 수를 써도 이길 수 없었음)
+  echoHpMul: [1.6, 2.0, 2.2], // 석상 체력 = 내 굴 체력 × 이 값. 이번 굴에서 석상 몫을 받은 수(0·1·2…)대로, 끝 값 뒤로는 끝 값
   carved: 6,                // 받침돌에 새겨 보여 줄, 최근 석상을 넘은 이름 수
+  rankShow: 5,              // 로비 순위에 보여 줄 수 (그 아래면 내 순위만 한 줄 더)
   dmgRef: 250,              // 주고받는 피해를 (내 굴 체력 ÷ 이 값)배로: 체력이 많든 적든 석상전 난이도가 같게
 };
 const TABLETS = [
@@ -419,12 +420,15 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     if (!m.furnMig) { m.furnMig = 1; if (Array.isArray(m.deco)) { const c = {}; m.deco.forEach((o) => { c[o.s] = (c[o.s] || 0) + 1; }); for (const [k, n] of Object.entries(c)) if ((m.furn[k] || 0) < n) m.furn[k] = n; } }
   }
   // 지금 재건 중인 구역의 재료함에 가진 도시 재료를 넣음 (모자란 만큼만)
-  function give(d) {
+  // p.mats: { 재료 id: 개수 } 고른 만큼만 넣음 (빠진 재료는 넣지 않음). 없으면 가진 만큼 모두
+  function give(d, p = {}) {
     const e = ready(d); if (e) return e;
+    const want = p.mats && typeof p.mats === 'object' && !Array.isArray(p.mats) ? p.mats : null;
     const z = curZone(); if (!z) return err('일곱 구역이 모두 재건되었다.');
     if (!Object.keys(ZONE_MATS[z.id]).length) return err(`${ga(z.name)} 재료함 없이 재건도만 차면 재건된다.`);
     const box = (W.box[z.id] = W.box[z.id] || {}), m = ct(d), items = [], parts = []; let cnt = 0;
-    for (const [k, n] of Object.entries(ZONE_MATS[z.id])) { if (k === 'gold') continue; const q = Math.min(n - (box[k] || 0), have(d, k)); if (q <= 0) continue; box[k] = (box[k] || 0) + q; items.push({ id: k, qty: -q }); parts.push(`${ITEMS[k].name} ${q}`); cnt += q; }
+    for (const [k, n] of Object.entries(ZONE_MATS[z.id])) { if (k === 'gold') continue; const pick = want ? Math.max(0, Math.floor(Number(want[k]) || 0)) : Infinity; const q = Math.min(n - (box[k] || 0), have(d, k), pick); if (q <= 0) continue; box[k] = (box[k] || 0) + q; items.push({ id: k, qty: -q }); parts.push(`${ITEMS[k].name} ${q}`); cnt += q; }
+    if (!items.length && want && !boxFull(z)) return err('넣을 개수를 골라야 한다.');
     if (!items.length) return err(boxFull(z) ? `${z.name} 재료함은 이미 다 찼다.` : ZONE_MATS[z.id].gold && Object.entries(ZONE_MATS[z.id]).every(([k, n]) => k === 'gold' || (box[k] || 0) >= n) ? '도시 재료는 다 찼다. 금은 금화를 녹여 넣어야 한다.' : '넣을 수 있는 도시 재료가 없다. 골렘을 채집·잔해 뒤지기로 보내 보자.');
     db.saveState(d, items);
     W.givers[d.name] = (W.givers[d.name] || 0) + cnt;
@@ -542,18 +546,19 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
   //    굴 안에서 장신구를 바꿔도 이번 입장의 싸움은 그대로 ──
   const sumOf = (d) => { const st = (logic.statsOf ? logic.statsOf(d) : null) || {}; return Object.values(st).reduce((a, v) => a + (Number(v) || 0), 0) || 120; };
   const caveMe = (d) => ({ sum: sumOf(d), hp: logic.hpCap(d) });
-  const echoFor = (me) => ({ ...CAVE.echo, sum: me.sum, hpMax: Math.round(me.hp * CAVE.echoHpMul) });
+  const echoTier = (c) => Math.min(c.beats || 0, CAVE.echoHpMul.length - 1); // 이번 굴에서 석상 몫을 받은 수: 받을수록 단단해짐
+  const echoFor = (me, tier = 0) => ({ ...CAVE.echo, sum: me.sum, tier, hpMax: Math.round(me.hp * CAVE.echoHpMul[tier]) });
   const caveMul = (f) => ({ scale: Math.round(f.me.hp / CAVE.dmgRef * 100) / 100 }); // 주고받는 피해 크기를 내 굴 체력에 맞춤
   function caveView(d) {
     const c = caveSt(d), cw = caveWorld(), M = myMap(d), rule = caveRule();
-    let f = c.echoOpen && c.fight; if (!f) { const me = caveMe(d); f = { me, echo: echoFor(me) }; } // 석상 앞이 아니면 지금 들어갈 때의 미리보기
+    let f = c.echoOpen && c.fight; if (!f) { const me = caveMe(d); f = { me, echo: echoFor(me, echoTier(c)) }; } // 석상 앞이 아니면 지금 들어갈 때의 미리보기
     const all = Object.entries(cw.rank).sort((a, b) => a[1] - b[1]), mine = all.findIndex(([n]) => n === d.name);
     const resetIn = CAVE.cycleDays - (((dayIdx() % CAVE.cycleDays) + CAVE.cycleDays) % CAVE.cycleDays); // 새 굴까지 남은 날 (오늘 포함)
     return { open: done('spring'), week: cw.week, mapId: `${cw.week}:${c.n}`, n: c.n, mazeMax, closed: c.n >= mazeMax, resetIn, reward: CAVE.reward,
       rule, ruleName: CAVE.names[rule], ruleLine: CAVE.lines[rule],
       echo: f.echo, mul: caveMul(f), carved: (W.caveCarved || []).map((x) => x.name), map: { g: M.g.map((r) => r.join('')), dist: M.dist, E: M.E, far: M.far, fires: M.fires, keys: M.keys, patrols: M.patrols.map((p) => p.path) },
-      rank: all.slice(0, 3), myRank: mine >= 0 ? [mine + 1, all[mine][1], all.length] : null,
-      me: { spent: c.spent, score: c.score, owe: c.owe.slice(), fires: c.fires, keys: c.keys, tabs: c.tabs.map((i) => TABLETS[i]), tabTotal: TABLETS.length, hpMax: f.me.hp, sum: f.me.sum } };
+      rank: all.slice(0, CAVE.rankShow), myRank: mine >= 0 ? [mine + 1, all[mine][1], all.length] : null,
+      me: { spent: c.spent, score: c.score, owe: c.owe.slice(), inRun: !!c.open, inEcho: !!c.echoOpen, fires: c.fires, keys: c.keys, tabs: c.tabs.map((i) => TABLETS[i]), tabTotal: TABLETS.length, hpMax: f.me.hp, sum: f.me.sum } };
   }
   // 한 번 들어가서 쓴 횃불 (화면이 보냄). 걷는 동안 tick으로 받아 둔 값(live)보다 적게는 셈하지 않음
   const caveUsed = (p, c) => { const s = r1(Number(p.used)); return s >= 0 ? Math.max(c.live || 0, Math.min(CAVE.usedMax, s)) : null; };
@@ -602,7 +607,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     const e = ready(d); if (e) return e;
     const c = caveSt(d); if (c.n < 1 && !c.owe.length) return err('끝방에 한 번 닿아야 석상 앞에 설 수 있다.');
     if (c.open) { c.spent = r1(c.spent + (c.live || 0)); c.open = false; c.live = 0; } // 걷던 입장은 거기서 끝
-    const me = caveMe(d); c.fight = { me, echo: echoFor(me) }; c.echoOpen = true; // 싸우는 동안 장신구를 바꿔도 그대로
+    const me = caveMe(d); c.fight = { me, echo: echoFor(me, echoTier(c)) }; c.echoOpen = true; // 싸우는 동안 장신구를 바꿔도 그대로
     return { ok: true };
   }
   function caveEchoEnd(d, p) {
@@ -613,7 +618,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
       const kind = c.owe.shift();
       if (!kind) lines.push('석상을 넘었다. 이번 굴에서 받을 몫은 이미 다 받았다.');
       else {
-        const R = CAVE.reward[kind], m = ct(d); m.seals += R.beat;
+        const R = CAVE.reward[kind], m = ct(d); m.seals += R.beat; c.beats = (c.beats || 0) + 1; // 다음 석상은 더 단단하게
         lines.push(`석상을 넘었다. 석공 인장 +${R.beat}.`);
         if (kind === 'first') { // 첫 미로 몫: 대륙 소식과 받침돌
           news(`${ga(d.name)} 시련의 굴 끝방에서 ${(c.fight && c.fight.echo.owner) || CAVE.echo.owner}의 석상을 넘었다.`);
@@ -1180,7 +1185,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     handle('city:frag', (d, p) => putFrag(d, String(p.key || '')));
     handle('city:hand', (d, p) => handFrag(d, String(p.key || '')));
     handle('city:board', (d) => ({ ok: true, board: board(d) }));
-    handle('city:give', (d) => give(d));
+    handle('city:give', (d, p) => give(d, p));
     handle('city:bp', (d, p) => buyBp(d, String(p.s || '')));
     handle('city:look', (d, p) => setLook(d, p));
     handle('city:garden', (d, p) => gardenAct(d, p));

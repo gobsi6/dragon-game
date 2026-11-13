@@ -14677,6 +14677,7 @@
     if (!inside) { if ($('city-home-dlg').open) $('city-home-dlg').close(); if ($('city-wall-dlg').open) $('city-wall-dlg').close(); return; }
     if (!CT.v && !CT.loading) { CT.loading = true; cityCall('city:get'); return; }
     renderCityAll();
+    if (!caveResumed && caveResumeFn) { caveResumed = true; caveResumeFn(); }
   }
   function renderCityAll() {
     if (!CT.v || $('city-card').hidden) return;
@@ -14732,7 +14733,8 @@
   }
   function zonePane(id) {
     const v = CT.v, z = zoneOf(id), st = z.state, inv = v.me.inv || {};
-    const boxList = (live) => `<ul class="cc-box">${z.box.map((m) => { const ok = m.put >= m.need, hv = inv[m.id] || 0; return `<li class="${ok ? 'ok' : ''}"><span>${m.name}</span>${ctBar(m.put, m.need, ok ? 'done' : '')}<b>${ok ? '다 참' : `${ctNum(m.put)} / ${ctNum(m.need)}`}</b>${live && !ok ? `<small>가진 것 ${ctNum(hv)}</small>` : ''}</li>`; }).join('')}</ul>`;
+    // live: 재건 중인 구역. 가진 재료가 있는 줄에는 넣을 개수 칸 (고른 값은 CT.boxQ에 두어 화면을 다시 그려도 그대로)
+    const boxList = (live) => `<ul class="cc-box">${z.box.map((m) => { const ok = m.put >= m.need, hv = inv[m.id] || 0, mx = Math.min(hv, m.need - m.put); return `<li class="${ok ? 'ok' : ''}"><span>${m.name}</span>${ctBar(m.put, m.need, ok ? 'done' : '')}<b>${ok ? '다 참' : `${ctNum(m.put)} / ${ctNum(m.need)}`}</b>${live && !ok && m.id !== 'gold' ? (mx > 0 ? `<div class="cc-q"><span>가진 것 ${ctNum(hv)}</span><input type="number" class="input" data-boxq="${m.id}" min="0" max="${mx}" step="1" value="${Math.min(mx, Math.max(0, (CT.boxQ || {})[m.id] || 0))}" aria-label="${ctEsc(m.name)} 넣을 개수"><button type="button" class="btn" data-ct="boxmax:${m.id}">최대 ${ctNum(mx)}</button></div>` : `<small>가진 것 ${ctNum(hv)}</small>`) : ''}</li>`; }).join('')}</ul>`;
     let lower = '';
     if (st === 'done') {
       if (id === 'plaza') {
@@ -14758,7 +14760,7 @@
         <p class="note">${sonFull ? '재건도는 다 찼다. 재료함이 차면 바로 재건된다.' : `골렘의 공사 시간과 집터에 넣은 재료로 오른다. 하루에 ${v.rules.dayCap}까지.${z.box.length ? '' : ' 이 구역은 재료함 없이 재건도만 차면 재건된다.'}`}</p>
         ${z.box.length ? `<div class="cc-prog"><div class="t"><span>재료함</span><span><b>${bp.pct}</b>%</span></div>${ctBar(bp.pct, 100, 'big' + (bp.full ? ' done' : ''))}</div>
         ${boxList(true)}
-        <div class="cc-btns"><button type="button" class="btn primary" data-ct="give" ${can ? '' : 'disabled'}>가진 도시 재료 넣기</button></div>
+        <div class="cc-btns"><button type="button" class="btn primary" data-ct="givesel" ${can ? '' : 'disabled'}>고른 만큼 넣기</button><button type="button" class="btn" data-ct="give" ${can ? '' : 'disabled'}>가진 만큼 모두 넣기</button></div>
         ${gb && gLeft > 0 ? `<div class="cc-gold"><span class="rm-k">금화 녹여 넣기 <small>남은 금 ${ctNum(gLeft)} · 가진 금화 ${ctNum(myGold)}</small></span>
           <div class="cc-gold-row"><input type="number" class="input" id="cc-gold-n" min="100" step="1000" value="${Math.min(gLeft, myGold, 10000)}" aria-label="녹일 금화"><button type="button" class="btn" data-ct="goldq:1000">+1천</button><button type="button" class="btn" data-ct="goldq:10000">+1만</button><button type="button" class="btn" data-ct="goldq:max">최대</button><button type="button" class="btn primary" data-ct="gold" ${myGold >= 100 ? '' : 'disabled'}>녹여 넣기</button></div>
           <p class="note">${({ forge: '식은 화로에 불을 넣고 모루를 되살리는 데', belfry: '깨진 종을 다시 붓는 데', sanctum: '성소 문의 문양을 금박으로 덮는 데' })[id] || '도시를 되살리는 데'} 금이 든다. 금화 5,000마다 석공 인장 1.</p></div>` : ''}
@@ -14812,7 +14814,7 @@
     }
     if (h.nap && h.nap.open && !h.nap.done) out.push({ t: '거처에서 단잠', b: '자기', a: 'nap' }); // 하루 한 번
     const z = CT.v.zones.find((x) => x.state === 'going'); // 지금 재건 중인 구역 재료함에 넣을 도시 재료가 있으면
-    if (z && z.box.some((m) => m.id !== 'gold' && m.put < m.need && (h.inv[m.id] || 0) > 0)) out.push({ t: `${z.name} 재료함에 넣기`, b: '넣기', a: 'give' });
+    if (z && z.box.some((m) => m.id !== 'gold' && m.put < m.need && (h.inv[m.id] || 0) > 0)) out.push({ t: `${z.name} 재료함에 넣기`, b: '고르러 가기', a: 'give', manual: true }); // 넣을 개수는 직접 고름 ('할 일 모두'에서 한꺼번에 넣지 않음)
     return out;
   }
   function homeAct(a) {
@@ -14821,7 +14823,7 @@
     if (a === 'gharv') return cityCall('city:garden', { act: 'harvestAll' });
     if (a === 'gwater') return cityCall('city:garden', { act: 'waterAll' });
     if (a === 'req') return cityCall('city:req');
-    if (a === 'give') return cityCall('city:give');
+    if (a === 'give') { const z = CT.v.zones.find((x) => x.state === 'going'); if (!z) return; $('city-home-dlg').close(); CT.zone = z.id; CT.board = null; renderCityMap(); setTimeout(() => document.getElementById('cc-pane')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50); return; } // 지도에서 그 구역 재료함을 열어 줌
     if (a === 'perk') return cityCall('city:perk');
     if (a === 'nap') return cityCall('city:nap');
     if (a === 'book') { CT.tab = 'plan'; CT.bookOpen = true; return renderHome(); }
@@ -14850,7 +14852,6 @@
       else if (k === 'gharv') { ev = 'city:garden'; p = { act: 'harvestAll' }; }
       else if (k === 'gwater') { ev = 'city:garden'; p = { act: 'waterAll' }; }
       else if (k === 'req') ev = 'city:req';
-      else if (k === 'give') ev = 'city:give';
       else if (k === 'perk') ev = 'city:perk';
       else if (k === 'nap') ev = 'city:nap';
       else if (k === 'again') { ev = 'city:send'; p = { i: +x, ...againOf(g) }; }
@@ -15541,7 +15542,14 @@
     if (a === 'gphrase') { const inp = document.getElementById('cv-guest-t'); if (inp) { inp.value = n.dataset.t; inp.focus(); } return; }
     if (a === 'guest') { const t = document.getElementById('cv-guest-t')?.value || '', name = CT.visit && CT.visit.name; if (!name) return; return cityCall('city:guest', { name, text: t }, () => cityVisit(name)); }
     if (a === 'book') { CT.tab = 'plan'; CT.bookOpen = true; renderHome(); setTimeout(() => document.querySelector('#city-home-dlg .hm-fold')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50); return; }
-    if (a === 'give') return cityCall('city:give');
+    if (a === 'give') { // 가진 만큼 모두: 무엇이 얼마나 들어가는지 보여 주고 확인
+      const z = CT.v.zones.find((x) => x.state === 'going'), inv = CT.v.me.inv || {};
+      const list = z ? z.box.filter((m) => m.id !== 'gold').map((m) => [m.name, Math.min(inv[m.id] || 0, m.need - m.put)]).filter(([, q]) => q > 0) : [];
+      if (list.length && !confirm(`가진 도시 재료를 모두 넣을까? 되돌릴 수 없다.\n${list.map(([nm, q]) => `${nm} ${ctNum(q)}`).join(', ')}`)) return;
+      return cityCall('city:give', {}, () => { CT.boxQ = {}; });
+    }
+    if (a === 'givesel') { const mats = Object.fromEntries(Object.entries(CT.boxQ || {}).filter(([, q]) => q > 0)); if (!Object.keys(mats).length) return toast('넣을 개수를 먼저 적어 주자.'); return cityCall('city:give', { mats }, () => { CT.boxQ = {}; }); }
+    if (a.startsWith('boxmax:')) { const id = a.slice(7), inp = document.querySelector(`[data-boxq="${id}"]`); if (!inp) return; inp.value = inp.max; (CT.boxQ ||= {})[id] = Number(inp.max) || 0; return; }
     if (a === 'gold') { const n = Number(document.getElementById('cc-gold-n')?.value || 0); if (!(n >= 100)) return toast('금화는 100 이상 녹여 넣을 수 있다.'); if (!confirm(`금화 ${ctNum(n)}을 녹여 넣을까? 되돌릴 수 없다.`)) return; return cityCall('city:gold', { n }); }
     if (a.startsWith('goldq:')) { const inp = document.getElementById('cc-gold-n'); if (!inp) return; const z = CT.v.zones.find((x) => x.state === 'going'), gb = z && z.box.find((m) => m.id === 'gold'), left = gb ? gb.need - gb.put : 0, mine = Math.floor(S.me.gold || 0); const q = a.slice(6); inp.value = q === 'max' ? Math.min(left, mine) : Math.min(left, mine, (Number(inp.value) || 0) + Number(q)); return; }
     if (a === 'todo') { CT.todoOpen = !CT.todoOpen; return renderHome(); }
@@ -15614,7 +15622,10 @@
   document.addEventListener('keydown', (e) => { const t = e.target; if (t?.dataset?.gname != null && e.key === 'Enter') { e.preventDefault(); const gi = t.dataset.gname; cityCall('city:rename', { i: +gi, name: t.value }, () => { if (CT.gedit) CT.gedit[gi] = false; if (CT.gdraft) delete CT.gdraft[gi]; }); } if (t?.dataset?.gname != null && e.key === 'Escape' && CT.gedit?.[t.dataset.gname]) { e.preventDefault(); CT.gedit[t.dataset.gname] = false; if (CT.gdraft) delete CT.gdraft[t.dataset.gname]; renderHome(); } });
   document.addEventListener('input', (e) => { const t = e.target; if (t?.dataset?.gname != null) (CT.gdraft ||= {})[t.dataset.gname] = t.value; });
 
+  // 구역 재료함: 적은 개수를 기억해 두었다가 '고른 만큼 넣기'로 보냄 (화면을 다시 그려도 그대로)
+  document.addEventListener('input', (e) => { const t = e.target.closest?.('[data-boxq]'); if (!t) return; const mx = Number(t.max) || 0; let q = Math.floor(Number(t.value) || 0); q = Math.max(0, Math.min(mx, q)); (CT.boxQ ||= {})[t.dataset.boxq] = q; });
   let caveOpenFn = null; // 시련의 굴 열기 (아래 묶음 안에서 채움)
+  var caveResumeFn = null, caveResumed = false; // 새로고침 전에 굴 창이 열려 있었으면 다시 엶 (한 번만). var: 도시 그리기가 이 줄보다 위에 있어 끌어올림이 필요
   (() => {
 
   // ════ 시련의 굴 (city.js의 city:cave:*) — 걷기·싸움은 화면에서, 입장·화톳불·쓴 횃불·기록은 서버에서 ════
@@ -15715,7 +15726,7 @@ function renderLobby() {
   const fires = [...(P.fireFound || [])], me = CV.v.me, n = CV.v.n || 0, max = CV.v.mazeMax || 3, closed = !!CV.v.closed, owe = (me.owe || []).length;
   const fireBtns = closed ? '' : fires.map((k, i) => `<button class="btn" type="button" data-cv="enter" data-from="${k}">화톳불 ${i + 1}에서 이어 간다</button>`).join('');
   const rank = CV.v.rank || [], my = CV.v.myRank;
-  const myRow = my && my[0] > 3 ? `<div class="rm-row"><span>${my[0]}. ${esc(S.me.name)} (나)</span><b>횃불 ${my[1]}</b></div>` : '';
+  const myRow = my && my[0] > rank.length ? `<div class="rm-row"><span>${my[0]}. ${esc(S.me.name)} (나)</span><b>횃불 ${my[1]}</b></div>` : '';
   const tag = closed ? '미로를 모두 지났다' : n ? `새 미로 ${n} / ${max - 1}` : '이번 굴의 첫 미로';
   const echoBtn = n > 0 || owe ? `<button class="btn${closed || owe ? ' primary' : ''}" type="button" data-cv="echo">석상 앞으로 간다${owe ? `<span class="cost">받을 몫 ${owe}</span>` : ''}</button>` : '';
   const note = closed ? '이번 굴의 미로를 모두 지났다. 새 굴이 열릴 때까지 석상과는 몇 번이든 겨룰 수 있다.'
@@ -15727,7 +15738,7 @@ function renderLobby() {
     <div class="where"><span class="k">고대도시 · 샘 곁</span><div class="title"><h1>시련의 굴</h1><span class="tag wild">${tag}</span></div></div>
     <div class="cv-week">
       <div class="cv-rule"><span class="rm-k">이번 굴의 규칙 · ${last ? '오늘 자정에 새 굴이 열린다' : `새 굴까지 ${CV.v.resetIn}일`}</span><b>${RULES[rule].name}</b><p>${RULES[rule].line}</p></div>
-      <div class="cv-echo"><span class="rm-k">끝방의 석상</span><b>${ECHO.owner}의 석상</b><p>내 능력치(합 ${ECHO.sum})에 맞춰 선다 · 체력 ${ECHO.hpMax}</p></div>
+      <div class="cv-echo"><span class="rm-k">끝방의 석상</span><b>${ECHO.owner}의 석상</b><p>석상 앞에 설 때의 내 능력치와 체력에 맞춰 선다.${ECHO.tier >= 2 ? ' 이번 굴에서 두 번 넘은 뒤라 한층 더 단단해졌다.' : ECHO.tier === 1 ? ' 이번 굴에서 한 번 넘은 뒤라 더 단단해졌다.' : ''}</p></div>
     </div>
     <div class="rm-pair">
       <div class="rm-box"><span class="rm-k">이번 굴 나의 기록</span>
@@ -15825,11 +15836,9 @@ function echoPlan(t) {
   if (t % 4 === 1) return { kind: 'skill' };
   return { kind: 'atk' };
 }
-function intentText(t, prev) {
-  const p = echoPlan(t), nx = echoPlan(t + 1);
-  let now = p.kind === 'mimic' ? `돌이 당신의 움직임을 새긴다. 방금 한 '${ACT_NAME[prev] || '…'}' 동작을 그대로 따라 한다.` : p.kind === 'skill' ? '얼어붙은 숨을 모은다. (강한 공격)' : '발톱을 치켜든다.';
-  if (nx.kind === 'mimic') now += ' 다음 턴에는 이번 턴 당신의 움직임을 새긴다.';
-  return now;
+function intentText(t) { // 예고는 흐릿하게: 무엇을 따라 할지, 다음 턴에 따라 할지는 알려 주지 않음
+  const p = echoPlan(t);
+  return p.kind === 'mimic' ? '돌 표면이 일렁인다. 무언가를 새기는 것 같다.' : p.kind === 'skill' ? '얼어붙은 숨을 모은다.' : '발톱을 치켜든다.';
 }
 function echoAct(a) {
   const b = B; if (b.done) return;
@@ -15869,7 +15878,7 @@ function renderEcho() {
   const b = B;
   const pr = P.hp / ME.hpMax * 100, er = b.ehp / ECHO.hpMax * 100;
   const carved = (CV.v.carved || []).length && !b.done ? `<div class="cv-intent"><span class="rm-k">받침돌에 새겨진 이름</span><p>${CV.v.carved.map(esc).join(', ')}</p></div>` : ''; // 최근 석상을 넘은 드래곤
-  const intent = b.done ? '' : `<div class="cv-intent"><span class="rm-k">석상의 다음 움직임</span><p>${esc(intentText(b.t, b.prev))}</p></div>`;
+  const intent = b.done ? '' : `<div class="cv-intent"><span class="rm-k">석상의 다음 움직임</span><p>${esc(intentText(b.t))}</p></div>`;
   const acts = b.done
     ? `<div class="actions">${b.done === 'win' ? '' : '<button class="btn primary" type="button" data-cv="echo">다시 도전한다</button>'}<button class="btn${b.done === 'win' ? ' primary' : ''}" type="button" data-cv="echoout">${b.done === 'win' && b.tab ? '돌판을 챙겨 굴을 나선다' : '굴 밖으로 나간다'}</button>${b.done === 'win' && (CV.v.me.owe || []).length ? '<button class="btn" type="button" data-cv="echo">한 번 더 겨룬다</button>' : ''}</div>`
     : `<div class="actions"><button class="btn primary" type="button" data-cv="act" data-a="claw">발톱으로 할퀸다</button><button class="btn primary" type="button" data-cv="act" data-a="breath"${b.cd > 0 ? ' disabled' : ''}>푸른 숨결${b.cd > 0 ? `<span class="cost">${b.cd}턴 뒤</span>` : '<span class="cost">강함</span>'}</button><button class="btn" type="button" data-cv="act" data-a="guard">막는다<span class="cost">받는 피해 −70%</span></button></div>`;
@@ -15885,19 +15894,48 @@ function renderEcho() {
 }
 
 
-  function renderCave() { if (!CV.v || $('cave-card').hidden) return; view === 'lobby' ? renderLobby() : view === 'run' ? renderRun() : renderEcho(); }
+  function renderCave() { if (!CV.v || $('cave-card').hidden) return; view === 'lobby' ? renderLobby() : view === 'run' ? renderRun() : renderEcho(); caveSave(); }
+  // ── 새로고침해도 굴 창·걷던 미로·석상전이 이어지게: 화면 상태를 이 브라우저에 적어 둠 (드래곤마다) ──
+  const caveKey = () => `dragon-cave:${S.me?.id ?? S.me?.name ?? ''}`;
+  function caveSave() {
+    try {
+      if (!CT.cave) { localStorage.removeItem(caveKey()); return; }
+      const r = CV.run, snap = { at: Date.now(), view, mapId: M && M.id, hp: CV.hp, steps: CV.steps, found: [...CV.found] };
+      if (view === 'run' && r) snap.run = { ...r, rev: [...r.rev], trod: [...r.trod], rubble: [...r.rubble], keys: [...r.keys], pat: M.patrols.map((p) => [p.i, p.dir]) };
+      if (view === 'echo' && B) snap.B = B;
+      localStorage.setItem(caveKey(), JSON.stringify(snap));
+    } catch {}
+  }
+  function caveSaved() { try { const s = JSON.parse(localStorage.getItem(caveKey()) || 'null'); return s && Date.now() - s.at < 6 * 3600000 ? s : null; } catch { return null; } } // 여섯 시간 넘게 지난 기록은 버림
+  // 다시 열 때: 서버도 걷던(싸우던) 중이라고 하고 같은 미로면 그 자리에서 이어 감, 아니면 로비
+  function caveResume(s) {
+    const me = CV.v.me;
+    if (s.mapId === M.id && s.found) CV.found = new Set(s.found);
+    if (s.view === 'run' && s.run && me.inRun && s.mapId === M.id) {
+      const r = s.run; CV.run = { ...r, rev: new Set(r.rev), trod: new Set(r.trod), rubble: new Set(r.rubble), keys: new Set(r.keys) };
+      (r.pat || []).forEach(([i, dir], k) => { if (M.patrols[k]) { M.patrols[k].i = i; M.patrols[k].dir = dir; } });
+      CV.hp = s.hp; CV.steps = s.steps; ui.log = [{ t: '걷던 자리에서 다시 횃불을 들었다.' }]; view = 'run'; return;
+    }
+    if (s.view === 'echo' && s.B && me.inEcho && !s.B.done) { B = s.B; CV.hp = s.hp; view = 'echo'; return; }
+    view = 'lobby';
+  }
   // 끝방에 닿음: 미로를 깬 기록 (then = 'echo'면 이어서 석상 앞으로)
+  // 서버가 받기 전까지는 걷던 화면 그대로 (오류가 나도 걷던 자리를 잃지 않게), 두 번 눌러도 한 번만
   function caveFinish(then) {
+    if (CV.sending) return; CV.sending = true;
     socket.emit('city:cave:finish', { cleared: true, used: usedNow() }, (r) => {
+      CV.sending = false;
       if (r?.error) return toast(r.error);
+      view = 'lobby'; CV.run = null;
       if (r?.cave) caveLoad(r.cave); if (r?.lines?.length) toast(r.lines.join(' '));
       if (then === 'echo') goEcho(); else renderCave();
     });
   }
   // 석상 앞에 섬: 서버가 그때의 내 값으로 석상을 맞춰 세움 (끝방에 한 번 닿았으면 몇 번이든)
   function goEcho() {
+    if (CV.sending) return; CV.sending = true;
     B = null; view = 'lobby'; CV.run = null;
-    socket.emit('city:cave:echo', {}, (r) => { if (r?.error) { toast(r.error); return renderCave(); } caveLoad(r.cave); CV.hp = ME.hpMax; startEcho(); renderCave(); $('cave-card').scrollIntoView({ block: 'nearest' }); });
+    socket.emit('city:cave:echo', {}, (r) => { CV.sending = false; if (r?.error) { toast(r.error); return renderCave(); } caveLoad(r.cave); CV.hp = ME.hpMax; startEcho(); renderCave(); $('cave-card').scrollIntoView({ block: 'nearest' }); });
   }
   // 석상전이 끝남: 이기면 깬 미로 몫 하나로 보상
   function echoEnd(win) {
@@ -15913,12 +15951,13 @@ function renderEcho() {
     const used = usedNow(); CV.run = null; view = 'lobby';
     socket.emit('city:cave:leave', { used }, (r) => { if (r?.error) return toast(r.error); if (r?.cave) caveLoad(r.cave); renderCave(); });
   }
-  function caveOpen(on) {
+  function caveOpen(on, resume = null) {
     if (!on && CV.run && view === 'run') caveLeave(); // 걷던 중에 도시를 나가면 나온 것으로
     CT.cave = on; const center = document.querySelector('.center');
     if (center) center.classList.toggle('in-cave', on);
     $('cave-card').hidden = !on;
-    if (on) { view = 'lobby'; socket.emit('city:cave:get', {}, (r) => { if (r?.error) { toast(r.error); return caveOpen(false); } caveLoad(r.cave); renderCave(); $('cave-card').scrollIntoView({ block: 'start' }); }); }
+    if (!on) caveSave();
+    if (on) { view = 'lobby'; B = null; socket.emit('city:cave:get', {}, (r) => { if (r?.error) { toast(r.error); return caveOpen(false); } caveLoad(r.cave); if (resume) caveResume(resume); renderCave(); $('cave-card').scrollIntoView({ block: 'start' }); }); }
   }
   document.addEventListener('click', (e) => {
     const t = e.target.closest('#cave-card button'); if (!t || t.disabled) return;
@@ -15933,12 +15972,13 @@ function renderEcho() {
     if (a === 'wait') { run.used = Math.round((run.used + 0.5) * 10) / 10; movePatrols(...run.pos); ui.log = [{ t: '숨죽여 기다렸다. 파수꾼이 한 걸음 옮겼다.' }]; tick(); renderCave(); return; }
     if (a === 'heal') { run.used += 1; tick(); run.healed = true; CV.hp = Math.min(ME.hpMax, CV.hp + Math.round(ME.hpMax * 0.5)); ui.log = [{ t: '화톳불 곁에서 상처를 돌봤다.' }]; renderCave(); return; }
     if (a === 'echo') { goEcho(); return; }
-    if (a === 'record') { const then = t.dataset.then; caveFinish(then); view = 'lobby'; CV.run = null; if (!then) renderCave(); return; }
+    if (a === 'record') { caveFinish(t.dataset.then); return; }
     if (a === 'act') { echoAct(t.dataset.a); if (B.done) echoEnd(B.done === 'win'); renderCave(); return; }
     if (a === 'echoout') { view = 'lobby'; CV.run = null; renderCave(); return; }
   });
 
   caveOpenFn = caveOpen;
+  caveResumeFn = () => { const s = caveSaved(); if (s && !CT.cave) caveOpen(true, s); }; // 새로고침 뒤 도시가 처음 그려질 때 한 번
   })();
 
   // 고대 유적 화면의 입구 띠. 안에 있으면 가운데 칸이 회랑 화면으로 바뀜
