@@ -38,14 +38,14 @@ const ZONES = [
 { let acc = 0; for (const z of ZONES) { z.from = acc; acc += z.need; z.to = acc; } }
 // 구역마다 재료함: 골렘이 가져오는 도시 재료만 받는다. 재건도와 재료함이 둘 다 차야 재건된다.
 // 양은 '그 구역 재건도가 차는 동안 서버 전체에 남는 골렘 시간'의 약 80%로 맞춤 (멤버 40명, 2/3가 열심히)
-const ZONE_MATS = {
+const ZONE_MATS = { // 도시 재료는 처음 값의 2배 (2026-11-13: 미리 모아 둔 재료로 열리자마자 차 버려서). 금은 그대로
   plaza:   {}, // 광장·샘은 재건도만 (초반엔 다들 집을 짓느라 바쁨). 재료함은 서고부터
   spring:  {},
-  archive: { old_tile: 650, faded_cloth: 450, sun_dust: 400, drip_dust: 200 },
-  green:   { sun_dust: 800, shroom_spore: 650, cave_crystal: 400, faded_cloth: 200 },
-  forge:   { sun_dust: 1000, old_tile: 650, cave_crystal: 300, drip_dust: 200, gold: 150000 },
-  belfry:  { sun_dust: 700, faded_cloth: 450, cave_crystal: 450, old_tile: 200, gold: 250000 },
-  sanctum: { sun_dust: 1200, cave_crystal: 650, old_tile: 650, shroom_spore: 500, faded_cloth: 500, drip_dust: 250, gold: 400000 },
+  archive: { old_tile: 1300, faded_cloth: 900, sun_dust: 800, drip_dust: 400 },
+  green:   { sun_dust: 1600, shroom_spore: 1300, cave_crystal: 800, faded_cloth: 400 },
+  forge:   { sun_dust: 2000, old_tile: 1300, cave_crystal: 600, drip_dust: 400, gold: 150000 },
+  belfry:  { sun_dust: 1400, faded_cloth: 900, cave_crystal: 900, old_tile: 400, gold: 250000 },
+  sanctum: { sun_dust: 2400, cave_crystal: 1300, old_tile: 1300, shroom_spore: 1000, faded_cloth: 1000, drip_dust: 500, gold: 400000 },
 };
 const BOX_SEAL = 10; // 재료함에 넣은 재료 몇 개마다 석공 인장 1
 // 금: 대장간 거리(화로와 모루)·종탑(종을 다시 붓기)·성소(문의 금박)에는 둥지의 금화를 녹여 넣음. 'gold'는 물건이 아니라 금화
@@ -552,11 +552,12 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
   function caveView(d) {
     const c = caveSt(d), cw = caveWorld(), M = myMap(d), rule = caveRule();
     let f = c.echoOpen && c.fight; if (!f) { const me = caveMe(d); f = { me, echo: echoFor(me, echoTier(c)) }; } // 석상 앞이 아니면 지금 들어갈 때의 미리보기
-    const all = Object.entries(cw.rank).sort((a, b) => a[1] - b[1]), mine = all.findIndex(([n]) => n === d.name);
+    const awake = (n) => { if (n === d.name) return true; try { const o = otherDragon(n); return !o || !o.dormant_at; } catch { return true; } }; // 휴면 중인 이는 순위·받침돌에서 빼 둠
+    const all = Object.entries(cw.rank).filter(([n]) => awake(n)).sort((a, b) => a[1] - b[1]), mine = all.findIndex(([n]) => n === d.name);
     const resetIn = CAVE.cycleDays - (((dayIdx() % CAVE.cycleDays) + CAVE.cycleDays) % CAVE.cycleDays); // 새 굴까지 남은 날 (오늘 포함)
     return { open: done('spring'), week: cw.week, mapId: `${cw.week}:${c.n}`, n: c.n, mazeMax, closed: c.n >= mazeMax, resetIn, reward: CAVE.reward,
       rule, ruleName: CAVE.names[rule], ruleLine: CAVE.lines[rule],
-      echo: f.echo, mul: caveMul(f), carved: (W.caveCarved || []).map((x) => x.name), map: { g: M.g.map((r) => r.join('')), dist: M.dist, E: M.E, far: M.far, fires: M.fires, keys: M.keys, patrols: M.patrols.map((p) => p.path) },
+      echo: f.echo, mul: caveMul(f), carved: (W.caveCarved || []).map((x) => x.name).filter(awake), map: { g: M.g.map((r) => r.join('')), dist: M.dist, E: M.E, far: M.far, fires: M.fires, keys: M.keys, patrols: M.patrols.map((p) => p.path) },
       rank: all.slice(0, CAVE.rankShow), myRank: mine >= 0 ? [mine + 1, all[mine][1], all.length] : null,
       me: { spent: c.spent, score: c.score, owe: c.owe.slice(), inRun: !!c.open, inEcho: !!c.echoOpen, fires: c.fires, keys: c.keys, tabs: c.tabs.map((i) => TABLETS[i]), tabTotal: TABLETS.length, hpMax: f.me.hp, sum: f.me.sum } };
   }
@@ -761,6 +762,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
   function visitView(d, name) {
     const o = otherDragon(name); if (!o) return err('그런 드래곤은 없다.');
     if (o.dead_at && o.id !== d.id) return err(`${o.name}의 집터는 이제 비어 있다. 주인이 대륙을 떠났다.`); // 먼 여행·긴 잠
+    if (o.dormant_at && o.id !== d.id) return err(`${o.name}${josa(o.name, '은', '는')} 오래 자리를 비워 휴면 중이다. 돌아오면 다시 놀러 갈 수 있다.`);
     const m = cityOf(o); if (!m || !m.plot || !m.rooms) return err(`${ga(o.name)} 아직 집터를 고르지 않았다.`);
     const mm = ct(d), spare = o.id !== d.id && mm.plot ? Object.keys(FURN).map((s) => ({ s, name: FURN[s].name, n: spareOf(mm, s) })).filter((x) => x.n > 0) : [];
     const rs = ROOMS(m.plot), ci = curIdx(m), today = dayIdx();
@@ -1154,7 +1156,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
   // 도시 게시판: 재건을 도운 이 (가나다 순). 집터 이름과 방명록 받침이 있는지 함께 (놀러 가기용)
   function board(d) {
     const names = [...new Set([...Object.keys(W.hands), ...Object.keys(W.givers)])].sort((a, b) => a.localeCompare(b, 'ko'));
-    return names.map((n) => { let plot = null, book = false, gone = false; try { const o = otherDragon(n); gone = !o || !!o.dead_at; const m = !gone && cityOf(o); if (m && m.plot && PI[m.plot]) { plot = PI[m.plot].name; book = hasBook(m); } } catch {} return { name: n, plot, book, gone, me: !!d && n === d.name }; }); // gone: 먼 여행을 떠났거나 긴 잠에 든 이 (이름은 남기고 집터는 보이지 않게)
+    return names.map((n) => { let plot = null, book = false, gone = false, rest = false; try { const o = otherDragon(n); gone = !o || !!o.dead_at; rest = !gone && !!o.dormant_at; const m = !gone && !rest && cityOf(o); if (m && m.plot && PI[m.plot]) { plot = PI[m.plot].name; book = hasBook(m); } } catch {} return { name: n, plot, book, gone, rest, me: !!d && n === d.name }; }).filter((x) => !x.rest || x.me); // 휴면 중인 이는 게시판에서도 빼 둠 (돌아오면 다시 보임) // gone: 먼 여행을 떠났거나 긴 잠에 든 이 (이름은 남기고 집터는 보이지 않게)
   }
   function scene(key) { const [zid, i] = String(key).split(':'); const f = own(FRAGS, zid) ? FRAGS[zid][+i] : null; if (!f || !W.wall[key]) return null; return { t: f.t, s: f.s, who: W.wall[key], zone: ZONES.find((z) => z.id === zid).name }; }
 
@@ -1246,7 +1248,17 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     });
   }
   const bind0 = bind;
-  return { RULES: R, meView, warpTo, bind: (socket, entry) => { bind0(socket, entry); bindGm(socket); }, isOpen };
+  // GM 도구 '진행 중인 싸움': 지금 시련의 굴에서 미로를 걷거나 석상과 겨루는 드래곤 (접속 중인 드래곤만)
+  function caveNow() {
+    const out = [];
+    for (const [, e] of online) {
+      const c = (logic.combatJson(e.dragon).city || {}).cave;
+      if (!c || (!c.open && !c.echoOpen)) continue;
+      out.push({ name: e.dragon.name, what: c.echoOpen ? '석상 앞' : c.n ? `새 미로 ${c.n}` : '첫 미로', used: c.open ? r1(c.live || 0) : null, old: c.week !== weekIdx() });
+    }
+    return out;
+  }
+  return { RULES: R, meView, warpTo, bind: (socket, entry) => { bind0(socket, entry); bindGm(socket); }, isOpen, caveNow };
 };
 module.exports.CITY_RULES = CITY_RULES;
 module.exports.CITY_ZONES = ZONES;

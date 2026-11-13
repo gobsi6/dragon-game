@@ -536,6 +536,7 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
       const id = Number(p.id);
       const o = id && id !== d.id ? load(id) : null;
       if (!o) return { error: '그런 드래곤은 없다.' };
+      if (o.dormant_at) return { error: `${o.name}${josa(o.name, '은', '는')} 오래 자리를 비워 휴면 중이다.` };
       const mine = myBlock(d);
       if (mine) return { error: mine };
       if (!combat.combatOf(d).duelOn) return { error: '결투 받기를 꺼 두었으면 신청도 할 수 없다. 설정에서 켜자.' };

@@ -8084,12 +8084,14 @@
       const box = document.createElement('div');
       for (const x of list) {
         const r = document.createElement('div');
-        r.className = `fr-row${x.idle ? ' idle' : ''}`; // 3일 넘게 자리를 비운 드래곤은 흐리게
+        r.className = `fr-row${x.idle || x.dormant ? ' idle' : ''}`; // 3일 넘게 자리를 비운 드래곤·휴면 중인 드래곤은 흐리게
         if (x.idle) r.title = '3일 넘게 자리를 비웠다';
+        if (x.dormant) r.title = '15일 넘게 접속하지 않아 휴면 중이다. 돌아와 휴면을 풀기 전까지는 다른 곳에 보이지 않는다.';
         r.appendChild(avaEl(x, 34));
         const t = document.createElement('div');
         t.innerHTML = '<b></b><small></small>';
         t.querySelector('b').textContent = x.name;
+        if (x.dormant) t.querySelector('b').insertAdjacentHTML('beforeend', ' <span class="relb dormant">휴면 중</span>');
         t.querySelector('small').innerHTML = sub(x);
         for (const [text, cls, who] of [[x.memo, 'memo', '내 메모'], [x.theirMemo, 'memo theirs', `${x.name}의 메모`]]) {
           if (!text) continue;
@@ -10175,7 +10177,10 @@
   new MutationObserver(() => { $('slate-open').setAttribute('aria-pressed', String($('slate-dlg').open)); renderSlateDot(); }).observe($('slate-dlg'), { attributes: true, attributeFilter: ['open'] });
 
   // 상단의 '용의 대륙'을 누르면 대륙(첫 화면)으로: 아래 메뉴의 '대륙'을 누른 것과 같고, 맨 위로 올림
-  const goHome = () => { $('dock-map').click(); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const goHome = () => {
+    if (!$('cave-card').hidden && window.__caveClose) { if (window.__caveClose()) window.scrollTo({ top: 0, behavior: 'smooth' }); return; } // 시련의 굴을 보고 있으면 고대도시 화면으로
+    $('dock-map').click(); window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   $('brand-home').addEventListener('click', goHome);
   $('brand-home').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goHome(); } });
 
@@ -12415,15 +12420,16 @@
     const load = () => socket.emit('gm:fights', {}, (res) => {
       if (res.error) { sum.textContent = res.error; return; }
       box.replaceChildren();
-      const n = res.raids.length + res.others.length;
+      const n = res.raids.length + res.others.length, cv = (res.cave || []).length;
       sum.textContent = n || res.lobbies.length
-        ? `레이드 ${res.raids.length}팀 · 모집 중 ${res.lobbies.length} · 그 밖의 싸움 ${res.others.length}마리 (${chatTime(res.at)} 기준)`
-        : `지금은 진행 중인 싸움이 없다. 올려도 괜찮다. (${chatTime(res.at)} 기준)`;
+        ? `레이드 ${res.raids.length}팀 · 모집 중 ${res.lobbies.length} · 그 밖의 싸움 ${res.others.length}마리${cv ? ` · 시련의 굴 ${cv}마리` : ''} (${chatTime(res.at)} 기준)`
+        : `지금은 진행 중인 싸움이 없다. 올려도 괜찮다.${cv ? ` 시련의 굴 ${cv}마리는 새로고침하면 이어서 한다.` : ''} (${chatTime(res.at)} 기준)`;
       sum.classList.toggle('gm-ok', !n && !res.lobbies.length);
       const line = (title, text, warn) => { const r = gEl('div', `gm-fight${warn ? ' warn' : ''}`); r.append(gEl('b', null, title), gEl('span', null, text)); box.appendChild(r); };
       for (const f of res.raids) line(`레이드 · ${f.boss}${f.test ? ' (GM 시험)' : ''}`, `${f.turn} / ${f.maxTurns}턴 · ${f.members.map((m) => `${m.name}${m.left ? '(물러남)' : m.down ? '(쓰러짐)' : ''}`).join(', ')}`, true);
       for (const l of res.lobbies) line(`레이드 모집 · ${l.name}`, `${l.names.length}/${l.size}마리 · 준비 ${l.ready} · ${l.names.join(', ')}${l.gm ? ' (GM 시험)' : ''}`);
       for (const o of res.others) line(o.kind, `${o.name}${o.online ? '' : ' (접속 끊김)'}`, true);
+      for (const c of res.cave || []) line(`시련의 굴 · ${c.what}`, `${c.name}${c.used != null ? ` · 이번에 쓴 횃불 ${c.used}` : ''}${c.old ? ' · 지난 굴에 들어감' : ''} — 올려도 새로고침하면 그 자리에서 이어 간다`);
     });
     gBtn(top, '새로고침', load, 'link');
     sec.appendChild(box);
@@ -12439,8 +12445,8 @@
     if (S.me) gBtn(f, '내 드래곤', () => openGmDragon(S.me.id));
     f.addEventListener('submit', (e) => { e.preventDefault(); GM.q = q.value.trim(); gmLoadList(); });
     body.appendChild(f);
-    const on = GM.list.filter((x) => x.online).length;
-    body.appendChild(gEl('p', 'note', `드래곤 ${GM.list.length}마리 · 접속 중 ${on}`));
+    const on = GM.list.filter((x) => x.online).length, hd = GM.list.filter((x) => x.heldAt).length, dm = GM.list.filter((x) => x.dormant && !x.heldAt).length;
+    body.appendChild(gEl('p', 'note', `드래곤 ${GM.list.length}마리 · 접속 중 ${on}${dm ? ` · 휴면 ${dm}` : ''}${hd ? ` · 지운 계정 ${hd}` : ''}`));
     const box = gEl('div');
     for (const x of GM.list) {
       const r = gEl('div', 'fr-row');
@@ -12449,6 +12455,8 @@
       const nm = gEl('b', null, x.name);
       t.appendChild(nm);
       if (x.isGm) nm.appendChild(gEl('span', 'gm-tag', 'GM'));
+      if (x.heldAt) { const left = Math.max(0, Math.ceil((x.heldAt + 7 * 86400000 - Date.now()) / 86400000)); const tg = gEl('span', 'relb rival', `지운 계정 · 완전 삭제까지 ${left}일`); tg.title = `지운 때: ${ago(x.heldAt)}. 살펴보기에서 복구할 수 있다.`; nm.append(' ', tg); }
+      else if (x.dormant) { const left = Math.max(0, Math.ceil((x.dormantAt + 30 * 86400000 - Date.now()) / 86400000)); const tg = gEl('span', 'relb dormant', `휴면 · 삭제까지 ${left}일`); tg.title = `휴면이 된 때: ${ago(x.dormantAt)}. 30일 안에 돌아와 풀지 않으면 계정이 지워진다 (GM 계정은 지우지 않음).`; nm.append(' ', tg); }
       const sm = gEl('small');
       sm.innerHTML = `<span class="dot${x.online ? ' on' : ''}"></span>`;
       sm.append(`${x.online ? S.regions[x.region]?.name || '' : ago(x.lastSeen)} · ${S.kinds[x.kind]?.name || ''} · Lv. ${x.level} · 아이디 ${x.username}${x.link ? ` · 계정 ${x.link}` : ''}`);
@@ -12519,6 +12527,8 @@
     const who = gEl('div', 'gm-who');
     const nm = gEl('b', null, d.name);
     if (d.isGm) nm.appendChild(gEl('span', 'gm-tag', 'GM'));
+    if (d.heldAt) nm.append(' ', gEl('span', 'relb rival', `지운 계정 · ${ago(d.heldAt)} · 완전 삭제까지 ${Math.max(0, Math.ceil((d.heldAt + 7 * 86400000 - Date.now()) / 86400000))}일`));
+    else if (d.dormantAt) nm.append(' ', gEl('span', 'relb dormant', `휴면 · ${ago(d.dormantAt)} · 삭제까지 ${Math.max(0, Math.ceil((d.dormantAt + 30 * 86400000 - Date.now()) / 86400000))}일`));
     who.appendChild(nm);
     const sm = gEl('small');
     sm.innerHTML = `<span class="dot${d.online ? ' on' : ''}"></span>`;
@@ -12526,6 +12536,7 @@
     who.appendChild(sm);
     head.appendChild(who);
     const ha = gEl('div', 'gm-r');
+    if (d.heldAt) gBtn(ha, '지운 계정 복구', () => { if (confirm(`${d.name}(아이디 ${d.username})의 계정을 되살릴까? 다시 들어올 수 있게 되고, 들어와서 휴면을 풀면 다시 보인다.`)) gmCall('gm:unhold', { id: d.id }, () => { toast('계정을 되살렸다.'); gmLoadList(); }); });
     if (d.online) gBtn(ha, '접속 끊기', () => { if (confirm(`${d.name}의 접속을 끊을까?`)) gmCall('gm:kick', { id: d.id }, () => toast('접속을 끊었다.')); }, 'warn');
     gBtn(ha, '임시 비밀번호', () => {
       if (!confirm(`${d.name}(아이디 ${d.username})의 비밀번호를 임시 비밀번호로 바꿀까? 지금 비밀번호로는 더 이상 들어올 수 없고, 접속 중이면 끊긴다.`)) return;
@@ -13941,8 +13952,23 @@
         show('create');
       }
     });
+    // 휴면: 15일 넘게 접속하지 않으면 결투장·지역 목록·지도 등에서 빠짐. 돌아와서 직접 눌러야 다시 보임 (그 전에는 이 창이 닫히지 않음)
+    function renderDormant(me) {
+      let dlg = document.getElementById('dormant-dlg');
+      if (!me || !me.dormant) { if (dlg && dlg.open) dlg.close(); return; }
+      if (!dlg) {
+        dlg = document.createElement('dialog'); dlg.className = 'frame dlg'; dlg.id = 'dormant-dlg'; dlg.setAttribute('aria-labelledby', 'dormant-dlg-title');
+        dlg.innerHTML = '<i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i><div class="orn-h"><h2 id="dormant-dlg-title">오랜만의 귀환</h2></div><div class="body"><p id="dormant-text"></p><p class="note">15일 넘게 접속하지 않아 휴면 상태가 되었다. 지금은 결투장·지역 목록·지도 같은 곳에 보이지 않는다. 돌아왔음을 알리면 다시 모두에게 보인다.</p><p class="note" id="dormant-left"></p><div class="row"><button class="btn primary" type="button" id="dormant-wake">돌아왔다 (휴면 풀기)</button></div></div>';
+        document.body.appendChild(dlg);
+        dlg.addEventListener('cancel', (e) => e.preventDefault()); // Esc로 닫히지 않게
+        const wb = dlg.querySelector('#dormant-wake'); wb.addEventListener('click', () => { wb.disabled = true; socket.emit('account:wake', {}, (r) => { wb.disabled = false; if (r && r.error) toast(r.error); }); }); // 풀리면 서버가 보내는 me로 창이 닫힘
+      }
+      dlg.querySelector('#dormant-text').textContent = `오랫동안 대륙을 비운 사이, ${me.name}의 모습이 다른 드래곤들의 눈에서 희미해졌다.`;
+  dlg.querySelector('#dormant-left').textContent = me.dormantLeft != null ? `휴면을 풀지 않은 채 30일이 지나면 계정과 드래곤이 지워진다. (남은 날 ${me.dormantLeft}일)` : '';
+      if (!dlg.open) dlg.showModal();
+    }
     socket.on('me', (me) => {
-      setMe(me); if (me.battle && !BT) resumeBattle(); // 싸우는 중인데 창이 없으면 (새로고침·재접속 때 순서가 엇갈려도) 다시 엶
+      setMe(me); renderDormant(me); if (me.battle && !BT) resumeBattle(); // 싸우는 중인데 창이 없으면 (새로고침·재접속 때 순서가 엇갈려도) 다시 엶
       renderSayMode(); maybeWelcome(); renderMazeBar(); renderCity(); renderRaidBar(); renderNmRow(); if ($('nm-dlg').open && !(me.nightMarket?.open && (me.nightMarket.here || nmTab === 'mine'))) $('nm-dlg').close(); FAV.migrate(); SEEN.migrate(); renderSlateDot(); renderNotesDot();
       if (!S.seenReady) { S.seenReady = true; renderRescues(); }
       // 임시 비밀번호로 들어왔으면: 설정의 비밀번호 바꾸기를 열어 줌 (바꾸면 안내 끝)
@@ -14734,7 +14760,9 @@
   function zonePane(id) {
     const v = CT.v, z = zoneOf(id), st = z.state, inv = v.me.inv || {};
     // live: 재건 중인 구역. 가진 재료가 있는 줄에는 넣을 개수 칸 (고른 값은 CT.boxQ에 두어 화면을 다시 그려도 그대로)
-    const boxList = (live) => `<ul class="cc-box">${z.box.map((m) => { const ok = m.put >= m.need, hv = inv[m.id] || 0, mx = Math.min(hv, m.need - m.put); return `<li class="${ok ? 'ok' : ''}"><span>${m.name}</span>${ctBar(m.put, m.need, ok ? 'done' : '')}<b>${ok ? '다 참' : `${ctNum(m.put)} / ${ctNum(m.need)}`}</b>${live && !ok && m.id !== 'gold' ? (mx > 0 ? `<div class="cc-q"><span>가진 것 ${ctNum(hv)}</span><input type="number" class="input" data-boxq="${m.id}" min="0" max="${mx}" step="1" value="${Math.min(mx, Math.max(0, (CT.boxQ || {})[m.id] || 0))}" aria-label="${ctEsc(m.name)} 넣을 개수"><button type="button" class="btn" data-ct="boxmax:${m.id}">최대 ${ctNum(mx)}</button></div>` : `<small>가진 것 ${ctNum(hv)}</small>`) : ''}</li>`; }).join('')}</ul>`;
+    const boxList = (live) => `<ul class="cc-box${live ? ' live' : ''}">${z.box.map((m) => { const ok = m.put >= m.need, hv = inv[m.id] || 0, mx = Math.min(hv, m.need - m.put), q = (CT.boxQ || {})[m.id] || 0;
+      const qty = !live || m.id === 'gold' ? '' : ok ? '<span class="cc-qx"></span>' : mx > 0 ? `<span class="cc-q"><input type="number" class="input" data-boxq="${m.id}" min="0" max="${mx}" step="1" value="${q ? Math.min(mx, q) : ''}" placeholder="0" aria-label="${ctEsc(m.name)} 넣을 개수 (가진 것 ${ctNum(hv)})"><button type="button" class="cc-max" data-ct="boxmax:${m.id}" title="넣을 수 있는 만큼">/ ${ctNum(mx)}</button></span>` : '<span class="cc-qx">가진 것 없음</span>';
+      return `<li class="${ok ? 'ok' : ''}"><span>${m.name}</span>${ctBar(m.put, m.need, ok ? 'done' : '')}<b>${ok ? '다 참' : `${ctNum(m.put)} / ${ctNum(m.need)}`}</b>${qty}</li>`; }).join('')}</ul>`;
     let lower = '';
     if (st === 'done') {
       if (id === 'plaza') {
@@ -14744,7 +14772,7 @@
         const me = v.me, did = !!(me.zday || {})[id];
         const btn = (label, doneLabel) => `<div class="cc-btns"><button type="button" class="btn primary" data-ct="zone:${id}" ${did ? 'disabled' : ''}>${did ? doneLabel : label}</button></div>`;
         const F = {
-          spring: `<p>마른 샘 바닥에서 맑은 물이 다시 솟는다. 샘물을 마시면 체력·기력·정신이 모두 가득 찬다. 하루 ${3}번까지.</p><div class="cc-btns"><button type="button" class="btn primary" data-ct="zone:spring" ${me.springLeft > 0 ? '' : 'disabled'}>${me.springLeft > 0 ? `샘물 마시기 (오늘 ${me.springLeft}번 남음)` : '오늘은 세 번 다 마셨다'}</button></div><div class="cc-btns"><button type="button" class="btn" data-ct="cave">시련의 굴로 내려간다</button></div>`,
+          spring: `<p>마른 샘 바닥에서 맑은 물이 다시 솟는다. 샘물을 마시면 체력·기력·정신이 모두 가득 찬다. 하루 ${3}번까지.</p><div class="cc-btns"><button type="button" class="btn primary" data-ct="zone:spring" ${me.springLeft > 0 ? '' : 'disabled'}>${me.springLeft > 0 ? `샘물 마시기 (오늘 ${me.springLeft}번 남음)` : '오늘은 세 번 다 마셨다'}</button><button type="button" class="btn" data-ct="cave">시련의 굴로 내려간다</button></div>`, // 샘물·굴 단추를 한 줄에
           archive: `<p>쓰러진 돌판을 하루 한 장씩 일으켜 읽을 수 있다. 읽으면 석공 인장 5, 가끔 돌판 틈에서 기억 조각이 나온다.</p>${btn('돌판 읽기', '오늘은 읽었다')}`,
           green: `<p>깨진 유리 지붕 아래 덩굴과 빛버섯이 다시 자란다. 하루 한 번 꽃과 씨앗을 거둘 수 있다 (빛버섯 포자·동굴 수정·태양가루).</p>${btn('꽃과 씨앗 거두기', '오늘은 거두었다')}`,
           forge: `<p>화로에 다시 불이 들어왔다. 이 거리의 모루를 함께 쓰니, 가구를 만들 때 드는 석공 인장이 ${Math.round((me.forgeOff || 0.2) * 100)}% 덜 든다. (늘 켜짐)</p>`,
@@ -14760,7 +14788,7 @@
         <p class="note">${sonFull ? '재건도는 다 찼다. 재료함이 차면 바로 재건된다.' : `골렘의 공사 시간과 집터에 넣은 재료로 오른다. 하루에 ${v.rules.dayCap}까지.${z.box.length ? '' : ' 이 구역은 재료함 없이 재건도만 차면 재건된다.'}`}</p>
         ${z.box.length ? `<div class="cc-prog"><div class="t"><span>재료함</span><span><b>${bp.pct}</b>%</span></div>${ctBar(bp.pct, 100, 'big' + (bp.full ? ' done' : ''))}</div>
         ${boxList(true)}
-        <div class="cc-btns"><button type="button" class="btn primary" data-ct="givesel" ${can ? '' : 'disabled'}>고른 만큼 넣기</button><button type="button" class="btn" data-ct="give" ${can ? '' : 'disabled'}>가진 만큼 모두 넣기</button></div>
+        ${can ? '<div class="cc-give"><span>넣을 개수를 적거나 숫자를 눌러 채운다</span><button type="button" class="btn" data-ct="give">가진 만큼 모두</button><button type="button" class="btn primary" data-ct="givesel">넣기</button></div>' : ''}
         ${gb && gLeft > 0 ? `<div class="cc-gold"><span class="rm-k">금화 녹여 넣기 <small>남은 금 ${ctNum(gLeft)} · 가진 금화 ${ctNum(myGold)}</small></span>
           <div class="cc-gold-row"><input type="number" class="input" id="cc-gold-n" min="100" step="1000" value="${Math.min(gLeft, myGold, 10000)}" aria-label="녹일 금화"><button type="button" class="btn" data-ct="goldq:1000">+1천</button><button type="button" class="btn" data-ct="goldq:10000">+1만</button><button type="button" class="btn" data-ct="goldq:max">최대</button><button type="button" class="btn primary" data-ct="gold" ${myGold >= 100 ? '' : 'disabled'}>녹여 넣기</button></div>
           <p class="note">${({ forge: '식은 화로에 불을 넣고 모루를 되살리는 데', belfry: '깨진 종을 다시 붓는 데', sanctum: '성소 문의 문양을 금박으로 덮는 데' })[id] || '도시를 되살리는 데'} 금이 든다. 금화 5,000마다 석공 인장 1.</p></div>` : ''}
@@ -15423,7 +15451,7 @@
     const all = [...(CT.board || [])].sort((a, b) => (b.me - a.me) || (!!b.plot - !!a.plot) || a.name.localeCompare(b.name, 'ko')), q = (CT.boardQ || '').trim(), list = q ? all.filter((x) => x.name.includes(q)) : all; // 나 → 집터 있는 이 → 없는 이, 각각 가나다
     const cards = list.map((x) => x.plot && !x.me
       ? `<button type="button" class="bd-it" data-ct="visit" data-name="${ctEsc(x.name)}" title="${ctEsc(x.name)}의 집터에 놀러 간다"><b>${ctEsc(x.name)}</b><small>${ctEsc(x.plot)}</small>${x.book ? `<i class="bd-bk" title="방명록을 받는다">${BOOK_ICO}</i>` : ''}</button>`
-      : `<div class="bd-it${x.me ? ' me' : ' off'}"><b>${ctEsc(x.name)}</b><small>${x.me ? '나' : x.gone ? '대륙을 떠남' : '집터 없음'}</small></div>`).join('');
+      : `<div class="bd-it${x.me ? ' me' : ' off'}"><b>${ctEsc(x.name)}</b><small>${x.me ? '나' : x.gone ? '대륙을 떠남' : x.rest ? '휴면 중' : '집터 없음'}</small></div>`).join('');
     return `<div class="cc-board"><div class="bd-h"><b>재건을 도운 이 <em>${all.length}</em></b>${all.length > 8 ? `<input type="search" class="input bd-q" id="bd-q" placeholder="이름 찾기" value="${ctEsc(q)}" aria-label="이름 찾기">` : ''}</div>
       <small class="bd-s">집터가 있는 이부터 가나다 순 · 이름을 누르면 그 집터에 놀러 간다${all.some((x) => x.book) ? ` · <i class="bd-bk">${BOOK_ICO}</i> 방명록을 받는 집` : ''}</small>
       ${list.length ? `<div class="bd-grid">${cards}</div>` : '<p class="note">찾는 이름이 없다.</p>'}</div>`;
@@ -15921,8 +15949,9 @@ function renderEcho() {
   }
   // 끝방에 닿음: 미로를 깬 기록 (then = 'echo'면 이어서 석상 앞으로)
   // 서버가 받기 전까지는 걷던 화면 그대로 (오류가 나도 걷던 자리를 잃지 않게), 두 번 눌러도 한 번만
+  const sendLock = () => { if (CV.sending) return false; CV.sending = true; clearTimeout(CV.sendT); CV.sendT = setTimeout(() => { CV.sending = false; }, 8000); return true; }; // 답이 오지 않으면(연결이 끊김 등) 8초 뒤 다시 누를 수 있게
   function caveFinish(then) {
-    if (CV.sending) return; CV.sending = true;
+    if (!sendLock()) return;
     socket.emit('city:cave:finish', { cleared: true, used: usedNow() }, (r) => {
       CV.sending = false;
       if (r?.error) return toast(r.error);
@@ -15933,7 +15962,7 @@ function renderEcho() {
   }
   // 석상 앞에 섬: 서버가 그때의 내 값으로 석상을 맞춰 세움 (끝방에 한 번 닿았으면 몇 번이든)
   function goEcho() {
-    if (CV.sending) return; CV.sending = true;
+    if (!sendLock()) return;
     B = null; view = 'lobby'; CV.run = null;
     socket.emit('city:cave:echo', {}, (r) => { CV.sending = false; if (r?.error) { toast(r.error); return renderCave(); } caveLoad(r.cave); CV.hp = ME.hpMax; startEcho(); renderCave(); $('cave-card').scrollIntoView({ block: 'nearest' }); });
   }
@@ -15978,6 +16007,8 @@ function renderEcho() {
   });
 
   caveOpenFn = caveOpen;
+  // 용의 대륙 타이틀: 굴 창을 닫고 고대도시 화면으로. 미로를 걷던 중이면 나갈지 먼저 물음 (걷던 자리는 사라지고 쓴 횃불은 남음)
+  window.__caveClose = () => { if (view === 'run' && CV.run && !confirm('굴 밖으로 나가 고대도시로 돌아갈까? 걷던 자리는 사라지고, 쓴 횃불은 그대로 남는다.')) return false; caveOpen(false); return true; };
   caveResumeFn = () => { const s = caveSaved(); if (s && !CT.cave) caveOpen(true, s); }; // 새로고침 뒤 도시가 처음 그려질 때 한 번
   })();
 

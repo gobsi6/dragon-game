@@ -70,6 +70,8 @@ if (!db.prepare('PRAGMA table_info(users)').all().some((c) => c.name === 'link_a
 if (!db.prepare('PRAGMA table_info(users)').all().some((c) => c.name === 'welcome_seen')) db.exec('ALTER TABLE users ADD COLUMN welcome_seen INTEGER NOT NULL DEFAULT 0');
 // 관계도 공개를 한 번 물어봤는지 (계정마다 한 번. 공개 설정을 직접 바꾼 적이 있어도 물어본 것으로 침)
 if (!db.prepare('PRAGMA table_info(users)').all().some((c) => c.name === 'map_asked')) db.exec('ALTER TABLE users ADD COLUMN map_asked INTEGER NOT NULL DEFAULT 0');
+// 지운 계정을 GM이 7일 동안 맡아 둠: 지운 시각 (그동안은 들어올 수도 보이지도 않고, GM이 복구할 수 있음. 7일이 지나면 완전히 지움)
+if (!db.prepare('PRAGMA table_info(users)').all().some((c) => c.name === 'deleted_at')) db.exec('ALTER TABLE users ADD COLUMN deleted_at INTEGER');
 const addCol = (name, def) => {
   if (dragonCols.includes(name)) return false;
   db.exec(`ALTER TABLE dragons ADD COLUMN ${name} ${def}`);
@@ -131,6 +133,7 @@ addCol('place', 'TEXT');
 addCol('fallen', 'TEXT');                           // 쓰러져 선택을 기다리면 { at, region }, 죽은 뒤에는 남긴 둥지 { region, until, closed }
 addCol('scars', "TEXT NOT NULL DEFAULT '[]'");      // 상흔이 남은 능력치
 addCol('dead_at', 'INTEGER');                       // 긴 잠에 든 시각
+addCol('dormant_at', 'INTEGER');                    // 휴면: 오래 접속하지 않아 결투장·목록에서 빠진 시각 (본인이 와서 복구하면 비움)
 addCol('titles', "TEXT NOT NULL DEFAULT '{}'");
 addCol('exp_info', "TEXT NOT NULL DEFAULT '{}'");
 addCol('chron', "TEXT NOT NULL DEFAULT '[]'");      // 20단계: 지나온 이야기 [{ at, k: 'choice'|'mark', t }] (최근 150개)   // 19단계: 원정 목적·갈림길 { goal, fork: { id, at, pick, res }, last: 지난 원정 일지 }     // 18단계: 칭호 { have: [얻은 칭호 id], on: 단 칭호 id }
@@ -334,7 +337,7 @@ if (!db.prepare('PRAGMA table_info(inventory)').all().some((c) => c.name === 'go
 // 그림(avatar)을 뺀 드래곤 정보 열
 const DRAGON_FIELDS = `id, name, kind, region, avatar_ver, level, xp, hp, hp_max, en, en_max,
   ap, ap_max, gold, claw, scale, wing, wisdom, majesty, stance,
-  ap_at, hp_at, en_at, exp_start, exp_end, exp_region, equip, rep, stance_at, nest, rest_at, hoard_gold, fame, pending_event, traits, combat, last_seen, stat_pts, mind, mind_at, berserk, place, fallen, scars, dead_at, bio, titles, exp_info, chron, nest_info, heir, ev_recent, created_at,
+  ap_at, hp_at, en_at, exp_start, exp_end, exp_region, equip, rep, stance_at, nest, rest_at, hoard_gold, fame, pending_event, traits, combat, last_seen, stat_pts, mind, mind_at, berserk, place, fallen, scars, dead_at, bio, titles, exp_info, chron, nest_info, heir, ev_recent, created_at, dormant_at,
   (avatar IS NOT NULL) AS has_avatar, bio_img_ver, (bio_img IS NOT NULL) AS has_bio_img`;
 
 // 석판: 모두가 글을 새겨 남기는 게시판. 쓴 드래곤이 사라져도 글은 남도록 이름·종류를 함께 적어 둠
@@ -452,10 +455,11 @@ const qp = {
 const q = {
   countUsers:   db.prepare('SELECT COUNT(*) AS n FROM users'),
   userByName:   db.prepare('SELECT * FROM users WHERE username = ?'),
+  userById:     db.prepare('SELECT * FROM users WHERE id = ?'),
   createUser:   db.prepare('INSERT INTO users (username, pw_hash, is_gm, created_at, link_account) VALUES (?, ?, ?, ?, ?)'),
   createSess:   db.prepare('INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)'),
   // 로그인 토큰은 90일이 지나면 쓸 수 없음 (오래전에 남긴 토큰이 새어 나가도 계속 쓰이지 않게)
-  sessUser:     db.prepare('SELECT u.id, u.username, u.is_gm FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ? AND s.created_at > ?'),
+  sessUser:     db.prepare('SELECT u.id, u.username, u.is_gm FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ? AND s.created_at > ? AND u.deleted_at IS NULL'),
   deleteSess:   db.prepare('DELETE FROM sessions WHERE token = ?'),
   setPw:        db.prepare('UPDATE users SET pw_hash = ? WHERE id = ?'),
   delSessOf:    db.prepare('DELETE FROM sessions WHERE user_id = ?'),
@@ -506,8 +510,8 @@ const q = {
   kinAdd:       db.prepare('INSERT INTO kin (dragon_id, type, status, name, data, created_at) VALUES (?, ?, ?, ?, ?, ?)'),
   kinSave:      db.prepare('UPDATE kin SET status = ?, name = ?, data = ? WHERE id = ? AND dragon_id = ?'),
   dragonById:   db.prepare(`SELECT ${DRAGON_FIELDS} FROM dragons WHERE id = ?`),
-  dragonsIn:    db.prepare(`SELECT ${DRAGON_FIELDS} FROM dragons WHERE region = ? AND dead_at IS NULL ORDER BY last_seen DESC`),
-  nestsAll:     db.prepare('SELECT id, name, nest FROM dragons WHERE nest IS NOT NULL AND dead_at IS NULL AND id != ?'), // 둥지를 튼 드래곤 (소꿉친구 찾기)
+  dragonsIn:    db.prepare(`SELECT ${DRAGON_FIELDS} FROM dragons WHERE region = ? AND dead_at IS NULL AND dormant_at IS NULL ORDER BY last_seen DESC`),
+  nestsAll:     db.prepare('SELECT id, name, nest FROM dragons WHERE nest IS NOT NULL AND dead_at IS NULL AND dormant_at IS NULL AND id != ?'), // 둥지를 튼 드래곤 (소꿉친구 찾기)
   addGold:      db.prepare('UPDATE dragons SET gold = gold + ? WHERE id = ?'),
   relGet:       db.prepare('SELECT kind FROM relations WHERE from_id = ? AND to_id = ?'),
   relSet:       db.prepare(`INSERT INTO relations (from_id, to_id, kind, at) VALUES (?, ?, ?, ?)
@@ -540,10 +544,10 @@ const q = {
   reqAddBond:   db.prepare('INSERT OR REPLACE INTO friend_requests (from_id, to_id, at, bond) VALUES (?, ?, ?, ?)'),
   kinAdoptedOut: db.prepare(`SELECT k.id, k.type, k.status, k.name, k.data, k.dragon_id AS owner_id, d.name AS owner FROM kin k JOIN dragons d ON d.id = k.dragon_id
     WHERE k.status IN ('home', 'egg') AND d.dead_at IS NULL AND json_extract(k.data, '$.adoptedFromId') = ?`),
-  relList:      db.prepare(`SELECT r.to_id AS id, r.kind, r.bond, d.name, d.kind AS dkind, d.level, d.region, d.last_seen, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar
-                            FROM relations r JOIN dragons d ON d.id = r.to_id WHERE r.from_id = ? ORDER BY d.name`),
+  relList:      db.prepare(`SELECT r.to_id AS id, r.kind, r.bond, d.name, d.kind AS dkind, d.level, d.region, d.last_seen, d.dormant_at, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar
+                            FROM relations r JOIN dragons d ON d.id = r.to_id WHERE r.from_id = ? AND NOT EXISTS (SELECT 1 FROM users du WHERE du.id = d.user_id AND du.deleted_at IS NOT NULL) ORDER BY d.name`),
   // 관계도: 대륙의 모든 드래곤과 서로 맺은 관계 (한 쌍에 한 줄. bond는 from에게 to가 무엇인지)
-  mapDragons:   db.prepare('SELECT id, name, kind, level, avatar_ver, (avatar IS NOT NULL) AS has_avatar, map_public FROM dragons WHERE dead_at IS NULL'),
+  mapDragons:   db.prepare('SELECT id, name, kind, level, avatar_ver, (avatar IS NOT NULL) AS has_avatar, map_public FROM dragons WHERE dead_at IS NULL AND dormant_at IS NULL'),
   // 관계도에 함께 보일 표시: 라이벌·원수 (혼자 붙이지만 상대도 아는 것만. 경계는 나만 아는 것이라 빼둠)
   mapMarks:     db.prepare(`SELECT r.from_id AS a, r.to_id AS b, r.kind FROM relations r
                             JOIN dragons x ON x.id = r.from_id JOIN dragons y ON y.id = r.to_id
@@ -614,11 +618,11 @@ const q = {
   noteList:     db.prepare('SELECT text FROM notes WHERE dragon_id = ? ORDER BY id'),
   noteClear:    db.prepare('DELETE FROM notes WHERE dragon_id = ?'),
   // GM
-  gmList:       db.prepare(`SELECT d.id, d.name, d.kind, d.level, d.region, d.gold, d.last_seen AS lastSeen, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar,
+  gmList:       db.prepare(`SELECT d.id, d.name, d.kind, d.level, d.region, d.gold, d.last_seen AS lastSeen, d.dormant_at, u.deleted_at, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar,
                                    u.username, u.is_gm AS isGm, u.link_account AS link
                             FROM dragons d JOIN users u ON u.id = d.user_id
                             WHERE d.name LIKE @q OR u.username LIKE @q ORDER BY d.last_seen DESC LIMIT 100`),
-  gmUserOf:     db.prepare('SELECT u.id, u.username, u.is_gm, u.link_account AS link FROM dragons d JOIN users u ON u.id = d.user_id WHERE d.id = ?'),
+  gmUserOf:     db.prepare('SELECT u.id, u.username, u.is_gm, u.link_account AS link, u.deleted_at AS deletedAt FROM dragons d JOIN users u ON u.id = d.user_id WHERE d.id = ?'),
   gmSetRole:    db.prepare('UPDATE users SET is_gm = ? WHERE id = ?'),
   welcomeSeen:  db.prepare('SELECT welcome_seen AS v FROM users WHERE id = ?'),
   welcomeSet:   db.prepare('UPDATE users SET welcome_seen = ? WHERE id = ?'),
@@ -627,6 +631,14 @@ const q = {
   gmLogPrune:   db.prepare('DELETE FROM gm_log WHERE id <= (SELECT id FROM gm_log ORDER BY id DESC LIMIT 1 OFFSET 500)'),
   dragonIds:    db.prepare('SELECT id FROM dragons'),
   activeSince:  db.prepare('SELECT id, level FROM dragons WHERE dead_at IS NULL AND last_seen >= ?'),
+  dormantDue:   db.prepare('SELECT id FROM dragons WHERE dead_at IS NULL AND dormant_at IS NULL AND last_seen < ?'), // 휴면으로 돌릴 드래곤
+  dormantSet:   db.prepare('UPDATE dragons SET dormant_at = ? WHERE id = ?'),
+  dormantOld:   db.prepare('SELECT d.id, d.name, d.user_id AS userId, u.username, u.is_gm AS isGm FROM dragons d JOIN users u ON u.id = d.user_id WHERE d.dead_at IS NULL AND d.dormant_at IS NOT NULL AND d.dormant_at < ? AND u.deleted_at IS NULL'), // 휴면이 오래되어 지울 계정
+  dragonByNameLive: db.prepare('SELECT d.id FROM dragons d LEFT JOIN users u ON u.id = d.user_id WHERE d.name = ? AND (u.deleted_at IS NULL)'),
+  heldSet:      db.prepare('UPDATE users SET deleted_at = ? WHERE id = ?'),
+  heldOf:       db.prepare('SELECT u.deleted_at AS at FROM dragons d JOIN users u ON u.id = d.user_id WHERE d.id = ?'),
+  heldDue:      db.prepare('SELECT u.id AS userId, u.username, d.id, d.name FROM users u LEFT JOIN dragons d ON d.user_id = u.id AND d.dead_at IS NULL WHERE u.deleted_at IS NOT NULL AND u.deleted_at < ?'), // 맡아 둔 지 7일이 지나 완전히 지울 계정
+  heldList:     db.prepare('SELECT u.id AS userId, u.username, u.deleted_at AS deletedAt, d.id, d.name, d.kind, d.level FROM users u LEFT JOIN dragons d ON d.user_id = u.id AND d.dead_at IS NULL WHERE u.deleted_at IS NOT NULL ORDER BY u.deleted_at DESC'),
   offerAdd:     db.prepare('INSERT INTO kin_offers (kin_id, from_id, to_id, at) VALUES (?, ?, ?, ?)'),
   offerGet:     db.prepare('SELECT * FROM kin_offers WHERE id = ?'),
   offerOfKin:   db.prepare('SELECT * FROM kin_offers WHERE kin_id = ?'),
@@ -675,7 +687,7 @@ const q = {
   berserkIds:   db.prepare('SELECT id FROM dragons WHERE berserk IS NOT NULL'),
   // 죽음
   delUser:      db.prepare('DELETE FROM users WHERE id = ?'),
-  gmCount:      db.prepare("SELECT COUNT(*) AS n FROM users WHERE is_gm = 1"),
+  gmCount:      db.prepare("SELECT COUNT(*) AS n FROM users WHERE is_gm = 1 AND deleted_at IS NULL"), // 지워서 맡아 둔 GM은 세지 않음
   userCount:    db.prepare("SELECT COUNT(*) AS n FROM users WHERE username NOT LIKE '#묘비#%'"),
   setBio:       db.prepare('UPDATE dragons SET bio = ? WHERE id = ?'),
   graveIds:     db.prepare("SELECT id FROM dragons WHERE dead_at IS NOT NULL AND fallen IS NOT NULL AND fallen NOT LIKE '%\"closed\":true%'"),
@@ -692,8 +704,8 @@ const q = {
   hoardGoldSet: db.prepare('UPDATE dragons SET hoard_gold = ? WHERE id = ?'),
   kinMove:      db.prepare('UPDATE kin SET dragon_id = ? WHERE id = ? AND dragon_id = ?'),
   arenaList:    db.prepare(`SELECT id, name, kind, level, combat, last_seen AS lastSeen, avatar_ver, (avatar IS NOT NULL) AS has_avatar, exp_end, exp_info, fallen, dead_at
-                            FROM dragons WHERE id != ? AND dead_at IS NULL ORDER BY last_seen DESC LIMIT 60`),
-  plotDragons:  db.prepare('SELECT id, name, kind, level, combat, avatar_ver, (avatar IS NOT NULL) AS has_avatar FROM dragons WHERE id != ? AND dead_at IS NULL ORDER BY name'), // 골렘 심부름 받는 이 고르기 (집터가 있는지는 combat에서 봄)
+                            FROM dragons WHERE id != ? AND dead_at IS NULL AND dormant_at IS NULL ORDER BY last_seen DESC LIMIT 60`),
+  plotDragons:  db.prepare('SELECT id, name, kind, level, combat, avatar_ver, (avatar IS NOT NULL) AS has_avatar FROM dragons WHERE id != ? AND dead_at IS NULL AND dormant_at IS NULL ORDER BY name'), // 골렘 심부름 받는 이 고르기 (집터가 있는지는 combat에서 봄)
   kinDel:       db.prepare('DELETE FROM kin WHERE id = ? AND dragon_id = ?'),
   pruneChat:    db.prepare('DELETE FROM chat WHERE region = ? AND id <= (SELECT id FROM chat WHERE region = ? ORDER BY id DESC LIMIT 1 OFFSET ?)'),
 };
@@ -801,6 +813,123 @@ function customOrphans(isKnown) {
   return n;
 }
 
+// ── 지워진 드래곤(휴면 삭제·계정 탈퇴)의 이름을 서버 어디에도 남기지 않음 ──
+// world 값은 모듈이 메모리에 들고 있다가 다시 저장하므로, 읽고 쓴 객체를 약한 참조로 기억해 두었다가 그 자리에서 고침
+const NAME_GONE = '떠난 드래곤';
+const worldRefs = new Map(); // k → Set<WeakRef>
+function trackWorld(k, v) {
+  if (v && typeof v === 'object') {
+    let s = worldRefs.get(k); if (!s) worldRefs.set(k, (s = new Set()));
+    s.add(new WeakRef(v));
+    if (s.size > 64) for (const r of s) if (!r.deref()) s.delete(r);
+  }
+  return v;
+}
+// 글 속의 이름을 '떠난 드래곤'으로 바꾸는 함수. 이름을 품은 다른 드래곤의 이름(예: '하늘'을 지울 때 '하늘빛')은 건드리지 않게 먼저 가려 둠
+function makeFix(name) {
+  // '떠난 드래곤'은 ㄴ 받침으로 끝남. 이름이 받침 없이 끝나면 가·를·는·와·로…를, ㄹ 받침이면 로를 받침 있는 꼴로
+  const c = name.charCodeAt(name.length - 1) - 0xac00, jong = c >= 0 && c <= 11171 ? c % 28 : -1;
+  const pairs = jong === 0 ? { 가: '이', 를: '을', 는: '은', 와: '과', 로: '으로', 랑: '이랑', 야: '아', 나: '이나', 라서: '이라서', 라고: '이라고', 여: '이여' } : jong === 8 ? { 로: '으로' } : null;
+  const swap = pairs ? { map: pairs, re: new RegExp(`${name}(${Object.keys(pairs).sort((a, b) => b.length - a.length).join('|')})`, 'g') } : null;
+  let longer = [];
+  try { longer = db.prepare('SELECT name FROM dragons WHERE name LIKE ? AND name != ?').all(`%${name}%`, name).map((r) => r.name).sort((a, b) => b.length - a.length); } catch {}
+  return (v) => {
+    if (typeof v !== 'string' || !v.includes(name)) return v;
+    longer.forEach((L, i) => { if (v.includes(L)) v = v.split(L).join(`\u0000${i}\u0000`); });
+    if (swap) v = v.replace(swap.re, (m, j) => NAME_GONE + swap.map[j]); // 받침이 달라 뒤의 조사도 맞춰 바꿈 (누리가 → 떠난 드래곤이)
+    v = v.split(name).join(NAME_GONE);
+    longer.forEach((L, i) => { v = v.split(`\u0000${i}\u0000`).join(L); });
+    return v;
+  };
+}
+// 그 자리에서 지움: 이름과 똑같은 키는 지우고, 배열에서 이름 자체이거나 '이름 + 숫자 같은 작은 값'뿐인 항목(예: { name, day })은 빼고, 글 속의 이름은 '떠난 드래곤'으로
+function scrubObj(x, name, fix, seen = new Set()) {
+  if (!x || typeof x !== 'object' || seen.has(x) || Buffer.isBuffer(x) || ArrayBuffer.isView(x)) return;
+  seen.add(x);
+  const small = (o) => o && typeof o === 'object' && !Array.isArray(o) && Object.values(o).some((v) => v === name) && Object.values(o).every((v) => v === null || ['number', 'boolean'].includes(typeof v) || (typeof v === 'string' && v.length <= 24));
+  if (Array.isArray(x)) {
+    for (let i = x.length - 1; i >= 0; i--) {
+      const v = x[i];
+      if (v === name || small(v)) { x.splice(i, 1); continue; }
+      if (typeof v === 'string') x[i] = fix(v); else scrubObj(v, name, fix, seen);
+    }
+    return;
+  }
+  if (x instanceof Set) { x.delete(name); for (const v of x) scrubObj(v, name, fix, seen); return; }
+  if (x instanceof Map) { x.delete(name); for (const [k, v] of x) { if (typeof v === 'string') x.set(k, fix(v)); else scrubObj(v, name, fix, seen); } return; }
+  for (const k of Object.keys(x)) {
+    if (k === name) { delete x[k]; continue; }
+    const v = x[k];
+    if (typeof v === 'string') x[k] = fix(v); else if (typeof v !== 'function') scrubObj(v, name, fix, seen);
+  }
+}
+const scrubIn = (x, name) => scrubObj(x, name, makeFix(name));
+// 이름만 담는 칸(다른 드래곤의 이름일 수 있음)은 똑같을 때만 바꿈
+const NAME_COLS = new Set(['name', 'from_name', 'other_name', 'target', 'username', 'gm']);
+function scrubText(s, name, fix, exact) {
+  if (typeof s !== 'string' || !s.includes(name)) return s;
+  if (exact) return s === name ? NAME_GONE : s;
+  const t = s.trimStart()[0];
+  if (t === '{' || t === '[') { try { const o = JSON.parse(s); scrubObj(o, name, fix); return JSON.stringify(o); } catch {} }
+  return fix(s);
+}
+// 계정을 지운 뒤 부름: 그 드래곤이 쓴 이야기·심부름 제안·선물 그림은 지우고, 남은 모든 글(이야기·대륙 소식·석판·다른 드래곤의 기록·world 값…)에서 이름을 지움
+// keepOwn: 맡아 두는 동안(복구할 수 있게) 그 드래곤 자신의 기록(드래곤 칸, dragon_id가 그 드래곤인 줄)은 건드리지 않고 남들에게 보이는 곳만 지움
+function scrubConn(conn, dragonId, name, fix, keepOwn = false) {
+  let n = 0;
+  conn.transaction(() => {
+    if (dragonId) {
+      n += conn.prepare('DELETE FROM chat WHERE dragon_id = ?').run(dragonId).changes;
+      n += conn.prepare('DELETE FROM kin_offers WHERE from_id = ? OR to_id = ?').run(dragonId, dragonId).changes;
+      if (!keepOwn) n += conn.prepare('DELETE FROM gift_images WHERE dragon_id = ? OR to_id = ?').run(dragonId, dragonId).changes;
+    }
+    n += conn.prepare('UPDATE gm_log SET target = NULL WHERE target = ?').run(name).changes;
+    const like = `%${name}%`; // 이름은 한글·영문·숫자만이라 LIKE 특수 문자가 없음
+    for (const { name: t } of conn.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'").all()) {
+      if (t === 'users' || t === 'sessions') continue;
+      const cols = conn.prepare(`PRAGMA table_info("${t}")`).all();
+      const own = !keepOwn || !dragonId ? '' : t === 'dragons' ? ` AND rowid != ${Number(dragonId)}` : cols.some((c) => c.name === 'dragon_id') ? ` AND (dragon_id IS NULL OR dragon_id != ${Number(dragonId)})` : '';
+      for (const c of cols) {
+        if (!/TEXT/i.test(c.type || '')) continue;
+        for (const r of conn.prepare(`SELECT rowid AS _r, "${c.name}" AS v FROM "${t}" WHERE "${c.name}" LIKE ?${own}`).all(like)) {
+          const v2 = scrubText(r.v, name, fix, NAME_COLS.has(c.name));
+          if (v2 !== r.v) { conn.prepare(`UPDATE "${t}" SET "${c.name}" = ? WHERE rowid = ?`).run(v2, r._r); n++; }
+        }
+      }
+    }
+  })();
+  return n;
+}
+// 백업 파일에서도: 그 계정을 지우고(되돌리기로 다시 살아나지 않게) 이름을 지움. 자동 백업(backups/*.db)과 되돌리기 전 파일
+function scrubBackups(userId, dragonId, name, fix) {
+  const dir = path.dirname(DB_PATH), files = [];
+  try { for (const f of fs.readdirSync(path.join(dir, 'backups'))) if (/\.db$/.test(f)) files.push(path.join(dir, 'backups', f)); } catch {}
+  for (const f of [`${DB_PATH}.before-restore`, `${DB_PATH}.restore`]) if (fs.existsSync(f)) files.push(f);
+  let done = 0;
+  for (const f of files) {
+    let conn = null;
+    try {
+      conn = new Database(f);
+      conn.pragma('foreign_keys = ON');
+      if (userId) conn.prepare('DELETE FROM users WHERE id = ?').run(userId);
+      if (dragonId) conn.prepare('DELETE FROM dragons WHERE id = ?').run(dragonId);
+      scrubConn(conn, dragonId, name, fix);
+      done++;
+    } catch (e) { console.error('[이름 지우기] 백업', path.basename(f), e.message); }
+    finally { try { conn && conn.close(); } catch {} }
+  }
+  return done;
+}
+// held: 지워서 맡아 두는 때(남들에게 보이는 곳만, 백업은 그대로). 아니면 완전히 지울 때(모든 곳과 백업까지)
+function scrubGone(dragonId, name, userId = null, held = false) {
+  if (!name) return 0;
+  const fix = makeFix(name);
+  const n = scrubConn(db, dragonId, name, fix, held);
+  for (const s of worldRefs.values()) for (const r of s) { const o = r.deref(); if (o) scrubObj(o, name, fix); } // 모듈이 메모리에 들고 있는 world 값
+  if (!held) scrubBackups(userId, dragonId, name, fix);
+  return n;
+}
+
 module.exports = {
   DB_PATH, snapshot, customRefs, customOrphans, checkBackup, stageRestore, closeDb, dbFileSize,
   countUsers: () => q.countUsers.get().n,
@@ -818,7 +947,7 @@ module.exports = {
   deleteSession: (token) => q.deleteSess.run(token),
   getDragonByUser: (userId) => q.dragonByUser.get(userId),
   dragonNameTaken: (name) => !!q.dragonByName.get(name),
-  dragonNameOwner: (name) => q.dragonByName.get(name)?.id ?? null,
+  dragonNameOwner: (name) => q.dragonByNameLive.get(name)?.id ?? null, // 지워서 맡아 둔 계정의 드래곤은 이름으로 찾지 않음
   setNameKind: (id, name, kind) => q.setNameKind.run(name, kind, id),     // GM: 이름·종족 바꾸기
   createDragon: (userId, name, kind, region, st, hpMax, enMax) => {
     const now = Date.now();
@@ -1032,8 +1161,9 @@ module.exports = {
     myReasons: (postId, dragonId) => Object.fromEntries(qp.myReasons.all(postId, dragonId).map((r) => [r.opt, r.text])),
     reasons: (postId) => qp.reasons.all(postId).map((r) => { let opts = [r.opt]; try { if (r.opts) opts = JSON.parse(r.opts); } catch {} return { ...r, opts }; }),
   },
-  worldGet: (k, def = null) => { const r = q.worldGet.get(k); if (!r) return def; try { return JSON.parse(r.v); } catch { return def; } },
-  worldSet: (k, v) => q.worldSet.run(k, JSON.stringify(v)),
+  worldGet: (k, def = null) => { const r = q.worldGet.get(k); if (!r) return trackWorld(k, def); try { return trackWorld(k, JSON.parse(r.v)); } catch { return trackWorld(k, def); } },
+  worldSet: (k, v) => { trackWorld(k, v); return q.worldSet.run(k, JSON.stringify(v)); },
+  scrubGone, scrubIn, // 지워진 드래곤의 이름 지우기 (scrubIn: 메모리의 객체를 그 자리에서)
   berserkIds: () => q.berserkIds.all().map((r) => r.id),
   graveIds: () => q.graveIds.all().map((r) => r.id),
   waitIds: () => q.waitIds.all().map((r) => r.id),       // 쓰러져 도움을 기다리는 (또는 기다렸던) 드래곤
@@ -1064,6 +1194,16 @@ module.exports = {
   hoardClear: (dragonId) => { q.hoardClear.run(dragonId); q.hoardGoldSet.run(0, dragonId); },
   kinMove: (kinId, from, to) => q.kinMove.run(to, kinId, from).changes > 0,
   arenaList: (me) => q.arenaList.all(me),
+  dormantDue: (before) => q.dormantDue.all(before),
+  dormantSet: (id, at) => q.dormantSet.run(at ?? null, id),
+  dormantOld: (before) => q.dormantOld.all(before),
+  // 지운 계정 맡아 두기: hold(지움, 7일 보관) · unhold(GM 복구) · heldDue(완전히 지울 때가 됨) · heldList(GM 화면)
+  hold: (userId, at = Date.now()) => { q.heldSet.run(at, userId); q.delSessOf.run(userId); },
+  unhold: (userId) => q.heldSet.run(null, userId),
+  heldDue: (before) => q.heldDue.all(before),
+  heldList: () => q.heldList.all(),
+  dragonHeld: (id) => !!q.heldOf.get(id)?.at, // 지워서 맡아 둔 계정의 드래곤인지
+  userById: (id) => q.userById.get(id),
   plotDragons: (me) => q.plotDragons.all(me),
   kinDelete: (kinId, dragonId) => q.kinDel.run(kinId, dragonId),
   inventory: (dragonId) => q.invList.all(dragonId),

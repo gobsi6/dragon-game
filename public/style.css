@@ -1265,6 +1265,7 @@ dialog.trip-dlg {
 .relb.rival { color: #8A2E27; border-color: #E6C3C7; background: #FBF1F2; }
 .relb.wary { color: #6B4E12; border-color: #E2CF9E; background: #FBF6E8; }
 .relb.pending { color: #2E4A60; border-color: #B9C7D3; background: #EEF2F6; }
+.relb.dormant { color: #6B6F74; border-color: #C9CBC8; background: #EFEFEC; } /* 휴면 중 (관계 목록·GM 화면) */
 .relb.acq { color: #4E5358; border-color: #CFD2CE; background: #F3F4F2; }
 .relb.mentor { color: #2A4256; border-color: #9DB3C6; background: #EAF0F5; }
 .relb.family { color: #6B4E12; border-color: #E2CF9E; background: #FBF6E8; }
@@ -4812,10 +4813,22 @@ body:not(.realm-city) .moss-fx { display: none; }
 .cc-box li b { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink); white-space: nowrap; }
 .cc-box li small { grid-column: 2 / -1; margin-top: -4px; font-size: 11px; color: var(--muted); }
 .cc-box li.ok b { color: #2F5D45; }
-.cc-box li .cc-q { grid-column: 2 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: -2px; font-size: 11px; color: var(--muted); }
-.cc-box li .cc-q span { margin-right: auto; }
-.cc-box li .cc-q .input { width: 6.5em; min-height: 0; height: 30px; padding: 0 8px; font-size: 12.5px; }
-.cc-box li .cc-q .btn { min-height: 30px; padding: 0 10px; font-size: 12px; }
+.cc-box.live li { grid-template-columns: 92px minmax(0, 1fr) 64px 96px; column-gap: 10px; }
+.cc-box.live li .cc-q, .cc-box.live li .cc-qx { margin-left: 8px; } /* 채운 수와 넣을 개수 칸 사이를 조금 더 */ /* 재건 중인 구역: 줄 끝에 넣을 개수 칸 (채운 수 바로 옆에 붙게) */
+.cc-box li .cc-q, .cc-box li .cc-qx { display: flex; align-items: center; justify-content: flex-start; gap: 4px; font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.cc-box li .cc-q .input { width: 4em; min-height: 0; height: 28px; padding: 0 6px; font-size: 12.5px; text-align: right; }
+.cc-box li .cc-max { border: 0; background: none; padding: 2px; font: inherit; font-size: 12px; color: var(--steel); cursor: pointer; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.cc-box li .cc-max:hover { text-decoration: underline; }
+.cc-box.live li b { text-align: right; }
+.cc-give { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.cc-give > span { margin-right: auto; font-size: 11.5px; color: var(--muted); }
+.cc-give .btn { min-height: 36px; padding: 0 16px; }
+@media (max-width: 520px) {
+  .cc-box.live li { grid-template-columns: 80px minmax(0, 1fr) auto; }
+  .cc-box.live li .cc-q, .cc-box.live li .cc-qx:not(:empty) { grid-column: 2 / -1; justify-content: flex-end; margin-left: 0; }
+  .cc-box.live li .cc-qx:empty { display: none; }
+  .cc-give > span { display: none; }
+}
 
 /* 머리줄 골렘 알림: 금화 바로 오른쪽, 아이콘과 점만 (나타나고 사라져도 행동력·금화 자리는 그대로) */
 .city-chip { position: relative; flex: none; width: 32px; height: 32px; box-sizing: border-box; display: inline-grid; place-items: center; margin-left: 0; padding: 0; border: 1px solid #E6C9A8; border-radius: 4px; background: #FFF8F1; color: #B5602A; cursor: pointer; }
@@ -4836,6 +4849,7 @@ body:not(.realm-city) .moss-fx { display: none; }
 /* 시련의 굴 (cave) */
 .center.in-cave > #city-card, .center.in-cave > #city-map { display: none !important; }
 #cave-card { margin-top: -4px; }
+#cave-card > p.note { margin: -6px 0 0; font-size: 12.5px; line-height: 1.6; color: var(--muted); } /* 로비 맨 아래 안내: 단추 줄에 붙여 작고 옅게 */
 .cv-week { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .cv-week > div { padding: 10px 12px; border: 1px solid var(--line-in); border-radius: 3px; background: var(--surface-2); display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .cv-week b { font: 700 16px/1.3 var(--serif); }

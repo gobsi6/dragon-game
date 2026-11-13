@@ -341,7 +341,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     for (const r of db.relList(me.id)) {
       const e = live(r.id);
       const row = { id: r.id, name: r.name, kind: r.dkind, level: r.level, av: r.has_avatar ? r.avatar_ver : 0, online: !!e,
-        idle: !e && Date.now() - (r.last_seen || 0) >= RULES.awayMs }; // 3일 넘게 자리를 비움 (목록에서 흐리게)
+        idle: !e && Date.now() - (r.last_seen || 0) >= RULES.awayMs, dormant: !!r.dormant_at }; // idle: 3일 넘게 자리를 비움 (목록에서 흐리게), dormant: 휴면 중 (관계 목록에만 '휴면 중'으로 보임)
       if (r.kind === 'friend') {
         row.bond = r.bond || 'comrade';
         row.region = e ? e.dragon.region : r.region;
@@ -517,6 +517,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
 
     on('dragon:profile', (d, p) => {
       const id = target(p);
+      if (id && id !== d.id && db.dragonHeld && db.dragonHeld(id)) return { error: '이 드래곤은 이제 대륙에 존재하지 않는다.' }; // 지워서 맡아 둔 계정 (석판 글 등에 남은 연결로도 열리지 않게)
       const v = id && profile(d, id);
       return v ? { ok: true, profile: v } : { error: '그런 드래곤은 없다.' };
     });
@@ -823,7 +824,7 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
       const list = [];
       if (d.region === FESTIVAL.region) {
         for (const [id, e] of online) {
-          if (id === d.id || e.dragon.region !== d.region) continue;
+          if (id === d.id || e.dragon.region !== d.region || e.dragon.dormant_at) continue; // 휴면을 풀기 전에는 보이지 않음
           list.push({ id, name: e.dragon.name, kind: e.dragon.kind, level: e.dragon.level, av: e.dragon.has_avatar ? e.dragon.avatar_ver : 0, done: done.includes(id), why: danceWhy(d, e.dragon, fest) });
         }
       }

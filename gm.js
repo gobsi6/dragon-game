@@ -78,6 +78,8 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
       username: u?.username || '', isGm: !!u?.is_gm, link: u?.link || '', // 가입할 때 적은 연결된 계정
       online: !!entry,
       lastSeen: entry ? now : d.last_seen,
+      dormantAt: d.dormant_at || null, // 휴면이 된 시각 (휴면이 아니면 null)
+      heldAt: u?.deletedAt || null,    // 지워서 맡아 둔 시각 (탈퇴·휴면 30일). 7일이 지나면 완전히 지워짐
       eventId: ev,
       items: db.inventory(d.id),
       seals: (logic.combatJson(d).city || {}).seals || 0, // 고대도시 석공 인장
@@ -420,7 +422,7 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
         const d = online.get(Number(id))?.dragon || db.getDragon(Number(id));
         return { name: d?.name || `#${id}`, kind: KIND[k] || k, online: online.has(Number(id)) };
       });
-      return { ok: true, at: Date.now(), others, raids: f.fights || [], lobbies: f.lobbies || [] };
+      return { ok: true, at: Date.now(), others, raids: f.fights || [], lobbies: f.lobbies || [], cave: f.cave || [] };
     });
     on('gm:meta', () => ({
       ok: true,
@@ -444,9 +446,19 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
       dragons: db.gmList(str(p.q)).map((x) => ({
         id: x.id, name: x.name, kind: x.kind, level: x.level, region: x.region, gold: x.gold,
         av: x.has_avatar ? x.avatar_ver : 0, username: x.username, isGm: !!x.isGm, link: x.link || '',
-        online: online.has(x.id), lastSeen: online.has(x.id) ? Date.now() : x.lastSeen,
+        online: online.has(x.id), lastSeen: online.has(x.id) ? Date.now() : x.lastSeen, dormant: !!x.dormant_at, dormantAt: x.dormant_at || null, heldAt: x.deleted_at || null, // heldAt: 지워서 맡아 둔 때 (7일 안에 복구할 수 있음)
       })),
     }));
+
+    // 지운 계정 복구 (맡아 둔 7일 안): 다시 들어올 수 있게. 휴면은 그대로라 본인이 들어와 '휴면 풀기'를 눌러야 보임
+    on('gm:unhold', (p) => {
+      const id = int(p.id), u = db.gmUserOf(id);
+      if (!u || !u.deletedAt) return { error: '지운 계정이 아니다.' };
+      db.unhold(u.id);
+      if (db.getDragon(id)?.dormant_at) db.dormantSet(id, Date.now()); // 휴면은 오늘부터 다시 셈 (예전 시각이 남아 있으면 다음 정리에서 곧바로 다시 지워짐)
+      db.gmLog(gmName(), db.getDragon(id)?.name || null, '지운 계정 복구');
+      return { ok: true, dragon: detail(id), log: db.gmLogList(40) };
+    });
 
     on('gm:get', (p) => {
       const d = detail(int(p.id));

@@ -177,6 +177,7 @@ module.exports = function setupMaze({ io, db, online, logic, sendMe, system, dea
   function hereOn(fi) {
     const out = [];
     for (const { dragon: d } of online.values()) {
+      if (d.dormant_at) continue; // 휴면을 풀기 전에는 보이지 않음
       const m = inside(d);
       if (!m || m.fi !== fi || d.region !== R.region) continue;
       out.push({ id: d.id, name: d.name, kind: d.kind, level: d.level, av: d.has_avatar ? d.avatar_ver : 0, pos: m.pos, stuck: !!m.stuck, torch: m.torch });

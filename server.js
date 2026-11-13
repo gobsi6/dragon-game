@@ -187,6 +187,41 @@ function autoBackup() {
   } catch (e) { console.error('[자동 백업 실패]', e.message); }
 }
 setTimeout(autoBackup, 30 * 1000);
+// 휴면: 이만큼 접속하지 않은 드래곤은 결투장·지역 목록·지도·둥지 찾기·골렘 심부름 목록에서 빠짐 (본인이 와서 복구하면 다시 보임)
+const DORMANT_MS = 15 * 24 * 3600000;
+// 지워진 드래곤의 이름을 지움: 저장된 모든 글과 world 값(db.scrubGone), 접속 중인 드래곤들이 메모리에 들고 있는 기록
+function eraseName(id, name, userId = null, held = false) {
+  try {
+    db.scrubGone(id, name, userId, held);
+    for (const e of online.values()) db.scrubIn(e.dragon, name);
+  } catch (e) { console.error('[이름 지우기 실패]', e.message); }
+}
+// 휴면이 된 뒤 이만큼 지나도록 돌아와 풀지 않으면 계정과 드래곤을 지움 (계정 탈퇴와 같음, 되돌릴 수 없음). GM 계정·접속 중인 드래곤은 지우지 않음
+const DORMANT_DELETE_MS = 30 * 24 * 3600000;
+const HOLD_MS = 7 * 24 * 3600000; // 지운 계정을 GM이 맡아 두는 기간 (그 뒤 완전히 지움)
+function dormantSweep() {
+  try {
+    const now = Date.now();
+    for (const { id } of db.dormantDue(now - DORMANT_MS)) { if (!online.has(id)) db.dormantSet(id, now); }
+    let held = 0, gone = 0;
+    for (const x of db.dormantOld(now - DORMANT_DELETE_MS)) {
+      if (online.has(x.id) || x.isGm) continue;
+      db.hold(x.userId, now);            // 지움: 7일 동안은 GM이 맡아 둠 (들어올 수도 보이지도 않음, GM 화면에서 복구)
+      eraseName(x.id, x.name, x.userId, true); // 남들에게 보이는 곳의 이름은 바로 지움 (그 드래곤 자신의 기록은 복구할 수 있게 남김)
+      held++;
+    }
+    for (const x of db.heldDue(now - HOLD_MS)) { // 맡아 둔 지 7일: 완전히 지움
+      if (x.id && online.has(x.id)) continue;
+      db.deleteUser(x.userId);
+      if (x.name) eraseName(x.id, x.name, x.userId); // 이름은 어디에도 남기지 않음 (GM 기록·서버 기록·백업 파일 포함)
+      gone++;
+    }
+    if (held) { db.gmLog('자동', null, `휴면 30일이 지나 계정 ${held}개를 지웠다 (7일 동안 GM 화면 '지운 계정'에서 복구할 수 있다)`); console.log(`[휴면 삭제] 계정 ${held}개 (7일 보관)`); }
+    if (gone) { db.gmLog('자동', null, `지운 지 7일이 지난 계정 ${gone}개를 완전히 지웠다`); console.log(`[완전 삭제] 계정 ${gone}개`); }
+  } catch (e) { console.error('[휴면 정리 실패]', e.message); }
+}
+setTimeout(dormantSweep, 20 * 1000);
+setInterval(dormantSweep, 60 * 60 * 1000);
 setInterval(autoBackup, 60 * 60 * 1000);
 // GM: 자동 백업 목록 · 내려받기 · 그 시점으로 되돌리기
 app.get('/api/gm/autobackups', (req, res) => {
@@ -342,7 +377,7 @@ app.post('/api/login', async (req, res) => {
     return res.status(429).json({ error: '비밀번호를 너무 여러 번 틀렸다. 15분쯤 뒤에 다시 해 보자.' });
   }
   const user = db.getUserByName(username);
-  if (!user || !(await bcrypt.compare(password, user.pw_hash))) {
+  if (!user || user.deleted_at || !(await bcrypt.compare(password, user.pw_hash))) { // 지워서 맡아 둔 계정은 들어올 수 없음 (없는 계정과 같게)
     hit(ipKey, L.windowMs); hit(userKey, L.windowMs);
     return res.status(401).json({ error: '아이디나 비밀번호가 맞지 않는다.' });
   }
@@ -515,6 +550,8 @@ function giftSender(d, id) {
 // 내 드래곤의 전체 정보 (나에게만 보냄)
 
 const meOf = (d) => ({
+  dormant: !!d.dormant_at,               // 휴면: 본인이 '돌아왔다'를 눌러 복구하기 전까지 다른 화면에 보이지 않음
+  dormantLeft: d.dormant_at ? Math.max(0, Math.ceil((d.dormant_at + DORMANT_DELETE_MS - Date.now()) / 86400000)) : null, // 휴면 풀기 전 계정이 지워지기까지 남은 날
   duelUnseen: db.duelUnseen(d.id),       // 아직 확인하지 않은, 받은 자동 결투 수
   favs: logic.combatJson(d).favs || null, // 즐겨찾기 (물건·제작법·칭호). 서버에 드래곤마다 저장해서 기기를 바꿔도 남음
   seen: logic.combatJson(d).seen || null, // 읽음 표시 (업데이트 노트·석판·다시 일어선 드래곤). 기기를 바꿔도 같은 알림이 다시 뜨지 않게
@@ -718,7 +755,7 @@ const rivalSeen = new Map();
 function rivalNear(d) {
   const now = Date.now();
   for (const [id, e] of online) {
-    if (id === d.id || e.dragon.region !== d.region) continue;
+    if (id === d.id || e.dragon.region !== d.region || d.dormant_at || e.dragon.dormant_at) continue; // 휴면이면 서로 알리지 않음
     const a = db.relGet(d.id, id), b = db.relGet(id, d.id);
     if (a !== 'rival' && b !== 'rival') continue;
     const key = d.id < id ? `${d.id}-${id}` : `${id}-${d.id}`;
@@ -751,7 +788,7 @@ function occupants(region) {
   const list = [];
   const awayBefore = Date.now() - AWAY_MS;
   for (const { dragon } of online.values()) {
-    if (dragon.region === region) list.push({ ...publicDragon(dragon), online: true });
+    if (dragon.region === region && !dragon.dormant_at) list.push({ ...publicDragon(dragon), online: true }); // 휴면을 풀기 전에는 보이지 않음
   }
   for (const d of db.dragonsIn(region)) {
     if (online.has(d.id)) continue;
@@ -768,6 +805,7 @@ function broadcastPresence(region) {
 function broadcastCounts() {
   const counts = {};
   for (const { dragon } of online.values()) {
+    if (dragon.dormant_at) continue; // 휴면을 풀기 전에는 접속 인원에도 세지 않음
     counts[dragon.region] = (counts[dragon.region] || 0) + 1;
   }
   io.emit('world:counts', counts);
@@ -852,7 +890,7 @@ function enterWorld(socket, dragon) {
   db.touch(dragon.id); dragon.last_seen = Date.now(); // 메모리의 값도 맞춰 둠 (다음 판정이 예전 값을 보지 않게)
 
   // 들어오고 나가는 알림은 띄우지 않음 (창을 내렸다 켤 때마다 다시 접속해 쌓였음). 오래 비웠다가 돌아올 때만 알림
-  if (!prev && back) {
+  if (!prev && back && !dragon.dormant_at) { // 휴면이면 복구할 때 알림
     system(dragon.region, `오랫동안 보이지 않던 ${dragon.name}${josa(dragon.name, '이', '가')} 먼 길을 돌아 다시 이곳에 모습을 드러냈다.`, socket);
   }
   sendRegionState(socket, dragon);
@@ -1312,7 +1350,7 @@ raidBoss = require('./raidboss')({ io, db, online, logic, combat, arena, sendMe,
   isOpen: (r) => ruin.unlocked(r), fall: death.fall, purify: (d, n) => ruin.add(d, 'raid', n), presence: (r) => broadcastPresence(r),
   news: (text) => { const at = Date.now(); let id = 0; try { id = db.addChat('!', { dragonId: 0, name: '', kind: '', text, at }); } catch {} io.emit('system', { text, at, news: true, id }); } });
 arena.setRaid(raidBoss);
-logic.hooks.companionsHere = (d) => { for (const e of online.values()) if (e.dragon.id !== d.id && e.dragon.region === d.region && !e.dragon.dead_at) return true; return false; };
+logic.hooks.companionsHere = (d) => { for (const e of online.values()) if (e.dragon.id !== d.id && e.dragon.region === d.region && !e.dragon.dead_at && !e.dragon.dormant_at) return true; return false; };
 // 청출어람: 내 스승의 레벨을 따라잡았으면 그 스승의 이름 (칭호 판정에서 씀)
 // 드래곤이 대륙을 떠남 (먼 여행·긴 잠): 그 집터에 놓여 있던 선물은 보낸 이에게 돌려줌
 logic.hooks.onGone = (d) => { try { social.returnHomeGifts(d.id, d.name); } catch (e) { console.error('[집터 선물 돌려주기]', e.message); } };
@@ -1537,7 +1575,7 @@ const FALLEN = '쓰러져 있다. 일어설지, 긴 잠에 들지 먼저 정해�
 // GM 도구 (gm.js)
 const gm = require('./gm')({
   io, db, online, logic, life, meOf, sendMe, refreshKin, arena, nestSync,
-  fightsNow: () => ({ live: liveFights.now(), ...(raidBoss?.gmView?.() || { lobbies: [], fights: [] }) }), // GM 도구: 진행 중인 싸움
+  fightsNow: () => ({ live: liveFights.now(), ...(raidBoss?.gmView?.() || { lobbies: [], fights: [] }), cave: city.caveNow ? city.caveNow() : [] }), // GM 도구: 진행 중인 싸움 (+ 시련의 굴)
   presence: (d) => broadcastPresence(d.region), // 이름·종족이 바뀌면 이곳의 드래곤 목록을 다시 보냄
   // 순간이동: d.region은 이미 바뀐 상태. 접속 중이면 방을 옮기고 양쪽에 알림
   teleport(d, from) {
@@ -2600,6 +2638,18 @@ function onConnect(socket) {
   });
 
   // ── 환영 공지: 계정마다 처음 들어올 때(와 GM이 다시 띄울 때) 한 번 ──
+  // 휴면 복구: 본인이 직접 눌러야 다시 결투장·지역 목록·지도 등에 보임
+  socket.on('account:wake', (p, ack) => {
+    const e = entryOf(socket); if (!e) return typeof ack === 'function' && ack({ error: '먼저 드래곤을 만들어야 한다.' });
+    const d = e.dragon;
+    if (d.dormant_at) {
+      db.dormantSet(d.id, null); d.dormant_at = null;
+      system(d.region, `오랫동안 보이지 않던 ${d.name}${josa(d.name, '이', '가')} 먼 길을 돌아 다시 이곳에 모습을 드러냈다.`, socket);
+    }
+    sendMe(socket, d); broadcastPresence(d.region); broadcastCounts();
+    setImmediate(() => rivalNear(d));
+    if (typeof ack === 'function') ack({ ok: true });
+  });
   socket.on('welcome:seen', (p, ack) => {
     db.welcomeSet(user.id, welcomeOf().ver);
     if (typeof ack === 'function') ack({ ok: true });
@@ -2974,7 +3024,11 @@ function onConnect(socket) {
       broadcastPresence(d.region);
       broadcastCounts();
     }
-    db.deleteUser(u.id);
+    const gone = entry ? entry.dragon : db.getDragonByUser(u.id);
+    // 탈퇴: 바로 지우지 않고 7일 동안 GM이 맡아 둠 (들어올 수도 보이지도 않음). 그 뒤 휴면 정리에서 완전히 지움
+    if (gone) { if (!gone.dormant_at) db.dormantSet(gone.id, Date.now()); }
+    db.hold(u.id);
+    if (gone) eraseName(gone.id, gone.name, u.id, true); // 남들에게 보이는 곳의 이름은 바로 지움
     socket.data.kicked = true;
     ack({ ok: true });
     socket.disconnect(true);
