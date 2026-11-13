@@ -10120,7 +10120,7 @@
     const pane = slEl('div', 'sl-linkp'); pane.hidden = true;
     const q = slEl('input', 'input'); q.type = 'search'; q.placeholder = '제목이나 글쓴이로 찾기'; q.setAttribute('aria-label', '이을 글 찾기');
     const res = slEl('div', 'sl-linkr');
-    pane.append(q, res, slEl('p', 'note', '고르면 내용에 [#번호 제목] 꼴로 들어간다. 새긴 글에서는 제목 표가 되어, 누르면 그 글로 간다.'));
+    pane.append(q, res, slEl('p', 'note', '고르면 내용에 [#번호 제목] 꼴로 들어간다.'));
     let pos = null; // 열 때의 커서 자리 (찾기 칸으로 옮겨 가도 기억)
     const draw = () => {
       res.replaceChildren();

@@ -565,10 +565,11 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     const awake = (n) => { if (n === d.name) return true; try { const o = otherDragon(n); return !o || !o.dormant_at; } catch { return true; } }; // 휴면 중인 이는 순위·받침돌에서 빼 둠
     const all = Object.entries(cw.rank).filter(([n]) => awake(n)).sort((a, b) => a[1] - b[1]), mine = all.findIndex(([n]) => n === d.name);
     const resetIn = CAVE.cycleDays - (((dayIdx() % CAVE.cycleDays) + CAVE.cycleDays) % CAVE.cycleDays); // 새 굴까지 남은 날 (오늘 포함)
-    // carved: 받침돌의 이름과 이번 굴에서 석상을 넘어 몫을 받은 수 (미로마다 한 번, 사흘마다 새로 셈)
+    // carved: 받침돌 — 이번 굴에서 석상을 넘은 드래곤 모두(최근 6명만이 아니라)와 넘어 몫을 받은 수 (미로마다 한 번, 사흘마다 새로 셈). 많이 넘은 차례, 같으면 이름 차례.
+    //   이번 굴 첫 미로를 끝낸 드래곤(순위 cw.rank) 가운데 한 번이라도 넘은 이. 석상 몫은 미로를 끝내야 생기므로 넘은 이는 모두 순위에 있음
     return { open: done('spring'), week: cw.week, mapId: `${cw.week}:${c.n}`, n: c.n, mazeMax, closed: c.n >= mazeMax, resetIn, reward: CAVE.reward,
       rule, ruleName: CAVE.names[rule], ruleLine: CAVE.lines[rule],
-      echo: f.echo, mul: caveMul(f), carved: (W.caveCarved || []).filter((x) => awake(x.name)).map((x) => ({ name: x.name, n: caveBeatsOf(x.name, d) })), map: { g: M.g.map((r) => r.join('')), dist: M.dist, E: M.E, far: M.far, fires: M.fires, keys: M.keys, patrols: M.patrols.map((p) => p.path) },
+      echo: f.echo, mul: caveMul(f), carved: Object.keys(cw.rank).filter(awake).map((n) => ({ name: n, n: caveBeatsOf(n, d) })).filter((x) => x.n > 0).sort((a, b) => b.n - a.n || a.name.localeCompare(b.name, 'ko')), map: { g: M.g.map((r) => r.join('')), dist: M.dist, E: M.E, far: M.far, fires: M.fires, keys: M.keys, patrols: M.patrols.map((p) => p.path) },
       rank: all.slice(0, CAVE.rankShow), myRank: mine >= 0 ? [mine + 1, all[mine][1], all.length] : null,
       me: { spent: c.spent, score: c.score, owe: c.owe.slice(), inRun: !!c.open, inEcho: !!c.echoOpen, fires: c.fires, keys: c.keys, tabs: c.tabs.map((i) => TABLETS[i]), tabTotal: TABLETS.length, hpMax: f.me.hp, sum: f.me.sum } };
   }

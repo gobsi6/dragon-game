@@ -497,12 +497,16 @@ dialog.frame:not(.as-panel) > .bl { bottom: 2px; left: 2px; } dialog.frame:not(.
 .sl-linkp { display: flex; flex-direction: column; gap: 6px; padding: 10px; border: 1px solid var(--line-in); border-radius: 3px; background: var(--surface-2); }
 .sl-linkp[hidden] { display: none; }
 .sl-linkp .note { margin: 2px 0 0; font-size: 11.5px; }
-.sl-linkr { display: flex; flex-direction: column; max-height: 260px; overflow-y: auto; border: 1px solid #E2E4E0; border-radius: 3px; background: #fff; }
-.sl-linko { display: flex; align-items: baseline; gap: 10px; width: 100%; min-height: 40px; padding: 8px 10px; border: 0; border-top: 1px solid #ECEDEA; background: none; text-align: left; font: inherit; color: var(--ink); cursor: pointer; }
+.sl-linkr { display: flex; flex-direction: column; max-height: 260px; overflow-y: auto; padding: 2px 0; border: 1px solid #E4E3DD; border-radius: 3px; background: #F1F0EB; /* 흰 바탕 대신 석판 카드 같은 옅은 돌빛 */
+  scrollbar-width: thin; scrollbar-color: #C9CCC8 transparent; }
+.sl-linkr::-webkit-scrollbar { width: 6px; }
+.sl-linkr::-webkit-scrollbar-thumb { background: #C9CCC8; border-radius: 3px; }
+.sl-linko { display: flex; align-items: baseline; gap: 10px; width: 100%; min-height: 36px; padding: 7px 10px; border: 0; border-top: 1px solid #E7E6E0; background: none; text-align: left; font: inherit; color: var(--ink); cursor: pointer; }
 .sl-linko:first-child { border-top: 0; }
-.sl-linko:hover, .sl-linko:focus-visible { background: #F1F4F7; outline: none; }
-.sl-linko b { flex: 1; min-width: 0; font: 600 13.5px/1.4 var(--serif); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sl-linko span { flex: none; font-size: 11.5px; color: var(--muted); }
+.sl-linko:hover, .sl-linko:focus-visible { background: #E6EAEC; outline: none; }
+.sl-linko:hover b, .sl-linko:focus-visible b { color: var(--steel-d); }
+.sl-linko b { flex: 1; min-width: 0; font: 500 13px/1.4 var(--sans); color: #3F4448; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } /* 훑어보는 목록: 보통 굵기 고딕, 짙은 회색 */
+.sl-linko span { flex: none; font-size: 11px; color: #8A8F94; }
 .sl-linke { padding: 14px 10px; text-align: center; font-size: 12.5px; color: var(--muted); }
 /* 글 하나 = 옅은 돌빛 판 */
 .sl-card { display: flex; flex-direction: column; gap: 7px; width: 100%; padding: 13px 14px 12px; border: 1px solid #D3D1C9; border-radius: 3px; text-align: left; cursor: pointer;
