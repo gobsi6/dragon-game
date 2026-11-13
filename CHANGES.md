@@ -1,3 +1,10 @@
+# 석판: 이어 건 글 제목 표가 글씨 길이만큼 (2026-11-13)
+
+바뀐 파일: `public/style.css`, `CHANGES.md`
+
+- 글 속 제목 표(`.sl-link`)가 줄 폭을 꽉 채우던 것을 글씨 길이만큼만 차지하게. 긴 제목은 그대로 줄을 바꿔 이어짐.
+  - 원인: 석판 창의 `.dlg .body`(세로로 쌓는 flex)가 글 내용 칸 `p.body`에도 걸려, 표와 앞뒤 글이 한 줄씩 따로 꽉 차게 쌓였음. `.sl-post .body`를 `display: block`으로. (표도 inline-flex → inline-block)
+
 # 시련의 굴: 받침돌에 이번 굴에서 석상을 넘은 드래곤 모두 (2026-11-13)
 
 바뀐 파일: `city.js`, `CHANGES.md`
