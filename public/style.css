@@ -1313,7 +1313,7 @@ dialog.trip-dlg {
 .relb.mentor { color: #2A4256; border-color: #9DB3C6; background: #EAF0F5; }
 .relb.family { color: #6B4E12; border-color: #E2CF9E; background: #FBF6E8; }
 .relb.heart { color: #8E3340; border-color: #E6BFC6; background: #FBEEF1; }
-.relb.nemesis { color: #FBEFF0; border-color: #6E2229; background: #8E3340; }
+.relb.nemesis, .who .nm .relb.nemesis { color: #FBEFF0; border-color: #6E2229; background: #8E3340; } /* 이름 줄의 '.who .nm span'(흐린 회색)이 글씨 색을 덮어 짙은 바탕에 글씨가 묻히던 것 */
 .bond-pick { width: 100%; display: flex; flex-direction: column; gap: 5px; padding: 8px 10px; background: var(--surface-2); border: 1px solid var(--line-in); border-radius: 3px; }
 .bp-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 .bp-l { width: 52px; flex: none; font-size: 11px; line-height: 22px; color: var(--muted); }
