@@ -72,6 +72,18 @@ module.exports = function setupSlate({ io, db, entryOf }) {
     return v;
   }
 
+  // 글 속에 이어 건 다른 글: [#번호 제목] 꼴. 지금 제목을 함께 보냄 (지워진 글은 null)
+  const LINK_RE = /\[#(\d{1,9})[^\]\n]{0,60}\]/g;
+  function linksOf(body) {
+    const out = {};
+    for (const m of String(body || '').matchAll(LINK_RE)) {
+      if (m[1] in out) continue;
+      if (Object.keys(out).length >= 30) break;
+      out[m[1]] = db.slate.title(Number(m[1]));
+    }
+    return out;
+  }
+
   function attach(socket) {
     socket.emit('slate:latest', { at: latest() });
     const me = () => entryOf(socket)?.dragon || null;
@@ -92,11 +104,18 @@ module.exports = function setupSlate({ io, db, entryOf }) {
       const n = pl.kind === 'public' || isGm() ? new Set(db.slate.voters(r.id).map((v) => v.dragon_id)).size : null;
       return { closed: !!pl.closed_at, revealed: !!pl.revealed_at, voted: db.slate.myVote(r.id, d.id) != null, n };
     };
-    on('slate:list', (d) => { const pk = db.slate.pollKinds(); return {
-      ok: true, rules: RULES, gm: isGm(),
-      posts: db.slate.list(RULES.list).map((r) => ({ id: r.id, poll: pk.get(r.id) || null, pollSt: pk.has(r.id) ? pollSt(r, d) : null, head: r.head, title: r.title, preview: r.preview, at: r.at, edited: !!r.edited_at, pinned: !!r.pinned, n: r.n, last: Math.max(r.at, r.last_c || 0),
-        lastC: r.last_c || 0, lastBy: r.last_by || null, mine: r.dragon_id === d.id, who: who(r) })),
-    }; });
+    // 목록: by가 있으면 그 드래곤이 새긴 글만 (모아 보기)
+    on('slate:list', (d, p) => {
+      const pk = db.slate.pollKinds();
+      const by = Number(p.by) || 0;
+      if (by && by !== d.id && db.dragonHeld && db.dragonHeld(by)) return { error: '이 드래곤은 이제 대륙에 존재하지 않는다.' }; // 지워서 맡아 둔 계정
+      const rows = by ? db.slate.by(by) : db.slate.list(RULES.list);
+      return {
+        ok: true, rules: RULES, gm: isGm(), by: by || null,
+        posts: rows.map((r) => ({ id: r.id, poll: pk.get(r.id) || null, pollSt: pk.has(r.id) ? pollSt(r, d) : null, head: r.head, title: r.title, preview: r.preview, at: r.at, edited: !!r.edited_at, pinned: !!r.pinned, n: r.n, last: Math.max(r.at, r.last_c || 0),
+          lastC: r.last_c || 0, lastBy: r.last_by || null, mine: r.dragon_id === d.id, who: who(r) })),
+      };
+    });
     // 접속할 때 한 번: 가장 새 글, 내 글에 달린 가장 새 답의 때 (아이콘 점)
     on('slate:peek', (d) => ({ ok: true, latest: latest(), replyAt: db.slate.replyAt(d.id) }));
     on('slate:get', (d, p) => {
@@ -104,7 +123,7 @@ module.exports = function setupSlate({ io, db, entryOf }) {
       if (!r) return { error: '이미 지워진 글이다.' };
       return {
         ok: true, gm: isGm(),
-        post: { id: r.id, head: r.head, title: r.title, body: r.body, at: r.at, edited: r.edited_at || 0, pinned: !!r.pinned, who: who(r, 'cur_name', 'cur_kind'), mine: r.dragon_id === d.id, imgs: db.slate.imgsOf(r.id), poll: pollView(r, d, isGm()) },
+        post: { id: r.id, head: r.head, title: r.title, body: r.body, at: r.at, edited: r.edited_at || 0, pinned: !!r.pinned, who: who(r, 'cur_name', 'cur_kind'), mine: r.dragon_id === d.id, imgs: db.slate.imgsOf(r.id), poll: pollView(r, d, isGm()), links: linksOf(r.body) },
         comments: (() => { const ci = new Map(db.slate.cmImgs(r.id).map((x) => [x.comment_id, { id: x.id, w: x.w, h: x.h, at: x.at }]));
           return db.slate.comments(r.id).map((c) => ({ id: c.id, text: c.text, at: c.at, edited: !!c.edited_at, who: who(c), mine: c.dragon_id === d.id, parent: c.parent_id || null, img: ci.get(c.id) || null })); })(),
       };

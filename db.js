@@ -653,6 +653,14 @@ const q = {
                               (SELECT MAX(c.at) FROM slate_comments c WHERE c.post_id = p.id) AS last_c,
                               (SELECT c.dragon_id FROM slate_comments c WHERE c.post_id = p.id ORDER BY c.at DESC LIMIT 1) AS last_by
                             FROM slate_posts p LEFT JOIN dragons d ON d.id = p.dragon_id ORDER BY p.pinned DESC, p.at DESC LIMIT ?`),
+  // 한 드래곤이 새긴 글 모아 보기 (목록과 같은 모양, 고정 글도 새긴 차례대로)
+  slateBy:      db.prepare(`SELECT p.id, p.dragon_id, COALESCE(d.name, p.name) AS name, COALESCE(d.kind, p.kind) AS kind, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar,
+                              p.head, p.title, substr(p.body, 1, 160) AS preview, p.at, p.edited_at, p.pinned,
+                              (SELECT COUNT(*) FROM slate_comments c WHERE c.post_id = p.id) AS n,
+                              (SELECT MAX(c.at) FROM slate_comments c WHERE c.post_id = p.id) AS last_c,
+                              (SELECT c.dragon_id FROM slate_comments c WHERE c.post_id = p.id ORDER BY c.at DESC LIMIT 1) AS last_by
+                            FROM slate_posts p LEFT JOIN dragons d ON d.id = p.dragon_id WHERE p.dragon_id = ? ORDER BY p.at DESC LIMIT ?`),
+  slateTitle:   db.prepare('SELECT id, title FROM slate_posts WHERE id = ?'), // 글 속에 이어 건 글의 제목
   slateGet:     db.prepare(`SELECT p.*, COALESCE(d.name, p.name) AS cur_name, COALESCE(d.kind, p.kind) AS cur_kind, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar
                             FROM slate_posts p LEFT JOIN dragons d ON d.id = p.dragon_id WHERE p.id = ?`),
   slateCms:     db.prepare(`SELECT c.id, c.dragon_id, COALESCE(d.name, c.name) AS name, COALESCE(d.kind, c.kind) AS kind, d.avatar_ver, (d.avatar IS NOT NULL) AS has_avatar, c.text, c.at, c.edited_at, c.parent_id
@@ -1119,6 +1127,8 @@ module.exports = {
   offersToCount: (id) => q.offersToN.get(id).n,
   slate: {
     list: (limit = 200) => q.slateList.all(limit),
+    by: (dragonId, limit = 500) => q.slateBy.all(dragonId, limit),
+    title: (id) => q.slateTitle.get(id)?.title ?? null,
     get: (id) => q.slateGet.get(id) || null,
     comments: (id) => q.slateCms.all(id),
     add: (d, head, title, body) => q.slateAdd.run(d.id, d.name, d.kind, head, title, body, Date.now()).lastInsertRowid,

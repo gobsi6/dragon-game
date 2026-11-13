@@ -532,9 +532,10 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     const m = ct(d), w = weekIdx(), o = m.cave;
     const stale = !o || o.week !== w || o.cyc !== CAVE.cycleDays;
     if (stale && !(keep && o && o.cyc === CAVE.cycleDays && (o.open || o.echoOpen))) {
-      m.cave = { week: w, cyc: CAVE.cycleDays, n: 0, spent: 0, open: false, score: null, owe: (o && o.cyc === CAVE.cycleDays && o.carry) || [], echoOpen: false, fires: [], keys: [], tabs: (o && o.tabs) || [] };
+      const carry = (o && o.cyc === CAVE.cycleDays && o.carry) || [];
+      m.cave = { week: w, cyc: CAVE.cycleDays, n: 0, spent: 0, open: false, score: null, owe: carry, carryN: carry.length, mine: 0, echoOpen: false, fires: [], keys: [], tabs: (o && o.tabs) || [] };
     }
-    return m.cave; // n: 이번 주기에 깬 미로 수, owe: 아직 석상으로 받지 않은 미로 몫('first'·'bonus'), carry: 지난 굴에 들어가 새 굴이 열린 뒤 깬 미로의 석상 몫
+    return m.cave; // mine: 이번 굴의 미로 몫으로 석상을 넘은 수(받침돌에 보임), carryN: 지난 굴에서 넘어와 owe 맨 앞에 있는 몫 수, n: 이번 주기에 깬 미로 수, owe: 아직 석상으로 받지 않은 미로 몫('first'·'bonus'), carry: 지난 굴에 들어가 새 굴이 열린 뒤 깬 미로의 석상 몫
   }
   const myMap = (d, c = caveSt(d)) => caveMap(caveSeed(d, Math.min(c.n, mazeMax - 1), c.week));
   const caveWorld = () => {
@@ -549,15 +550,25 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
   const echoTier = (c) => Math.min(c.beats || 0, CAVE.echoHpMul.length - 1); // 이번 굴에서 석상 몫을 받은 수: 받을수록 단단해짐
   const echoFor = (me, tier = 0) => ({ ...CAVE.echo, sum: me.sum, tier, hpMax: Math.round(me.hp * CAVE.echoHpMul[tier]) });
   const caveMul = (f) => ({ scale: Math.round(f.me.hp / CAVE.dmgRef * 100) / 100 }); // 주고받는 피해 크기를 내 굴 체력에 맞춤
+  // 받침돌의 넘은 수: 그 드래곤의 이번 굴 기록(c.mine, 이번 굴 미로 몫을 받은 승리만 · 미로마다 한 번 → 많아야 3)을 그대로 읽음.
+  // 업데이트 전에 넘은 것도 들어 있고, 새 굴이 열리면 그 드래곤의 굴 기록과 함께 0. 읽기만 하고 고치지 않음 (ct는 기록을 고치므로 쓰지 않음)
+  function caveBeatsOf(name, me) {
+    try {
+      const o = name === me.name ? me : otherDragon(name); if (!o) return 0;
+      const cv = logic.combatJson(o)?.city?.cave;
+      return cv && cv.week === weekIdx() && cv.cyc === CAVE.cycleDays ? (cv.mine ?? cv.beats ?? 0) : 0; // mine이 없는 기록은 업데이트 전에 열린 굴
+    } catch { return 0; }
+  }
   function caveView(d) {
     const c = caveSt(d), cw = caveWorld(), M = myMap(d), rule = caveRule();
     let f = c.echoOpen && c.fight; if (!f) { const me = caveMe(d); f = { me, echo: echoFor(me, echoTier(c)) }; } // 석상 앞이 아니면 지금 들어갈 때의 미리보기
     const awake = (n) => { if (n === d.name) return true; try { const o = otherDragon(n); return !o || !o.dormant_at; } catch { return true; } }; // 휴면 중인 이는 순위·받침돌에서 빼 둠
     const all = Object.entries(cw.rank).filter(([n]) => awake(n)).sort((a, b) => a[1] - b[1]), mine = all.findIndex(([n]) => n === d.name);
     const resetIn = CAVE.cycleDays - (((dayIdx() % CAVE.cycleDays) + CAVE.cycleDays) % CAVE.cycleDays); // 새 굴까지 남은 날 (오늘 포함)
+    // carved: 받침돌의 이름과 이번 굴에서 석상을 넘어 몫을 받은 수 (미로마다 한 번, 사흘마다 새로 셈)
     return { open: done('spring'), week: cw.week, mapId: `${cw.week}:${c.n}`, n: c.n, mazeMax, closed: c.n >= mazeMax, resetIn, reward: CAVE.reward,
       rule, ruleName: CAVE.names[rule], ruleLine: CAVE.lines[rule],
-      echo: f.echo, mul: caveMul(f), carved: (W.caveCarved || []).map((x) => x.name).filter(awake), map: { g: M.g.map((r) => r.join('')), dist: M.dist, E: M.E, far: M.far, fires: M.fires, keys: M.keys, patrols: M.patrols.map((p) => p.path) },
+      echo: f.echo, mul: caveMul(f), carved: (W.caveCarved || []).filter((x) => awake(x.name)).map((x) => ({ name: x.name, n: caveBeatsOf(x.name, d) })), map: { g: M.g.map((r) => r.join('')), dist: M.dist, E: M.E, far: M.far, fires: M.fires, keys: M.keys, patrols: M.patrols.map((p) => p.path) },
       rank: all.slice(0, CAVE.rankShow), myRank: mine >= 0 ? [mine + 1, all[mine][1], all.length] : null,
       me: { spent: c.spent, score: c.score, owe: c.owe.slice(), inRun: !!c.open, inEcho: !!c.echoOpen, fires: c.fires, keys: c.keys, tabs: c.tabs.map((i) => TABLETS[i]), tabTotal: TABLETS.length, hpMax: f.me.hp, sum: f.me.sum } };
   }
@@ -619,6 +630,8 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
       const kind = c.owe.shift();
       if (!kind) lines.push('석상을 넘었다. 이번 굴에서 받을 몫은 이미 다 받았다.');
       else {
+        if (c.mine == null) c.mine = c.beats || 0; // 이 업데이트 전에 열린 굴: 지금까지 넘은 수에서 시작
+        if (c.carryN > 0) c.carryN--; else c.mine++; // 지난 굴에서 넘어온 몫(owe 맨 앞)은 받침돌 수에 세지 않음
         const R = CAVE.reward[kind], m = ct(d); m.seals += R.beat; c.beats = (c.beats || 0) + 1; // 다음 석상은 더 단단하게
         lines.push(`석상을 넘었다. 석공 인장 +${R.beat}.`);
         if (kind === 'first') { // 첫 미로 몫: 대륙 소식과 받침돌

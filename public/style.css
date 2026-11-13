@@ -465,6 +465,35 @@ dialog.frame:not(.as-panel) > .bl { bottom: 2px; left: 2px; } dialog.frame:not(.
 .sl-foot { position: sticky; bottom: calc(var(--dock-h, 56px) + 8px); z-index: 2; margin-top: 14px; }
 .sl-foot .btn { gap: 7px; min-height: 42px; box-shadow: 0 4px 14px rgba(31, 35, 38, .14), inset 0 0 0 1px var(--steel-l); }
 .sl-foot .sl-pen { width: 16px; height: 16px; }
+/* 모아 보기 머리: 누구의 글 · 모든 글로 */
+.sl-byh { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 12px 0 -4px; padding: 0 2px 9px; border-bottom: 1px solid var(--line-in); }
+.sl-byh b { display: inline-flex; align-items: baseline; gap: 7px; min-width: 0; font: 700 14px/1.35 var(--serif); color: var(--steel-d); overflow-wrap: anywhere; }
+.sl-byh b .n { font: 600 12px/1 var(--sans); color: var(--muted); font-variant-numeric: tabular-nums; }
+.sl-byx, .sl-bylink { flex: none; min-height: 28px; padding: 0 9px; border: 1px solid #D3D1C9; border-radius: 3px; background: #FBFAF7; font: 500 12px/1 var(--sans); color: var(--ink-2); cursor: pointer; }
+.sl-byx:hover, .sl-bylink:hover { border-color: #A9B4BD; color: var(--steel-d); }
+.sl-byx:focus-visible, .sl-bylink:focus-visible { outline: 2px solid var(--steel); outline-offset: 2px; }
+.sl-bylink { min-height: 24px; padding: 0 7px; font-size: 11.5px; }
+/* 글 속에 이어 건 글: 제목 표 */
+.sl-link { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; margin: 0 1px; padding: 1px 7px 1px 5px; border: 1px solid #C9D3DC; border-radius: 3px; background: #F1F4F7; font: 600 13.5px/1.5 var(--serif); color: var(--steel-d); vertical-align: baseline; text-align: left; white-space: normal; overflow-wrap: anywhere; cursor: pointer; }
+.sl-link svg { flex: none; width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.sl-link:hover:not(:disabled) { border-color: var(--steel); background: #fff; }
+.sl-link:focus-visible { outline: 2px solid var(--steel); outline-offset: 1px; }
+.sl-link:disabled { cursor: default; }
+.sl-link.gone { border-color: #DAD8D0; background: #F3F2EE; color: var(--muted); font-weight: 500; text-decoration: line-through; }
+/* 새기기: 다른 글 잇기 */
+.sl-linkw { display: flex; flex-direction: column; gap: 8px; margin-top: -4px; }
+.sl-addlink svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.sl-addlink[aria-expanded="true"] { border-color: var(--steel); color: var(--steel-d); }
+.sl-linkp { display: flex; flex-direction: column; gap: 6px; padding: 10px; border: 1px solid var(--line-in); border-radius: 3px; background: var(--surface-2); }
+.sl-linkp[hidden] { display: none; }
+.sl-linkp .note { margin: 2px 0 0; font-size: 11.5px; }
+.sl-linkr { display: flex; flex-direction: column; max-height: 260px; overflow-y: auto; border: 1px solid #E2E4E0; border-radius: 3px; background: #fff; }
+.sl-linko { display: flex; align-items: baseline; gap: 10px; width: 100%; min-height: 40px; padding: 8px 10px; border: 0; border-top: 1px solid #ECEDEA; background: none; text-align: left; font: inherit; color: var(--ink); cursor: pointer; }
+.sl-linko:first-child { border-top: 0; }
+.sl-linko:hover, .sl-linko:focus-visible { background: #F1F4F7; outline: none; }
+.sl-linko b { flex: 1; min-width: 0; font: 600 13.5px/1.4 var(--serif); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sl-linko span { flex: none; font-size: 11.5px; color: var(--muted); }
+.sl-linke { padding: 14px 10px; text-align: center; font-size: 12.5px; color: var(--muted); }
 /* 글 하나 = 옅은 돌빛 판 */
 .sl-card { display: flex; flex-direction: column; gap: 7px; width: 100%; padding: 13px 14px 12px; border: 1px solid #D3D1C9; border-radius: 3px; text-align: left; cursor: pointer;
   background: linear-gradient(180deg, #F3F2EE, #ECEBE6); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7), 0 1px 0 rgba(79, 75, 62, .06); }
@@ -4855,6 +4884,11 @@ body:not(.realm-city) .moss-fx { display: none; }
 .cv-week b { font: 700 16px/1.3 var(--serif); }
 .cv-week p { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--ink-2); }
 .cv-echo { background: #EFF0EE !important; }
+/* 받침돌에 새겨진 이름: 석상 설명 아래 점선 밑에 작게 */
+.cv-carved { display: flex; flex-wrap: wrap; gap: 3px 12px; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #C9CBC6; font-size: 11.5px; line-height: 1.5; color: var(--ink-2); }
+.cv-carved .t { flex-basis: 100%; font-size: 11px; color: #7A7F84; }
+.cv-carved .n { color: var(--steel-d); }
+.cv-carved .x { margin-left: 4px; font-size: 11px; color: #8A8F94; font-variant-numeric: tabular-nums; }
 .rm-c.cv-rubble { background: repeating-linear-gradient(45deg, #5E5A52 0 4px, #6E6A60 4px 7px); border-color: #55514A; }
 .rm-c.cv-water { background: linear-gradient(180deg, #9DB3C6, #7F9BB2); border-color: #6F8BA3; }
 .cv-mark { display: flex; flex-direction: column; gap: 4px; padding: 7px 9px; background: #fff; border: 1px dashed #B9BBB6; border-radius: 3px; }

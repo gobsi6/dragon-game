@@ -9580,6 +9580,7 @@
   // ── 석판: 모두가 글을 새겨 남기는 게시판 ──
   // 새 글 점: 이 기기에 드래곤마다 마지막으로 본 때를 저장하고, 그보다 새 글이 있으면 상단 아이콘에 점
   const SL_PEN = '<svg class="sl-pen" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/></svg>';
+  const SL_LINK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>'; // 이어 건 글
   const SL_CM = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>';
   // 글·답 옆의 작은 아이콘 단추: 고치기(연필) · 고정(핀) · 지우기(휴지통)
   const SL_IC = {
@@ -9594,7 +9595,9 @@
   const slSeen = () => Math.max(SEEN.num('slate'), (() => { try { return Number(localStorage.getItem(slKey())) || 0; } catch { return 0; } })()); // 서버(드래곤마다)와 이 기기 중 큰 쪽
   const slSetSeen = (t) => { try { localStorage.setItem(slKey(), String(t)); } catch {} if (t > SEEN.num('slate')) SEEN.set('slate', t); };
   const SL_PER = 10; // 석판 목록 한 쪽에 보이는 글 수
-  const SL = { latest: 0, replyAt: 0, peeked: false, page: 'list', listPage: 0, cur: null, draft: null, prevSeen: 0, rules: { title: 40, body: 1000, comment: 100 }, gm: false, posts: [] };
+  const SL = { latest: 0, replyAt: 0, peeked: false, page: 'list', listPage: 0, cur: null, draft: null, prevSeen: 0, rules: { title: 40, body: 1000, comment: 100 }, gm: false, posts: [],
+    by: null, byPosts: [], byPage: 0, // 모아 보기: 한 드래곤이 새긴 글만 ({ id, name })
+    trail: [] }; // 글 속 이어 건 글을 따라간 길 ('앞 글로')
   function renderSlateDot() {
     const on = Math.max(SL.latest, SL.replyAt) > slSeen() && !$('slate-dlg').open; // 새 글이나, 내 글에 달린 새 답
     const d = $('slate-dot');
@@ -9665,23 +9668,26 @@
   }
   function openSlate() {
     SL.prevSeen = slSeen();
-    SL.page = 'list'; SL.listPage = 0; // 석판을 새로 열면 첫 쪽부터
+    SL.page = 'list'; SL.listPage = 0; SL.by = null; SL.trail = []; // 석판을 새로 열면 모든 글의 첫 쪽부터
     loadSlate(() => { openPanel('slate-dlg'); slSetSeen(Math.max(SL.latest, Date.now())); renderSlateDot(); });
   }
   function loadSlate(done) {
-    socket.emit('slate:list', {}, (res) => {
-      if (res.error) return toast(res.error);
-      SL.posts = res.posts; SL.rules = res.rules || SL.rules; SL.gm = !!res.gm;
+    const by = SL.by?.id || 0;
+    socket.emit('slate:list', by ? { by } : {}, (res) => {
+      if (res.error) { toast(res.error); if (by) { SL.by = null; loadSlate(done); } return; }
+      if (by && SL.by?.id !== by) return; // 그새 모아 보기를 그만둠
+      if (by) SL.byPosts = res.posts; else SL.posts = res.posts;
+      SL.rules = res.rules || SL.rules; SL.gm = !!res.gm;
       if (SL.page === 'list') drawSlate();
       done && done();
     });
   }
   // 석판 그림 주소: 올린 때(at)를 붙임. 지워진 그림의 번호가 새 그림에 다시 쓰여도, 브라우저가 기억해 둔 옛 그림을 보여 주지 않게
   const slImgUrl = (im) => `/slate-img/${im.id}?v=${im.at || 0}`;
-  function slGo(page, cur) { SL.page = page; if (cur != null) SL.cur = cur; if (page === 'list') return loadSlate(); if (page === 'post') return loadSlatePost(); drawSlate(); }
+  function slGo(page, cur) { SL.page = page; if (cur != null) SL.cur = cur; if (page === 'list') { SL.trail = []; return loadSlate(); } if (page === 'post') return loadSlatePost(); drawSlate(); }
   function loadSlatePost() {
     socket.emit('slate:get', { id: SL.cur }, (res) => {
-      if (res.error) { toast(res.error); SL.page = 'list'; return loadSlate(); }
+      if (res.error) { toast(res.error); SL.page = 'list'; SL.trail = []; return loadSlate(); }
       SL.post = res.post; SL.comments = res.comments; SL.gm = !!res.gm;
       if (SL.composing) { SL.pending = true; return; } // 한글을 조합하는 도중이면 조합이 끝난 뒤에 다시 그림
       const keep = slCapture();
@@ -9740,20 +9746,40 @@
     b.addEventListener('click', () => slGo(to));
     box.appendChild(b);
   }
+  // 모아 보기: 한 드래곤이 새긴 글만 (w: { id, name }). null이면 모든 글로
+  function slByGo(w) {
+    SL.by = w && w.id ? { id: w.id, name: w.name } : null;
+    SL.byPage = 0; SL.byPosts = [];
+    slGo('list');
+    $('slate-body').scrollTop = 0;
+  }
+  // 글 목록 미리보기·고르기 목록에서 [#번호 제목]은 '제목'만
+  const slPlain = (t) => String(t || '').replace(/\[#\d{1,9}\s*([^\]\n]{0,60})\]/g, (m, x) => (x.trim() ? `‘${x.trim()}’` : '‘글’'))
+    .replace(/\[#\d*[^\]\n]{0,60}$/, '…'); // 미리보기(160자)가 표 중간에서 잘렸으면 그 조각은 '…'로
   function slList(box) {
     const list = slEl('div', 'sl-list');
+    const posts = SL.by ? SL.byPosts : SL.posts, pk = SL.by ? 'byPage' : 'listPage';
+    // 모아 보기 머리: 누구의 글인지 · 모든 글로
+    if (SL.by) {
+      const h = slEl('div', 'sl-byh');
+      const t = slEl('b', '', SL.by.id === S.me?.id ? '내가 새긴 글' : `${SL.by.name}${josa(SL.by.name, '이', '가')} 새긴 글`);
+      t.appendChild(slEl('span', 'n', String(posts.length)));
+      const x = slEl('button', 'sl-byx', '모든 글'); x.type = 'button';
+      x.addEventListener('click', () => slByGo(null));
+      h.append(t, x); box.appendChild(h);
+    }
     // 쪽 나누기: 한 쪽에 SL_PER개. 글을 보고 돌아와도 보던 쪽 그대로 (글이 줄어 쪽이 사라졌으면 마지막 쪽)
-    const pages = Math.max(1, Math.ceil(SL.posts.length / SL_PER));
-    SL.listPage = Math.min(Math.max(0, SL.listPage || 0), pages - 1);
-    const ps = SL.posts.slice(SL.listPage * SL_PER, (SL.listPage + 1) * SL_PER);
-    if (!SL.posts.length) list.appendChild(slEl('div', 'sl-empty', "아직 아무것도 새겨지지 않았다. '새기기'로 처음 글을 남겨 보자."));
+    const pages = Math.max(1, Math.ceil(posts.length / SL_PER));
+    SL[pk] = Math.min(Math.max(0, SL[pk] || 0), pages - 1);
+    const ps = posts.slice(SL[pk] * SL_PER, (SL[pk] + 1) * SL_PER);
+    if (!posts.length) list.appendChild(slEl('div', 'sl-empty', SL.by ? '아직 새긴 글이 없다.' : "아직 아무것도 새겨지지 않았다. '새기기'로 처음 글을 남겨 보자."));
     for (const p of ps) {
       const fresh = p.at > SL.prevSeen && p.who.id !== S.me?.id;
       const c = slEl('button', `sl-card${p.pinned ? ' pin' : ''}${!p.pinned && Date.now() - p.last > 3 * 86400000 ? ' old' : ''}`); c.type = 'button';
       const t = slEl('div', 't'); if (p.pinned) t.appendChild(slTag(p)); if (p.poll) t.appendChild(slEl('span', 'sl-pollb', p.poll === 'secret' ? '비밀 투표' : '투표')); t.appendChild(slEl('b', '', p.title)); if (fresh) { const n = slEl('i', 'sl-new'); n.title = '새 글'; t.appendChild(n); }
       if (p.mine && p.lastC > SL.prevSeen && p.lastBy && p.lastBy !== S.me?.id) t.appendChild(slEl('span', 'sl-newreply', '새 답')); // 내 글에 지난번 뒤로 남이 단 답
       const m = slEl('div', 'm'); m.append(slWho(p.who), slEl('span', '', slAgo(p.at)), slCm(p.n));
-      c.append(t, slEl('p', 'p', p.preview.replace(/\s*\n\s*/g, ' ')));
+      c.append(t, slEl('p', 'p', slPlain(p.preview).replace(/\s*\n\s*/g, ' ')));
       // 투표 글: 제목 옆에 진행 상태 꼬리표 (안 골랐으면 주황 '진행 중', 골랐으면 초록 '진행 중 ✓', 마감은 회색). 화면 읽기·마우스엔 '아직 안 고름'·'고름'
       const st = p.pollSt;
       if (st) {
@@ -9763,7 +9789,7 @@
         t.querySelector(':scope > b').after(tg);
       }
       c.appendChild(m);
-      c.addEventListener('click', () => slGo('post', p.id));
+      c.addEventListener('click', () => { SL.trail = []; slGo('post', p.id); });
       list.appendChild(c);
     }
     box.appendChild(list);
@@ -9772,7 +9798,8 @@
   // 석판 목록 아래 쪽 단추: ‹ 1 2 3 … › (쪽이 많으면 처음·끝과 지금 쪽 둘레만)
   function slPager(pages) {
     const nav = slEl('nav', 'sl-pager'); nav.setAttribute('aria-label', '석판 쪽');
-    const go = (i) => { SL.listPage = i; drawSlate(); const b = $('slate-body'); b.scrollTop = 0; b.querySelector('.sl-list')?.scrollIntoView({ block: 'nearest' }); };
+    const pk = SL.by ? 'byPage' : 'listPage';
+    const go = (i) => { SL[pk] = i; drawSlate(); const b = $('slate-body'); b.scrollTop = 0; b.querySelector('.sl-list')?.scrollIntoView({ block: 'nearest' }); };
     const btn = (text, i, opts = {}) => {
       const b = slEl('button', `sl-pg${opts.on ? ' on' : ''}`, text); b.type = 'button';
       if (opts.label) b.setAttribute('aria-label', opts.label);
@@ -9780,7 +9807,7 @@
       if (i == null || opts.on) b.disabled = true; else b.addEventListener('click', () => go(i));
       nav.appendChild(b);
     };
-    const cur = SL.listPage;
+    const cur = SL[pk];
     btn('‹', cur > 0 ? cur - 1 : null, { label: '앞 쪽' });
     let last = -1;
     for (let i = 0; i < pages; i++) {
@@ -9836,20 +9863,53 @@
     l.appendChild(img);
     return l;
   }
+  // 글 내용: [#번호 제목]은 그 글로 가는 작은 표 (지금 제목으로. 지워진 글은 누를 수 없음)
+  function slBody(text, links) {
+    const el = slEl('p', 'body');
+    const re = /\[#(\d{1,9})\s*([^\]\n]{0,60})\]/g;
+    let at = 0;
+    for (const m of String(text).matchAll(re)) {
+      if (m.index > at) el.appendChild(document.createTextNode(text.slice(at, m.index)));
+      at = m.index + m[0].length;
+      const id = Number(m[1]), title = links[m[1]];
+      if (title == null && !(m[1] in links)) { el.appendChild(document.createTextNode(m[0])); continue; } // 알 수 없는 꼴은 글 그대로
+      const b = slEl('button', `sl-link${title == null ? ' gone' : ''}`); b.type = 'button';
+      b.innerHTML = SL_LINK; b.append(title == null ? '지워진 글' : title);
+      if (title == null) { b.disabled = true; b.title = '지워진 글이다.'; }
+      else if (id === SL.cur) { b.disabled = true; b.title = '지금 보는 글'; }
+      else { b.title = `'${title}' 글로 가기`; b.addEventListener('click', () => { SL.trail.push(SL.cur); slGo('post', id); $('slate-body').scrollTop = 0; }); }
+      el.appendChild(b);
+    }
+    if (at < text.length) el.appendChild(document.createTextNode(text.slice(at)));
+    return el;
+  }
   function slPost(box) {
     const p = SL.post;
-    slBack(box, '석판으로');
+    // 돌아가기: 이어 건 글을 따라왔으면 앞 글로, 모아 보기에서 왔으면 그 목록으로
+    if (SL.trail.length) {
+      const b = slEl('button', 'sl-back'); b.type = 'button';
+      b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>'; b.append('앞 글로');
+      b.addEventListener('click', () => { const prev = SL.trail.pop(); slGo('post', prev); });
+      box.appendChild(b);
+    } else slBack(box, SL.by ? (SL.by.id === S.me?.id ? '내 글로' : `${SL.by.name}의 글로`) : '석판으로');
     const a = slEl('article', 'sl-post');
     if (p.pinned) a.appendChild(slTag(p));
     a.appendChild(slEl('h3', '', p.title));
     const m = slEl('div', 'm');
     m.append(slWho(p.who), slEl('span', '', `${slAgo(p.at)}${p.edited ? ' · 고침' : ''}`));
+    // 이 드래곤이 새긴 글 모아 보기 (지금 그 드래곤의 글을 모아 보는 중이면 빼고)
+    if (p.who.id && SL.by?.id !== p.who.id) {
+      const g = slEl('button', 'sl-bylink', '글 모아 보기'); g.type = 'button';
+      g.title = `${p.who.name}${josa(p.who.name, '이', '가')} 새긴 글 모아 보기`;
+      g.addEventListener('click', () => slByGo(p.who));
+      m.appendChild(g);
+    }
     const own = slEl('div', 'sl-own');
     if (p.mine) own.appendChild(slIcon('edit', '고치기', () => { SL.draft = { id: p.id, head: p.head, title: p.title, body: p.body, imgs: (p.imgs || []).map((x) => ({ ...x })) }; slGo('write'); }));
     if (SL.gm) own.appendChild(slIcon('pin', p.pinned ? '고정 풀기' : '맨 위에 고정', () => slAct('slate:pin', { id: p.id, pin: !p.pinned }, () => loadSlatePost()), p.pinned ? 'on' : ''));
     if (p.mine || SL.gm) own.appendChild(slIcon('del', '지우기', () => { if (confirm('이 글을 지울까? 남긴 답도 함께 사라진다.')) slAct('slate:delete', { id: p.id }, () => { toast('글을 지웠다.'); slGo('list'); }); }));
     if (own.children.length) m.appendChild(own);
-    a.append(m, slEl('p', 'body', p.body));
+    a.append(m, slBody(p.body, p.links || {}));
     // 그림: 글을 열었을 때만 보임 (목록에는 없음). 누르면 원래 크기로 새 창에
     if (p.imgs?.length) {
       const g = slEl('div', 'sl-imgs');
@@ -10051,6 +10111,51 @@
     return w;
   }
   const slLeft = (at) => { const ms = at - Date.now(); if (ms <= 0) return '곧'; const h = Math.ceil(ms / 3600000); return h >= 24 ? `${Math.floor(h / 24)}일 ${h % 24 ? `${h % 24}시간` : ''}`.trim() : `${h}시간`; };
+  // 다른 글 잇기: 제목·글쓴이로 찾아 고르면 내용의 커서 자리에 [#번호 제목]을 넣음 (새긴 글에서는 누르면 그 글로 감)
+  function slLinkPick(d, ta, cnt) {
+    const w = slEl('div', 'sl-linkw');
+    const open = slEl('button', 'btn sl-addimg sl-addlink'); open.type = 'button';
+    open.innerHTML = SL_LINK; open.append(slEl('span', '', '다른 글 잇기'));
+    open.setAttribute('aria-expanded', 'false');
+    const pane = slEl('div', 'sl-linkp'); pane.hidden = true;
+    const q = slEl('input', 'input'); q.type = 'search'; q.placeholder = '제목이나 글쓴이로 찾기'; q.setAttribute('aria-label', '이을 글 찾기');
+    const res = slEl('div', 'sl-linkr');
+    pane.append(q, res, slEl('p', 'note', '고르면 내용에 [#번호 제목] 꼴로 들어간다. 새긴 글에서는 제목 표가 되어, 누르면 그 글로 간다.'));
+    let pos = null; // 열 때의 커서 자리 (찾기 칸으로 옮겨 가도 기억)
+    const draw = () => {
+      res.replaceChildren();
+      const k = q.value.trim().toLowerCase();
+      const all = (SL.posts || []).filter((x) => x.id !== d.id);
+      const hit = (k ? all.filter((x) => x.title.toLowerCase().includes(k) || (x.who?.name || '').toLowerCase().includes(k)) : all).slice(0, 8);
+      if (!hit.length) { res.appendChild(slEl('div', 'sl-linke', k ? '맞는 글이 없다.' : '이을 글이 없다.')); return; }
+      for (const x of hit) {
+        const b = slEl('button', 'sl-linko'); b.type = 'button';
+        b.append(slEl('b', '', x.title), slEl('span', '', `${x.who?.name || ''} · ${slAgo(x.at)}`));
+        b.addEventListener('click', () => {
+          const tok = `[#${x.id} ${x.title.replace(/[[\]\n]/g, '').trim()}]`; // 제목 속 대괄호는 빼고 (표가 중간에 끊기지 않게)
+          const v = ta.value, at = pos ?? v.length;
+          const before = v.slice(0, at), after = v.slice(at);
+          const ins = (before && !/\s$/.test(before) ? ' ' : '') + tok + (after && !/^\s/.test(after) ? ' ' : '');
+          if (v.length + ins.length > SL.rules.body) return toast('내용이 너무 길어 더 이을 수 없다.');
+          ta.value = before + ins + after; d.body = ta.value;
+          cnt.textContent = `${ta.value.length} / ${SL.rules.body}`;
+          shut();
+          ta.focus(); const c = before.length + ins.length; ta.setSelectionRange(c, c); pos = null;
+        });
+        res.appendChild(b);
+      }
+    };
+    const shut = () => { pane.hidden = true; open.setAttribute('aria-expanded', 'false'); };
+    open.addEventListener('click', () => {
+      if (!pane.hidden) return shut();
+      pos = document.activeElement === ta || ta.selectionStart != null ? ta.selectionEnd : null;
+      q.value = ''; pane.hidden = false; open.setAttribute('aria-expanded', 'true'); draw(); q.focus();
+    });
+    q.addEventListener('input', draw);
+    q.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); shut(); open.focus(); } });
+    w.append(open, pane);
+    return w;
+  }
   function slWrite(box) {
     const d = SL.draft;
     slBack(box, '그만두기', d.id ? 'post' : 'list');
@@ -10064,6 +10169,7 @@
     const cnt = slEl('div', 'cnt', `${d.body.length} / ${SL.rules.body}`);
     ta.addEventListener('input', () => { d.body = ta.value; cnt.textContent = `${ta.value.length} / ${SL.rules.body}`; });
     bw.append(ta, cnt); f.appendChild(bw);
+    f.appendChild(slLinkPick(d, ta, cnt));
     // 그림 (최대 3장): 고른 그림은 이 기기에서 줄여서 한 장씩 올려 둠 → 새길 때 함께 붙음
     d.imgs ||= [];
     const MAXI = SL.rules.imgs || 3;
@@ -15750,6 +15856,12 @@
   }
   const RULES = new Proxy({}, { get: () => ({ name: CV.v.ruleName, line: CV.v.ruleLine }) });
   function frameOpen() { return '<i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>'; }
+// 받침돌에 새겨진 이름: 끝방의 석상 칸 아래 점선 밑에 작게 · 이름 옆에 이번 굴에서 석상을 넘은 수 (미로마다 한 번, 사흘마다 새로. 예전 서버는 이름만 보냄)
+function carvedHtml() {
+  const list = (CV.v.carved || []).map((x) => (typeof x === 'string' ? { name: x, n: 0 } : x));
+  if (!list.length) return '';
+  return `<div class="cv-carved"><span class="t">받침돌에 새겨진 이름 · 이번 굴에서 넘은 수</span>${list.map((x) => `<span><span class="n">${esc(x.name)}</span><span class="x">${x.n}번</span></span>`).join('')}</div>`;
+}
 function renderLobby() {
   const fires = [...(P.fireFound || [])], me = CV.v.me, n = CV.v.n || 0, max = CV.v.mazeMax || 3, closed = !!CV.v.closed, owe = (me.owe || []).length;
   const fireBtns = closed ? '' : fires.map((k, i) => `<button class="btn" type="button" data-cv="enter" data-from="${k}">화톳불 ${i + 1}에서 이어 간다</button>`).join('');
@@ -15766,7 +15878,7 @@ function renderLobby() {
     <div class="where"><span class="k">고대도시 · 샘 곁</span><div class="title"><h1>시련의 굴</h1><span class="tag wild">${tag}</span></div></div>
     <div class="cv-week">
       <div class="cv-rule"><span class="rm-k">이번 굴의 규칙 · ${last ? '오늘 자정에 새 굴이 열린다' : `새 굴까지 ${CV.v.resetIn}일`}</span><b>${RULES[rule].name}</b><p>${RULES[rule].line}</p></div>
-      <div class="cv-echo"><span class="rm-k">끝방의 석상</span><b>${ECHO.owner}의 석상</b><p>석상 앞에 설 때의 내 능력치와 체력에 맞춰 선다.${ECHO.tier >= 2 ? ' 이번 굴에서 두 번 넘은 뒤라 한층 더 단단해졌다.' : ECHO.tier === 1 ? ' 이번 굴에서 한 번 넘은 뒤라 더 단단해졌다.' : ''}</p></div>
+      <div class="cv-echo"><span class="rm-k">끝방의 석상</span><b>${ECHO.owner}의 석상</b><p>석상 앞에 설 때의 내 능력치와 체력에 맞춰 선다.${ECHO.tier >= 2 ? ' 이번 굴에서 두 번 넘은 뒤라 한층 더 단단해졌다.' : ECHO.tier === 1 ? ' 이번 굴에서 한 번 넘은 뒤라 더 단단해졌다.' : ''}</p>${carvedHtml()}</div>
     </div>
     <div class="rm-pair">
       <div class="rm-box"><span class="rm-k">이번 굴 나의 기록</span>
@@ -15905,7 +16017,6 @@ function winEcho() {
 function renderEcho() {
   const b = B;
   const pr = P.hp / ME.hpMax * 100, er = b.ehp / ECHO.hpMax * 100;
-  const carved = (CV.v.carved || []).length && !b.done ? `<div class="cv-intent"><span class="rm-k">받침돌에 새겨진 이름</span><p>${CV.v.carved.map(esc).join(', ')}</p></div>` : ''; // 최근 석상을 넘은 드래곤
   const intent = b.done ? '' : `<div class="cv-intent"><span class="rm-k">석상의 다음 움직임</span><p>${esc(intentText(b.t))}</p></div>`;
   const acts = b.done
     ? `<div class="actions">${b.done === 'win' ? '' : '<button class="btn primary" type="button" data-cv="echo">다시 도전한다</button>'}<button class="btn${b.done === 'win' ? ' primary' : ''}" type="button" data-cv="echoout">${b.done === 'win' && b.tab ? '돌판을 챙겨 굴을 나선다' : '굴 밖으로 나간다'}</button>${b.done === 'win' && (CV.v.me.owe || []).length ? '<button class="btn" type="button" data-cv="echo">한 번 더 겨룬다</button>' : ''}</div>`
@@ -15917,7 +16028,7 @@ function renderEcho() {
       <div class="cv-side"><div class="h"><b>${ME.name}</b><span>${P.hp} / ${ME.hpMax}</span></div><div class="bar"><i style="width:${pr}%;background:linear-gradient(90deg,#8E3340,#CB5A66)"></i></div></div>
       <div class="cv-side"><div class="h"><b>${ECHO.owner}의 석상</b><span>${b.ehp} / ${ECHO.hpMax}</span></div><div class="bar"><i style="width:${er}%;background:linear-gradient(90deg,#5B6066,#9A9C98)"></i></div></div>
     </div>
-    ${carved}${intent}${reward}${acts}
+    ${intent}${reward}${acts}
     <div class="cv-log">${b.log.map((l) => `<div class="${l.c || ''}">${esc(l.t)}</div>`).join('')}</div>`;
 }
 
