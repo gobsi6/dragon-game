@@ -9596,7 +9596,7 @@
   const slSeen = () => Math.max(SEEN.num('slate'), (() => { try { return Number(localStorage.getItem(slKey())) || 0; } catch { return 0; } })()); // 서버(드래곤마다)와 이 기기 중 큰 쪽
   const slSetSeen = (t) => { try { localStorage.setItem(slKey(), String(t)); } catch {} if (t > SEEN.num('slate')) SEEN.set('slate', t); };
   const SL_PER = 10; // 석판 목록 한 쪽에 보이는 글 수
-  const SL = { latest: 0, replyAt: 0, peeked: false, page: 'list', listPage: 0, cur: null, draft: null, prevSeen: 0, rules: { title: 40, body: 1000, comment: 100 }, gm: false, posts: [],
+  const SL = { latest: 0, replyAt: 0, peeked: false, page: 'list', listPage: 0, cur: null, draft: null, prevSeen: 0, rules: { title: 40, body: 2000, comment: 150 }, gm: false, posts: [],
     by: null, byPosts: [], byPage: 0, // 모아 보기: 한 드래곤이 새긴 글만 ({ id, name })
     trail: [] }; // 글 속 이어 건 글을 따라간 길 ('앞 글로')
   function renderSlateDot() {
