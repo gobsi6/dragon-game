@@ -480,10 +480,20 @@ dialog.frame:not(.as-panel) > .bl { bottom: 2px; left: 2px; } dialog.frame:not(.
 .sl-link:focus-visible { outline: 2px solid var(--steel); outline-offset: 1px; }
 .sl-link:disabled { cursor: default; }
 .sl-link.gone { border-color: #DAD8D0; background: #F3F2EE; color: var(--muted); font-weight: 500; text-decoration: line-through; }
-/* 새기기: 다른 글 잇기 */
-.sl-linkw { display: flex; flex-direction: column; gap: 8px; margin-top: -4px; }
-.sl-addlink svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.sl-addlink[aria-expanded="true"] { border-color: var(--steel); color: var(--steel-d); }
+/* 새기기: 내용 칸 한 틀 = 글 칸 + 아래쪽 도구 줄(글 잇기 · 그림 · 투표 · 글자 수). 글을 쓰면 틀 전체에 강조 테두리 */
+.sl-tabox { border: 1px solid var(--line-soft); border-radius: 3px; background: var(--surface-2); }
+.sl-tabox:focus-within { border-color: var(--steel); box-shadow: 0 0 0 1px var(--steel); }
+.sl-form .sl-tabox textarea { min-height: 150px; resize: none; overflow: hidden; border: 0; border-radius: 3px 3px 0 0; background: none; outline: none; box-shadow: none; padding-top: 10px; padding-bottom: 8px; }
+.sl-tools { display: flex; align-items: center; gap: 2px; min-height: 40px; padding: 4px 6px; border-top: 1px solid var(--line-in); }
+.sl-tool { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 8px; border: 0; border-radius: 3px; background: none; font: 500 12.5px/1 var(--sans); color: var(--muted); cursor: pointer; white-space: nowrap; }
+.sl-tool svg { flex: none; width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.sl-tool small.n { font-size: 11px; color: #8A8F94; font-variant-numeric: tabular-nums; }
+.sl-tool:hover { background: rgba(42, 66, 86, .06); color: var(--steel-d); }
+.sl-tool.on { background: #E9EEF2; color: var(--steel-d); }
+.sl-tool.on small.n { color: var(--steel); }
+.sl-tool:focus-visible { outline: 2px solid var(--steel); outline-offset: -2px; }
+.sl-form .sl-tools .cnt { margin: 0 2px 0 auto; }
+.sl-form > .sl-linkp, .sl-form > .sl-thumbs { margin-top: -4px; } /* 틀 바로 아래에 붙여 펼침 */
 .sl-linkp { display: flex; flex-direction: column; gap: 6px; padding: 10px; border: 1px solid var(--line-in); border-radius: 3px; background: var(--surface-2); }
 .sl-linkp[hidden] { display: none; }
 .sl-linkp .note { margin: 2px 0 0; font-size: 11.5px; }
@@ -5415,3 +5425,4 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 #home-ui > .hm-tabs { position: sticky; top: -4px; z-index: 6; background: rgb(252, 250, 246); box-shadow: 0 -6px 0 rgb(252, 250, 246); } /* 창 본문 위쪽 여백(4px)까지 덮음 */
 #home-ui > .dk-mode { position: sticky; top: 40px; z-index: 5; background: rgb(252, 250, 246); box-shadow: 0 -8px 0 rgb(252, 250, 246), 0 8px 0 rgb(252, 250, 246); } /* 위아래 여백까지 덮어 아래 목록이 비치지 않게 */
 #home-ui .mk-row, #home-ui .dk-it { scroll-margin-top: 96px; } /* 그 줄로 데려갈 때 위에 붙은 메뉴에 가리지 않게 */
+@media (max-width: 400px) { .sl-tool { padding: 0 6px; } .sl-tools { padding: 4px 4px; } } /* 좁은 폰: 도구 셋과 글자 수가 한 줄에 */

@@ -9581,6 +9581,7 @@
   // 새 글 점: 이 기기에 드래곤마다 마지막으로 본 때를 저장하고, 그보다 새 글이 있으면 상단 아이콘에 점
   const SL_PEN = '<svg class="sl-pen" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/></svg>';
   const SL_LINK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>'; // 이어 건 글
+  const SL_POLL = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2"/><circle cx="5" cy="18" r="1.2"/></svg>'; // 투표 붙이기
   const SL_CM = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>';
   // 글·답 옆의 작은 아이콘 단추: 고치기(연필) · 고정(핀) · 지우기(휴지통)
   const SL_IC = {
@@ -10112,10 +10113,9 @@
   }
   const slLeft = (at) => { const ms = at - Date.now(); if (ms <= 0) return '곧'; const h = Math.ceil(ms / 3600000); return h >= 24 ? `${Math.floor(h / 24)}일 ${h % 24 ? `${h % 24}시간` : ''}`.trim() : `${h}시간`; };
   // 다른 글 잇기: 제목·글쓴이로 찾아 고르면 내용의 커서 자리에 [#번호 제목]을 넣음 (새긴 글에서는 누르면 그 글로 감)
+  // 돌려줌: { btn 내용 칸 도구 줄의 '글 잇기', pane 그 아래 펼쳐지는 찾기 칸 }
   function slLinkPick(d, ta, cnt) {
-    const w = slEl('div', 'sl-linkw');
-    const open = slEl('button', 'btn sl-addimg sl-addlink'); open.type = 'button';
-    open.innerHTML = SL_LINK; open.append(slEl('span', '', '다른 글 잇기'));
+    const open = slTool(SL_LINK, '글 잇기', '다른 석판 글 잇기');
     open.setAttribute('aria-expanded', 'false');
     const pane = slEl('div', 'sl-linkp'); pane.hidden = true;
     const q = slEl('input', 'input'); q.type = 'search'; q.placeholder = '제목이나 글쓴이로 찾기'; q.setAttribute('aria-label', '이을 글 찾기');
@@ -10138,23 +10138,29 @@
           const ins = (before && !/\s$/.test(before) ? ' ' : '') + tok + (after && !/^\s/.test(after) ? ' ' : '');
           if (v.length + ins.length > SL.rules.body) return toast('내용이 너무 길어 더 이을 수 없다.');
           ta.value = before + ins + after; d.body = ta.value;
-          cnt.textContent = `${ta.value.length} / ${SL.rules.body}`;
+          cnt.textContent = `${ta.value.length} / ${SL.rules.body}`; ta.dispatchEvent(new Event('input')); // 칸 높이 맞춤
           shut();
           ta.focus(); const c = before.length + ins.length; ta.setSelectionRange(c, c); pos = null;
         });
         res.appendChild(b);
       }
     };
-    const shut = () => { pane.hidden = true; open.setAttribute('aria-expanded', 'false'); };
+    const shut = () => { pane.hidden = true; open.setAttribute('aria-expanded', 'false'); open.classList.remove('on'); };
     open.addEventListener('click', () => {
       if (!pane.hidden) return shut();
       pos = document.activeElement === ta || ta.selectionStart != null ? ta.selectionEnd : null;
-      q.value = ''; pane.hidden = false; open.setAttribute('aria-expanded', 'true'); draw(); q.focus();
+      q.value = ''; pane.hidden = false; open.setAttribute('aria-expanded', 'true'); open.classList.add('on'); draw(); q.focus();
     });
     q.addEventListener('input', draw);
     q.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); shut(); open.focus(); } });
-    w.append(open, pane);
-    return w;
+    return { btn: open, pane };
+  }
+  // 내용 칸 아래쪽 도구 줄의 단추 (글 잇기 · 그림 · 투표): 테두리 없이 낮게, 켜지면 옅은 강철빛 바탕
+  function slTool(icon, label, title) {
+    const b = slEl('button', 'sl-tool'); b.type = 'button';
+    b.innerHTML = icon; b.append(slEl('span', '', label));
+    if (title) b.title = title;
+    return b;
   }
   function slWrite(box) {
     const d = SL.draft;
@@ -10164,21 +10170,28 @@
     const ti = slEl('input', 'input'); ti.maxLength = SL.rules.title; ti.value = d.title; ti.placeholder = `한 줄로 (${SL.rules.title}자)`;
     ti.addEventListener('input', () => { d.title = ti.value; });
     tw.appendChild(ti); f.appendChild(tw);
-    const bw = slEl('label'); bw.appendChild(slEl('span', 'lbl', '내용'));
-    const ta = slEl('textarea', 'input'); ta.maxLength = SL.rules.body; ta.value = d.body; ta.placeholder = `석판에 새길 이야기 (${SL.rules.body}자)`;
-    const cnt = slEl('div', 'cnt', `${d.body.length} / ${SL.rules.body}`);
-    ta.addEventListener('input', () => { d.body = ta.value; cnt.textContent = `${ta.value.length} / ${SL.rules.body}`; });
-    bw.append(ta, cnt); f.appendChild(bw);
-    f.appendChild(slLinkPick(d, ta, cnt));
+    // 내용: 한 틀 안에 글 칸과 아래쪽 도구 줄(글 잇기 · 그림 · 투표 · 글자 수). 붙인 것(찾기 칸·그림·투표)은 틀 아래에 펼쳐짐
+    const bw = slEl('div', 'sl-bodyw'); bw.appendChild(slEl('span', 'lbl', '내용'));
+    const tbox = slEl('div', 'sl-tabox');
+    const ta = slEl('textarea', 'input'); ta.maxLength = SL.rules.body; ta.value = d.body; ta.placeholder = `석판에 새길 이야기 (${SL.rules.body}자)`; ta.setAttribute('aria-label', '내용');
+    const cnt = slEl('span', 'cnt', `${d.body.length} / ${SL.rules.body}`);
+    const fit = () => { ta.style.height = 'auto'; ta.style.height = `${Math.max(150, ta.scrollHeight + 2)}px`; }; // 글이 길어지면 칸이 저절로 늘어남 (끌어서 바꾸는 손잡이는 없앰)
+    ta.addEventListener('input', () => { d.body = ta.value; cnt.textContent = `${ta.value.length} / ${SL.rules.body}`; fit(); });
+    const tools = slEl('div', 'sl-tools');
+    tbox.append(ta, tools); bw.appendChild(tbox); f.appendChild(bw);
+    setTimeout(fit, 0);
+    const lp = slLinkPick(d, ta, cnt);
+    tools.appendChild(lp.btn);
+    f.appendChild(lp.pane);
     // 그림 (최대 3장): 고른 그림은 이 기기에서 줄여서 한 장씩 올려 둠 → 새길 때 함께 붙음
     d.imgs ||= [];
     const MAXI = SL.rules.imgs || 3;
-    const iw = slEl('div', 'sl-imgpick');
-    const lbl = slEl('span', 'lbl', `그림 (${MAXI}장까지 · 글을 열었을 때만 보인다)`);
     const strip = slEl('div', 'sl-thumbs');
     const file = slEl('input'); file.type = 'file'; file.accept = 'image/*'; file.multiple = true; file.hidden = true;
-    const add = slEl('button', 'btn sl-addimg'); add.type = 'button';
-    add.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="1.5"/><circle cx="9" cy="10" r="1.6"/><path d="M5 17l4.5-4.5 3 3 2.5-2.5L19 17"/></svg><span>그림 넣기</span>';
+    const add = slTool(SL_IC.img, '그림', `그림 넣기 (${MAXI}장까지 · 글을 열었을 때만 보인다)`);
+    const addN = slEl('small', 'n'); add.appendChild(addN);
+    tools.append(add, file);
+    f.appendChild(strip);
     const drawThumbs = () => {
       strip.replaceChildren();
       d.imgs.forEach((im, i) => {
@@ -10189,9 +10202,10 @@
         t.append(img); if (!im.busy) t.append(x);
         strip.appendChild(t);
       });
-      add.hidden = d.imgs.length >= MAXI;
+      addN.textContent = `${d.imgs.length}/${MAXI}`;
+      add.classList.toggle('on', d.imgs.length > 0);
     };
-    add.addEventListener('click', () => file.click());
+    add.addEventListener('click', () => { if (d.imgs.length >= MAXI) return toast(`그림은 ${MAXI}장까지 넣을 수 있다.`); file.click(); });
     file.addEventListener('change', async () => {
       const files = [...file.files].slice(0, MAXI - d.imgs.length);
       file.value = '';
@@ -10211,18 +10225,18 @@
         await new Promise((r) => setTimeout(r, 1600)); // 서버의 올리기 간격
       }
     });
-    iw.append(lbl, strip, add, file); f.appendChild(iw);
     drawThumbs();
     // 투표 붙이기 (새로 새길 때만. 붙인 투표는 나중에 고칠 수 없음)
     if (!d.id) {
       const PR = SL.rules.poll || { min: 2, max: 30, opt: 40, days: [1, 3, 7], multi: 3 };
       d.poll ||= null;
       const pw = slEl('div', 'sl-pollw');
-      const tg = slEl('label', 'sl-polltg'); const cb = slEl('input'); cb.type = 'checkbox'; cb.checked = !!d.poll;
-      tg.append(cb, slEl('span', '', '투표 붙이기'));
+      const tg = slTool(SL_POLL, '투표', '투표 붙이기'); tg.setAttribute('aria-pressed', String(!!d.poll));
+      tools.appendChild(tg);
       const ed = slEl('div', 'sl-polled');
       const drawEd = () => {
-        ed.replaceChildren(); ed.hidden = !d.poll;
+        ed.replaceChildren(); ed.hidden = !d.poll; pw.hidden = !d.poll;
+        tg.classList.toggle('on', !!d.poll); tg.setAttribute('aria-pressed', String(!!d.poll));
         if (!d.poll) return;
         // 투표 방식은 GM에게만 고르게 (비밀 투표는 GM 전용). 다른 드래곤은 늘 공개 투표
         if (!S.isGm) d.poll.kind = 'public';
@@ -10255,10 +10269,15 @@
         sel.value = String(d.poll.days); sel.addEventListener('change', () => { d.poll.days = Number(sel.value); });
         dl.appendChild(sel); ed.appendChild(dl);
       };
-      cb.addEventListener('change', () => { d.poll = cb.checked ? { kind: 'public', options: ['', ''], days: 3 } : null; drawEd(); });
-      pw.append(tg, ed); f.appendChild(pw);
+      tg.addEventListener('click', () => {
+        if (d.poll && d.poll.options.some((x) => x.trim()) && !confirm('붙인 투표를 뺄까? 적은 선택지도 지워진다.')) return;
+        d.poll = d.poll ? null : { kind: 'public', options: ['', ''], days: 3 }; drawEd();
+        if (d.poll) ed.querySelector('.sl-pollopt input')?.focus();
+      });
+      pw.appendChild(ed); f.appendChild(pw);
       drawEd();
     }
+    tools.appendChild(cnt); // 글자 수는 도구 줄 오른쪽 끝
     const go = slEl('button', 'btn primary', d.id ? '고친 대로 새기기' : '석판에 새기기'); go.type = 'button';
     go.addEventListener('click', () => {
       if (!d.title.trim() || !d.body.trim()) return toast('제목과 내용을 모두 적어야 새길 수 있다.');
