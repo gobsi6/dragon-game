@@ -235,13 +235,23 @@ function gen(seed) {
   const pick = (lo, hi) => { const cand = cells.filter((x) => x[2] >= far * lo && x[2] <= far * hi && g[x[0]][x[1]] === '.'); return cand[Math.floor(R() * cand.length)]; };
   const fires = [pick(0.3, 0.4), pick(0.6, 0.7)].map((x) => `${x[0]},${x[1]}`);
   const keys = [pick(0.2, 0.45), pick(0.45, 0.7), pick(0.7, 0.9)].map((x) => `${x[0]},${x[1]}`);
-  // 순찰 길: 아무 칸에서 시작해 되돌아오지 않고 8~10칸 걷기
+  // 순찰 길: 돌아갈 길이 있는 칸(그 칸 하나가 막혀도 나머지 칸이 모두 이어지는 칸, 곧 고리 위의 칸)만 밟으며 되돌아오지 않고 8~10칸 걷기.
+  // 외길·막다른 길 어귀·입구·끝방·화톳불 자리에는 서지 않으므로, 파수꾼 하나가 길을 막아도 늘 에움길이 있음 (막히면 기다리거나 돌아가기)
+  const open = cells.map(([r, c]) => `${r},${c}`), detour = new Set();
+  for (const k of open) {
+    const rest = open.filter((x) => x !== k), seen = new Set([rest[0]]), q = [rest[0]];
+    while (q.length) { const [r, c] = q.pop().split(',').map(Number); for (const d of D4) { const nk = `${r + d[0]},${c + d[1]}`; if (nk !== k && !seen.has(nk) && g[r + d[0]][c + d[1]] !== '#') { seen.add(nk); q.push(nk); } } }
+    if (seen.size === rest.length) detour.add(k);
+  }
+  [`1,1`, `${E[0]},${E[1]}`, ...fires].forEach((k) => detour.delete(k));
   const patrols = [];
   for (let k = 0; k < 2; k++) {
-    for (let tries = 0; tries < 60; tries++) {
-      const s = pick(0.25 + k * 0.35, 0.5 + k * 0.35); const path = [[s[0], s[1]]], seen = new Set([`${s[0]},${s[1]}`]);
-      while (path.length < 10) { const [r, c] = path[path.length - 1]; const nx = D4.map((d) => [r + d[0], c + d[1]]).filter(([nr, nc]) => g[nr][nc] !== '#' && !seen.has(`${nr},${nc}`)); if (!nx.length) break; const n = nx[Math.floor(R() * nx.length)]; seen.add(`${n[0]},${n[1]}`); path.push(n); }
-      if (path.length >= 8) { patrols.push({ path, i: 0, dir: 1 }); break; }
+    for (let tries = 0; tries < 200; tries++) {
+      const lo = tries < 120 ? 0.25 + k * 0.35 : 0.15, hi = tries < 120 ? 0.5 + k * 0.35 : 0.95; // 정한 구간에서 못 찾으면 넓혀서
+      const cand = cells.filter((x) => x[2] >= far * lo && x[2] <= far * hi && detour.has(`${x[0]},${x[1]}`)); if (!cand.length) continue;
+      const s = cand[Math.floor(R() * cand.length)]; const path = [[s[0], s[1]]], seen = new Set([`${s[0]},${s[1]}`]);
+      while (path.length < 10) { const [r, c] = path[path.length - 1]; const nx = D4.map((d) => [r + d[0], c + d[1]]).filter(([nr, nc]) => detour.has(`${nr},${nc}`) && !seen.has(`${nr},${nc}`)); if (!nx.length) break; const n = nx[Math.floor(R() * nx.length)]; seen.add(`${n[0]},${n[1]}`); path.push(n); }
+      if (path.length >= (tries < 150 ? 8 : 6)) { patrols.push({ path, i: 0, dir: 1 }); break; }
     }
   }
   g[1][1] = 'S'; g[E[0]][E[1]] = 'E';
@@ -518,6 +528,61 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     return err('그 구역에서 할 수 있는 일이 없다.');
   }
 
+  // ── 대장간 거리: 용광로 — 안 쓰는 장신구를 녹여 석공 인장(과 덤)으로 ──
+  // 능력치 합으로 나눔(직접 빚은 장신구도 같은 기준). 착용 중·즐겨찾기·판매 잠금·프리셋에 남겨 둘 몫·강화한 한 개는 녹이지 않음
+  const MELT = {
+    perDay: 10,
+    tiers: [ // [능력치 합 이하, 석공 인장, 덤 [물건, 개수, 확률]]
+      [2, 1, []],
+      [4, 2, []],
+      [6, 4, [['bog_iron', 1, 0.3]]],
+      [8, 6, [['bog_iron', 1, 0.5]]],
+      [Infinity, 9, [['bog_iron', 1, 1], ['sun_dust', 2, 0.3]]],
+    ],
+    warn: 7, // 이 합부터는 녹이기 전에 한 번 더 물음 (화면)
+  };
+  const statSum = (it) => Object.values(it?.bonus || {}).reduce((a, v) => a + (Number(v) > 0 ? Number(v) : 0), 0);
+  const meltTier = (sum) => MELT.tiers.find((t) => sum <= t[0]);
+  const meltLeft = (m) => MELT.perDay - (m.melt && m.melt.day === dayIdx() ? m.melt.n : 0);
+  function meltList(d) {
+    const c = logic.combatJson(d), fav = new Set([...(c.favs?.items || []), ...(c.favs?.lock || [])]);
+    const g = logic.gearOf(d), out = [];
+    for (const r of db.inventory(d.id)) {
+      const it = ITEMS[r.item];
+      if (!it || it.type !== 'equip' || fav.has(r.item)) continue;
+      const keepOne = g[r.item] && logic.gearAt(d, r.item) === 'inv' ? 1 : 0; // 강화·각인한 한 개는 남김
+      const n = r.qty - logic.keptFor(d, r.item) - keepOne;
+      if (n <= 0) continue;
+      const sum = statSum(it), t = meltTier(sum);
+      out.push({ id: r.item, name: it.name, rarity: it.rarity || 'common', sum, n, seals: t[1], extra: t[2].map(([k, q, pr]) => ({ name: ITEMS[k].name, q, p: pr })) });
+    }
+    return out.sort((a, b) => a.sum - b.sum || a.name.localeCompare(b.name, 'ko'));
+  }
+  const meltBox = (d, m) => ({ list: meltList(d), left: meltLeft(m), per: MELT.perDay, warn: MELT.warn });
+  function meltView(d) {
+    if (!done('forge')) return err('대장간 거리가 재건되어야 한다.');
+    return { ok: true, melt: meltBox(d, ct(d)) };
+  }
+  function melt(d, p) {
+    const e = ready(d); if (e) return e;
+    if (!done('forge')) return err('대장간 거리가 재건되어야 한다.');
+    const m = ct(d), left = meltLeft(m);
+    if (left <= 0) return err(`오늘은 용광로에 ${MELT.perDay}개를 다 녹였다. 내일 다시 녹일 수 있다.`);
+    const id = String(p.id || ''), row = meltList(d).find((x) => x.id === id);
+    if (!row) return err('녹일 수 있는 장신구가 아니다.');
+    const n = Math.max(1, Math.min(Math.floor(Number(p.n) || 1), row.n, left));
+    const t = meltTier(row.sum), got = {};
+    let seals = 0;
+    for (let i = 0; i < n; i++) { seals += t[1]; for (const [k, q, pr] of t[2]) if (Math.random() < pr) got[k] = (got[k] || 0) + q; }
+    db.saveState(d, [{ id, qty: -n }, ...Object.entries(got).map(([k, q]) => ({ id: k, qty: q }))]);
+    m.seals += seals;
+    if (!m.melt || m.melt.day !== dayIdx()) m.melt = { day: dayIdx(), n: 0 };
+    m.melt.n += n;
+    const extra = Object.entries(got).map(([k, q]) => `${ITEMS[k].name} ${q}`);
+    return { ok: true, lines: [`${row.name}${n > 1 ? ` ${n}개` : ''}${josa(n > 1 ? '개' : row.name, '을', '를')} 용광로에 녹였다. 석공 인장 +${seals}${extra.length ? `, ${extra.join(', ')}` : ''}. ${MELT.perDay - m.melt.n > 0 ? `(오늘 ${MELT.perDay - m.melt.n}개 더 녹일 수 있다)` : '(오늘 녹일 몫을 다 썼다)'}`],
+      melt: meltBox(d, m) };
+  }
+
   // ── 시련의 굴 ──
   const weekIdx = () => Math.floor(dayIdx() / CAVE.cycleDays); // 주기 번호 (사흘마다). 이름은 예전 그대로
   const caveRule = (w = weekIdx()) => CAVE.rules[((w % CAVE.rules.length) + CAVE.rules.length) % CAVE.rules.length];
@@ -563,18 +628,23 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
   // 굴마다 처음 한 번은 모든 드래곤의 굴 기록(city.cave.mine)에서 채우고(업데이트 전에 넘은 이·순위에 없는 이도), 그 뒤로는 넘을 때마다 올림.
   // 이름이 키라 지운 드래곤은 이름 지우기 때 키째 지워짐
   function caveBeatList(cw) {
-    if (!cw.beatFill) {
+    if (cw.beatFill !== 2) { // 2: 석상 넘은 기록(beats)이 생기기 전에 넘은 이까지 채우도록 다시 (예전에 1로 채운 굴도 한 번 더)
       cw.beat ||= {};
+      const up = (name, n) => { n = Math.min(mazeMax, Math.max(0, Math.floor(n) || 0)); if (name && n > (cw.beat[name] || 0)) cw.beat[name] = n; };
       for (const id of db.dragonIds()) {
         try {
           if (db.dragonHeld && db.dragonHeld(id)) continue; // 지워서 맡아 둔 계정
           const o = (online.get && online.get(id) && online.get(id).dragon) || db.getDragon(id); if (!o) continue;
           const cv = logic.combatJson(o)?.city?.cave;
-          const n = cv && cv.week === cw.week && cv.cyc === CAVE.cycleDays ? (cv.mine ?? cv.beats ?? 0) : 0;
-          if (n > (cw.beat[o.name] || 0)) cw.beat[o.name] = n;
+          if (!cv || cv.week !== cw.week || cv.cyc !== CAVE.cycleDays) continue;
+          // 넘은 수: 새 기록(mine) → 석상 넘은 기록(beats) → 그것도 없던 때는 '깬 미로 수 − 아직 받지 않은 몫'으로 어림
+          const owed = Array.isArray(cv.owe) ? cv.owe.length : 0;
+          up(o.name, Math.max(cv.mine ?? cv.beats ?? 0, (cv.n || 0) - owed + (cv.carryN || 0)));
         } catch { /* 한 드래곤 기록이 이상해도 나머지는 채움 */ }
       }
-      cw.beatFill = true; save();
+      // 예전 받침돌(최근 6명)에 이번 굴 안에 새겨진 이름은 적어도 1번
+      for (const x of W.caveCarved || []) if (x && Math.floor((x.day ?? -1) / CAVE.cycleDays) === cw.week) up(x.name, Math.max(1, cw.beat[x.name] || 0));
+      cw.beatFill = 2; save();
     }
     return cw.beat;
   }
@@ -1236,6 +1306,8 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     handle('city:gold', (d, p) => giveGold(d, p.n));
     handle('city:perk', (d, p) => perkUse(d, p.i));
     handle('city:zone', (d, p) => zoneAct(d, String(p.id || '')));
+    handle('city:melt:get', (d) => meltView(d));
+    handle('city:melt', (d, p) => melt(d, p));
     handle('city:cave:get', (d) => ({ ok: true, cave: caveView(d) }));
     handle('city:cave:enter', (d) => { const r = caveEnter(d); return r.error ? r : { ok: true, cave: caveView(d) }; });
     handle('city:cave:fire', (d, p) => caveFire(d, p.k));

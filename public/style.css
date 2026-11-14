@@ -4118,7 +4118,7 @@ html:has(dialog.dlg:modal) { overflow: hidden; overscroll-behavior: none; } /* �
 /* 결투장: 규칙은 접어 둠 */
 .arena-rules { margin: 2px 0 4px; }
 .arena-rules > summary { cursor: pointer; min-height: 28px; display: list-item; line-height: 28px; font-size: 12.5px; font-weight: 600; color: var(--steel-d); }
-.arena-rules-b { margin: 2px 0 8px; padding: 10px 14px; background: #fff; border: 1px solid var(--line-in); border-radius: 3px; font-size: 13px; line-height: 1.65; color: var(--ink-2); }
+.arena-rules-b { margin: 2px 0 8px; padding: 10px 14px; background: var(--surface-2); /* 위 전적 칸(.ar-me)과 같은 옅은 미색 */ border: 1px solid var(--line-in); border-radius: 3px; font-size: 13px; line-height: 1.65; color: var(--ink-2); }
 .arena-rules-b p { margin: 0 0 6px; }
 .arena-rules-b ul { margin: 8px 0 0; padding: 8px 0 0 1.1em; border-top: 1px solid var(--line-in); display: flex; flex-direction: column; gap: 5px; }
 .arena-rules-b li b { margin-right: 6px; color: var(--ink); font-weight: 700; }

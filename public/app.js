@@ -14882,6 +14882,38 @@
     $('city-map').innerHTML = h;
     if (bdTop) { const g = document.querySelector('#city-map .bd-grid'); if (g) g.scrollTop = bdTop; }
   }
+  // 용광로 개수: 시장과 같은 [− n + | 최대]. 고른 개수는 CT.meltQ에 두어 다시 그려도 그대로
+  const meltQOf = (id, mx) => Math.max(1, Math.min(mx || 1, (CT.meltQ || {})[id] || 1));
+  function meltStep(id, name, mx) {
+    const q = meltQOf(id, mx), e = ctEsc(id), off = mx ? '' : ' disabled';
+    return `<button type="button" data-ct="meltstep" data-id="${e}" data-d="-1" aria-label="하나 덜"${q <= 1 || !mx ? ' disabled' : ''}>−</button>`
+      + `<input type="number" inputmode="numeric" class="mk-num" data-meltq="${e}" min="1" max="${mx || 1}" value="${q}" aria-label="${ctEsc(name)} 녹일 개수"${off}>`
+      + `<button type="button" data-ct="meltstep" data-id="${e}" data-d="1" aria-label="하나 더"${q >= mx ? ' disabled' : ''}>+</button>`
+      + (mx > 1 ? `<button type="button" class="mk-max" data-ct="meltmax" data-id="${e}" aria-label="녹일 수 있는 만큼">최대</button>` : '');
+  }
+  // 개수만 바꿀 때는 창 전체를 다시 그리지 않고 그 줄만
+  function meltSet(id, q) {
+    const x = CT.melt && CT.melt.list.find((r) => r.id === id); if (!x) return;
+    const mx = Math.max(0, Math.min(x.n, CT.melt.left));
+    (CT.meltQ ||= {})[id] = Math.max(1, Math.min(mx || 1, Math.floor(q) || 1));
+    const inp = [...document.querySelectorAll('[data-meltq]')].find((i) => i.dataset.meltq === id);
+    const st = inp && inp.closest('.mk-step'); if (st) st.innerHTML = meltStep(id, x.name, mx);
+  }
+  // 용광로: 녹일 수 있는 장신구 목록 (착용 중·즐겨찾기·판매 잠금·프리셋 몫·강화한 한 개는 빠져 있음)
+  function meltBox() {
+    const M = CT.melt;
+    if (!M) return '<p class="note">용광로에 불을 지피는 중…</p>';
+    const head = `<div class="cc-melt-h"><span>오늘 더 녹일 수 있는 장신구</span><b>${M.left} / ${M.per}</b></div>`;
+    if (!M.list.length) return `<div class="cc-melt">${head}<p class="note">녹일 수 있는 장신구가 없다. 차고 있는 것, 즐겨찾기·판매 잠금한 것, 프리셋에 넣어 둔 것, 강화한 한 개는 녹이지 않는다.</p></div>`;
+    const rows = M.list.map((x) => {
+      const mx = Math.max(0, Math.min(x.n, M.left));
+      const extra = x.extra.map((e) => `${ctEsc(e.name)} ${e.q}${e.p < 1 ? ` (${Math.round(e.p * 100)}%)` : ''}`).join(' · ');
+      return `<li><div class="l"><div class="t"><b>${ctEsc(x.name)}</b><small>능력치 합 ${x.sum} · ${x.n}개</small></div>
+        <div class="r">석공 인장 ${x.seals}${extra ? ` · ${extra}` : ''}</div></div>
+        <div class="q"><div class="mk-step">${meltStep(x.id, x.name, mx)}</div><button type="button" class="btn" data-ct="meltgo" data-id="${ctEsc(x.id)}" ${mx ? '' : 'disabled'}>녹이기</button></div></li>`;
+    }).join('');
+    return `<div class="cc-melt">${head}<ul>${rows}</ul><p class="note">능력치 합이 높을수록 많이 받는다. 차고 있는 것, 즐겨찾기·판매 잠금한 것, 프리셋에 넣어 둔 것, 강화한 한 개는 목록에 없다.</p></div>`;
+  }
   function zonePane(id) {
     const v = CT.v, z = zoneOf(id), st = z.state, inv = v.me.inv || {};
     // live: 재건 중인 구역. 가진 재료가 있는 줄에는 넣을 개수 칸 (고른 값은 CT.boxQ에 두어 화면을 다시 그려도 그대로)
@@ -14900,7 +14932,7 @@
           spring: `<p>마른 샘 바닥에서 맑은 물이 다시 솟는다. 샘물을 마시면 체력·기력·정신이 모두 가득 찬다. 하루 ${3}번까지.</p><div class="cc-btns"><button type="button" class="btn primary" data-ct="zone:spring" ${me.springLeft > 0 ? '' : 'disabled'}>${me.springLeft > 0 ? `샘물 마시기 (오늘 ${me.springLeft}번 남음)` : '오늘은 세 번 다 마셨다'}</button><button type="button" class="btn" data-ct="cave">시련의 굴로 내려간다</button></div>`, // 샘물·굴 단추를 한 줄에
           archive: `<p>쓰러진 돌판을 하루 한 장씩 일으켜 읽을 수 있다. 읽으면 석공 인장 5, 가끔 돌판 틈에서 기억 조각이 나온다.</p>${btn('돌판 읽기', '오늘은 읽었다')}`,
           green: `<p>깨진 유리 지붕 아래 덩굴과 빛버섯이 다시 자란다. 하루 한 번 꽃과 씨앗을 거둘 수 있다 (빛버섯 포자·동굴 수정·태양가루).</p>${btn('꽃과 씨앗 거두기', '오늘은 거두었다')}`,
-          forge: `<p>화로에 다시 불이 들어왔다. 이 거리의 모루를 함께 쓰니, 가구를 만들 때 드는 석공 인장이 ${Math.round((me.forgeOff || 0.2) * 100)}% 덜 든다. (늘 켜짐)</p>`,
+          forge: `<p>화로에 다시 불이 들어왔다. 이 거리의 모루를 함께 쓰니, 가구를 만들 때 드는 석공 인장이 ${Math.round((me.forgeOff || 0.2) * 100)}% 덜 든다. (늘 켜짐)</p><p>거리 끝 용광로에서는 이제 쓰지 않는 장신구를 녹여 석공 인장을 받을 수 있다.</p><div class="cc-btns"><button type="button" class="btn primary" data-ct="melt" aria-expanded="${CT.meltOpen ? 'true' : 'false'}">${CT.meltOpen ? '용광로 닫기' : '용광로'}</button></div>${CT.meltOpen ? meltBox() : ''}`,
           belfry: `<p>끊어진 줄을 이었다. 누구든 하루 한 번 종을 울릴 수 있고, 울리면 석공 인장 2를 받는다. 그날 종이 ${me.bell.need}번 모이면 모두가 보탤 수 있는 재건도가 5 늘어난다.</p><div class="cc-prog"><div class="t"><span>오늘 울린 종</span><span><b>${Math.min(me.bell.n, me.bell.need)}</b> / ${me.bell.need}</span></div>${ctBar(Math.min(me.bell.n, me.bell.need), me.bell.need, 'big' + (me.bell.on ? ' done' : ''))}</div>${me.bell.on ? `<p class="note">오늘은 종이 다 모였다. 오늘 재건도 상한 ${v.rules.dayCap}.</p>` : ''}<div class="cc-btns"><button type="button" class="btn primary" data-ct="zone:belfry" ${me.bell.mine ? 'disabled' : ''}>${me.bell.mine ? '오늘은 울렸다' : '종 울리기'}</button></div>`,
           sanctum: `<p>도시 가장 깊은 곳의 돌문이다. 문에 홈 스물한 개가 파여 있고, 기억의 벽이 채워진 만큼 빛이 들어와 있다 (${Object.keys(v.wall).length} / 21).</p><div class="cc-btns"><button type="button" class="btn primary" data-ct="zone:sanctum">문에 손을 대 본다</button></div>${CT.story ? `<div class="cc-scene"><p>${CT.story.map((l, n) => `<span class="ln" style="--d:${n}">${ctEsc(l)}</span>`).join('')}</p></div>` : ''}`,
         };
@@ -15667,6 +15699,8 @@
   }
 
   // ── 누르기 ──
+  // 용광로 개수 칸에 직접 적으면 (엔터나 칸을 벗어날 때) 범위 안으로 맞춤
+  document.addEventListener('change', (e) => { const i = e.target.closest && e.target.closest('[data-meltq]'); if (i) meltSet(i.dataset.meltq, +i.value); });
   document.addEventListener('click', (e) => {
     const n = e.target.closest('#city-card [data-ct], #city-map [data-ct], #city-home-dlg [data-ct], #city-wall-dlg [data-ct], #city-intro-dlg [data-ct], #city-visit-dlg [data-ct], #city-bar [data-ct]');
     const node = e.target.closest('#city-map .cm-node');
@@ -15685,6 +15719,16 @@
     if (a === 'wall') { const d = $('city-wall-dlg'); renderWall(); if (!d.open) d.showModal(); return; }
     if (a === 'board') return cityCall('city:board', {}, (r) => { CT.board = r.board; });
     if (a === 'cave') return caveOpenFn && caveOpenFn(true);
+    if (a === 'melt') { CT.meltOpen = !CT.meltOpen; if (!CT.meltOpen) return renderCityAll(); CT.melt = null; renderCityAll(); return cityCall('city:melt:get', {}, (r) => { CT.melt = r.melt; }); }
+    if (a === 'meltstep') return meltSet(n.dataset.id, ((CT.meltQ || {})[n.dataset.id] || 1) + Number(n.dataset.d));
+    if (a === 'meltmax') { const x = CT.melt && CT.melt.list.find((r) => r.id === n.dataset.id); return x && meltSet(x.id, Math.min(x.n, CT.melt.left)); }
+    if (a === 'meltgo') {
+      const id = n.dataset.id, x = CT.melt && CT.melt.list.find((r) => r.id === id); if (!x) return;
+      const inp = [...document.querySelectorAll('[data-meltq]')].find((i) => i.dataset.meltq === id);
+      const q = Math.max(1, Math.min(Math.floor(+(inp && inp.value) || (CT.meltQ || {})[id] || 1), x.n, CT.melt.left));
+      if (x.sum >= CT.melt.warn && !confirm(`${x.name}${q > 1 ? ` ${q}개` : ''}을(를) 녹일까? 능력치 합 ${x.sum}의 좋은 장신구다. 녹이면 되돌릴 수 없다.`)) return;
+      return cityCall('city:melt', { id, n: q }, (r) => { if (r.melt) CT.melt = r.melt; if (CT.meltQ) delete CT.meltQ[id]; });
+    }
     if (a.startsWith('zone:')) return cityCall('city:zone', { id: a.slice(5) }, (r) => { if (a === 'zone:sanctum') CT.story = r.lines; });
     if (a === 'hpview') { CT.hpClean = !CT.hpClean; return renderHome(); }
     if (a === 'visit') return cityVisit(n.dataset.name);
@@ -15849,14 +15893,22 @@
   }
   // 순찰하는 파수꾼이 한 칸 옮김 (내가 선 칸으로는 들어오지 않음). 걸을 때와 숨죽여 기다릴 때
   // 파수꾼 한 걸음: 길 끝이면 돌아서고, 가려는 칸에 내가 서 있으면 그 자리에서 돌아선다(멈춰 서 버리면 좁은 길에서 내 양옆을 막고 영영 비키지 않음)
+  // 길 끝에 몰린 파수꾼은 그 자리를 지킨다(순찰 길은 돌아갈 길이 있는 칸으로만 나므로 에움길로 돌아가면 됨).
+  // 다만 내가 어느 쪽으로도 움직일 수 없을 만큼 갇혔을 때만, 길 끝에 몰린 파수꾼이 내 곁을 스쳐 반대편으로 지나간다(예전에 만든 길·파수꾼 둘이 겹친 때의 안전장치). 지나간 수를 돌려줌
   function movePatrols(r, c) {
+    let slid = 0; const boxed = !D4.some(([dr, dc]) => canStep(r + dr, c + dc));
     for (const p of M.patrols) {
       let ni = p.i + p.dir;
       if (ni < 0 || ni >= p.path.length) { p.dir *= -1; ni = p.i + p.dir; }
       const [gr, gc] = p.path[ni];
-      if (gr === r && gc === c) { p.dir *= -1; continue; } // 나를 마주쳤다: 이번엔 제자리, 다음부터 반대로 걸어감
+      if (gr === r && gc === c) {
+        const back = p.i - p.dir, nj = ni + p.dir;
+        if (boxed && (back < 0 || back >= p.path.length) && nj >= 0 && nj < p.path.length) { p.i = nj; slid++; continue; } // 갇힌 채 길 끝에 몰림: 나를 스쳐 지나감
+        p.dir *= -1; continue; // 나를 마주쳤다: 이번엔 제자리, 다음부터 반대로 걸어감
+      }
       p.i = ni;
     }
+    return slid;
   }
   // 갇혔는지: 무너진 칸·잠긴 칸을 빼고 끝방까지 길이 이어지는지 (파수꾼은 기다리면 비키니 지나갈 수 있다고 봄).
   // 끊겼으면 'crumble'·'water', 이어져도 옆 칸이 모두 파수꾼에 막혔으면 'guard', 아니면 null
@@ -15876,7 +15928,7 @@
     run.trod.add(k); CV.found.add(k); ui.log = [];
     if (rule === 'crumble') { run.trail.push(k); if (run.trail.length > 6) { const gone = run.trail.shift(); if (gone !== k) { run.rubble.add(gone); ui.log.push({ t: '등 뒤에서 돌이 무너지는 소리가 났다.' }); } } }
     if (rule === 'water' && run.moved % 10 === 0) { run.flood++; ui.log.push({ t: '입구 쪽에서 물이 한 칸 더 차올랐다.', c: 'warn' }); }
-    if (rule === 'patrol') movePatrols(r, c);
+    if (rule === 'patrol' && movePatrols(r, c)) ui.log.push({ t: '오도 가도 못 하자 파수꾼이 몸을 비틀어 곁을 스쳐 지나갔다.' });
     if (rule === 'keys' && M.keys.includes(k) && !run.keys.has(k)) { run.keys.add(k); CV.v.me.keys = [...run.keys]; socket.emit('city:cave:fire', { k }, () => {}); ui.log.push({ t: `돌 열쇠를 주웠다. (${run.keys.size}/3)` }); }
     if (M.fires.includes(k) && !CV.v.me.fires.includes(k)) { CV.v.me.fires.push(k); socket.emit('city:cave:fire', { k }, () => {}); ui.log.push({ t: '화톳불 자리를 찾았다. 이 미로에서는 여기서 이어 갈 수 있다.' }); }
     if (fresh && M.g[r][c] === '.' && !M.fires.includes(k) && Math.random() < 0.08) { run.mob = { hp: 3, hpMax: 3, lv: 27 }; ui.log.push({ t: '발소리에 돌 파수꾼이 깨어났다.', c: 'warn' }); }
@@ -15956,6 +16008,7 @@ function renderRun() {
   else if (M.fires.includes(k)) hereT = '옛 화톳불 자리';
   if (trap && !ui.log.length) hereX = ''; // 갇혔을 때는 '주변 한 칸을 눌러…' 대신 까닭만
   if (trap === 'guard') hereX += ' 파수꾼이 길을 막고 서 있다. 숨죽여 기다리면 지나간다.';
+  else if (!trap && !run.mob && rule === 'patrol' && D4.some(([dr, dc]) => guardAt(pr + dr, pc + dc))) hereX += ' 파수꾼이 앞을 지키고 있다. 기다리거나, 다른 길로 돌아가자.';
   else if (trap) { hereT = '갇혔다'; hereX += trap === 'crumble' ? ' 끝방으로 가는 길이 무너져 끊겼다.' : trap === 'water' ? ' 끝방으로 가는 길이 물에 잠겨 끊겼다.' : ' 끝방으로 가는 길이 끊겼다.'; hereX += ' 이번에는 끝방에 닿을 수 없으니, 굴 밖으로 나가 다시 들어와야 한다.'; }
   hereX = hereX.trim();
   let acts = '';
@@ -16080,7 +16133,7 @@ function renderEcho() {
     if (s.mapId === M.id && s.found) CV.found = new Set(s.found);
     if (s.view === 'run' && s.run && me.inRun && s.mapId === M.id) {
       const r = s.run; CV.run = { ...r, rev: new Set(r.rev), trod: new Set(r.trod), rubble: new Set(r.rubble), keys: new Set(r.keys) };
-      (r.pat || []).forEach(([i, dir], k) => { if (M.patrols[k]) { M.patrols[k].i = i; M.patrols[k].dir = dir; } });
+      (r.pat || []).forEach(([i, dir], k) => { const p = M.patrols[k]; if (p) { p.i = Math.max(0, Math.min(p.path.length - 1, i | 0)); p.dir = dir === -1 ? -1 : 1; } }); // 순찰 길이 바뀌었어도 길 안에서
       CV.hp = s.hp; CV.steps = s.steps; ui.log = [{ t: '걷던 자리에서 다시 횃불을 들었다.' }]; view = 'run'; return;
     }
     if (s.view === 'echo' && s.B && me.inEcho && !s.B.done) { B = s.B; CV.hp = s.hp; view = 'echo'; return; }
@@ -16137,7 +16190,7 @@ function renderEcho() {
     if (a === 'leave') { caveLeave(); renderCave(); return; }
     if (a === 'hit') { run.used += 2; tick(); run.mob.hp--; CV.hp = Math.max(1, CV.hp - 6); ui.log = [{ t: run.mob.hp ? '돌 조각이 튀었다.' : '파수꾼이 무너져 돌무더기가 되었다.' }]; if (!run.mob.hp) run.mob = null; renderCave(); return; }
     if (a === 'pass') { const d = Math.round(ME.hpMax * 0.2); CV.hp = Math.max(1, CV.hp - d); run.mob = null; ui.log = [{ t: `파수꾼을 지나치다 등을 세게 맞았다. 체력 −${d}` }]; renderCave(); return; }
-    if (a === 'wait') { run.used = Math.round((run.used + 0.5) * 10) / 10; movePatrols(...run.pos); ui.log = [{ t: '숨죽여 기다렸다. 파수꾼이 한 걸음 옮겼다.' }]; tick(); renderCave(); return; }
+    if (a === 'wait') { run.used = Math.round((run.used + 0.5) * 10) / 10; const slid = movePatrols(...run.pos); ui.log = [{ t: slid ? '숨죽여 기다렸다. 오도 가도 못 하자 파수꾼이 몸을 비틀어 곁을 스쳐 지나갔다.' : '숨죽여 기다렸다. 파수꾼이 한 걸음 옮겼다.' }]; tick(); renderCave(); return; }
     if (a === 'heal') { run.used += 1; tick(); run.healed = true; CV.hp = Math.min(ME.hpMax, CV.hp + Math.round(ME.hpMax * 0.5)); ui.log = [{ t: '화톳불 곁에서 상처를 돌봤다.' }]; renderCave(); return; }
     if (a === 'echo') { goEcho(); return; }
     if (a === 'record') { caveFinish(t.dataset.then); return; }
