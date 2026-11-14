@@ -481,7 +481,7 @@ function regen(d, now = Date.now()) {
   const shelter = (v) => (d.rest_at ? Math.max(1, v) : v);
   const rr = d.rest_at ? wx.restRegen * (1 + FACILITY.list.spa.rest * facPower(host, 'spa')) : 1; // 온천: 쉴 때 더 빨리 (쉬는 둥지의 온천)
   m = { ap: m.ap * shelter(wx.apRegen) * rr, hp: m.hp * shelter(wx.hpRegen) * rr, en: m.en * shelter(wx.enRegen) * rr };
-  const apEvery = RULES.apEvery / (m.ap * tm.apRegen);
+  const apEvery = RULES.apEvery / (m.ap * tm.apRegen * (titleMods(d).apRegen || 1)); // 칭호 '오래된 용의 제자'
   // 지금 행동력이 한 칸 차는 데 걸리는 시간 (둥지에서 쉬기·날씨·특성까지 반영). 화면의 '+1 남은 시간'이 이 값으로 셈. 저장하지 않음
   Object.defineProperty(d, '_apEvery', { value: Math.round(apEvery), writable: true, configurable: true, enumerable: false });
   tick('ap', apCap(d), 'ap_at', apEvery);

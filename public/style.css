@@ -3103,6 +3103,7 @@ button.cnt { width: 100%; padding: 0; border: 0; background: none; font-family: 
   border-top: 3px double var(--line);
 }
 #game { padding-bottom: var(--dock-h, 56px); }
+.dock { bottom: var(--vv-gap, 0px); } /* 브라우저 아래 도구 막대가 겹쳐 뜨면 그만큼 위로 (app.js setVvGap) */
 /* 폰: 흐림(backdrop-filter)은 스크롤할 때마다 아래 내용을 다시 흐리게 계산해 버벅였음 → 흐림 없이 거의 불투명한 바탕 */
 @media (max-width: 860px) {
   .top, .dock { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(250, 250, 249, .97); }

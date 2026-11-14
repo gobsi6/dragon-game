@@ -14445,7 +14445,21 @@
 
   // 하단 메뉴 높이를 재서 본문 여백과 알림 위치에 씀 (휴대폰에서 두 줄이 되어도 맞음)
   const dock = document.querySelector('.dock');
-  const setDockH = () => document.documentElement.style.setProperty('--dock-h', `${dock.offsetHeight}px`);
+  // 브라우저 아래쪽 도구 막대(삼성 인터넷 등)가 화면 위에 겹쳐 떠 있으면 하단 메뉴 아래쪽이 그만큼 가려짐 → 보이는 화면(visualViewport)의 아래 끝에 맞춰 메뉴를 올림
+  //  화면 확대 중이거나 글을 치는 중(자판이 올라와 있음)이거나 차이가 너무 크면(자판 등) 올리지 않음
+  let vvGap = 0;
+  const setVvGap = () => {
+    const vv = window.visualViewport; let g = 0;
+    if (vv && Math.abs(vv.scale - 1) < 0.01 && !document.activeElement?.matches?.('input, textarea, [contenteditable]')) {
+      g = Math.round(window.innerHeight - vv.height - vv.offsetTop);
+      if (!(g > 0 && g <= 120)) g = 0;
+    }
+    if (g !== vvGap) { vvGap = g; document.documentElement.style.setProperty('--vv-gap', `${g}px`); setDockH(); }
+  };
+  if (window.visualViewport) { visualViewport.addEventListener('resize', setVvGap); visualViewport.addEventListener('scroll', setVvGap); }
+  window.addEventListener('scroll', setVvGap, { passive: true }); document.addEventListener('focusout', () => setTimeout(setVvGap, 300));
+  const setDockH = () => document.documentElement.style.setProperty('--dock-h', `${dock.offsetHeight + vvGap}px`);
+  setTimeout(setVvGap, 0);
   // 상단바 높이 (넓은 화면에서 양옆 칸이 상단바 아래에 붙도록)
   const head = document.querySelector('header.top');
   // offsetHeight는 정수로 반올림돼서, 양옆 칸이 붙는 순간 0.x px씩 밀리며 아이콘이 흔들렸음 → 실제 높이를 소수점까지

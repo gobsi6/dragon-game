@@ -1270,12 +1270,20 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
 
   // ── 소켓 ──
   function bind(socket, entry) {
+    // 시련의 돌판 모은 장 수를 칭호 셈(cavetab)에 맞춤. 칭호가 생기기 전에 다 모은 드래곤도 고대도시에서 무엇이든 하면 바로 얻음
+    const tabCount = (d) => {
+      const have = (ct(d).cave?.tabs || []).length, cur = logic.traitsOf(d).counts.cavetab || 0;
+      if (have > cur) logic.traitCount(d, 'cavetab', have - cur);
+    };
     const handle = (event, fn) => socket.on(event, (p, ack) => {
       if (typeof ack !== 'function') return;
       const e = entry(); if (!e) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
       const d = e.dragon; logic.regen(d);
       let res;
-      try { settle(d); flushBank(d); res = fn(d, p && typeof p === 'object' ? p : {}); }
+      try {
+        settle(d); flushBank(d); res = fn(d, p && typeof p === 'object' ? p : {});
+        if (!res.error) tabCount(d);
+      }
       catch (er) { console.error('[고대도시]', event, er && er.stack ? er.stack : er); return ack({ error: '고대도시에서 문제가 생겼다. 잠시 뒤 다시 해 보자.' }); }
       if (res.error) return ack(res);
       db.saveState(d); sendMe(socket, d);
