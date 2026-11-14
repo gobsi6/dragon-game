@@ -795,6 +795,10 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     m.furn[s] -= n; fd.n += n;
     if (!om.furn) om.furn = {}; om.furn[s] = (om.furn[s] || 0) + n;
     db.saveState(d); db.saveState(o);
+    // 주고받은 기록: 가구는 물건 목록에 없어서 'furn:가구' 꼴로 적고, 기록을 볼 때 가구 이름을 붙임 (social.js ledger:list). 받는 쪽은 집터에 바로 들어오므로 지금 적음
+    const fit = [{ id: `furn:${s}`, qty: n }];
+    db.ledgerAdd(d.id, { kind: 'gift_out', other: { id: o.id, name: o.name, kind: o.kind }, itemsOut: fit, note: '집터 · 가구' });
+    db.ledgerAdd(o.id, { kind: 'gift_in', other: { id: d.id, name: d.name, kind: d.kind }, itemsIn: fit, note: '집터 · 가구' });
     const what = `${FURN[s].name}${n > 1 ? ` ${n}개` : ''}`, tell = `${ga(d.name)} 집터로 가구를 보내왔다: ${what}. 꾸미기에서 놓을 수 있다.`;
     const oe = online.get && online.get(o.id); if (oe && oe.socket) { try { oe.socket.emit('notice', { title: '가구 선물', lines: [tell] }); sendMe(oe.socket, oe.dragon); } catch {} } else if (db.noteAdd) db.noteAdd(o.id, tell);
     return { ok: true, lines: [`${o.name}의 집터로 ${what}${josa(what, '을', '를')} 보냈다. (오늘 보낼 수 있는 가구 ${FGIFT.perDay - fd.n}개 남음)`] };
@@ -1371,3 +1375,4 @@ module.exports.CITY_ZONES = ZONES;
 module.exports.CITY_TRADE = TRADE; // 재료 얻는 곳 안내(server.js ITEM_SOURCES)에 씀
 module.exports.CITY_WORKSHOP = WORKSHOP;
 module.exports.CITY_JOBS = JOBS;
+module.exports.CITY_FURN = FURN; // 주고받은 기록에 가구 이름을 붙일 때 (social.js)

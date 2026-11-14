@@ -16,6 +16,27 @@
     requestAnimationFrame(() => back(y));
   }, true);
 })();
+// 글을 치는 도중에 창이 뜨면(결투 신청·전투·내기 확인 등) 창 안의 첫 단추에 초점이 가서, 이어 치던 Enter·띄어쓰기가 그 단추를 눌러 창이 바로 닫히던 것.
+// 채팅 칸 같은 입력 칸에 초점이 있거나 1.2초 안에 자판을 눌렀으면, 창을 띄운 뒤 초점을 단추가 아니라 창 자체에 둠. 단추는 직접 누르거나 Tab으로 옮겨 가면 됨
+(() => {
+  if (typeof HTMLDialogElement === 'undefined') return;
+  let keyAt = 0;
+  document.addEventListener('keydown', () => { keyAt = Date.now(); }, true);
+  const typing = () => {
+    const a = document.activeElement;
+    return !!(a && a.matches && a.matches('input:not([type=button]):not([type=submit]):not([type=checkbox]):not([type=radio]), textarea, [contenteditable=""], [contenteditable="true"]')) || Date.now() - keyAt < 1200;
+  };
+  const open1 = HTMLDialogElement.prototype.showModal;
+  HTMLDialogElement.prototype.showModal = function (...a) {
+    const guard = typing();
+    const r = open1.apply(this, a);
+    if (guard) {
+      if (!this.hasAttribute('tabindex')) this.setAttribute('tabindex', '-1');
+      this.focus({ preventScroll: true });
+    }
+    return r;
+  };
+})();
 // 용의 대륙 화면 동작 (예전엔 index.html 안에 있던 스크립트를 그대로 옮김)
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -1412,6 +1433,58 @@
       t.querySelector('.w').textContent = st[1];
       t.querySelector('.tm').textContent = st[2];
     }
+    renderStatusPills(now);
+  }
+  // ── 머리줄 제목 오른쪽에 지금 상태: 컴퓨터는 모두 나란히(그림 위 꼬리표와 달리 겹치면 다 보임), 폰은 가장 급한 것 하나를 짧은 말로 ──
+  // [종류, 말, 시간] — 급한 것부터. '원정 중'만 누르면 원정 상황 창
+  const PILL_ICON = {
+    berserk: '<path d="M12 3c3 4 6 6 6 10a6 6 0 0 1-12 0c0-2 1-3.5 2-4.5.5 1.5 1.5 2.5 3 2.5-1-3 0-5.5 1-8z"/>',
+    buff: '<path d="M4 11h16a8 8 0 0 1-16 0z"/><path d="M9 7.5c0-1 1-1.5 1-2.5M13 7.5c0-1 1-1.5 1-2.5"/>',
+  };
+  const minLeft = (t, now) => `${Math.max(1, Math.ceil((t - now) / 60000))}분`;
+  function renderStatusPills(now = Date.now()) {
+    const me = S.me, box = $('st-pills');
+    if (!me || !box) return;
+    const list = [];
+    // [종류, 말, 시간, 폰에서 쓰는 짧은 말, 누르면 할 일, 진행 띠(0~1, 없으면 null)] — 폰은 맨 앞 하나만 짧은 말로 (시간·강화 음식 없이, 머리줄 한 줄 유지)
+    // 진행 띠: 원정·낚시는 지난 만큼 차오르고, 광폭화·강화 음식은 남은 만큼 줄어듦. 시작 시각을 모르면(예전에 먹은 강화 음식 등) 띠 없이
+    const fill = (a, b) => (a && b > a ? Math.max(0, Math.min(1, (now - a) / (b - a))) : null);
+    const left = (a, b) => { const f = fill(a, b); return f == null ? null : 1 - f; };
+    if (me.fallen) list.push(['fall', '쓰러짐', '', '쓰러짐', null, null]);
+    if (me.berserkInfo) list.push(['berserk', '광폭화', me.berserkInfo.until ? `남은 ${minLeft(me.berserkInfo.until, now)}` : '', '광폭화', null, left(me.berserkInfo.at, me.berserkInfo.until)]);
+    if (me.raidBoss?.inRaid) list.push(['raid', '레이드 중', '', '레이드', null, null]);
+    if (me.exp) {
+      const done = now >= me.exp.end, f = done ? 1 : fill(me.exp.start, me.exp.end);
+      if (me.exp.goal === 'fishline') list.push(['exp', done ? '줄 거둘 때' : '낚시 중', done ? '' : stClock(me.exp.end - now), done ? '낚시 끝' : '낚시 중', null, f]);
+      else list.push(['exp', done ? '원정 끝' : '원정 중', done ? '' : stClock(me.exp.end - now), done ? '원정 끝' : '원정 중', 'trip', f]);
+    }
+    if (inMazeNow()) list.push(['maze', '회랑 탐사', '', '회랑', null, null]);
+    if (me.restAt && !me.exp) list.push(['rest', '둥지에서 쉬는 중', stTime(now - me.restAt), '쉬는 중', null, null]);
+    const buf = me.buff && me.buff.until > now ? S.buffs?.[me.buff.id] : null;
+    if (buf) list.push(['buff', buf.name, minLeft(me.buff.until, now), '', null, left(me.buff.at, me.buff.until)]);
+    box.hidden = !list.length;
+    box.classList.toggle('buff-only', list.length === 1 && !!buf); // 폰에서는 강화 음식만 있으면 아무것도 안 보임
+    const sig = list.map((x) => `${x[0]}:${x[1]}:${x[5] == null ? 0 : 1}`).join('|');
+    if (box.dataset.sig !== sig) { // 무엇이 떠 있는지 바뀔 때만 새로 그림 (원정 중엔 1초마다 불림)
+      box.dataset.sig = sig;
+      box.replaceChildren(...list.map(([k, w, , ws, act, pr]) => {
+        const el = document.createElement(act ? 'button' : 'span');
+        el.className = `stp ${k}`;
+        if (act) { el.type = 'button'; el.title = '원정 상황 보기'; el.addEventListener('click', openTrip); }
+        el.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${PILL_ICON[k] || ST_ICON[k] || ''}</svg>`;
+        const a = document.createElement('span'); a.className = 'w'; a.textContent = w;
+        const b = document.createElement('span'); b.className = 'ws'; b.textContent = ws;
+        const tm = document.createElement('span'); tm.className = 'tm';
+        el.append(a, b, tm);
+        if (pr != null) { const bar = document.createElement('i'); bar.className = 'bar'; bar.setAttribute('aria-hidden', 'true'); bar.append(document.createElement('b')); el.append(bar); } // 진행 띠 (아래쪽 가는 줄)
+        return el;
+      }));
+    }
+    list.forEach((x, i) => {
+      const el = box.children[i]; if (!el) return;
+      const tm = el.querySelector('.tm'); if (tm && tm.textContent !== x[2]) tm.textContent = x[2];
+      const bb = el.querySelector('.bar > b'); if (bb && x[5] != null) bb.style.width = `${(x[5] * 100).toFixed(1)}%`;
+    });
   }
   // 원정 중에는 남은 시간이 초 단위라 1초마다, 그 밖에는 30초마다 ('쉬는 중' 분 글씨 등)
   let stTick = 0;
@@ -1893,7 +1966,7 @@
   function itemAct(event, payload) {
     if (event === 'item:use' && S.items[payload?.item]?.use?.mistBox) return pdOpenBox(payload.item); // 안개 상자: 여는 모습을 보여 줌
     if (event === 'item:use' && S.items[payload?.item]?.use?.statReset) { // 태초의 조각: 쓰기 전에 한 번 더 묻기 (되돌릴 수 없음)
-      const me = S.me || {}, base = S.kinds?.[me.kind]?.stats, st = me.stats || {};
+      const me = S.me || {}, base = S.kinds?.[me.kind]?.stats, st = me.base || {}; // 장신구를 뺀 값으로 (me.stats는 장신구까지 더한 값이라 돌려받을 포인트가 부풀어 보였음)
       const back = base ? Object.keys(base).reduce((s, k) => s + ((st[k] || 0) - (base[k] || 0)), 0) : null;
       const nm = S.items[payload.item].name;
       if (!confirm(`${nm}${josa(nm, '을', '를')} 쓸까?\n\n발톱·비늘·날개·지혜·위엄이 태어날 때의 모습으로 돌아가고, 그동안 나눈 포인트${back != null ? ` ${back}점` : ''}을 돌려받는다. 드래곤 기록에서 다시 나눠야 한다.\n\n쓴 조각은 사라지고 되돌릴 수 없다.`)) return;
@@ -2601,8 +2674,8 @@
     for (const x of items || []) {
       const it = S.items[x.id];
       const c = document.createElement('span');
-      c.className = `lg-chip ${it?.rarity || 'common'}`;
-      c.textContent = `${it?.name || x.id} ×${x.qty}`;
+      c.className = `lg-chip ${x.furn ? 'furn' : it?.rarity || 'common'}`; // furn: 집터 가구 선물 (이름은 서버가 붙여 보냄)
+      c.textContent = `${it?.name || x.name || x.id} ×${x.qty}`;
       host.appendChild(c);
     }
   }
@@ -15097,7 +15170,7 @@
     }
     if (h.nap && h.nap.open && !h.nap.done) out.push({ t: '거처에서 단잠', b: '자기', a: 'nap' }); // 하루 한 번
     const z = CT.v.zones.find((x) => x.state === 'going'); // 지금 재건 중인 구역 재료함에 넣을 도시 재료가 있으면
-    if (z && z.box.some((m) => m.id !== 'gold' && m.put < m.need && (h.inv[m.id] || 0) > 0)) out.push({ t: `${z.name} 재료함에 넣기`, b: '고르러 가기', a: 'give', manual: true }); // 넣을 개수는 직접 고름 ('할 일 모두'에서 한꺼번에 넣지 않음)
+    if (z && z.box.some((m) => m.id !== 'gold' && m.put < m.need && (h.inv[m.id] || 0) > 0)) out.push({ t: `${z.name} 재료함에 넣기`, b: '가서 넣기', a: 'give', manual: true }); // 넣을 개수는 직접 고름 ('할 일 모두'에서 한꺼번에 넣지 않음)
     return out;
   }
   function homeAct(a) {

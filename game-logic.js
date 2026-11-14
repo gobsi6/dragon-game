@@ -1505,7 +1505,7 @@ function combatJson(d) {
 // 강화 효과를 줌 (이벤트 등에서)
 function giveBuff(d, id, minutes, now = Date.now()) {
   if (!BUFFS[id]) return;
-  combatJson(d).buff = { id, until: now + minutes * 60000 };
+  combatJson(d).buff = { id, at: now, until: now + minutes * 60000 }; // at: 머리줄 진행 띠
 }
 // 거처의 단잠 (고대도시): 몇 시간 동안 채집에서 하나 더 찾을 확률 (요리 버프와 따로)
 const napGather = (d, now = Date.now()) => { const n = combatJson(d).nap; return n && n.until > now ? (n.gather || 0) : 0; };
@@ -1607,7 +1607,7 @@ function useItem(d, id, have, opts = {}) {
     const B = BUFFS[u.buff];
     const old = buffOf(d);
     const mins = Math.round((u.minutes || BUFFS.minutes) * (titleMods(d).buffMin || 1) * lifeMods(d).buffMin); // 부엌에서 아이가 만든 것은 더 오래감 · 칭호 '용족의 미식가'
-    combatJson(d).buff = { id: u.buff, until: Date.now() + mins * 60000 };
+    combatJson(d).buff = { id: u.buff, at: Date.now(), until: Date.now() + mins * 60000 }; // at: 머리줄 진행 띠
     lines.push(`${mins}분 동안 ${B.name} 상태가 된다. (사냥·강적 전투에서 ${B.desc})`);
     if (old && old.id !== u.buff) lines.push(`먼저 있던 ${old.name}의 효과는 사라졌다.`);
     if (u.mindCost) lines.push(...loseMind(d, u.mindCost)); // 광기의 묘약: 정신이 깎임

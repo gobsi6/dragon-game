@@ -563,7 +563,7 @@ const meOf = (d) => ({
   base: { claw: d.claw, scale: d.scale, wing: d.wing, wisdom: d.wisdom, majesty: d.majesty }, // 타고난 값 (포인트를 나눈 값 포함)
   statPts: d.stat_pts || 0,                // 아직 나누지 않은 능력치 포인트
   mind: d.mind ?? MIND.max, mindMax: MIND.max, mindAt: d.mind_at || 0, mindEvery: MIND.regenEvery,
-  berserkInfo: (() => { const b = logic.berserkOf(d); return b ? { until: b.until, region: b.region, hp: b.hp, hpMax: b.hpMax } : null; })(),
+  berserkInfo: (() => { const b = logic.berserkOf(d); return b ? { at: b.at, until: b.until, region: b.region, hp: b.hp, hpMax: b.hpMax } : null; })(),
   corrupt: { region: !purify.purified() ? logic.corruptedRegion() : null, // 매일 옮겨 가는 오염만 (재앙의 오염은 아래 blight)
               until: logic.corruptUntil(), purify: purify.view(d) },
   blight: blight.view(d), // 재앙의 오염 (놓친 재앙이 휩쓸고 간 곳과 그 주변)
@@ -584,7 +584,7 @@ const meOf = (d) => ({
   cookMult: logic.titleMods(d).cookEn || 1, // 칭호 '둥지의 요리사': 요리 제작 기력
   mob: mobs.summary(d),                     // 맡은 모브 드래곤 의뢰와 진행도
   craft: logic.craftView(d),                // 찾아낸 제작법, 대성공 확률, 공방, 장신구 강화·각인
-  buff: (() => { const b = logic.buffOf(d); return b ? { id: b.id, until: b.until } : null; })(),
+  buff: (() => { const b = logic.buffOf(d); return b ? { id: b.id, at: b.at || null, until: b.until } : null; })(),
   nap: (() => { const n = logic.combatJson(d).nap; return n && n.until > Date.now() ? { until: n.until, gather: n.gather } : null; })(), // 거처의 단잠
   scars: death.scarsOf(d),
   bio: bioOf(d),

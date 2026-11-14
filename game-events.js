@@ -322,7 +322,7 @@ const ready = (t, ms) => !t || Date.now() - t > ms; // 다시 일어나기까지
 // 유대가 깎이기 쉬운 식구 이벤트에 쓰는 조건 (kin_jealous·kin_promise·kin_talkback·kin_compare·kin_shy)
 const homeNow = (x) => !x.data.onExp && !x.data.runaway && !x.data.errand && !x.data.companion; // 지금 둥지에 있음
 const youngNow = (c, x) => homeNow(x) && !['어른', '노년', '다 자란 용'].includes(c.stage(x));
-const leftBehind = (c, x) => homeNow(x) && c.canTravel(x) && ['소년', '청소년', '해츨링', '어린 용'].includes(c.stage(x))
+const leftBehind = (c, x) => homeNow(x) && c.canTravel(x) && !(x.type === 'human' && x.data.job) && ['소년', '청소년', '해츨링', '어린 용'].includes(c.stage(x))
   && !(x.data.expBack && c.now - x.data.expBack < 6 * 3600000) && ready(x.data.promiseAt, D3); // 따라갈 나이인데 이번 원정에 데려가지 않음
 const teenNow = (c, x) => homeNow(x) && ['청소년', '젊은 용'].includes(c.stage(x)) && (x.data.bond || 0) >= 50 && ready(x.data.talkbackAt, D3);
 const smallNow = (c, x) => homeNow(x) && ['아이', '소년', '어린 용'].includes(c.stage(x)) && ready(x.data.compareAt, D3); // 말을 해야 하므로 해츨링은 빼고
@@ -397,7 +397,7 @@ module.exports = [
       } },
       { label: '다음엔 꼭 데려가겠다고 새로 약속한다', run: (h, c, v) => {
         const k = c.k(v.id); k.data.promiseAt = c.now; h.bond(k, -2);
-        h.say(c.stage(k) === '해츨링' ? `${h.name(k)} 작은 발톱을 내 발톱에 꼭 걸었다. 그래도 믿는 눈치는 아니다. (유대 −2)`
+        h.say(c.stage(k) === '해츨링' ? `${h.name(k)} 작은 발톱으로 내 손가락을 꼭 움켜쥐었다. 그래도 믿는 눈치는 아니다. (유대 −2)`
           : `${h.name(k)} "이번엔 진짜예요." 하고 몇 번이나 다짐을 받았다. 믿는 눈치는 아니다. (유대 −2)`);
       } },
       { label: '위험한 길이라 안 된다고 단호하게 말한다', tone: 'strict', run: (h, c, v) => {

@@ -1001,7 +1001,12 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     });
     on('gift:inbox', (d) => ({ ok: true, list: db.giftList(d.id).map((g) => ({ ...g, from: { ...g.from, av: avOf(g.from.id) } })) }));
     // 주고받은 기록: 선물·교환·이벤트 선물·GM 지급 (최근 것부터)
-    on('ledger:list', (d) => ({ ok: true, list: db.ledgerList(d.id, 150) }));
+    // 가구 선물('furn:가구')에는 가구 이름을 붙여 보냄 (화면의 물건 목록에 없으므로)
+    on('ledger:list', (d) => {
+      const FN = require('./city').CITY_FURN || {};
+      const named = (l) => l.map((x) => (String(x.id).startsWith('furn:') ? { ...x, name: FN[x.id.slice(5)]?.name || '가구', furn: true } : x));
+      return { ok: true, list: db.ledgerList(d.id, 150).map((e) => ({ ...e, itemsIn: named(e.itemsIn || []), itemsOut: named(e.itemsOut || []) })) };
+    });
 
     // ── 텔레파시 ──
     on('tp:threads', (d) => ({

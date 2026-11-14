@@ -34,6 +34,7 @@
   --sans: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
 }
 * { box-sizing: border-box; }
+dialog[tabindex="-1"]:focus { outline: none; } /* 타자 중에 뜬 창은 창 자체에 초점을 둠 (app.js 맨 위) — 테두리 표시 없이 */
 html, body { margin: 0; }
 body {
   min-height: 100vh;
@@ -2556,6 +2557,7 @@ button.trait.skill.on { background: #EEF2F6; box-shadow: inset 0 0 0 1px var(--s
 .lg-chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border: 1px solid var(--line-in); border-radius: 10px; background: #fff; color: var(--ink-2); font-size: 12px; line-height: 18px; }
 .lg-chip::before { content: ""; width: 6px; height: 6px; transform: rotate(45deg); background: var(--r, #9A9C98); flex: none; }
 .lg-chip.common { --r: #9A9C98; } .lg-chip.uncommon { --r: #3C5A73; } .lg-chip.rare { --r: #B8913A; }
+.lg-chip.furn { --r: #8A7A5C; } /* 집터 가구 선물: 바랜 나무색 점 */
 .lg-chip.gold { color: #6A4E12; border-color: #E2D2A6; background: #FBF6E8; }
 .lg-chip.gold::before { display: none; }
 .lg-msg { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--ink-2); padding-left: 8px; border-left: 2px solid var(--line-soft); }
@@ -2793,7 +2795,7 @@ header.top .in { padding-top: 6px; padding-bottom: 6px; }
 .menu button:hover { background: #ECEEEC; }
 
 /* ── 본문 ── */
-.main { width: 100%; max-width: 1440px; margin: 0 auto; padding: 22px 24px; display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; }
+.main { width: 100%; max-width: 1440px; margin: 0 auto; padding: 22px 24px; display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; align-content: flex-start; } /* align-content: 폰에서 칸이 여러 줄로 놓일 때 남는 높이를 줄마다 나눠 주지 않게 (짧은 창이 드래곤 기록 아래로 붕 뜨던 것) */
 .profile { flex: 1 1 270px; max-width: 300px; padding: 0; display: flex; flex-direction: column; }
 /* 내용은 안쪽 상자에. 스크롤이 생겨도 안쪽에서만 생기므로 모서리 장식은 다른 칸처럼 바깥 모서리에 걸린다 */
 .pf-body { padding: 18px 18px 20px; display: flex; flex-direction: column; gap: 16px; min-height: 0; }
@@ -3104,6 +3106,7 @@ button.cnt { width: 100%; padding: 0; border: 0; background: none; font-family: 
 /* 폰: 흐림(backdrop-filter)은 스크롤할 때마다 아래 내용을 다시 흐리게 계산해 버벅였음 → 흐림 없이 거의 불투명한 바탕 */
 @media (max-width: 860px) {
   .top, .dock { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(250, 250, 249, .97); }
+  .dock { background: #FAFAF9; } /* 하단 메뉴는 완전히 불투명하게 (아래 지역 설명 글씨가 메뉴 글씨 밑으로 비치던 것) */
 }
 /* 메뉴는 같은 폭의 칸으로 나눠 정확히 가운데에 둔다. 메뉴 수가 바뀌어도 칸이 알아서 늘어남 */
 .dock .in { max-width: 680px; margin: 0 auto; padding: 4px 16px; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 0 4px; }
@@ -3941,15 +3944,14 @@ html:has(dialog.dlg:modal) { overflow: hidden; overscroll-behavior: none; } /* �
 .bt-log, .bt-chat { flex-shrink: 0; } /* 창이 길어져도 기록·작전 이야기 칸이 찌그러지지 않게 (창이 스크롤됨) */
 #battle-dlg.raid .bt-log { height: 132px; } /* 레이드는 동료 칸·작전 이야기가 더 있어 전투 기록을 조금 낮게 */
 @media (max-width: 620px) { #battle-dlg.raid .bt-log { height: 110px; } }
-/* 폰·좁은 화면: 전투 창(사냥·강적·레이드 등 모든 싸움)을 화면 위 끝부터 하단 메뉴 바로 위까지 꽉 채움.
-   다른 창은 주소창이 보일 때의 작은 높이(svh)에 맞춰 위아래가 비지만, 전투 창은 위·아래를 직접 붙여 늘 꽉 참.
-   늘어난 자리는 전투 기록 칸이 차지해 행동 단추는 늘 아래쪽에 붙음 (내용이 더 길면 예전처럼 창 안에서 스크롤) */
+/* 폰·좁은 화면: 전투 창(사냥·강적·레이드 등 모든 싸움)을 화면 아래 끝(홈 바 위 8px)에 붙임 — 싸우는 동안 누를 일이 없는 하단 메뉴도 덮음.
+   높이는 내용만큼(전투 기록 칸은 원래 높이 그대로), 남는 자리는 창 위쪽에. 내용이 화면보다 길면 위 끝(노치 아래 8px)까지 늘고 창 안에서 스크롤 */
 @media (max-width: 860px) {
   #battle-dlg:not(.as-panel) {
-    top: calc(env(safe-area-inset-top, 0px) + 8px); bottom: calc(var(--dock-h, 56px) + 8px); left: 0; right: 0;
-    height: auto; max-height: none; margin: 0 auto;
+    top: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); left: 0; right: 0;
+    height: auto; margin: 0 auto;
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 16px);
   }
-  #battle-dlg .bt-log { flex: 1 0 auto; }
 }
 .who .raid { font-size: 11px; color: #8A2E27; border: 1px solid #E3B9B4; background: #FBEFEE; padding: 0 6px; border-radius: 2px; margin-left: auto; margin-right: 2px; white-space: nowrap; } /* 이곳의 드래곤: 레이드 중 */
 /* 전투 기록 줄의 색: 받은 피해·쓰러짐(붉게), 회복(초록), 잘 막아 냄·적이 쓰러짐(강철빛), 장면·대사(흐리게) */
@@ -5458,3 +5460,45 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 #home-ui > .dk-mode { position: sticky; top: 40px; z-index: 5; background: rgb(252, 250, 246); box-shadow: 0 -8px 0 rgb(252, 250, 246), 0 8px 0 rgb(252, 250, 246); } /* 위아래 여백까지 덮어 아래 목록이 비치지 않게 */
 #home-ui .mk-row, #home-ui .dk-it { scroll-margin-top: 96px; } /* 그 줄로 데려갈 때 위에 붙은 메뉴에 가리지 않게 */
 @media (max-width: 400px) { .sl-tool { padding: 0 6px; } .sl-tools { padding: 4px 4px; } } /* 좁은 폰: 도구 셋과 글자 수가 한 줄에 */
+
+/* ── 머리줄 제목 오른쪽의 '지금 상태' 꼬리표 ──
+   컴퓨터(861px 이상): 원정·쉼·광폭화·강화 음식 등 겹치면 모두, 남은 시간까지
+   폰(520px 이하): 금화 옆 빈자리에, 머리줄 한 줄을 지키려고 가장 급한 것 하나만 짧은 말로 (시간·강화 음식 없이). 그 사이 폭은 숨김 */
+.st-pills { display: none; }
+.stp .ws { display: none; }
+@media (min-width: 861px) {
+  .top .in > .st-pills:not([hidden]) { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-right: auto; margin-left: -8px; }
+}
+@media (max-width: 520px) {
+  .top .in > .st-pills:not([hidden]):not(.buff-only) { display: flex; flex: 0 1 auto; min-width: 0; overflow: hidden; }
+  /* 자리: 금화 바로 오른쪽 빈자리 (폰에서는 머리줄 칸들이 한 줄에 나란히 놓이므로 순서만 바꿈) */
+  .top .in > .brand { order: -3; } .top .chip { order: -2; } .top .in > .st-pills { order: -1; }
+  /* 금화 칸의 '오른쪽 여백 자동'(단추들을 오른쪽 끝으로 미는 것)을 꼬리표가 떠 있을 때만 꼬리표 뒤로 옮겨, 꼬리표가 금화 바로 옆에 붙게 */
+  .top .in:has(> .st-pills:not([hidden]):not(.buff-only)) .chip { margin-right: 0; }
+  .top .in > .st-pills { margin: 0 auto 0 2px; }
+  .st-pills > .stp:not(:first-child), .st-pills > .stp.buff { display: none; }
+  .st-pills .stp { height: 24px; padding: 0 7px 1px 5px; gap: 3px; font-size: 11.5px; min-width: 0; }
+  .st-pills .stp .bar { height: 2px; }
+  .st-pills .stp svg { width: 13px; height: 13px; }
+  .st-pills .stp .w, .st-pills .stp .tm { display: none; }
+  .st-pills .stp .ws { display: inline; overflow: hidden; text-overflow: ellipsis; }
+}
+@media (max-width: 400px) { .st-pills .stp { padding: 0 7px 1px; } .st-pills .stp svg { display: none; } } /* 아주 좁은 폰: 그림 없이 글씨만 (글씨가 잘리지 않게) */
+.stp { position: relative; overflow: hidden; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px 1px 8px; border: 1px solid var(--line-soft); border-radius: 3px; background: var(--surface-2); color: var(--ink); font: 600 12.5px/1 var(--sans); white-space: nowrap; }
+/* 4안 '진행 띠': 행동력·금화 칸과 같은 네모. 바탕은 모두 같은 미색, 그림은 짙은 회색. 색은 아래쪽 진행 띠에만 (급한 쓰러짐·광폭화만 칸째 붉게) */
+button.stp { cursor: pointer; }
+button.stp:hover { background: #fff; border-color: var(--line); }
+.stp svg { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; color: var(--ink-2); }
+.stp .tm { font-weight: 500; color: var(--muted); font-variant-numeric: tabular-nums; }
+.stp .tm:empty { display: none; }
+.stp .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: #E6E7E3; }
+.stp .bar > b { display: block; height: 100%; width: 0; transition: width .6s linear; }
+.stp.exp .bar > b { background: var(--steel); }
+.stp.buff .bar > b { background: #2F5D45; }
+.stp.fall { background: #FBF3F4; border-color: #D7A9B0; color: #8A2E3A; }
+.stp.fall svg { color: #8A2E3A; }
+.stp.berserk { background: #A63E4B; border-color: #8E3340; color: #fff; }
+.stp.berserk svg { color: #fff; }
+.stp.berserk .tm { color: #F6E3E5; }
+.stp.berserk .bar { background: #8E3340; }
+.stp.berserk .bar > b { background: #F2C9CE; }
