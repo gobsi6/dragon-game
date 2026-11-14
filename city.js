@@ -200,13 +200,13 @@ const CAVE = {
   rankShow: 5,              // 로비 순위에 보여 줄 수 (그 아래면 내 순위만 한 줄 더)
   dmgRef: 250,              // 주고받는 피해를 (내 굴 체력 ÷ 이 값)배로: 체력이 많든 적든 석상전 난이도가 같게
 };
-const TABLETS = [
+const TABLETS = [ // 차례대로 나옴(앞 셋: 시험 받는 어린 용, 뒤 셋: 바다·떠난 형제·문과 일곱 겹·긴 잠을 비춤). 이유는 말하지 않음
   { t: '첫 비행', s: '오늘 처음으로 회랑 끝까지 날았다. 날개가 벽에 세 번 부딪혔다.\n시험관은 웃지 않았지만, 꼬리 끝이 흔들렸다.' },
-  { t: '서툰 발톱 글씨', s: '이름을 새기다 획 하나를 빠뜨렸다.\n고치지 않기로 했다. 이것도 나다.' },
-  { t: '꾸중 한 줄', s: '"불을 아껴라. 굴은 네 숨이 다할 때까지 기다려 주지 않는다."\n그 아래, 작게: 알겠습니다.' },
-  { t: '물에 잠긴 날', s: '물이 발목까지 차올랐을 때, 처음으로 뒤를 돌아보지 않았다.\n앞만 보면 길이 줄어든다.' },
-  { t: '열쇠 셋', s: '세 번째 열쇠는 처음 지나친 막다른 길에 있었다.\n돌아가는 것도 길이다.' },
-  { t: '석상', s: '끝방의 돌은 나보다 먼저 온 이의 모습을 하고 있었다.\n그를 넘고 나서야, 그도 여기서 떨었다는 걸 알았다.' },
+  { t: '서툰 발톱 글씨', s: '이름을 새기다 획 하나를 빠뜨렸다.\n다시 새기려다 발톱을 거뒀다. 다음 시험 때 마저 새기면 된다.' },
+  { t: '꺼진 불', s: '횃불을 아끼지 않다가 끝방 앞에서 불이 꺼졌다.\n어둠 속에서 내 숨소리만 크게 들렸다. 다음엔 불을 아껴야지.' },
+  { t: '물에 잠긴 날', s: '물이 발목까지 차올랐을 때, 처음으로 뒤를 돌아보지 않았다.\n어른들은 바다가 생기던 날에도 물이 이렇게 올라왔다고 한다. 나는 바다를 본 적이 없다.' },
+  { t: '열쇠 셋', s: '세 번째 열쇠는 처음 지나친 막다른 길에 있었다. 돌아가는 것도 길이다.\n형제도 그렇게 말했다. 바다 건너로 날아가던 날, 돌아보지도 않으면서.' },
+  { t: '석상', s: '끝방의 돌은 나보다 먼저 온 이의 모습을 하고 있었다.\n그를 넘고 나자 시험관이 말했다. 문이 무너지는 날, 일곱 겹을 지킬 이는 우리뿐이라고. 그 말을 하고 그는 잠들러 내려갔다.' },
 ];
 const N = 21, D4 = [[-1, 0], [1, 0], [0, -1], [0, 1]];
 function rng(seed) { let a = seed; return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -600,6 +600,8 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
       const carry = (o && o.cyc === CAVE.cycleDays && o.carry) || [];
       m.cave = { week: w, cyc: CAVE.cycleDays, n: 0, spent: 0, open: false, score: null, owe: carry, carryN: carry.length, mine: 0, echoOpen: false, fires: [], keys: [], tabs: (o && o.tabs) || [] };
     }
+    // 돌판이 무작위로 나오던 때 모은 것은 장 수만큼 앞에서부터로 맞춤 (이야기가 차례대로 읽히게)
+    const tb = m.cave.tabs; if (tb.length && tb.some((x, i) => x !== i)) m.cave.tabs = tb.map((_, i) => i).slice(0, TABLETS.length);
     return m.cave; // mine: 이번 굴의 미로 몫으로 석상을 넘은 수(받침돌에 보임), carryN: 지난 굴에서 넘어와 owe 맨 앞에 있는 몫 수, n: 이번 주기에 깬 미로 수, owe: 아직 석상으로 받지 않은 미로 몫('first'·'bonus'), carry: 지난 굴에 들어가 새 굴이 열린 뒤 깬 미로의 석상 몫
   }
   const myMap = (d, c = caveSt(d)) => caveMap(caveSeed(d, Math.min(c.n, mazeMax - 1), c.week));
@@ -731,7 +733,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
         }
         if (Math.random() < (R.tab || 0)) { // 시련의 돌판: 낮은 확률로. 모두 모았으면 대신 인장 조금
           const pool = TABLETS.map((_, i) => i).filter((i) => !c.tabs.includes(i));
-          if (pool.length) { const i = pool[Math.floor(Math.random() * pool.length)]; c.tabs.push(i); tab = TABLETS[i]; lines.push(`석상 발치에서 시련의 돌판을 찾았다: '${tab.t}'.`); }
+          if (pool.length) { const i = pool[0]; /* 차례대로: 아직 없는 것 중 가장 앞 */ c.tabs.push(i); tab = TABLETS[i]; lines.push(`석상 발치에서 시련의 돌판을 찾았다: '${tab.t}'.`); }
           else { m.seals += CAVE.tabFull; lines.push(`석상 발치에 돌판이 하나 있었지만, 시련의 돌판은 이미 모두 모았다. 대신 석공 인장 +${CAVE.tabFull}.`); }
         }
       }
