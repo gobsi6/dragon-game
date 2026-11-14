@@ -2372,6 +2372,13 @@ function onConnect(socket) {
     const sender = U.keep ? giftSender(d, id) : {};  // 받은 꽃다발을 써 버려도 그 선물은 쓴 것으로 셈 (나중에 넣는 다른 꽃다발에 엉뚱한 이름이 붙지 않게)
     const mk = logic.combatJson(d).madeKeep || {};
     const made = keep && !sender.from && mk[id] > 0;
+    // 유품: 누구의 것인지 고른 식구(긴 잠에 든 이 둥지의 인간 식구)의 이름을 붙여 넣음. 고르지 않으면 이름 없이
+    if (keep && U.kin) {
+      const of = Math.trunc(Number(p.of)) || 0;
+      const k = of ? db.kinLoad(d.id).find((x) => x.id === of && x.type === 'human' && x.status === 'dead') : null;
+      if (of && !k) return { error: '그 식구를 찾지 못했다.' };
+      return logic.useItem(d, id, have, { keep: true, from: k ? k.name : '' });
+    }
     const res = logic.useItem(d, id, have, keep ? { keep: true, ...sender, made } : {});
     if (!res.error && keep && made) mk[id] -= 1;
     if (res.error && U.keep) { const c = logic.combatJson(d); /* 쓰지 못했으면 셈을 되돌림 */ for (const k of Object.keys(c.keepUsed || {})) if (c._lastKeep === k) c.keepUsed[k] -= 1; }

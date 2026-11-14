@@ -319,8 +319,189 @@ function pickGift(c, k, st) {
   return c.pick(use || [k.type === 'drake' ? 'shiny_pebble' : 'kid_drawing']);
 }
 const ready = (t, ms) => !t || Date.now() - t > ms; // 다시 일어나기까지의 간격
+// 유대가 깎이기 쉬운 식구 이벤트에 쓰는 조건 (kin_jealous·kin_promise·kin_talkback·kin_compare·kin_shy)
+const homeNow = (x) => !x.data.onExp && !x.data.runaway && !x.data.errand && !x.data.companion; // 지금 둥지에 있음
+const youngNow = (c, x) => homeNow(x) && !['어른', '노년', '다 자란 용'].includes(c.stage(x));
+const leftBehind = (c, x) => homeNow(x) && c.canTravel(x) && ['소년', '청소년', '해츨링', '어린 용'].includes(c.stage(x))
+  && !(x.data.expBack && c.now - x.data.expBack < 6 * 3600000) && ready(x.data.promiseAt, D3); // 따라갈 나이인데 이번 원정에 데려가지 않음
+const teenNow = (c, x) => homeNow(x) && ['청소년', '젊은 용'].includes(c.stage(x)) && (x.data.bond || 0) >= 50 && ready(x.data.talkbackAt, D3);
+const smallNow = (c, x) => homeNow(x) && ['아이', '소년', '어린 용'].includes(c.stage(x)) && ready(x.data.compareAt, D3); // 말을 해야 하므로 해츨링은 빼고
+const jealousOk = (c, x) => youngNow(c, x) && c.stage(x) !== '아기' && ready(x.data.jealousAt, D3); // 토라지는 쪽 (아기는 빼고)
+const lastTouched = (x) => Math.max(x.data.touch?.last || 0, x.data.lastCare || 0, x.data.lastFeed || 0, x.data.lastTrain || 0, x.data.born || 0);
+const shyNow = (c, x) => youngNow(c, x) && c.stage(x) !== '아기' && (x.data.bond || 0) >= 30 && c.now - lastTouched(x) > 20 * 3600000 && ready(x.data.shyAt, D3); // 스무 시간 넘게 손길이 없었음
 
 module.exports = [
+  // ── 유대가 깎이기 쉬운 식구 이벤트 (2026-11-14): 좋은 쪽을 골라도 품이 들고, 대개는 유대가 조금 내려감 ──
+  // 나이에 맞춰 문장을 나눔: 아기·해츨링은 말을 못 함(해츨링은 손도 없음) · 청소년·젊은 용은 숨거나 안기지 않음 · 새끼 용은 콧김·꼬리로
+  // 형제 질투: 식구가 둘 이상일 때, 유대가 가장 낮은 아이(아기는 빼고)가 다른 아이만 챙긴다고 토라짐
+  {
+    id: 'kin_jealous',
+    title: '토라진 아이',
+    when: ['wake', 'explore'],
+    weight: 4,
+    cond: (c) => c.grown.filter((x) => youngNow(c, x)).length >= 2 && c.grown.some((x) => jealousOk(c, x)),
+    setup: (c) => {
+      const a = c.grown.filter((x) => jealousOk(c, x)).reduce((m, x) => ((x.data.bond || 0) < (m.data.bond || 0) ? x : m)); // 유대가 가장 낮은 아이가 토라짐
+      const others = c.grown.filter((x) => youngNow(c, x) && x.id !== a.id), b = others.reduce((m, x) => ((x.data.bond || 0) > (m.data.bond || 0) ? x : m), others[0]);
+      return { a: a.id, b: b.id };
+    },
+    text: (c, v) => {
+      const a = c.k(v.a), b = c.k(v.b), sa = c.stage(a), bTiny = ['아기', '해츨링'].includes(c.stage(b));
+      const bRef = bTiny ? (b.type === 'human' ? '아기' : '그 꼬맹이') : b.name; // 아기·해츨링은 이름 대신 (형·누나가 부르듯)
+      const bLine = bTiny ? `${b.name}${c.josa(b.name, '은', '는')} 영문을 모른 채 눈만 끔뻑인다.` : `${b.name}${c.josa(b.name, '은', '는')} 머쓱한 얼굴로 슬쩍 자리를 피했다.`;
+      if (sa === '해츨링') return [`${b.name} 쪽으로 다가가자 ${a.name}${c.josa(a.name, '이', '가')} 꼬리로 바닥을 탁탁 치며 삐익 울어 댄다.`, `나만 봐 달라는 듯 작은 날개를 잔뜩 부풀렸다. ${bLine}`];
+      if (['청소년', '젊은 용'].includes(sa)) return [`${a.name}${c.josa(a.name, '이', '가')} 요즘 부쩍 퉁명스럽다. 이유를 묻자 시선을 피한 채 툭 내뱉는다.`, `"${c.callOf(a)}${c.josa(c.callOf(a), '은', '는')} 어차피 ${bRef}${c.josa(bRef, '이', '가')} 더 좋잖아요."`, bLine];
+      return [`${a.name}${c.josa(a.name, '이', '가')} 둥지 구석에 등을 돌리고 ${a.type === 'human' ? '앉아' : '웅크리고'} 있다.`, `"${c.callOf(a)}${c.josa(c.callOf(a), '은', '는')} ${bRef}만 좋아하잖아요."`, bLine];
+    },
+    choices: [
+      { label: '둘을 함께 품어 준다 (기력 6)', tone: 'warm', need: (c) => (c.d.en < 6 ? '기력이 모자란다.' : null), run: (h, c, v) => {
+        const a = c.k(v.a), b = c.k(v.b); a.data.jealousAt = c.now; h.en(-6); h.bond(a, 2);
+        const teen = ['청소년', '젊은 용'].includes(c.stage(a));
+        h.say(teen ? `둘을 나란히 날개 밑으로 불러 앉혔다. ${h.name(a)} "이러지 않아도 돼요." 하면서도 자리를 뜨지 않았다. (${a.name} 유대 +2)`
+          : `둘을 한꺼번에 날개 밑으로 끌어안았다. ${h.name(a)} 한참 버티다 슬그머니 ${b.name} 쪽으로 몸을 붙였다. (${a.name} 유대 +2)`);
+      } },
+      { label: (c, v) => `${c.k(v.a)?.name || '아이'}의 편을 들어 준다`, run: (h, c, v) => {
+        const a = c.k(v.a), b = c.k(v.b); a.data.jealousAt = c.now; h.bond(a, 4); h.bond(b, -5);
+        const sb = c.stage(b);
+        const bOut = sb === '아기' ? `${h.name(b)} 자지러지게 울음을 터뜨렸다` : sb === '해츨링' ? `${h.name(b)} 삐익삐익 울며 구석으로 기어 들어갔다` : `${h.name(b)} 말없이 둥지 밖으로 나가 버렸다`;
+        h.say(`${a.name}${c.stage(a) === '해츨링' ? '의 날개가 금세 가라앉았다' : '의 얼굴이 금세 펴졌다'}. 대신 이번에는 ${bOut}. (${a.name} 유대 +4, ${b.name} 유대 −5)`);
+      } },
+      { label: '둘이 알아서 풀게 둔다', tone: 'trust', run: (h, c, v) => {
+        const a = c.k(v.a), b = c.k(v.b); a.data.jealousAt = c.now;
+        if (Math.random() < 0.4) { h.bond(a, 1); h.bond(b, 1); h.say(['아기', '해츨링'].includes(c.stage(b)) ? `저녁 무렵, ${h.name(a)} ${b.name} 곁에 바짝 붙어 잠들어 있었다. 혼자서 마음을 푼 모양이다. (둘 다 유대 +1)` : `저녁 무렵, 둘이 나란히 붙어 잠들어 있었다. 어떻게 풀었는지는 둘만 아는 일이다. (둘 다 유대 +1)`); }
+        else { h.bond(a, -4); h.say(c.stage(a) === '해츨링' ? `${h.name(a)} 하루 종일 구석에서 나오지 않고 등을 돌리고 있었다. (${a.name} 유대 −4)` : `${h.name(a)} 하루 종일 ${b.name}에게도, 나에게도 말을 걸지 않았다. (${a.name} 유대 −4)`); }
+      } },
+    ],
+  },
+  // 잊어버린 약속: 원정에서 돌아왔는데, 따라갈 나이(소년·청소년·해츨링·어린 용)인 아이를 두고 갔음
+  {
+    id: 'kin_promise',
+    title: '잊어버린 약속',
+    when: ['expedition'],
+    weight: 5,
+    cond: (c) => c.grown.some((x) => leftBehind(c, x)),
+    setup: (c) => ({ id: c.pick(c.grown.filter((x) => leftBehind(c, x))).id }),
+    text: (c, v) => {
+      const k = c.k(v.id), st = c.stage(k), call = c.callOf(k);
+      if (st === '해츨링') return [`둥지에 내려앉자마자 ${k.name}${c.josa(k.name, '이', '가')} 앞을 가로막고 삐익 울었다.`, '떠나던 날 둥지 끝까지 쫓아 나왔던 그 얼굴이다. 작은 꼬리가 바닥을 탁탁 친다.'];
+      if (k.type === 'drake') return [`둥지에 내려앉자마자 ${k.name}${c.josa(k.name, '이', '가')} 앞을 가로막고 콧김을 씩씩 내뿜었다.`, `"${call}, 다음엔 꼭 데려간다고 했잖아요!"`];
+      if (st === '청소년') return [`둥지에 내려앉자 ${k.name}${c.josa(k.name, '이', '가')} 팔짱을 낀 채 기다리고 있었다.`, `"${call}, 다음엔 데려간다고 했잖아요. 저도 이제 어린애 아니에요."`];
+      return [`둥지에 내려앉자마자 ${k.name}${c.josa(k.name, '이', '가')} 앞을 가로막았다.`, `"${call}, 다음엔 꼭 데려간다고 했잖아요!" 눈가가 벌겋다.`];
+    },
+    choices: [
+      { label: '미안하다며 시장에서 선물을 사 주기로 한다 (금화 30)', tone: 'warm', need: (c) => (c.d.gold < 30 ? '금화가 모자란다.' : null), run: (h, c, v) => {
+        const k = c.k(v.id); k.data.promiseAt = c.now; h.gold(-30); h.bond(k, 1);
+        h.say(k.type === 'drake' ? `${h.name(k)} 콧김을 씩씩대면서도 선물이라는 말에 고개를 번쩍 들었다. 그래도 서운한 기색은 남아 있다. (금화 −30, 유대 +1)`
+          : c.stage(k) === '청소년' ? `${h.name(k)} 시큰둥한 척하면서도 선물 이야기에는 슬쩍 귀를 기울였다. 그래도 서운한 기색은 남아 있다. (금화 −30, 유대 +1)`
+          : `${h.name(k)} 입을 삐죽이면서도 선물 이야기에 귀를 쫑긋 세웠다. 그래도 서운한 기색은 남아 있다. (금화 −30, 유대 +1)`);
+      } },
+      { label: '다음엔 꼭 데려가겠다고 새로 약속한다', run: (h, c, v) => {
+        const k = c.k(v.id); k.data.promiseAt = c.now; h.bond(k, -2);
+        h.say(c.stage(k) === '해츨링' ? `${h.name(k)} 작은 발톱을 내 발톱에 꼭 걸었다. 그래도 믿는 눈치는 아니다. (유대 −2)`
+          : `${h.name(k)} "이번엔 진짜예요." 하고 몇 번이나 다짐을 받았다. 믿는 눈치는 아니다. (유대 −2)`);
+      } },
+      { label: '위험한 길이라 안 된다고 단호하게 말한다', tone: 'strict', run: (h, c, v) => {
+        const k = c.k(v.id); k.data.promiseAt = c.now; h.bond(k, -5); if (k.type === 'human') h.lean(k, 'guard', 1);
+        h.say(`${h.name(k)} ${c.stage(k) === '해츨링' ? '고개를 푹 숙이고' : '아무 대꾸 없이'} 돌아섰다. 그날 밤 둥지 끝에 혼자 앉아 먼 하늘만 보고 있었다. (유대 −5)`);
+      } },
+    ],
+  },
+  // 사춘기 말대꾸: 청소년·젊은 용이 보호자의 잔소리에 날을 세움 (유대가 어느 정도 있어야 대듦)
+  {
+    id: 'kin_talkback',
+    title: '날 선 대꾸',
+    when: ['wake'],
+    weight: 4,
+    cond: (c) => c.grown.some((x) => teenNow(c, x)),
+    setup: (c) => ({ id: c.pick(c.grown.filter((x) => teenNow(c, x))).id }),
+    text: (c, v) => {
+      const k = c.k(v.id);
+      return k.type === 'human'
+        ? [`해가 중천인데 ${k.name}${c.josa(k.name, '이', '가')} 아직 이불 속이다. 깨우려 하자 이불을 머리끝까지 뒤집어쓴다.`, `"알아서 한다니까요! 언제까지 애 취급할 거예요?"`]
+        : [`${k.name}${c.josa(k.name, '이', '가')} 사냥감을 둥지 안까지 끌고 들어와 뼈를 사방에 흩어 놓았다. 치우라고 하자 콧김을 훅 내뿜는다.`, `"제 둥지이기도 하잖아요. 내버려 둬요."`];
+    },
+    choices: [
+      { label: '따끔하게 혼낸다', tone: 'strict', run: (h, c, v) => {
+        const k = c.k(v.id); k.data.talkbackAt = c.now; h.bond(k, -6);
+        h.say(`${h.name(k)} 마지못해 시키는 대로 했지만, 그 뒤로 눈을 마주치지 않는다. (유대 −6)`);
+      } },
+      { label: '이번엔 한발 물러서 준다', tone: 'free', run: (h, c, v) => {
+        const k = c.k(v.id); k.data.talkbackAt = c.now; h.bond(k, -2);
+        h.say(`그냥 두기로 했다. ${h.name(k)} 이겼다는 얼굴이었지만, 어딘가 허전해 보이기도 한다. (유대 −2)`);
+      } },
+      { label: '마주 앉아 이야기를 들어 본다 (정신 6)', tone: 'warm', need: (c) => ((c.d.mind ?? 100) < 6 ? '정신이 모자란다.' : null), run: (h, c, v) => {
+        const k = c.k(v.id); k.data.talkbackAt = c.now; h.mind(-6);
+        if (Math.random() < 0.5) { h.bond(k, 3); h.say(`한참 뒤에야 ${h.name(k)} 요즘 마음이 복잡하다고 털어놓았다. 조금은 가까워진 것 같다. (정신 −6, 유대 +3)`); }
+        else { h.bond(k, -3); h.say(`"됐어요, 말해 봤자 모를 거예요." ${h.name(k)} 이야기를 끊고 나가 버렸다. (정신 −6, 유대 −3)`); }
+      } },
+    ],
+  },
+  // 다른 둥지와 비교: 어린 식구(아이·소년·어린 용)가 남의 둥지 이야기를 듣고 와서 서운해함 (말을 해야 하므로 해츨링은 빼고)
+  {
+    id: 'kin_compare',
+    title: '남의 둥지 이야기',
+    when: ['wake', 'explore'],
+    weight: 3,
+    cond: (c) => c.grown.some((x) => smallNow(c, x)),
+    setup: (c) => ({ id: c.pick(c.grown.filter((x) => smallNow(c, x))).id }),
+    text: (c, v) => {
+      const k = c.k(v.id);
+      return k.type === 'human'
+        ? [`${k.name}${c.josa(k.name, '이', '가')} 시무룩하게 다가와 옆에 앉았다.`, `"다른 둥지 애는 매일 그 집 보호자 등에 타고 구름 위까지 날아간대요. 우리는 왜 안 해요?"`]
+        : [`${k.name}${c.josa(k.name, '이', '가')} 꼬리를 늘어뜨린 채 다가와 옆에 웅크렸다.`, `"다른 둥지 용들은 매일 같이 구름 위까지 날아간대요. 우리는 왜 안 해요?"`];
+    },
+    choices: [
+      { label: '오늘은 구름 위까지 날아 준다 (기력 10)', tone: 'warm', need: (c) => (c.d.en < 10 ? '기력이 모자란다.' : null), run: (h, c, v) => {
+        const k = c.k(v.id); k.data.compareAt = c.now; h.en(-10); h.bond(k, 2);
+        h.say(k.type === 'human' ? `${h.name(k)} 등에 매달려 구름을 뚫고 올라가자 소리를 지르며 좋아했다. 내려와서는 "매일은 아니어도 돼요." 하고 작게 말했다. (기력 −10, 유대 +2)`
+          : `나란히 구름을 뚫고 올라가자 ${h.name(k)} 신이 나서 몇 번이고 재주를 넘었다. 내려와서는 "매일은 아니어도 돼요." 하고 작게 말했다. (기력 −10, 유대 +2)`);
+      } },
+      { label: '"우리 둥지는 우리 둥지야." 하고 타이른다', tone: 'strict', run: (h, c, v) => {
+        const k = c.k(v.id); k.data.compareAt = c.now; h.bond(k, -3);
+        h.say(`${h.name(k)} 고개를 끄덕였지만 납득한 얼굴은 아니다. (유대 −3)`);
+      } },
+      { label: '웃어넘긴다', tone: 'free', run: (h, c, v) => {
+        const k = c.k(v.id); k.data.compareAt = c.now; h.bond(k, -4);
+        h.say(`농담인 줄 알았는데, ${h.name(k)} 진심이었던 모양이다. 그날은 먼저 잠자리에 들었다. (유대 −4)`);
+      } },
+    ],
+  },
+  // 오래 비운 뒤 낯가림: 스무 시간 넘게 손길이 없었던 식구가 돌아온 보호자를 피함 (어린 아이는 숨고, 청소년·젊은 용은 데면데면)
+  {
+    id: 'kin_shy',
+    title: '낯을 가리는 아이',
+    when: ['expedition', 'wake'],
+    weight: 5,
+    cond: (c) => c.grown.some((x) => shyNow(c, x)),
+    setup: (c) => ({ id: c.pick(c.grown.filter((x) => shyNow(c, x))).id }),
+    text: (c, v) => {
+      const k = c.k(v.id);
+      if (['청소년', '젊은 용'].includes(c.stage(k))) return [`오랜만에 둥지에서 마주쳤는데, ${k.name}${c.josa(k.name, '은', '는')} 고개만 까딱하고 제자리로 가 버렸다.`, '예전 같으면 먼저 다가왔을 텐데, 어색한 침묵만 흐른다.'];
+      return [`오랜만에 둥지에서 마주쳤는데, ${k.name}${c.josa(k.name, '이', '가')} 반기기는커녕 ${k.type === 'human' ? '기둥 뒤로' : '알껍데기 더미 뒤로'} 숨어 버렸다.`, '빼꼼 내다보다가 눈이 마주치자 다시 쏙 들어간다.'];
+    },
+    choices: [
+      { label: '곁에 앉아 먼저 다가올 때까지 기다린다 (기력 5)', tone: 'warm', need: (c) => (c.d.en < 5 ? '기력이 모자란다.' : null), run: (h, c, v) => {
+        const k = c.k(v.id); k.data.shyAt = c.now; h.en(-5); h.bond(k, -1);
+        h.say(['청소년', '젊은 용'].includes(c.stage(k)) ? `한참 뒤에야 ${h.name(k)} 슬그머니 와서 옆에 앉았다. 아직은 조금 어색하다. (기력 −5, 유대 −1)`
+          : `한참을 기다리자 ${h.name(k)} 슬금슬금 나와 꼬리 끝에 기대앉았다. 아직은 조금 어색하다. (기력 −5, 유대 −1)`);
+      } },
+      { label: '이름을 부르며 다가간다', run: (h, c, v) => {
+        const k = c.k(v.id), st = c.stage(k), teen = ['청소년', '젊은 용'].includes(st); k.data.shyAt = c.now;
+        if (Math.random() < 0.35) {
+          h.bond(k, 1);
+          h.say(teen ? `${h.name(k)} 머쓱하게 웃으며 다가와 그동안 있었던 일을 하나둘 꺼냈다. (유대 +1)`
+            : k.type === 'human' ? `${h.name(k)} 머뭇거리다 달려와 와락 안겼다. (유대 +1)` : `${h.name(k)} 머뭇거리다 쪼르르 다가와 품으로 파고들었다. (유대 +1)`);
+        } else {
+          h.bond(k, -3);
+          h.say(teen ? `"…왔어요?" ${h.name(k)} 짧게 대꾸하고는 고개를 돌렸다. (유대 −3)` : `${h.name(k)} 더 깊숙이 숨어 버렸다. 다가갈수록 멀어지는 것 같다. (유대 −3)`);
+        }
+      } },
+      { label: '저절로 풀리겠거니 내버려 둔다', tone: 'trust', run: (h, c, v) => {
+        const k = c.k(v.id); k.data.shyAt = c.now; h.bond(k, -5);
+        h.say(`${h.name(k)} 그날 하루 내내 내 곁에 오지 않았다. (유대 −5)`);
+      } },
+    ],
+  },
   // ── 아이의 선물: 정이 든 식구가 선물을 들고 옴 → 보물 상자에 (성격·나이에 따라 선물이 다름) ──
   {
     id: 'kid_gift',
@@ -1654,7 +1835,7 @@ module.exports = [
       } },
       // 마지막 장면: 남긴 유품을 거두어 옴 (둥지가 있으면 보물더미에, 없으면 소지품에)
       { label: '유품을 거두어 온다', show: (c, v) => !!v.end && !!v.ks && !!ITEMS[v.ks], run: (h, c, v) => {
-        const k = c.kAny(v.id); if (k) { k.data.metEnd = c.now; k.data.ksSeen = true; h.diary(k, `보호자가 무덤에 찾아와 ${ITEMS[v.ks].name}${h.josa(ITEMS[v.ks].name, '을', '를')} 거두어 갔다.`); }
+        const k = c.kAny(v.id); if (k) { k.data.metEnd = c.now; k.data.ksSeen = true; k.data.ksId = v.ks; h.diary(k, `보호자가 무덤에 찾아와 ${ITEMS[v.ks].name}${h.josa(ITEMS[v.ks].name, '을', '를')} 거두어 갔다.`); }
         if (c.nest) h.hoardGive(v.ks); else h.give(v.ks);
         h.mind(8);
         const who = v.grand ? `${v.grand}${h.josa(v.grand, '이', '가')}` : v.mate ? `${v.mate}${h.josa(v.mate, '이', '가')}` : '이웃 하나가', it = ITEMS[v.ks].name; // 다시 찾은 무덤의 문구와 같은 사람

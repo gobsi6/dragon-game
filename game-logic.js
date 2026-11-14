@@ -1537,7 +1537,7 @@ function useItem(d, id, have, opts = {}) {
     const custom = u.keep === 'custom' ? { name: it.name, desc: it.desc, value: it.value, by } : null;
     const label = chestLabel(custom ? { k: 'custom', n: opts.from || '', nm: it.name, by } : { k: u.keep, n: opts.from || '' }) || it.name; // 먼저 이름을 만든 뒤 넣음 (도중에 멈춰 상자에만 들어가는 일이 없게)
     if (chestOf(d).length >= FREE.chestMax) return { error: `보물 상자가 가득 찼다. (${FREE.chestMax}개까지 간직할 수 있다)` };
-    if (!chestAdd(d, u.keep, opts.from || '', opts.msg || '', Date.now(), custom, { id, src: opts.from ? 'got' : opts.made ? 'made' : '' })) return { error: '보물 상자에 넣지 못했다.' };
+    if (!chestAdd(d, u.keep, opts.from || '', opts.msg || '', Date.now(), custom, { id, src: u.kin ? 'ks' : opts.from ? 'got' : opts.made ? 'made' : '' })) return { error: '보물 상자에 넣지 못했다.' }; // ks: 떠난 식구의 유품
     lines.push(`${label}${josa(label, '을', '를')} 보물 상자에 넣어 간직했다.`);
     if (opts.msg) lines.push(`함께 받은 쪽지도 접어 넣었다. "${opts.msg}"`);
     return { title: '보물 상자', lines, items: [{ id, qty: -1 }] };

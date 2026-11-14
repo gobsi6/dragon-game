@@ -2027,6 +2027,8 @@ button.trait.bad.on { background: #FBF1F2; box-shadow: inset 0 0 0 1px #A63E4B; 
 .src-got { background: #EEF4EF; color: #2F5D45; border-color: #A9C4B2; }
 .src-made { background: #EEF2F6; color: #2A4256; border-color: #9DB3C6; }
 .src-kid { background: #FBF1F4; color: #8A3D55; border-color: #E2BFCB; }
+.src-ks { background: #F4F1EA; color: #5E5134; border-color: #CFC4A8; } /* 떠난 식구의 유품 */
+.ks-ask { flex-basis: 100%; font-size: 12.5px; color: var(--muted); } /* 소지품: '누구의 유품일까?' */
 /* 넓은 화면: 양옆 칸을 화면에 고정 (JS가 자리·폭을 재서 넣음). sticky는 화면 배율 125%·150%에서 스크롤하면 1픽셀씩 흔들림 */
 @media (min-width: 861px) {
   .profile.pinned, .side.pinned { position: fixed !important; top: calc(var(--head-h, 0px) + 22px); margin: 0; z-index: 2; }
@@ -3939,6 +3941,16 @@ html:has(dialog.dlg:modal) { overflow: hidden; overscroll-behavior: none; } /* �
 .bt-log, .bt-chat { flex-shrink: 0; } /* 창이 길어져도 기록·작전 이야기 칸이 찌그러지지 않게 (창이 스크롤됨) */
 #battle-dlg.raid .bt-log { height: 132px; } /* 레이드는 동료 칸·작전 이야기가 더 있어 전투 기록을 조금 낮게 */
 @media (max-width: 620px) { #battle-dlg.raid .bt-log { height: 110px; } }
+/* 폰·좁은 화면: 전투 창(사냥·강적·레이드 등 모든 싸움)을 화면 위 끝부터 하단 메뉴 바로 위까지 꽉 채움.
+   다른 창은 주소창이 보일 때의 작은 높이(svh)에 맞춰 위아래가 비지만, 전투 창은 위·아래를 직접 붙여 늘 꽉 참.
+   늘어난 자리는 전투 기록 칸이 차지해 행동 단추는 늘 아래쪽에 붙음 (내용이 더 길면 예전처럼 창 안에서 스크롤) */
+@media (max-width: 860px) {
+  #battle-dlg:not(.as-panel) {
+    top: calc(env(safe-area-inset-top, 0px) + 8px); bottom: calc(var(--dock-h, 56px) + 8px); left: 0; right: 0;
+    height: auto; max-height: none; margin: 0 auto;
+  }
+  #battle-dlg .bt-log { flex: 1 0 auto; }
+}
 .who .raid { font-size: 11px; color: #8A2E27; border: 1px solid #E3B9B4; background: #FBEFEE; padding: 0 6px; border-radius: 2px; margin-left: auto; margin-right: 2px; white-space: nowrap; } /* 이곳의 드래곤: 레이드 중 */
 /* 전투 기록 줄의 색: 받은 피해·쓰러짐(붉게), 회복(초록), 잘 막아 냄·적이 쓰러짐(강철빛), 장면·대사(흐리게) */
 .bt-log p.hurt { color: #9A3A33; }
@@ -4697,6 +4709,22 @@ body.realm-city::before {
 .cc-fn p { margin: 0; font-size: 13px; color: var(--ink-2); }
 .cc-btns { display: flex; gap: 6px; flex-wrap: wrap; }
 .cc-btns .btn { flex: 1 1 auto; }
+/* 대장간 거리 용광로: 녹일 장신구 목록 */
+.cc-melt { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px solid var(--line-in); border-radius: 3px; background: var(--surface-2); }
+.cc-melt-h { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; color: var(--muted); }
+.cc-melt-h b { font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.cc-melt ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; max-height: 360px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #C9CCC8 transparent; }
+.cc-melt li { display: flex; align-items: center; gap: 10px; padding: 8px 2px; border-top: 1px solid var(--line-in); }
+.cc-melt li .l { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cc-melt li:first-child { border-top: 0; }
+.cc-melt li .t { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.cc-melt li .t b { font: 600 13px/1.4 var(--sans); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cc-melt li .t small { flex: none; font-size: 11px; color: var(--muted); }
+.cc-melt li .r { font-size: 11.5px; color: var(--ink-2); }
+.cc-melt li .q { flex: none; display: flex; align-items: center; gap: 6px; }
+.cc-melt li .q .mk-step { flex: none; } /* 개수: 시장과 같은 [− n + | 최대] */
+.cc-melt li .q .btn { flex: none; min-height: 32px; height: 32px; padding: 0 12px; font-size: 12.5px; white-space: nowrap; } /* 개수 칸과 같은 높이 */
+.cc-melt .note { margin: 0; font-size: 11.5px; }
 .cc-board { padding: 10px 12px; border: 1px solid var(--line-in); background: var(--surface-2); }
 .cc-board b { font: 600 12.5px/1.4 var(--sans); color: var(--steel-d); }
 .cc-board p { margin: 4px 0 0; font-size: 12.5px; line-height: 1.7; color: var(--ink-2); }

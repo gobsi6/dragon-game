@@ -429,6 +429,29 @@ function bondFade(k, now, out, d) {
     k.data.fadeN = Math.max(k.data.fadeN || 0, steps);
   }
 }
+// ── 높은 유대 지키기: 잘 챙겨 줘도 70을 넘는 유대는 조금씩 줄어듦 (KIN_BOND.upkeep). 오래 못 챙겨 옅어지는 중이면 bondFade에 맡김 ──
+// 알림은 유대가 10 단위 선(90·80…)을 내려설 때만 (몇 시간마다 소식이 뜨지 않게)
+function bondUpkeep(k, now, out, d) {
+  const U = KIN_BOND.upkeep, b = k.data.bond ?? 0;
+  const away = k.data.onExp || k.data.errand || k.data.runaway || k.data.companion || d?.rest_at;
+  const fading = k.data.bondUpAt && now - k.data.bondUpAt > (hasT(k, 'lonely') ? BF.lonelyH : BF.idleH) * 3600000;
+  if (away || fading || b <= U.from || !k.data.upkeepAt) { k.data.upkeepAt = now; return; }
+  const mul = hasT(k, 'aloof') || hasT(k, 'aloofd') ? 2 : 1; // 새침한: 절반
+  let t = k.data.upkeepAt, cur = b, n = 0;
+  while (cur > U.from) {
+    const every = (cur >= U.highFrom ? U.highEveryH : U.everyH) * 3600000 * mul;
+    if (now - t < every) break;
+    t += every; cur -= 1; n++;
+  }
+  k.data.upkeepAt = cur <= U.from ? now : t;
+  if (!n) return;
+  k.data.bond = Math.max(U.from, Math.round((b - n) * 10) / 10);
+  if (Math.floor(b / 10) > Math.floor(k.data.bond / 10)) {
+    out.lines.push(k.type === 'human'
+      ? `${ga(k)} 요즘 부쩍 보호자의 손길을 기다린다. 마음을 더 써 주자. (유대 ${Math.floor(k.data.bond)})`
+      : `${ga(k)} 요즘 둥지 입구에서 보호자를 자주 기다린다. 마음을 더 써 주자. (유대 ${Math.floor(k.data.bond)})`);
+  }
+}
 
 // ── 시간이 흐르며 일어나는 일 ──────────────────────
 // 접속하거나 무언가를 할 때마다 부름. 지난 시간만큼 한꺼번에 계산함
@@ -447,7 +470,7 @@ function tick(d, kin, now = Date.now()) {
     if (k.status === 'home' && rollLooks(k)) out.lines.push(`${k.name}${josa(k.name, '을', '를')} 다시 찬찬히 들여다보았다. ${introOf(k)}`);
     if (k.status === 'home') { fillLooks(k); diaryStart(k); }
     if (k.status === 'home') { touchTick(k, now, out); bondGift(k, out, now); } // 교감: 아이가 먼저 조르기 · 놓침 · 서운함 · 유대가 깊으면 선물
-    if (k.status === 'home' && k.type !== 'egg') bondFade(k, now, out, d); // 유대가 조금씩 옅어짐
+    if (k.status === 'home' && k.type !== 'egg') { bondFade(k, now, out, d); bondUpkeep(k, now, out, d); } // 유대가 조금씩 옅어짐 · 높은 유대는 잘 챙겨도 조금씩
     if (k.type === 'drake' && k.status === 'home' && k.data.errand && now >= k.data.errand.end) {
       const seek = k.data.errand.seek;
       if (seek) {
@@ -558,6 +581,7 @@ function tick(d, kin, now = Date.now()) {
         k.status = 'dead';
         k.data.ended = now;
         const id = keepsakeOf(k);
+        k.data.ksId = id; // 남긴 유품 (보물 상자에 넣을 때 누구의 것인지 먼저 골라 두려고)
         (d.nest ? out.hoardItems : out.items).push({ id, qty: 1 });
         out.lines.push(
           `${ga(k)} 긴 잠에 들었다. 드래곤의 날개 아래에서 ${Math.floor(a)}일의 생을 마쳤다.`,
@@ -699,6 +723,8 @@ function summary(kin, now) {
     home: kin.filter(isHome).map((k) => ({ name: k.name, type: k.type, stage: stageOf(k, now).name, status: k.status,
       away: k.data.onExp ? 'exp' : k.data.errand ? 'errand' : k.data.runaway ? 'runaway' : null })),
     lineage: kin.filter((k) => k.type === 'drake' && k.status === 'independent').length,
+    // 긴 잠에 든 인간 식구 (유품을 보물 상자에 넣을 때 누구의 것인지 고름). ks: 남긴 유품 (기록이 생긴 뒤에 떠난 식구만)
+    gone: kin.filter((k) => k.type === 'human' && k.status === 'dead').map((k) => ({ id: k.id, name: k.name, ks: k.data.ksId || null })),
   };
 }
 
@@ -1156,8 +1182,9 @@ function touchTick(k, now, out) {
   if (A && A.until < now) {
     k.data.ask = null;
     k.data.askMissed = now;
-    if (!hasT(k, 'aloof') && !hasT(k, 'aloofd')) growAdd(k, 'neglect', 0.5);
-    out.lines.push(`${ga(k)} 한참 기다리다 시무룩하게 돌아섰다.`);
+    const cool = hasT(k, 'aloof') || hasT(k, 'aloofd'); // 새침한: 서운해하지 않음
+    if (!cool) { growAdd(k, 'neglect', 0.5); k.data.bond = clamp(k.data.bond - TC.ask.missBond); }
+    out.lines.push(`${ga(k)} 한참 기다리다 시무룩하게 돌아섰다.${cool ? '' : ` (유대 −${TC.ask.missBond})`}`);
   }
   const t = k.data.touch || {};
   // 응석받이·어리광쟁이: 하루 넘게 교감이 없으면 서운해함 (하루 한 번)

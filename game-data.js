@@ -1596,6 +1596,9 @@ const KIN_BOND = {
   dip: { stages: ['청소년', '젊은 용'], amount: 15, floor: 40 }, // 이 단계가 되면 유대가 이만큼 내려감 (이 밑으로는 안 내려감)
   gift: { min: 60, chance: 0.35, human: ['wild_flower', 'sea_shell', 'grass_seed', 'brass_button'], drake: ['glow_moss', 'sea_shell', 'beast_hide'] }, // 하루 한 번 이 확률로 작은 선물을 물어 옴
   strong: { min: 80, ally: 1.1, lean: 1.25 },   // 곁에 둔 새끼의 공격 ×1.1, 인간 아이의 재주가 1.25배 빨리 자람
+  // 높은 유대 지키기: 잘 챙겨 줘도 from보다 높으면 everyH시간마다 1씩, highFrom 이상이면 highEveryH시간마다 1씩 줄어듦 (from 아래로는 안 내려감)
+  // 하루로 치면 70대·80대 −8, 90대 −12쯤. 원정·심부름·가출·곁에 둠·둥지에서 함께 쉬는 동안, 오래 못 챙겨 옅어지는 중(KIN.bondFade)에는 멈춤. 새침한: 절반
+  upkeep: { from: 70, everyH: 3, highFrom: 90, highEveryH: 2 },
 };
 
 const KIN_TOUCH = {
@@ -1604,7 +1607,7 @@ const KIN_TOUCH = {
   boredH: 8, lonelyH: 30,                   // 교감 없이 이만큼 지나면 심심함 · 서운함
   happyH: 3,                                // 좋아하는 교감 뒤 이만큼은 신남
   night: [22, 6],                           // 이 시각(한국 시간) 사이에는 졸림
-  ask: { chance: 0.1, everyH: 6, waitMin: 90, bond: 4, missH: 6 }, // 아이가 먼저 조름: 한 시간마다 확률, 최소 간격, 기다려 주는 시간, 받아 주면 더 오르는 유대, 놓치면 서운한 시간
+  ask: { chance: 0.1, everyH: 6, waitMin: 90, bond: 4, missH: 6, missBond: 3 }, // 아이가 먼저 조름: 한 시간마다 확률, 최소 간격, 기다려 주는 시간, 받아 주면 더 오르는 유대, 놓치면 서운한 시간, 놓치면 줄어드는 유대(새침한은 그대로)
   spoiledLoss: 2,                           // 응석받이·어리광쟁이: 하루 넘게 교감이 없으면 줄어드는 유대
   // stages: 이 단계에서만 보이는 교감 (자란 식구는 나이에 맞는 교감으로 바뀜). 없으면 그 종류의 모든 단계
   acts: {
@@ -2945,6 +2948,13 @@ const KEEPSAKES = {
   fest_drawing:  { name: '축제 그림',         value: 8,  fmt: 'of',   say: false, desc: '왕도 축제를 그린 그림. 하늘 가득 국화 불꽃이 터지고, 그 아래 식구들이 손을 잡고 작게 서 있다.' },
   festival_garland: { name: '축제 꽃장식',     value: 8,  fmt: 'plain', desc: '왕도 축제에서 처음 춤춘 날 받은 꽃장식. 꽃은 말랐지만 방울 소리는 그대로다.' },
 };
+// 유품(keepsake_*): 세상을 떠난 인간 식구가 남긴 것. 보물 상자에 간직할 수 있는 추억 물건으로 (도둑·까마귀가 손대지 못함)
+// 상자에 넣을 때 누구의 유품인지 고르면 '하늘의 손때 묻은 목각 용'처럼 이름이 남음 (use.kin). 다시 꺼낼 수 있음
+for (const [id, it] of Object.entries(ITEMS)) {
+  if (!id.startsWith('keepsake_')) continue;
+  it.type = 'use'; it.use = { keep: id, kin: true };
+  KEEPSAKES[id] = { name: it.name, value: it.value, fmt: 'of', say: false, desc: it.desc };
+}
 
 // ── 왕도 야시장: 축제 날(토·일) 저녁부터 밤까지 왕도에 노점이 섬 (nightmarket.js) ──
 // 일요일 밤은 축제가 끝나는 자정에 함께 걷음. 적대 드래곤도 이용할 수 있음

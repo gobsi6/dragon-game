@@ -626,7 +626,12 @@
     if (!a) return;
     pmenu.hidden = true;
     if (a === 'new') $('avatar-file').click();
-    if (a === 'recrop') loadImage(avatarUrl(S.me)).then(openCrop).catch(() => toast('그림을 불러오지 못했다.'));
+    if (a === 'recrop') { // 지금 그림의 형식을 알아 두고 다시 자름
+      fetch(avatarUrl(S.me)).then((r) => (r.ok ? r.blob() : Promise.reject())).then((b) => {
+        crop.type = b.type; const u = URL.createObjectURL(b);
+        return loadImage(u).then(openCrop).finally(() => setTimeout(() => URL.revokeObjectURL(u), 1000));
+      }).catch(() => toast('그림을 불러오지 못했다.'));
+    }
     if (a === 'delete' && confirm('그림을 지울까? 지우면 종류별 문양으로 돌아간다.')) {
       socket.emit('dragon:avatar:delete', {}, (res) => toast(res.error || '그림을 지웠다.'));
     }
@@ -645,11 +650,12 @@
     e.target.value = '';
     if (!file) return;
     const url = URL.createObjectURL(file);
+    crop.type = file.type; // 고른 그림의 형식 (자른 그림도 같은 형식으로)
     loadImage(url).then(openCrop).catch(() => toast('그림 파일을 읽지 못했다. 다른 그림으로 해 보자.'))
       .finally(() => setTimeout(() => URL.revokeObjectURL(url), 1000));
   });
 
-  const crop = { img: null, V: 0, dpr: 1, cover: 1, s: 1, ox: 0, oy: 0 };
+  const crop = { img: null, type: '', V: 0, dpr: 1, cover: 1, s: 1, ox: 0, oy: 0 };
   const cv = $('crop-cv');
   function openCrop(img) {
     crop.img = img;
@@ -735,8 +741,10 @@
     const ctx = c.getContext('2d');
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(crop.img, crop.ox * k, crop.oy * k, crop.img.naturalWidth * crop.s * k, crop.img.naturalHeight * crop.s * k);
-    let data = c.toDataURL('image/webp', 0.88);
-    if (!data.startsWith('data:image/webp')) data = c.toDataURL('image/jpeg', 0.88);
+    // 원래 형식을 지킴: png는 png, jpg는 jpg(품질 92%), 그 밖은 webp(안 되면 jpeg). png가 너무 커지면(서버 한도 약 300KB) webp로
+    const webp = () => { const w = c.toDataURL('image/webp', 0.88); return w.startsWith('data:image/webp') ? w : c.toDataURL('image/jpeg', 0.88); };
+    let data = crop.type === 'image/png' ? c.toDataURL('image/png') : crop.type === 'image/jpeg' ? c.toDataURL('image/jpeg', 0.92) : webp();
+    if (data.length > 390000) data = webp();
     $('crop').close();
     socket.emit('dragon:avatar', { dataUrl: data }, (res) => toast(res.error || '그림을 바꿨다.'));
   });
@@ -1623,7 +1631,7 @@
       if (u.ap) out.push(`행동력 +${u.ap}`);
       if (u.mind) out.push(`정신 +${u.mind}`);
       if (u.scar) out.push('가장 최근 상흔 하나를 씻어 냄 · 7일에 한 번');
-      if (u.keep && !u.mind) out.push(`보물 상자에 간직할 선물${it.value ? ` · 가치 ${it.value}` : ''}`);
+      if (u.keep && !u.mind) out.push(`보물 상자에 간직할 ${u.kin ? '유품' : '선물'}${it.value ? ` · 가치 ${it.value}` : ''}`);
       if (u.mistBox) out.push('열면 이국 장신구·합성 재료·회복약·요리 재료 중 하나와 행상인의 증표');
       return out.join(', ');
     }
@@ -2321,7 +2329,8 @@
           b.className = 'btn';
           b.textContent = it.type === 'use' ? (it.use?.keep && !it.use?.mind ? '상자에 넣기' : it.use?.crown ? '머리에 얹기' : it.use?.mistBox ? '열기' : '사용') : '착용';
           if (S.me?.exp) { b.disabled = true; b.title = awayMsg('할 수 없다.'); } // 원정 중에는 쓰거나 차거나 할 수 없음
-          b.addEventListener('click', () => itemAct(it.type === 'use' ? 'item:use' : 'equip', kind === 'plain' ? { item: id, plain: true } : { item: id })); // 보통 것 줄: 강화되지 않은 것을 참
+          if (it.use?.kin) b.addEventListener('click', whose); // 유품: 누구의 것인지 먼저 고름
+          else b.addEventListener('click', () => itemAct(it.type === 'use' ? 'item:use' : 'equip', kind === 'plain' ? { item: id, plain: true } : { item: id })); // 보통 것 줄: 강화되지 않은 것을 참
           acts.appendChild(b);
           // 꽃다발: 써서 정신을 맑히거나, 보물 상자에 넣어 간직하거나
           if (it.use?.keep && it.use?.mind) {
@@ -2339,6 +2348,18 @@
         x.textContent = '버리기';
         x.addEventListener('click', asking);
         acts.appendChild(x);
+      };
+      // 유품을 보물 상자에 넣기: 긴 잠에 든 식구 가운데 누구의 것인지 고름 (이 유품을 남긴 식구가 맨 앞). 떠난 식구가 없으면 바로 넣음
+      const whose = () => {
+        const gone = [...(S.me?.kin?.gone || [])].sort((a, b) => (b.ks === id) - (a.ks === id));
+        if (!gone.length) return itemAct('item:use', { item: id });
+        acts.replaceChildren();
+        const ask = document.createElement('small'); ask.className = 'ks-ask'; ask.textContent = '누구의 유품일까?';
+        acts.appendChild(ask);
+        const mk = (text, cls, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = `btn ${cls}`; b.textContent = text; b.addEventListener('click', fn); acts.appendChild(b); };
+        for (const k of gone) mk(k.name, k.ks === id ? 'primary' : '', () => itemAct('item:use', { item: id, of: k.id }));
+        mk('이름 없이', '', () => itemAct('item:use', { item: id, of: 0 }));
+        mk('취소', '', normal);
       };
       const asking = () => {
         acts.replaceChildren();
@@ -2744,7 +2765,7 @@
       const fl = file.files[0]; file.value = '';
       if (!fl || st.busy) return;
       st.busy = true; st.id = 0;
-      try { const sm = await slShrink(fl); draw(sm.url); const res = await giftUpload(sm); st.id = res.id; st.busy = false; draw(sm.url); }
+      try { const sm = await slShrink(fl, 320 * 1024); draw(sm.url); const res = await giftUpload(sm); st.id = res.id; st.busy = false; draw(sm.url); }
       catch (e) { st.busy = false; st.id = 0; draw(''); toast(e.message || '그림을 올리지 못했다.'); }
     });
     return { id: () => st.id, title: () => title.value.trim(), busy: () => st.busy, clear: () => { st.id = 0; draw(''); } };
@@ -3668,7 +3689,8 @@
         : n.classList.contains('kin-diary') ? 'diary' : n.classList.contains('kin-adopt') ? 'adopt' : n.classList.contains('kin-look') ? (v.status === 'egg' ? 'egg' : 'look')
           : n.classList.contains('kin-meta') ? (v.status === 'egg' || v.runaway ? 'egg' : 'about') : 'about');
     // 교감: 쓰다듬기·안아 주기 등 (자기 둥지 식구만). 아이가 조르는 것이 있으면 그 단추가 빛남
-    if (!partner && KIN_CAN_ACT && v.touchActs?.length && v.status !== 'egg') {
+    // 둥지 밖(원정 중 포함)에서 열어도 조르는 것은 보이고, 단추만 막힘
+    if (!partner && v.touchActs?.length && v.status !== 'egg') {
       const tb = document.createElement('div');
       tb.className = 'kin-touch';
       tb.dataset.sec = 'touch';
@@ -3682,7 +3704,8 @@
       if (v.ask) {
         const a = document.createElement('p');
         a.className = 'kt-ask';
-        a.textContent = `${v.name}${josa(v.name, '이', '가')} ${v.ask.line}. (${Math.max(1, Math.ceil(v.ask.left / 60000))}분 안에 '${v.ask.name}'를 해 주자)`;
+        const m = Math.max(1, Math.ceil(v.ask.left / 60000));
+        a.textContent = `${v.name}${josa(v.name, '이', '가')} ${v.ask.line}. (${KIN_CAN_ACT ? `${m}분 안에` : `${m}분 안에 둥지로 돌아가`} '${v.ask.name}'${josa(v.ask.name, '을', '를')} 해 주자)`;
         tb.appendChild(a);
       }
       const row = document.createElement('div');
@@ -3692,7 +3715,8 @@
         b.type = 'button';
         b.className = `btn kt-btn${v.ask?.act === a.id ? ' asked' : ''}`;
         b.textContent = a.name;
-        b.addEventListener('click', () => nestAct('kin:touch', { id: v.id, act: a.id }));
+        if (!KIN_CAN_ACT) { b.disabled = true; b.title = '교감은 둥지에 있을 때만 할 수 있다.'; }
+        else b.addEventListener('click', () => nestAct('kin:touch', { id: v.id, act: a.id }));
         row.appendChild(b);
       }
       tb.appendChild(row);
@@ -4469,7 +4493,7 @@
               const sm = document.createElement('summary');
               const b5 = document.createElement('b'); b5.textContent = e.label;
               // 어디서 온 것인지: 받은 선물 · 아이가 준 것 · 직접 만든 것
-              const SRC = { got: ['src-got', '받은 선물'], kid: ['src-kid', '아이의 선물'], made: ['src-made', '직접 만듦'] }[e.src];
+              const SRC = { got: ['src-got', '받은 선물'], kid: ['src-kid', '아이의 선물'], made: ['src-made', '직접 만듦'], ks: ['src-ks', '유품'] }[e.src];
               if (SRC) { const t = document.createElement('span'); t.className = `src-tag ${SRC[0]}`; t.textContent = SRC[1]; b5.appendChild(t); }
               const dt = document.createElement('small'); dt.textContent = e.at ? new Date(e.at).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' }) : '예전부터';
               sm.append(b5, dt);
@@ -4483,7 +4507,7 @@
                 const r = document.createElement('div'); r.className = 'chest-act';
                 const tb = document.createElement('button'); tb.type = 'button'; tb.className = 'btn'; tb.textContent = '꺼내기';
                 tb.addEventListener('click', () => {
-                  if (!confirm(`${e.label}${josa(e.label, '을', '를')} 보물 상자에서 꺼낼까?${e.src === 'got' || e.text ? ' 함께 넣어 둔 쪽지와 보낸 이 기록은 남지 않는다.' : ''}`)) return;
+                  if (!confirm(`${e.label}${josa(e.label, '을', '를')} 보물 상자에서 꺼낼까?${e.src === 'got' || e.text ? ' 함께 넣어 둔 쪽지와 보낸 이 기록은 남지 않는다.' : e.src === 'ks' && e.label !== S.items[e.k]?.name ? ' 누구의 유품인지는 다시 넣을 때 고를 수 있다.' : ''}`)) return;
                   socket.emit('chest:take', { i: e.i, at: e.at }, (res) => {
                     if (res.error) { SFX.play('error'); return toast(res.error); }
                     toast(res.result.lines.join(' ')); openNest();
@@ -4613,6 +4637,7 @@
               r2.querySelector('small').textContent = `개당 가치 ${it.value}`;
               const hg = S.me?.craft?.gear?.[x.item]; // 강화·각인한 한 개가 보물더미에 있음 (꺼내면 그것이 먼저 나옴)
               if (hg?.at === 'hoard') r2.querySelector('small').append(` · 그중 하나는 ${[hg.plus ? `+${hg.plus} 강화` : '', hg.elem ? `${ELEM_NAME[hg.elem] || hg.elem} 각인` : ''].filter(Boolean).join(' · ') || '강화'}`);
+              if (it.use?.kin) r2.querySelector('small').append(' · 꺼내서 소지품에서 보물 상자에 넣을 수 있다'); // 유품: 상자에 넣으면 까마귀·도둑이 손대지 못함
               r2.querySelector('.acts').append(btn('1개 꺼내기', () => nestAct('hoard:take', { what: x.item, qty: 1 })));
               if (x.qty > 1) r2.querySelector('.acts').append(btn('모두 꺼내기', () => nestAct('hoard:take', { what: x.item, qty: x.qty })));
               list.appendChild(r2);
@@ -8483,6 +8508,7 @@
       const back = document.createElement('button');
       back.type = 'button';
       back.className = 'linkbtn';
+      back.dataset.back = '1';
       back.textContent = '목록';
       back.addEventListener('click', openTpList);
       head.appendChild(back);
@@ -9632,29 +9658,44 @@
   };
   const slTag = () => slEl('span', 'sl-tag pin', '고정'); // GM이 고정한 글 표시
   const slCm = (n) => { const c = slEl('span', 'sl-cm'); c.innerHTML = SL_CM; c.append(String(n)); c.title = `남긴 답 ${n}`; return c; };
-  // 석판 그림 줄이기: 긴 변 1600px, webp 품질 88%(안 되면 jpeg). 700KB가 넘으면 품질·크기를 조금씩 낮춤 → 대개 한 장 150~450KB (예전 1024px · 75% · 300KB)
-  const SL_IMG_MAX = 700 * 1024;
-  function slShrink(file) {
+  // 석판·선물·특징 그림 줄이기: 원래 형식(확장자)을 지킴. png는 png, jpg는 jpg, 그 밖(webp·gif·heic 등)은 webp(안 되면 jpeg)
+  //  - png: 긴 변 1600px·크기(max) 안이면 원본 그대로. 넘으면 png로 다시 그리며 크기만 조금씩 줄임
+  //  - jpg: 늘 다시 그림(품질 92%부터) — 사진 속 위치(GPS) 같은 정보를 지우고, 휴대폰 사진의 돌림 방향을 바로잡음
+  //  - 7번 줄여도 크기를 넘으면 그때만 webp(안 되면 jpeg)로 바꿔 한 번 더 (그림을 못 올리는 것보다 나음)
+  const SL_IMG_MAX = 700 * 1024, SL_IMG_SIDE = 1600;
+  function slShrink(file, max = SL_IMG_MAX) {
     return new Promise((ok, no) => {
       if (!/^image\//.test(file.type)) return no(new Error('그림 파일만 넣을 수 있다.'));
+      const want = file.type === 'image/png' ? 'image/png' : file.type === 'image/jpeg' ? 'image/jpeg' : 'image/webp';
       const url = URL.createObjectURL(file);
       const img = new Image();
       img.onload = async () => {
         URL.revokeObjectURL(url);
+        const W = img.naturalWidth, H = img.naturalHeight;
+        if (want === 'image/png' && file.size <= max && Math.max(W, H) <= SL_IMG_SIDE) return ok({ blob: file, url: URL.createObjectURL(file), w: W, h: H });
         const toBlob = (c, type, q) => new Promise((r) => c.toBlob(r, type, q));
-        let side = 1600, q = 0.88, blob = null, w = 0, h = 0;
+        const draw = (side) => {
+          const k = Math.min(1, side / Math.max(W, H));
+          const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(W * k)); c.height = Math.max(1, Math.round(H * k));
+          const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(img, 0, 0, c.width, c.height);
+          return c;
+        };
+        const enc = async (c, type, q) => {
+          let b = await toBlob(c, type, q);
+          if (type === 'image/webp' && (!b || b.type !== 'image/webp')) b = await toBlob(c, 'image/jpeg', q);
+          return b;
+        };
+        let side = Math.min(SL_IMG_SIDE, Math.max(W, H)), q = want === 'image/jpeg' ? 0.92 : 0.88, blob = null, c = null; // 그림이 1600px보다 작으면 제 크기부터 줄임 (헛도는 차례가 없게)
         for (let t = 0; t < 7; t++) {
-          const k = Math.min(1, side / Math.max(img.naturalWidth, img.naturalHeight));
-          w = Math.max(1, Math.round(img.naturalWidth * k)); h = Math.max(1, Math.round(img.naturalHeight * k));
-          const c = document.createElement('canvas'); c.width = w; c.height = h;
-          const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(img, 0, 0, w, h);
-          blob = await toBlob(c, 'image/webp', q);
-          if (!blob || blob.type !== 'image/webp') blob = await toBlob(c, 'image/jpeg', q);
-          if (blob && blob.size <= SL_IMG_MAX) break;
-          q = Math.max(0.6, q - 0.06); side = Math.round(side * 0.88); // 한 번에 조금씩만 낮춤 (화질을 되도록 지키며)
+          c = draw(side);
+          blob = await enc(c, want, q);
+          if (blob && blob.size <= max) break;
+          if (want !== 'image/png') q = Math.max(0.6, q - 0.06); // png는 품질이 없으니 크기만
+          side = Math.round(side * 0.88); // 한 번에 조금씩만 낮춤 (화질을 되도록 지키며)
         }
-        if (!blob || blob.size > SL_IMG_MAX) return no(new Error('그림이 너무 크다.'));
-        ok({ blob, url: URL.createObjectURL(blob), w, h });
+        if ((!blob || blob.size > max) && want !== 'image/webp') blob = await enc(c, 'image/webp', 0.8); // 마지막 수단: 형식을 바꿔서라도
+        if (!blob || blob.size > max) return no(new Error('그림이 너무 크다.'));
+        ok({ blob, url: URL.createObjectURL(blob), w: c.width, h: c.height });
       };
       img.onerror = () => { URL.revokeObjectURL(url); no(new Error('그림 파일을 읽지 못했다.')); };
       img.src = url;
@@ -9742,7 +9783,7 @@
     ({ list: slList, post: slPost, write: slWrite })[SL.page](box);
   }
   function slBack(box, label, to = 'list') {
-    const b = slEl('button', 'sl-back'); b.type = 'button';
+    const b = slEl('button', 'sl-back'); b.type = 'button'; b.dataset.back = '1'; // 뒤로가기도 이 단추를 누른 것과 같음
     b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>'; b.append(label);
     b.addEventListener('click', () => slGo(to));
     box.appendChild(b);
@@ -9765,7 +9806,7 @@
       const h = slEl('div', 'sl-byh');
       const t = slEl('b', '', SL.by.id === S.me?.id ? '내가 새긴 글' : `${SL.by.name}${josa(SL.by.name, '이', '가')} 새긴 글`);
       t.appendChild(slEl('span', 'n', String(posts.length)));
-      const x = slEl('button', 'sl-byx', '모든 글'); x.type = 'button';
+      const x = slEl('button', 'sl-byx', '모든 글'); x.type = 'button'; x.dataset.back = '1';
       x.addEventListener('click', () => slByGo(null));
       h.append(t, x); box.appendChild(h);
     }
@@ -9888,7 +9929,7 @@
     const p = SL.post;
     // 돌아가기: 이어 건 글을 따라왔으면 앞 글로, 모아 보기에서 왔으면 그 목록으로
     if (SL.trail.length) {
-      const b = slEl('button', 'sl-back'); b.type = 'button';
+      const b = slEl('button', 'sl-back'); b.type = 'button'; b.dataset.back = '1';
       b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>'; b.append('앞 글로');
       b.addEventListener('click', () => { const prev = SL.trail.pop(); slGo('post', prev); });
       box.appendChild(b);
@@ -10165,6 +10206,7 @@
   function slWrite(box) {
     const d = SL.draft;
     slBack(box, '그만두기', d.id ? 'post' : 'list');
+    box.lastElementChild.dataset.backAsk = d.id ? '고치던 글을 두고 돌아갈까? 고친 내용은 사라진다.' : '쓰던 글을 두고 돌아갈까? 적던 내용은 사라진다.'; // 뒤로가기로 그만둘 때는 적은 것이 있으면 먼저 물음
     const f = slEl('div', 'sl-form');
     const tw = slEl('label'); tw.appendChild(slEl('span', 'lbl', '제목'));
     const ti = slEl('input', 'input'); ti.maxLength = SL.rules.title; ti.value = d.title; ti.placeholder = `한 줄로 (${SL.rules.title}자)`;
@@ -10378,6 +10420,62 @@
     const open = PANELS.find((x) => $(x).open);
     if (open) $(open).close();
   });
+
+  // ── 뒤로가기로 창·메뉴 닫기 ──
+  // 창(팝업)·하단 메뉴 화면·시련의 굴·휴대폰 서랍이 하나라도 열려 있으면 방문 기록에 표시를 하나 끼워 둠 → 뒤로가기를 누르면 사이트를 떠나는 대신 맨 위에 열린 것 하나만 닫음.
+  // 창 안의 하위 화면(석판 글 보기·텔레파시 대화 등)이면 창을 닫지 않고 한 단계 돌아감. 모두 닫힌 뒤의 뒤로가기는 원래대로 이전 페이지로. Esc로 닫히지 않게 막아 둔 창(확인을 눌러야 하는 창·싸우는 중의 전투 창 등)은 뒤로가기로도 닫히지 않음
+  // 닫기 단추로 닫아서 모두 닫히면 끼워 둔 표시를 조용히 거둠 (뒤로가기를 한 번 더 눌러야 떠나지는 일이 없게)
+  {
+    const layers = []; // 열린 차례 (나중에 열린 것이 위)
+    let guarded = false, skipPop = 0, dropT = 0;
+    // 휴대폰 서랍(드래곤 기록·이곳의 이야기)은 뒤에 까는 어두운 막(backdrop)이 보이는 동안 열려 있는 것으로 봄
+    const DRAWERS = ['pf-backdrop', 'here-backdrop'];
+    const isLayer = (el) => el.tagName === 'DIALOG' || el.id === 'cave-card' || DRAWERS.includes(el.id);
+    const isOpen = (el) => (el.tagName === 'DIALOG' ? el.open : !el.hidden && el.isConnected);
+    // 창 안의 하위 화면: 돌아가기 단추에 data-back을 달아 두면 뒤로가기가 창을 닫는 대신 그 단추를 누름 (보이는 것만)
+    // data-back-ask가 있으면 창 안에 적은 글이 있을 때 먼저 물음 (석판 글쓰기의 '그만두기')
+    const shown = (el) => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
+    const typed = (box) => [...box.querySelectorAll('input:not([type]), input[type="text"], input[type="search"], textarea')].some((x) => shown(x) && x.value.trim());
+    const subBack = (top) => {
+      const b = [...top.querySelectorAll('[data-back]')].find((x) => shown(x) && !x.disabled);
+      if (!b) return false;
+      if (b.dataset.backAsk && typed(top) && !confirm(b.dataset.backAsk)) return true; // 그대로 머묾
+      b.click();
+      return true;
+    };
+    const sync = () => {
+      for (let i = layers.length - 1; i >= 0; i--) if (!isOpen(layers[i])) layers.splice(i, 1);
+      if (layers.length) {
+        clearTimeout(dropT); dropT = 0;
+        if (!guarded) { history.pushState({ dragonLayer: 1 }, ''); guarded = true; }
+      } else if (guarded && !dropT) { // 창 하나를 닫고 곧바로 다른 창이 열리는 때(결과 창 → 다음 창 등)를 위해 잠깐 기다렸다가 거둠
+        dropT = setTimeout(() => { dropT = 0; if (!layers.length && guarded) { guarded = false; skipPop++; history.back(); } }, 300);
+      }
+    };
+    const note = (el) => { if (!isLayer(el)) return; const i = layers.indexOf(el); if (isOpen(el)) { if (i < 0) layers.push(el); } else if (i >= 0) layers.splice(i, 1); };
+    document.querySelectorAll('dialog[open]').forEach((d) => layers.push(d));
+    if (!$('cave-card').hidden) layers.push($('cave-card'));
+    for (const id of DRAWERS) if ($(id) && !$(id).hidden) layers.push($(id));
+    new MutationObserver((recs) => { for (const r of recs) note(r.target); sync(); })
+      .observe(document.body, { subtree: true, attributes: true, attributeFilter: ['open', 'hidden'] });
+    window.addEventListener('popstate', () => {
+      if (skipPop) { skipPop--; return; }
+      if (!guarded) return;
+      guarded = false; // 끼워 둔 표시를 썼음
+      const top = layers[layers.length - 1];
+      if (top && subBack(top)) { /* 창 안에서 한 단계 돌아감 */ }
+      else if (top) {
+        if (top.id === 'cave-card') window.__caveClose?.(); // 미로를 걷던 중이면 나갈지 먼저 물음
+        else if (DRAWERS.includes(top.id)) top.click(); // 서랍: 어두운 막을 누른 것과 같음
+        else if (top.tagName === 'DIALOG') {
+          const ev = new Event('cancel', { cancelable: true });
+          if (top.dispatchEvent(ev)) top.close(); // Esc와 같은 규칙: cancel을 막아 둔 창은 그대로
+        }
+      }
+      setTimeout(sync, 0); // 아직 열린 것이 있으면(막혀서 안 닫혔거나 아래에 더 있으면) 표시를 다시 끼움
+    });
+    if (layers.length) sync();
+  }
 
   // ── 정신 · 오염 · 광폭화 ──
   S.rampages = [];
