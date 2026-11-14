@@ -1,3 +1,10 @@
+# 쪽지를 벽에도 붙임 (2026-11-15)
+
+바뀐 파일: `public/house/pack.json`, `tools/house-pack/add_franuka_more.py`, `CHANGES.md`
+
+- 내 집터 가구 '쪽지'를 탁자 위뿐 아니라 벽에도 붙일 수 있음. 놓을 때 '놓는 곳 바꾸기'로 탁자 위 ↔ 벽.
+  - 같은 그림을 벽 장식 층으로 한 장 더(`memo_wall`, `of: memo`). 같은 가구로 세므로 쪽지 하나로 어느 쪽에든 놓음.
+
 # 시련의 돌판: 차례대로 나옴 · 뒤 세 장에 옛이야기 (2026-11-15)
 
 바뀐 파일: `city.js`, `CHANGES.md`

@@ -32,6 +32,9 @@ add('rug_star', '칠판', cut('Expansion_School.png', (210, 36, 254, 58)), 'wall
 add('wizard_hat', '풀무', cut('Expansion_Workshop.png', (53, 94, 76, 111)), 'work', 4, {'beast_hide': 2, 'living_bark': 2})
 # 쪽지: 복숭앗빛 종이를 베이지로 (바탕 · 글씨 자국)
 add('memo', '쪽지', recolor(cut('Expansion_Workshop.png', (100, 101, 106, 108)), {(255, 194, 161): (236, 223, 198), (208, 156, 142): (184, 163, 134)}), 'study', 1, {'old_scroll': 1}, {'stack': 1})
+# 쪽지는 벽에도 붙임: 같은 그림을 벽 장식 층으로 한 장 더(memo_wall, 같은 가구로 셈). 놓을 때 '놓는 곳 바꾸기'로 탁자 위 ↔ 벽
+P['sprites']['memo_wall'] = {**P['sprites']['memo'], 'name': '쪽지 (벽)', 'layer': 'wall', 'of': 'memo'}; P['sprites']['memo_wall'].pop('stack', None)
+P['groups']['memo'] = ['memo', 'memo_wall']; P.setdefault('groupLabel', {})['memo'] = '놓는 곳'
 # 류트: 색마다 따로 사는 가구 (v13부터의 규칙: '색유리 창 (하늘)'처럼). 목록에서는 order_cat.py가 이름 '류트'끼리 한데 모음
 add('lute', '류트 (하늘)', cut('Expansion_Music.png', (275, 64, 285, 80)), 'live', 4, {'living_bark': 2, 'beast_hide': 1})
 add('lute_orange', '류트 (주황)', cut('Expansion_Music.png', (291, 64, 301, 80)), 'live', 4, {'living_bark': 2, 'beast_hide': 1})
