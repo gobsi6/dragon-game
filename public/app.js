@@ -15928,7 +15928,7 @@
     if (k === 'bp') return cityCall('city:bp', { s: x });
     if (k === 'lkr') { CT.lkRoom = x; return renderHome(); } // 바닥·벽·담: 바꿀 곳 고르기 (미리 보기는 그대로 둠)
     if (k === 'dkc') { CT.dkCat = x; return renderHome(); } // 가구 놓기 분류
-    if (k === 'gp') { const c = CT.v.me.garden.crops[y]; if (!confirm(`금화 ${c.seed}으로 ${c.name} 씨앗을 사서 심을까?`)) return; return cityCall('city:garden', { act: 'plant', g: +x, crop: y }); } // 텃밭
+    if (k === 'gp') return cityCall('city:garden', { act: 'plant', g: +x, crop: y }); // 텃밭: 묻지 않고 바로 심음 (갈아엎기만 확인)
     if (k === 'gw') return cityCall('city:garden', { act: 'water', g: +x });
     if (k === 'gh') return cityCall('city:garden', { act: 'harvest', g: +x });
     if (k === 'gc') { if (!confirm('이 텃밭을 갈아엎을까? 자라던 작물은 사라진다.')) return; return cityCall('city:garden', { act: 'clear', g: +x }); }
