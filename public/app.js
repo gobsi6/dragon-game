@@ -7630,8 +7630,14 @@
   });
   // 프로필은 동료 목록 위에 겹쳐 뜸. 닫으면 보던 목록이 그대로 남아 있음
   // 같은 프로필을 다시 그릴 때(관계를 바꾼 뒤 등)는 스크롤 위치와 열어 둔 선물 칸·쓰던 메모를 그대로 둠
-  function openProfile(id) {
+  // refresh: 열려 있는 창을 새로 그리기만 (관계가 바뀜 등). 답이 오기 전에 창을 닫았으면 다시 띄우지 않음
+  //  — 예전에는 닫은 직후에 늦게 온 답이 창을 다시 띄웠음
+  let profileAsk = 0;
+  function openProfile(id, refresh = false) {
+    const ask = refresh ? profileAsk : ++profileAsk; // 앞서 보낸 요청의 답이 더 나중에 연 다른 드래곤의 창을 덮지 않게 (새로 그리기는 순번을 올리지 않아, 그사이 연 창의 답을 막지 않음)
     socket.emit('dragon:profile', { id }, (res) => {
+      if (ask !== profileAsk) return;
+      if (refresh && !$('profile-dlg').open) return;
       if (res.error) return toast(res.error);
       const same = $('profile-dlg').open && profileId === id;
       profileId = id;
@@ -7652,11 +7658,11 @@
           body.appendChild(n);
         }
         if (keep) body.scrollTop = keep.top;
-        if (!$('profile-dlg').open) $('profile-dlg').showModal();
+        if (!$('profile-dlg').open) { if (refresh) return; $('profile-dlg').showModal(); }
       });
     });
   }
-  const refreshProfile = () => { if ($('profile-dlg').open && profileId) openProfile(profileId); };
+  const refreshProfile = () => { if ($('profile-dlg').open && profileId) openProfile(profileId, true); };
   // 선물 칸: 물건 고르기 · 금화 · 함께 보낼 말 · 그림. 드래곤 기록 창의 '선물 보내기'와 집터의 '선물'(leave: 집터에 두고 가기)이 함께 씀
   // after: 보낸 뒤 (소지품을 다시 받아 온 다음)
   function buildGiftBox(p, leave, after) {
