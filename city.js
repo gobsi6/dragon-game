@@ -1004,7 +1004,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
   }
   function leave(d) { const m = ct(d); m.inside = false; return { ok: true, lines: ['회랑을 거슬러 고대 유적으로 올라왔다.'] }; }
   // 귀환 주문진: 내 집터에 놓아 두면 어디서든 고대도시(집터가 있는 도시 안)로 곧장 날아옴. 행동력 본 대륙 R.warpAp, 멸망한 대륙 RUIN.crossAp (고대 유적에 둥지를 둔 이는 둥지로 날아가기로 공짜)
-  const hasWarp = (m) => Array.isArray(m.deco) && m.deco.some((o) => o.s === 'warp_circle');
+  const hasWarp = (m) => Array.isArray(m.deco) && m.deco.some((o) => DECO.base[o.s] === 'warp_circle'); // 색이 다른 주문진(초록·분홍·주황)도 같은 주문진
   function warpTo(d) {
     if (!isOpen()) return { error: W.closed && pathOpen() ? '고대도시는 잠시 닫혀 있다. (점검 중)' : '고대도시로 가는 길은 아직 열리지 않았다.' };
     const m = ct(d);

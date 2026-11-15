@@ -1,3 +1,11 @@
+# 귀환 주문진 색 세 가지 더 (2026-11-15)
+
+바뀐 파일: `public/house/pack.json`(v32), `city.js`, `tools/house-pack/add_warp_colors.py`, `CHANGES.md`
+
+- 귀환 주문진에 초록 · 분홍 · 주황을 더함(연금술 확장의 같은 주문진 그림). 청록이 기본.
+- 네 색은 한 가구로 셈(`of: warp_circle`, groups.warp_circle, groupLabel '색'). 주문진 하나만 있으면 꾸미기에서 놓을 때나 놓은 뒤에 '색 바꾸기'(R 키)로 마음대로 바꿈. 새로 만들거나 도면을 더 살 필요 없음. 둘 이상 놓으려면 그만큼 있어야 함은 그대로.
+- '내 집터로 가기'가 어느 색 주문진이든 알아보게(city.js hasWarp가 DECO.base로 봄).
+
 # 골렘마다 '평소 손질' 방법 정해 두기 (2026-11-15)
 
 바뀐 파일: `city.js`, `public/app.js`, `public/style.css`, `CHANGES.md`
