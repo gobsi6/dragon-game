@@ -1,3 +1,10 @@
+# 동료 탭: 텔레파시 · 집터 방문 순서를 폰과 컴퓨터 같게 (2026-11-15)
+
+바뀐 파일: `public/app.js`, `public/style.css`, `CHANGES.md`
+
+- 맺은 관계 줄의 단추가 컴퓨터는 '집터 방문 · 텔레파시', 폰은 '텔레파시 · 집터 방문'으로 달라 헷갈리던 것. 이제 둘 다 '텔레파시 · 집터 방문'(텔레파시가 늘 같은 자리).
+  - 단추를 그 순서로 만들고, 폰에서만 순서를 바꾸던 CSS(`.fr-home { order: 2 }`)는 뺌.
+
 # 쪽지를 벽에도 붙임 (2026-11-15)
 
 바뀐 파일: `public/house/pack.json`, `tools/house-pack/add_franuka_more.py`, `CHANGES.md`

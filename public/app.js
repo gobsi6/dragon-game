@@ -8227,7 +8227,7 @@
       btn(a, '거절', () => socialAct('rel:decline', { id: x.id }));
     });
     const bondChip = (x) => `<span class="relb ${bondCls(x.bond)}">${bondName(x.bond)}</span> `;
-    section('맺은 관계', l.friends, (x) => `${bondChip(x)}${where(x)}`, (x, a) => { a.classList.add('below'); if (x.home && window.__cityVisit) btn(a, '집터 방문', () => window.__cityVisit(x.name)).classList.add('fr-home'); btn(a, '텔레파시', () => { $('friends-dlg').close(); openTp(x.id); }); }); // 고대도시 집터가 있는 동료는 광장 게시판 없이도 놀러 감
+    section('맺은 관계', l.friends, (x) => `${bondChip(x)}${where(x)}`, (x, a) => { a.classList.add('below'); btn(a, '텔레파시', () => { $('friends-dlg').close(); openTp(x.id); }); if (x.home && window.__cityVisit) btn(a, '집터 방문', () => window.__cityVisit(x.name)).classList.add('fr-home'); }); // 고대도시 집터가 있는 동료는 광장 게시판 없이도 놀러 감. 순서는 폰·컴퓨터 모두 텔레파시 → 집터 방문
     section('보낸 관계 요청', l.outgoing, (x) => `'${S.bonds?.[x.bond]?.label || ''}' · ${kindLv(x)}`, (x, a) => btn(a, '거두기', () => socialAct('rel:cancel', { id: x.id })));
     section('라이벌', l.rivals, (x) => `${x.mutual ? '<span class="relb rival">숙적</span> ' : ''}${kindLv(x)}`, (x, a) => btn(a, '결투 신청', () => challenge(x, 'live')));
     section('나를 라이벌로 정한 드래곤', l.rivalsIn || [], kindLv, (x, a) => btn(a, '맞받아치기', () => socialAct('rel:mark', { id: x.id, kind: 'rival' }, () => openFriends()), true));

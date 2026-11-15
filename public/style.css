@@ -5132,10 +5132,9 @@ body.chat-off #say, body.chat-off #chat-view { display: none; }
   .fr-row:has(.acts > :nth-child(2)) { grid-template-columns: 34px minmax(0, 1fr); }
   .fr-row:has(.acts > :nth-child(2)) .acts { grid-column: 2; justify-self: start; display: flex; gap: 6px; }
   /* 맺은 관계: 집터가 있든 없든 단추를 늘 이름 아래 줄에 (줄마다 오른쪽·아래로 들쑥날쑥하지 않게).
-     텔레파시를 맨 앞에 두어 위아래 줄의 텔레파시가 같은 자리에 오고, 집터 방문은 그 옆에 */
+     텔레파시가 맨 앞(app.js에서 그 순서로 만듦, 컴퓨터도 같음)이라 위아래 줄의 텔레파시가 같은 자리에 오고, 집터 방문은 그 옆에 */
   .fr-row:has(.acts.below) { grid-template-columns: 34px minmax(0, 1fr); }
   .fr-row .acts.below { grid-column: 2; justify-self: start; display: flex; gap: 6px; }
-  .fr-row .acts.below .fr-home { order: 2; }
 }
 
 /* 집터 구경 창: 위 줄 오른쪽 '선물' */
