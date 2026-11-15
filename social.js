@@ -991,7 +991,8 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     on('gift:seen', (d, p) => {
       const g = p.keep ? db.giftGet(Number(p.id), d.id) : null;
       let kept = false;
-      if (g?.img) {
+      if (g?.img && db.giftImg.meta(g.img.id)?.kept) kept = true; // 주고받은 기록에서 이미 간직함 (두 번 넣지 않음)
+      else if (g?.img) {
         if (!d.nest) return { error: '보물 상자에 간직하려면 먼저 둥지를 틀어야 한다.' };
         kept = logic.chestAdd(d, 'gift_pic', g.fromName, g.msg || '', Date.now(), null, { img: g.img, src: 'got' });
         if (!kept) return { error: '보물 상자가 가득 찼다.' };
@@ -1005,7 +1006,21 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     on('ledger:list', (d) => {
       const FN = require('./city').CITY_FURN || {};
       const named = (l) => l.map((x) => (String(x.id).startsWith('furn:') ? { ...x, name: FN[x.id.slice(5)]?.name || '가구', furn: true } : x));
-      return { ok: true, list: db.ledgerList(d.id, 150).map((e) => ({ ...e, itemsIn: named(e.itemsIn || []), itemsOut: named(e.itemsOut || []) })) };
+      // 받은 이미지 선물: 간직할 수 있는지(imgKeep) — can: 아직 안 간직함 · kept: 보물 상자에 간직함 · gone: 90일이 지나 이미지가 지워짐
+      const keepOf = (e) => { if (e.kind !== 'gift_in' || !e.img?.id) return null; const m = db.giftImg.meta(e.img.id); return !m ? 'gone' : m.kept ? 'kept' : m.to_id === d.id ? 'can' : null; };
+      return { ok: true, list: db.ledgerList(d.id, 150).map((e) => ({ ...e, itemsIn: named(e.itemsIn || []), itemsOut: named(e.itemsOut || []), imgKeep: keepOf(e) })) };
+    });
+    // 주고받은 기록에서 받은 이미지 선물을 보물 상자에 간직 (처음 받을 때 '간직하기'를 누르지 않았어도, 이미지가 지워지기 전(90일)이면)
+    on('gift:keepImg', (d, p) => {
+      const id = Number(p.img);
+      const e = Number.isInteger(id) ? db.ledgerList(d.id, 2000).find((x) => x.kind === 'gift_in' && x.img?.id === id) : null;
+      const m = e ? db.giftImg.meta(id) : null;
+      if (!e || !m || m.to_id !== d.id) return { error: '이미지가 이미 지워졌거나 찾을 수 없다.' };
+      if (m.kept) return { error: '이미 보물 상자에 간직했다.' };
+      if (!d.nest) return { error: '보물 상자에 간직하려면 먼저 둥지를 틀어야 한다.' };
+      if (!logic.chestAdd(d, 'gift_pic', e.other?.name || '', e.msg || '', Date.now(), null, { img: e.img, src: 'got' })) return { error: '보물 상자가 가득 찼다.' };
+      db.giftImg.keep(id, d.id); db.saveState(d);
+      return { ok: true };
     });
 
     // ── 텔레파시 ──

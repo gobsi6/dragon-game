@@ -2916,6 +2916,26 @@
       r.appendChild(flow);
       if (e.msg) { const m = document.createElement('p'); m.className = 'lg-msg'; m.textContent = `"${e.msg}"`; r.appendChild(m); }
       if (e.img) r.appendChild(giftImgEl(e.img, 'lg-img')); // 이미지로 보낸 창작 선물 (간직하지 않았으면 90일 뒤 사라짐)
+      // 받은 이미지 선물: 처음 받을 때 간직하지 않았어도 여기서 보물 상자에 간직 (이미지가 지워지기 전까지)
+      if (e.imgKeep === 'can' || e.imgKeep === 'kept') {
+        const kr = document.createElement('div'); kr.className = 'lg-keep';
+        if (e.imgKeep === 'kept') kr.innerHTML = '<span class="done">보물 상자에 간직함</span>';
+        else {
+          const kb = document.createElement('button'); kb.type = 'button'; kb.className = 'btn sm'; kb.textContent = '간직하기';
+          kb.addEventListener('click', () => {
+            kb.disabled = true;
+            socket.emit('gift:keepImg', { img: e.img.id }, (res) => {
+              kb.disabled = false;
+              if (res?.error) { SFX.play('error'); if (/이미/.test(res.error)) { e.imgKeep = /간직/.test(res.error) ? 'kept' : 'gone'; renderLedger(ledgerCache); } return toast(res.error); }
+              const nm = e.img.t || '손수 마련한 선물';
+              e.imgKeep = 'kept'; toast(`${nm}${josa(nm, '을', '를')} 보물 상자에 간직했다.`); renderLedger(ledgerCache);
+              if ($('nest-dlg').open) openNest();
+            });
+          });
+          kr.appendChild(kb);
+        }
+        r.appendChild(kr);
+      }
       box.appendChild(r);
     }
   }
@@ -8176,7 +8196,7 @@
     }
     const n2 = document.createElement('p');
     n2.className = 'note';
-    n2.textContent = [g.gold || g.items.length ? '받은 것은 이미 소지품과 금화에 들어 있다.' : '', g.img ? `${g.img.t || '손수 마련한 선물'}${josa(g.img.t || '선물', '은', '는')} 세상에 하나뿐인 물건이라 소지품에는 들어가지 않는다. '간직하기'를 누르면 보물 상자에 오래 남고, 간직하지 않으면 주고받은 기록에서 90일 동안 볼 수 있다.` : ''].filter(Boolean).join(' ');
+    n2.textContent = [g.gold || g.items.length ? '받은 것은 이미 소지품과 금화에 들어 있다.' : '', g.img ? `${g.img.t || '손수 마련한 선물'}${josa(g.img.t || '선물', '은', '는')} 세상에 하나뿐인 물건이라 소지품에는 들어가지 않는다. '간직하기'를 누르면 보물 상자에 오래 남는다. 지금 간직하지 않아도 90일 안에는 주고받은 기록에서 간직할 수 있다.` : ''].filter(Boolean).join(' ');
     body.appendChild(n2);
     $('gift-keep').hidden = !g.img;
     $('gift-thanks').hidden = !g.from.id || g.from.id === S.me?.id;
@@ -14473,29 +14493,9 @@
 
   // 하단 메뉴 높이를 재서 본문 여백과 알림 위치에 씀 (휴대폰에서 두 줄이 되어도 맞음)
   const dock = document.querySelector('.dock');
-  // 브라우저 아래쪽 도구 막대(삼성 인터넷 등)가 화면 위에 겹쳐 떠 있으면 하단 메뉴 아래쪽이 그만큼 가려짐 → 보이는 화면(visualViewport)의 아래 끝에 맞춰 메뉴를 올림
-  //  창 높이(innerHeight)로 막대 높이를 어림하지 않고, 메뉴가 실제로 그려진 자리를 잼: 올리지 않았을 때의 메뉴 아래 끝이 보이는 화면 아래 끝보다 내려가 있을 때만 그만큼 올림
-  //  (예전 방식은 스크롤로 막대가 접혔다 펴지는 사이 브라우저가 이미 메뉴를 막대 위로 올려 둔 때에도 한 번 더 올려, 메뉴가 화면 가운데쯤 떠 있었음)
-  //  화면 확대 중이거나 글을 치는 중(자판이 올라와 있음)이거나 차이가 너무 크면(자판 등) 올리지 않음
-  let vvGap = 0, vvRaf = 0, vvLate = 0;
-  const setVvGap = () => {
-    const vv = window.visualViewport; let g = 0;
-    if (vv && Math.abs(vv.scale - 1) < 0.01 && !document.activeElement?.matches?.('input, textarea, [contenteditable]')) {
-      const natural = dock.getBoundingClientRect().bottom + vvGap; // 올리지 않았다면 메뉴 아래 끝이 있을 자리
-      g = Math.round(natural - (vv.offsetTop + vv.height));
-      if (!(g > 1 && g <= 120)) g = 0;
-    }
-    if (g !== vvGap) { vvGap = g; document.documentElement.style.setProperty('--vv-gap', `${g}px`); setDockH(); }
-  };
-  // 스크롤 중에는 한 화면에 한 번만 재고, 멈춘 뒤 막대가 다 접히거나 펴질 즈음 한 번 더 잼
-  const askVvGap = () => {
-    if (!vvRaf) vvRaf = requestAnimationFrame(() => { vvRaf = 0; setVvGap(); });
-    clearTimeout(vvLate); vvLate = setTimeout(setVvGap, 350);
-  };
-  if (window.visualViewport) { visualViewport.addEventListener('resize', askVvGap); visualViewport.addEventListener('scroll', askVvGap); }
-  window.addEventListener('scroll', askVvGap, { passive: true }); window.addEventListener('resize', askVvGap); document.addEventListener('focusout', () => setTimeout(setVvGap, 300));
-  const setDockH = () => document.documentElement.style.setProperty('--dock-h', `${dock.offsetHeight + vvGap}px`);
-  setTimeout(setVvGap, 0);
+  // (11-14에 넣었던 '브라우저 아래 도구 막대만큼 하단 메뉴 올리기'는 뺌: 삼성 인터넷 등은 막대가 접혔다 펴질 때 고정 메뉴를 그리기 단계에서만 막대 위로 밀어 올려서,
+  //  코드로 잰 자리에는 그게 안 보임 → 막대 높이를 어림하든 메뉴 자리를 재든 한 번 더 올려 메뉴가 화면 가운데쯤 떠 있었음. 메뉴 자리는 브라우저에 맡김)
+  const setDockH = () => document.documentElement.style.setProperty('--dock-h', `${dock.offsetHeight}px`);
   // 상단바 높이 (넓은 화면에서 양옆 칸이 상단바 아래에 붙도록)
   const head = document.querySelector('header.top');
   // offsetHeight는 정수로 반올림돼서, 양옆 칸이 붙는 순간 0.x px씩 밀리며 아이콘이 흔들렸음 → 실제 높이를 소수점까지
