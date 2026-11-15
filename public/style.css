@@ -5167,6 +5167,9 @@ body.chat-off #say, body.chat-off #chat-view { display: none; }
 .g-dur-box .bar.low i { background: var(--ht) !important; }
 .g-mend { display: flex; flex-wrap: wrap; gap: 6px; }
 #home-ui.hm-e .g-mend .btn.sm { min-height: 30px; padding: 0 10px; font-size: 12px; }
+/* 평소 손질 방법: 할 일 목록의 '손질'이 이걸로 처리됨 */
+.g-mendby { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+#home-ui .g-mendby .seg button { min-height: 30px; padding: 4px 0; font-size: 12px; }
 #home-ui.hm-e .sum .rm-row.bad b { color: #B0442E; }
 
 .g-name.locked .g-edit { margin-left: auto; height: 22px; padding: 0 8px; border: 1px solid transparent; background: none; font: 500 11.5px var(--sans); color: var(--hm); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }

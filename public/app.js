@@ -15171,7 +15171,7 @@
     const h = CT.v?.me; if (!h || !h.plot) return [];
     const out = [];
     h.golems.forEach((g) => { const s = gState(g);
-      if (durLow(g) && s !== 'work' && s !== 'due') out.push({ t: `${g.name} 손질이 필요하다 · 내구도 ${g.dur}`, b: '손질', a: `mend:${g.i}` }); // 보내기 전에 먼저
+      if (durLow(g) && s !== 'work' && s !== 'due') out.push({ t: `${g.name} 손질이 필요하다 · 내구도 ${g.dur}${g.mendBy ? ` · ${g.mendBy === 'seal' ? '인장' : '재료'}로` : ''}`, b: '손질', a: `mend:${g.i}` }); // 보내기 전에 먼저
       if (s === 'back') { const a = againOf(g); out.push({ t: `${g.name} 돌아옴 · ${repSum(g.report)} → 다음: ${CT.v.rules.jobs[a.job]} ${a.hours}시간`, b: '보내기', a: `again:${g.i}`, pri: true }); }
       else if (s === 'due') out.push({ t: `${g.name} 돌아오는 중`, b: '맞이하기', a: 'get' });
       else if (s === 'idle') { const a = againOf(g); out.push({ t: `${g.name} 쉬는 중 → 다음: ${CT.v.rules.jobs[a.job]} ${a.hours}시간`, b: '보내기', a: `golem:${g.i}` }); }
@@ -15206,9 +15206,9 @@
     if (a === 'gifts') { CT.tab = 'plan'; renderHome(); setTimeout(() => document.querySelector('#city-home-dlg .hm-gifts')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50); return; }
     const [k, i] = a.split(':');
     if (k === 'golem') { CT.sel = 'golems'; CT.gopen = +i; CT.tab = 'golems'; return renderHome(); }
-    if (k === 'mend') { const h = CT.v.me, g = h.golems[+i], by = canPay(h, mendCostOf(g, 'seal')) ? 'seal' : canPay(h, mendCostOf(g, 'mat')) ? 'mat' : null;
-      if (by) return cityCall('city:mend', { i: +i, by });
-      CT.sel = 'golems'; CT.gopen = +i; CT.tab = 'golems'; renderHome(); return toast('손질할 인장이나 재료가 모자란다.'); }
+    if (k === 'mend') { const h = CT.v.me, g = h.golems[+i], pk = mendPick(h, g);
+      if (pk.by) return cityCall('city:mend', { i: +i, by: pk.by });
+      CT.sel = 'golems'; CT.gopen = +i; CT.tab = 'golems'; renderHome(); return toast(`${g.name} 손질: ${pk.why}.`); }
     if (k === 'again') { const g = CT.v.me.golems[+i]; return cityCall('city:send', { i: +i, ...againOf(g) }); }
   }
   // 할 일 모두 처리: 목록 순서대로 서버에 차례로 보냄. 골렘은 고른 일(없으면 지난번에 보낸 일)을 그 시간만큼, 처음 보내는 골렘은 공사(공사가 다 찼으면 도시 일손) 4시간
@@ -15223,7 +15223,7 @@
       const curR = h.rooms.find((r) => r.state === 'cur'), buildOk = !!curR && curR.h < curR.hours;
       let ev, p = {};
       if (k === 'get') { ev = 'city:get'; t.due = h.golems.filter((o) => gState(o) === 'due').map((o) => o.i); }
-      else if (k === 'mend') { const by = canPay(h, mendCostOf(g, 'seal')) ? 'seal' : canPay(h, mendCostOf(g, 'mat')) ? 'mat' : null; if (!by) { fail.push(`${g.name} 손질: 인장이나 재료가 모자란다`); continue; } ev = 'city:mend'; p = { i: +x, by }; }
+      else if (k === 'mend') { const pk = mendPick(h, g); if (!pk.by) { fail.push(`${g.name} 손질: ${pk.why}`); continue; } ev = 'city:mend'; p = { i: +x, by: pk.by }; }
       else if (k === 'put') ev = 'city:put';
       else if (k === 'gharv') { ev = 'city:garden'; p = { act: 'harvestAll' }; }
       else if (k === 'gwater') { ev = 'city:garden'; p = { act: 'waterAll' }; }
@@ -15698,7 +15698,9 @@
       : `<div class="g-name locked"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span>${ctEsc(g.name)}</span><button type="button" class="g-edit" data-ct="gedit:${g.i}:on" aria-label="${ctEsc(g.name)} 이름 수정">수정</button></div>`;
     const W = CT.v.rules.wear || { max: 100, perHour: {} }, dur = g.dur ?? W.max;
     const mendBtn = (by, label) => { const c = mendCostOf(g, by); return c ? `<button type="button" class="btn sm" data-ct="mend:${g.i}:${by}" ${canPay(h, c) && !g.job ? '' : 'disabled'}>${label(c)}</button>` : ''; };
-    const durRow = `<div class="g-dur-box"><div class="rm-row"><span>내구도</span><b>${dur} / ${W.max}</b></div><div class="bar${dur < (W.low ?? 30) ? ' low' : ''}"><i style="width:${(dur / W.max) * 100}%"></i></div>${dur < W.max && !g.job ? `<div class="g-mend">${mendBtn('seal', (c) => `인장 ${c.seals}개로 손질`)}${mendBtn('mat', (c) => `${Object.entries(c.items).map(([k, n]) => `${ITEMS_NAME(k)} ${n}`).join(' · ')}로 손질`)}</div>` : ''}</div>`;
+    const pref = g.mendBy || '';
+    const prefRow = g.awake ? `<div class="g-mendby"><span class="rm-k">평소 손질</span><div class="seg s3">${[['', '정하지 않음'], ['seal', '인장'], ['mat', '재료']].map(([k, n]) => `<button type="button" data-ct="mendby:${g.i}:${k}" class="${pref === k ? 'on' : ''}" aria-pressed="${pref === k}">${n}</button>`).join('')}</div></div>` : '';
+    const durRow = `<div class="g-dur-box"><div class="rm-row"><span>내구도</span><b>${dur} / ${W.max}</b></div><div class="bar${dur < (W.low ?? 30) ? ' low' : ''}"><i style="width:${(dur / W.max) * 100}%"></i></div>${dur < W.max && !g.job ? `<div class="g-mend">${mendBtn('seal', (c) => `인장 ${c.seals}개로 손질`)}${mendBtn('mat', (c) => `${Object.entries(c.items).map(([k, n]) => `${ITEMS_NAME(k)} ${n}`).join(' · ')}로 손질`)}</div>` : ''}</div>${prefRow}`;
     return nm + durRow + golemBody0(h, g);
   }
   function golemBody0(h, g) {
@@ -15740,6 +15742,13 @@
     return { job, hours: (CT.hrs || {})[g.i] || last.hours || rep.hours || 4 };
   }
   const durLow = (g) => g.awake && g.dur != null && g.dur < (CT.v.rules.wear?.low ?? 30);
+  // 할 일 목록의 손질 방법: 골렘마다 정해 둔 것(mendBy)만 씀. 안 정했으면 인장 먼저, 없으면 재료
+  function mendPick(h, g) {
+    const pref = g.mendBy;
+    if (pref) return canPay(h, mendCostOf(g, pref)) ? { by: pref } : { why: pref === 'seal' ? '석공 인장이 모자란다' : '재료가 모자란다' };
+    const by = canPay(h, mendCostOf(g, 'seal')) ? 'seal' : canPay(h, mendCostOf(g, 'mat')) ? 'mat' : null;
+    return by ? { by } : { why: '인장이나 재료가 모자란다' };
+  }
   function mendCostOf(g, by) { // city.js의 mendCost와 같은 셈
     const W = CT.v.rules.wear, M = CT.v.rules.mend, lack = (W?.max ?? 100) - (g.dur ?? 100); if (!M || lack <= 0) return null;
     if (by === 'seal') return { seals: Math.ceil(lack / M.seal), items: {} };
@@ -15944,6 +15953,7 @@
     if (a === 'all') return homeAll();
     if (k === 'gedit') { (CT.gedit ||= {})[x] = y === 'on'; if (y !== 'on' && CT.gdraft) delete CT.gdraft[x]; renderHome(); if (y === 'on') setTimeout(() => { const el = $(`gname-${x}`); el?.focus(); el?.select(); }, 0); return; }
     if (k === 'mend') return cityCall('city:mend', { i: +x, by: y });
+    if (k === 'mendby') { if ((CT.v.me.golems[+x]?.mendBy || '') === (y || '')) return; return cityCall('city:mendBy', { i: +x, by: y || '' }); }
     if (k === 'mk') return cityCall('city:craft', { s: x, n: +(y || 1) });
     if (k === 'bp') return cityCall('city:bp', { s: x });
     if (k === 'lkr') { CT.lkRoom = x; return renderHome(); } // 바닥·벽·담: 바꿀 곳 고르기 (미리 보기는 그대로 둠)

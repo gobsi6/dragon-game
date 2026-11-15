@@ -1120,6 +1120,14 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     const paid = c.seals ? `석공 인장 ${c.seals}` : Object.entries(c.items).map(([k, n]) => `${ITEMS[k].name} ${n}`).join(', ');
     return { ok: true, lines: [`${eul(g.name)} 손질했다. 내구도 ${before} → ${g.dur}. (${paid})`] };
   }
+  // 평소 손질 방법: 할 일 목록의 '손질'이 이걸로 처리됨 ('' = 정하지 않음: 인장 먼저, 없으면 재료)
+  function mendBy(d, i, by) {
+    const m = ct(d); const g = m.golems[Number(i)];
+    if (!g || !g.awake) return err('깨어 있는 골렘만 정할 수 있다.');
+    if (by !== 'seal' && by !== 'mat' && by !== '') return err('손질할 방법을 골라야 한다.');
+    if (by) g.mendBy = by; else delete g.mendBy;
+    return { ok: true, lines: [] };
+  }
   // 아직 못 고치는 골렘이면 되살려야 하는 칸 이름
   function gateOf(m, i) {
     const need = (R.repairGate || [])[i]; if (!need || !m.plot) return null;
@@ -1244,7 +1252,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
       me: {
         plot: m.plot, plots: PLOTS.map((p) => ({ id: p.id, name: p.name, mood: p.mood, room: p.room, perk: p.perk })),
         rooms: rs.map((r, i) => ({ id: r.id, name: r.name, hours: r.hours, h: m.rooms[r.id].h, mats: Object.entries(r.mats).map(([k, n]) => ({ id: k, name: ITEMS[k].name, need: n, put: m.rooms[r.id].mats[k] || 0 })), opens: r.opens, state: i < ci ? 'done' : i === ci ? 'cur' : 'lock' })),
-        golems: m.golems.map((g, i) => ({ i, name: g.name, named: !!g.named, awake: g.awake, job: g.job, hours: g.hours, start: g.start, until: g.until, report: g.report, last: g.last || null, gate: g.awake ? null : gateOf(m, i), dur: g.dur ?? R.wear.max })),
+        golems: m.golems.map((g, i) => ({ i, name: g.name, named: !!g.named, awake: g.awake, job: g.job, hours: g.hours, start: g.start, until: g.until, report: g.report, last: g.last || null, gate: g.awake ? null : gateOf(m, i), dur: g.dur ?? R.wear.max, mendBy: g.mendBy || null })),
         garden: m.plot ? { list: gBeds(m).map((o, k) => ({ g: o.g, n: k + 1, ...(m.garden[o.g] ? gInfo(m.garden[o.g]) : { c: null }) })), crops: GARDEN.crops, dry: GARDEN.dry, gold: Math.floor(d.gold || 0) } : null,
         deco: m.deco || null, decoRules: { max: DECO.max }, packNote: m.packNote && m.packNote.at > Date.now() - 7 * 864e5 ? m.packNote : null, pondBack: m.pondBack && m.pondBack.at > Date.now() - 7 * 864e5 ? m.pondBack : null,
         furn: m.furn, furnCat: Object.entries(FURN).map(([k, f]) => ({ s: k, name: f.name, cat: f.cat, seals: sealCost(f), base: f.seals, cap: FURN_CAP[k] || null, bp: own(BLUEPRINT, BPKEY[k]) ? !!(m.bp || {})[BPKEY[k]] : null, mats: Object.entries(f.mats).map(([id, n]) => ({ id, name: ITEMS[id].name, need: n })) })),
@@ -1301,6 +1309,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     handle('city:cancel', (d, p) => cancelJob(d, p.i)); // 골렘 작업 중단
     handle('city:rename', (d, p) => rename(d, p.i, p.name));
     handle('city:mend', (d, p) => mend(d, p.i, String(p.by || '')));
+    handle('city:mendBy', (d, p) => mendBy(d, p.i, String(p.by || '')));
     handle('city:req', (d) => fillReq(d));
     handle('city:frag', (d, p) => putFrag(d, String(p.key || '')));
     handle('city:hand', (d, p) => handFrag(d, String(p.key || '')));
