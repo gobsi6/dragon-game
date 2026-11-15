@@ -1836,13 +1836,13 @@ module.exports = [
         h.mind(12);
         h.say(`들꽃 옆에 비늘 한 조각을 내려놓았다. 바람이 언덕을 지나갔다. (정신 +12)`);
       } },
-      // 마지막 장면: 남긴 유품을 거두어 옴 (둥지가 있으면 보물더미에, 없으면 소지품에)
+      // 마지막 장면: 남긴 유품을 거두어 옴 (소지품에. 소지품에서 '상자에 넣기'로 누구의 유품인지 골라 간직)
       { label: '유품을 거두어 온다', show: (c, v) => !!v.end && !!v.ks && !!ITEMS[v.ks], run: (h, c, v) => {
         const k = c.kAny(v.id); if (k) { k.data.metEnd = c.now; k.data.ksSeen = true; k.data.ksId = v.ks; h.diary(k, `보호자가 무덤에 찾아와 ${ITEMS[v.ks].name}${h.josa(ITEMS[v.ks].name, '을', '를')} 거두어 갔다.`); }
-        if (c.nest) h.hoardGive(v.ks); else h.give(v.ks);
+        h.give(v.ks); // 유품은 소지품으로 (보물더미가 아니라)
         h.mind(8);
         const who = v.grand ? `${v.grand}${h.josa(v.grand, '이', '가')}` : v.mate ? `${v.mate}${h.josa(v.mate, '이', '가')}` : '이웃 하나가', it = ITEMS[v.ks].name; // 다시 찾은 무덤의 문구와 같은 사람
-        h.say(`${who} 작은 보따리를 내밀었다. "${v.again ? '지난번에 드리려다 그만 놓쳤어요. 드래곤이 오면 꼭 전해 달라고 했거든요.' : '드래곤이 오면 꼭 전해 달라고 했어요.'}" 안에는 ${v.name}의 ${it}${h.josa(it, '이', '가')} 들어 있었다. 무덤 앞에 들꽃을 놓고, 보따리를 품에 안고 날아올랐다. (정신 +8, ${it}${c.nest ? ' — 보물더미에' : ''})`);
+        h.say(`${who} 작은 보따리를 내밀었다. "${v.again ? '지난번에 드리려다 그만 놓쳤어요. 드래곤이 오면 꼭 전해 달라고 했거든요.' : '드래곤이 오면 꼭 전해 달라고 했어요.'}" 안에는 ${v.name}의 ${it}${h.josa(it, '이', '가')} 들어 있었다. 무덤 앞에 들꽃을 놓고, 보따리를 품에 안고 날아올랐다. (정신 +8, ${it} — 소지품에)`);
       } },
       { label: (c, v) => `${v.ng}에게 이 소식을 전한다`, show: (c, v) => !!v.end && !!v.ng && !v.told, run: (h, c, v) => {
         const k = c.kAny(v.id); if (k) { k.data.metEnd = c.now; k.data.ngTold = true; h.diary(k, '언덕 위 무덤 앞에, 보호자가 찾아와 오래 머물렀다.'); } // 유품은 그대로 남음: 하루 뒤 다시 들르면 거둘 수 있음. 손주에게 소식은 한 번만(ngTold)

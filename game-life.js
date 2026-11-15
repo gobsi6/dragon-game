@@ -582,10 +582,10 @@ function tick(d, kin, now = Date.now()) {
         k.data.ended = now;
         const id = keepsakeOf(k);
         k.data.ksId = id; // 남긴 유품 (보물 상자에 넣을 때 누구의 것인지 먼저 골라 두려고)
-        (d.nest ? out.hoardItems : out.items).push({ id, qty: 1 });
+        out.items.push({ id, qty: 1 }); // 유품은 소지품으로 (보물더미가 아니라): 소지품에서 '상자에 넣기'로 누구의 유품인지 골라 간직
         out.lines.push(
           `${ga(k)} 긴 잠에 들었다. 드래곤의 날개 아래에서 ${Math.floor(a)}일의 생을 마쳤다.`,
-          `${ITEMS[id].name}${josa(ITEMS[id].name, '이', '가')} ${d.nest ? '보물더미에' : '소지품에'} 남았다.`,
+          `${ITEMS[id].name}${josa(ITEMS[id].name, '이', '가')} 소지품에 남았다.`,
         );
       }
     }
@@ -717,6 +717,8 @@ function perksOf(kin, now = Date.now()) {
 }
 
 // 프로필에 보여 줄 짧은 요약
+// 긴 잠에 든 인간 식구: 둥지에서 생을 마친 식구(dead)와, 마을로 내려가 그곳에서 수명을 다한 식구(상태는 returned 그대로, 마을 무덤 장면이 뜨게)
+const restedHuman = (k, now = Date.now()) => k.type === 'human' && (k.status === 'dead' || (k.status === 'returned' && !!k.data.born && (k.data.lifeTold || ageOf(k, now) >= H.lifespan)));
 function summary(kin, now) {
   return {
     // away: 원정·심부름·가출로 둥지를 비움 (둥지 한 줄 요약에서 흐리게)
@@ -724,7 +726,8 @@ function summary(kin, now) {
       away: k.data.onExp ? 'exp' : k.data.errand ? 'errand' : k.data.runaway ? 'runaway' : null })),
     lineage: kin.filter((k) => k.type === 'drake' && k.status === 'independent').length,
     // 긴 잠에 든 인간 식구 (유품을 보물 상자에 넣을 때 누구의 것인지 고름). ks: 남긴 유품 (기록이 생긴 뒤에 떠난 식구만)
-    gone: kin.filter((k) => k.type === 'human' && k.status === 'dead').map((k) => ({ id: k.id, name: k.name, ks: k.data.ksId || null })),
+    // 마을에서 생을 마친 식구도 넣음 (마을 무덤에서 거둔 유품은 이 식구들의 것)
+    gone: kin.filter((k) => restedHuman(k, now)).map((k) => ({ id: k.id, name: k.name, ks: k.data.ksId || null })),
   };
 }
 
@@ -2140,7 +2143,7 @@ module.exports = {
   touch, // 교감
   playable, playTogether, bestFriends, growInfo,
   expCandidates,
-  tick, perksOf, summary, views, homeKin, stageOf,
+  tick, perksOf, summary, views, homeKin, stageOf, restedHuman,
   care, rename, choosePath, incubate, train, release,
   expStart, expFinish, companions, restTogether,
   rollEvent, getEvent, chooseEvent, forceEvent, diary, addBond, // diary·addBond: 다른 둥지 아이와 맺어질 때 (kinlove.js)

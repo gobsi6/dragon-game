@@ -2375,7 +2375,7 @@ function onConnect(socket) {
     // 유품: 누구의 것인지 고른 식구(긴 잠에 든 이 둥지의 인간 식구)의 이름을 붙여 넣음. 고르지 않으면 이름 없이
     if (keep && U.kin) {
       const of = Math.trunc(Number(p.of)) || 0;
-      const k = of ? db.kinLoad(d.id).find((x) => x.id === of && x.type === 'human' && x.status === 'dead') : null;
+      const k = of ? db.kinLoad(d.id).find((x) => x.id === of && life.restedHuman(x)) : null; // 둥지에서 생을 마친 식구 + 마을에서 수명을 다한 식구
       if (of && !k) return { error: '그 식구를 찾지 못했다.' };
       return logic.useItem(d, id, have, { keep: true, from: k ? k.name : '' });
     }
