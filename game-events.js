@@ -162,7 +162,7 @@ const liveOf = (x) => x.data.family || x.data.liveIn || x.data.town || null;
 const TOWN_GAP = DAYMS;              // 같은 식구는 하루에 한 번
 const LIFE_END = 25;                 // 인간 식구가 세상을 떠나는 나이(일). 지나면 마지막 장면 한 번
 const YOUNG = new Set(['아기', '아이', '소년', '청소년']); // 어린 나이에 마을로 간 식구 (기사단에게 돌려보낸 아이 등)
-// 무덤 장면은 한 번만. 다만 유품 선택지가 생기기 전에 무덤 장면을 본 식구(ksSeen 없음)는 하루 뒤 한 번 더 (유품을 거둘 수 있게)
+// 무덤 장면은 유품을 거둘 때까지: 유품을 거두지 않고 떠났으면(꽃만 놓음·손주에게 소식만 전함, 또는 유품 선택지가 생기기 전에 본 식구) 하루 뒤 다시 들렀을 때 한 번 더 (ksSeen: 유품을 거둠)
 const endOk = (c, x) => !x.data.metEnd || (!x.data.ksSeen && c.now - x.data.metEnd >= TOWN_GAP);
 const metOk = (c, x) => liveOf(x) === c.region && endOk(c, x) && c.now - (x.data.metAt || 0) >= TOWN_GAP && c.now - (x.data.ended || 0) >= DAYMS / 2;
 // 마을에서 그 식구와 함께 사는 손주 (둥지에 맡기고 혼자 떠났으면 없음). 가장 늦게 난 아이부터 봄
@@ -1670,15 +1670,18 @@ module.exports = [
     when: ['explore'],
     weight: 6,
     cond: (c) => c.town && c.away.some((x) => metOk(c, x)),
+    // 비석 장면(수명을 다한 식구, 다시 들러 유품을 거둘 때 포함)은 조건이 맞으면 그 마을의 첫 탐사에 반드시 뜸 (확률·최근 본 이벤트 감점 없이)
+    sure: (c) => c.away.some((x) => metOk(c, x) && c.age(x) >= LIFE_END),
     setup: (c) => {
-      const k = c.pick(c.away.filter((x) => metOk(c, x)));
+      const ok = c.away.filter((x) => metOk(c, x)), ends = ok.filter((x) => c.age(x) >= LIFE_END);
+      const k = c.pick(ends.length ? ends : ok); // 비석 장면이 있으면 그쪽부터
       const since = (c.now - (k.data.ended || c.now)) / DAYMS;
       const end = c.age(k) >= LIFE_END; // 수명이 다했으면 마지막 장면
       // vr: 장면 문구 번호. 같은 식구를 지난번에 만났을 때와 다른 문구가 나오게 함 (단계마다 문구가 세 개)
       const grand = grandOf(c, k), ng = grand ? null : nestGrandOf(c, k); // ng: 둥지에 맡기고 간 손주
       // pStage: 지금 이 식구의 단계 (어린 나이로 마을에 간 아이), gStage: 마을에 함께 사는 손주의 단계
       const pStage = c.stage(k), gStage = grand ? grandStage(c, k, grand) : null;
-      return { id: k.id, name: k.name, mate: mateOf(c, k), grand, pStage, gStage, ngId: ng?.id ?? null, ng: ng?.name || null, ngStage: ng ? c.stage(ng) : null, ks: end && c.keepsake ? c.keepsake(k, { town: true, ng: !!ng }) : null, again: end && !!k.data.metEnd, since: Math.floor(since), end, sneak: !c.human, vr: (() => { let r; do r = Math.floor(Math.random() * 6); while (r % 3 === (k.data.metVr ?? -1) % 3); return r; })(), call: c.callOf ? c.callOf(k) : c.call };
+      return { id: k.id, name: k.name, mate: mateOf(c, k), grand, pStage, gStage, ngId: ng?.id ?? null, ng: ng?.name || null, ngStage: ng ? c.stage(ng) : null, ks: end && c.keepsake ? c.keepsake(k, { town: true, ng: !!ng }) : null, again: end && !!k.data.metEnd, told: !!k.data.ngTold, since: Math.floor(since), end, sneak: !c.human, vr: (() => { let r; do r = Math.floor(Math.random() * 6); while (r % 3 === (k.data.metVr ?? -1) % 3); return r; })(), call: c.callOf ? c.callOf(k) : c.call };
     },
     text: (c, v) => {
       const n = v.name, ga = `${n}${c.josa(n, '이', '가')}`, g = v.grand, m = v.mate, ng = v.ng;
@@ -1829,7 +1832,7 @@ module.exports = [
     choices: [
       // 마지막 장면
       { label: '꽃을 놓고 오래 머문다', show: (c, v) => !!v.end, run: (h, c, v) => {
-        const k = c.kAny(v.id); if (k) { k.data.metEnd = c.now; k.data.ksSeen = true; h.diary(k, '언덕 위 무덤 앞에, 보호자가 찾아와 오래 머물렀다.'); }
+        const k = c.kAny(v.id); if (k) { k.data.metEnd = c.now; h.diary(k, '언덕 위 무덤 앞에, 보호자가 찾아와 오래 머물렀다.'); } // 유품은 그대로 남음: 하루 뒤 다시 들르면 거둘 수 있음
         h.mind(12);
         h.say(`들꽃 옆에 비늘 한 조각을 내려놓았다. 바람이 언덕을 지나갔다. (정신 +12)`);
       } },
@@ -1841,8 +1844,8 @@ module.exports = [
         const who = v.grand ? `${v.grand}${h.josa(v.grand, '이', '가')}` : v.mate ? `${v.mate}${h.josa(v.mate, '이', '가')}` : '이웃 하나가', it = ITEMS[v.ks].name; // 다시 찾은 무덤의 문구와 같은 사람
         h.say(`${who} 작은 보따리를 내밀었다. "${v.again ? '지난번에 드리려다 그만 놓쳤어요. 드래곤이 오면 꼭 전해 달라고 했거든요.' : '드래곤이 오면 꼭 전해 달라고 했어요.'}" 안에는 ${v.name}의 ${it}${h.josa(it, '이', '가')} 들어 있었다. 무덤 앞에 들꽃을 놓고, 보따리를 품에 안고 날아올랐다. (정신 +8, ${it}${c.nest ? ' — 보물더미에' : ''})`);
       } },
-      { label: (c, v) => `${v.ng}에게 이 소식을 전한다`, show: (c, v) => !!v.end && !!v.ng, run: (h, c, v) => {
-        const k = c.kAny(v.id); if (k) { k.data.metEnd = c.now; k.data.ksSeen = true; h.diary(k, '언덕 위 무덤 앞에, 보호자가 찾아와 오래 머물렀다.'); }
+      { label: (c, v) => `${v.ng}에게 이 소식을 전한다`, show: (c, v) => !!v.end && !!v.ng && !v.told, run: (h, c, v) => {
+        const k = c.kAny(v.id); if (k) { k.data.metEnd = c.now; k.data.ngTold = true; h.diary(k, '언덕 위 무덤 앞에, 보호자가 찾아와 오래 머물렀다.'); } // 유품은 그대로 남음: 하루 뒤 다시 들르면 거둘 수 있음. 손주에게 소식은 한 번만(ngTold)
         const gk = c.k(v.ngId); if (gk) { h.bond(gk, 6); h.diary(gk, `마을로 내려간 ${v.name}${h.josa(v.name, '이', '가')} 긴 잠에 들었다는 소식을 전해 들었다.`); }
         h.mind(10);
         h.say(`둥지에 돌아와 ${v.ng}${h.josa(v.ng, '을', '를')} 날개 밑에 품고, ${v.name}${h.josa(v.name, '이', '가')} 마지막까지 ${v.ng} 이야기를 했다고 들려주었다. (정신 +10, ${v.ng} 유대 +6)`);

@@ -1881,6 +1881,18 @@ function rememberEvent(d, id, now) {
 
 function rollEvent(d, kin, have, trigger, now = Date.now(), force = false) {
   if (pending(d)) return null;
+  // 반드시 뜨는 이벤트(e.sure): 조건이 맞으면 확률을 굴리지 않고 바로 (예: 마을 무덤의 비석 장면)
+  {
+    const c = ctxOf(d, kin, have, trigger, now);
+    const inRuin = logic.isRuin(c.region);
+    const e = EVENTS.find((x) => x.sure && (inRuin ? x.ruin || x.ruinToo : !x.ruin) && x.when.includes(trigger) && safe(() => x.cond(c)) && safe(() => x.sure(c)));
+    if (e) {
+      const vars = e.setup ? e.setup(c) : {};
+      d.pending_event = JSON.stringify({ id: e.id, vars, at: now, region: d.region, trigger });
+      rememberEvent(d, e.id, now);
+      return eventView(e, c, vars);
+    }
+  }
   if (!force && Math.random() >= (EVENT_RULES.chance[trigger] || 0) * (1 + FACILITY.list.library.event * logic.facPower(d, 'library'))) return null; // 서고: 이야기가 조금 더 자주
   const c = ctxOf(d, kin, have, trigger, now);
   // 멸망한 대륙에서는 그 땅의 이벤트(ruin)와 어울리는 오염 이벤트(ruinToo)만, 다른 곳에서는 멸망한 대륙 이벤트를 빼고
