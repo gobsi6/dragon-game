@@ -3200,8 +3200,10 @@ button.cnt { width: 100%; padding: 0; border: 0; background: none; font-family: 
     width: min(380px, calc(100vw - 24px)); height: min(460px, calc(100vh - var(--dock-h, 56px) - 90px)); height: min(460px, calc(100svh - var(--dock-h, 56px) - 90px)); /* svh: 주소창이 접혔다 펴져도 높이가 바뀌지 않음 (dvh면 스크롤할 때마다 글자가 출렁였음) */
     padding: 10px 10px 8px; background: var(--surface); border: 1px solid var(--orn); border-radius: 4px;
     box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px var(--line-in), 0 10px 28px rgba(20, 30, 40, .22);
-    transform: translateZ(0); /* 창 전체를 한 층으로: 안의 대화 목록(.log, 따로 그리는 층)이 이 창 안에서 같이 그려지게 (아이폰 사파리에서 창 바탕·머리줄·입력칸은 안 보이고 대화만 떠 있던 것) */
+    z-index: 30; /* 폰에서는 본문 밖(body 바로 아래)으로 옮겨 띄움 (app.js placeChat): 드래곤 기록 줄(7)·머리줄(8)·탭 화면보다 위, 띄운 창(44~)보다 아래 */
   }
+  .chat .log { transform: none; }
+  body:not(.in-game) > .chat, body:not(.in-game) > .chat-fab { display: none !important; } /* 로그인·드래곤 만들기 화면에서는 숨김 */ /* 폰 이야기 창 안에서는 대화 목록을 따로 된 층으로 그리지 않음 (아이폰 사파리에서 목록만 떠 보이던 것) */
   .chat.open { display: flex; animation: chat-in .28s cubic-bezier(.16, 1, .3, 1) backwards; transform-origin: bottom right; }
   .chat-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 2px 8px 4px; border-bottom: 1px solid var(--line-in); }
   .chat-h b { font: 700 15px/1.3 var(--serif); }

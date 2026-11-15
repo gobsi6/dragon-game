@@ -141,6 +141,7 @@
 
   function show(id) {
     for (const s of ['auth', 'create', 'game']) $(s).hidden = s !== id;
+    document.body.classList.toggle('in-game', id === 'game'); // 폰에서 본문 밖으로 옮긴 이야기 창·단추는 게임 화면일 때만 (style.css)
   }
 
   let toastTimer = null;
@@ -14125,6 +14126,14 @@
   });
   // 폰에서 이야기 창 접기·펴기. 접혀 있는 동안 들어온 남의 말은 버튼에 숫자로
   const chatMq = matchMedia('(max-width: 860px)');
+  // 폰(좁은 화면)에서는 이야기 창과 단추를 본문 밖(body 바로 아래)으로 옮김: 화면에 고정된 창이 '이곳의 이야기' 칸·본문 안에 있으면
+  //  아이폰 사파리가 바깥 칸에 끌려 창 바탕·머리줄·입력칸은 안 그리고 대화만 띄우던 것. 넓은 화면에서는 원래 자리(이야기 칸 안)로 되돌림
+  {
+    const homes = ['chat', 'chat-fab'].map((id) => { const el = $(id), mark = document.createComment(`${id} 자리`); el.before(mark); return [el, mark]; });
+    const placeChat = () => { for (const [el, mark] of homes) { if (chatMq.matches) { if (el.parentElement !== document.body) document.body.appendChild(el); } else if (mark.nextSibling !== el) mark.after(el); } };
+    placeChat();
+    chatMq.addEventListener('change', placeChat);
+  }
   // 채팅 가리기 (설정): 이 기기에 기억. 켜면 이야기 창에 대륙 소식만, 말하기 칸과 보기 탭은 숨김
   const CHAT_HIDE_KEY = 'dragon-chat-hide';
   function chatHidden() { try { return localStorage.getItem('dragon-chat-hide') === '1'; } catch { return false; } } // 함수 선언: 이야기 창 날짜 줄(seenInView)이 이보다 먼저 불려도 되게
