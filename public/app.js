@@ -2420,7 +2420,7 @@
       }
       // 기본 버튼: 사용·착용 + 버리기. 버리기를 누르면 그 자리에서 개수를 고르고 한 번 더 확인
       const normal = () => {
-        acts.replaceChildren();
+        acts.replaceChildren(); acts.classList.remove('ks-mode');
         if (row._usesBtn) acts.appendChild(row._usesBtn); // 폰에서만 보이는 '제작' 단추
         if (row._awakenBtn) acts.appendChild(row._awakenBtn); // 폰에서만 보이는 '각성' 단추
         if (it.type) {
@@ -2453,7 +2453,7 @@
       const whose = () => {
         const gone = [...(S.me?.kin?.gone || [])].sort((a, b) => (b.ks === id) - (a.ks === id));
         if (!gone.length) return itemAct('item:use', { item: id });
-        acts.replaceChildren();
+        acts.replaceChildren(); acts.classList.add('ks-mode'); // 고르는 동안은 물건 아래 전체 너비로 펼침 (질문과 단추를 한 덩어리로)
         const ask = document.createElement('small'); ask.className = 'ks-ask'; ask.textContent = '누구의 유품일까?';
         acts.appendChild(ask);
         const mk = (text, cls, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = `btn ${cls}`; b.textContent = text; b.addEventListener('click', fn); acts.appendChild(b); };
@@ -4888,8 +4888,9 @@
     return row;
   }
   // 개수 고르기 (− n +) 와 합계가 적힌 버튼. 개수를 바꿔도 창을 다시 그리지 않고 그 줄만 바꿈
+  // opt: 금화가 아닌 것으로 셀 때 (오르샤의 정화의 결정) — cost(합계) → 단추 글, lack(합계) → 모자랄 때 안내
   const mkQty = new Map();
-  function mkControls(row, key, unit, max, label, onGo, canAfford) {
+  function mkControls(row, key, unit, max, label, onGo, canAfford, opt = {}) {
     const ctl = row.querySelector('.ctl');
     const step = document.createElement('div');
     step.className = 'mk-step';
@@ -4907,9 +4908,9 @@
       if (document.activeElement !== num || Number(num.value) !== n) num.value = n;
       minus.disabled = n <= 1;
       plus.disabled = n >= max;
-      go.textContent = `${(unit * n).toLocaleString()}닢 ${label}`; // 동그란 금화 아이콘 없이 글자만
+      go.textContent = opt.cost ? `${opt.cost(unit * n)} ${label}` : `${(unit * n).toLocaleString()}닢 ${label}`; // 동그란 금화 아이콘 없이 글자만
       go.disabled = canAfford ? !canAfford(unit * n) : false;
-      go.title = go.disabled ? `금화가 ${(unit * n - S.me.gold).toLocaleString()}닢 모자란다.` : '';
+      go.title = go.disabled ? (opt.lack ? opt.lack(unit * n) : `금화가 ${(unit * n - S.me.gold).toLocaleString()}닢 모자란다.`) : '';
       row.classList.toggle('on', n > 1);
     };
     minus.addEventListener('click', () => { mkQty.set(key, (mkQty.get(key) || 1) - 1); draw(); });
@@ -11130,17 +11131,13 @@
         row.querySelector('b').append(itemTags(it));
         row.querySelector('.eff').textContent = effectText(it);
         setItemDesc(row.querySelector('small'), it, `정화의 결정 ${x.cost}개 · `);
-        const bt = document.createElement('button');
-        bt.type = 'button';
-        bt.className = 'btn primary';
-        bt.textContent = '바꾸기';
-        bt.disabled = res.shards < x.cost;
-        bt.addEventListener('click', () => socket.emit('ruin:trade', { id: x.id, qty: 1 }, (r) => {
+        // 시장처럼 개수를 골라 한 번에 (서버는 한 번에 20개까지). '최대'는 가진 결정으로 바꿀 수 있는 만큼
+        const most = Math.max(1, Math.min(20, Math.floor(res.shards / x.cost)));
+        mkControls(row, `ruin:${x.id}`, x.cost, most, '바꾸기', (n) => socket.emit('ruin:trade', { id: x.id, qty: n }, (r) => {
           if (r.error) return toast(r.error);
           showResult(r.result);
           openRuinTrade();
-        }));
-        row.querySelector('.ctl').appendChild(bt);
+        }), (t) => res.shards >= t, { cost: (t) => `결정 ${t.toLocaleString()}개`, lack: (t) => `정화의 결정이 ${(t - res.shards).toLocaleString()}개 모자란다.` });
         box.appendChild(row);
       }
       if (!$('ruin-dlg').open) $('ruin-dlg').showModal(); // 시장·모브 드래곤처럼 팝업으로

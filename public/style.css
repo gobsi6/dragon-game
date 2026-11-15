@@ -2040,6 +2040,9 @@ button.trait.bad.on { background: #FBF1F2; box-shadow: inset 0 0 0 1px #A63E4B; 
 .src-kid { background: #FBF1F4; color: #8A3D55; border-color: #E2BFCB; }
 .src-ks { background: #F4F1EA; color: #5E5134; border-color: #CFC4A8; } /* 떠난 식구의 유품 */
 .ks-ask { flex-basis: 100%; font-size: 12.5px; color: var(--muted); } /* 소지품: '누구의 유품일까?' */
+/* 누구의 유품인지 고르는 동안: 오른쪽 좁은 칸 대신 물건 아래 전체 너비에, 질문 → 식구 이름 단추 순서로 왼쪽부터 (예전엔 질문만 칸 왼쪽 끝에 떨어져 있었음) */
+.inv .it .acts.ks-mode { grid-column: 1 / -1; grid-row: auto; max-width: none; justify-content: flex-start; align-items: center; gap: 6px; margin-top: 8px; padding: 9px 10px 10px; background: #F7F5EF; border: 1px solid #E4DFD2; border-radius: 3px; }
+.inv .it .acts.ks-mode .ks-ask { font: 600 12.5px/1.4 var(--sans); color: var(--ink-2); margin-bottom: 2px; }
 /* 넓은 화면: 양옆 칸을 화면에 고정 (JS가 자리·폭을 재서 넣음). sticky는 화면 배율 125%·150%에서 스크롤하면 1픽셀씩 흔들림 */
 @media (min-width: 861px) {
   .profile.pinned, .side.pinned { position: fixed !important; top: calc(var(--head-h, 0px) + 22px); margin: 0; z-index: 2; }
