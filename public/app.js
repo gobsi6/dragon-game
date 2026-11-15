@@ -1912,27 +1912,52 @@
     }
   }
 
-  // 강화 음식 효과 (왼쪽 칸)
+  // 걸린 효과 (왼쪽 칸): 줄마다 이름·남은 시간만 보이고, 누르면 아래에 내용이 펼쳐짐. 펼친 줄은 기억해 둠 (30초마다 다시 그려도 그대로)
+  const BF_OPEN = (() => { try { return JSON.parse(localStorage.getItem('bfOpen') || '{}') || {}; } catch { return {}; } })();
+  const BF_ICON = {
+    buff: '<path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6-4.5-4.2 6.1-.7z"/>',
+    nap: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+  };
+  function drawBfRow(row, key, name, time, desc, title) {
+    if (!row.querySelector('.bf-h')) {
+      row.innerHTML = `<button type="button" class="bf-h" aria-expanded="false"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${BF_ICON[key]}</svg><b></b><span class="bf-t"></span><svg class="bf-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="bf-d" hidden></div>`;
+      row.querySelector('.bf-h').addEventListener('click', () => {
+        BF_OPEN[key] = !BF_OPEN[key];
+        try { localStorage.setItem('bfOpen', JSON.stringify(BF_OPEN)); } catch {}
+        setBfOpen(row, key);
+      });
+    }
+    row.querySelector('b').textContent = name;
+    row.querySelector('.bf-t').textContent = time;
+    row.querySelector('.bf-d').textContent = desc;
+    row.title = title;
+    setBfOpen(row, key);
+  }
+  function setBfOpen(row, key) {
+    const open = !!BF_OPEN[key];
+    row.classList.toggle('open', open);
+    row.querySelector('.bf-h').setAttribute('aria-expanded', String(open));
+    row.querySelector('.bf-d').hidden = !open;
+  }
+  const syncBfList = () => { const l = $('buff-list'); if (l) l.hidden = $('buff-row').hidden && $('nap-row').hidden; };
+  // 강화 음식 효과
   function renderBuff() {
     const b = S.me?.buff;
     const B = b && b.until > Date.now() ? S.buffs?.[b.id] : null;
     $('buff-row').hidden = !B;
-    if (!B) return;
-    $('buff-row').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6-4.5-4.2 6.1-.7z"/></svg><b></b><span></span>';
-    $('buff-row').querySelector('b').textContent = B.name;
-    $('buff-row').querySelector('span').textContent = `${B.desc} · ${leftMin(b.until)}분`;
-    $('buff-row').title = '강화 음식 효과 · 사냥·강적 전용 · 결투장 제외';
+    if (B) drawBfRow($('buff-row'), 'buff', B.name, `${leftMin(b.until)}분`, B.desc, '강화 음식 효과 · 사냥·강적 전용 · 결투장 제외 · 누르면 내용을 펼치거나 접음');
+    syncBfList();
   }
   // 거처의 단잠 (요리 버프와 따로 걸림): 남은 시간이 길어서 '몇 시간 몇 분'으로
   function renderNap() {
     const n = S.me?.nap, row = $('nap-row'); if (!row) return;
     const left = n ? n.until - Date.now() : 0;
     row.hidden = !(left > 0);
-    if (!(left > 0)) return;
-    const m = Math.ceil(left / 60000), hh = Math.floor(m / 60), mm = m % 60;
-    row.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg><b>단잠</b><span></span>';
-    row.querySelector('span').textContent = `채집에서 하나 더 찾을 확률 +${Math.round((n.gather || 0) * 100)}% · ${hh ? `${hh}시간 ` : ''}${mm}분`;
-    row.title = '고대도시 거처에서 잔 단잠 · 강화 음식과 함께 걸린다';
+    if (left > 0) {
+      const m = Math.ceil(left / 60000), hh = Math.floor(m / 60), mm = m % 60;
+      drawBfRow(row, 'nap', '단잠', `${hh ? `${hh}시간 ` : ''}${mm}분`, `채집에서 하나 더 찾을 확률 +${Math.round((n.gather || 0) * 100)}%`, '고대도시 거처에서 잔 단잠 · 강화 음식과 함께 걸린다 · 누르면 내용을 펼치거나 접음');
+    }
+    syncBfList();
   }
   setInterval(() => { if (S.me) { renderBuff(); renderNap(); } }, 30000);
 
@@ -14449,18 +14474,26 @@
   // 하단 메뉴 높이를 재서 본문 여백과 알림 위치에 씀 (휴대폰에서 두 줄이 되어도 맞음)
   const dock = document.querySelector('.dock');
   // 브라우저 아래쪽 도구 막대(삼성 인터넷 등)가 화면 위에 겹쳐 떠 있으면 하단 메뉴 아래쪽이 그만큼 가려짐 → 보이는 화면(visualViewport)의 아래 끝에 맞춰 메뉴를 올림
+  //  창 높이(innerHeight)로 막대 높이를 어림하지 않고, 메뉴가 실제로 그려진 자리를 잼: 올리지 않았을 때의 메뉴 아래 끝이 보이는 화면 아래 끝보다 내려가 있을 때만 그만큼 올림
+  //  (예전 방식은 스크롤로 막대가 접혔다 펴지는 사이 브라우저가 이미 메뉴를 막대 위로 올려 둔 때에도 한 번 더 올려, 메뉴가 화면 가운데쯤 떠 있었음)
   //  화면 확대 중이거나 글을 치는 중(자판이 올라와 있음)이거나 차이가 너무 크면(자판 등) 올리지 않음
-  let vvGap = 0;
+  let vvGap = 0, vvRaf = 0, vvLate = 0;
   const setVvGap = () => {
     const vv = window.visualViewport; let g = 0;
     if (vv && Math.abs(vv.scale - 1) < 0.01 && !document.activeElement?.matches?.('input, textarea, [contenteditable]')) {
-      g = Math.round(window.innerHeight - vv.height - vv.offsetTop);
-      if (!(g > 0 && g <= 120)) g = 0;
+      const natural = dock.getBoundingClientRect().bottom + vvGap; // 올리지 않았다면 메뉴 아래 끝이 있을 자리
+      g = Math.round(natural - (vv.offsetTop + vv.height));
+      if (!(g > 1 && g <= 120)) g = 0;
     }
     if (g !== vvGap) { vvGap = g; document.documentElement.style.setProperty('--vv-gap', `${g}px`); setDockH(); }
   };
-  if (window.visualViewport) { visualViewport.addEventListener('resize', setVvGap); visualViewport.addEventListener('scroll', setVvGap); }
-  window.addEventListener('scroll', setVvGap, { passive: true }); document.addEventListener('focusout', () => setTimeout(setVvGap, 300));
+  // 스크롤 중에는 한 화면에 한 번만 재고, 멈춘 뒤 막대가 다 접히거나 펴질 즈음 한 번 더 잼
+  const askVvGap = () => {
+    if (!vvRaf) vvRaf = requestAnimationFrame(() => { vvRaf = 0; setVvGap(); });
+    clearTimeout(vvLate); vvLate = setTimeout(setVvGap, 350);
+  };
+  if (window.visualViewport) { visualViewport.addEventListener('resize', askVvGap); visualViewport.addEventListener('scroll', askVvGap); }
+  window.addEventListener('scroll', askVvGap, { passive: true }); window.addEventListener('resize', askVvGap); document.addEventListener('focusout', () => setTimeout(setVvGap, 300));
   const setDockH = () => document.documentElement.style.setProperty('--dock-h', `${dock.offsetHeight + vvGap}px`);
   setTimeout(setVvGap, 0);
   // 상단바 높이 (넓은 화면에서 양옆 칸이 상단바 아래에 붙도록)

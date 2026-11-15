@@ -2237,12 +2237,23 @@ button.trait.bad.on { background: #FBF1F2; box-shadow: inset 0 0 0 1px #A63E4B; 
 .fall-opt.wait b { color: var(--steel-d); }
 .fall-opts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 720px) { .fall-opts { grid-template-columns: 1fr; } }
-.buff-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 6px 10px; font-size: 12.5px; color: #5A4A12; background: #FBF6E8; border: 1px solid #E2CF9E; border-radius: 3px; }
-.buff-row b { font-weight: 700; }
+/* 걸린 효과 묶음: 줄 사이를 좁게 (예전엔 왼쪽 칸 간격 16px이 줄마다 벌어졌음) */
+.buff-list { display: flex; flex-direction: column; gap: 4px; }
+.buff-list[hidden] { display: none; }
+.pf-body > .buff-list { grid-column: 1 / -1; }
+.buff-row { font-size: 12.5px; color: #5A4A12; background: #FBF6E8; border: 1px solid #E2CF9E; border-radius: 3px; }
+.buff-row[hidden] { display: none; }
+/* 머리줄(이름·남은 시간)을 누르면 아래에 내용이 펼쳐짐 */
+.buff-row .bf-h { display: flex; align-items: center; gap: 6px; width: 100%; padding: 6px 10px; margin: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.buff-row .bf-h:focus-visible { outline: 2px solid currentColor; outline-offset: -2px; }
+.buff-row b { font-weight: 700; min-width: 0; }
 .buff-row svg { color: #A87A1C; flex: none; }
-.nap-row { margin-top: 4px; color: #2E4A5E; background: #EEF2F6; border-color: #C3D1DD; } /* 단잠: 밤빛 */
+.buff-row .bf-t { margin-left: auto; flex: none; font-size: 12px; opacity: .8; font-variant-numeric: tabular-nums; }
+.buff-row .bf-chev { opacity: .7; transition: transform .15s; }
+.buff-row.open .bf-chev { transform: rotate(180deg); }
+.buff-row .bf-d { padding: 0 10px 7px 30px; line-height: 1.5; }
+.nap-row { color: #2E4A5E; background: #EEF2F6; border-color: #C3D1DD; } /* 단잠: 밤빛 */
 .nap-row svg { color: #3C5A73; }
-.pf-body > .nap-row { grid-column: 1 / -1; }
 .buff-now { padding: 8px 12px; font-size: 13px; color: #5A4A12; background: #FBF6E8; border: 1px solid #E2CF9E; border-radius: 3px; margin-bottom: 4px; }
 .inv-h, .dlg h3.inv-h { margin: 26px 0 8px; font: 700 13px/1.4 var(--serif); color: var(--steel-d); display: flex; align-items: center; gap: 8px; grid-column: 1 / -1; }
 .inv-h .inv-hn { font: 400 11px/1 var(--sans); color: var(--muted); }
@@ -2928,7 +2939,7 @@ html { scrollbar-gutter: stable; }
   .vital .h { font-size: 12px; gap: 5px; }
   .vital .h svg { width: 13px; height: 13px; }
   .vital .bar { height: 5px; }
-  .pf-body > .attrs, .pf-body > .buff-row, .pf-body > .pts-row { grid-column: 1 / -1; }
+  .pf-body > .attrs, .pf-body > .buff-list, .pf-body > .pts-row { grid-column: 1 / -1; }
   .pf-body > .attrs { padding: 8px 0 6px; }
   .attr { flex-direction: row; justify-content: center; gap: 5px; flex-wrap: wrap; }
   .attr svg { width: 16px; height: 16px; }
@@ -3721,7 +3732,7 @@ body.mz-drag, body.mz-drag * { user-select: none !important; -webkit-user-select
   .profile:not(.folded) .pf-body > .orn-h { padding-right: 38px; }
   /* 접힌 모습: 그림 · 이름과 레벨 · 체력·기력·정신 막대 한 줄 */
   .profile.folded .pf-body { grid-template-columns: 52px minmax(0, 1fr) 84px; column-gap: 10px; row-gap: 0; padding: 11px 52px 11px 14px; align-items: center; cursor: pointer; }
-  .profile.folded .pf-body > .orn-h, .profile.folded .pf-body > .attrs, .profile.folded .pf-body > .buff-row, .profile.folded .pf-body > .nap-row, .profile.folded .pf-body > .pts-row, .profile.folded .pmenu { display: none !important; }
+  .profile.folded .pf-body > .orn-h, .profile.folded .pf-body > .attrs, .profile.folded .pf-body > .buff-list, .profile.folded .pf-body > .pts-row, .profile.folded .pmenu { display: none !important; }
   .profile.folded .portrait { grid-row: 1; width: 52px; height: 52px; }
   .profile.folded .portrait #portrait-ph svg { width: 34px; height: 34px; }
   .profile.folded .portrait.empty::after, .profile.folded .portrait .over { display: none; }
