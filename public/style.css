@@ -2251,7 +2251,7 @@ button.trait.bad.on { background: #FBF1F2; box-shadow: inset 0 0 0 1px #A63E4B; 
 .buff-row .bf-t { margin-left: auto; flex: none; font-size: 12px; opacity: .8; font-variant-numeric: tabular-nums; }
 .buff-row .bf-chev { opacity: .7; transition: transform .15s; }
 .buff-row.open .bf-chev { transform: rotate(180deg); }
-.buff-row .bf-d { padding: 0 10px 7px 30px; line-height: 1.5; }
+.buff-row .bf-d { padding: 0 10px 7px; line-height: 1.5; text-align: left; } /* 아이콘 자리(왼쪽 끝)부터 왼쪽 정렬 */
 .nap-row { color: #2E4A5E; background: #EEF2F6; border-color: #C3D1DD; } /* 단잠: 밤빛 */
 .nap-row svg { color: #3C5A73; }
 .buff-now { padding: 8px 12px; font-size: 13px; color: #5A4A12; background: #FBF6E8; border: 1px solid #E2CF9E; border-radius: 3px; margin-bottom: 4px; }

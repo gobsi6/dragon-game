@@ -15359,13 +15359,11 @@
     if (!CT.dk || CT.dk.saved !== saved) CT.dk = { saved, list: (h.deco || dkDefaults(h)).map((o) => ({ ...o })), pick: null, pickD: 0, sel: null, dirty: false };
     return CT.dk;
   }
-  // 놓을 자리: 점(px, py)을 가운데로 하는 자리. 서버와 같은 규칙(HP.where) + 같은 층(바닥 가구 · 벽 장식 · 탁상 소품)끼리 겹치지 않기 (깔개는 위에 놓을 수 있음)
-  function dkFit(h, name, px, py, skip) {
+  // 놓을 자리: 점(px, py)을 가운데로 하는 자리. 서버와 같은 규칙(HP.where: 칸 안·벽·문 등)만 봄
+  //  장식끼리는 겹쳐 놓아도 됨 (2026-11-15부터, 서버와 같음): 아래쪽(앞)에 있는 것이 위에 그려지고, 누르면 위에 보이는 것이 집힘
+  function dkFit(h, name, px, py, skip) { // eslint-disable-line no-unused-vars -- skip: 옮기는 그 장식 (예전 겹침 검사용, 부르는 쪽은 그대로)
     const [w, hh] = HP.size(name), x = Math.round(px - w / 2), y = Math.round(py - hh / 2);
     const why = HP.where(name, x, y, dkDone(h)); if (why) return { x, y, w, h: hh, ok: false, why };
-    const others = CT.dk.list.filter((o, i) => i !== skip), me = { s: name, x, y }, L = HP.effLayer(me, others); // 화분·등·촛대·책은 가구 위에 올리면 'top' 층
-    const Z = HP.zone(me); // 방 안과 바깥뜰 가구는 서로 겹쳐도 됨 (서버와 같음)
-    if (L !== 'flat' && others.some((o) => HP.effLayer(o, others) === L && HP.zone(o) === Z && HP.hit(x, y, w, hh, [o.x, o.y, ...HP.size(o.s)]))) return { x, y, w, h: hh, ok: false, why: '다른 장식과 겹친다.' };
     return { x, y, w, h: hh, ok: true };
   }
   // 놓인 장식 방향 바꾸기 (의자 앞·뒤·옆, 긴 탁자 가로·세로): 가운데를 축으로, 그 자리에 못 놓으면 그대로 두고 알림

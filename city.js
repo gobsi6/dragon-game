@@ -1207,9 +1207,8 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     for (const it of items) { // 올려 둔 소품은 받친 가구가 목록 어디에 있든 알아야 해서, 다 읽은 뒤에 검사
       const [w, h] = DECO.size[it.s], L = decoLayer(it, items);
       const why = decoWhere(it.s, it.x, it.y, done); if (why) return err(`${FURN[DECO.base[it.s]]?.name || '장식'}: ${why}`);
-      const Z = decoZone(it.s, it.x, it.y); // 벽 안쪽(방)과 바깥뜰은 서로 겹쳐도 됨 (바깥 가구가 건물 아랫부분에 걸칠 때)
-      if (L !== 'flat' && boxes.some((b) => b.L === L && b.Z === Z && decoBox(it.x, it.y, w, h, [b.x, b.y, b.w, b.h]))) return err('장식끼리 겹친다.');
-      boxes.push({ ...it, w, h, L, Z });
+      // 장식끼리는 겹쳐 놓아도 됨 (2026-11-15부터): 그리는 순서는 아래쪽(앞)이 위, 올려 둔 소품은 받친 가구 바로 앞
+      boxes.push({ ...it, w, h, L });
     }
     grantFurn(d);
     const used = {}; boxes.forEach((b) => { const k = DECO.base[b.s]; used[k] = (used[k] || 0) + 1; });
