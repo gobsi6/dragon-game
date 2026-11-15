@@ -1436,11 +1436,13 @@
     renderStatusPills(now);
   }
   // ── 머리줄 제목 오른쪽에 지금 상태: 컴퓨터는 모두 나란히(그림 위 꼬리표와 달리 겹치면 다 보임), 폰은 가장 급한 것 하나를 짧은 말로 ──
-  // [종류, 말, 시간] — 급한 것부터. '원정 중'만 누르면 원정 상황 창
+  // [종류, 말, 시간] — 급한 것부터. '원정 중'을 누르면 원정 상황 창, '쉬는 중'을 누르면 둥지 창
   const PILL_ICON = {
     berserk: '<path d="M12 3c3 4 6 6 6 10a6 6 0 0 1-12 0c0-2 1-3.5 2-4.5.5 1.5 1.5 2.5 3 2.5-1-3 0-5.5 1-8z"/>',
     buff: '<path d="M4 11h16a8 8 0 0 1-16 0z"/><path d="M9 7.5c0-1 1-1.5 1-2.5M13 7.5c0-1 1-1.5 1-2.5"/>',
   };
+  // 누르면 열리는 창: 원정 중 → 원정 상황 창, 쉬는 중 → 둥지 창 (반려의 둥지에서 쉬어도 쉬기 카드의 '보물더미 보기'처럼 내 둥지 창)
+  const PILL_ACT = { trip: ['원정 상황 보기', () => openTrip()], nest: ['둥지 보기', () => openNest()] };
   const minLeft = (t, now) => `${Math.max(1, Math.ceil((t - now) / 60000))}분`;
   function renderStatusPills(now = Date.now()) {
     const me = S.me, box = $('st-pills');
@@ -1459,7 +1461,7 @@
       else list.push(['exp', done ? '원정 끝' : '원정 중', done ? '' : stClock(me.exp.end - now), done ? '원정 끝' : '원정 중', 'trip', f]);
     }
     if (inMazeNow()) list.push(['maze', '회랑 탐사', '', '회랑', null, null]);
-    if (me.restAt && !me.exp) list.push(['rest', '둥지에서 쉬는 중', stTime(now - me.restAt), '쉬는 중', null, null]);
+    if (me.restAt && !me.exp) list.push(['rest', '둥지에서 쉬는 중', stTime(now - me.restAt), '쉬는 중', 'nest', null]);
     const buf = me.buff && me.buff.until > now ? S.buffs?.[me.buff.id] : null;
     if (buf) list.push(['buff', buf.name, minLeft(me.buff.until, now), '', null, left(me.buff.at, me.buff.until)]);
     box.hidden = !list.length;
@@ -1470,7 +1472,7 @@
       box.replaceChildren(...list.map(([k, w, , ws, act, pr]) => {
         const el = document.createElement(act ? 'button' : 'span');
         el.className = `stp ${k}`;
-        if (act) { el.type = 'button'; el.title = '원정 상황 보기'; el.addEventListener('click', openTrip); }
+        if (act) { const go = PILL_ACT[act]; el.type = 'button'; el.title = go[0]; el.addEventListener('click', go[1]); }
         el.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${PILL_ICON[k] || ST_ICON[k] || ''}</svg>`;
         const a = document.createElement('span'); a.className = 'w'; a.textContent = w;
         const b = document.createElement('span'); b.className = 'ws'; b.textContent = ws;
