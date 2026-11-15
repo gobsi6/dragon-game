@@ -790,8 +790,15 @@ dialog.frame:not(.as-panel) > .bl { bottom: 2px; left: 2px; } dialog.frame:not(.
 .coin { width: 15px; height: 15px; flex: none; box-sizing: border-box; border-radius: 50%; border: 1.6px solid currentColor; display: inline-flex; align-items: center; justify-content: center; color: #8A6A22; }
 .coin::after { content: ""; width: 7px; height: 7px; box-sizing: border-box; border-radius: 50%; border: 1.6px solid currentColor; }
 .mk-banner { display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; background: #2A4256; color: #F4F7FA; border-radius: 4px; }
-.mk-banner .mkb-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.mk-banner .mkb-who { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.mk-banner .mkb-top { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px 12px; }
+/* 좁은 화면(폰·큰 글씨)에서 오른쪽 꼬리표(정화의 결정 911개 등)가 길면 말풍선이 한 줄에 몇 자씩 끊기지 않게, 꼬리표를 아랫줄로 내림 */
+.mk-banner .mkb-who { flex: 1 1 13em; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+/* 폰: 오른쪽 꼬리표(금화·정화의 결정)를 따로 한 줄로 떼어 맨 위 오른쪽에 둠. 말풍선은 그 아래 띠 너비를 다 씀 */
+@media (max-width: 520px) {
+  .mk-banner .mkb-top { flex-direction: column; flex-wrap: nowrap; gap: 8px; }
+  .mk-banner .mkb-gold { order: -1; align-self: flex-end; }
+  .mk-banner .mkb-who { flex: none; }
+}
 .mk-banner .mkb-where { font-size: 11.5px; letter-spacing: .08em; color: #B9C7D3; }
 .mk-banner .mkb-say { font: 700 17px/1.4 var(--serif); }
 .mk-banner .mkb-gold { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 16px; background: rgba(255, 255, 255, .12); font-size: 13px; color: #E8DCC0; }
@@ -1995,8 +2002,13 @@ button.trait.bad.on { background: #FBF1F2; box-shadow: inset 0 0 0 1px #A63E4B; 
 .wl-text .wl-sub { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; padding-top: 12px; border-top: 1px dashed var(--line-soft); }
 .wl-text .wl-sub p { font: 400 12.5px/1.65 var(--sans); color: var(--muted); }
 /* 모브 드래곤 */
-.mob-bar { display: flex; align-items: center; gap: 12px; padding: 9px 10px 9px 12px; background: #F4F7FA; border: 1px solid #C9D6E2; }
+.mob-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 9px 10px 9px 12px; background: #F4F7FA; border: 1px solid #C9D6E2; }
 .mob-bar .mob-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+/* 폰: 오른쪽 단추(말 걸기·내려간다 등)를 아랫줄 오른쪽으로 내림. 문양은 글 옆에 그대로 두고, 글은 줄 너비를 다 씀 (큰 글씨에서 몇 자씩 끊기지 않게). 레이드 모집 줄과 같은 모양 */
+@media (max-width: 520px) {
+  .mob-bar .mob-t { flex-basis: calc(100% - 48px); }
+  .mob-bar > .btn { margin-left: auto; }
+}
 .mob-bar b { font: 700 14.5px/1.3 var(--serif); color: var(--ink); }
 .mob-bar small { font-size: 12.5px; line-height: 1.45; color: var(--muted); }
 .mob-bar small .rd { color: #2F5D45; font-weight: 600; }
@@ -2082,6 +2094,13 @@ button.trait.bad.on { background: #FBF1F2; box-shadow: inset 0 0 0 1px #A63E4B; 
 .mob-track .mt-r .p { font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
 .mob-track .mt-r.ready .p { color: #2F5D45; font-weight: 600; }
 .mob-head { display: flex; gap: 14px; align-items: flex-start; padding: 14px 16px; background: var(--steel-d); color: #F4F7FA; border-radius: 4px; }
+/* 폰: 문양을 작게 줄여 첫 줄(종류·사는 곳) 옆에만 두고, 대사와 설명은 띠 너비를 다 씀 */
+@media (max-width: 520px) {
+  .mob-head { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: center; }
+  .mob-head .mob-who { display: contents; }
+  .mob-head .mob-em .emblem { width: 34px; height: 34px; }
+  .mob-head .mob-who b, .mob-head .mob-who small { grid-column: 1 / -1; }
+}
 .mob-who { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .mob-who .mob-k { font-size: 11.5px; letter-spacing: .06em; color: #B9C7D3; }
 .mob-who b { font: 700 17px/1.4 var(--serif); }
@@ -3387,6 +3406,11 @@ button.cnt { width: 100%; padding: 0; border: 0; background: none; font-family: 
 .nm-st-top b { font-size: 17px; color: #F4F7FA; }
 .nm-st-top small { color: #D8C9D6; }
 .nm-st-top .mine-tag { background: rgba(255, 255, 255, .12); border-color: rgba(255, 255, 255, .25); color: #F3D9E3; }
+@media (max-width: 520px) { /* 폰: 남색 머리띠처럼 금화를 따로 한 줄로 떼어 맨 위에 */
+  .nm-st-top { flex-direction: column; gap: 8px; }
+  .nm-st-top .mkb-gold { order: -1; align-self: flex-end; }
+  .nm-st-top .tx { flex: none; }
+}
 .nm-st-top .mkb-gold { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 16px; background: rgba(255, 255, 255, .12); font-size: 13px; color: #E8DCC0; }
 .nm-st-top .mkb-gold .coin { color: #E8CF8A; }
 .nm-st-top .mkb-gold b { font: 700 15px/1 var(--sans); color: #F3E2B0; font-variant-numeric: tabular-nums; }

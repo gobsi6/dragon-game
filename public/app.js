@@ -3214,17 +3214,18 @@
     chip.className = `kin-chip${v.status === 'egg' ? ' egg' : ''}`;
     chip.textContent = v.status === 'egg' ? `알 · ${kindName(v.kind)}` : v.type === 'human' ? `인간 · ${v.stage}` : `${kindName(v.kind)} · ${v.stage}`;
     head.append(kinFace(v), nm, chip);
-    // 머리줄 오른쪽: 이름 바꾸기 · 동료에게 입양 보내기 (같은 모양의 버튼)
+    // 머리줄 오른쪽: 이름 바꾸기(알이면 '이름 짓기': 깨어나기 전부터 지어 줄 수 있음) · 동료에게 입양 보내기 (같은 모양의 버튼)
     const pend = nestOffersOut.find((o) => o.kin === v.id);
     const hb = document.createElement('div');
     hb.className = 'kin-head-btns';
-    if (v.status !== 'egg' && !partner) {
+    if (!partner) {
+      const egg = v.status === 'egg';
       const rn = document.createElement('button');
       rn.type = 'button';
       rn.className = 'linkbtn';
-      rn.textContent = '이름 바꾸기';
+      rn.textContent = egg ? '이름 짓기' : '이름 바꾸기';
       rn.addEventListener('click', () => {
-        const name = prompt('새 이름 (한글이나 영문 1~8자)', v.name);
+        const name = prompt(egg ? '알 속의 아이에게 지어 줄 이름 (한글이나 영문 1~8자)' : '새 이름 (한글이나 영문 1~8자)', v.name);
         if (name && name.trim() !== v.name) nestAct('kin:rename', { id: v.id, name: name.trim() });
       });
       hb.appendChild(rn);
