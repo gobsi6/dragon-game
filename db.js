@@ -754,6 +754,12 @@ function snapshot(to) {
   db.exec(`VACUUM INTO '${to.replace(/'/g, "''")}'`);
   return to;
 }
+// 같은 사본을 조금씩 나눠 뜸 (자동 백업용). VACUUM INTO는 다 뜰 때까지 서버 전체가 멈춰, 저장 파일이 크면 그 몇 초 동안 채팅·행동이 모두 멎었음
+async function snapshotAsync(to) {
+  if (fs.existsSync(to)) fs.unlinkSync(to);
+  await db.backup(to);
+  return to;
+}
 // 올린 파일이 이 게임의 저장 파일이 맞는지 살펴봄 (SQLite이고, 드래곤·계정 표가 있는지)
 function checkBackup(file) {
   const buf = fs.readFileSync(file);
@@ -939,7 +945,7 @@ function scrubGone(dragonId, name, userId = null, held = false) {
 }
 
 module.exports = {
-  DB_PATH, snapshot, customRefs, customOrphans, checkBackup, stageRestore, closeDb, dbFileSize,
+  DB_PATH, snapshot, snapshotAsync, customRefs, customOrphans, checkBackup, stageRestore, closeDb, dbFileSize,
   countUsers: () => q.countUsers.get().n,
   getUserByName: (name) => q.userByName.get(name),
   // 비밀번호 바꾸기. keepToken이 있으면 그 접속만 남기고 다른 기기의 로그인은 모두 끊음

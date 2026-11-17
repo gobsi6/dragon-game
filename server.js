@@ -174,17 +174,21 @@ function autoBackups() {
       .map((name) => { const st = fs.statSync(path.join(AUTO_BK.dir, name)); return { name, size: st.size, at: st.mtimeMs }; });
   } catch { return []; }
 }
-function autoBackup() {
+let autoBackupBusy = false;
+async function autoBackup() {
+  if (autoBackupBusy) return; // 아직 뜨는 중 (저장 파일이 크면 몇 초 걸림)
+  autoBackupBusy = true;
   try {
     fs.mkdirSync(AUTO_BK.dir, { recursive: true });
     const name = `auto-${kstDay()}.db`, to = path.join(AUTO_BK.dir, name);
     if (fs.existsSync(to)) return;
     const tmp = `${to}.tmp`;
-    db.snapshot(tmp);
+    await db.snapshotAsync(tmp); // 조금씩 나눠 떠서, 백업하는 동안에도 채팅·행동이 멈추지 않음
     fs.renameSync(tmp, to); // 다 만든 뒤에 이름을 붙여, 만드는 도중에 꺼져도 반쪽 파일이 남지 않게
     for (const old of autoBackups().slice(AUTO_BK.keep)) fs.unlink(path.join(AUTO_BK.dir, old.name), () => {});
     console.log(`[자동 백업] ${name}`);
   } catch (e) { console.error('[자동 백업 실패]', e.message); }
+  finally { autoBackupBusy = false; }
 }
 setTimeout(autoBackup, 30 * 1000);
 // 휴면: 이만큼 접속하지 않은 드래곤은 결투장·지역 목록·지도·둥지 찾기·골렘 심부름 목록에서 빠짐 (본인이 와서 복구하면 다시 보임)
@@ -2924,22 +2928,25 @@ function onConnect(socket) {
     sendMe(socket, entry.dragon);
   });
 
-  socket.on('chat', (payload) => {
+  socket.on('chat', (payload, ack) => {
+    if (typeof ack !== 'function') ack = () => {}; // 예전 화면(답을 받지 않음)도 그대로 됨
     const entry = entryOf(socket);
-    if (!entry) return;
+    if (!entry) return ack({ error: '먼저 드래곤을 만들어야 한다.' });
     const text = str(payload?.text).slice(0, CHAT_MAX);
-    if (!text) return;
+    if (!text) return ack({ ok: true });
     // 광폭화 중에는 말을 잃음 (텔레파시만 가능)
-    if (logic.berserkOf(entry.dragon)) return socket.emit('system', { text: '광폭화 중에는 말을 할 수 없다. 텔레파시로만 마음을 전할 수 있다.', at: Date.now() });
+    if (logic.berserkOf(entry.dragon)) { socket.emit('system', { text: '광폭화 중에는 말을 할 수 없다. 텔레파시로만 마음을 전할 수 있다.', at: Date.now() }); return ack({ error: 'berserk' }); }
 
     const now = Date.now();
-    if (now - (socket.data.lastChat || 0) < CHAT_COOLDOWN) return;
+    // 너무 빨리 이어 말하면: 예전엔 아무 말 없이 버려져 '보냈는데 안 올라간' 것처럼 보였음 → 화면에 알려 글을 되돌려 줌
+    if (now - (socket.data.lastChat || 0) < CHAT_COOLDOWN) return ack({ error: '숨을 고르고 다시 말하자.' });
     socket.data.lastChat = now;
 
     const d = entry.dragon;
     const msg = { dragonId: d.id, name: d.name, kind: d.kind, text, at: now };
     msg.id = db.addChat(d.region, msg);
     io.to(d.region).emit('chat', { ...msg, title: logic.titleName(d), av: d.has_avatar ? d.avatar_ver : 0 });
+    ack({ ok: true });
   });
 
   // 용언: 대륙의 모든 드래곤에게 텔레파시로 외침

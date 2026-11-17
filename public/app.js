@@ -624,7 +624,7 @@
       if (img.getAttribute('src') !== url) img.src = url;
     } else {
       if (img) img.remove();
-      $('portrait-ph').innerHTML = emblem(me.kind, 128);
+      { const ph = $('portrait-ph'); if (ph.dataset.kind !== me.kind || !ph.firstChild) { ph.innerHTML = emblem(me.kind, 128); ph.dataset.kind = me.kind; } } // 같은 문양이면 그대로 (행동할 때마다 새로 그리지 않게)
     }
     // 이름판의 작은 얼굴 (회복 가방을 열어 큰 그림이 접힌 넓은 화면에서만 보임): 같은 그림, 없으면 종족 문장
     const nf = $('np-face');
@@ -1886,9 +1886,15 @@
     slot.appendChild(d);
   }
 
+  let gearKey = '';
   function renderGear() {
     const box = $('gear');
     if (!S.slots || !S.me) return;
+    // 낀 장신구·레벨·강화·펼친 칸이 그대로면 다시 그리지 않음 (행동할 때마다 여섯 칸을 새로 만들던 것)
+    const eq = S.me.equip || {};
+    const key = JSON.stringify([eq, S.me.level, S.me.craft?.gear || null, [...gearOpen.gear], Object.values(eq).map((id) => S.items[id] || null)]);
+    if (key === gearKey && box.firstChild) return;
+    gearKey = key;
     box.replaceChildren();
     for (const sl of S.slots) {
       const id = S.me.equip?.[sl.key];
@@ -5512,7 +5518,7 @@
     const bar = $('mob-bar');
     bar.hidden = !mb || !!me.exp;
     if (mb) {
-      $('mob-em').innerHTML = emblem(mb.kind, 34);
+      { const em = $('mob-em'); if (em.dataset.kind !== mb.kind || !em.firstChild) { em.innerHTML = emblem(mb.kind, 34); em.dataset.kind = mb.kind; } }
       $('mob-name').textContent = mb.name;
       const sub = $('mob-sub');
       sub.replaceChildren(mb.who);
@@ -6688,14 +6694,14 @@
   let mapCentered = null;
   function mapToHere(r) {
     const wrap = mapSvg?.parentElement;
-    if (!wrap || !r || wrap.scrollWidth <= wrap.clientWidth + 2 || mapCentered === r.id) return;
+    if (!wrap || !r || mapCentered === r.id || wrap.scrollWidth <= wrap.clientWidth + 2) return; // 이미 맞춘 곳이면 크기를 재지 않음 (재는 것만으로 화면 배치를 다시 계산함)
     mapCentered = r.id;
     requestAnimationFrame(() => { const x = (r.gate && realmOf(r.id) !== realmOf(S.region) ? r.gate.x : r.x) / 1000 * wrap.scrollWidth; wrap.scrollLeft = Math.max(0, x - wrap.clientWidth / 2); });
   }
+  let overlayKey = '';
   function renderOverlay() {
     const g = $('overlay');
-    g.replaceChildren();
-    if (!S.region) return;
+    if (!S.region) { g.replaceChildren(); overlayKey = ''; return; }
     showTerrain();
     const here = S.regions[S.region];
     const rm = realmOf(S.region);
@@ -6705,6 +6711,14 @@
     const shown = Object.values(S.regions).filter((r) => realmOf(r.id) === rm || r.links.some((id) => realmOf(id) === rm && r.gate)).map(pos);
     const byId = Object.fromEntries(shown.map((r) => [r.id, r]));
     const lockedOf = (r) => r.realm === 'ruin' && (r.unlock || 0) > 0 && !(S.me?.ruin?.open || []).includes(r.id) && (r.unlock || 0) > (S.me?.ruin?.pct || 0); // 한 번 열린 지역은 다시 잠기지 않음
+    // 지도에 그릴 것이 지난번과 같으면 다시 그리지 않음. 행동할 때마다(내 정보가 올 때마다) 지도를 통째로 새로 그려,
+    // 폰에서 지형 그림 전체를 다시 칠하느라 단추를 누를 때마다 멈칫했음
+    {
+      const key = JSON.stringify([S.region, shown.map((r) => { const b = blightOn(r.id); return [r.id, lockedOf(r), S.me?.corrupt?.region === r.id, b ? b.kind : 0, S.boss?.region === r.id, !!S.rampages?.some((x) => x.region === r.id), S.me?.nest === r.id, S.wx?.regions?.[r.id]?.id || '', S.counts?.[r.id] || 0]; })]);
+      if (key === overlayKey && g.firstChild) { mapToHere(here); return; }
+      overlayKey = key;
+    }
+    g.replaceChildren();
     const drawn = new Set();
     for (const r of shown) {
       for (const id of r.links) {
@@ -6890,9 +6904,18 @@
     a.style.setProperty('--c', `var(--k-${d.kind})`);
     const url = avatarUrl(d);
     if (url) { const img = document.createElement('img'); img.src = url; img.alt = ''; a.appendChild(img); }
-    else a.innerHTML = emblem(d.kind, size);
+    else a.appendChild(emblemNode(d.kind, size));
     return a;
   };
+  // 종류 문양은 종류·크기마다 한 번만 만들어 두고 복사해 씀. 예전엔 채팅 한 묶음·목록 한 줄마다 문양 글을 새로 읽어 그려서,
+  // 접속할 때 지난 이야기 수백 줄을 그리느라 폰에서 꽤 오래 걸렸음
+  const EMBLEM_TPL = new Map();
+  function emblemNode(kind, size) {
+    const k = `${kind}|${size}`;
+    let t = EMBLEM_TPL.get(k);
+    if (!t) { t = document.createElement('template'); t.innerHTML = emblem(kind, size); EMBLEM_TPL.set(k, t); }
+    return t.content.cloneNode(true);
+  }
   const socialAct = (event, payload, after) => {
     socket.emit(event, payload, (res) => {
       // 안 되었을 때도 화면을 다시 그려서 잠가 둔 버튼을 풀어 줌
@@ -9386,6 +9409,7 @@
       document.body.prepend(box);
     }
   }
+  let plLastKey = '';
   function renderPlaces() {
     renderRealmBg();
     renderFestBg();
@@ -9397,6 +9421,11 @@
     if (!ids) return;
     const selId = cur ? S.me.place : ids[0];
     const corrupt = corruptOn(S.region); // 매일 옮겨 가는 오염 또는 재앙의 오염
+    // 그릴 것(지역·머무는 장소·오염·내 레벨에 따른 난이도)이 지난번과 같으면 미니맵과 장소 설명을 다시 그리지 않음.
+    // 예전엔 행동할 때마다 미니맵 그림을 새로 만들고 크기를 다시 재서, 폰에서 단추를 누를 때마다 멈칫했음
+    const plKey = JSON.stringify([S.region, ids, S.me?.place || '', corrupt, S.me?.level || 0, !!S.combat]);
+    if (plKey === plLastKey && $('pl-map').firstChild) return;
+    plLastKey = plKey;
 
     // ── 미니맵: 손으로 그린 듯한 지형 위에 장소 핀 ──
     const map = $('pl-map');
@@ -13771,7 +13800,7 @@
         img.alt = '';
         ava.appendChild(img);
       } else {
-        ava.innerHTML = emblem(d.kind, 38);
+        ava.appendChild(emblemNode(d.kind, 38));
       }
       const nm = document.createElement('div');
       nm.className = 'nm';
@@ -14208,7 +14237,11 @@
       sayReady();
       return;
     }
-    socket.emit('chat', { text });
+    socket.emit('chat', { text }, (res) => {
+      if (!res?.error || res.error === 'berserk') return; // 광폭화 안내는 서버가 이야기 창에 따로 띄움
+      toast(res.error);
+      if (!input.value.trim()) { input.value = text; sayReady(); } // 버려진 말을 입력 칸에 되돌려 줌 (그새 새로 적고 있으면 건드리지 않음)
+    });
     input.value = '';
     sayReady();
   });
@@ -14242,6 +14275,7 @@
 
     socket.on('init', (data) => {
       checkVersion(data.version);
+      overlayKey = ''; plLastKey = ''; gearKey = ''; // 게임 자료를 새로 받았으니 지도·미니맵·장신구 칸은 다음에 꼭 다시 그림
       S.kinds = data.kinds;
       S.regions = data.regions;
       S.stats = data.stats;
@@ -14385,7 +14419,15 @@
       CHAT_S_OLD = oldestKind(data.history, 'shout'); CHAT_N_OLD = oldestKind(data.history, 'news'); CHAT_S_END = false; CHAT_N_END = false;
       if (!Number.isFinite(CHAT_SHOUT_OLDEST)) CHAT_SHOUT_OLDEST = 0;
       if (data.history.length) $('log').prepend(olderBtn()); // 기록이 있으면 늘 '더 보기' (더 없는지는 불러와 보고 앎: 지역 대화가 적어도 용언·소식은 더 있을 수 있음)
-      for (const m of data.history) addHistory(m); // 지역 대화 · 용언 · 대륙 소식
+      // 지역 대화 · 용언 · 대륙 소식: 화면 밖 칸에 다 그린 뒤 한 번에 붙이고 날짜 줄도 한 번에 매김.
+      // 예전엔 수백 줄을 한 줄씩 이야기 창에 붙이며 그때마다 높이를 다시 재서, 접속·재접속·지역 이동 때 폰이 몇 초씩 멈췄음
+      {
+        const tmp = document.createElement('div');
+        LOG_TARGET = tmp;
+        try { for (const m of data.history) addHistory(m); } finally { LOG_TARGET = null; }
+        $('log').append(...tmp.childNodes);
+        markDays();
+      }
       addSystem(`${S.regions[data.region].name}에 내려앉았다`);
       $('log').scrollTop = $('log').scrollHeight;
     });
@@ -14395,10 +14437,14 @@
       renderHere();
     });
     socket.on('world:counts', (counts) => {
+      const prev = S.counts || {};
       S.counts = counts;
       const total = Object.values(counts).reduce((a, b) => a + b, 0);
       $('online-count').textContent = `지금 대륙에 ${total}마리`;
-      renderOverlay();
+      // 지도의 숫자 표시가 실제로 바뀔 때만 지도를 다시 그림 (지금 있는 곳에는 숫자를 그리지 않음).
+      // 예전엔 누가 접속하거나 창을 내렸다 켤 때마다 모두의 지도를 통째로 다시 그려, 사람이 많을 때 폰이 자주 멈칫했음
+      const ids = new Set([...Object.keys(prev), ...Object.keys(counts)]);
+      if ([...ids].some((k) => k !== S.region && (prev[k] || 0) !== (counts[k] || 0))) renderOverlay();
     });
     socket.on('chat', onLiveChat);
     socket.on('chat:deleted', onChatDeleted);
@@ -14610,6 +14656,28 @@
   window.addEventListener('resize', () => { if (!narrowMq.matches && document.body.classList.contains('here-sheet')) hereSheet(false); });
   // 이곳의 드래곤을 누르면(말 걸기·기록 보기 창) 띄운 칸은 닫음
   $('here').addEventListener('click', () => { if (document.body.classList.contains('here-sheet')) setTimeout(() => { if (document.querySelector('dialog[open]')) hereSheet(false); }, 0); });
+  // 화면 상태를 <html>의 꼬리표(f-…)로 옮겨 둠. CSS가 이걸 보고 행동 줄 위로 단추를 띄우거나 뒤 화면 스크롤을 막음.
+  // 예전엔 CSS의 body:has(…)로 직접 찾았는데, 그러면 채팅 한 줄·1초 시계 글씨처럼 아무 데나 바뀔 때마다 브라우저가 화면 전체의 스타일을 다시 계산해 폰에서 채팅이 버벅였음
+  {
+    const root = document.documentElement;
+    const actsEl = $('actions'), actsCard = actsEl?.closest('.region-card'), center = actsCard?.parentElement, pfEl = $('pf-panel');
+    const modalOpen = () => { try { return !!document.querySelector('dialog.dlg:modal'); } catch { return false; } }; // :modal을 모르는 옛 브라우저는 예전 :has 규칙도 몰랐으므로 그대로 꺼 둠
+    const syncFlags = () => {
+      const b = document.body.classList;
+      root.classList.toggle('f-pf-sheet', b.contains('pf-sheet'));
+      root.classList.toggle('f-here-sheet', b.contains('here-sheet'));
+      root.classList.toggle('f-top-hide', head.classList.contains('hide'));
+      root.classList.toggle('f-pf-stuck', !!pfEl?.classList.contains('stuck') && pfEl.parentElement?.matches('main.main'));
+      root.classList.toggle('f-acts', !!(center?.classList.contains('center') && !center.classList.contains('paneled') && !center.classList.contains('in-city') && !actsCard.hidden && !actsEl.hidden));
+      root.classList.toggle('f-modal', modalOpen());
+    };
+    if ('MutationObserver' in window) {
+      const mo = new MutationObserver(syncFlags);
+      for (const n of [document.body, head, pfEl, center, actsCard, actsEl]) if (n) mo.observe(n, { attributes: true, attributeFilter: ['class', 'hidden'] });
+      new MutationObserver(syncFlags).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['open'] }); // 창이 열리고 닫힘
+    }
+    syncFlags();
+  }
   {
     const hereBox = $('here-box'), side = hereBox.parentElement, chatEl = $('chat'), chatH = chatEl.querySelector('.chat-h');
     let hereOpen = (() => { try { return localStorage.getItem('dragon-here-open') === '1'; } catch { return false; } })();
@@ -15040,6 +15108,7 @@
   // 고대 유적의 입구 띠 + 안에 있으면 가운데 칸을 도시 화면으로
   function renderCity() {
     const c = ctMe(), me = S.me; if (!me) return;
+    if (c?.inside) HP.ready(); // 고대도시 안에 들어오면 집터 그림 팩을 미리 받아 둠 (집터·구경 창을 열 때 기다리지 않게)
     { const chip = $('city-chip'), show = !!c && c.open && !!c.plot && c.idle > 0; // 쉬는 골렘이 있으면 머리줄에 알림
       if (chip) { chip.hidden = !show; if (show) { const t = c.back ? `골렘 ${c.back}기가 일을 마치고 돌아왔다` : `골렘 ${c.idle}기가 쉬고 있다`; chip.title = t; chip.setAttribute('aria-label', t); chip.classList.toggle('back', !!c.back); } }
       if (c && CT.lastBack != null && c.back > CT.lastBack) toast(`골렘이 일을 마치고 돌아왔다.${c.inside ? '' : ' 고대도시 내 집터에서 다시 보낼 수 있다.'}`);
@@ -15539,6 +15608,9 @@
     const load = (src) => new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(i); i.src = src; });
     const pix = (im, w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.drawImage(im, 0, 0); return g.getImageData(0, 0, w, h).data; };
     const u32 = (b64) => { const s = atob(b64), a = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; };
+    // 그림 팩(약 500KB)은 집터·가구 그림이 처음 필요할 때 불러옴. 예전엔 고대도시에 가지 않아도 접속할 때마다 받아서 그림 수백 장을 풀었음
+    let started = false;
+    const start = () => { if (started) return; started = true;
     fetch('/house/pack.json').then((r) => r.json()).then(async (d) => {
       P = d; const jobs = [];
       jobs.push(load(d.base).then((i) => { IMG.__base = i; }), load(d.front).then((i) => { IMG.__front = i; }));
@@ -15551,7 +15623,8 @@
       const M = (m) => ({ idx: new Uint32Array(u32(m.idx).buffer), a: m.a ? u32(m.a) : null, y: m.y });
       P.FM = Object.fromEntries(Object.entries(d.fmask).map(([k, m]) => [k, M(m)])); P.WM = Object.fromEntries(Object.entries(d.wmask).map(([k, m]) => [k, M(m)])); P.YM = M(d.ymask); P.WC = Object.fromEntries(Object.entries(d.woodCopy || {}).map(([k, m]) => [k, { b: new Uint32Array(u32(m.b).buffer), f: new Uint32Array(u32(m.f).buffer) }])); P.SC = Object.fromEntries(Object.entries(d.stoneCopy || {}).map(([k, m]) => [k, { b: new Uint32Array(u32(m.b).buffer), f: new Uint32Array(u32(m.f).buffer) }]));
       ok = true; wait.splice(0).forEach((f) => f());
-    }).catch(() => {});
+    }).catch(() => { setTimeout(() => { started = false; }, 30000); }); // 못 받았으면 30초 뒤에 다시 시도할 수 있게
+    };
     const sp = (k) => (P && P.sprites[k]) || null;
     const size = (k) => { const s = sp(k); return s ? [s.w, s.h] : [16, 16]; };
     const baseOf = (k) => (sp(k) && sp(k).of) || k;
@@ -15677,12 +15750,12 @@
         const key = cv._hpAnim.deco.filter((o) => FR[o.s]).map((o) => frameOf(o.s)).join(); if (key !== cv._hpKey) { cv._hpKey = key; paint(cv, cv._hpAnim); } } }, 80);
     const defaults = (plot, done) => (P && P.defaults[plot] ? P.defaults[plot].filter((o) => done.includes(o.room)).map(({ room, ...o }) => o) : []);
     const catalog = () => (P ? Object.keys(P.cat).sort((a, b) => DK_CATS.findIndex(([c]) => c === P.cat[a].cat) - DK_CATS.findIndex(([c]) => c === P.cat[b].cat)) : []);
-    return { W, H, ROOMS, fn: (s) => (P && P.cat[s] && P.cat[s].fn) || '', ready: () => ok, onReady: (f) => (ok ? f() : wait.push(f)), plan, paint, sprite, swatch, size, defaults, where, hit, layer, order, effLayer, support, baseOf, drawSprite, catalog, zone,
+    return new Proxy({ W, H, ROOMS, fn: (s) => (P && P.cat[s] && P.cat[s].fn) || '', ready: () => ok, onReady: (f) => (ok ? f() : wait.push(f)), plan, paint, sprite, swatch, size, defaults, where, hit, layer, order, effLayer, support, baseOf, drawSprite, catalog, zone,
       name: (k) => (sp(k) ? sp(k).name : k), cat: (k) => (P && P.cat[k] ? P.cat[k].cat : ''),
       group: (b) => (P && P.groups[b]) || null, groupLabel: (b) => (P && P.groupLabel && P.groupLabel[b]) || '방향', /* 꽃은 '모양 바꾸기' */ variant: (b, i) => { const g = P && P.groups[b]; return g ? g[i % g.length] : b; },
       floors: () => (P ? P.floors : []), walls: () => (P ? P.walls : []), yardFloors: () => (P ? P.yardFloors.map((id) => (id === 'cobble' ? { id, name: '회색 자갈' } : P.floors.find((f) => f.id === id))) : []),
       floorName: (k) => (k === 'cobble' ? '회색 자갈' : (P.floors.find((f) => f.id === k) || {}).name || k), wallName: (k) => (P.walls.find((f) => f.id === k) || {}).name || k,
-      floorDef: (r) => (P ? P.fdef[r] : ''), wallDef: (r) => (P ? P.wdef[r] : ''), floorDefault: (k) => k === 'cobble' || (P && Object.values(P.fdef).includes(k)), wallDefault: (k) => !!(P && Object.values(P.wdef).includes(k)) };
+      floorDef: (r) => (P ? P.fdef[r] : ''), wallDef: (r) => (P ? P.wdef[r] : ''), floorDefault: (k) => k === 'cobble' || (P && Object.values(P.fdef).includes(k)), wallDefault: (k) => !!(P && Object.values(P.wdef).includes(k)) }, { get: (t, k) => { start(); return t[k]; } }); // 무엇이든 처음 쓰면 그때 팩을 불러옴
   })();
 
   function homeDetail(h) {
@@ -15837,7 +15910,8 @@
       $('city-visit-body').innerHTML = `<div id="home-ui" class="hm-e"><div class="cv-top"><p class="hd-s">${ctEsc(v.plot.name)} · ${ctEsc(v.plot.mood)} · ${stg} / 4단계</p>${v.me ? '' : '<button type="button" class="btn sm cv-gift" data-ct="vgift"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="9" width="17" height="11" rx="1"/><path d="M2.5 9h19M12 9v11M12 9c-2-4-6-4-6-1.5S10 9 12 9zm0 0c2-4 6-4 6-1.5S14 9 12 9z"/></svg>선물</button>'}</div>${gl}
         <div class="hp hp-clean"><canvas class="hp-cv" width="320" height="240" aria-hidden="true"></canvas></div>${fg}
         <section class="hm-book"><h4>방명록${v.book ? '' : ' (받침 없음)'}</h4>${guest}${write}</section></div>`;
-      HP.paint($('city-visit-body').querySelector('.hp-cv'), HP.plan(v.plot.id, rooms, v.deco || HP.defaults(v.plot.id, v.rooms.filter((x) => x.state === 'done').map((x) => x.id)), v.look, v.garden));
+      // 그림 팩을 다 받은 뒤에 배치를 셈 (팩이 없을 때 세면 기본 가구가 빠진 채 그려졌음)
+      HP.onReady(() => { const cv = $('city-visit-body').querySelector('.hp-cv'); if (CT.visit !== v || !cv) return; HP.paint(cv, HP.plan(v.plot.id, rooms, v.deco || HP.defaults(v.plot.id, v.rooms.filter((x) => x.state === 'done').map((x) => x.id)), v.look, v.garden)); });
       if (!d.open) d.showModal();
       fitHP($('city-visit-body'));
     });
@@ -16879,6 +16953,6 @@ function renderEcho() {
 (() => {
   const SEL = 'input[type="number"]:not([inputmode])';
   const fix = (root) => { if (root.matches?.(SEL)) root.setAttribute('inputmode', 'numeric'); root.querySelectorAll?.(SEL).forEach((i) => i.setAttribute('inputmode', 'numeric')); };
-  const start = () => { fix(document); new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1) fix(n); }).observe(document.body, { childList: true, subtree: true }); };
+  const start = () => { fix(document); new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1 && (n.tagName === 'INPUT' || n.getElementsByTagName('input').length)) fix(n); } /* 입력 칸이 든 것만 (채팅 한 줄처럼 입력 칸이 없는 칸은 뒤지지 않고 건너뜀) */).observe(document.body, { childList: true, subtree: true }); };
   if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
 })();
