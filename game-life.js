@@ -425,12 +425,13 @@ function bondFade(k, now, out, d) {
     if (n > 0) {
       k.data.bond = b - n;
       out.lines.push(`${ga(k)} 조금 서운해한다. 한동안 마음을 나누지 못했다. (유대 −${n})`);
+      bondLowNote(k, b, out);
     }
     k.data.fadeN = Math.max(k.data.fadeN || 0, steps);
   }
 }
 // ── 높은 유대 지키기: 잘 챙겨 줘도 70을 넘는 유대는 조금씩 줄어듦 (KIN_BOND.upkeep). 오래 못 챙겨 옅어지는 중이면 bondFade에 맡김 ──
-// 알림은 유대가 10 단위 선(90·80…)을 내려설 때만 (몇 시간마다 소식이 뜨지 않게)
+// 70 아래로는 내려가지 않으므로 알림 없이 조용히 줄어듦 ('마음을 더 써 주자'는 유대가 50 아래일 때만, bondLowNote)
 function bondUpkeep(k, now, out, d) {
   const U = KIN_BOND.upkeep, b = k.data.bond ?? 0;
   const away = k.data.onExp || k.data.errand || k.data.runaway || k.data.companion || d?.rest_at;
@@ -446,11 +447,14 @@ function bondUpkeep(k, now, out, d) {
   k.data.upkeepAt = cur <= U.from ? now : t;
   if (!n) return;
   k.data.bond = Math.max(U.from, Math.round((b - n) * 10) / 10);
-  if (Math.floor(b / 10) > Math.floor(k.data.bond / 10)) {
-    out.lines.push(k.type === 'human'
-      ? `${ga(k)} 요즘 부쩍 보호자의 손길을 기다린다. 마음을 더 써 주자. (유대 ${Math.floor(k.data.bond)})`
-      : `${ga(k)} 요즘 둥지 입구에서 보호자를 자주 기다린다. 마음을 더 써 주자. (유대 ${Math.floor(k.data.bond)})`);
-  }
+}
+// '마음을 더 써 주자' 알림: 유대가 50 아래에서 10 단위 선(49·39…)을 내려설 때만
+function bondLowNote(k, before, out) {
+  const after = k.data.bond ?? 0;
+  if (after >= 50 || Math.floor(before / 10) <= Math.floor(after / 10)) return;
+  out.lines.push(k.type === 'human'
+    ? `${ga(k)} 요즘 부쩍 보호자의 손길을 기다린다. 마음을 더 써 주자. (유대 ${Math.floor(after)})`
+    : `${ga(k)} 요즘 둥지 입구에서 보호자를 자주 기다린다. 마음을 더 써 주자. (유대 ${Math.floor(after)})`);
 }
 
 // ── 시간이 흐르며 일어나는 일 ──────────────────────
