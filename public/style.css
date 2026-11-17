@@ -5544,3 +5544,13 @@ button.stp:hover { background: #fff; border-color: var(--line); }
 .stp.berserk .tm { color: #F6E3E5; }
 .stp.berserk .bar { background: #8E3340; }
 .stp.berserk .bar > b { background: #F2C9CE; }
+
+/* ── 소지품 줄 오른쪽 단추: 폰(860px 이하)에서만 옆으로 늘어놓지 않고 위아래로 (2026-11-17). 넓은 화면은 예전처럼 가로 ──
+   단추 칸의 폭을 맞춰 줄마다 같은 자리에. '누구의 유품일까?' 고르기(ks-mode)는 예전처럼 줄 아래 전체 너비에 가로로 */
+@media (max-width: 860px) {
+  #inv-list .it .acts { flex-direction: column; flex-wrap: nowrap; align-items: stretch; justify-content: center; min-width: 76px; }
+  #inv-list .it .acts .btn { justify-content: center; white-space: nowrap; }
+  #inv-list .it .acts.ks-mode { flex-direction: row; flex-wrap: wrap; align-items: center; min-width: 0; }
+  #inv-list .it .acts.ks-mode .btn { white-space: normal; }
+}
+@media (max-width: 420px) { #inv-list .it .acts { min-width: 62px; } #inv-list .it .acts.ks-mode { min-width: 0; } }
