@@ -2054,12 +2054,10 @@
     const q = INV_Q.trim().toLowerCase();
     let any = 0;
     for (const row of box.querySelectorAll('.it[data-q]')) { const on = !q || row.dataset.q.toLowerCase().includes(q); row.hidden = !on; if (on) any++; }
-    for (const grp of box.querySelectorAll('.inv-box')) { // 묶음마다 (머리줄이 있으면 함께)
-      const vis = [...grp.querySelectorAll('.it[data-q]')].filter((r) => !r.hidden).length;
-      grp.hidden = !!q && !vis;
-      const h = grp.previousElementSibling?.matches('h3.inv-h') ? grp.previousElementSibling : null;
-      if (!h) continue;
-      h.hidden = !!q && !vis;
+    for (const h of box.querySelectorAll('h3.inv-h')) {
+      const grp = h.nextElementSibling;
+      const vis = grp ? [...grp.querySelectorAll('.it[data-q]')].filter((r) => !r.hidden).length : 0;
+      h.hidden = !!q && !vis; if (grp) grp.hidden = !!q && !vis;
       const hn = h.querySelector('.inv-hn'); if (hn) { hn.dataset.all ||= hn.textContent; hn.textContent = q ? `${vis}종` : hn.dataset.all; }
     }
     let none = box.querySelector('.inv-q-none');
@@ -2230,13 +2228,19 @@
         || order[S.items[a].rarity] - order[S.items[b].rarity]
         || S.items[a].name.localeCompare(S.items[b].name, 'ko'));
     const box = $('inv-list');
-    const railY = box.querySelector('.inv-rail')?.scrollTop || 0, railX = box.querySelector('.inv-rail')?.scrollLeft || 0; // 다시 그려도 책갈피(폰은 가로 메뉴)를 보던 자리 그대로
+    const tabX = box.querySelector('.utabs')?.scrollLeft || 0;
     box.replaceChildren();
-    // 분류 책갈피: 가진 물건이 있는 분류만 (전체 · 즐겨찾기는 늘)
+    // 분류 탭: 가진 물건이 있는 분류만 (전체 · 즐겨찾기는 늘)
     const has = new Set([...wornE, ...all].map(([id]) => itemCat(S.items[id])));
     if (invTab !== 'all' && invTab !== 'fav' && !has.has(invTab)) invTab = 'all';
     const kinds = {};
     for (const id of new Set([...wornE, ...all].map(([x]) => x))) { const c = itemCat(S.items[id]); kinds[c] = (kinds[c] || 0) + 1; }
+    const { wrap: bar, tabs } = buildTabs(
+      [['all', '전체'], ['fav', '★ 즐겨찾기'], ...CATS.filter((c) => has.has(c)).map((c) => [c, INV_TAB_NAME[c], true, kinds[c]])],
+      invTab, (k) => { invTab = k; keepScroll($('inv-dlg'), renderInv); }, '물건 분류');
+    bar.classList.add('inv-bar');
+    box.appendChild(bar);
+    showTab(tabs, tabX);
     // 정렬 고르기: 오른쪽 '정렬 기본순 ▾' → 펼침 메뉴
     const SORTS = [['default', '기본순', '등급 · 이름'], ['new', '획득순', '최근에 얻은 것부터'], ['power', '성능순', '장신구는 능력치 합, 회복약은 회복량, 재료는 성질 세기'], ['value', '값순', '물건의 값어치']];
     if (!SORTS.some(([k]) => k === invSort)) invSort = 'default';
@@ -2278,84 +2282,32 @@
     iq.addEventListener('input', () => { INV_Q = iq.value; applyInvQ(box); });
     sb.append(iq, sbtn, smenu);
     box.appendChild(sb);
-    // ── 왼쪽 책갈피(분류) | 오른쪽 목록 칸 ──
-    const split = document.createElement('div'); split.className = 'inv-split';
-    const rail = document.createElement('div'); rail.className = 'inv-rail';
-    rail.setAttribute('role', 'group'); rail.setAttribute('aria-label', '물건 분류');
-    const pane = document.createElement('div'); pane.className = 'inv-pane';
-    split.append(rail, pane);
-    box.appendChild(split);
-    // 장신구 부위: 가진 장신구가 있는 부위만, 개수와 함께
-    const slotCnt = {};
-    for (const id of new Set([...wornE, ...all].map(([x]) => x))) if (S.items[id].type === 'equip') slotCnt[S.items[id].slot] = (slotCnt[S.items[id].slot] || 0) + 1;
-    if (invSlot !== 'all' && !slotCnt[invSlot]) invSlot = 'all';
-    const slotList = [['all', '전체', INV_ICON.equip, kinds.equip || 0], ...S.slots.filter((sl) => slotCnt[sl.key]).map((sl) => [sl.key, sl.name, null, slotCnt[sl.key]])];
-    const pickSlot = (k) => { invSlot = k; keepScroll($('inv-dlg'), renderInv); };
-    const favN = favI.filter((id) => S.items[id]).length;
-    for (const [k, label, n] of [['all', '전체', Object.values(kinds).reduce((a, x) => a + x, 0)], ['fav', '즐겨찾기', favN], ...CATS.filter((c) => has.has(c)).map((c) => [c, INV_TAB_NAME[c], kinds[c]])]) {
-      const on = invTab === k;
-      const bt = document.createElement('button');
-      bt.type = 'button';
-      bt.className = `inv-bm${on ? ' on' : ''}`;
-      bt.setAttribute('aria-pressed', String(on));
-      bt.append(invIcon(INV_ICON[k]));
-      const t = document.createElement('span'); t.className = 'bm-t'; t.textContent = label;
-      const c = document.createElement('span'); c.className = 'bm-n'; c.textContent = n || 0;
-      bt.append(t, c);
-      bt.addEventListener('click', () => { if (invTab === k) return; invTab = k; invSlot = 'all'; keepScroll($('inv-dlg'), renderInv); });
-      rail.appendChild(bt);
-      // 넓은 화면: 장신구를 고르면 그 밑으로 부위가 펼쳐짐 (폰에서는 목록 칸 위의 부위 칸)
-      if (k === 'equip' && on) {
-        for (const [sk, sl, ic, sn] of slotList) {
-          const s2 = document.createElement('button');
-          s2.type = 'button'; s2.className = `inv-bm sub${invSlot === sk ? ' on' : ''}`;
-          s2.setAttribute('aria-pressed', String(invSlot === sk));
-          s2.append(ic ? invIcon(ic) : invIcon(null, SLOT_ICON[sk]));
-          const st = document.createElement('span'); st.className = 'bm-t'; st.textContent = sl;
-          const sc = document.createElement('span'); sc.className = 'bm-n'; sc.textContent = sn;
-          s2.append(st, sc);
-          s2.addEventListener('click', () => pickSlot(sk));
-          rail.appendChild(s2);
-        }
-      }
-    }
-    rail.scrollTop = railY;
-    // 폰의 가로 메뉴: 넘겨 보던 자리를 지키되, 고른 탭이 화면 밖이면 보이는 자리로. 옆에 더 있으면 그쪽 가장자리를 흐리게
-    requestAnimationFrame(() => {
-      if (!rail.isConnected || rail.scrollWidth <= rail.clientWidth + 1) { rail.classList.remove('more-l', 'more-r'); return; }
-      rail.scrollLeft = railX;
-      const on = rail.querySelector('.inv-bm.on');
-      if (on) { const l = on.getBoundingClientRect().left - rail.getBoundingClientRect().left + rail.scrollLeft, r = l + on.offsetWidth; if (l < rail.scrollLeft + 8) rail.scrollLeft = l - 24; else if (r > rail.scrollLeft + rail.clientWidth - 8) rail.scrollLeft = r - rail.clientWidth + 24; }
-      edges();
-    });
-    const edges = () => { rail.classList.toggle('more-l', rail.scrollLeft > 2); rail.classList.toggle('more-r', rail.scrollLeft + rail.clientWidth < rail.scrollWidth - 2); };
-    rail.addEventListener('scroll', edges, { passive: true });
-    // 폰: 장신구 부위 칸 (목록 칸 맨 위, 줄바꿈해서 옆으로 밀리지 않게)
+    // 장신구 탭: 부위별 소분류 (만들기 창과 같은 모양). 가진 장신구 수를 함께
     if (invTab === 'equip') {
+      const cnt = {};
+      for (const id of new Set([...wornE, ...all].map(([x]) => x))) if (S.items[id].type === 'equip') cnt[S.items[id].slot] = (cnt[S.items[id].slot] || 0) + 1;
+      if (invSlot !== 'all' && !cnt[invSlot]) invSlot = 'all';
       const sub = document.createElement('div');
-      sub.className = 'inv-sub';
+      sub.className = 'craft-sub inv-sub';
       sub.setAttribute('role', 'group');
       sub.setAttribute('aria-label', '장신구 부위');
-      for (const [k, label, ic, n] of slotList) {
+      for (const [k, label] of [['all', '전체'], ...S.slots.filter((sl) => cnt[sl.key]).map((sl) => [sl.key, sl.name])]) {
         const bt = document.createElement('button');
         bt.type = 'button';
         bt.className = `subchip${invSlot === k ? ' on' : ''}`;
         bt.setAttribute('aria-pressed', String(invSlot === k));
-        bt.append(ic ? invIcon(ic) : invIcon(null, SLOT_ICON[k]));
-        const t = document.createElement('span'); t.textContent = label;
-        const c = document.createElement('small'); c.textContent = n;
-        bt.append(t, c);
-        bt.addEventListener('click', () => pickSlot(k));
+        bt.textContent = k === 'all' ? label : `${label} ${cnt[k]}`;
+        bt.addEventListener('click', () => { invSlot = k; keepScroll($('inv-dlg'), renderInv); });
         sub.appendChild(bt);
       }
-      pane.appendChild(sub);
+      box.appendChild(sub);
     }
     const buf = S.me.buff && S.me.buff.until > Date.now() ? S.buffs?.[S.me.buff.id] : null;
     if (buf) {
       const n = document.createElement('div');
       n.className = 'buff-now';
       n.textContent = `지금 ${buf.name} 상태 · ${buf.desc} · ${leftMin(S.me.buff.until)}분 남음`;
-      pane.appendChild(n);
+      box.appendChild(n);
     }
     let lastCat = null, group = box;
     const catN = {};
@@ -2365,9 +2317,8 @@
       p.className = 'empty';
       p.textContent = !all.length && !wornE.length ? '아직 모은 물건이 없다. 탐사나 채집으로 모아 보자.'
         : invTab === 'fav' ? '즐겨찾기한 물건이 없다. 물건 이름 앞의 ☆를 누르면 여기에 모인다.' : '이 분류의 물건이 없다.';
-      pane.appendChild(p);
+      box.appendChild(p);
     }
-    const showHead = invTab === 'all' || invTab === 'fav' || invTab === 'equip';
     // 강화·각인된 한 개가 소지품에 있으면 그 한 개는 따로 한 줄로 (나머지는 보통 것)
     const rows = [];
     for (const [id, qty, slot] of list) {
@@ -2381,21 +2332,17 @@
       const cat = groupOf(id);
       if (cat !== lastCat) {
         lastCat = cat;
-        if (showHead) {
-          const h = document.createElement('h3');
-          h.className = 'inv-h';
-          h.append(invIcon(INV_ICON[cat]));
-          const slotNm = invTab === 'equip' && invSlot !== 'all' ? S.slots.find((x) => x.key === invSlot)?.name : '';
-          h.append(cat === 'fav' ? '즐겨찾기' : slotNm ? `장신구 · ${slotNm}` : CAT_NAME[cat]);
-          const hn = document.createElement('span');
-          hn.className = 'inv-hn';
-          hn.textContent = `${catN[cat]}종`;
-          h.appendChild(hn);
-          pane.appendChild(h);
-        }
+        const h = document.createElement('h3');
+        h.className = 'inv-h';
+        h.textContent = cat === 'fav' ? '★ 즐겨찾기' : CAT_NAME[cat];
+        const hn = document.createElement('span');
+        hn.className = 'inv-hn';
+        hn.textContent = `${catN[cat]}종`;
+        h.appendChild(hn);
+        box.appendChild(h);
         group = document.createElement('div');
         group.className = 'inv-box';
-        pane.appendChild(group);
+        box.appendChild(group);
       }
       const row = document.createElement('div');
       row.className = `it ${it.rarity}`;
@@ -2462,8 +2409,6 @@
         const it0 = nm.querySelector('.itags'); if (it0) tg.appendChild(it0);
         for (const el of [...nb.children]) if (el !== nm) tg.appendChild(el);
         nb.appendChild(tg);
-        const cc = tg.querySelector('.itag[class*="cat-"]');
-        if (cc && cat !== 'fav' && cc.textContent === INV_TAB_NAME[cat]) cc.remove();
       }
       setItemDesc(row.querySelector('small'), it);
       if (it.cat === 'trophy') {
@@ -2695,28 +2640,6 @@
     });
   }
   const INV_TAB_NAME = { treasure: '보물', equip: '장신구', use: '회복약', buff: '강화 음식', gift: '선물·추억', meal: '식구 요리', fish: '낚시', trophy: '전리품', mat: '재료' };
-  // 소지품 분류 그림 (책갈피·묶음 머리줄). 선 그림 하나, 색은 글자색을 따름
-  const INV_ICON = {
-    all: 'M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M13 13h7v7h-7z',
-    fav: 'M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z',
-    treasure: 'M4 10h16v9H4z M4 10c0-3 3.6-5 8-5s8 2 8 5 M4 13.5h16 M10.8 12.3h2.4v3.4h-2.4z',
-    equip: 'M8 4h8l3.5 4.5L12 20 4.5 8.5z M4.5 8.5h15 M10 4l-1.5 4.5L12 20l3.5-11.5L14 4',
-    use: 'M9.5 3h5 M10.5 3v5.5L6 16.5A2.8 2.8 0 0 0 8.5 20.5h7a2.8 2.8 0 0 0 2.5-4L13.5 8.5V3 M7.5 14.5h9',
-    buff: 'M12 3c.8 3.2 5 5.2 5 10a5 5 0 0 1-10 0c0-2.8 1.6-4 2-6 1 1 1.4 2 1.4 3.2C11.4 8.5 12.2 6 12 3z',
-    gift: 'M4 9h16v4H4z M5.5 13h13v7h-13z M12 9v11 M12 9c-1.5-3.5-5.5-4-5.5-1.5S10 9 12 9c2 0 5.5.5 5.5-1.5S13.5 5.5 12 9',
-    meal: 'M3.5 12h17a8.5 6.5 0 0 1-17 0z M8.5 3.5c-1 1.4 1 2.6 0 4 M12 3.5c-1 1.4 1 2.6 0 4 M15.5 3.5c-1 1.4 1 2.6 0 4 M8 20.5h8',
-    fish: 'M3 12c3-5 9-6.5 14-2.2L21 7v10l-4-2.8C12 18.5 6 17 3 12z M7.5 11.2v.1',
-    trophy: 'M8 4c1 1 2.6 1.6 4 1.6S15 5 16 4l2.2 3-.8 3 1.8 4-2 2 .8 4-3-.9-3 .9-3-.9-3 .9.8-4-2-2 1.8-4-.8-3z', // 펼친 털가죽
-    mat: 'M5 19C5 10 10 5 19 5c0 9-5 14-14 14z M5 19l8.5-8.5',
-  };
-  // d: 선 하나(path d) · inner: 여러 도형을 담은 svg 속 (장신구 부위 그림 SLOT_ICON)
-  function invIcon(d, inner) {
-    const sv = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    sv.setAttribute('viewBox', '0 0 24 24'); sv.setAttribute('aria-hidden', 'true'); sv.classList.add('ii');
-    if (inner) sv.innerHTML = inner;
-    else { const pth = document.createElementNS('http://www.w3.org/2000/svg', 'path'); pth.setAttribute('d', d || ''); sv.appendChild(pth); }
-    return sv;
-  }
   function openInv() { fetchInv(() => { renderInv(); openPanel('inv-dlg'); }); }
   // ── 쓰임새: 이 재료로 만들 수 있는 것 (숨겨진 제작법은 찾아낸 것만) ──
   function usesOf(id) {
