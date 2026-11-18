@@ -32,7 +32,7 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
   const basePer = (lv) => 80 + lv * 4; // 같은 레벨 드래곤이 한 번 맞설 때 입히는 피해 (처음에 짐작한 공식)
   // 재앙이 끝나면(쓰러짐·떠남) 이번 기록으로 다음 재앙 체력을 맞춤
   function learn() {
-    if (st.gm) return; // GM이 체력·레벨을 정해 부른 재앙이나 GM이 떠나보낸 재앙은 배우지 않음
+    if (st.gm || st.ev) return; // 잔치 재앙(크라켄 등 ev)도 배우지 않음. GM이 체력·레벨을 정해 부른 재앙이나 GM이 떠나보낸 재앙은 배우지 않음
     const T = BOSS.tune || {};
     const tries = Object.values(st.tries || {}).reduce((a, b) => a + b, 0);
     const dmg = Object.values(st.dmg || {}).reduce((a, b) => a + b, 0);
@@ -56,6 +56,8 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
   }
   const save = () => { db.worldSet('boss', st); db.worldSet('boss_next', nextAt); };
   const shout = (text) => io.emit('system', { text, at: Date.now() });
+  // 알림 머리말: 대륙의 재앙, 또는 잔치 재앙의 tag (예: 풍어 잔치)
+  const tagOf = (key) => BOSSES[key]?.tag || '대륙의 재앙';
   const active = () => !!st && !st.done;
   const WILD = () => Object.keys(BOSSES).filter((r) => REGIONS[r] && !SHOPS[r]);
   if (!nextAt) { nextAt = Date.now() + rand(...BOSS.gapHours) * HOUR; save(); }
@@ -70,7 +72,7 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
     const r = ranking();
     const sum = total() || 1;
     return {
-      id: st.id, key: st.key, region: st.region, name: T.name, desc: T.desc, type: T.type, lv: st.lv,
+      id: st.id, key: st.key, region: st.region, name: T.name, desc: T.desc, type: T.type, lv: st.lv, tag: tagOf(st.key), ev: !!T.ev,
       weak: T.weak, resist: T.resist, special: T.special.name,
       hp: Math.max(0, Math.round(st.hp)), hpMax: st.hpMax, at: st.at, until: st.until, ap: BOSS.ap, turns: BOSS.turns,
       fighters: r.length,
@@ -89,15 +91,16 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
     const regions = WILD().filter((r) => r !== logic.corruptedRegion(now));
     if (!key) key = regions[Math.floor(Math.random() * regions.length)];
     if (!BOSSES[key]) return { error: '그 지역에는 재앙이 나타나지 않는다.' };
+    if (BOSSES[key].ev && !opt.ev) return { error: '그 재앙은 잔치 동안에만 나타난다.' };
     const avg = list.length ? list.reduce((a, x) => a + x.level, 0) / list.length : 3;
     const lv = Math.max(BOSS.lvMin, Math.min(BOSS.lvMax, opt.lv || Math.round(avg) + BOSS.lvAdd));
     // 한 번 피해 = 공식 × 지난 재앙에서 잰 실제 배율, 그리고 쓰러지는 빠르기에 맞춘 체력 배율
     const per = basePer(lv) * (tune.ratio || 1);
     const hpMax = opt.hp || Math.round(per * BOSS.triesPerActive * Math.max(BOSS.minActive, list.length) * (tune.mult || 1));
-    st = { id: (st?.id || 0) + 1, key, region: key, lv, hp: hpMax, hpMax, at: now, until: now + BOSS.lastsHours * HOUR, dmg: {}, names: {}, tries: {}, news: [], last: null, done: null, paid: [], gm: !!(opt.hp || opt.lv) };
+    st = { id: (st?.id || 0) + 1, key, region: key, lv, hp: hpMax, hpMax, at: now, until: now + BOSS.lastsHours * HOUR, dmg: {}, names: {}, tries: {}, news: [], last: null, done: null, paid: [], gm: !!(opt.hp || opt.lv), ev: !!BOSSES[key].ev };
     save();
     const T = BOSSES[key];
-    shout(`[대륙의 재앙] ${REGIONS[key].name}에 ${ga(T.name)} 나타났다! ${T.desc} 모든 드래곤이 힘을 모아야 한다. (${BOSS.lastsHours}시간 안에)`);
+    shout(`[${tagOf(key)}] ${REGIONS[key].name}에 ${ga(T.name)} 나타났다! ${T.desc} 모든 드래곤이 힘을 모아야 한다. (${BOSS.lastsHours}시간 안에)`);
     st.pin = io.lastNews || null; save(); // 재앙이 머무는 동안 이 알림은 이야기 창 기록에 늘 남김
     push();
     return { ok: true, view: view() };
@@ -119,8 +122,9 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
     const T = BOSSES[st.key];
     grant(id, (d) => {
       const gold = Math.round(st.lv * (BOSS.goldBase + BOSS.goldShare * share));
-      const ids = Array(BOSS.core).fill('calamity_core');
-      if (rank <= BOSS.top) ids.push(...Array(BOSS.topCore).fill('calamity_core'), logic.rollItem(st.key, { uncommon: 0, rare: 1 }));
+      const R = T.reward; // 잔치 재앙: 재앙의 핵 대신 (기본 n개 + 내 몫 × per, 많아야 max개)
+      const ids = R ? Array(Math.min(R.max, R.n + Math.floor(share * R.per))).fill(R.item) : Array(BOSS.core).fill('calamity_core');
+      if (rank <= BOSS.top) ids.push(...(R ? [] : Array(BOSS.topCore).fill('calamity_core')), logic.rollItem(st.key, { uncommon: 0, rare: 1 }));
       const items = logic.bundle(ids);
       d.gold += gold;
       const lines = [`${eul(T.name)} 쓰러뜨렸다! 대륙의 드래곤들이 함께 이겨 냈다.`, `내가 입힌 피해는 전체의 ${Math.round(share * 100)}%, ${rank}위였다.`];
@@ -131,8 +135,8 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
       lines.push(...logic.traitCount(d, 'bosswin'));
       if (id === lastId) { lines.push('마지막 일격은 나의 것이었다!'); lines.push(...logic.traitCount(d, 'bosslast')); }
       logic.dexWin(d, `boss:${st.key}`); // 도감
-      logic.chron(d, 'mark', `대륙의 재앙 ${eul(T.name)} 함께 쓰러뜨렸다. (${rank}위${id === lastId ? ', 마지막 일격' : ''})`);
-      return { title: '대륙의 재앙', lines, items };
+      logic.chron(d, 'mark', `${T.ev ? '' : '대륙의 재앙 '}${eul(T.name)} 함께 쓰러뜨렸다. (${rank}위${id === lastId ? ', 마지막 일격' : ''})`);
+      return { title: tagOf(st.key), lines, items };
     });
   }
   function defeat(lastId) {
@@ -144,7 +148,7 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
     const r = ranking();
     save();
     learn();
-    shout(`[대륙의 재앙] ${ga(T.name)} 쓰러졌다! ${r.length}마리의 드래곤이 함께 맞섰다. 마지막 일격: ${st.names[lastId] || ''}${r[0] ? ` · 가장 큰 피해: ${r[0].name}` : ''}`);
+    shout(`[${tagOf(st.key)}] ${ga(T.name)} 쓰러졌다! ${r.length}마리의 드래곤이 함께 맞섰다. 마지막 일격: ${st.names[lastId] || ''}${r[0] ? ` · 가장 큰 피해: ${r[0].name}` : ''}`);
     r.forEach((x, i) => { st.paid.push(x.id); payOne(x.id, i + 1, x.dmg / sum, lastId); });
     nextAt = Date.now() + rand(...BOSS.gapHours) * HOUR;
     save();
@@ -157,9 +161,9 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
     nextAt = Date.now() + rand(...BOSS.gapHours) * HOUR;
     save();
     learn();
-    shout(`[대륙의 재앙] ${ga(T.name)} ${REGIONS[st.region].name}${josa(REGIONS[st.region].name, '을', '를')} 휩쓸고 어디론가 떠났다. 남은 체력 ${Math.round((st.hp / st.hpMax) * 100)}%.`);
+    shout(`[${tagOf(st.key)}] ${ga(T.name)} ${REGIONS[st.region].name}${josa(REGIONS[st.region].name, '을', '를')} 휩쓸고 ${T.ev ? '바다 밑으로 돌아갔다' : '어디론가 떠났다'}. 남은 체력 ${Math.round((st.hp / st.hpMax) * 100)}%.`);
     // 놓친 대가 (GM이 떠나보낸 재앙은 제외): 재앙의 오염이 있으면 휩쓸고 간 곳과 그 주변이 오염됨 (server.js의 blight)
-    if (!st.gm && BOSS.blight && logic.hooks.bossBlight) {
+    if (st.ev) { /* 잔치 재앙은 놓쳐도 아무 일 없음 */ } else if (!st.gm && BOSS.blight && logic.hooks.bossBlight) {
       logic.hooks.bossBlight(st.region, T.name);
     } else if (!st.gm && BOSS.scar) { // 예전 방식: 휩쓸고 간 땅의 짐승들이 한동안 사나워짐
       scar = { region: st.region, name: T.name, until: Date.now() + BOSS.scar.hours * HOUR };
@@ -191,7 +195,7 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
     if (first) lines.push('도감에 대륙의 재앙을 적어 두었다.');
     const view = arena.startHunt(d, b, c, null, (dd, bb) => result(dd, bb, bossId));
     db.saveState(d);
-    return { ok: true, battle: view, lines, title: `재앙 · ${T.name}` };
+    return { ok: true, battle: view, lines, title: `${T.ev ? T.tag : '재앙'} · ${T.name}` };
   }
   // 한 번 맞선 결과
   function result(d, b, bossId) {
@@ -214,7 +218,7 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
         const after = st.hp / st.hpMax;
         for (const t of BOSS.news) if (before > t && after <= t && !st.news.includes(t)) {
           st.news.push(t);
-          shout(`[대륙의 재앙] ${ga(b.b.name)} 비틀거린다! 남은 체력 ${Math.round(after * 100)}%. (${REGIONS[st.region].name})`);
+          shout(`[${tagOf(st.key)}] ${ga(b.b.name)} 비틀거린다! 남은 체력 ${Math.round(after * 100)}%. (${REGIONS[st.region].name})`);
         }
         if (st.hp <= 0) killed = true;
         const v = view();
@@ -237,7 +241,7 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
     if (gold) lines.push(`흩어진 비늘 사이에서 금화 ${gold}닢을 주웠다.`);
     lines.push(`체력을 ${Math.round(Math.max(0, (me.hp0 ?? me.hpMax) - me.hp))} 잃었다.`);
     if (killed) setImmediate(() => defeat(d.id)); else setImmediate(push);
-    return { title: `대륙의 재앙`, lines, items: [], gold, xp, levelUp, win: killed, turns: b.turn, fall: false, dealt, wound: d.hp <= logic.hpCap(d) * 0.15 };
+    return { title: tagOf(st.key), lines, items: [], gold, xp, levelUp, win: killed, turns: b.turn, fall: false, dealt, wound: d.hp <= logic.hpCap(d) * 0.15 };
   }
 
   // 1분마다: 시간이 다 되면 떠나고, 때가 되면 새 재앙
@@ -245,7 +249,8 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
     const now = Date.now();
     if (active() && st.until <= now) gone();
     else if (!active() && nextAt && now >= nextAt) {
-      const r = spawn();
+      const ov = logic.hooks.bossOverride?.(); // 풍어 요리 잔치 중이면 재앙 차례에 크라켄이 대신 (contest.js)
+      const r = ov ? spawn(ov, { ev: true }) : spawn();
       if (r.error) { nextAt = now + HOUR; save(); }
     }
   }, 60000);
@@ -275,7 +280,7 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
     });
     gm('gm:boss:spawn', (p) => {
       const key = str(p.key) || null;
-      const r = spawn(key, { force: true, lv: Number(p.lv) || 0, hp: Number(p.hp) || 0 });
+      const r = spawn(key, { force: true, lv: Number(p.lv) || 0, hp: Number(p.hp) || 0, ev: !!p.ev });
       return r.error ? r : { ok: true, view: r.view, gmlog: `대륙의 재앙을 불렀다: ${r.view.name} (${REGIONS[r.view.region].name}, Lv.${r.view.lv}, 체력 ${r.view.hpMax})` };
     });
     gm('gm:boss:hp', (p) => {
@@ -329,9 +334,9 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
 
   // 재앙이 쓰러지거나 떠난 지 하루가 안 된 지역이면 그 흔적 (이벤트 '재앙이 지나간 자리')
   function trace(region) {
-    if (!st || !st.done || st.region !== region || !st.doneAt || Date.now() - st.doneAt > 24 * HOUR) return null;
+    if (!st || !st.done || st.ev || st.region !== region || !st.doneAt || Date.now() - st.doneAt > 24 * HOUR) return null; // 잔치 재앙은 흔적 이벤트 없음
     return { name: BOSSES[st.key].name, won: st.done === 'win' };
   }
 
-  return { attach, view, spawn, trace, nextAt: () => nextAt, _state: () => st, pin: () => (active() ? st.pin || null : null) };
+  return { attach, view, spawn, trace, nextAt: () => nextAt, active: () => (active() ? st.key : null), gone: () => { if (active()) { st.gm = true; gone(); } }, _state: () => st, pin: () => (active() ? st.pin || null : null) };
 };

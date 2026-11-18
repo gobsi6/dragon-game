@@ -130,6 +130,8 @@ const titleName = (d) => titleOn(d)?.name || null;
 const titleCrown = (d) => titleOn(d)?.crown || null; // 단 칭호의 왕관 (이벤트 칭호: 'gold')
 const titleCrownText = (d) => titleOn(d)?.crownText || null; // 왕관 옆 작은 글씨 (예: '1위')
 // 단 칭호의 효과. 지역 칭호는 그 지역에 있을 때만 공격·받는 피해가 바뀜
+// 요리대회(풍어 요리 잔치) 물건: 대회 때만 얻는 재료·요리·상품 (도감 업적 칸에서 뺌)
+function isCcItem(id) { const b = String(id).split('__')[0]; return b.startsWith('cc_') || b === 'kraken_leg'; }
 function titleMods(d) {
   const t = titleOn(d);
   if (!t) return {};
@@ -231,7 +233,7 @@ function titlesView(d) {
       const [cur, at] = titleProgress(d, ti);
       if (ti.event && !t.have.includes(ti.id)) return null; // 이벤트 칭호는 받은 뒤에만 목록에 보임
       const hidden = !!ti.hide && !t.have.includes(ti.id) && !(traitsOf(d).counts[ti.hide] > 0);
-      return { id: ti.id, name: ti.name, eff: ti.eff, cond: ti.event ? `이벤트로 받은 칭호${ti.crownText ? ` · ${ti.crownText}` : ''}` : titleCondText(ti, d), have: t.have.includes(ti.id), cur: ti.event ? 1 : hidden ? 0 : Math.min(cur, at), at, hidden, crown: ti.crown || null };
+      return { id: ti.id, name: ti.name, eff: ti.secret && !t.have.includes(ti.id) ? '효과는 받아 봐야 알 수 있다.' : ti.eff, cond: ti.event ? `이벤트로 받은 칭호${ti.crownText ? ` · ${ti.crownText}` : ''}` : titleCondText(ti, d), have: t.have.includes(ti.id), cur: ti.event ? 1 : hidden ? 0 : Math.min(cur, at), at, hidden, crown: ti.crown || null };
     }).filter(Boolean),
   };
 }
@@ -627,6 +629,7 @@ function loseMind(d, n, max = Infinity) {
 function spendAp(d, n, now = Date.now()) {
   if (d.ap >= apCap(d)) d.ap_at = now;
   d.ap -= n;
+  d.apSpent = { n, at: now }; // 방금 쓴 행동력 (저장하지 않음): 이어서 사냥·강적 싸움이 열리면 끊긴 싸움 안내가 이 값을 적어 둠 → 서버가 다시 켜지면 돌려줌
 }
 
 // 행동에 드는 행동력. 은둔은 인간 마을에서 변장하느라 탐사·채집에 더 듦
@@ -697,6 +700,7 @@ function festivalNow(now = Date.now()) {
 function townArrows(d) {
   if (d.stance !== 'hostile' || !isTown(d.region)) return null;
   if (d.region === FESTIVAL.region && festivalNow()) return null;
+  if (hooks.townSafe?.(d.region)) return null; // 풍어 요리 잔치 중인 해안도 쏘지 않음 (contest.js)
   const [a, b] = SR.hostile.arrows;
   const dmg = Math.max(3, Math.round(randInt(a, b) - statsOf(d).scale * 0.2));
   d.hp = Math.max(1, d.hp - dmg);
@@ -1123,7 +1127,7 @@ function finishExpedition(d, now = Date.now(), companions = 0) {
 // ── 제작 ───────────────────────────────────────────
 // 둥지의 대장장이가 있으면 기력이 30% 덜 듦
 // 요리: 강화 음식(쓰면 사나움 등)과 식구 요리 (칭호 '둥지의 요리사'·'용족의 미식가'가 셈)
-const isCook = (id) => { const it = ITEMS[id]; return !!it && ((it.type === 'use' && !!it.use?.buff) || it.cat === 'meal'); };
+const isCook = (id) => { const it = ITEMS[id]; return !!it && ((it.type === 'use' && !!it.use?.buff) || it.cat === 'meal' || !!it.dish); }; // dish: 잔치 요리 (요리대회)
 const craftEnBase = (d, r) => Math.ceil(r.en * (d.perks?.smith ? 0.7 : 1) * (titleMods(d).craftEn || 1) * lifeMods(d).craftEn * (atForge(d) ? CRAFT.forge.en - FACILITY.list.forge.en * (forgeP(d) - 1) : 1) - 1e-9);
 // 칭호 '둥지의 요리사': 요리는 기력이 적어(3~4) 올림하면 줄지 않으니, 요리에만 내림으로 (최소 1)
 const craftEn = (d, r) => { const en = craftEnBase(d, r), k = isCook(r.out) ? titleMods(d).cookEn || 1 : 1; return k < 1 ? Math.max(1, Math.floor(en * k + 1e-9)) : en; };
@@ -1183,7 +1187,7 @@ function craft(d, outId, have, focus = null, spice = null) {
   }
   const it = ITEMS[r.out];
   const f = it.type === 'equip' && Number.isFinite(Number(focus)) ? Math.max(0, Math.min(1, Number(focus))) : null;
-  const chance = greatChance(d, f);
+  const chance = Math.min(CRAFT.great.cap, greatChance(d, f) + (isCook(r.out) ? titleMods(d).cookGreat || 0 : 0)); // 요리 대성공 (지금은 이 효과를 가진 칭호 없음)
   if (d.en >= enCap(d)) d.en_at = Date.now();
   d.en -= en;
   const items = Object.entries(r.needs).map(([id, n]) => ({ id, qty: -n }));
@@ -1249,7 +1253,7 @@ function experiment(d, ids, have, opts = {}) {
   // 직접 빚은 물건은 다시 화로에 넣을 수 없음 (값이 거듭 불어나지 않게)
   const re = ids.find((id) => ITEMS[id].custom);
   if (re) return { error: `${ITEMS[re].name}${josa(ITEMS[re].name, '은', '는')} ${ITEMS[re].exotic ? '안개 너머에서 온 물건이라' : '직접 빚은 물건이라 다시'} 화로에 넣을 수 없다.` };
-  const key = (r) => Object.keys(r.needs).sort().join('|');
+  const key = (r) => (r.find || Object.keys(r.needs)).slice().sort().join('|'); // find: 재료가 많은 숨은 제작법을 찾는 열쇠 재료 (잔치 요리)
   const mine = ids.slice().sort().join('|');
   const hit = RECIPES.find((r) => key(r) === mine);
   // 성질 없는 재료(숨은 제작법에만 쓰이는 꿀 고약 등)를 넣었는데 제작법과 맞지 않으면: 기력을 쓰고, 넣은 재료 중 하나가 무작위로 터져 사라짐
@@ -1280,6 +1284,7 @@ function experiment(d, ids, have, opts = {}) {
     knownRecipes(d).push(hit.out);
     found = hit.out;
     lines.push(`재료가 녹아 하나로 엉기더니 새로운 모양이 떠올랐다… '${ITEMS[hit.out].name}' 제작법을 알아냈다!`);
+    if (hit.find) lines.push(`제대로 만들려면 재료가 더 든다. (${Object.entries(hit.needs).map(([id, q]) => `${ITEMS[id].name} ${q}`).join(', ')})`);
     lines.push(...(hooks.firstRecipe ? hooks.firstRecipe(d, hit.out) : []));
   } else {
     lines.push(`이미 아는 제작법이다. ('${ITEMS[hit.out].name}') 만들기에서 만들 수 있다.`);
@@ -1293,9 +1298,9 @@ function freeCraft(d, ids, have, opts = {}) {
   // 성질이 없는 물건(회복약·요리·물고기 등)은 섞어 빚을 수 없음 (숨은 제작법에 맞을 때만 쓰임)
   const plain = ids.find((id) => !FREE.tags[id]);
   if (plain) return { error: `${ITEMS[plain].name}에는 성질이 없어 섞어 빚을 수 없다.` };
-  const r = opts.gift ? FREE_R.resolveGift(ids) : opts.meal ? FREE_R.resolveMeal(ids) : FREE_R.resolve(ids, statsOf(d).wisdom, greatChance(d, null));
+  const r = opts.gift ? FREE_R.resolveGift(ids) : opts.meal ? FREE_R.resolveMeal(ids) : FREE_R.resolve(ids, statsOf(d).wisdom, greatChance(d, null), Math.random, titleMods(d).freeFood || 0); // 칭호 '대륙의 요리사': 직접 빚은 먹을거리
   const [b0, per] = FREE.en[r.kind || 'food'];
-  const en = r.kind ? b0 + per * ids.length : CRAFT.experiment.en;
+  const en = r.kind ? Math.max(1, Math.round((b0 + per * ids.length) * (titleMods(d).freeEn || 1))) : CRAFT.experiment.en; // 칭호 '풍어 잔치 손님': 자유 제작 기력 −10%
   if (d.en < en) return { error: `기력이 모자란다. (${en} 필요)` };
   if (d.en >= enCap(d)) d.en_at = Date.now();
   d.en -= en;
@@ -1309,6 +1314,16 @@ function freeCraft(d, ids, have, opts = {}) {
     freeNote(d, { at: Date.now(), mats: ids, fail: r.fail });
     return { title: '실험 · 실패', lines, items, gold: back, free: { fail: r.fail } };
   }
+  // 칭호가 직접 빚은 먹을거리에 더하는 것: '맛을 아는 용' 정신 회복 · '심연 요리사' 확률로 광기
+  const tm = titleMods(d), titleLines = [];
+  if (r.kind === 'food') {
+    if (tm.tasteMind) { r.use.mind = (r.use.mind || 0) + tm.tasteMind; titleLines.push(`한 입 맛보자 기분이 좋아졌다. 바로 이 맛이다! (정신 +${tm.tasteMind})`); }
+    if (tm.abyssFrenzy && !r.use.buff && Math.random() < tm.abyssFrenzy) {
+      r.use.buff = 'frenzy';
+      r.name = `꿈틀거리는 ${r.name}`;
+      titleLines.push('화로 속에서 무언가가 꿈틀거렸다… 한 입 먹으면 눈앞이 붉게 끓어오를 것 같다. (먹으면 광기 상태. 심사위원들은 받지 않는다)');
+    }
+  }
   const made = hooks.registerCustom ? hooks.registerCustom(d, ids, r) : null;
   if (!made) return { error: '빚은 물건을 기록하지 못했다.' };
   items.push({ id: made.id, qty: 1 });
@@ -1316,6 +1331,7 @@ function freeCraft(d, ids, have, opts = {}) {
   const qWord = { good: ' 손끝에 기운이 실렸다. 좋은 물건이다!', great: ' 화로가 환하게 빛났다. 빼어난 물건이다!', normal: '' }[r.quality];
   lines.push(`재료가 녹아 하나로 엉기더니 '${it.name}'${josa(it.name, '이', '가')} 되었다.${qWord}`);
   if (r.mw) lines.push('불길까지 완벽하게 맞아 걸작이 되었다.');
+  lines.push(...titleLines);
   lines.push(...(hooks.creation ? hooks.creation(d, r, made.id) : []));
   if (r.kind === 'gift') lines.push('보물 상자에 간직하거나, 누군가에게 선물할 수 있다.');
   if (r.kind === 'meal') traitCount(d, 'cook'); // 칭호: 자유 제작으로 빚은 식구 요리도 요리로 셈
@@ -1325,7 +1341,7 @@ function freeCraft(d, ids, have, opts = {}) {
 }
 // 바랜 제작서: 읽으면 아직 모르는 숨겨진 제작법 하나를 바로 알게 됨 (예전에 반쯤 읽어 실마리만 얻은 것이 있으면 그것부터)
 function readRecipeScroll(d) {
-  const left = RECIPES.filter((r) => r.hidden && !knownRecipes(d).includes(r.out));
+  const left = RECIPES.filter((r) => r.hidden && !r.cc && !knownRecipes(d).includes(r.out)); // 잔치 요리(cc)는 직접 찾아야 함
   if (!left.length) return { error: '이미 모든 숨겨진 제작법을 알고 있다.' };
   const c = combatJson(d);
   const H = (c.scrollHints ||= {});
@@ -1487,7 +1503,7 @@ function craftView(d) {
   return {
     known: knownRecipes(d).slice(),
     needs: Object.fromEntries(knownRecipes(d).map((o) => [o, RECIPES.find((r) => r.out === o)?.needs || {}])), // 찾아낸 숨겨진 제작법의 재료
-    hiddenLeft: RECIPES.filter((r) => r.hidden && !knownRecipes(d).includes(r.out)).length,
+    hiddenLeft: RECIPES.filter((r) => r.hidden && !r.cc && !knownRecipes(d).includes(r.out)).length, // 잔치 요리 제작법은 셈에서 뺌 (대회 창에서 따로 보여 줌)
     great: Math.round(greatChance(d) * 1000) / 10,
     forge: atForge(d), hasForge: !!(d.nest && nestInfo(d).forge),
     gear: Object.fromEntries(Object.entries(gearOf(d)).map(([id, g]) => [id, { ...g, at: gearAt(d, id) }])), // at: 강화된 한 개가 어디 있는지
@@ -1615,6 +1631,7 @@ function useItem(d, id, have, opts = {}) {
     const hm = lifeMods(d).healItem;
     if (u.hp && d.hp < hpCap(d)) { const before = d.hp; d.hp = Math.min(hpCap(d), d.hp + Math.round(u.hp * hm)); lines.push(`체력이 ${d.hp - before} 회복되었다.`); }
     if (u.en && d.en < enCap(d)) { const before = d.en; d.en = Math.min(enCap(d), d.en + Math.round(u.en * hm)); lines.push(`기력이 ${d.en - before} 회복되었다.`); }
+    if (u.mind && !berserkOf(d) && (d.mind ?? MIND.max) < MIND.max) { const before = d.mind ?? MIND.max; d.mind = Math.min(MIND.max, before + u.mind); lines.push(`정신이 ${d.mind - before} 맑아졌다.`); } // 정신도 채워 주는 강화 음식 (직접 빚은 것)
     return { title: it.name, lines, items: [{ id, qty: -1 }] };
   }
   // 여러 효과가 있는 물건(체력·기력·행동력·정신)은 하나라도 쓸모가 있으면 씀. 이미 가득 찬 효과는 건너뜀
@@ -2611,7 +2628,7 @@ function dexView(d) {
     beasts.push({ region: r, name: dexRegionName(r), ruin: isRuin(r), list });
   }
   // 대륙의 재앙
-  const bosses = Object.entries(BOSSES).map(([r, B]) => {
+  const bosses = Object.entries(BOSSES).filter(([r, B]) => !B.ev || x.m[`boss:${r}`]).map(([r, B]) => { // 잔치 재앙(크라켄)은 만난 뒤에만
     const e = x.m[`boss:${r}`];
     const where = `${dexRegionName(r)}에 나타남`;
     return e ? { seen: true, name: B.name, where, desc: B.desc, info: fightInfo(B), sub: `쓰러뜨린 수 ${e[1]}`, at: e[0], fresh: isNew(e[0]) } : { seen: false, where };
@@ -2634,6 +2651,7 @@ function dexView(d) {
   for (const [id, it] of Object.entries(ITEMS)) {
     if (it.cooked || it.spiced || it.mwOf || it.custom || fishIds.has(id)) continue; // 직접 빚은 물건은 '빚은 물건'에 따로
     const at = x.i[id];
+    if (at == null && isCcItem(id)) continue; // 요리대회 물건은 얻은 뒤에만 도감에
     const src = dexSources(d, id);
     const row = at != null
       ? { seen: true, id, name: it.name, rarity: it.rarity, desc: it.desc, sub: src.join(' · '), at, fresh: isNew(at) }
@@ -2675,9 +2693,9 @@ function dexHasNew(d) {
 const DEX_ALL = (() => { // 도감의 모든 칸 (분류별 물건 id 포함)
   const fishIds = new Set(FISHING.fish.map((f) => f.id));
   const cats = {};
-  for (const [id, it] of Object.entries(ITEMS)) if (!it.cooked && !it.spiced && !it.mwOf && !fishIds.has(id)) (cats[dexCat(it)] ||= []).push(id);
+  for (const [id, it] of Object.entries(ITEMS)) if (!it.cooked && !it.spiced && !it.mwOf && !fishIds.has(id) && !isCcItem(id)) (cats[dexCat(it)] ||= []).push(id); // 요리대회 물건은 업적 칸에서 뺌 (대회 때만 얻음)
   const beasts = Object.values(REGION_PLACES).flat().flatMap((p) => [p, `${p}!`]);
-  return { cats, beasts, bosses: Object.keys(BOSSES).map((r) => `boss:${r}`), fish: [...fishIds], items: Object.values(cats).flat() };
+  return { cats, beasts, bosses: Object.keys(BOSSES).filter((r) => !BOSSES[r].ev).map((r) => `boss:${r}`), fish: [...fishIds], items: Object.values(cats).flat() };
 })();
 const RUIN_PLACES = Object.values(PLACES).filter((p) => isRuin(p.region)).map((p) => p.id);
 function achOf(d) {
@@ -2702,7 +2720,7 @@ function achProgress(d, A) {
   if (c.item) return [seenI(c.item), 1];
   if (c.metRuin) return [RUIN_PLACES.some((p) => x.m[p] || x.m[`${p}!`]) ? 1 : 0, 1];
   if (c.beat) return [(x.m[c.beat]?.[1] || 0) > 0 ? 1 : 0, 1];
-  if (c.recipes) return [knownRecipes(d).length, c.recipes];
+  if (c.recipes) return [knownRecipes(d).filter((o) => !RECIPES.find((r) => r.out === o)?.cc).length, c.recipes]; // 잔치 요리 제작법은 빼고 셈
   if (c.level) return [d.level, c.level];
   if (c.nest) return [d.nest ? nestInfo(d).tier : 0, c.nest];
   if (c.count) return [traitsOf(d).counts[c.count[0]] || 0, c.count[1]];
@@ -2760,7 +2778,7 @@ module.exports = { restHostOf, flyPartner,
   seasonAt, weatherOf, weatherIdAt, weatherFx, fxText, fxProse, weatherDebug, SLOT_MS,
   nestInfo, nestTier, maxKinOf, expandNest, checkRaid, raidView, chaseCheck,
   regen, gather, explore, fishCast, fishReel, startExpedition, finishExpedition, chooseFork, forkView, expInfo,
-  craft, craftMany, experiment, freeCraft, enhanceGear, engraveGear, tidyGear, tidyHoardGear, engraveOf, gearOf, greatChance, craftView, ordersView, fillOrder, buildForge, atForge,
+  craft, craftMany, knownRecipes, experiment, freeCraft, enhanceGear, engraveGear, tidyGear, tidyHoardGear, engraveOf, gearOf, greatChance, craftView, ordersView, fillOrder, buildForge, atForge,
   useItem, equip, unequip, statsOf, bonusOf, hpCap, enCap, apCap, equipOf, buffOf, giveBuff,
   presetsView, presetSave, presetRename, presetClear, presetUse, // 장비 프리셋
   repOf, setStance, marketInfo, buy, sell, sellLocked, keptFor, intimidate, startFishLine, finishFishLine,

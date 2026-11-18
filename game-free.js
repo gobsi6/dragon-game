@@ -78,14 +78,16 @@ function rollQuality(rnd = Math.random, L = FREE.luck) {
 const wisCap = (wis) => { for (const [w, cap] of FREE.gearCap) if (wis <= w) return cap; return FREE.gearCap.at(-1)[1]; };
 
 // 결과 정하기 (재료는 아직 빼지 않음). wis: 지금 지혜, great: 제작 대성공 확률
-function resolve(ids, wis, greatChance, rnd = Math.random) {
+// foodLuck: 먹을거리가 좋음·빼어남이 될 확률을 더함 (칭호 '대륙의 요리사')
+function resolve(ids, wis, greatChance, rnd = Math.random, foodLuck = 0) {
   const { sum, first, best } = sumTags(ids);
   const food = sum.food || 0, bind = sum.bind || 0;
   const aura = pickTop(AURA, sum, first)[0] || null;
   const value = Math.max(1, Math.round(ids.reduce((a, id) => a + matValue(id), 0) * FREE.valueMul));
   if (!food && !bind) return { fail: '바탕이 없었다. 먹을거리나 엮음이 되는 재료가 하나는 있어야 한다.', sum, value };
   if (food === bind) return { fail: '먹을거리와 엮음이 팽팽하게 맞서 어느 쪽도 되지 못했다.', sum, value };
-  const quality = rollQuality(rnd, food > bind ? FREE.luck : FREE.gearLuck); // 장신구는 따로 된 확률
+  const L = food > bind ? (foodLuck ? { good: FREE.luck.good + foodLuck * 0.7, great: FREE.luck.great + foodLuck * 0.3 } : FREE.luck) : FREE.gearLuck;
+  const quality = rollQuality(rnd, L); // 장신구는 따로 된 확률
   const qmul = { normal: 1, good: FREE.foodLuck.good, great: FREE.foodLuck.great }[quality];
   if (food > bind) {
     const effs = pickTop(FOOD_EFF, sum, first);

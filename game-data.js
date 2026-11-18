@@ -533,6 +533,43 @@ const ITEMS = {
   nm_ember_candy:{ name: '불씨 사탕',       rarity: 'uncommon', value: 15, type: 'use', use: { ap: 2 }, desc: '떠돌이 약장수가 불의 결정 가루를 녹여 굳혔다는 붉은 사탕. 입에 넣으면 혀끝이 화끈하고 날개가 들썩인다.' },
   nm_lantern:   { name: '종이 등불',        rarity: 'uncommon', value: 8,  type: 'use', use: { keep: 'nm_lantern' }, desc: '야시장 등불장이가 한 장씩 붙여 만든 종이 등불. 안에 불을 넣으면 벚꽃 무늬가 벽에 비친다. 둥지의 보물 상자에 넣어 간직할 수 있다.' },
   nm_mask:      { name: '축제 가면',        rarity: 'uncommon', value: 12, type: 'use', use: { keep: 'nm_mask' }, desc: '여우인지 용인지 모를 얼굴을 칠한 나무 가면. 축제 밤에는 누구나 이것을 쓰고 서로 모르는 척한다. 둥지의 보물 상자에 넣어 간직할 수 있다.' },
+  // ── 풍어 요리 잔치 (요리대회, contest.js): 대회 기간에만 나오는 재료 · 해안 바다괴물 고기 · 잔치 요리 · 상품 ──
+  // 지역 재료는 대회 동안 그 지역 채집·탐사·사냥에서 가끔. 대회가 끝나면 더 나오지 않지만 가진 것과 제작법은 그대로 남음
+  cc_ginseng:   { name: '숙성된 만년삼',     rarity: 'rare',     value: 40, ccEvent: true, desc: '북부 설원의 눈 밑에서 오래 묵어 뿌리 끝까지 향이 짙어진 산삼. 요리대회 기간에만 눈 속에서 모습을 드러낸다.' },
+  cc_truffle:   { name: '이슬 송로버섯',     rarity: 'rare',     value: 36, ccEvent: true, desc: '독안개 숲의 안개가 걷힌 새벽에만 낙엽 밑에서 고개를 내미는 검은 버섯. 쪼개면 흙과 이슬 냄새가 확 퍼진다.' },
+  cc_lotus:     { name: '천년 연근',         rarity: 'rare',     value: 32, ccEvent: true, desc: '검은 늪 바닥에서 팔뚝만 하게 자란 연근. 구멍마다 단물이 고여 있다.' },
+  cc_honey:     { name: '바위틈 석청',       rarity: 'rare',     value: 34, ccEvent: true, desc: '태양 협곡의 달궈진 바위틈에 벌들이 몇 해를 두고 모은 꿀. 호박처럼 진하고 끈적하다.' },
+  cc_lavasalt:  { name: '용암 소금',         rarity: 'rare',     value: 30, ccEvent: true, desc: '잿빛 화산의 용암이 바닷물을 덮치며 구워 낸 검은 소금. 한 꼬집이면 음식에서 불 맛이 난다.' },
+  cc_spice:     { name: '봉인된 옛 향신료',   rarity: 'rare',     value: 38, ccEvent: true, desc: '고대 유적 석주 밑에 묻혀 있던 작은 항아리. 밀랍 봉인을 뜯자 이름 모를 향신료 냄새가 피어오른다.' },
+  cc_wheat:     { name: '금빛 밀 이삭',       rarity: 'uncommon', value: 22, ccEvent: true, desc: '중앙 평원에서 한 해에 몇 포기만 금빛으로 익는 밀. 빻으면 가루에서도 햇빛 냄새가 난다.' },
+  cc_serpent:   { name: '바다 히드라 살',     rarity: 'uncommon', value: 18, ccEvent: true, desc: '해안에 몰려든 바다 히드라의 흰 살. 잘린 목에서 떼어 냈는데도 아직 꿈틀거린다. 익히면 쫄깃하고 담백하다.' },
+  cc_claw:      { name: '철갑게 집게살',     rarity: 'uncommon', value: 20, ccEvent: true, desc: '철갑게의 집게 속에 꽉 찬 살. 무쇠 같은 껍데기를 깨는 게 일이지만 그만한 값을 한다.' },
+  cc_liver:     { name: '등불 아귀 간',       rarity: 'rare',     value: 45, ccEvent: true, desc: '밤바다에서 등불로 먹이를 꾀던 등불 아귀의 기름진 간. 바다의 버터라고 불린다.' },
+  kraken_leg:   { name: '크라켄 다리살',     rarity: 'rare',     value: 60, ccEvent: true, desc: '해안을 덮친 크라켄의 다리에서 잘라 낸 살. 빨판 하나가 손바닥만 하다. 구우면 바다 냄새가 진동한다.' },
+  // 잔치 요리 (dish: 요리대회에 낼 수 있는 요리. 먹으면 회복하거나 힘이 남)
+  cc_ginseng_soup:  { name: '만년삼 영계 백숙',   rarity: 'rare',     type: 'use', dish: true, use: { hp: 140, en: 40 },  value: 70, desc: '숙성된 만년삼을 통째로 넣고 닭과 쌀을 푹 고았다. 국물 한 숟갈에 온몸이 데워진다.' },
+  cc_truffle_soup:  { name: '송로버섯 크림 수프', rarity: 'rare',     type: 'use', dish: true, use: { en: 70, mind: 10 }, value: 60, desc: '이슬 송로버섯을 얇게 저며 달걀과 밀가루로 걸쭉하게 끓였다. 향이 그릇 밖까지 넘친다.' },
+  cc_lotus_glaze:   { name: '천년 연근 꿀조림',   rarity: 'rare',     type: 'use', dish: true, use: { hp: 80, mind: 12 }, value: 50, desc: '천년 연근을 설탕과 함께 졸여 윤기를 냈다. 아삭하고 달큰하다.' },
+  cc_honey_cake:    { name: '석청 꿀떡',         rarity: 'rare',     type: 'use', dish: true, use: { en: 60, mind: 6 },  value: 50, desc: '쌀을 쪄서 친 떡에 바위틈 석청을 듬뿍 끼얹었다. 한입 물면 꿀이 주르륵 흐른다.' },
+  cc_lava_fish:     { name: '용암 소금 생선구이', rarity: 'uncommon', type: 'use', dish: true, use: { hp: 80, en: 30 },  value: 40, desc: '고등어에 용암 소금을 뿌려 숯불에 구웠다. 껍질은 바삭하고 속은 촉촉하다.' },
+  cc_spice_stew:    { name: '옛 향신료 스튜',     rarity: 'rare',     type: 'use', dish: true, use: { hp: 110, en: 30 }, value: 60, desc: '와이번 고기와 당근을 옛 향신료로 끓였다. 처음 맡아 보는 향인데 어쩐지 그립다.' },
+  cc_gold_bread:    { name: '금빛 밀 빵',         rarity: 'uncommon', type: 'use', dish: true, use: { hp: 60, en: 40 },  value: 36, desc: '금빛 밀 이삭을 빻아 달걀을 넣고 구운 빵. 껍질이 정말로 금빛으로 반짝인다.' },
+  cc_serpent_soup:  { name: '히드라 맑은탕',       rarity: 'uncommon', type: 'use', dish: true, use: { hp: 100 },        value: 36, desc: '바다 히드라 살과 갯메꽃을 소금 간해 맑게 끓였다. 국물이 시원하다.' },
+  cc_claw_steam:    { name: '집게살 버터찜',     rarity: 'uncommon', type: 'use', dish: true, use: { hp: 50, en: 50 },  value: 38, desc: '철갑게 집게살에 밀가루 반죽을 얇게 입혀 쪘다. 살이 결대로 찢어진다.' },
+  cc_liver_steam:   { name: '아귀 간 찜',         rarity: 'rare',     type: 'use', dish: true, use: { hp: 100, mind: 10 }, value: 70, desc: '등불 아귀 간을 숲 버섯과 함께 쪄 소금으로만 간했다. 입에서 녹는다.' },
+  cc_kraken_grill:  { name: '크라켄 다리 숯불구이', rarity: 'rare',   type: 'use', dish: true, use: { hp: 120, en: 60 }, value: 80, desc: '크라켄 다리살을 소금만 쳐서 숯불에 구웠다. 씹을 때마다 바다의 힘이 차오른다.' },
+  cc_feast:         { name: '풍어 잔치 한상',     rarity: 'rare',     type: 'use', dish: true, use: { hp: 220, en: 100, mind: 20 }, value: 160, desc: '크라켄 다리살, 만년삼, 석청, 옛 향신료, 용암 소금을 한 상에 모두 올렸다. 대륙 곳곳의 귀한 것이 한자리에 모였다.' },
+  cc_truffle_fish:  { name: '송로버섯 도미찜',     rarity: 'rare',     type: 'use', dish: true, use: { hp: 120, en: 40 }, value: 70, desc: '금빛 도미 배 속에 이슬 송로버섯과 숲 버섯을 채워 소금으로만 쪘다. 뚜껑을 열면 숲 냄새와 바다 냄새가 한꺼번에 올라온다.' },
+  cc_honey_tart:    { name: '석청 산딸기 타르트', rarity: 'rare',     type: 'use', dish: true, use: { en: 70, mind: 12 }, value: 60, desc: '밀가루 반죽에 산딸기를 깔고 바위틈 석청을 끼얹어 구웠다. 별 레몬 껍질을 살짝 갈아 올렸다.' },
+  cc_lotus_seafood: { name: '천년 연근 해물찜',   rarity: 'rare',     type: 'use', dish: true, use: { hp: 150, en: 30 }, value: 80, desc: '천년 연근과 철갑게 집게살, 당근, 숲 버섯을 한 솥에 넣고 소금 간해 쪘다. 단맛과 바다 맛이 서로를 끌어올린다.' },
+  cc_wyvern_steak:  { name: '용암 소금 와이번 스테이크', rarity: 'rare', type: 'use', dish: true, use: { hp: 130, en: 40 }, value: 70, desc: '와이번 고기를 두툼하게 썰어 용암 소금을 뿌려 굽고, 야생 꿀과 빛나는 이끼로 만든 소스를 곁들였다.' },
+  cc_wheat_pie:     { name: '금빛 밀 대구 파이',   rarity: 'rare',     type: 'use', dish: true, use: { hp: 120, en: 50 }, value: 70, desc: '금빛 밀 이삭 가루로 만든 반죽에 눈송이 대구와 달걀을 채워 구웠다. 위에 눈꽃 한 송이를 얹었다.' },
+  cc_spice_curry:   { name: '옛 향신료 생선 덮밥', rarity: 'rare',     type: 'use', dish: true, use: { hp: 110, en: 50 }, value: 70, desc: '옛 향신료로 고등어와 당근을 졸여 쌀밥 위에 얹고 이끼꽃을 뿌렸다. 한 숟갈마다 향이 다르다.' },
+  // 대회 상품 (보물 상자에 간직)
+  cc_ladle_gold:   { name: '풍어 잔치 금 트로피', rarity: 'rare',     value: 60, type: 'use', use: { keep: 'cc_ladle_gold' },   desc: '풍어 요리 잔치에서 1위를 한 드래곤에게 어촌이 바친 금 트로피. 파도 위로 뛰어오르는 물고기가 새겨져 있고, 받침에는 그해 잔치의 날짜와 우승자의 이름이 새겨져 있다. 둥지의 보물 상자에 넣어 간직할 수 있다.' },
+  cc_ladle_silver: { name: '풍어 잔치 은 트로피', rarity: 'rare',     value: 40, type: 'use', use: { keep: 'cc_ladle_silver' }, desc: '풍어 요리 잔치에서 2위를 한 드래곤에게 준 은 트로피. 어촌 대장장이가 그물 무늬를 한 땀 한 땀 두드려 새겼다. 둥지의 보물 상자에 넣어 간직할 수 있다.' },
+  cc_ladle_bronze: { name: '풍어 잔치 동 트로피', rarity: 'uncommon', value: 25, type: 'use', use: { keep: 'cc_ladle_bronze' }, desc: '풍어 요리 잔치에서 3위를 한 드래곤에게 준 동 트로피. 바닷바람을 맞으면 금세 푸른빛이 도는데, 어촌 사람들은 그게 진짜 바다의 훈장이라고 말한다. 둥지의 보물 상자에 넣어 간직할 수 있다.' },
+  cc_apron:        { name: '풍어 잔치 앞치마',   rarity: 'uncommon', value: 10, type: 'use', use: { keep: 'cc_apron' },        desc: '풍어 요리 잔치에 요리를 낸 이에게 어촌 사람들이 건넨 앞치마. 귀퉁이에 물고기 한 마리가 수놓여 있다. 둥지의 보물 상자에 넣어 간직할 수 있다.' },
   bouquet_four: { name: '네 고장 꽃다발', rarity: 'uncommon', value: 20, type: 'use', use: { keep: 'bouquet_four', mind: 25 }, desc: '평원·숲·해안·설원의 꽃을 하나씩 모아 묶은 꽃다발. 대륙을 한 바퀴 돈 정성이 담겼다. 향을 맡으면 정신이 맑아진다(+25). 선물로 보내거나 보물 상자에 넣어 간직할 수도 있다.' },
   whisper_ring: { name: '속삭이는 반지',   rarity: 'rare',     type: 'equip', slot: 'charm', bonus: { majesty: 3 }, mindWard: 1.3, value: 60, desc: '보물더미 깊은 곳에서 나온 반지. 끼면 위엄이 차오르지만, 밤마다 속삭임이 정신을 갉아먹는다. (깎이는 정신 +30%)' },
   calamity_core:{ name: '재앙의 핵',        rarity: 'rare',     cat: 'trophy', value: 120, desc: '쓰러진 재앙의 가슴에서 꺼낸, 아직 고동치는 검붉은 핵. 대륙에 몇 개 없는 물건이다.' },
@@ -699,6 +736,28 @@ const RECIPES = [
   { out: 'puffer_brew',     needs: { fish_puffer: 1, strong_wine: 1 },                   en: 5,  wis: 6 },
   { out: 'jelly_circlet',   needs: { fish_jelly: 1, deep_pearl: 1, silver_chain: 1 },    en: 14, wis: 13 },
   { out: 'moonray_mantle',  needs: { fish_moonray: 2, silk_scrap: 2, deep_pearl: 1 },    en: 14, wis: 13 },
+  // 풍어 요리 잔치 요리 (요리대회 재료: 대회가 끝난 뒤에도 만들 수 있음)
+  // 숨겨진 제작법(cc): 실험에서 재료를 섞어 찾아냄. 재료가 4가지를 넘으면 find(찾는 열쇠 2~3가지)로 찾음. 심사위원에게 귀띔을 들을 수 있음 (CONTEST.hints)
+  // 바랜 제작서·'모든 비밀' 업적·남은 숨은 제작법 수에는 들어가지 않음
+  { out: 'cc_ginseng_soup', needs: { cc_ginseng: 1, chicken_meat: 1, rice: 1 },        en: 5,  wis: 0, hidden: true, cc: true },
+  { out: 'cc_truffle_soup', needs: { cc_truffle: 1, hen_egg: 1, wheat_flour: 1 },      en: 5,  wis: 0, hidden: true, cc: true },
+  { out: 'cc_lotus_glaze',  needs: { cc_lotus: 1, cane_sugar: 1 },                     en: 4,  wis: 0, hidden: true, cc: true },
+  { out: 'cc_honey_cake',   needs: { cc_honey: 1, rice: 2 },                           en: 4,  wis: 0, hidden: true, cc: true },
+  { out: 'cc_lava_fish',    needs: { cc_lavasalt: 1, fish_mackerel: 2 },               en: 4,  wis: 0, hidden: true, cc: true },
+  { out: 'cc_spice_stew',   needs: { cc_spice: 1, wyvern_meat: 1, carrot: 1 },         en: 5,  wis: 0, hidden: true, cc: true },
+  { out: 'cc_gold_bread',   needs: { cc_wheat: 2, hen_egg: 1 },                        en: 4,  wis: 0, hidden: true, cc: true },
+  { out: 'cc_serpent_soup', needs: { cc_serpent: 2, sea_bindweed: 1, salt_crystal: 1 }, en: 4, wis: 0, hidden: true, cc: true },
+  { out: 'cc_claw_steam',   needs: { cc_claw: 2, wheat_flour: 1 },                     en: 4,  wis: 0, hidden: true, cc: true },
+  { out: 'cc_liver_steam',  needs: { cc_liver: 1, forest_mushroom: 1, salt_crystal: 1 }, en: 5, wis: 0, hidden: true, cc: true },
+  { out: 'cc_kraken_grill', needs: { kraken_leg: 1, salt_crystal: 1 },                 en: 5,  wis: 0, hidden: true, cc: true },
+  // 대회 재료 하나에 기존 재료를 섞은 잔치 요리 (심사위원 셋의 취향을 고루 맞추기 좋음)
+  { out: 'cc_truffle_fish',  needs: { cc_truffle: 1, fish_bream: 1, forest_mushroom: 1, salt_crystal: 1 }, en: 6, wis: 0, hidden: true, cc: true, find: ['cc_truffle', 'fish_bream'] },
+  { out: 'cc_honey_tart',    needs: { cc_honey: 1, raspberry: 2, wheat_flour: 1, star_lemon: 1 },      en: 6, wis: 0, hidden: true, cc: true, find: ['cc_honey', 'raspberry'] },
+  { out: 'cc_lotus_seafood', needs: { cc_lotus: 1, cc_claw: 1, carrot: 1, forest_mushroom: 1, salt_crystal: 1 }, en: 7, wis: 0, hidden: true, cc: true, find: ['cc_lotus', 'cc_claw'] },
+  { out: 'cc_wyvern_steak',  needs: { cc_lavasalt: 1, wyvern_meat: 1, wild_honey: 1, glow_moss: 1 },  en: 6, wis: 0, hidden: true, cc: true, find: ['cc_lavasalt', 'wyvern_meat'] },
+  { out: 'cc_wheat_pie',     needs: { cc_wheat: 2, fish_cod: 1, hen_egg: 1, snow_flower: 1 },          en: 6, wis: 0, hidden: true, cc: true, find: ['cc_wheat', 'fish_cod'] },
+  { out: 'cc_spice_curry',   needs: { cc_spice: 1, fish_mackerel: 1, rice: 1, carrot: 1, moss_flower: 1 }, en: 7, wis: 0, hidden: true, cc: true, find: ['cc_spice', 'fish_mackerel'] },
+  { out: 'cc_feast',        needs: { kraken_leg: 1, cc_ginseng: 1, cc_honey: 1, cc_spice: 1, cc_lavasalt: 1 }, en: 10, wis: 0, hidden: true, cc: true, find: ['kraken_leg', 'cc_ginseng', 'cc_honey'] },
   // 식구 요리
   { out: 'honey_cake',    needs: { wild_honey: 1, grass_seed: 2 },                     en: 3,  wis: 0 },
   { out: 'moss_soup',     needs: { glow_moss: 1, grass_seed: 1 },                      en: 3,  wis: 0 },
@@ -907,7 +966,7 @@ const FACILITY = {
   worker: { adult: 1, apprentice: 0.5, fit: 1.5, apprenticeStages: ['소년', '청소년'], adultStages: ['어른', '노년'] },
   list: {
     forge:   { name: '공방',   cost: { gold: 250, items: { bog_iron: 4, red_clay: 4, obsidian: 2 } }, talent: 'smith', traits: ['handy'],
-      desc: '둥지에서 만들면 기력이 덜 들고 대성공·강화가 잘 된다.', en: 0.05, great: 0.015, rate: 0.5 },
+      desc: '둥지에서 제작법대로 만들면 기력이 덜 들고 대성공·강화가 잘 된다.', en: 0.05, great: 0.015, rate: 0.5 },
     herb:    { name: '약초밭', cost: { gold: 120, items: { grass_seed: 6, glow_moss: 3, red_clay: 3 } }, talent: 'herbalist', traits: ['flowers'],
       desc: '하루 한 번 약초와 꿀을 거둔다. 가끔 귀한 약초도.', rolls: 3, pool: ['wild_honey', 'glow_moss', 'grass_seed', 'poison_herb'], rare: 'silver_clover', rareChance: 0.08 },
     kitchen: { name: '부엌',   cost: { gold: 150, items: { red_clay: 6, bog_iron: 2, salt_crystal: 2 } }, talent: null, traits: ['glutton', 'handy', 'gentle'],
@@ -1256,7 +1315,7 @@ const KIN = {
 };
 const TALENTS = {
   herbalist: { name: '약초꾼',   desc: '둥지에 남으면 하루에 한 번 꿀 고약을 만들어 둔다.' },
-  smith:     { name: '대장장이', desc: '둥지에 남으면 제작에 드는 기력이 30% 줄어든다.' },
+  smith:     { name: '대장장이', desc: '둥지에 남으면 제작법대로 만드는 데 드는 기력이 30% 줄어든다.' },
   guard:     { name: '파수꾼',   desc: '둥지에 남으면 기사단 습격이 절반으로 줄고, 어린 식구를 되찾으러 오는 기사단도 절반으로 준다.' },
 };
 // ── 식구의 타고난 모습 ─────────────────────────────
@@ -1448,6 +1507,10 @@ const FREE = {
     hen_egg: {food: 2, life: 1}, wheat_flour: {food: 2}, rice: {food: 2}, cane_sugar: {food: 1, vigor: 1}, raspberry: {food: 1, clear: 1}, carrot: {food: 1, vigor: 1}, sunflower: {food: 1, shine: 1}, grape: {food: 1, vigor: 1}, pear: {food: 2, clear: 1},
     moss_flower: {food: 2, clear: 2},
     snow_flower: {food: 2, clear: 2, frost: 2},
+    // 풍어 요리 잔치 재료 (요리대회)
+    cc_ginseng: {food: 3, life: 3}, cc_truffle: {food: 3, clear: 2}, cc_lotus: {food: 3, life: 2}, cc_honey: {food: 3, vigor: 3},
+    cc_lavasalt: {food: 1, fire: 3}, cc_spice: {food: 2, soul: 3}, cc_wheat: {food: 3, shine: 1},
+    cc_serpent: {food: 2, vigor: 1}, cc_claw: {food: 2, hard: 2}, cc_liver: {food: 3, life: 2}, kraken_leg: {food: 3, vigor: 3},
     glow_moss: {food: 2, clear: 2},
     silver_clover: {food: 3, life: 3},
     spider_silk: {bind: 1, light: 1},
@@ -1955,7 +2018,7 @@ const TITLES = [
   { id: 'fish3',     name: '전설을 낚은 자',     cond: { fish: 10, tier: 'rare' },    mod: { fishTiming: 1.3 }, eff: "낚시 '완벽'·'좋음' 판정 시간 +30%" },
   { id: 'fish_mack', name: '고등어 박사',        cond: { fishN: ['fish_mackerel', 100] }, mod: { fishMackerel: 1.5 }, eff: '고등어가 1.5배 잘 문다' }, // 업적에서 칭호로 옮김
   // 요리: 제작한 강화 음식·식구 요리, 둥지 부엌에 맡긴 요리
-  { id: 'cook1',     name: '둥지의 요리사',     cond: { count: 'cook', at: 30 },     mod: { cookEn: 0.8 },    eff: '요리(강화 음식·식구 요리) 제작 기력 −20%' },
+  { id: 'cook1',     name: '둥지의 요리사',     cond: { count: 'cook', at: 30 },     mod: { cookEn: 0.8 },    eff: '요리(강화 음식·식구 요리·잔치 요리) 만들기 기력 −20% (제작법대로 만들 때)' },
   { id: 'cook2',     name: '용족의 미식가',     cond: { count: 'cook', at: 150 },    mod: { buffMin: 1.25 },  eff: '강화 음식 지속 시간 +25%' },
   // 모으기·떠돌기
   { id: 'gatherer',  name: '약초를 아는 발톱', cond: { count: 'gather', at: 60 },   mod: { heal: 1.15 },     eff: '치유 +15%' },
@@ -1966,8 +2029,8 @@ const TITLES = [
   { id: 'trader',    name: '흥정꾼',           cond: { count: 'trade', at: 30 },    mod: { huntGold: 1.15 }, eff: '사냥터 금화 +15%' },
   { id: 'sleeper',   name: '깊은 잠의 용',     cond: { count: 'rest', at: 40 },     mod: { mindWard: 0.85 }, eff: '깎이는 정신 −15%' },
   // 만들기
-  { id: 'crafter1',  name: '솜씨 좋은 발톱',   cond: { count: 'craft', at: 20 },    mod: { craftEn: 0.85 },  eff: '제작 기력 −15%' },
-  { id: 'crafter2',  name: '용의 장인',        cond: { count: 'craft', at: 100 },   mod: { craftEn: 0.75 },  eff: '제작 기력 −25%' },
+  { id: 'crafter1',  name: '솜씨 좋은 발톱',   cond: { count: 'craft', at: 20 },    mod: { craftEn: 0.85 },  eff: '만들기 기력 −15% (제작법대로 만들 때)' },
+  { id: 'crafter2',  name: '용의 장인',        cond: { count: 'craft', at: 100 },   mod: { craftEn: 0.75 },  eff: '만들기 기력 −25% (제작법대로 만들 때)' },
   // 자라기
   { id: 'lv5',       name: '날개를 편 자',     cond: { level: 5 },                  mod: { xp: 1.03 },       eff: '경험치 +3%' },
   { id: 'lv10',      name: '하늘의 주인',      cond: { level: 10 },                 mod: { xp: 1.06 },       eff: '경험치 +6%' },
@@ -1983,11 +2046,16 @@ const TITLES = [
   { id: 'calmer',    name: '광기를 잠재우는 자', cond: { count: 'calm', at: 3 },     mod: { mindWard: 0.8 },  eff: '깎이는 정신 −20%' },
   // 왕도 축제
   { id: 'dancer',    name: '축제의 춤꾼',       cond: { count: 'dance', at: 3 },     mod: { mindWard: 0.9 },  eff: '깎이는 정신 −10%' },
+  // 풍어 요리 잔치 (요리대회, contest.js가 횟수를 셈)
+  { id: 'cc_king',   name: '대륙의 요리사',     cond: { count: 'cc_king', at: 1 },   mod: { freeFood: 0.1 }, eff: '직접 빚은 먹을거리가 좋은·빼어난 물건이 될 확률 +10%' },
+  { id: 'cc_guest',  name: '풍어 잔치 손님',   cond: { count: 'cc_join', at: 1 },   mod: { freeEn: 0.9 }, eff: '자유 제작 기력 −10% (재료를 섞어 직접 빚을 때)' },
+  { id: 'cc_tasty',  name: '맛을 아는 용',      cond: { count: 'cc_tasty', at: 1 },  mod: { tasteMind: 5 }, secret: true, eff: '직접 빚은 먹을거리에 정신 회복 +5' },
+  { id: 'cc_weird',  name: '심연 요리사',       cond: { count: 'cc_weird', at: 1 },  mod: { abyssFrenzy: 0.25 }, secret: true, eff: '직접 빚은 먹을거리가 25% 확률로 꿈틀거리는 요리가 됨. 먹으면 광기, 요리대회에는 낼 수 없음' },
   // 관계
   { id: 'teacher',   name: '이름난 스승',      cond: { count: 'teach', at: 20 },    mod: { xp: 1.03 },       eff: '경험치 +3%' },
   { id: 'surpass',   name: '청출어람',         cond: { count: 'surpass', at: 1 },   mod: { atk: 1.03 },      eff: '사냥터·레이드·강적 공격 +3%' },
   // 이어받은 의지
-  { id: 'pioneer',   name: '새 길을 연 발톱',   cond: { count: 'firstcraft', at: 1 }, mod: { craftEn: 0.9 }, eff: '제작 기력 −10%' },
+  { id: 'pioneer',   name: '새 길을 연 발톱',   cond: { count: 'firstcraft', at: 1 }, mod: { craftEn: 0.9 }, eff: '만들기 기력 −10% (제작법대로 만들 때)' },
   { id: 'masterwork', name: '걸작의 장인',     cond: { count: 'masterwork', at: 5 }, mod: { craftGreat: 0.05 }, eff: '제작 대성공 +5%' },
   // 모브 드래곤
   { id: 'errand',    name: '용족의 해결사',     cond: { count: 'mobquest', at: 15 }, mod: { mobGold: 1.2 }, eff: '모브 드래곤 의뢰 금화 +20%' },
@@ -2030,7 +2098,7 @@ const TITLES = [
   { id: 'yb_gambler', name: '홀짝의 귀재', cond: { count: 'yabawi', at: 30 }, mod: { huntGold: 1.05 }, eff: '사냥터 금화 +5%' },
 ];
 // 칭호 조건을 사람이 읽는 글로
-const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: `둥지에서 {n}번 쉬기 (한 번에 ${NEST.restCountMin}분 이상)`, craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격', raidwin_morven: '레이드에서 이삭지기 모르벤을 {n}번 쓰러뜨리기', raidguard: '레이드에서 막아서기로 동료를 {n}번 지키기', raidhelp: '보상을 다 받은 주에 레이드를 {n}번 도와 이기기', ruinpts: '에레보스 정화도에 {n}만큼 기여하기', raidwin_heiron: '레이드에서 마지막 기사단장 헤이른을 {n}번 쓰러뜨리기', raidflank: '레이드에서 우회로 방패벽을 {n}번 깨기', raidduel: '레이드에서 일기토를 {n}번 끝까지 버티기', raidwin_rift: '레이드에서 균열을 지킨 자 아스테르를 {n}번 쓰러뜨리기', riftgold: '아스테르를 금빛 1 이상인 채로 쓰러뜨리기', riftlift: '아스테르의 마지막 숨을 {n}번 늦추기', riftsave: '심연의 손아귀에 잡힌 동료를 {n}번 구하기', riftfirst: '서버에서 처음 아스테르를 쓰러뜨리기', heir: '먼 여행을 떠난 드래곤의 의지를 잇기', teach: '제자를 {n}번 가르치기', surpass: '스승의 레벨을 따라잡기', sendoff: '다 자란 식구를 {n}번 떠나보내기', corrupt: '오염된 땅에서 {n}번 행동하기', purify: '오염된 땅을 {n}번 정화하기', firstcraft: '숨겨진 제작법을 대륙에서 처음 찾아내기', masterwork: '대성공 {n}번', mobquest: '모브 드래곤의 의뢰 {n}번 마치기', mobstory: '모브 드래곤의 이야기 {n}개를 끝까지 듣기', yabawimeet: '떠돌이 야바위꾼을 {n}번 만나기 (나타날 때마다 한 번)', yabawi: '야바위꾼과 홀짝 {n}판', dance: '왕도 축제에서 {n}번 춤추기', ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map((n) => [`mazef${n}`, `지하 회랑 제 ${n}층의 봉인이 풀린 날 수호자를 치거나 기둥을 밝히기`])), mazecity: '지하 회랑 일곱 층을 모두 밝힌 날 함께하기', cavetab: '시련의 굴에서 시련의 돌판 {n}장을 모두 모으기', cook: '요리 {n}번 하기 (강화 음식·식구 요리 만들기, 부엌에 맡기기)' };
+const TITLE_COUNT_NAMES = { huntwin: '사냥에서 {n}번 이기기', elite: '강적 {n}마리 쓰러뜨리기', gather: '채집 {n}번', explore: '탐사 {n}번', expedition: '원정 {n}번', trade: '시장 거래 {n}번', rest: `둥지에서 {n}번 쉬기 (한 번에 ${NEST.restCountMin}분 이상)`, craft: '물건 {n}개 만들기', rescue: '쓰러진 드래곤 {n}번 일으키기', healother: '다른 드래곤 {n}번 치유하기', calm: '광폭화 {n}번 진정시키기', raidwin: '보물 도둑 {n}번 물리치기', bosswin: '대륙의 재앙 {n}번 쓰러뜨리기', bosslast: '대륙의 재앙에게 마지막 일격', raidwin_morven: '레이드에서 이삭지기 모르벤을 {n}번 쓰러뜨리기', raidguard: '레이드에서 막아서기로 동료를 {n}번 지키기', raidhelp: '보상을 다 받은 주에 레이드를 {n}번 도와 이기기', ruinpts: '에레보스 정화도에 {n}만큼 기여하기', raidwin_heiron: '레이드에서 마지막 기사단장 헤이른을 {n}번 쓰러뜨리기', raidflank: '레이드에서 우회로 방패벽을 {n}번 깨기', raidduel: '레이드에서 일기토를 {n}번 끝까지 버티기', raidwin_rift: '레이드에서 균열을 지킨 자 아스테르를 {n}번 쓰러뜨리기', riftgold: '아스테르를 금빛 1 이상인 채로 쓰러뜨리기', riftlift: '아스테르의 마지막 숨을 {n}번 늦추기', riftsave: '심연의 손아귀에 잡힌 동료를 {n}번 구하기', riftfirst: '서버에서 처음 아스테르를 쓰러뜨리기', heir: '먼 여행을 떠난 드래곤의 의지를 잇기', teach: '제자를 {n}번 가르치기', surpass: '스승의 레벨을 따라잡기', sendoff: '다 자란 식구를 {n}번 떠나보내기', corrupt: '오염된 땅에서 {n}번 행동하기', purify: '오염된 땅을 {n}번 정화하기', firstcraft: '숨겨진 제작법을 대륙에서 처음 찾아내기', masterwork: '대성공 {n}번', mobquest: '모브 드래곤의 의뢰 {n}번 마치기', mobstory: '모브 드래곤의 이야기 {n}개를 끝까지 듣기', yabawimeet: '떠돌이 야바위꾼을 {n}번 만나기 (나타날 때마다 한 번)', yabawi: '야바위꾼과 홀짝 {n}판', dance: '왕도 축제에서 {n}번 춤추기', ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map((n) => [`mazef${n}`, `지하 회랑 제 ${n}층의 봉인이 풀린 날 수호자를 치거나 기둥을 밝히기`])), mazecity: '지하 회랑 일곱 층을 모두 밝힌 날 함께하기', cavetab: '시련의 굴에서 시련의 돌판 {n}장을 모두 모으기', cook: '요리 {n}번 하기 (강화 음식·식구 요리·잔치 요리 만들기, 부엌에 맡기기)', cc_king: '풍어 요리 잔치에서 1위 하기', cc_join: '풍어 요리 잔치에 요리 내기', cc_tasty: '풍어 요리 잔치 인기 투표 \'탐나는 요리\'에서 1위', cc_weird: '풍어 요리 잔치 인기 투표 \'개성 요리\'에서 1위' };
 
 // ── 장소와 사냥터 난이도 ───────────────────────────
 // 야생 지역마다 장소가 넷. 입구는 쉽고 안쪽일수록 사냥터 난이도가 높다 (셋째까지 Lv.1~12, 넷째는 고레벨 구역 Lv.13~24).
@@ -2535,6 +2603,12 @@ const BOSSES = {
   volcano: { name: '깨어난 고룡 바르가스', type: 'flyer',  weak: ['ice', 'water'], resist: ['fire'],
     special: { name: '멸망의 화염', power: 1.6, debuff: { burn: 3 }, element: 'fire' },
     desc: '천 년을 잠들어 있던 고룡이 분화구에서 깨어났다. 대륙의 모든 드래곤이 그 울음을 들었다.' },
+  // 풍어 요리 잔치 동안에만 해안에 나타남 (contest.js가 이틀에 한 번 부름. 무작위 재앙으로는 나오지 않음: 해안은 시장이 있는 마을)
+  // ev: 잔치 재앙 (체력 맞춤에 쓰지 않고, 놓쳐도 땅이 오염되지 않음) · tag: 알림 머리말 · reward: 재앙의 핵 대신 줄 것 (기본 n개 + 내 몫 × per, 많아야 max개)
+  coast:   { name: '심해의 크라켄', type: 'beast',   weak: ['lightning', 'fire'], resist: ['water', 'ice'],
+    special: { name: '휘감는 다리', power: 0.45, hits: 4, debuff: { stun: 1 }, chance: 0.3 },
+    ev: true, tag: '풍어 잔치', reward: { item: 'kraken_leg', n: 1, per: 20, max: 4 },
+    desc: '바다가 부풀어 오르더니 배보다 큰 다리들이 선창을 휘감았다. 등대지기가 듣던 바다 밑 노랫소리의 주인이다.' },
 };
 const BOSS = {
   gapHours: [10, 20],      // 재앙이 사라진 뒤 다음 재앙까지 (시간, 이 사이에서 무작위)
@@ -2845,7 +2919,7 @@ for (const r of RECIPES) {
   if (!it || r.hidden) continue;
   const meal = it.cat === 'meal';
   const buff = it.type === 'use' && it.use?.buff;
-  if (!meal && !buff) continue;
+  if (!meal && !buff && !it.dish) continue; // 잔치 요리(dish)도 부엌에 맡길 수 있음 (먹는 용도. 요리대회에는 낼 수 없음)
   const id = `${r.out}__k`;
   const C = FACILITY.cooked;
   ITEMS[id] = { ...it, name: `정성 들인 ${it.name}`, value: Math.round((it.value || 1) * 1.5), cooked: r.out,
@@ -2947,6 +3021,10 @@ const KEEPSAKES = {
   nm_lantern:    { name: '종이 등불',         value: 6,  fmt: 'plain', desc: '축제 밤 야시장에서 산 종이 등불. 불을 넣으면 지금도 벚꽃 무늬가 둥지 벽에 번진다.' },
   nm_mask:       { name: '축제 가면',         value: 10, fmt: 'plain', desc: '축제 밤 야시장에서 산 나무 가면. 칠이 조금 벗겨졌지만, 쓰면 그날 밤 음악이 들리는 것 같다.' },
   fest_drawing:  { name: '축제 그림',         value: 8,  fmt: 'of',   say: false, desc: '왕도 축제를 그린 그림. 하늘 가득 국화 불꽃이 터지고, 그 아래 식구들이 손을 잡고 작게 서 있다.' },
+  cc_ladle_gold:   { name: '풍어 잔치 금 트로피', value: 30, fmt: 'plain', desc: '풍어 요리 잔치 1위의 금 트로피. 받침에 새긴 이름을 손끝으로 쓸어 보면, 그날 잔치 마당을 가득 메웠던 함성이 다시 들리는 듯하다.' },
+  cc_ladle_silver: { name: '풍어 잔치 은 트로피', value: 20, fmt: 'plain', desc: '풍어 요리 잔치 2위의 은 트로피. 아깝게 놓친 자리였지만, 반들반들 닦아 둔 은빛을 볼 때마다 다음 잔치가 기다려진다.' },
+  cc_ladle_bronze: { name: '풍어 잔치 동 트로피', value: 12, fmt: 'plain', desc: '풍어 요리 잔치 3위의 동 트로피. 해가 갈수록 푸른 녹이 조금씩 스며들어, 바다를 닮아 간다.' },
+  cc_apron:        { name: '풍어 잔치 앞치마', value: 6,  fmt: 'plain', desc: '풍어 요리 잔치에 요리를 내고 받은 앞치마. 아직 바다 냄새가 조금 난다.' },
   festival_garland: { name: '축제 꽃장식',     value: 8,  fmt: 'plain', desc: '왕도 축제에서 처음 춤춘 날 받은 꽃장식. 꽃은 말랐지만 방울 소리는 그대로다.' },
 };
 // 유품(keepsake_*): 세상을 떠난 인간 식구가 남긴 것. 보물 상자에 간직할 수 있는 추억 물건으로 (도둑·까마귀가 손대지 못함)
@@ -3160,7 +3238,7 @@ const ACHIEVEMENTS = [
   { id: 'dex_half',     name: '반쪽짜리 박물지', desc: '도감의 절반을 채우기',                     cond: { dexPct: 0.5 } },
   { id: 'dex_most',     name: '대륙의 박물학자', desc: '도감의 여덟 할을 채우기',                  cond: { dexPct: 0.8 } },
   { id: 'recipe3',      name: '비밀의 제작자',   desc: '숨겨진 제작법 셋을 찾아내기',              cond: { recipes: 3 } },
-  { id: 'recipe_all',   name: '모든 비밀',       desc: '숨겨진 제작법을 모두 찾아내기',            cond: { recipes: RECIPES.filter((r) => r.hidden).length } },
+  { id: 'recipe_all',   name: '모든 비밀',       desc: '숨겨진 제작법을 모두 찾아내기',            cond: { recipes: RECIPES.filter((r) => r.hidden && !r.cc).length } },
   { id: 'lv25',         name: '하늘에 닿다',     desc: '레벨 25에 이르기',                         cond: { level: 25 } },
   // 대륙에서 보낸 날 (현실 시간, 드래곤을 만든 날부터)
   { id: 'days30',       name: '대륙에 깃들다',   desc: '용의 대륙에서 30일 보내기',                cond: { daysIn: 30 } },
@@ -3257,11 +3335,105 @@ let gearLvOfMats = () => 0;
   gearLvOfMats = (ids) => { const lv = Math.max(0, ...ids.map((id) => lvOf(id))); return lv >= 4 ? lv : 0; }; // 섞은 재료 중 가장 높은 재료 레벨 (4 미만이면 0)
 })();
 
+// ── 풍어 요리 잔치 (요리대회): GM이 여는 기간 한정 이벤트 (contest.js) ──
+// 남쪽 해안 어촌에서 열림. 대회 동안 지역마다 귀한 재료가 나오고, 해안에는 바다괴물과 크라켄이 나타남
+// 심사위원 셋에게 하루 perDay번까지 요리를 내고 점수를 받음. 순위는 가장 잘 만든 한 그릇 (같으면 varietyMin점 넘긴 요리 가짓수, 그다음 두 번째 그릇)
+// 인기 투표 (두 부문: 탐나는 요리 · 개성 요리): 대회가 열리면 해안에서 한 그릇씩 직접 출품받고, GM이 원할 때 투표를 엶 (기본 voteHours시간)
+// 시간이 지나거나 GM이 마감하면 표만 세어 두고, 결과·칭호는 GM이 공개할 때. 대회와 투표(공개까지)가 모두 끝나면 마무리됨
+const CONTEST = {
+  name: '풍어 요리 잔치',
+  region: 'coast',
+  days: 6,              // 대회 기간 (일)
+  voteHours: 48,        // GM이 인기 투표를 열 때 기본 시간
+  noteMax: 40,          // 인기 투표 출품에 붙이는 한 줄 소개 글자 수
+  perDay: 3,            // 하루(한국 시각)에 낼 수 있는 요리 수
+  topShow: 5,           // 대회 중 보여 주는 순위 수
+  varietyMin: 25,       // 동점 가르기: 이 점수 이상을 받은 서로 다른 요리 가짓수가 많은 쪽이 앞섬 (그다음 두 번째 그릇)
+  // 지역마다 대회 동안 나오는 재료 (채집·탐사·이긴 사냥에서 이 확률로 하나)
+  drops: { snow: 'cc_ginseng', forest: 'cc_truffle', swamp: 'cc_lotus', canyon: 'cc_honey', volcano: 'cc_lavasalt', ruins: 'cc_spice', plains: 'cc_wheat' },
+  dropChance: { gather: 0.09, explore: 0.11, hunt: 0.07 },
+  // 해안 바다괴물: 대회 동안만. 사냥 버튼 하나로 사냥감 둘 중 하나, 가끔 강적. 레벨은 드래곤 레벨에 맞춤 (lv: 드래곤 레벨 + 이만큼)
+  hunt: {
+    ap: 2,
+    eliteChance: 0.18,
+    beasts: [
+      { name: '바다 히드라', type: 'reptile', lv: -2, drop: 'cc_serpent', weak: ['lightning'], resist: ['water'], intro: '파도 사이로 머리 여럿이 한꺼번에 솟아올랐다. 바다 히드라다!', special: { name: '독니 물어뜯기', power: 0.8, debuff: { poison: 2 } } },
+      { name: '철갑게',      intro: '선창 기둥이 우지끈 부러지더니 무쇠 같은 등딱지의 철갑게가 기어 올라왔다.', type: 'beast',  lv: -1, drop: 'cc_claw',    weak: ['acid', 'lightning'], resist: ['earth'], special: { name: '집게 내려찍기', power: 1.4 } },
+    ],
+    elite: { name: '등불 아귀', intro: '선창 밑 깊은 물에서 등불 같은 빛이 깜빡였다. 등불 아귀가 입을 쩍 벌리고 솟아올랐다!', type: 'beast', lv: 1, drop: 'cc_liver', weak: ['fire', 'spirit'], resist: ['water', 'ice'], special: { name: '등불 유혹', power: 1.2, debuff: { stun: 1 }, chance: 0.3 } },
+    xp: [14, 5],          // 경험치 = xp[0] + 드래곤 레벨 × xp[1] (강적 ×2)
+    gold: [2, 6],         // 금화 = 이 사이 × 레벨 / 3
+    extra: 0.3,           // 이기면 고기 하나 더 나올 확률
+  },
+  // 크라켄: 따로 부르지 않음. 대회 동안 대륙의 재앙이 올 차례(BOSS.gapHours)마다 재앙 대신 해안에 나타남 (boss.js의 hooks.bossOverride)
+  // 심사위원: like = 좋아하는 재료 (요리에 든 재료 중 이것이 하나씩 늘 때마다 per점, 많아야 max점)
+  judges: [
+    { key: 'salt',  name: '할보르', role: '늙은 어부',          like: '짠맛·바다 재료·고기', per: 7, max: 20 },
+    { key: 'sweet', name: '네사',   role: '바닷가 주막 안주인', like: '단맛·과일·곡물',  per: 7, max: 20 },
+    { key: 'aroma', name: '에드릭 경', role: '왕도에서 온 미식가', like: '향신료·버섯·꽃', per: 7, max: 20 },
+  ],
+  // 맛 갈래: 재료 id (물고기(cat: fish)는 모두 '짠맛·바다'로 셈). 기존 재료도 고루 들어가게: 고기는 할보르, 곡물·달걀·연근은 네사, 꽃·향은 에드릭 경
+  taste: {
+    salt:  ['salt_crystal', 'sea_salt_flower', 'salted_fish', 'sea_bindweed', 'cc_lavasalt', 'cc_serpent', 'cc_claw', 'cc_liver', 'kraken_leg', 'sea_shell', 'wyvern_meat', 'chicken_meat', 'bait_meat', 'salamander_tail'],
+    sweet: ['wild_honey', 'cane_sugar', 'honey_date', 'raspberry', 'grape', 'pear', 'sunset_apple', 'carrot', 'cc_honey', 'cc_lotus', 'rice', 'wheat_flour', 'hen_egg', 'lotus_root', 'cc_wheat', 'grass_seed'],
+    aroma: ['red_peppercorn', 'cedar_bark', 'forest_mushroom', 'moss_flower', 'snow_flower', 'glow_moss', 'silver_clover', 'cc_truffle', 'cc_spice', 'cc_ginseng', 'star_lemon', 'wild_flower', 'sunflower'],
+  },
+  // 낼 수 있는 요리: 잔치 요리(강화 효과 없는 것) + 아래 회복 음식·차 + 직접 빚은 먹을거리. 강화 음식·식구 요리·약은 빠짐 (1위 요리를 모두에게 나눠 주므로 드래곤이 먹을 수 있는 것만)
+  dishes: ['salted_fish', 'hairtail_braise', 'cod_stew', 'ashfin_broth', 'wyvern_skewer', 'fruit_punch', 'mist_tea', 'snow_tea', 'bindweed_drink', 'forest_stew', 'hunter_stew', 'ember_tea', 'star_honey'],
+  eventPer: 5, eventMax: 10,   // 대회 재료(지역 재료·바다괴물 고기) 가짓수마다 (많아야 두 가지 몫: 기존 재료로 만든 요리도 겨룰 수 있게)
+  care: { spiced: 4, good: 4, great: 8 }, // 양념 · 직접 빚은 요리의 좋음·훌륭함 (아이가 부엌에서 만든 '정성 들인' 요리는 낼 수 없음)
+  // 창작 요리: 직접 빚은 먹을거리에 더하는 점수 (자유 제작은 재료가 2~3가지라 제작법 요리보다 심사위원 점수가 낮음)
+  creative: { pts: 10, says: ['에드릭 경이 처음 보는 요리라며 수첩을 새로 한 장 넘겼다.', '세 심사위원이 이런 요리는 처음 본다며 서로 얼굴을 마주 보았다.', '네사가 이 요리 이름을 주막 차림표에 적어도 되겠느냐고 물었다.', '할보르가 "희한한 걸 다 만드는구먼" 하며 한 숟갈 더 떴다.'] },
+  // 잔치 요리 귀띔: 해안에서 하루 perDay번, 아직 모르는 잔치 요리 제작법의 실마리를 들음 (실험에 넣을 재료를 넌지시 알려 줌)
+  hints: { perDay: 2, lines: {
+    cc_ginseng_soup:  ['할보르', '만년삼은 말이야, 날짐승 고기 한 덩이랑 흰 낟알 한 줌을 같이 넣고 푹 고아야 제맛이지.'],
+    cc_truffle_soup:  ['에드릭 경', '이슬 송로버섯은 둥근 알 하나와 고운 가루를 만나면 부드러운 수프가 됩니다.'],
+    cc_lotus_glaze:   ['네사', '천년 연근은 단 걸 좋아해. 하얗고 고운 단맛 하나만 곁들이면 돼.'],
+    cc_honey_cake:    ['네사', '석청은 흰 낟알이랑 만나면 쫀득해져. 우리 어머니가 잔칫날마다 빚으셨지.'],
+    cc_lava_fish:     ['할보르', '용암 소금은 등 푸른 바닷고기에 뿌려서 구워야 제격이야.'],
+    cc_spice_stew:    ['에드릭 경', '봉인된 옛 향신료는 하늘을 나는 큰 짐승의 고기, 주황빛 뿌리채소와 함께 끓일 때 깨어나지요.'],
+    cc_gold_bread:    ['네사', '금빛 밀 이삭에 알 하나만 깨 넣으면 빵이 노랗게 부풀어 올라.'],
+    cc_serpent_soup:  ['할보르', '히드라 살은 바닷가 덩굴꽃이랑 소금 알갱이만 넣고 맑게 끓여. 다른 건 넣지 마.'],
+    cc_claw_steam:    ['네사', '철갑게 집게살은 고운 가루 옷만 살짝 입혀서 쪄 봐.'],
+    cc_liver_steam:   ['에드릭 경', '아귀 간에는 숲의 버섯과 소금 한 알이면 됩니다. 그 이상은 군더더기지요.'],
+    cc_kraken_grill:  ['할보르', '크라켄 다리는 소금 하나면 충분해. 나머지는 숯불이 알아서 하지.'],
+    cc_truffle_fish:  ['에드릭 경', '송로버섯은 금빛 비늘 생선과도 잘 어울립니다. 둘을 함께 화로에 넣어 보시지요.'],
+    cc_honey_tart:    ['네사', '석청에 빨간 산열매를 섞어 보면 근사한 과자가 나올 것 같지 않아?'],
+    cc_lotus_seafood: ['할보르', '천년 연근하고 철갑게 살을 한 솥에 넣어 봐. 뭍이랑 바다가 만나는 맛이야.'],
+    cc_wyvern_steak:  ['할보르', '용암 소금을 하늘 짐승 고기에 문질러 구우면 장정 셋이 줄을 서.'],
+    cc_wheat_pie:     ['네사', '금빛 밀 반죽에 눈 고장 흰살생선을 싸서 구우면 어떨까 싶어.'],
+    cc_spice_curry:   ['에드릭 경', '옛 향신료를 등 푸른 생선에 써 본 이는 아직 없더군요. 궁금하지 않으십니까?'],
+    cc_feast:         ['세 심사위원', '바다의 왕과 뭍의 오래된 뿌리, 바위틈의 단맛이 한 화로에서 만나면 잔칫상의 으뜸이 나온다고들 하더라.'],
+  } },
+  mood: [0, 6],                // 심사위원 기분 (무작위)
+  // 심사평: 심사위원마다 [낮음, 보통, 높음] (점수가 max의 1/3, 2/3를 넘는가)
+  says: {
+    salt:  [['할보르가 한 숟갈 뜨더니 고개를 갸웃했다. "바다 맛이 하나도 안 나는구먼."', '할보르가 말없이 소금 통을 찾았다.'],
+            ['할보르가 천천히 씹으며 고개를 끄덕였다. "나쁘지 않아."', '할보르가 "짠맛이 조금만 더 있었으면" 하고 중얼거렸다.'],
+            ['할보르가 국물을 한 숟갈 떠먹고 한참 말이 없었다.', '할보르가 그릇을 싹 비우고 "옛날 배 위에서 먹던 맛이야" 하고 웃었다.']],
+    sweet: [['네사가 웃으며 말했다. "단 걸 좋아하는 손님한텐 조금 심심하겠네요."', '네사가 꿀단지를 힐끗 보았다.'],
+            ['네사가 "은근히 달큰하네요" 하며 한 입 더 떠먹었다.', '네사가 접시를 들고 향을 맡더니 고개를 끄덕였다.'],
+            ['네사가 눈을 동그랗게 떴다. "이거, 주막에 내도 되겠는데요?"', '네사가 남은 것을 몰래 싸 가도 되느냐고 물었다.']],
+    aroma: [['에드릭 경이 코끝을 찡그렸다. "향이 밋밋하군."', '에드릭 경이 한 입 먹고 수첩에 짧게 무언가를 적었다.'],
+            ['에드릭 경이 "흠, 쓸 만한 재료로군" 하고 수첩에 적었다.', '에드릭 경이 향을 맡고 눈썹을 살짝 올렸다.'],
+            ['에드릭 경이 숟가락을 내려놓고 눈을 감았다. "왕도에서도 맛보기 힘든 향이다."', '에드릭 경이 수첩을 덮고 "이건 기억해 두겠네" 하고 말했다.']],
+  },
+  // 인기 투표 두 부문
+  votes: [
+    { key: 'tasty', name: '탐나는 요리', title: 'cc_tasty' },
+    { key: 'weird', name: '개성 요리',   title: 'cc_weird' },
+  ],
+  trophies: ['cc_ladle_gold', 'cc_ladle_silver', 'cc_ladle_bronze'], // 1~3위 금·은·동 트로피 (id는 예전 국자 이름 그대로)
+  apron: 'cc_apron',            // 요리를 낸 모두 (대회가 끝날 때)
+  kingTitle: 'cc_king',         // 1위 (같은 점수면 함께)
+};
+
 module.exports = {
   gearLvOfMats: (ids) => gearLvOfMats(ids), // 자유 제작 장신구의 착용 레벨
   SCENES_HUMAN,
   PLAY_KINDS: Object.keys(KINDS).filter((k) => !KINDS[k].hidden), // 고를 수 있는 종족 (무작위로 뽑을 때도 이것만)
   isTestDragon: (d) => !!d && !!KINDS[d.kind]?.test,                // GM 시험용 투명 드래곤인가
+  CONTEST,
   KINDS, REGIONS, STANCES, STATS, CREATION, derive, ITEMS, REGION_LOOT, CREATURES, SCENES, RULES, SLOTS, RECIPES, BUFFS, FESTIVAL, NIGHT_MARKET, KIN_FEST, TITLES, TITLE_COUNT_NAMES, ACHIEVEMENTS, YABAWI, PEDDLER, KEEPSAKES,
   PURIFY, CRAFT, SHOPS, SHOPS_SPECIAL, REP_TIERS, repTier, TRADE, FISHING, RUIN, FACILITY, NEST, HOARD_TIERS, hoardTier, RAID, STANCE_RULES, FAME_TIERS, fameTier,
   DAY, KIN, TALENTS, HUMAN_NAMES, DRAKE_NAMES, MATE_DRAKE_NAMES, KIN_LOOKS, KIN_TRAITS, KIN_TRAIT_RULES, KIN_GROW, KIN_PLAY, KIN_TOUCH, KIN_BOND, FREE, EVENT_RULES, TRAITS, TRAIT_EARN, TRAIT_COUNTS, STAT_POINTS, MIND, PLACES, REGION_PLACES, PLACE_RULES, DEATH,

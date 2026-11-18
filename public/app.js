@@ -11233,6 +11233,255 @@
       $('mf-dlg').close(); showResult(res.result); // itemAction은 { ok, result }로 답함
     });
   });
+  // ── 풍어 요리 잔치 (요리대회, GM 이벤트): 해안에 있으면 지역 카드에 잔치 칸. 인기 투표가 열려 있으면 어디서든 ──
+  // 대회(심사·순위)와 인기 투표(출품 → GM이 열면 투표 → 닫힘)는 따로 흘러감
+  S.contest = null;
+  const ccLeft = (t) => { const m = Math.max(1, Math.ceil((t - Date.now()) / 60000)); return m >= 1440 ? `${Math.floor(m / 1440)}일 ${Math.floor((m % 1440) / 60)}시간` : fmtLeft(t); }; // 하루가 넘으면 '6일 23시간'
+  const ccEl = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  function ccRank(list) {
+    const ol = ccEl('ol', 'cc-top');
+    for (const x of list) { const li = document.createElement('li'); li.append(ccEl('i', null, `${x.rank}위`), ccEl('b', null, x.name), ccEl('span', null, x.dish), ccEl('em', null, `${x.best}점`)); ol.appendChild(li); }
+    return ol;
+  }
+  // 지역 카드의 잔치 칸: 날씨 칸처럼 짧게 (상황 몇 가지 + 할 일 단추). 자세한 건 잔치 창에서
+  function renderContest(quiet) { // quiet: 잔치 창은 다시 그리지 않음 (1분마다 남은 시간만 고칠 때 스크롤이 튀지 않게)
+    const v = S.contest, box = $('cc-note');
+    const here = !!v && v.region === S.region;
+    const V = v?.vote;
+    const show = !!v && (here || V?.state === 'open' || v.phase === 'done'); // 마무리되면 (결과 공개 뒤 사흘) 어디서든 결과를 볼 수 있게
+    box.hidden = !show;
+    if ($('ccw-dlg').open && !quiet) renderCcWin();
+    if (!show) return box.replaceChildren();
+    box.replaceChildren();
+    const busy = !S.me || !!S.me.exp || !!S.me.restAt || !!S.me.battle;
+    const h = ccEl('div', 'cc-h');
+    h.append(ccEl('b', null, v.name), ccEl('small', null, v.phase === 'on' ? `어촌 광장의 요리대회 · ${ccLeft(v.until)} 남음` : v.phase === 'done' ? '잔치가 마무리되었다' : '대회가 끝났다'));
+    box.appendChild(h);
+    // 상황 칩
+    const chips = ccEl('div', 'cc-chips');
+    const chip = (label, val) => { const c = ccEl('span'); c.append(`${label} `, ccEl('b', null, val)); chips.appendChild(c); };
+    if (v.phase === 'on') {
+      if (v.mine) chip('내 최고', `${v.mine.best}점${v.mine.rank ? ` · ${v.mine.rank}위` : ''}`);
+      chip('오늘', `${v.left}/${v.perDay}번 남음`);
+      if (v.recipes) chip('제작법', `${v.recipes.found}/${v.recipes.total}`);
+    } else if (v.result?.rank?.length) {
+      const t = v.result.rank[0]; chip('1위', `${t.name} · ${t.dish}`);
+    }
+    if (V) chip('인기 투표', V.state === 'entry' ? '출품 받는 중' : V.state === 'open' ? `투표 중 · ${ccLeft(V.until)} 남음` : V.result ? '결과 발표' : '마감');
+    box.appendChild(chips);
+    // 할 일
+    const act = ccEl('div', 'cc-act');
+    const btn = (label, cls, fn, off) => { const b = ccEl('button', `btn sm${cls ? ` ${cls}` : ''}`, label); b.type = 'button'; b.disabled = !!off; b.addEventListener('click', fn); act.appendChild(b); return b; };
+    if (V?.state === 'open') btn('인기 투표', 'primary', openCcVote);
+    if (v.phase === 'on' && here) {
+      btn('요리 내기', V?.state === 'open' ? '' : 'primary', () => openCcSubmit('judge'), busy);
+      btn(`바다괴물 사냥 −${v.hunt.ap}`, '', ccHunt, busy || (S.me?.ap || 0) < v.hunt.ap);
+    }
+    const lk = ccEl('button', 'cc-lnk', '잔치 자세히 보기 ›'); lk.type = 'button'; lk.addEventListener('click', () => openCcWin());
+    act.appendChild(lk);
+    box.appendChild(act);
+  }
+  // 잔치 창: 대회 · 제작법 · 순위 · 인기 투표
+  let ccTab = 'contest';
+  function openCcWin(tab) {
+    if (!S.contest) return;
+    if (tab) ccTab = tab;
+    renderCcWin();
+    if (!$('ccw-dlg').open) $('ccw-dlg').showModal();
+  }
+  $('ccw-tabs').addEventListener('click', (e) => { const b = e.target.closest('.chipbtn'); if (!b) return; ccTab = b.dataset.t; renderCcWin(); });
+  $('ccw-close').addEventListener('click', () => $('ccw-dlg').close());
+  function renderCcWin() {
+    const v = S.contest, box = $('ccw-body');
+    if (!v) { $('ccw-dlg').close(); return; }
+    for (const b of $('ccw-tabs').children) b.classList.toggle('on', b.dataset.t === ccTab);
+    box.replaceChildren();
+    const here = v.region === S.region, V = v.vote;
+    const busy = !S.me || !!S.me.exp || !!S.me.restAt || !!S.me.battle;
+    const p = (t, cls) => box.appendChild(ccEl('p', cls || 'note', t));
+    const row = (...btns) => { const r = ccEl('div', 'ccw-act'); r.append(...btns); box.appendChild(r); };
+    const mkBtn = (label, cls, fn, off) => { const b = ccEl('button', `btn${cls ? ` ${cls}` : ''}`, label); b.type = 'button'; b.disabled = !!off; b.addEventListener('click', fn); return b; };
+    const stats = (list) => { const g = ccEl('div', 'ccw-stats'); for (const [k, val] of list) { const c = ccEl('div'); c.append(ccEl('small', null, k), ccEl('b', null, val)); g.appendChild(c); } box.appendChild(g); };
+    if (ccTab === 'contest') {
+      p(v.phase === 'on'
+        ? `어촌 광장에 잔칫상이 차려졌다. 심사위원 셋에게 요리를 내 보자. 순위는 가장 잘 만든 한 그릇으로 정하고, 같으면 ${v.varietyMin}점을 넘긴 서로 다른 요리가 많은 쪽이 앞선다. 직접 빚은 요리에는 창작 점수가 붙는다.`
+        : '요리 대회가 끝났다. 순위는 순위 칸에서 볼 수 있다.');
+      const jl = ccEl('div', 'ccw-judges');
+      for (const J of v.judges) { const c = ccEl('div'); c.append(ccEl('b', null, J.name), ccEl('small', null, J.role), ccEl('span', null, J.like)); jl.appendChild(c); }
+      box.appendChild(jl);
+      if (v.phase === 'on') {
+        stats([['내 최고 · 순위', v.mine ? `${v.mine.best}점${v.mine.rank ? ` · ${v.mine.rank}위` : ''}` : '—'], [`가짓수 (${v.varietyMin}점 넘김)`, `${v.mine?.kinds || 0}가지`], ['오늘 낼 수 있는 요리', `${v.left} / ${v.perDay}`]]);
+        if (here) row(mkBtn(`바다괴물 사냥 −${v.hunt.ap}`, '', () => { $('ccw-dlg').close(); ccHunt(); }, busy || (S.me?.ap || 0) < v.hunt.ap), mkBtn('요리 내기', 'primary', () => openCcSubmit('judge'), busy));
+        else p(`요리를 내려면 ${S.regions?.[v.region]?.name || '해안'} 어촌으로 가야 한다.`, 'note cc-small');
+      }
+      if (v.mine?.subs?.length) {
+        box.appendChild(ccEl('h3', 'ccw-h', '심사위원에게 낸 요리'));
+        const l = ccEl('div', 'ccw-list');
+        for (const x of v.mine.subs) { const r = ccEl('div', 'cc-sub'); r.append(ccEl('span', null, x.dish), ccEl('em', null, `${x.score}점`)); l.appendChild(r); }
+        box.appendChild(l);
+      }
+    } else if (ccTab === 'recipe') {
+      const R = v.recipes || { found: 0, total: 0, hintPer: 0 };
+      if (v.phase === 'on') {
+        stats([['찾아낸 잔치 요리 제작법', `${R.found} / ${R.total}`], ['오늘 들을 수 있는 귀띔', `${v.hintLeft || 0} / ${R.hintPer}`]]);
+        p('잔치 요리 제작법은 숨겨져 있다. 실험에서 재료 2~3가지를 섞어 보면 찾을 수 있고, 찾고 나면 만들기에서 만들 수 있다. 어촌의 심사위원들이 실마리를 귀띔해 주기도 한다.');
+      } else {
+        stats([['찾아낸 잔치 요리 제작법', `${R.found} / ${R.total}`]]);
+        p('대회가 끝나 심사위원들은 떠났다. 찾아낸 제작법으로는 남은 재료가 있는 만큼 계속 만들 수 있고, 남은 재료로 실험해 더 찾을 수도 있다.');
+      }
+      if (v.phase === 'on') {
+        row(mkBtn('귀띔 듣기', 'primary', () => socket.emit('cc:hint', {}, (r) => {
+          if (r.error) { SFX.play('error'); return toast(r.error); }
+          S.contest = r.contest; renderContest(); renderCcWin(); showResult(r);
+        }), busy || !here || !v.hintLeft || R.found >= R.total));
+        if (!here) p(`귀띔은 ${S.regions?.[v.region]?.name || '해안'} 어촌에서 들을 수 있다.`, 'note cc-small');
+      }
+      if (v.hints?.length) {
+        box.appendChild(ccEl('h3', 'ccw-h', '들은 귀띔'));
+        const l = ccEl('div', 'ccw-hints');
+        for (const x of v.hints) {
+          const r = ccEl('div', x.found ? 'found' : null);
+          r.append(ccEl('b', null, x.by), ccEl('span', null, `"${x.text}"`));
+          if (x.found) r.appendChild(ccEl('small', null, `찾음 · ${x.dish}`));
+          l.appendChild(r);
+        }
+        box.appendChild(l);
+      }
+    } else if (ccTab === 'rank') {
+      if (v.phase === 'on') {
+        p('대회 중에는 상위 5위까지만 보인다. 전체 순위는 대회가 끝나면 나온다.');
+        if (v.top?.length) box.appendChild(ccRank(v.top)); else p('아직 요리를 낸 드래곤이 없다.', 'note cc-small');
+        p('1위 요리는 대회가 끝나면 모든 드래곤에게 한 그릇씩 나눠진다.', 'note cc-small');
+      } else if (v.result?.rank?.length) {
+        box.appendChild(ccRank(v.result.rank));
+        if (v.result.gift?.length) p(`1위 요리 ${v.result.gift.map((g) => `${g.by}의 ${g.dish}`).join(', ')}${v.result.gift.length > 1 ? '가' : josa(v.result.gift[0].dish, '이', '가')} 모든 드래곤에게 한 그릇씩 나눠졌다.`, 'note cc-small');
+      } else p('심사위원에게 요리를 낸 드래곤이 없었다.');
+    } else if (ccTab === 'reward') {
+      const R = v.rewards; if (!R) return p('보상 정보를 받아 오지 못했다.');
+      const card = (head, item, title, extra) => {
+        const c = ccEl('div', 'ccw-rw');
+        c.appendChild(ccEl('b', 'ccw-rw-h', head));
+        if (item) { const r = ccEl('div', 'ccw-rw-i'); r.append(ccEl('span', 'ccw-rw-k', '기념품'), ccEl('strong', null, item.name)); c.appendChild(r); }
+        if (title) { const r = ccEl('div', 'ccw-rw-i'); r.append(ccEl('span', 'ccw-rw-k', '칭호'), ccEl('strong', null, title.name), ccEl('small', null, title.eff)); c.appendChild(r); }
+        if (extra) c.appendChild(ccEl('p', 'ccw-rw-x', extra));
+        return c;
+      };
+      box.appendChild(ccEl('h3', 'ccw-h', '대회 순위 (심사위원 점수)'));
+      const g = ccEl('div', 'ccw-rws');
+      for (const x of R.rank) g.appendChild(card(`${x.rank}위`, x.item, x.title, x.rank === 1 ? '1위 요리는 대회가 끝나면 모든 드래곤에게 한 그릇씩 나눠진다.' : null));
+      g.appendChild(card('요리를 낸 모두', R.all.item, R.all.title));
+      box.appendChild(g);
+      p('점수가 같으면 같은 순위로 함께 받는다. 기념품은 둥지의 보물 상자에 간직할 수 있다.', 'note cc-small');
+      box.appendChild(ccEl('h3', 'ccw-h', '인기 투표'));
+      const g2 = ccEl('div', 'ccw-rws');
+      for (const x of R.vote) g2.appendChild(card(`${x.name} 1위`, null, x.title));
+      box.appendChild(g2);
+    } else if (ccTab === 'vote') {
+      if (!V) return p('인기 투표가 없다.');
+      const cats = V.cats.map((c) => `'${c.name}'`).join('와 ');
+      if (V.state === 'entry') {
+        stats([['상태', '출품 받는 중'], ['올라온 요리', `${V.n}그릇`]]);
+        p(`${cats}를 뽑는다. 심사와 따로, 내가 고른 요리 한 그릇을 잔치 마당에 올려 두자. 투표가 열리기 전까지 바꿀 수 있지만, 올린 요리는 돌려받지 못한다.`);
+        const m = ccEl('div', 'ccw-entry');
+        const t = ccEl('div'); t.append(ccEl('small', null, '내 출품'), ccEl('b', null, V.mine ? V.mine.dish : '아직 없음'));
+        if (V.mine?.note) t.appendChild(ccEl('span', null, `"${V.mine.note}"`));
+        m.appendChild(t);
+        if (here) m.appendChild(mkBtn(V.mine ? '다른 요리로 바꾸기' : '출품하기', V.mine ? '' : 'primary', () => openCcSubmit('vote'), busy));
+        box.appendChild(m);
+        if (!here) p(`출품은 ${S.regions?.[v.region]?.name || '해안'} 어촌에서 할 수 있다.`, 'note cc-small');
+      } else if (V.state === 'open') {
+        const n = Object.values(V.my || {}).filter((x) => x != null).length;
+        stats([['남은 시간', ccLeft(V.until)], ['올라온 요리', `${V.cands.length}그릇`], ['내 투표', `${n} / ${V.cats.length}부문`]]);
+        p(`${cats}를 부문마다 한 그릇씩 고르자. 내 요리에는 투표할 수 없다.`);
+        row(mkBtn('투표하기', 'primary', openCcVote));
+      } else if (!V.result) {
+        p('투표가 마감되었다. 곧 결과가 발표된다.');
+      } else {
+        for (const c of V.cats) {
+          box.appendChild(ccEl('h3', 'ccw-h', c.name));
+          const l = V.result[c.key];
+          if (!l?.length) { p('표가 없었다.', 'note cc-small'); continue; }
+          const ol = ccEl('ol', 'cc-top');
+          l.forEach((x, i) => { const li = document.createElement('li'); li.append(ccEl('i', null, `${i + 1}위`), ccEl('b', null, x.name), ccEl('span', null, x.dish), ccEl('em', null, `${x.votes}표`)); ol.appendChild(li); });
+          box.appendChild(ol);
+        }
+      }
+    }
+  }
+  function ccHunt() {
+    socket.emit('cc:hunt', {}, (res) => {
+      if (res.error) { SFX.play('error'); return toast(res.error); }
+      openBattle(res.battle, { title: res.title, lines: res.lines });
+    });
+  }
+  // 요리 고르기 창: mode 'judge' = 심사위원에게 내기, 'vote' = 인기 투표에 출품 (한 줄 소개를 붙일 수 있음)
+  let ccMode = 'judge';
+  function openCcSubmit(mode) {
+    const v = S.contest; if (!v) return;
+    if (mode === 'judge' && v.phase !== 'on') return;
+    if (mode === 'vote' && v.vote?.state !== 'entry') return;
+    ccMode = mode;
+    socket.emit('cc:dishes', {}, (res) => {
+      if (res.error) return toast(res.error);
+      const vote = mode === 'vote';
+      $('cc-title').textContent = vote ? '인기 투표에 출품' : '심사위원에게 요리 내기';
+      $('cc-lead').textContent = vote
+        ? `잔치 마당에 올려 둘 요리 한 그릇을 고르자. 투표가 열리기 전까지 다른 요리로 바꿀 수 있지만, 올린 요리는 돌려받지 못한다.${v.vote.mine ? ` 지금 올린 요리: ${v.vote.mine.dish}` : ''}`
+        : `오늘 더 낼 수 있는 요리 ${v.left}/${v.perDay}. 낸 요리는 심사위원들이 먹는다.`;
+      const note = $('cc-note-in'); note.hidden = !vote; note.maxLength = v.vote?.noteMax || 40; if (vote) note.value = v.vote.mine?.note || '';
+      const list = $('cc-list'); list.replaceChildren();
+      if (!res.list.length) list.appendChild(ccEl('p', 'note', '낼 수 있는 요리가 없다. 잔치 요리나 생선 조림·탕 같은 회복 요리, 직접 빚은 먹을거리를 가져오자. (강화 음식·식구 요리·아이가 부엌에서 만든 요리는 낼 수 없다)'));
+      for (const it of res.list) {
+        const row = ccEl('div', `cc-dish it ${it.rarity}`);
+        const b = ccEl('button', 'btn', vote ? '올리기' : '내기'); b.type = 'button'; b.disabled = !vote && !v.left;
+        b.addEventListener('click', () => {
+          b.disabled = true;
+          const ev = vote ? 'cc:enter' : 'cc:submit';
+          socket.emit(ev, vote ? { id: it.id, note: note.value } : { id: it.id }, (r) => {
+            if (r.error) { b.disabled = false; SFX.play('error'); return toast(r.error); }
+            $('cc-dlg').close(); showResult(r.result);
+          });
+        });
+        row.append(ccEl('span', 'nm', it.name), ccEl('small', null, `×${it.qty}`), b); list.appendChild(row);
+      }
+      renderCcMine();
+      if (!$('cc-dlg').open) $('cc-dlg').showModal();
+    });
+  }
+  function renderCcMine() {
+    const v = S.contest, box = $('cc-mine'); box.replaceChildren();
+    if (ccMode !== 'judge' || !v?.mine?.subs?.length) return;
+    box.appendChild(ccEl('p', 'note', '심사위원에게 낸 요리'));
+    for (const x of v.mine.subs) { const row = ccEl('div', 'cc-sub'); row.append(ccEl('span', null, x.dish), ccEl('em', null, `${x.score}점`)); box.appendChild(row); }
+  }
+  function openCcVote() {
+    const v = S.contest; if (v?.vote?.state !== 'open') return;
+    $('ccv-lead').textContent = `부문마다 한 그릇씩 고르자. 투표가 끝날 때까지 바꿀 수 있다. (${ccLeft(v.vote.until)} 남음)`;
+    renderCcVote();
+    if (!$('ccv-dlg').open) $('ccv-dlg').showModal();
+  }
+  function renderCcVote() {
+    const v = S.contest, box = $('ccv-body'); box.replaceChildren();
+    const V = v?.vote;
+    if (!V || V.state !== 'open') return;
+    for (const c of V.cats) {
+      box.appendChild(ccEl('h3', 'ccv-h', c.name));
+      const list = ccEl('div', 'ccv-list');
+      for (const x of V.cands) {
+        const mine = x.id === S.me?.id, picked = V.my[c.key] === x.id;
+        const b = ccEl('button', `ccv-opt${picked ? ' on' : ''}`); b.type = 'button'; b.disabled = mine;
+        b.appendChild(ccEl('b', null, x.dish));
+        if (x.note) b.appendChild(ccEl('span', 'ccv-note', `"${x.note}"`));
+        b.appendChild(ccEl('small', null, mine ? `${x.name} (내 요리)` : x.name));
+        b.addEventListener('click', () => socket.emit('cc:vote', { cat: c.key, id: x.id }, (r) => { if (r.error) return toast(r.error); S.contest = r.contest; renderCcVote(); renderContest(); }));
+        list.appendChild(b);
+      }
+      box.appendChild(list);
+    }
+  }
+  $('cc-close').addEventListener('click', () => $('cc-dlg').close());
+  $('ccv-close').addEventListener('click', () => $('ccv-dlg').close());
+  setInterval(() => { if (S.contest && !$('cc-note').hidden) renderContest(true); }, 60000);
   // 재앙의 오염 (놓친 재앙이 남긴 검은 기운): 기간이 남은 곳 (정화된 곳 포함) / 아직 오염된 곳
   function blightAt(rid) { return (S.me?.blight || []).find((b) => b.region === rid && b.until > Date.now()) || null; }
   function blightOn(rid) { const b = blightAt(rid); return b && !b.done ? b : null; }
@@ -11254,6 +11503,7 @@
   const hoursLeft = (until) => Math.max(1, Math.round((until - Date.now()) / 3600000));
   function renderCorrupt() {
     renderMarketFall();
+    renderContest();
     if (realmOf(S.region) === 'ruin') return renderRuin($('corrupt-note'));
     $('corrupt-note').classList.remove('ruin');
     const c = S.me?.corrupt;
@@ -11310,8 +11560,9 @@
     const left = v.until - Date.now();
     const leftT = left >= 3600000 ? `${Math.floor(left / 3600000)}시간 ${Math.floor((left % 3600000) / 60000)}분` : `${Math.max(1, Math.ceil(left / 60000))}분`;
     const els = (l) => l.map((x) => S.combat?.elements?.[x] || x).join('·');
-    box.innerHTML = '<div class="h"><span class="k">대륙의 재앙</span><span class="nm"></span><span class="bs-lv"></span></div><p class="ds"></p>'
+    box.innerHTML = '<div class="h"><span class="k"></span><span class="nm"></span><span class="bs-lv"></span></div><p class="ds"></p>'
       + '<div class="hpw"><div class="hp"><i></i></div><span class="pc"></span></div><div class="meta"></div><div class="ft"><span class="mine"></span></div>';
+    box.querySelector('.k').textContent = v.tag || '대륙의 재앙'; // 잔치 재앙(크라켄)은 '풍어 잔치'
     box.querySelector('.nm').textContent = v.name;
     box.querySelector('.bs-lv').textContent = `Lv.${v.lv} · ${where}`;
     box.querySelector('.ds').textContent = v.desc;
@@ -11324,7 +11575,7 @@
     if (v.weak.length) m('약점', els(v.weak));
     if (v.resist.length) m('저항', els(v.resist));
     m('특기', v.special);
-    m('놓치면', '이곳과 주변 땅이 오염됨');
+    if (!v.ev) m('놓치면', '이곳과 주변 땅이 오염됨'); else m('쓰러뜨리면', '크라켄 다리살');
     if (v.top.length) m('선두', v.top.slice(0, 3).map((x) => `${x.name} ${x.share}%`).join(' · '));
     const mine = v.dmg?.[S.me?.id];
     box.querySelector('.mine').textContent = mine ? `내가 입힌 피해 ${mine.dmg.toLocaleString()} · ${mine.share}% · ${mine.rank}위` : `한 번 맞서면 ${v.turns}턴 동안 싸우고 물러난다. 모두의 상처가 쌓인다.`;
@@ -12758,7 +13009,7 @@
   }
   // 공지 탭과 대륙 이벤트 탭: 예전 '공지' 탭 하나에 섞여 있던 묶음을 제목으로 골라 나눔
   const GM_NOTICE = ['공지', '업데이트 노트', '환영 공지'];
-  const GM_EVENTS = ['떠돌이 야바위꾼', '안개 너머의 행상인', '무너진 시장', '오염', '재앙의 오염', '대륙의 재앙', '계절과 날씨'];
+  const GM_EVENTS = ['떠돌이 야바위꾼', '안개 너머의 행상인', '무너진 시장', '풍어 요리 잔치', '오염', '재앙의 오염', '대륙의 재앙', '계절과 날씨'];
   function renderGmAnnouncePart(body, part) {
     const tmp = document.createElement('div');
     renderGmAnnounce(tmp);
@@ -13442,6 +13693,43 @@
         if (!confirm(`${S.regions[mtown.value].name}의 시장을 무너뜨릴까? 다 세울 때까지 그곳 시장을 쓸 수 없다.`)) return;
         gmCall('gm:marketfall', { town: mtown.value, attacker: matk.value.trim(), gold: mg.value, items: { red_clay: mc.value, bog_iron: mi.value, living_bark: mb.value }, sun: ms.value, salt: ml.value, cap: mcap.value }, () => { toast('시장을 무너뜨렸다.'); renderGm(); });
       }, 'primary');
+    }
+
+    // 풍어 요리 잔치 (요리대회)
+    {
+      const ccs = gmSection(body, '풍어 요리 잔치', '남쪽 해안에서 여는 요리대회. 대회 동안 지역마다 귀한 재료가 나고, 해안에 바다괴물과 크라켄(재앙이 올 차례마다 재앙 대신)이 나타난다. 대회가 끝나면 1위 대륙의 요리사·1~3위 금·은·동 트로피·낸 모두 앞치마. 인기 투표는 대회와 따로: 잔치가 열리면 해안에서 출품을 받고, 투표는 여기서 원할 때 열고, 마감한 뒤 결과도 여기서 공개한다.');
+      if (GM.cc === undefined) { GM.cc = null; socket.emit('gm:cc:get', {}, (res) => { if (!res.error) { GM.cc = res.state; if (GM.tab === 'events') renderGm(); } }); }
+      const c = GM.cc, when = (t) => new Date(t).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      const done = (msg) => (res) => { GM.cc = res.state; toast(msg); };
+      if (c && c.phase !== 'done') {
+        if (c.phase === 'on') {
+          gmRow(ccs, `대회 중 · ${when(c.until)}까지 · 요리를 낸 드래곤 ${c.people} · 낸 요리 ${c.subs}${c.krakenAt ? ` · 다음 크라켄(재앙 차례) ${when(c.krakenAt)}` : ''}`);
+          if (c.top.length) gmRow(ccs, c.top.join(' · '));
+          const r = gmRow(ccs);
+          gBtn(r, '크라켄 지금 부르기', () => gmCall('gm:cc:kraken', {}, done('크라켄을 불렀다.')));
+          gBtn(r, '대회 마치기 (상 주기)', () => { if (!confirm('지금 대회를 마치고 순위대로 상을 줄까? 인기 투표는 따로 그대로 간다.')) return; gmCall('gm:cc:finish', {}, done('대회를 마쳤다.')); });
+        } else gmRow(ccs, `대회 끝 (상을 줌) · 요리를 낸 드래곤 ${c.people}`);
+        const V = c.vote || { state: 'entry', n: 0 };
+        if (V.state === 'entry') {
+          const r = gmRow(ccs, `인기 투표 · 출품 ${V.n}그릇`);
+          const hours = gNum(r, '시간', '48', '64px');
+          gBtn(r, '투표 열기', () => { if (!confirm(`출품을 닫고 ${hours.value || 48}시간 동안 인기 투표를 열까? 모두에게 알림이 간다.`)) return; gmCall('gm:cc:vote', { hours: hours.value }, done('인기 투표를 열었다.')); }, 'primary');
+        } else if (V.state === 'open') {
+          const r = gmRow(ccs, `인기 투표 중 · ${when(V.until)}까지 · 출품 ${V.n}그릇 · 투표한 드래곤 ${V.voters}`);
+          gBtn(r, '투표 마감하기', () => { if (!confirm('지금 인기 투표를 마감할까? 결과는 따로 공개해야 보인다.')) return; gmCall('gm:cc:close', {}, done('인기 투표를 마감했다.')); });
+        } else if (!V.shown) {
+          gmRow(ccs, `인기 투표 마감 · 투표한 드래곤 ${V.voters} · 아직 공개하지 않음 (GM만 보임)`);
+          for (const t of V.tally || []) gmRow(ccs, `${t.name}: ${t.top.length ? t.top.join(' · ') : '표 없음'}`);
+          const r = gmRow(ccs);
+          gBtn(r, '결과 공개', () => { if (!confirm('인기 투표 결과를 모두에게 공개하고 1위에게 칭호를 줄까?')) return; gmCall('gm:cc:publish', {}, done('결과를 공개했다.')); }, 'primary');
+        } else gmRow(ccs, '인기 투표 결과 공개함');
+        const r2 = gmRow(ccs);
+        gBtn(r2, '상 없이 거두기', () => { if (!confirm('남은 상·칭호를 주지 않고 잔치를 거둘까?')) return; gmCall('gm:cc:cancel', {}, done('잔치를 거뒀다.')); }, 'link');
+      } else {
+        const r = gmRow(ccs, '기간');
+        const days = gNum(r, '일', '6', '56px');
+        gBtn(r, '잔치 열기', () => { if (!confirm(`${days.value || 6}일 동안 풍어 요리 잔치를 열까? 모두에게 알림이 간다.`)) return; gmCall('gm:cc:start', { days: days.value }, done('풍어 요리 잔치를 열었다.')); }, 'primary');
+      }
     }
 
     // 오염: 지금 상태와 즉시 일으키기
@@ -14448,6 +14736,7 @@
     });
     socket.on('chat', onLiveChat);
     socket.on('chat:deleted', onChatDeleted);
+    socket.on('contest', (v) => { S.contest = v || null; if (S.region) renderContest(); if ($('cc-dlg').open) renderCcMine(); if ($('ccv-dlg').open) renderCcVote(); GM.cc = undefined; if ($('gm-dlg')?.open && GM.tab === 'events') renderGm(); }); // GM 칸은 다시 받아 옴
     socket.on('marketfall', (v) => { if (S.me) S.me.marketFall = v; if (S.region) renderMarketFall(); if ($('gm-dlg')?.open && GM.tab === 'events') renderGm(); });
     socket.on('notice', (r) => {
       SFX.play('notice');

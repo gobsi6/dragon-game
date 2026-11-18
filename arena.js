@@ -23,7 +23,14 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
   let track = null;
   const setTrack = (fn) => { track = fn; };
   { const set = sessions.set.bind(sessions), del = sessions.delete.bind(sessions);
-    sessions.set = (id, s) => { track?.(id, s.kind || 'duel'); return set(id, s); };
+    sessions.set = (id, s) => {
+      // 사냥·강적(재앙·바다괴물·도둑 추격 포함)은 싸움을 열며 쓴 행동력도 함께 적어 둠: 서버가 다시 켜져 싸움이 끊기면 돌려줌 (server.js liveFights)
+      const k = s.kind || 'duel', sp = online.get(id)?.dragon?.apSpent;
+      const ap = (k === 'hunt' || k === 'elite') && sp && Date.now() - sp.at < 10000 ? sp.n : 0;
+      if (ap) delete online.get(id).dragon.apSpent; // 한 번 적은 값은 다시 쓰지 않음
+      track?.(id, k, ap);
+      return set(id, s);
+    };
     sessions.delete = (id) => { track?.(id, null); return del(id); }; }
   const invites = new Map();  // 신청 id → { id, from, to, timer }
   let nextId = 1;

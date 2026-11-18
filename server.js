@@ -862,7 +862,7 @@ function chatPage(region, before) {
 }
 // 진행 중인 큰 사건의 알림 (끝나면 빠짐)
 function livePins() {
-  const out = [...marketFall.pins(), boss.pin()];
+  const out = [...marketFall.pins(), boss.pin(), contest.pin()];
   const cp = db.worldGet('corruptPin');
   if (cp && cp.region === logic.corruptedRegion() && !purify.purified()) out.push(cp);
   out.push(blight.pin());
@@ -889,6 +889,7 @@ function enterWorld(socket, dragon) {
   maze.onEnter(socket, dragon);
   online.set(dragon.id, { socket, dragon, at: Date.now() }); // at: 이번에 접속한 시각 (결투장 목록 순서 등)
   socket.join(dragon.region);
+  if (contest) socket.emit('contest', contest.view(dragon)); // 풍어 요리 잔치 (열려 있을 때만 모습이 있음)
   setImmediate(() => rivalNear(dragon));
   const back = !prev && Date.now() - (dragon.last_seen || 0) >= AWAY_MS; // 오래 자리를 비웠다가 돌아옴
   db.touch(dragon.id); dragon.last_seen = Date.now(); // 메모리의 값도 맞춰 둠 (다음 판정이 예전 값을 보지 않게)
@@ -965,6 +966,8 @@ wxTicker.unref?.();
 
 // 대륙의 재앙: 모두가 함께 맞서는 거대한 적 (boss.js)
 const boss = require('./boss')({ io, db, online, logic, combat, arena, sendMe });
+// 풍어 요리 잔치 (요리대회): GM이 여는 기간 한정 이벤트. 크라켄은 boss로 부름 (contest.js)
+const contest = require('./contest')({ io, db, online, logic, combat, arena, sendMe, boss });
 // 떠돌이 야바위꾼: 하루 네 번 한 시간씩 대륙 어딘가에 판을 벌임 (yabawi.js)
 const slate = require('./slate')({ io, db, entryOf }); // 석판 (게시판)
 const yabawi = require('./yabawi')({ io, db, online, logic, sendMe, isOpen: (r) => (r.startsWith('raid:') ? !!raidBoss?.cleared(r.slice(5)) : ruin.unlocked(r)) }); // ruin은 아래에서 만들어지지만, 쓰는 건 게임이 돌아갈 때라 괜찮음
@@ -1337,16 +1340,28 @@ const liveFights = (() => {
     calm: '서버가 다시 시작되어 광폭한 드래곤을 진정시키던 싸움이 끊겼다.',
   };
   // 켜질 때: 지난번에 싸우던 드래곤에게 쪽지 (다시 접속하면 '자리를 비운 동안'으로 보임)
+  // 사냥·강적은 싸움을 열며 쓴 행동력을 돌려줌 ({ k: 종류, ap: 쓴 행동력 }. 예전 기록은 종류 글자만 있음)
   const before = db.worldGet('liveFights', null) || {};
   let n = 0;
-  for (const [id, kind] of Object.entries(before)) { try { db.noteAdd(Number(id), `[서버 점검] ${LOST[kind] || LOST.hunt}`); n++; } catch {} }
+  for (const [id, v] of Object.entries(before)) {
+    try {
+      const kind = typeof v === 'string' ? v : v?.k;
+      const ap = typeof v === 'object' && v ? Math.max(0, Math.floor(v.ap || 0)) : 0;
+      let back = '';
+      if (ap) {
+        const d = db.getDragon(Number(id));
+        if (d && !d.dead_at) { d.ap = (d.ap || 0) + ap; db.saveState(d); back = ` 싸움에 쓴 행동력을 돌려받았다. (행동력 +${ap})`; }
+      }
+      db.noteAdd(Number(id), `[서버 점검] ${LOST[kind] || LOST.hunt}${back}`); n++;
+    } catch (e) { console.error('[끊긴 싸움]', id, e.message); }
+  }
   if (n) console.log(`[끊긴 싸움] ${n}마리에게 안내를 남겼다.`);
   const st = {};
   db.worldSet('liveFights', st);
   let t = null;
   const save = () => { if (t) return; t = setTimeout(() => { t = null; db.worldSet('liveFights', st); }, 1000); t.unref?.(); };
-  const fn = (id, kind) => { if (kind) st[id] = kind; else delete st[id]; save(); };
-  fn.now = () => ({ ...st }); // GM 도구: 지금 싸우는 드래곤 { id: 종류 }
+  const fn = (id, kind, ap = 0) => { if (kind) st[id] = ap ? { k: kind, ap } : kind; else delete st[id]; save(); };
+  fn.now = () => Object.fromEntries(Object.entries(st).map(([id, v]) => [id, typeof v === 'string' ? v : v.k])); // GM 도구: 지금 싸우는 드래곤 { id: 종류 }
   return fn;
 })();
 arena.setTrack(liveFights);
@@ -1693,7 +1708,7 @@ function onConnect(socket) {
     traits: TRAITS, traitEarn: TRAIT_EARN, traitCounts: TRAIT_COUNTS,
     mobs: mobs.listForClient(),
     free: { tags: FREE_CFG.tags, names: FREE_CFG.tagNames, groups: FREE_CFG.tagGroup, mine: FREE_CFG.mine, mineLib: FREE_CFG.mineLib, // 자유 제작: 재료의 성질
-      plainHidden: [...new Set(RECIPES.filter((r) => r.hidden).flatMap((r) => Object.keys(r.needs)).filter((id) => !FREE_CFG.tags[id]))] }, // 성질이 없어도 숨은 제작법에 쓰여 화로 목록에 남기는 것 (지금은 꿀 고약)
+      plainHidden: [...new Set(RECIPES.filter((r) => r.hidden).flatMap((r) => r.find || Object.keys(r.needs)).filter((id) => !FREE_CFG.tags[id]))] }, // 성질이 없어도 숨은 제작법에 쓰여 화로 목록에 남기는 것 (지금은 꿀 고약)
     craftRules: { enhance: CRAFT.enhance, forgeRate: CRAFT.forgeRate, engrave: CRAFT.engrave, experimentEn: CRAFT.experiment.en, forge: CRAFT.forge, hidden: RECIPES.filter((r) => r.hidden).map((r) => r.out) },
     statPerLevel: require('./game-data').STAT_POINTS.perLevel,
     places: PLACES, regionPlaces: REGION_PLACES, placeRules: PLACE_RULES,
@@ -2027,6 +2042,7 @@ function onConnect(socket) {
         if (logic.isCorrupted(dd.region)) r.lines.push(...logic.traitCount(dd, 'corrupt'));
         r.lines.push(...logic.traitCount(dd, 'hunt'));
         if (r.wound) r.lines.push(...logic.traitCount(dd, 'wound'));
+        if (r.win) contest.drop(dd, 'hunt', r); // 풍어 요리 잔치: 이긴 사냥에서도 가끔
         if (!r.fall) r.event = life.rollEvent(dd, db.kinLoad(dd.id), (id) => db.itemCount(dd.id, id), 'hunt');
       });
       db.saveState(d);
@@ -2048,6 +2064,7 @@ function onConnect(socket) {
     }
     // 바랜 제작서: 탐사하다 가끔 (숨겨진 제작법)
     if (type === 'explore' && Math.random() < CRAFT.scrollChance.explore) { res.items = [...(res.items || []), { id: 'recipe_scroll', qty: 1 }]; res.lines.push('무너진 돌 틈에 낡은 양피지가 끼어 있었다. 바랜 제작서다!'); }
+    contest.drop(d, type, res); // 풍어 요리 잔치: 대회 동안 지역마다 귀한 재료
     // 특성: 행동을 세고, 쓰러지기 직전까지 몰린 사냥은 상처로 셈
     res.lines.push(...logic.traitCount(d, type));
     if (type === 'gather' || type === 'explore') logic.traitCount(d, `${type}:${d.region}`); // 모브 드래곤 의뢰: 지역별
@@ -2802,6 +2819,8 @@ function onConnect(socket) {
     ack({ ok: true });
   });
   itemAction('market:help', (d, p, have) => marketFall.help(d, p?.gold, p?.items, have));
+  itemAction('cc:submit', (d, p, have) => contest.submit(d, p?.id, have)); // 풍어 요리 잔치: 심사위원에게 요리 내기
+  itemAction('cc:enter', (d, p, have) => contest.enter(d, p?.id, p?.note, have)); // 풍어 요리 잔치: 인기 투표에 요리 출품
   socket.on('gm:corrupt', (p, ack) => {
     if (typeof ack !== 'function') return;
     if (!socket.data.user?.is_gm) return ack({ error: 'GM만 쓸 수 있다.' });
@@ -3126,6 +3145,7 @@ function onConnect(socket) {
   arena.attach(socket);
   death.attach(socket);
   boss.attach(socket);
+  contest.attach(socket);
   raidBoss.attach(socket);
 
   socket.on('disconnect', () => {

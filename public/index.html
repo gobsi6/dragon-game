@@ -258,6 +258,7 @@
         <div class="rampage-bars" id="rescue-bars"></div>
         <div class="corrupt-note" id="corrupt-note" hidden></div>
         <div class="mf-note" id="mf-note" hidden></div><!-- 무너진 시장 (GM 이벤트) -->
+        <div class="cc-note" id="cc-note" hidden></div><!-- 풍어 요리 잔치 (요리대회, GM 이벤트) -->
         <div class="mob-bar" id="mob-bar" hidden>
           <span class="mob-em" id="mob-em"></span>
           <div class="mob-t"><b id="mob-name"></b><small id="mob-sub"></small></div>
@@ -1000,6 +1001,28 @@
   <div class="orn-h"><h2 id="mf-title">시장 다시 세우기</h2></div>
   <div class="body"><p class="note" id="mf-lead"></p><div class="mf-form" id="mf-form"></div></div>
   <div class="row"><button class="btn" type="button" id="mf-close">닫기</button><button class="btn primary" type="button" id="mf-go">보태기</button></div>
+</dialog>
+
+<dialog class="frame dlg" id="ccw-dlg" aria-labelledby="ccw-title"><!-- 풍어 요리 잔치: 잔치 창 (대회 · 제작법 · 순위 · 인기 투표) -->
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="ccw-title">풍어 요리 잔치</h2></div>
+  <div class="utabs" id="ccw-tabs" role="group" aria-label="잔치 창 메뉴"><button type="button" class="chipbtn on" data-t="contest">대회</button><button type="button" class="chipbtn" data-t="recipe">제작법</button><button type="button" class="chipbtn" data-t="rank">순위</button><button type="button" class="chipbtn" data-t="vote">인기 투표</button><button type="button" class="chipbtn" data-t="reward">보상</button></div>
+  <div class="body ccw-body" id="ccw-body"></div>
+  <div class="row"><button class="btn" type="button" id="ccw-close">닫기</button></div>
+</dialog>
+
+<dialog class="frame dlg" id="cc-dlg" aria-labelledby="cc-title"><!-- 풍어 요리 잔치: 요리 내기 -->
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="cc-title">심사위원에게 요리 내기</h2></div>
+  <div class="body"><p class="note" id="cc-lead"></p><input class="input" id="cc-note-in" type="text" maxlength="40" placeholder="한 줄 소개 (안 적어도 됨)" aria-label="한 줄 소개" hidden><div class="cc-list" id="cc-list"></div><div class="cc-mine" id="cc-mine"></div></div>
+  <div class="row"><button class="btn" type="button" id="cc-close">닫기</button></div>
+</dialog>
+
+<dialog class="frame dlg" id="ccv-dlg" aria-labelledby="ccv-title"><!-- 풍어 요리 잔치: 인기 투표 -->
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="orn-h"><h2 id="ccv-title">인기 투표</h2></div>
+  <div class="body"><p class="note" id="ccv-lead"></p><div class="ccv-body" id="ccv-body"></div></div>
+  <div class="row"><button class="btn primary" type="button" id="ccv-close">닫기</button></div>
 </dialog>
 
 <dialog class="frame dlg" id="gift-dlg" aria-labelledby="gift-title">
