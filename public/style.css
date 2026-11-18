@@ -2149,7 +2149,7 @@ button.trait.bad.on { background: #FBF1F2; box-shadow: inset 0 0 0 1px #A63E4B; 
 .mf-in small { grid-column: 2; font-size: 11.5px; color: var(--muted); }
 #market-open.mf-down { opacity: .5; }
 /* 풍어 요리 잔치 (요리대회): 해안 지역 카드의 잔치 칸 · 요리 내기 · 인기 투표 */
-.cc-note { display: flex; flex-direction: column; gap: 7px; margin-top: 12px; padding: 10px 12px; background: var(--surface-2); border: 1px solid var(--line-in); border-left: 3px solid #3C5A73; font-size: 13px; color: #2E4350; }
+.cc-note { display: flex; flex-direction: column; gap: 7px; margin-top: 0; padding: 10px 12px; background: var(--surface-2); border: 1px solid var(--line-in); border-left: 3px solid #3C5A73; font-size: 13px; color: #2E4350; }
 .cc-note[hidden] { display: none; }
 .cc-note p { margin: 0; line-height: 1.6; }
 .cc-note .cc-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
@@ -5681,3 +5681,14 @@ button.stp:hover { background: #fff; border-color: var(--line); }
   .cci-judges span { margin-top: 0; margin-left: auto; font-size: 11.5px; }
   .cci-reward div { flex-direction: column; gap: 0; }
 }
+/* 요리대회 화면 다듬기: 작은 버튼 높이 · 굵은 글씨 (잔치 칸 위쪽 여백은 0: 바깥 칸 사이 간격이 이미 있어 두 겹으로 벌어졌음)
+   - 잔치 칸의 btn.sm은 따로 정한 높이가 없어 기본 42px로 나왔음
+   - 고딕(IBM Plex Sans KR)은 400·500·600만 받아 오므로 700(b 기본값)은 브라우저가 억지로 두껍게 그려 뭉개짐 → 600으로, 숫자·이름은 명조 700 */
+.cc-act .btn.sm { min-height: 32px; padding: 0 12px; font-size: 13px; }
+.ccw-act .btn, .ccw-entry .btn { min-height: 36px; padding: 0 14px; font-size: 13.5px; }
+.cc-note b, .cc-note strong, .ccw-body b, .ccw-body strong, #cci-dlg b, #cc-dlg b, #ccv-dlg b { font-weight: 600; }
+.cc-chips b { font-weight: 600; }
+.ccw-stats b { font: 700 15.5px/1.35 var(--serif); color: var(--ink); letter-spacing: .01em; }
+.ccw-stats small { letter-spacing: .01em; }
+.ccw-judges b, .ccw-entry b, .ccw-rw-h, .cci-judges b, .cc-note .cc-h b { font-weight: 700; } /* 명조(Noto Serif KR)는 700이 있음 */
+.ccw-body .note { line-height: 1.65; }
