@@ -3820,6 +3820,8 @@ body.mz-drag, body.mz-drag * { user-select: none !important; -webkit-user-select
 @media (max-width: 860px) {
   .chat { right: 8px; width: min(520px, calc(100vw - 16px)); height: calc(100vh - var(--dock-h, 56px) - var(--top-h, 52px) - 20px); height: calc(100dvh - var(--dock-h, 56px) - var(--top-h, 52px) - 20px); height: calc(100svh - var(--dock-h, 56px) - var(--top-h, 52px) - 20px); } /* 상단바 바로 아래부터 아래 탭 줄 위까지 가득 */
   .chat .here.in-chat .here-list { max-height: min(220px, 32svh); }
+  .chat { transition: height .22s ease; }
+  html.f-top-hide .chat { height: calc(100vh - var(--dock-h, 56px) - 16px); height: calc(100svh - var(--dock-h, 56px) - 16px); } /* 스크롤로 머리줄이 접혀 있으면 드래곤 기록 칸(체력바)까지 덮어 화면 맨 위 가까이까지 */
 }
 
 /* ── 팝업창: 오른쪽 위 ✕ 닫기, 폰 주소창이 오르내려도 위가 잘리지 않게, 창이 떠 있는 동안 바깥 화면은 스크롤되지 않게 ── */
@@ -3992,6 +3994,11 @@ html.f-modal { overflow: hidden; overscroll-behavior: none; } /* 뒤 화면이 �
     height: auto; margin: 0 auto;
     max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 16px);
   }
+  /* (2026-11-18) 창을 화면 위 끝(노치 아래 8px)부터 아래 끝까지 늘 가득 채움: 내용이 짧을 때(전투 끝 등) 창이 아래로 내려앉아 위로 체력바·지도가 비쳐 보이던 것.
+     남는 높이는 전투 기록 칸이 받아 기록이 더 길게 보임. 내용이 더 길면 지금처럼 창 안에서 스크롤 */
+  #battle-dlg:not(.as-panel)[open] { top: calc(env(safe-area-inset-top, 0px) + 8px); display: flex; flex-direction: column; }
+  #battle-dlg:not(.as-panel) > .body { flex: 1 0 auto; }
+  #battle-dlg:not(.as-panel) .bt-log { flex-grow: 1; }
 }
 .who .raid { font-size: 11px; color: #8A2E27; border: 1px solid #E3B9B4; background: #FBEFEE; padding: 0 6px; border-radius: 2px; margin-left: auto; margin-right: 2px; white-space: nowrap; } /* 이곳의 드래곤: 레이드 중 */
 /* 전투 기록 줄의 색: 받은 피해·쓰러짐(붉게), 회복(초록), 잘 막아 냄·적이 쓰러짐(강철빛), 장면·대사(흐리게) */
@@ -5545,12 +5552,73 @@ button.stp:hover { background: #fff; border-color: var(--line); }
 .stp.berserk .bar { background: #8E3340; }
 .stp.berserk .bar > b { background: #F2C9CE; }
 
-/* ── 소지품 줄 오른쪽 단추: 폰(860px 이하)에서만 옆으로 늘어놓지 않고 위아래로 (2026-11-17). 넓은 화면은 예전처럼 가로 ──
-   단추 칸의 폭을 맞춰 줄마다 같은 자리에. '누구의 유품일까?' 고르기(ks-mode)는 예전처럼 줄 아래 전체 너비에 가로로 */
+/* ── 소지품: 분류 책갈피 + 목록 칸 (C안, 2026-11-17) ──
+   넓은 화면(561px 이상): 왼쪽 세로 책갈피(그림 · 이름 · 가진 종 수, 폭 128px). 고른 책갈피는 오른쪽 목록 칸과 이어져 한 장처럼.
+   장신구를 고르면 그 밑으로 부위가 펼쳐짐. 책갈피는 목록을 내려도 화면에 붙어 따라옴.
+   폰(560px 이하): 목록 칸 위의 가로 메뉴(그림 위 · 이름 · 수). 내려도 위에 붙어 있고, 옆으로 밀어 넘겨 봄. 장신구 부위는 목록 칸 맨 위 */
+.ii { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+#inv-list .inv-split { display: flex; align-items: flex-start; margin-top: 10px; }
+#inv-list .inv-rail { flex: none; width: 128px; display: flex; flex-direction: column; gap: 2px; padding: 4px 0;
+  position: sticky; top: calc(var(--head-h, 0px) + 14px); max-height: calc(100vh - var(--head-h, 0px) - 28px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+#inv-list .inv-rail::-webkit-scrollbar { display: none; }
+#inv-list .inv-bm { position: relative; z-index: 1; display: flex; align-items: center; gap: 7px; min-height: 40px; margin: 0 -1px 0 0; padding: 0 9px;
+  border: 1px solid transparent; border-right: 0; border-radius: 3px 0 0 3px; background: transparent; color: var(--ink-2); font: 500 13px/1.2 var(--sans); text-align: left; cursor: pointer; }
+#inv-list .inv-bm .ii { color: #7E8389; }
+#inv-list .inv-bm .bm-t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#inv-list .inv-bm .bm-n { flex: none; font: 400 11px/1 var(--sans); color: var(--muted); font-variant-numeric: tabular-nums; }
+#inv-list .inv-bm:hover { background: #ECEEEC; }
+#inv-list .inv-bm.on { z-index: 2; background: var(--surface-2); border-color: var(--line-soft); color: var(--ink); font-weight: 700; }
+#inv-list .inv-bm.on .ii { color: var(--steel-d); }
+#inv-list .inv-bm:focus-visible { outline: 2px solid var(--steel); outline-offset: -2px; }
+/* 장신구 부위 (넓은 화면): 장신구 책갈피 밑으로 한 칸 들여서 */
+#inv-list .inv-bm.sub { min-height: 32px; margin: 0 6px 0 12px; padding: 0 8px; border: 1px solid transparent; border-radius: 2px; font-size: 12.5px; gap: 6px; }
+#inv-list .inv-bm.sub .ii { width: 15px; height: 15px; }
+#inv-list .inv-bm.sub.on { background: #EEF2F5; border-color: #B9C7D3; color: var(--steel-d); }
+#inv-list .inv-pane { flex: 1; min-width: 0; min-height: 280px; padding: 2px 0 14px; background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: 0 4px 4px 4px; }
+#inv-list .inv-pane .inv-box { border: 0; border-radius: 0; background: transparent; }
+#inv-list .inv-pane h3.inv-h { margin: 16px 14px 2px; font-size: 13.5px; }
+#inv-list .inv-pane > h3.inv-h:first-child, #inv-list .inv-pane > .inv-sub + h3.inv-h, #inv-list .inv-pane > .buff-now + h3.inv-h { margin-top: 12px; }
+#inv-list .inv-pane h3.inv-h .ii { width: 16px; height: 16px; color: var(--steel-d); }
+#inv-list .inv-pane > .buff-now { margin: 10px 12px 2px; }
+#inv-list .inv-pane > .empty { border-top: 0; padding: 28px 14px; }
+/* 장신구 부위 (폰): 목록 칸 맨 위, 넘치면 다음 줄로 */
+#inv-list .inv-sub { display: flex; flex-wrap: wrap; gap: 5px; margin: 0; padding: 10px 10px 4px; }
+#inv-list .inv-sub .subchip { display: inline-flex; align-items: center; gap: 5px; min-height: 30px; padding: 0 9px 0 7px; border: 1px solid var(--line-in); border-radius: 2px; background: #fff; color: var(--ink-2); font: 500 12.5px/1 var(--sans); }
+#inv-list .inv-sub .subchip .ii { width: 14px; height: 14px; color: #7E8389; }
+#inv-list .inv-sub .subchip small { font: 400 11px/1 var(--sans); color: var(--muted); }
+#inv-list .inv-sub .subchip.on { background: #EEF2F5; border-color: #B9C7D3; color: var(--steel-d); font-weight: 700; }
+#inv-list .inv-sub .subchip.on .ii { color: var(--steel-d); }
+@media (min-width: 561px) { #inv-list .inv-pane > .inv-sub { display: none; } }
+/* 861~ : 머리줄 아래에 붙음. 860px 이하: 위의 머리줄(접히기도 함)과 드래곤 기록 줄 아래에 붙음 */
 @media (max-width: 860px) {
-  #inv-list .it .acts { flex-direction: column; flex-wrap: nowrap; align-items: stretch; justify-content: center; min-width: 76px; }
+  #inv-list .inv-rail { top: calc(var(--top-h, 52px) + var(--pf-h, 80px) + 8px); max-height: calc(100vh - var(--top-h, 52px) - var(--pf-h, 80px) - var(--dock-h, 56px) - 16px); }
+  html.f-top-hide #inv-list .inv-rail { top: calc(var(--pf-h, 80px) + 8px); max-height: calc(100vh - var(--pf-h, 80px) - var(--dock-h, 56px) - 16px); }
+  /* 줄 오른쪽 단추: 폰에서만 위아래로 (넓은 화면은 예전처럼 가로). 폭을 맞춰 줄마다 같은 자리 */
+  #inv-list .it .acts { flex-direction: column; flex-wrap: nowrap; align-items: stretch; justify-content: center; min-width: 76px; max-width: none; }
   #inv-list .it .acts .btn { justify-content: center; white-space: nowrap; }
   #inv-list .it .acts.ks-mode { flex-direction: row; flex-wrap: wrap; align-items: center; min-width: 0; }
   #inv-list .it .acts.ks-mode .btn { white-space: normal; }
 }
-@media (max-width: 420px) { #inv-list .it .acts { min-width: 62px; } #inv-list .it .acts.ks-mode { min-width: 0; } }
+/* 폰: 가로 메뉴 */
+@media (max-width: 560px) {
+  #inv-list .inv-split { flex-direction: column; align-items: stretch; margin-left: -14px; margin-right: -14px; } /* 창의 안쪽 여백까지 넓힘 (액자 안쪽 장식선과 3px 떨어진 자리) */
+  #inv-list .inv-rail { top: calc(var(--top-h, 52px) + var(--pf-h, 80px)); z-index: 4; width: auto; max-height: none; flex-direction: row; gap: 2px; padding: 10px 2px 0; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain;
+    background: var(--surface); border-bottom: 1px solid var(--line-soft); scroll-padding-inline: 24px; } /* 위 틈 없이 기록 줄에 바로 붙음 (틈으로 목록 글자가 비치지 않게) */
+  html.f-top-hide #inv-list .inv-rail { top: var(--pf-h, 80px); max-height: none; }
+  /* 옆에 더 있으면 그쪽 가장자리를 흐리게 ('더 있음'): JS가 more-l · more-r를 붙임 */
+  #inv-list .inv-rail.more-r { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent); }
+  #inv-list .inv-rail.more-l { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 26px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 26px), transparent); }
+  #inv-list .inv-rail.more-l.more-r { -webkit-mask-image: linear-gradient(to right, transparent, #000 26px, #000 calc(100% - 26px), transparent); mask-image: linear-gradient(to right, transparent, #000 26px, #000 calc(100% - 26px), transparent); }
+  #inv-list .inv-bm { flex: none; flex-direction: column; justify-content: center; gap: 3px; min-width: 58px; min-height: 58px; margin: 0 0 -1px; padding: 7px 6px 6px; /* 다섯 개 반쯤 보이게: 옆에 더 있다는 게 보임 */
+    border: 1px solid transparent; border-bottom: 0; border-radius: 3px 3px 0 0; font-size: 12px; text-align: center; }
+  #inv-list .inv-bm .bm-t { flex: none; overflow: visible; }
+  #inv-list .inv-bm .bm-n { font-size: 10.5px; }
+  #inv-list .inv-bm:hover { background: transparent; }
+  #inv-list .inv-bm.on { background: var(--surface-2); border-color: var(--line-soft); }
+  #inv-list .inv-bm.sub { display: none; }
+  #inv-list .inv-pane { border-top: 0; border-radius: 0 0 4px 4px; }
+  #inv-list .inv-pane h3.inv-h { margin: 14px 10px 2px; }
+  #inv-list .inv-pane .it { padding: 10px 8px 10px 36px; column-gap: 8px; } /* 왼쪽 36px: 즐겨찾기 별 자리 */
+  #inv-list .inv-pane .it > .fav-star { left: 5px; top: 4px; }
+}
+@media (max-width: 420px) { #inv-list .it .acts { min-width: 62px; } #inv-list .it .acts.ks-mode { min-width: 0; } #inv-list .it .acts .btn { padding: 0 6px; } }
