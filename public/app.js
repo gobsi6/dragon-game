@@ -11314,6 +11314,7 @@
         if (here) row(mkBtn(`바다괴물 사냥 −${v.hunt.ap}`, '', () => { $('ccw-dlg').close(); ccHunt(); }, busy || (S.me?.ap || 0) < v.hunt.ap), mkBtn('요리 내기', 'primary', () => openCcSubmit('judge'), busy));
         else p(`요리를 내려면 ${S.regions?.[v.region]?.name || '해안'} 어촌으로 가야 한다.`, 'note cc-small');
       }
+      if (v.phase === 'on') { const lk = ccEl('button', 'cc-lnk ccw-intro', '잔치 안내 다시 보기 ›'); lk.type = 'button'; lk.addEventListener('click', () => socket.emit('cc:intro', {}, (r) => { if (r.error) return toast(r.error); showCcIntro(r.intro, true); })); box.appendChild(lk); }
       if (v.mine?.subs?.length) {
         box.appendChild(ccEl('h3', 'ccw-h', '심사위원에게 낸 요리'));
         const l = ccEl('div', 'ccw-list');
@@ -11480,7 +11481,7 @@
     }
   }
   // 대회 시작 안내 팝업 (서버가 대회마다 드래곤당 한 번 보냄)
-  function showCcIntro(x) {
+  function showCcIntro(x, again) { // again: 잔치 창에서 다시 볼 때 (소리 없이, 잔치 창 위에 뜸)
     if (!x) return;
     $('cci-title').textContent = x.title;
     $('cci-left').textContent = x.until ? `${ccLeft(x.until)} 남음` : '';
@@ -11510,11 +11511,11 @@
       box.appendChild(rw);
     }
     box.scrollTop = 0;
-    SFX.play('notice');
+    if (!again) SFX.play('notice');
     if (!$('cci-dlg').open) $('cci-dlg').showModal();
   }
   $('cci-close').addEventListener('click', () => $('cci-dlg').close());
-  $('cci-go').addEventListener('click', () => { $('cci-dlg').close(); openCcWin('contest'); });
+  $('cci-go').addEventListener('click', () => { $('cci-dlg').close(); if (!$('ccw-dlg').open) openCcWin('contest'); });
   $('cc-close').addEventListener('click', () => $('cc-dlg').close());
   $('ccv-close').addEventListener('click', () => $('ccv-dlg').close());
   setInterval(() => { if (S.contest && !$('cc-note').hidden) renderContest(true); }, 60000);

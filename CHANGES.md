@@ -1,3 +1,9 @@
+# 풍어 요리 잔치: 잔치 안내 다시 보기 (2026-11-18)
+
+바뀐 파일: contest.js, public/app.js, public/style.css, CHANGES.md
+
+- 잔치 창 '대회' 탭에 '잔치 안내 다시 보기 ›'를 더함: 대회 중이면 언제든 시작 안내를 다시 열어 볼 수 있음 (서버 cc:intro). 다시 볼 때는 알림 소리가 나지 않음.
+
 # 풍어 요리 잔치: 버튼 높이 · 굵은 글씨 · 간격 (2026-11-18)
 
 바뀐 파일: public/style.css, CHANGES.md

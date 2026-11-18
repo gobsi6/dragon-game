@@ -5692,3 +5692,4 @@ button.stp:hover { background: #fff; border-color: var(--line); }
 .ccw-stats small { letter-spacing: .01em; }
 .ccw-judges b, .ccw-entry b, .ccw-rw-h, .cci-judges b, .cc-note .cc-h b { font-weight: 700; } /* 명조(Noto Serif KR)는 700이 있음 */
 .ccw-body .note { line-height: 1.65; }
+.ccw-intro { align-self: flex-start; margin: -2px 0 0; padding: 2px 0; font-size: 13px; }

@@ -124,6 +124,11 @@ module.exports = function setupContest({ io, db, online, logic, combat, arena, s
     const seen = (st.seen ||= {});
     if (seen[d.id]) return null;
     seen[d.id] = 1; save();
+    return introView();
+  }
+  // 안내 내용 (잔치 창 '잔치 안내 다시 보기'에서도 씀)
+  function introView() {
+    if (!on()) return null;
     const king = TITLE_OF(C.kingTitle);
     const boss = BOSS_NAME();
     const days = Math.round((st.until - st.at) / DAY);
@@ -537,6 +542,7 @@ module.exports = function setupContest({ io, db, online, logic, combat, arena, s
     call('cc:get', (d) => ({ ok: true, contest: view(d) }));
     call('cc:vote', (d, p) => vote(d, String(p.cat || ''), p.id));
     call('cc:hint', (d) => hint(d));
+    call('cc:intro', () => { const x = introView(); return x ? { ok: true, intro: x } : { error: '지금은 요리 대회가 열려 있지 않다.' }; }); // 잔치 안내 다시 보기
     // 낼 수 있는 요리: 소지품에서
     call('cc:dishes', (d) => ({ ok: true, list: db.inventory(d.id).filter((x) => x.qty > 0 && dishInfo(x.item)).map((x) => ({ id: x.item, name: ITEMS[x.item].name, qty: x.qty, rarity: ITEMS[x.item].rarity || 'common' })).sort((a, b) => a.name.localeCompare(b.name, 'ko')) }));
     call('cc:hunt', (d) => {
