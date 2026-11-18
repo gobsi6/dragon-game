@@ -3997,8 +3997,8 @@ html.f-modal { overflow: hidden; overscroll-behavior: none; } /* 뒤 화면이 �
   /* (2026-11-18) 창을 화면 위 끝(노치 아래 8px)부터 아래 끝까지 늘 가득 채움: 내용이 짧을 때(전투 끝 등) 창이 아래로 내려앉아 위로 체력바·지도가 비쳐 보이던 것.
      남는 높이는 전투 기록 칸이 받아 기록이 더 길게 보임. 내용이 더 길면 지금처럼 창 안에서 스크롤 */
   #battle-dlg:not(.as-panel)[open] { top: calc(env(safe-area-inset-top, 0px) + 8px); display: flex; flex-direction: column; }
-  #battle-dlg:not(.as-panel) > .body { flex: 1 0 auto; }
-  #battle-dlg:not(.as-panel) .bt-log { flex-grow: 1; }
+  #battle-dlg:not(.as-panel) > .body { gap: 8px; } /* 스크롤은 원래대로 창 안쪽(.body)이 맡음 (.dlg:not(.as-panel) > .body: overflow-y auto) — flex를 바꾸면 스크롤이 막힘 */
+  #battle-dlg:not(.as-panel) .bt-log { flex: 1 1 0; min-height: 64px; } /* 기록 칸이 늘고 줄며 높이를 맞춤: 적·기술이 많아도 자동·물러나기 단추까지 되도록 스크롤 없이 보이게 (64px 밑으로는 줄지 않고 그때는 창이 스크롤) */
 }
 .who .raid { font-size: 11px; color: #8A2E27; border: 1px solid #E3B9B4; background: #FBEFEE; padding: 0 6px; border-radius: 2px; margin-left: auto; margin-right: 2px; white-space: nowrap; } /* 이곳의 드래곤: 레이드 중 */
 /* 전투 기록 줄의 색: 받은 피해·쓰러짐(붉게), 회복(초록), 잘 막아 냄·적이 쓰러짐(강철빛), 장면·대사(흐리게) */
