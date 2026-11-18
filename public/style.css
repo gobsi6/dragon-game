@@ -3821,7 +3821,7 @@ body.mz-drag, body.mz-drag * { user-select: none !important; -webkit-user-select
   .chat { right: 8px; width: min(520px, calc(100vw - 16px)); height: calc(100vh - var(--dock-h, 56px) - var(--top-h, 52px) - 20px); height: calc(100dvh - var(--dock-h, 56px) - var(--top-h, 52px) - 20px); height: calc(100svh - var(--dock-h, 56px) - var(--top-h, 52px) - 20px); } /* 상단바 바로 아래부터 아래 탭 줄 위까지 가득 */
   .chat .here.in-chat .here-list { max-height: min(220px, 32svh); }
   .chat { transition: height .22s ease; }
-  html.f-top-hide .chat { height: calc(100vh - var(--dock-h, 56px) - 16px); height: calc(100svh - var(--dock-h, 56px) - 16px); } /* 스크롤로 머리줄이 접혀 있으면 드래곤 기록 칸(체력바)까지 덮어 화면 맨 위 가까이까지 */
+  html.f-top-hide .chat { height: calc(100vh - var(--dock-h, 56px) - env(safe-area-inset-top, 0px) - 16px); height: calc(100svh - var(--dock-h, 56px) - env(safe-area-inset-top, 0px) - 16px); } /* 스크롤로 머리줄이 접혀 있으면 드래곤 기록 칸(체력바)까지 덮어 화면 맨 위 가까이까지 */
 }
 
 /* ── 팝업창: 오른쪽 위 ✕ 닫기, 폰 주소창이 오르내려도 위가 잘리지 않게, 창이 떠 있는 동안 바깥 화면은 스크롤되지 않게 ── */
