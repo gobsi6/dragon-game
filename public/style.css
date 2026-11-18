@@ -5648,3 +5648,36 @@ button.stp:hover { background: #fff; border-color: var(--line); }
 .ccw-rw-i small { flex-basis: 100%; font-size: 12px; color: var(--ink-2); line-height: 1.5; }
 .ccw-rw-x { margin: 2px 0 0; font-size: 12px; color: var(--muted); line-height: 1.5; }
 @media (max-width: 520px) { .ccw-rws { grid-template-columns: 1fr; } }
+/* 요리대회 시작 안내 팝업 */
+#cci-dlg { width: min(560px, calc(100vw - 24px)); }
+.cci-body { display: flex; flex-direction: column; }
+#cci-dlg .cci-body:focus, #cci-dlg .cci-body:focus-visible { outline: none; } /* 창이 열릴 때 본문에 포커스가 가도 테두리는 그리지 않음 */
+.cci-left { margin: -4px 0 12px; font-size: 12px; color: var(--muted); text-align: center; letter-spacing: .02em; }
+.cci-lines { display: flex; flex-direction: column; gap: 10px; font-size: 13.5px; line-height: 1.65; color: var(--ink-2); }
+.cci-lines p { margin: 0; }
+.cci-lines .cci-lead { font: 500 14.5px/1.7 var(--serif); color: var(--ink); text-align: center; padding: 0 6px 10px; border-bottom: 1px dashed var(--line-in); }
+.cci-judges { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.cci-judges div { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 9px 8px 10px; background: #fff; border: 1px solid #E3E8EC; border-top: 3px solid #3C5A73; text-align: center; }
+.cci-judges small { font-size: 11px; color: var(--muted); }
+.cci-judges b { font: 700 14.5px/1.4 var(--serif); color: var(--ink); }
+.cci-judges span { margin-top: 3px; font-size: 11.5px; color: #23506A; }
+.cci-rumor { display: flex; flex-direction: column; gap: 7px; padding: 10px 13px; background: #F4F1EA; border: 1px solid #E2DCCD; border-left: 3px solid #A8874E; }
+.cci-rumor h3 { margin: 0; font: 700 13px/1.4 var(--serif); color: #7A5C28; letter-spacing: .04em; }
+.cci-rumor p { color: #4F4636; }
+.cci-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.cci-chips span { display: inline-flex; align-items: baseline; gap: 5px; padding: 2px 8px; background: #fff; border: 1px solid #E2DCCD; font-size: 12px; white-space: nowrap; }
+.cci-chips small { font-size: 11px; color: #8A7A5C; }
+.cci-chips b { font-weight: 600; color: #4F4636; }
+.cci-reward { display: flex; flex-direction: column; gap: 4px; padding: 11px 14px; background: #EEF4F7; border: 1px solid #C5D6E0; }
+.cci-reward div { display: flex; align-items: baseline; gap: 10px; }
+.cci-reward small { flex: none; min-width: 7.5em; font-size: 12px; color: #5E7480; }
+.cci-reward b { font-weight: 600; color: #23506A; font-size: 13.5px; }
+.cci-reward p { margin-top: 3px; font-size: 12px; color: #5E7480; }
+@media (max-width: 520px) {
+  /* 폰: 심사위원은 한 줄씩 (이름 · 하는 일 · 입맛) */
+  .cci-judges { grid-template-columns: 1fr; gap: 4px; }
+  .cci-judges div { flex-direction: row; flex-wrap: wrap; align-items: baseline; justify-content: flex-start; gap: 0 8px; padding: 6px 10px; border-top-width: 1px; border-left: 3px solid #3C5A73; text-align: left; }
+  .cci-judges b { order: -1; font-size: 14px; }
+  .cci-judges span { margin-top: 0; margin-left: auto; font-size: 11.5px; }
+  .cci-reward div { flex-direction: column; gap: 0; }
+}

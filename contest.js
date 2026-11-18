@@ -117,6 +117,38 @@ module.exports = function setupContest({ io, db, online, logic, combat, arena, s
     const mine = Object.fromEntries((logic.titlesView(d).list || []).map((x) => [x.id, x.eff]));
     return { ...REWARDS, vote: REWARDS.vote.map((x) => ({ ...x, title: x.title && mine[x.id] ? { ...x.title, eff: mine[x.id] } : x.title })) };
   }
+  // 대회 시작 안내 팝업: 대회마다 드래곤당 한 번 (열릴 때 접속해 있거나, 대회 중 처음 접속할 때)
+  const BOSS_NAME = () => require('./game-data').BOSSES[C.region]?.name || '크라켄';
+  function intro(d) {
+    if (!on() || !d) return null;
+    const seen = (st.seen ||= {});
+    if (seen[d.id]) return null;
+    seen[d.id] = 1; save();
+    const king = TITLE_OF(C.kingTitle);
+    const boss = BOSS_NAME();
+    const days = Math.round((st.until - st.at) / DAY);
+    const trophy = ITEMS[C.trophies[0]]?.name || '금 트로피', apron = ITEMS[C.apron]?.name || '앞치마';
+    // 잔치 창보다 가볍게: 이야기처럼 읽히는 몇 덩어리 (재료·보상 이름은 game-data에서)
+    return {
+      title: `${C.name}가 열렸습니다`,
+      until: st.until,
+      lead: `${regionName()} 어촌에 ${C.name}가 열렸습니다. 올해도 바다가 넉넉히 내어 준 덕분에, 어촌 사람들은 ${days}일 동안 광장에 잔칫상을 차리기로 했습니다.`,
+      judges: C.judges.map((J) => ({ name: J.name, role: J.role, like: J.like })),
+      judging: `세 심사위원에게 하루 ${C.perDay}번까지 요리를 심사받을 수 있습니다. 순위는 가장 잘 만든 한 그릇으로 정해집니다.`,
+      rumors: [
+        { text: '잔치 소식이 퍼지면서 묘한 소문도 함께 돌기 시작했습니다. 잔치를 반기기라도 하듯, 대륙 곳곳에서 좀처럼 보기 힘든 귀한 재료가 나타났다는 이야기입니다.',
+          chips: Object.entries(C.drops).map(([r, id]) => ({ where: REGIONS[r]?.name || r, what: ITEMS[id]?.name || id })) },
+        { text: `어촌 사람들 사이에서는 또 다른 소문도 돕니다. 잔치 냄새를 맡은 바다괴물들이 ${regionName()}${josa(regionName(), '으로', '로')} 몰려들고 있고, 재앙이 찾아올 무렵이면 깊은 바다에서 ${boss}${josa(boss, '이', '가')} 올라온다는 것입니다. 쓰러뜨리기만 하면 귀한 고기를 얻을 수 있다고들 하네요.` },
+      ],
+      secret: '잔치 요리의 제작법은 어촌 사람들만 아는 비밀입니다. 실험에서 재료를 섞어 직접 찾아내거나, 심사위원들에게 슬쩍 귀띔을 들어 보세요. 세상에 없던 요리를 직접 빚어 낸다면 심사위원들이 점수를 더 얹어 줄 겁니다.',
+      vote: '심사와는 따로, 잔치 마당에 올릴 인기 투표 요리도 한 그릇씩 받고 있습니다.',
+      rewards: [
+        { who: '1위', what: `${trophy} · 칭호 '${king?.name || ''}'` },
+        { who: '요리를 낸 모두', what: apron },
+      ],
+      rewardNote: '자세한 보상은 잔치 창의 보상 탭에서 볼 수 있습니다.',
+    };
+  }
   // ── 화면에 보낼 모습 ──
   function view(d, now = Date.now()) {
     if (!st) return null;
@@ -183,6 +215,7 @@ module.exports = function setupContest({ io, db, online, logic, combat, arena, s
     shout(`${tag} ${regionName()} 어촌에서 ${C.name}가 열렸다! ${days}일 동안 대륙 곳곳에서 귀한 재료가 나고, 해안에는 바다괴물이 몰려든다. 어촌의 심사위원 셋에게 요리를 내 보자. (하루 ${C.perDay}번까지) 인기 투표에 올릴 요리도 한 그릇씩 받는다.`);
     st.pin = io.lastNews || null; save();
     push();
+    for (const e of online.values()) { const x = intro(e.dragon); if (x) e.socket.emit('contest:intro', x); } // 접속해 있는 드래곤에게 시작 안내
     return { ok: true };
   }
   // 대회를 마치고 상을 줌 (인기 투표는 따로: GM이 열고 닫음)
@@ -500,6 +533,7 @@ module.exports = function setupContest({ io, db, online, logic, combat, arena, s
       ack(fn(d, p || {}));
     });
     socket.emit('contest', view(me()));
+    { const x = intro(me()); if (x) setTimeout(() => socket.connected && socket.emit('contest:intro', x), 1500); } // 대회 중 처음 접속하면 시작 안내 (다른 첫 화면 알림이 먼저 뜬 뒤에)
     call('cc:get', (d) => ({ ok: true, contest: view(d) }));
     call('cc:vote', (d, p) => vote(d, String(p.cat || ''), p.id));
     call('cc:hint', (d) => hint(d));

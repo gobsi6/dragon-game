@@ -11479,6 +11479,42 @@
       box.appendChild(list);
     }
   }
+  // 대회 시작 안내 팝업 (서버가 대회마다 드래곤당 한 번 보냄)
+  function showCcIntro(x) {
+    if (!x) return;
+    $('cci-title').textContent = x.title;
+    $('cci-left').textContent = x.until ? `${ccLeft(x.until)} 남음` : '';
+    const box = $('cci-lines'); box.replaceChildren();
+    const para = (t, cls) => { if (t) box.appendChild(ccEl('p', cls || null, t)); };
+    if (!x.lead) { for (const t of x.lines || []) para(t); } // 예전 서버가 보낸 안내 (글 줄만)
+    else {
+      para(x.lead, 'cci-lead');
+      // 심사위원 셋
+      const jl = ccEl('div', 'cci-judges');
+      for (const J of x.judges || []) { const c = ccEl('div'); c.append(ccEl('small', null, J.role), ccEl('b', null, J.name), ccEl('span', null, J.like)); jl.appendChild(c); }
+      box.appendChild(jl);
+      para(x.judging);
+      // 떠도는 소문 (재료 · 바다괴물)
+      const rm = ccEl('section', 'cci-rumor');
+      rm.appendChild(ccEl('h3', null, '떠도는 소문'));
+      for (const r of x.rumors || []) {
+        rm.appendChild(ccEl('p', null, r.text));
+        if (r.chips?.length) { const cl = ccEl('div', 'cci-chips'); for (const c of r.chips) { const s = ccEl('span'); s.append(ccEl('small', null, c.where), ccEl('b', null, c.what)); cl.appendChild(s); } rm.appendChild(cl); }
+      }
+      box.appendChild(rm);
+      para([x.secret, x.vote].filter(Boolean).join(' '));
+      // 보상
+      const rw = ccEl('div', 'cci-reward');
+      for (const r of x.rewards || []) { const row = ccEl('div'); row.append(ccEl('small', null, r.who), ccEl('b', null, r.what)); rw.appendChild(row); }
+      if (x.rewardNote) rw.appendChild(ccEl('p', null, x.rewardNote));
+      box.appendChild(rw);
+    }
+    box.scrollTop = 0;
+    SFX.play('notice');
+    if (!$('cci-dlg').open) $('cci-dlg').showModal();
+  }
+  $('cci-close').addEventListener('click', () => $('cci-dlg').close());
+  $('cci-go').addEventListener('click', () => { $('cci-dlg').close(); openCcWin('contest'); });
   $('cc-close').addEventListener('click', () => $('cc-dlg').close());
   $('ccv-close').addEventListener('click', () => $('ccv-dlg').close());
   setInterval(() => { if (S.contest && !$('cc-note').hidden) renderContest(true); }, 60000);
@@ -14736,6 +14772,7 @@
     });
     socket.on('chat', onLiveChat);
     socket.on('chat:deleted', onChatDeleted);
+    socket.on('contest:intro', showCcIntro);
     socket.on('contest', (v) => { S.contest = v || null; if (S.region) renderContest(); if ($('cc-dlg').open) renderCcMine(); if ($('ccv-dlg').open) renderCcVote(); GM.cc = undefined; if ($('gm-dlg')?.open && GM.tab === 'events') renderGm(); }); // GM 칸은 다시 받아 옴
     socket.on('marketfall', (v) => { if (S.me) S.me.marketFall = v; if (S.region) renderMarketFall(); if ($('gm-dlg')?.open && GM.tab === 'events') renderGm(); });
     socket.on('notice', (r) => {
