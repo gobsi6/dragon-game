@@ -59,7 +59,7 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
   // 알림 머리말: 대륙의 재앙, 또는 잔치 재앙의 tag (예: 풍어 잔치)
   const tagOf = (key) => BOSSES[key]?.tag || '대륙의 재앙';
   const active = () => !!st && !st.done;
-  const WILD = () => Object.keys(BOSSES).filter((r) => REGIONS[r] && !SHOPS[r]);
+  const WILD = () => Object.keys(BOSSES).filter((r) => REGIONS[r] && !SHOPS[r] && !BOSSES[r].ev); // 잔치 재앙(크라켄)은 무작위로 뽑지 않음 (뽑히면 나타나지 못해 한 시간씩 밀렸음)
   if (!nextAt) { nextAt = Date.now() + rand(...BOSS.gapHours) * HOUR; save(); }
 
   // 순위: 입힌 피해가 큰 순서
@@ -252,6 +252,7 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
       const ov = logic.hooks.bossOverride?.(); // 풍어 요리 잔치 중이면 재앙 차례에 크라켄이 대신 (contest.js)
       const r = ov ? spawn(ov, { ev: true }) : spawn();
       if (r.error) { nextAt = now + HOUR; save(); }
+      else logic.hooks.bossSpawned?.(); // 재앙 차례가 지나감 (요리대회: 크라켄·일반 재앙 번갈아)
     }
   }, 60000);
   ticker.unref?.();

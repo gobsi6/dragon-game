@@ -11267,7 +11267,7 @@
     } else if (v.result?.rank?.length) {
       const t = v.result.rank[0]; chip('1위', `${t.name} · ${t.dish}`);
     }
-    if (V) chip('인기 투표', V.state === 'entry' ? '출품 받는 중' : V.state === 'open' ? `투표 중 · ${ccLeft(V.until)} 남음` : V.result ? '결과 발표' : '마감');
+    if (V) chip('인기 투표', V.state === 'entry' ? (V.entryUntil ? `출품 · ${ccLeft(V.entryUntil)} 남음` : '출품 받는 중') : V.state === 'open' ? `투표 중 · ${ccLeft(V.until)} 남음` : V.skipped ? '열리지 않음' : V.result ? '결과 발표' : '마감');
     box.appendChild(chips);
     // 할 일
     const act = ccEl('div', 'cc-act');
@@ -11381,8 +11381,8 @@
       if (!V) return p('인기 투표가 없다.');
       const cats = V.cats.map((c) => `'${c.name}'`).join('와 ');
       if (V.state === 'entry') {
-        stats([['상태', '출품 받는 중'], ['올라온 요리', `${V.n}그릇`]]);
-        p(`${cats}를 뽑는다. 심사와 따로, 내가 고른 요리 한 그릇을 잔치 마당에 올려 두자. 투표가 열리기 전까지 바꿀 수 있지만, 올린 요리는 돌려받지 못한다.`);
+        stats([['상태', '출품 받는 중'], ['올라온 요리', `${V.n}그릇`], ...(V.entryUntil ? [['출품 마감', `${ccLeft(V.entryUntil)} 남음`]] : [])]);
+        p(`${cats}를 뽑는다. 심사와 따로, 내가 고른 요리 한 그릇을 잔치 마당에 올려 두자.${V.entryUntil ? ' 출품은 잔치가 끝나기 하루 전까지 받고, 마감되면 마지막 하루 동안 투표가 열린다.' : ''} 투표 때는 누가 만든 요리인지 보이지 않는다. 마감 전까지 다른 요리로 바꿀 수 있고, 바꾸면 먼저 올린 요리는 돌려받는다. 투표가 열리면 올린 요리는 돌려받지 못한다.`);
         const m = ccEl('div', 'ccw-entry');
         const t = ccEl('div'); t.append(ccEl('small', null, '내 출품'), ccEl('b', null, V.mine ? V.mine.dish : '아직 없음'));
         if (V.mine?.note) t.appendChild(ccEl('span', null, `"${V.mine.note}"`));
@@ -11393,8 +11393,10 @@
       } else if (V.state === 'open') {
         const n = Object.values(V.my || {}).filter((x) => x != null).length;
         stats([['남은 시간', ccLeft(V.until)], ['올라온 요리', `${V.cands.length}그릇`], ['내 투표', `${n} / ${V.cats.length}부문`]]);
-        p(`${cats}를 부문마다 한 그릇씩 고르자. 내 요리에는 투표할 수 없다.`);
+        p(`${cats}를 부문마다 한 그릇씩 고르자. 누가 만든 요리인지는 결과가 나올 때까지 비밀이다. 내 요리에는 투표할 수 없다.`);
         row(mkBtn('투표하기', 'primary', openCcVote));
+      } else if (V.skipped) {
+        p('출품된 요리가 모자라 이번 인기 투표는 열리지 않았다.');
       } else if (!V.result) {
         p('투표가 마감되었다. 곧 결과가 발표된다.');
       } else {
@@ -11427,7 +11429,7 @@
       const vote = mode === 'vote';
       $('cc-title').textContent = vote ? '인기 투표에 출품' : '심사위원에게 요리 내기';
       $('cc-lead').textContent = vote
-        ? `잔치 마당에 올려 둘 요리 한 그릇을 고르자. 투표가 열리기 전까지 다른 요리로 바꿀 수 있지만, 올린 요리는 돌려받지 못한다.${v.vote.mine ? ` 지금 올린 요리: ${v.vote.mine.dish}` : ''}`
+        ? `잔치 마당에 올려 둘 요리 한 그릇을 고르자. 투표 때는 누가 만든 요리인지 보이지 않는다.${v.vote.entryUntil ? ` 출품 마감까지 ${ccLeft(v.vote.entryUntil)} 남았다.` : ''} 마감 전까지 다른 요리로 바꿀 수 있고, 바꾸면 먼저 올린 요리는 돌려받는다. 투표가 열리면 올린 요리는 돌려받지 못한다.${v.vote.mine ? ` 지금 올린 요리: ${v.vote.mine.dish}` : ''}`
         : `오늘 더 낼 수 있는 요리 ${v.left}/${v.perDay}. 낸 요리는 심사위원들이 먹는다.`;
       const note = $('cc-note-in'); note.hidden = !vote; note.maxLength = v.vote?.noteMax || 40; if (vote) note.value = v.vote.mine?.note || '';
       const list = $('cc-list'); list.replaceChildren();
@@ -11457,7 +11459,7 @@
   }
   function openCcVote() {
     const v = S.contest; if (v?.vote?.state !== 'open') return;
-    $('ccv-lead').textContent = `부문마다 한 그릇씩 고르자. 투표가 끝날 때까지 바꿀 수 있다. (${ccLeft(v.vote.until)} 남음)`;
+    $('ccv-lead').textContent = `부문마다 한 그릇씩 고르자. 누가 만든 요리인지는 결과가 나올 때까지 비밀이다. 투표가 끝날 때까지 바꿀 수 있다. (${ccLeft(v.vote.until)} 남음)`;
     renderCcVote();
     if (!$('ccv-dlg').open) $('ccv-dlg').showModal();
   }
@@ -11465,19 +11467,50 @@
     const v = S.contest, box = $('ccv-body'); box.replaceChildren();
     const V = v?.vote;
     if (!V || V.state !== 'open') return;
+    const byId = Object.fromEntries(V.cands.map((x) => [x.id, x]));
+    // 내 선택 요약
+    const sum = ccEl('div', 'ccv-sum');
     for (const c of V.cats) {
-      box.appendChild(ccEl('h3', 'ccv-h', c.name));
-      const list = ccEl('div', 'ccv-list');
-      for (const x of V.cands) {
-        const mine = x.id === S.me?.id, picked = V.my[c.key] === x.id;
-        const b = ccEl('button', `ccv-opt${picked ? ' on' : ''}`); b.type = 'button'; b.disabled = mine;
-        b.appendChild(ccEl('b', null, x.dish));
-        if (x.note) b.appendChild(ccEl('span', 'ccv-note', `"${x.note}"`));
-        b.appendChild(ccEl('small', null, mine ? `${x.name} (내 요리)` : x.name));
-        b.addEventListener('click', () => socket.emit('cc:vote', { cat: c.key, id: x.id }, (r) => { if (r.error) return toast(r.error); S.contest = r.contest; renderCcVote(); renderContest(); }));
-        list.appendChild(b);
+      const pick = byId[V.my[c.key]];
+      const r = ccEl('div', pick ? 'on' : null);
+      r.append(ccEl('small', null, c.name), ccEl('b', null, pick ? `${pick.no}번 · ${pick.dish}` : '아직 고르지 않음'));
+      sum.appendChild(r);
+    }
+    box.appendChild(sum);
+    // 부문 설명
+    const legend = ccEl('p', 'ccv-legend');
+    legend.textContent = V.cats.map((c) => `${c.name}: ${c.desc || ''}`).join(' · ');
+    box.appendChild(legend);
+    // 보는 사람마다 순서를 섞음 (번호는 그대로. 같은 드래곤에게는 늘 같은 순서)
+    const seed = S.me?.id || 0;
+    const mix = (n) => { let h = (n * 2654435761 + seed * 40503) >>> 0; h ^= h >>> 13; h = Math.imul(h, 2246822519) >>> 0; return h ^ (h >>> 16); };
+    const others = V.cands.filter((x) => !x.mine).sort((a, b) => mix(a.no) - mix(b.no));
+    const mine = V.cands.filter((x) => x.mine);
+    const list = ccEl('div', 'ccv-list');
+    for (const x of others) {
+      const card = ccEl('div', 'ccv-card');
+      const head = ccEl('div', 'ccv-head');
+      head.append(ccEl('span', 'ccv-no', `${x.no}번`), ccEl('b', null, x.dish));
+      card.appendChild(head);
+      if (x.note) card.appendChild(ccEl('p', 'ccv-note', `"${x.note}"`));
+      const btns = ccEl('div', 'ccv-picks');
+      for (const c of V.cats) {
+        const on = V.my[c.key] === x.id;
+        const bt = ccEl('button', `btn sm ccv-pick${on ? ' on' : ''}`, on ? `✓ ${c.name}` : c.name); bt.type = 'button';
+        bt.setAttribute('aria-pressed', on ? 'true' : 'false');
+        bt.addEventListener('click', () => socket.emit('cc:vote', { cat: c.key, id: x.id }, (r) => { if (r.error) return toast(r.error); S.contest = r.contest; renderCcVote(); renderContest(); }));
+        btns.appendChild(bt);
       }
-      box.appendChild(list);
+      card.appendChild(btns);
+      list.appendChild(card);
+    }
+    box.appendChild(list);
+    // 내 출품 (투표할 수 없음)
+    for (const x of mine) {
+      const m = ccEl('div', 'ccv-mine');
+      m.append(ccEl('small', null, '내 출품 (내 요리에는 투표할 수 없다)'), ccEl('b', null, `${x.no}번 · ${x.dish}`));
+      if (x.note) m.appendChild(ccEl('span', null, `"${x.note}"`));
+      box.appendChild(m);
     }
   }
   // 대회 시작 안내 팝업 (서버가 대회마다 드래곤당 한 번 보냄)
@@ -12954,7 +12987,7 @@
 
   // ── GM 도구 ──
   // 드래곤 찾기 → 살펴보기 → 고치기. 고친 결과는 서버가 다시 보내 준 값으로 다시 그림
-  const GM = { tab: 'dragons', q: '', list: [], d: null, meta: null, notify: true, kinPick: 'human:abandoned', give: { rows: [{ item: '', qty: 1 }], mode: 'online', pick: new Set(), msg: '' }, all: null };
+  const GM = { tab: 'overview', open: new Set(), ov: null, q: '', list: [], d: null, meta: null, notify: true, kinPick: 'human:abandoned', give: { rows: [{ item: '', qty: 1 }], mode: 'online', pick: new Set(), msg: '' }, all: null };
   const STANCE_NAMES = { friendly: '우호', hermit: '은둔', hostile: '적대' };
   const KIN_STATUS = { home: '함께 삶', egg: '알', returned: '마을로 돌아감', dead: '세상을 떠남', independent: '독립', cold: '식은 알' };
   function gEl(tag, cls, text) {
@@ -12970,11 +13003,15 @@
     parent.appendChild(b);
     return b;
   }
+  // 숫자 칸: 위에 작은 이름표를 붙임 (예전엔 비어 있을 때만 보이는 안내 글이라, 값이 차 있으면 무슨 칸인지 몰랐음)
   function gNum(parent, label, value = '', w) {
+    const f = gEl('label', 'gm-f');
+    f.appendChild(gEl('span', null, label));
     const i = gEl('input', 'input num');
-    i.type = 'number'; i.value = value; i.setAttribute('aria-label', label); i.placeholder = label;
+    i.type = 'number'; i.value = value; i.placeholder = label;
     if (w) i.style.width = w;
-    parent.appendChild(i);
+    f.appendChild(i);
+    parent.appendChild(f);
     return i;
   }
   function gSelect(parent, label, options, value) {
@@ -12997,6 +13034,7 @@
       if (res.dragon) GM.d = res.dragon;
       if (done) done(res);
       renderGm();
+      if (['overview', 'events', 'weather'].includes(GM.tab)) gmOverview(); // 상태 배지·한눈에 보기를 새로 (시장을 무너뜨리거나 잔치를 거둔 뒤 등)
     });
   }
   const gmDo = (op, extra = {}, msg = '적용했다.') =>
@@ -13018,13 +13056,28 @@
       if (!$('gm-dlg').open) $('gm-dlg').showModal();
       gmLoadList();
       socket.emit('gm:pwreqs', {}, (r2) => { if (!r2.error) setGmReqDot(r2.list.length); });
+      gmOverview();
     });
   }
-  function openGmDragon(id) { gmCall('gm:get', { id }); }
+  // 한눈에 보기·이벤트 상태: 서버의 요약 (접속·이벤트 시간표·재앙·잔치·최근 기록)
+  let gmOvBusy = false;
+  function gmOverview() {
+    if (gmOvBusy) return;
+    gmOvBusy = true;
+    socket.emit('gm:overview', {}, (r) => {
+      gmOvBusy = false;
+      if (r.error) return;
+      GM.ov = r;
+      const dot = $('gm-ev-dot'); if (dot) dot.hidden = !gmLive().length;
+      if (['overview', 'events', 'weather'].includes(GM.tab) && $('gm-dlg').open) renderGm();
+    });
+  }
+  function openGmDragon(id) { GM.tab = 'dragons'; gmCall('gm:get', { id }); }
 
   function renderGm() {
     if (!GM.meta) return;
-    for (const b of $('gm-tabs').children) b.classList.toggle('on', b.dataset.t === GM.tab);
+    for (const b of $('gm-tabs').querySelectorAll('button[data-t]')) { const on = b.dataset.t === GM.tab; b.classList.toggle('on', on); if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); }
+    const cur = $('gm-tabs').querySelector('button.on span'); $('gm-all').querySelector('span').textContent = cur ? `전체 · ${cur.textContent}` : '전체'; // 폰: 지금 보는 메뉴 이름
     const body = $('gm-body');
     // 같은 화면을 다시 그릴 때(무언가를 바꾼 뒤)는 보던 자리를 지킴 — 긴 살펴보기에서 맨 위로 튀지 않게
     const key = `${GM.tab}|${GM.tab === 'dragons' && GM.d ? GM.d.id : ''}`;
@@ -13035,9 +13088,13 @@
     body.scrollTop = keep;
   }
   function renderGmTab(body) {
+    if (GM.tab === 'overview') return renderGmOverview(body);
     if (GM.tab === 'give') return renderGmGive(body);
     if (GM.tab === 'announce') return renderGmAnnouncePart(body, 'notice');
+    if (GM.tab === 'notes') return renderGmAnnouncePart(body, 'notes');
     if (GM.tab === 'events') return renderGmAnnouncePart(body, 'events');
+    if (GM.tab === 'weather') return renderGmAnnouncePart(body, 'weather');
+    if (GM.tab === 'city') return renderGmCity(body);
     if (GM.tab === 'server') return renderGmServer(body);
     if (GM.tab === 'log') return renderGmLog(body);
     if (GM.tab === 'pwreq') return renderGmPwReq(body);
@@ -13045,8 +13102,46 @@
     renderGmList(body);
   }
   // 공지 탭과 대륙 이벤트 탭: 예전 '공지' 탭 하나에 섞여 있던 묶음을 제목으로 골라 나눔
-  const GM_NOTICE = ['공지', '업데이트 노트', '환영 공지'];
-  const GM_EVENTS = ['떠돌이 야바위꾼', '안개 너머의 행상인', '무너진 시장', '풍어 요리 잔치', '오염', '재앙의 오염', '대륙의 재앙', '계절과 날씨'];
+  const GM_NOTICE = ['공지', '환영 공지'];
+  const GM_NOTES = ['업데이트 노트'];
+  const GM_EVENTS = ['떠돌이 야바위꾼', '안개 너머의 행상인', '무너진 시장', '풍어 요리 잔치', '오염', '재앙의 오염'];
+  const GM_WEATHER = ['대륙의 재앙', '계절과 날씨'];
+  const GM_KNOWN = [...GM_NOTICE, ...GM_NOTES, ...GM_EVENTS, ...GM_WEATHER];
+  // 이벤트·재앙 칸의 상태 (한 줄 요약에 붙는 배지): cls live(진행 중)·soon(곧)·off(쉬는 중)·warn(오염 등)
+  const gmClock = (t) => { if (!t) return ''; const d = new Date(t), now = new Date(); const tm = d.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' }); return d.toDateString() === now.toDateString() ? tm : d.getTime() - now.getTime() < 2 * 864e5 && d.getDate() === new Date(now.getTime() + 864e5).getDate() ? `내일 ${tm}` : `${d.getMonth() + 1}. ${d.getDate()}. ${tm}`; };
+  function gmStatus(title) {
+    const ov = GM.ov || {};
+    const blights = (S.me?.blight || []).filter((b) => b.until > Date.now() && !b.done);
+    switch (title) {
+      case '떠돌이 야바위꾼': return ov.yabawi ? (ov.yabawi.open ? { cls: 'live', pill: '와 있음', sum: `${ov.yabawi.region} · ${gmClock(ov.yabawi.until)}까지` } : { cls: 'soon', pill: gmClock(ov.yabawi.next) || '쉬는 중', sum: ov.yabawi.next ? `다음은 ${ov.yabawi.region}` : '' }) : null;
+      case '안개 너머의 행상인': return ov.peddler ? (ov.peddler.open ? { cls: 'live', pill: '와 있음', sum: `남쪽 해안 선창 · ${gmClock(ov.peddler.until)}까지` } : { cls: 'soon', pill: gmClock(ov.peddler.next) || '쉬는 중', sum: '남쪽 해안 선창에 들름' }) : null;
+      case '무너진 시장': return ov.markets ? (ov.markets.length ? { cls: 'live', pill: `${ov.markets.length}곳 무너짐`, sum: ov.markets.map((m) => m.name).join(', ') } : { cls: 'off', pill: '쉬는 중', sum: '마을마다 따로 일으킬 수 있다' }) : null;
+      case '풍어 요리 잔치': { const c = GM.cc !== undefined && GM.cc !== null ? (GM.cc.phase === 'done' ? null : GM.cc) : ov.contest; if (!c) return { cls: 'off', pill: '쉬는 중', sum: '' }; return c.phase === 'on' ? { cls: 'live', pill: '진행 중', sum: `${gmClock(c.until)}까지 · 요리를 낸 드래곤 ${c.people ?? 0}` } : { cls: 'soon', pill: '대회 끝', sum: c.vote?.state === 'open' ? '인기 투표 중' : c.vote?.state === 'closed' && !c.vote?.shown ? '인기 투표 결과 공개를 기다림' : '인기 투표 남음' }; }
+      case '오염': { const cr = S.me?.corrupt; return cr?.region ? { cls: 'warn', pill: '오염됨', sum: `${S.regions[cr.region]?.name} · ${fmtLeft(cr.until)} 뒤 옮겨 감` } : { cls: 'off', pill: '없음', sum: '24시간마다 새 곳에 생긴다' }; }
+      case '재앙의 오염': return blights.length ? { cls: 'warn', pill: `${blights.length}곳`, sum: blights.map((b) => S.regions[b.region]?.name).join(', ') } : { cls: 'off', pill: '없음', sum: '재앙을 놓치면 생긴다' };
+      case '대륙의 재앙': return S.boss ? { cls: 'warn', pill: '나타남', sum: `${S.boss.name} · ${S.regions[S.boss.region]?.name}` } : { cls: 'soon', pill: ov.bossNext ? gmClock(ov.bossNext) : '없음', sum: ov.bossNext ? `다음 재앙 차례${ov.bossNextKraken ? ' · 크라켄' : ''}` : '' };
+      case '계절과 날씨': return S.wx ? { cls: 'off', pill: S.wx.season.name, sum: `${fmtLeft(S.wx.season.until)} 뒤 바뀜` } : null;
+      default: return null;
+    }
+  }
+  // 진행 중인 것 (이벤트 메뉴의 점 · 한눈에 보기)
+  const gmLive = () => [...GM_EVENTS, '대륙의 재앙'].map((t) => [t, gmStatus(t)]).filter(([, x]) => x && (x.cls === 'live' || x.cls === 'warn'));
+  // 한 묶음을 접는 카드로: 제목 · 상태 배지 · 한 줄 요약. 펼친 카드는 다시 그려도 펼친 채로
+  function gmCard(title, els) {
+    const st = gmStatus(title);
+    const dt = gEl('details', 'gm-card');
+    dt.open = GM.open.has(title);
+    dt.addEventListener('toggle', () => { if (dt.open) GM.open.add(title); else GM.open.delete(title); });
+    const sm = gEl('summary');
+    sm.appendChild(gEl('b', null, title));
+    if (st) { sm.appendChild(gEl('span', `gm-pill ${st.cls}`, st.pill)); if (st.sum) sm.appendChild(gEl('span', 'gm-sum', st.sum)); }
+    sm.appendChild(gEl('span', 'gm-tog', '설정'));
+    dt.appendChild(sm);
+    const inner = gEl('div', 'gm-card-b');
+    for (const el of els) if (el.tagName !== 'H3') inner.appendChild(el);
+    dt.appendChild(inner);
+    return dt;
+  }
   function renderGmAnnouncePart(body, part) {
     const tmp = document.createElement('div');
     renderGmAnnounce(tmp);
@@ -13056,21 +13151,99 @@
       else groups[groups.length - 1].els.push(el);
     }
     const put = (t) => { const g = groups.find((x) => x.title === t); if (g) body.append(...g.els); };
+    const card = (t) => { const g = groups.find((x) => x.title === t); if (g) list.appendChild(gmCard(t, g.els)); };
+    const list = gEl('div', 'gm-cards');
     if (part === 'notice') {
       body.appendChild(gEl('h3', null, '대륙 전체에 알리기'));
       body.append(...groups[0].els); // 맨 위의 바로 알리기 칸
       GM_NOTICE.forEach(put);
+    } else if (part === 'notes') {
+      GM_NOTES.forEach(put);
+    } else if (part === 'weather') {
+      body.appendChild(gEl('p', 'note gm-lead', '대륙의 재앙과 계절·날씨. 칸을 누르면 설정이 펼쳐진다.'));
+      GM_WEATHER.forEach(card); body.appendChild(list);
     } else {
-      GM_EVENTS.forEach(put);
-      for (const g of groups) if (g.title && !GM_NOTICE.includes(g.title) && !GM_EVENTS.includes(g.title)) body.append(...g.els); // 나중에 새로 생긴 묶음도 빠지지 않게
+      body.appendChild(gEl('p', 'note gm-lead', '이벤트마다 지금 상태가 한 줄로 보인다. 칸을 누르면 설정이 펼쳐진다.'));
+      GM_EVENTS.forEach(card);
+      for (const g of groups) if (g.title && !GM_KNOWN.includes(g.title)) list.appendChild(gmCard(g.title, g.els)); // 나중에 새로 생긴 묶음도 빠지지 않게
+      body.appendChild(list);
     }
+  }
+  // ── 한눈에 보기: 지금 대륙 · 진행 중 · 곧 일어날 일 · 최근 GM 기록 ──
+  function renderGmOverview(body) {
+    const ov = GM.ov;
+    if (!ov) { body.appendChild(gEl('p', 'note', '불러오는 중이다…')); gmOverview(); return; }
+    const go = (tab, open) => () => { GM.tab = tab; if (open) GM.open.add(open); if (['events', 'weather'].includes(tab)) gmOverview(); renderGm(); };
+    // 지금 대륙
+    const h = gEl('div', 'gm-ov-h'); h.append(gEl('h3', null, '지금 대륙'), gEl('small', null, `${new Date(ov.now).toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' })} 기준`));
+    const rb = gEl('button', 'linkbtn', '새로고침'); rb.type = 'button'; rb.addEventListener('click', () => { GM.ov = null; gmOverview(); renderGm(); }); h.appendChild(rb);
+    body.appendChild(h);
+    const live = gmLive();
+    const boss = gmStatus('대륙의 재앙');
+    const stats = gEl('div', 'gm-stats');
+    const stat = (k, v, sub, tab) => { const c = gEl(tab ? 'button' : 'div', 'gm-stat'); if (tab) { c.type = 'button'; c.addEventListener('click', go(tab)); } c.append(gEl('small', null, k), gEl('b', null, v), gEl('span', null, sub)); stats.appendChild(c); };
+    stat('접속 중', `${ov.online}`, `드래곤 ${ov.total}마리 가운데`, 'dragons');
+    stat('진행 중인 이벤트', `${live.filter(([t]) => t !== '대륙의 재앙').length}`, live.filter(([t]) => t !== '대륙의 재앙').map(([t]) => t).join(' · ') || '없음', 'events');
+    stat('대륙의 재앙', S.boss ? S.boss.name : '없음', S.boss ? S.regions[S.boss.region]?.name || '' : boss?.sum ? `${boss.pill} · ${boss.sum}` : '', 'weather');
+    stat('처리할 요청', `${ov.reqs}`, ov.reqs ? '비밀번호 다시 받기' : '없음', 'pwreq');
+    body.appendChild(stats);
+    const two = gEl('div', 'gm-ov-two');
+    // 진행 중
+    const lsec = gEl('section'); lsec.appendChild(gEl('h3', null, '진행 중'));
+    const ll = gEl('ul', 'gm-list');
+    if (!live.length) ll.appendChild(gEl('li', 'gm-empty', '지금 열려 있는 이벤트가 없다.'));
+    for (const [t, st] of live) {
+      const li = gEl('li');
+      li.append(gEl('b', null, t), gEl('span', `gm-pill ${st.cls}`, st.pill), gEl('span', 'gm-sum', st.sum || ''));
+      gBtn(li, '설정 열기', go(t === '대륙의 재앙' ? 'weather' : 'events', t), 'link');
+      ll.appendChild(li);
+    }
+    lsec.appendChild(ll); two.appendChild(lsec);
+    // 곧 일어날 일
+    const up = [];
+    if (ov.peddler && !ov.peddler.open && ov.peddler.next) up.push([ov.peddler.next, '안개 너머의 행상인', '90분 머무름']);
+    if (ov.yabawi && !ov.yabawi.open && ov.yabawi.next) up.push([ov.yabawi.next, `떠돌이 야바위꾼 · ${ov.yabawi.region}`, '1시간']);
+    if (!S.boss && ov.bossNext) up.push([ov.bossNext, ov.bossNextKraken ? '재앙 차례 · 심해의 크라켄' : '재앙 차례', '']);
+    const c = ov.contest;
+    if (c?.phase === 'on' && c.vote?.autoAt) up.push([c.vote.autoAt, '인기 투표가 스스로 열림', '풍어 요리 잔치']);
+    if (c?.phase === 'on') up.push([c.until, '풍어 요리 잔치가 끝남', '상을 줌']);
+    if (ov.season?.until) up.push([ov.season.until, `계절이 바뀜 (지금 ${ov.season.name})`, '']);
+    up.sort((a, b) => a[0] - b[0]);
+    const usec = gEl('section'); usec.appendChild(gEl('h3', null, '곧 일어날 일'));
+    const ul = gEl('ul', 'gm-list');
+    if (!up.length) ul.appendChild(gEl('li', 'gm-empty', '정해진 일이 없다.'));
+    for (const [t, name, tag] of up.slice(0, 7)) { const li = gEl('li'); li.append(gEl('span', 'gm-when', gmClock(t)), gEl('span', null, name)); if (tag) li.appendChild(gEl('span', 'gm-pill soon', tag)); ul.appendChild(li); }
+    usec.appendChild(ul); two.appendChild(usec);
+    body.appendChild(two);
+    // 최근 GM 기록
+    const gh = gEl('div', 'gm-ov-h'); gh.append(gEl('h3', null, '최근 GM 기록'), gEl('small', null, '모든 GM이 보는 기록'));
+    gBtn(gh, '기록 전체', go('log'), 'link');
+    body.appendChild(gh);
+    const gl = gEl('ul', 'gm-list');
+    if (!ov.log?.length) gl.appendChild(gEl('li', 'gm-empty', '아직 기록이 없다.'));
+    for (const x of ov.log || []) { const li = gEl('li'); li.append(gEl('span', 'gm-when', new Date(x.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' })), gEl('b', null, x.gm), gEl('span', null, `${x.target ? `${x.target} · ` : ''}${x.text}`)); gl.appendChild(li); }
+    body.appendChild(gl);
+  }
+  // 되돌리기 어려운 작업의 확인 창: word를 그대로 적어야 실행 단추가 켜짐. 고르면 true
+  function gmConfirm({ title, text, word, ok }) {
+    return new Promise((resolve) => {
+      const dlg = $('gm-cf'), inp = $('gm-cf-in'), okb = $('gm-cf-ok');
+      $('gm-cf-t').textContent = title; $('gm-cf-text').textContent = text;
+      $('gm-cf-lbl').textContent = `확인하려면 '${word}'라고 적자`;
+      inp.value = ''; inp.placeholder = word; okb.textContent = ok || word; okb.disabled = true;
+      inp.oninput = () => { okb.disabled = inp.value.trim() !== word; };
+      const end = (v) => { dlg.close(); okb.onclick = null; $('gm-cf-no').onclick = null; dlg.onclose = null; resolve(v); };
+      okb.onclick = () => end(true);
+      $('gm-cf-no').onclick = () => end(false);
+      dlg.onclose = () => resolve(false);
+      dlg.showModal(); inp.focus();
+    });
   }
   // 서버 탭: 고대도시 · 저장 파일 · 내 GM 드래곤 (예전 '기록'·'내 드래곤' 탭에 있던 것)
   function renderGmServer(body) {
     gmSignupSec(body); // 새 계정 만들기 막기 · 열기 (서버 탭 맨 위)
     renderGmFights(body);
-    renderGmCity(body);
-    renderGmBackup(body);
+    renderGmBackup(body); // 고대도시는 '대륙 › 고대도시' 메뉴로
     body.appendChild(gEl('h3', null, '내 GM 드래곤'));
     renderGmMe(body);
   }
@@ -13453,7 +13626,7 @@
         const bv = gNum(a, '유대', k.bond ?? 0, '64px');
         gBtn(a, '유대', () => gmDo('kinBond', { kin: k.id, value: +bv.value }));
       }
-      gBtn(a, '기록 지우기', () => { if (confirm(`${k.name}의 기록을 완전히 지울까? 되돌릴 수 없다.`)) gmDo('kinRemove', { kin: k.id }, '기록을 지웠다.'); }, 'warn');
+      gBtn(a, '기록 지우기…', () => gmConfirm({ title: `${k.name}의 기록을 지울까?`, text: `${k.name}의 기록을 완전히 지운다. 되돌릴 수 없다.`, word: '지우기' }).then((y) => { if (y) gmDo('kinRemove', { kin: k.id }, '기록을 지웠다.'); }), 'danger');
       row.appendChild(a);
       s.appendChild(row);
     }
@@ -13697,7 +13870,7 @@
       });
     }, 'primary');
     nsec.appendChild(ntRow);
-    if (!GM.notes) socket.emit('notes:get', {}, (res) => { if (res.ok) { GM.notes = res.list; if (GM.tab === 'announce') renderGm(); } });
+    if (!GM.notes) socket.emit('notes:get', {}, (res) => { if (res.ok) { GM.notes = res.list; if (GM.tab === 'notes') renderGm(); } });
     for (const n of GM.notes || []) {
       const r = gmRow(nsec, `${n.date || ''} · ${n.title}`);
       gBtn(r, '고치기', () => { GM.note = { id: n.id, title: n.title, body: n.body }; renderGm(); }, 'link');
@@ -13734,13 +13907,13 @@
 
     // 풍어 요리 잔치 (요리대회)
     {
-      const ccs = gmSection(body, '풍어 요리 잔치', '남쪽 해안에서 여는 요리대회. 대회 동안 지역마다 귀한 재료가 나고, 해안에 바다괴물과 크라켄(재앙이 올 차례마다 재앙 대신)이 나타난다. 대회가 끝나면 1위 대륙의 요리사·1~3위 금·은·동 트로피·낸 모두 앞치마. 인기 투표는 대회와 따로: 잔치가 열리면 해안에서 출품을 받고, 투표는 여기서 원할 때 열고, 마감한 뒤 결과도 여기서 공개한다.');
+      const ccs = gmSection(body, '풍어 요리 잔치', '남쪽 해안에서 여는 요리대회. 대회 동안 지역마다 귀한 재료가 나고, 해안에 바다괴물이 몰려들고, 재앙이 올 차례에는 크라켄과 일반 재앙이 번갈아 나타난다(첫 차례는 크라켄). 대회가 끝나면 1위 대륙의 요리사·1~3위 금·은·동 트로피·낸 모두 앞치마. 인기 투표: 대회가 끝나기 하루 전에 출품이 닫히고 마지막 하루 동안 스스로 열려(출품이 둘 미만이면 열리지 않음) 대회가 끝날 때 마감된다. 투표 중에는 누가 낸 요리인지 보이지 않는다. 결과는 여기서 공개한다. 필요하면 여기서 직접 열거나 마감할 수도 있다.');
       if (GM.cc === undefined) { GM.cc = null; socket.emit('gm:cc:get', {}, (res) => { if (!res.error) { GM.cc = res.state; if (GM.tab === 'events') renderGm(); } }); }
       const c = GM.cc, when = (t) => new Date(t).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
       const done = (msg) => (res) => { GM.cc = res.state; toast(msg); };
       if (c && c.phase !== 'done') {
         if (c.phase === 'on') {
-          gmRow(ccs, `대회 중 · ${when(c.until)}까지 · 요리를 낸 드래곤 ${c.people} · 낸 요리 ${c.subs}${c.krakenAt ? ` · 다음 크라켄(재앙 차례) ${when(c.krakenAt)}` : ''}`);
+          gmRow(ccs, `대회 중 · ${when(c.until)}까지 · 요리를 낸 드래곤 ${c.people} · 낸 요리 ${c.subs}${c.krakenAt ? ` · 다음 재앙 차례 ${when(c.krakenAt)} (${c.nextIsKraken ? '크라켄' : '일반 재앙'})` : ''}`);
           if (c.top.length) gmRow(ccs, c.top.join(' · '));
           const r = gmRow(ccs);
           gBtn(r, '크라켄 지금 부르기', () => gmCall('gm:cc:kraken', {}, done('크라켄을 불렀다.')));
@@ -13748,9 +13921,11 @@
         } else gmRow(ccs, `대회 끝 (상을 줌) · 요리를 낸 드래곤 ${c.people}`);
         const V = c.vote || { state: 'entry', n: 0 };
         if (V.state === 'entry') {
-          const r = gmRow(ccs, `인기 투표 · 출품 ${V.n}그릇`);
-          const hours = gNum(r, '시간', '48', '64px');
-          gBtn(r, '투표 열기', () => { if (!confirm(`출품을 닫고 ${hours.value || 48}시간 동안 인기 투표를 열까? 모두에게 알림이 간다.`)) return; gmCall('gm:cc:vote', { hours: hours.value }, done('인기 투표를 열었다.')); }, 'primary');
+          gmRow(ccs, `인기 투표 · 출품 ${V.n}그릇 · ${V.autoAt ? `${when(V.autoAt)}에 출품이 닫히고 투표가 스스로 열림 (대회가 끝날 때 마감)` : '스스로 열리지 않음 (짧게 연 대회이거나 대회가 끝남) · 아래에서 직접 열기'}`);
+          const r = gmRow(ccs, '직접 열기');
+          const hours = gNum(r, '열어 둘 시간', '24', '64px'); // 투표를 몇 시간 동안 열지
+          r.appendChild(gEl('span', 'gm-unit', '시간 동안'));
+          gBtn(r, '지금 투표 열기', () => { if (!confirm(`지금 출품을 닫고 ${hours.value || 24}시간 동안 인기 투표를 열까? 모두에게 알림이 간다.`)) return; gmCall('gm:cc:vote', { hours: hours.value || 24 }, done('인기 투표를 열었다.')); }, 'primary');
         } else if (V.state === 'open') {
           const r = gmRow(ccs, `인기 투표 중 · ${when(V.until)}까지 · 출품 ${V.n}그릇 · 투표한 드래곤 ${V.voters}`);
           gBtn(r, '투표 마감하기', () => { if (!confirm('지금 인기 투표를 마감할까? 결과는 따로 공개해야 보인다.')) return; gmCall('gm:cc:close', {}, done('인기 투표를 마감했다.')); });
@@ -13761,7 +13936,7 @@
           gBtn(r, '결과 공개', () => { if (!confirm('인기 투표 결과를 모두에게 공개하고 1위에게 칭호를 줄까?')) return; gmCall('gm:cc:publish', {}, done('결과를 공개했다.')); }, 'primary');
         } else gmRow(ccs, '인기 투표 결과 공개함');
         const r2 = gmRow(ccs);
-        gBtn(r2, '상 없이 거두기', () => { if (!confirm('남은 상·칭호를 주지 않고 잔치를 거둘까?')) return; gmCall('gm:cc:cancel', {}, done('잔치를 거뒀다.')); }, 'link');
+        gBtn(r2, '상 없이 거두기…', () => gmConfirm({ title: '잔치를 상 없이 거둘까?', text: '남은 상·칭호·1위 요리 나눔 없이 풍어 요리 잔치를 없앤다. 낸 요리와 인기 투표 출품도 사라진다.', word: '거두기' }).then((y) => { if (y) gmCall('gm:cc:cancel', {}, done('잔치를 거뒀다.')); }), 'danger');
       } else {
         const r = gmRow(ccs, '기간');
         const days = gNum(r, '일', '6', '56px');
@@ -13802,10 +13977,11 @@
     if (!S.boss) {
       const r2 = gmRow(sec, '부르기');
       const wild = Object.keys(S.regions).filter((id) => !S.shops.includes(id) && S.regions[id].realm !== 'ruin');
-      const where = gSelect(r2, '지역', [['', '무작위'], ...wild.map((id) => [id, S.regions[id].name])], '');
+      const evKey = ['coast']; // 잔치 재앙(크라켄, BOSSES.coast): 따로 골라 부름 (해안의 일반 재앙 자리)
+      const where = gSelect(r2, '지역', [['', '무작위'], ...wild.filter((id) => !evKey.includes(id)).map((id) => [id, S.regions[id].name]), ...evKey.map((id) => [`ev:${id}`, `${S.regions[id]?.name || id} · 심해의 크라켄 (잔치 재앙)`])], '');
       const lv = gNum(r2, '레벨', '', '64px');
       const hp = gNum(r2, '체력', '', '90px');
-      gBtn(r2, '부르기', () => gmCall('gm:boss:spawn', { key: where.value, lv: +lv.value || 0, hp: +hp.value || 0 }, (res) => { toast(`${res.view.name}${josa(res.view.name, '을', '를')} 불렀다.`); onBoss(res.view); }), 'primary');
+      gBtn(r2, '부르기', () => gmCall('gm:boss:spawn', { key: where.value.replace(/^ev:/, ''), ev: where.value.startsWith('ev:'), lv: +lv.value || 0, hp: +hp.value || 0 }, (res) => { toast(`${res.view.name}${josa(res.view.name, '을', '를')} 불렀다.`); onBoss(res.view); }), 'primary');
     } else {
       const r2 = gmRow(sec, '체력');
       const pc = gNum(r2, '%', Math.round((S.boss.hp / S.boss.hpMax) * 100), '64px');
@@ -13897,13 +14073,12 @@
     const file = gEl('input');
     file.type = 'file'; file.accept = '.db,application/octet-stream'; file.hidden = true;
     sec.appendChild(file);
-    gBtn(r, '저장 파일 되돌리기…', () => file.click(), 'link');
+    gBtn(r, '저장 파일 되돌리기…', () => file.click(), 'danger');
     file.addEventListener('change', async () => {
       const f = file.files[0];
       file.value = '';
       if (!f) return;
-      if (!confirm(`'${f.name}' 파일로 되돌릴까?\n\n대륙의 모든 계정·드래곤이 이 파일을 받은 시점으로 돌아간다. 그 뒤에 생긴 일은 사라진다.\n서버가 잠깐 다시 켜지고, 접속한 모두가 다시 연결된다.`)) return;
-      if (!confirm('정말 되돌릴까? (지금 데이터는 서버에 한 벌 남겨 두지만, 되돌리기 전에 지금 파일을 먼저 내려받아 두는 것이 안전하다)')) return;
+      if (!(await gmConfirm({ title: `'${f.name}' 파일로 되돌릴까?`, text: '대륙의 모든 계정·드래곤이 이 파일을 받은 시점으로 돌아간다. 그 뒤에 생긴 일은 사라진다. 서버가 잠깐 다시 켜지고, 접속한 모두가 다시 연결된다. (지금 데이터는 서버에 한 벌 남겨 두지만, 먼저 지금 파일을 내려받아 두는 것이 안전하다)', word: '되돌리기' }))) return;
       try {
         const res = await fetch('/api/gm/restore', { method: 'POST', headers: { Authorization: `Bearer ${store.get()}`, 'Content-Type': 'application/octet-stream' }, body: f });
         const j = await res.json().catch(() => ({}));
@@ -13947,7 +14122,7 @@
           } catch (e) { toast(e.message); }
         }, 'link');
         gBtn(row, '이날로 되돌리기…', async () => {
-          if (!confirm(`${d ? `${Number(d[2])}월 ${Number(d[3])}일` : b.name} 자동 백업으로 되돌릴까?\n\n대륙의 모든 계정·드래곤이 그날 사본을 만든 때로 돌아간다. 그 뒤에 생긴 일은 사라진다.\n서버가 잠깐 다시 켜지고, 접속한 모두가 다시 연결된다.`)) return;
+          if (!(await gmConfirm({ title: `${d ? `${Number(d[2])}월 ${Number(d[3])}일` : b.name} 자동 백업으로 되돌릴까?`, text: '대륙의 모든 계정·드래곤이 그날 사본을 만든 때로 돌아간다. 그 뒤에 생긴 일은 사라진다. 서버가 잠깐 다시 켜지고, 접속한 모두가 다시 연결된다.', word: '되돌리기' }))) return;
           try {
             const res = await fetch('/api/gm/restore-auto', { method: 'POST', headers: { Authorization: `Bearer ${store.get()}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: b.name }) });
             const r2 = await res.json().catch(() => ({}));
@@ -13955,7 +14130,7 @@
             toast(`되돌리는 중이다. (드래곤 ${r2.dragons}마리) 잠시 뒤 다시 연결된다.`);
             $('gm-dlg').close();
           } catch (e) { toast(e.message); }
-        }, 'link');
+        }, 'danger');
       }
     }).catch(() => { list.replaceChildren(gEl('p', 'note', '자동 백업 목록을 불러오지 못했다.')); });
   }
@@ -14000,10 +14175,19 @@
 
   $('gm-open').addEventListener('click', openGm);
   $('gm-close').addEventListener('click', () => $('gm-dlg').close());
+  // 폰: '전체'를 누르면 메뉴 판이 아래에서 올라옴
+  const gmSheet = (on) => { $('gm-tabs').classList.toggle('sheet', on); $('gm-all').setAttribute('aria-expanded', on ? 'true' : 'false'); $('gm-dlg').classList.toggle('gm-sheet-on', on); };
+  $('gm-all').addEventListener('click', () => gmSheet(!$('gm-tabs').classList.contains('sheet')));
+  $('gm-sheet-x').addEventListener('click', () => gmSheet(false));
+  $('gm-dlg').addEventListener('click', (e) => { if ($('gm-tabs').classList.contains('sheet') && !e.target.closest('#gm-tabs')) gmSheet(false); });
+  $('gm-dlg').addEventListener('close', () => gmSheet(false));
   $('gm-tabs').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-t]');
     if (!b) return;
+    gmSheet(false);
     GM.tab = b.dataset.t;
+    if (['overview', 'events', 'weather'].includes(GM.tab)) gmOverview();
+    b.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     if (GM.tab === 'log' || GM.tab === 'server') socket.emit('gm:meta', {}, (res) => { if (!res.error) { GM.meta = res; renderGm(); } });
     renderGm();
   });

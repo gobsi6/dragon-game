@@ -1,6 +1,6 @@
 // 풍어 요리 잔치 (요리대회): GM이 여는 기간 한정 이벤트 (숫자·심사평·재료는 game-data.js의 CONTEST)
 // - 대회 동안(CONTEST.days일) 지역마다 귀한 재료가 나옴 (server.js가 채집·탐사·사냥 뒤에 drop을 부름)
-// - 해안(CONTEST.region)에 바다괴물이 몰려듦: '바다괴물 사냥'으로 고기를 얻음. 대회 동안은 재앙이 올 차례마다 재앙 대신 크라켄이 나타남 (boss.js의 BOSSES.coast)
+// - 해안(CONTEST.region)에 바다괴물이 몰려듦: '바다괴물 사냥'으로 고기를 얻음. 대회 동안은 재앙 차례마다 크라켄과 일반 재앙이 번갈아 나타남 (첫 차례는 크라켄) (boss.js의 BOSSES.coast)
 // - 심사위원 셋에게 하루 perDay번까지 요리를 냄. 순위는 가장 잘 만든 한 그릇 (같으면 두 번째 그릇)
 // - 대회가 끝나면 1위 '대륙의 요리사', 1~3위 금·은·동 트로피, 낸 모두 앞치마
 // - 인기 투표: 대회가 열리면 해안에서 내 요리를 한 그릇 직접 출품(심사와 따로). GM이 원할 때 투표를 열고(두 부문), 정한 시간이 지나거나 GM이 닫으면 마침
@@ -89,7 +89,7 @@ module.exports = function setupContest({ io, db, online, logic, combat, arena, s
     }
     parts.event = Math.min(C.eventMax, info.mats.filter((m) => EVENT_MATS.has(m)).length * C.eventPer);
     parts.care = (info.spiced ? C.care.spiced : 0) + (info.quality === 'good' ? C.care.good : info.quality === 'great' ? C.care.great : 0);
-    if (info.custom) { parts.creative = C.creative.pts; says.push(pick(C.creative.says)); } // 창작 요리: 직접 빚은 요리 (재료가 2~3가지뿐이라 제작법 요리와 겨룰 수 있게)
+    if (info.custom) { parts.creative = randInt(C.creative.pts, C.creative.max ?? C.creative.pts); says.push(pick(C.creative.says)); } // 창작 요리: 직접 빚은 요리 (재료가 2~3가지뿐이라 제작법 요리와 겨룰 수 있게)
     parts.mood = randInt(...C.mood);
     const total = Math.min(100, parts.judges.reduce((a, j) => a + j.pts, 0) + parts.event + parts.care + parts.creative + parts.mood);
     return { total, parts, says };
@@ -146,7 +146,7 @@ module.exports = function setupContest({ io, db, online, logic, combat, arena, s
         { text: `어촌 사람들 사이에서는 또 다른 소문도 돕니다. 잔치 냄새를 맡은 바다괴물들이 ${regionName()}${josa(regionName(), '으로', '로')} 몰려들고 있고, 재앙이 찾아올 무렵이면 깊은 바다에서 ${boss}${josa(boss, '이', '가')} 올라온다는 것입니다. 쓰러뜨리기만 하면 귀한 고기를 얻을 수 있다고들 하네요.` },
       ],
       secret: '잔치 요리의 제작법은 어촌 사람들만 아는 비밀입니다. 실험에서 재료를 섞어 직접 찾아내거나, 심사위원들에게 슬쩍 귀띔을 들어 보세요. 세상에 없던 요리를 직접 빚어 낸다면 심사위원들이 점수를 더 얹어 줄 겁니다.',
-      vote: '심사와는 따로, 잔치 마당에 올릴 인기 투표 요리도 한 그릇씩 받고 있습니다.',
+      vote: `심사와는 따로, 잔치 마당에 올릴 인기 투표 요리도 한 그릇씩 받고 있습니다. 출품은 잔치가 끝나기 ${C.voteLastDays === 1 ? '하루' : `${C.voteLastDays}일`} 전까지 받고, 마지막 ${C.voteLastDays === 1 ? '하루' : `${C.voteLastDays}일`} 동안 누가 만들었는지 모르는 채로 투표합니다.`,
       rewards: [
         { who: '1위', what: `${trophy} · 칭호 '${king?.name || ''}'` },
         { who: '요리를 낸 모두', what: apron },
@@ -187,10 +187,13 @@ module.exports = function setupContest({ io, db, online, logic, combat, arena, s
     const V = VT(), mineV = d && V.entries[d.id];
     v.vote = {
       state: V.state, until: V.until || 0, n: Object.keys(V.entries).length, noteMax: C.noteMax,
-      cats: C.votes.map((c) => ({ key: c.key, name: c.name })),
+      cats: C.votes.map((c) => ({ key: c.key, name: c.name, desc: c.desc || '' })),
       mine: mineV ? { dish: mineV.dish, note: mineV.note || '' } : null,
-      cands: V.state === 'entry' ? [] : Object.entries(V.entries).map(([id, x]) => ({ id: Number(id), name: x.name, dish: x.dish, note: x.note || '' })),
-      my: d ? Object.fromEntries(C.votes.map((c) => [c.key, V.votes[c.key]?.[d.id] ?? null])) : {},
+      // 후보: 이름 없이 섞은 번호로 (mine: 내가 낸 것). 결과가 공개되면 이름은 result에
+      cands: V.state === 'entry' ? [] : (V.order || Object.keys(V.entries).map(Number)).map((id, i) => [id, i]).filter(([id]) => V.entries[id]).map(([id, i]) => ({ id: V.order ? i + 1 : id, no: i + 1, dish: V.entries[id].dish, note: V.entries[id].note || '', mine: !!d && id === d.id })),
+      entryUntil: V.state === 'entry' && st.phase === 'on' && autoVote() ? st.until - C.voteLastDays * DAY : 0, // 출품 마감 (이때 투표가 스스로 열림)
+      skipped: !!V.skipped,
+      my: d ? Object.fromEntries(C.votes.map((c) => { const t = V.votes[c.key]?.[d.id]; return [c.key, t == null ? null : V.order ? V.order.indexOf(t) + 1 || null : t]; })) : {},
       result: V.shown ? V.result || null : null, // 결과는 GM이 공개한 뒤에만
       shown: V.state === 'closed' && V.shown !== false,
     };
@@ -268,15 +271,19 @@ module.exports = function setupContest({ io, db, online, logic, combat, arena, s
     return { ok: true };
   }
   // 인기 투표 열기 (GM): 출품을 닫고 hours시간 동안 투표
-  function openVote(hours = C.voteHours, now = Date.now()) {
+  // until: 투표가 끝나는 때 (스스로 열릴 때는 대회가 끝나는 때). 후보는 섞은 차례 번호로만 보임 (누가 냈는지 모르게)
+  function openVote(hours = C.voteHours, now = Date.now(), until = 0) {
     if (!live()) return { error: '지금 열린 잔치가 없다.' };
     const V = VT();
     if (V.state !== 'entry') return { error: V.state === 'open' ? '이미 투표가 열려 있다.' : '이번 잔치의 투표는 이미 끝났다.' };
     const n = Object.keys(V.entries).length;
     if (n < 2) return { error: `출품된 요리가 둘 이상이어야 한다. (지금 ${n}그릇)` };
-    V.state = 'open'; V.until = now + hours * H;
+    V.state = 'open'; V.until = until || now + hours * H;
+    V.order = Object.keys(V.entries).map(Number);
+    for (let i = V.order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [V.order[i], V.order[j]] = [V.order[j], V.order[i]]; } // 후보 차례 (1번부터). 투표 중에는 이름 대신 이 번호로만
     save();
-    shout(`${tag} 인기 투표가 열렸다! 출품된 요리 ${n}그릇 가운데 ${C.votes.map((c) => `'${c.name}'`).join('와 ')}를 뽑는다. 어디서든 잔치 칸에서 투표할 수 있다. (${hours}시간 동안)`);
+    const hrs = Math.max(1, Math.round((V.until - now) / H));
+    shout(`${tag} 인기 투표가 열렸다! 출품된 요리 ${n}그릇 가운데 ${C.votes.map((c) => `'${c.name}'`).join('와 ')}를 뽑는다. 누가 만든 요리인지는 결과가 나올 때까지 비밀이다. 어디서든 잔치 칸에서 투표할 수 있다. (${hrs}시간 동안)`);
     st.pin = io.lastNews || null; save();
     push();
     return { ok: true };
@@ -337,9 +344,12 @@ module.exports = function setupContest({ io, db, online, logic, combat, arena, s
     return { ok: true };
   }
 
-  // ── 크라켄: 대회 동안은 재앙이 올 차례마다 재앙 대신 해안에 (boss.js가 hooks.bossOverride를 물어봄). GM은 바로 부를 수도 있음 ──
+  // ── 크라켄: 대회 동안은 재앙 차례마다 일반 재앙과 번갈아 해안에 (boss.js가 hooks.bossOverride를 물어봄). GM은 바로 부를 수도 있음 ──
   function kraken() { return boss.spawn(C.region, { force: true, ev: true }); }
-  logic.hooks.bossOverride = () => (on() ? C.region : null);
+  // 재앙 차례마다 크라켄과 일반 재앙이 번갈아 (대회의 첫 차례는 크라켄). bossTurn: 대회 중 지나간 재앙 차례 수
+  const krakenTurn = () => ((st?.bossTurn || 0) % 2) === 0; // 다음 차례가 크라켄인지
+  logic.hooks.bossOverride = () => (on() && krakenTurn() ? C.region : null);
+  logic.hooks.bossSpawned = () => { if (on()) { st.bossTurn = (st.bossTurn || 0) + 1; save(); } }; // 재앙이 실제로 나타났을 때만 차례를 넘김 (못 나타나면 다음 시도도 같은 차례)
 
   // ── 대회 재료 (server.js가 채집·탐사·사냥 뒤에 부름) ──
   function drop(d, type, res) {
@@ -483,7 +493,7 @@ module.exports = function setupContest({ io, db, online, logic, combat, arena, s
     return { ok: true, title: '심사위원의 귀띔', lines: [`${by === '세 심사위원' ? '심사위원들이' : ga(by)} 목소리를 낮추어 말했다.`, `"${text}"`, '(실험에서 재료를 섞어 보면 잔치 요리 제작법을 찾을 수 있다)'], contest: view(d, now) };
   }
 
-  // 인기 투표 출품: 해안에서 내 요리 한 그릇 (심사와 따로, 다시 내면 바뀜. 낸 요리는 돌려받지 못함). note: 한 줄 소개
+  // 인기 투표 출품: 해안에서 내 요리 한 그릇 (심사와 따로, 다시 내면 바뀌고 먼저 올린 요리는 돌려받음. 투표가 열리면 돌려받지 못함). note: 한 줄 소개
   function enter(d, id, note, have, now = Date.now()) {
     if (!live()) return { error: '지금은 잔치가 열려 있지 않다.' };
     const V = VT();
@@ -499,29 +509,45 @@ module.exports = function setupContest({ io, db, online, logic, combat, arena, s
     const old = V.entries[d.id];
     V.entries[d.id] = { name: d.name, item: id, dish: info.name, note, at: now };
     save();
-    const lines = [old ? `잔치 마당에 올려 둔 ${old.dish} 대신 ${eul(info.name)} 올렸다.` : `잔치 마당의 인기 투표 상에 ${eul(info.name)} 올렸다.`];
+    const lines = [old ? `잔치 마당에 올려 둔 ${old.dish} 대신 ${eul(info.name)} 올렸다. 먼저 올린 ${eul(old.dish)} 돌려받았다.` : `잔치 마당의 인기 투표 상에 ${eul(info.name)} 올렸다.`];
     if (note) lines.push(`곁에 꽂은 쪽지: "${note}"`);
-    lines.push('투표가 열리면 모두가 이 요리를 보게 된다. 투표가 열리기 전까지는 다른 요리로 바꿀 수 있다.');
+    lines.push('투표가 열리면 모두가 이 요리를 보게 된다. 누가 냈는지는 결과가 나올 때까지 비밀이다. 투표가 열리기 전까지는 다른 요리로 바꿀 수 있고, 바꾸면 먼저 올린 요리는 돌려받는다.');
     setImmediate(() => pushOne(d.id));
-    return { title: '인기 투표 출품', lines, items: [{ id, qty: -1 }], gold: 0 };
+    const items = [{ id, qty: -1 }];
+    if (old && ITEMS[old.item]) items.push({ id: old.item, qty: 1 }); // 바꾸면 먼저 올린 요리는 소지품으로 돌아옴
+    return { title: '인기 투표 출품', lines, items, gold: 0 };
   }
   function vote(d, cat, target) {
     const V = st && VT();
     if (!V || V.state !== 'open') return { error: '지금은 인기 투표 기간이 아니다.' };
     const c = C.votes.find((x) => x.key === cat);
     if (!c) return { error: '그런 부문은 없다.' };
-    const t = Number(target);
-    if (!V.entries[t]) return { error: '그런 요리는 없다.' };
+    const t = V.order ? V.order[Number(target) - 1] : Number(target); // 후보 번호 → 낸 드래곤 (예전 투표는 드래곤 id 그대로)
+    if (!t || !V.entries[t]) return { error: '그런 요리는 없다.' };
     if (t === d.id) return { error: '내 요리에는 투표할 수 없다.' };
     (V.votes[cat] ||= {})[d.id] = t;
     save();
     return { ok: true, contest: view(d) };
   }
 
+  // 인기 투표가 스스로 열리는 대회인지: 대회가 voteLastDays보다 길어야 출품 기간이 생김 (짧게 연 대회는 GM이 직접 엶)
+  const autoVote = () => !!st && st.until - st.at > C.voteLastDays * DAY;
   // 1분마다: 기간이 다하면 대회를 마치고, 투표 시간이 다하면 마감
   const ticker = setInterval(() => {
     if (!st) return;
     const now = Date.now();
+    // 대회가 끝나기 voteLastDays 전: 출품을 닫고 대회가 끝날 때까지 인기 투표 (출품이 둘 미만이면 열지 않음)
+    if (st.phase === 'on' && VT().state === 'entry' && autoVote() && now >= st.until - C.voteLastDays * DAY && now < st.until) {
+      const n = Object.keys(VT().entries).length;
+      if (n >= 2) openVote(0, now, st.until);
+      else {
+        const V = VT();
+        // 열리지 않으면 올려 둔 요리는 주인에게 돌려줌
+        for (const [id, x] of Object.entries(V.entries)) if (ITEMS[x.item]) grant(Number(id), () => ({ items: [{ id: x.item, qty: 1 }], lines: [`인기 투표에 올라온 요리가 모자라 투표가 열리지 않았다. 올려 둔 ${eul(x.dish)} 돌려받았다.`] }));
+        V.entries = {}; V.state = 'closed'; V.shown = true; V.skipped = true; V.result = {}; save();
+        shout(`${tag} 인기 투표에 올라온 요리가 ${n ? '한 그릇뿐이라' : '없어'} 이번 잔치의 인기 투표는 열리지 않았다.${n ? ' 올라온 요리는 주인에게 돌아갔다.' : ''}`); push();
+      }
+    }
     if (st.phase === 'on' && now >= st.until) finish(now);
     if (st.vote?.state === 'open' && now >= st.vote.until) closeVote(now);
   }, 60000);
@@ -538,7 +564,6 @@ module.exports = function setupContest({ io, db, online, logic, combat, arena, s
       ack(fn(d, p || {}));
     });
     socket.emit('contest', view(me()));
-    { const x = intro(me()); if (x) setTimeout(() => socket.connected && socket.emit('contest:intro', x), 1500); } // 대회 중 처음 접속하면 시작 안내 (다른 첫 화면 알림이 먼저 뜬 뒤에)
     call('cc:get', (d) => ({ ok: true, contest: view(d) }));
     call('cc:vote', (d, p) => vote(d, String(p.cat || ''), p.id));
     call('cc:hint', (d) => hint(d));
@@ -574,8 +599,8 @@ module.exports = function setupContest({ io, db, online, logic, combat, arena, s
   function gmView() {
     if (!st) return null;
     const V = VT();
-    return { phase: st.phase, at: st.at, until: st.until, vote: { state: V.state, shown: V.shown !== false, tally: V.state === 'closed' ? C.votes.map((c) => ({ name: c.name, top: (V.tally?.[c.key] || []).slice(0, 3).map((x) => `${x.name}의 ${x.dish} ${x.votes}표`) })) : null, until: V.until || 0, n: Object.keys(V.entries).length, voters: new Set(Object.values(V.votes).flatMap((x) => Object.keys(x))).size }, krakenAt: st.phase === 'on' && !boss.active() ? boss.nextAt() || 0 : 0, people: Object.keys(st.entries).length, subs: Object.values(st.entries).reduce((a, e) => a + e.subs.length, 0), top: st.phase === 'on' ? ranking().slice(0, 5).map((x) => `${x.rank}위 ${x.name} ${x.best}점`) : [] };
+    return { phase: st.phase, at: st.at, until: st.until, vote: { state: V.state, autoAt: st.phase === 'on' && V.state === 'entry' && autoVote() ? st.until - C.voteLastDays * DAY : 0, shown: V.shown !== false, tally: V.state === 'closed' ? C.votes.map((c) => ({ name: c.name, top: (V.tally?.[c.key] || []).slice(0, 3).map((x) => `${x.name}의 ${x.dish} ${x.votes}표`) })) : null, until: V.until || 0, n: Object.keys(V.entries).length, voters: new Set(Object.values(V.votes).flatMap((x) => Object.keys(x))).size }, krakenAt: st.phase === 'on' && !boss.active() ? boss.nextAt() || 0 : 0, nextIsKraken: krakenTurn(), people: Object.keys(st.entries).length, subs: Object.values(st.entries).reduce((a, e) => a + e.subs.length, 0), top: st.phase === 'on' ? ranking().slice(0, 5).map((x) => `${x.rank}위 ${x.name} ${x.best}점`) : [] };
   }
 
-  return { attach, view, drop, submit, enter, gmView, on, pin: () => (live() && (st.phase === 'on' || VT().state === 'open') ? st.pin || null : null), _dish: dishInfo, _judge: judge };
+  return { attach, view, intro, drop, submit, enter, gmView, on, pin: () => (live() && (st.phase === 'on' || VT().state === 'open') ? st.pin || null : null), _dish: dishInfo, _judge: judge };
 };

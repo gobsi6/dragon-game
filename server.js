@@ -890,6 +890,7 @@ function enterWorld(socket, dragon) {
   online.set(dragon.id, { socket, dragon, at: Date.now() }); // at: 이번에 접속한 시각 (결투장 목록 순서 등)
   socket.join(dragon.region);
   if (contest) socket.emit('contest', contest.view(dragon)); // 풍어 요리 잔치 (열려 있을 때만 모습이 있음)
+  if (contest) { const x = contest.intro(dragon); if (x) setTimeout(() => socket.connected && socket.emit('contest:intro', x), 1500); } // 대회 중 처음 들어오면(새 드래곤 포함) 시작 안내, 다른 첫 화면 알림이 먼저 뜬 뒤에
   setImmediate(() => rivalNear(dragon));
   const back = !prev && Date.now() - (dragon.last_seen || 0) >= AWAY_MS; // 오래 자리를 비웠다가 돌아옴
   db.touch(dragon.id); dragon.last_seen = Date.now(); // 메모리의 값도 맞춰 둠 (다음 판정이 예전 값을 보지 않게)
@@ -1229,7 +1230,7 @@ const marketFall = (() => {
     push();
   }
   function stop(town) { const st = of(town); if (!st) return false; st.done = true; save(); io.emit('system', { text: `[복구] ${REGIONS[st.town].name}의 시장이 마을 사람들의 손으로 다시 섰다.`, at: Date.now() }); push(); return true; }
-  return { start, help, view, stop, has: (town) => !!of(town), down: (region) => !!of(region), pins: () => actives().map((x) => x.pin) };
+  return { start, help, view, stop, has: (town) => !!of(town), down: (region) => !!of(region), pins: () => actives().map((x) => x.pin), list: () => actives().map((x) => ({ town: x.town, at: x.at })) }; // list: GM 한눈에 보기
 })();
 logic.hooks.marketDown = marketFall.down;
 // ── 멸망한 대륙의 정화도: 서버 전체가 함께 채움. 단계를 넘을 때마다 새 지역이 열림 ──
@@ -2162,6 +2163,31 @@ function onConnect(socket) {
     if (p?.summon) peddler.summon(Number(p.minutes) || undefined);
     const nowS = peddler.slotNow();
     ack({ ok: true, now: nowS ? { until: nowS.end } : null, today: peddler.daySlots(logic.dayIdx()).map((x) => ({ start: x.start, end: x.end })) });
+  });
+  // GM 도구 '한눈에 보기': 지금 대륙 (접속 · 진행 중인 이벤트 · 곧 일어날 일 · 최근 기록)
+  socket.on('gm:overview', (p, ack) => {
+    if (typeof ack !== 'function') return;
+    if (!socket.data.user?.is_gm) return ack({ error: 'GM만 쓸 수 있다.' });
+    const now = Date.now(), day = logic.dayIdx();
+    const nextSlot = (slots) => slots.flat().filter((s) => s.start > now).sort((a, b) => a.start - b.start)[0] || null;
+    const ys = yabawi.slotNow(now), yn = nextSlot([yabawi.daySlots(day), yabawi.daySlots(day + 1)]);
+    const ps = peddler.slotNow(now), pn = nextSlot([peddler.daySlots(day), peddler.daySlots(day + 1)]);
+    const bk = boss.active();
+    const bv = bk ? boss.view() : null;
+    const cc = contest.gmView ? contest.gmView() : null;
+    const se = logic.seasonAt(now);
+    const reqs = (db.worldGet('pwreq', []) || []).length;
+    ack({ ok: true, now,
+      online: online.size, total: db.dragonIds().length, reqs,
+      yabawi: ys ? { open: true, until: ys.end, region: REGIONS[ys.region]?.name || '' } : { open: false, next: yn?.start || 0, region: yn ? REGIONS[yn.region]?.name || '' : '' },
+      peddler: ps ? { open: true, until: ps.end } : { open: false, next: pn?.start || 0 },
+      markets: marketFall.list().map((x) => ({ town: x.town, name: REGIONS[x.town]?.name || x.town, at: x.at })),
+      boss: bv ? { name: bv.name, region: REGIONS[bv.region]?.name || '', until: bv.until, hp: bv.hp, hpMax: bv.hpMax } : null,
+      bossNext: bk ? 0 : boss.nextAt() || 0, bossNextKraken: !!(cc && cc.phase === 'on' && cc.nextIsKraken),
+      contest: cc && cc.phase !== 'done' ? cc : null,
+      season: { name: se.name, until: se.until },
+      log: db.gmLogList(6),
+    });
   });
   socket.on('gm:yabawi', (p, ack) => {
     if (typeof ack !== 'function') return;
