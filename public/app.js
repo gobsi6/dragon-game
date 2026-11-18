@@ -12337,7 +12337,7 @@
       t.innerHTML = '<b></b><small></small>';
       t.querySelector('b').textContent = x.name;
       if (x.rel === 'rival') t.querySelector('b').insertAdjacentHTML('beforeend', ' <span class="relb rival">라이벌</span>');
-      if (x.rel === 'friend') t.querySelector('b').insertAdjacentHTML('beforeend', ' <span class="relb friend">동료</span>');
+      if (x.rel === 'friend') { const bd = x.bond || S.relBond?.[x.id]; const c = document.createElement('span'); c.className = `relb ${bondCls(bd)}`; c.textContent = bondName(bd); t.querySelector('b').append(' ', c); } // 친구·연인·스승 등 맺은 사이 그대로 (예전 서버는 bond를 안 보내므로 내 관계 목록에서)
       t.querySelector('small').innerHTML = `<span class="dot${x.online ? ' on' : ''}"></span>`;
       t.querySelector('small').append(`${x.online ? '접속 중' : ago(x.lastSeen)} · ${S.kinds[x.kind]?.name || ''} · Lv. ${x.level} · ${x.w}승 ${x.l}패`);
       if (x.live && x.auto) { const w = document.createElement('span'); w.className = 'why'; w.textContent = x.live === x.auto ? x.live : `${x.live} ${x.auto}`; t.appendChild(w); }

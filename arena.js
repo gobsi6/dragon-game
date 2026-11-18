@@ -525,6 +525,7 @@ module.exports = function setupArena({ io, db, online, logic, combat, life, send
           online: !!e, lastSeen: e ? Date.now() : r.lastSeen, at: e ? (e.at || 0) : r.lastSeen || 0, w: oc.w, l: oc.l,
           idle: !e && Date.now() - (r.lastSeen || 0) >= RULES.awayMs, // 3일 넘게 자리를 비움 (목록에서 흐리게)
           rel: db.relGet(d.id, r.id), live: why.live, auto: why.auto,
+          bond: db.relBond(d.id, r.id) || undefined, // 동료일 때 무슨 사이인지 (친구·연인·스승 등). 예전에는 모두 '동료'로만 보였음
         };
       });
       // 접속 중인 드래곤이 언제나 위, 그 안에서는 최근에 접속한 순. 접속하지 않은 드래곤은 마지막으로 본 시각 순
