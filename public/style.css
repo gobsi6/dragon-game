@@ -3472,18 +3472,22 @@ button.cnt { width: 100%; padding: 0; border: 0; background: none; font-family: 
 .nm-put .btn { min-height: 34px; padding: 0 12px; }
 @media (max-width: 520px) { .nm-put { flex: 1 1 100%; justify-content: flex-end; } }
 
-/* ── 둥지 이야기: 식구들의 하루를 일기처럼 ── */
-.nest-story { margin-bottom: 18px; }
-/* 장면 목록(로그)만 상자로 감쌈. 제목 '둥지 이야기'는 상자 밖 */
-.nest-story > .note { margin: 8px 0 0; padding: 10px 14px; background: var(--surface-2); border: 1px solid var(--line-in); border-radius: 3px; }
-.nest-story ul { position: relative; list-style: none; margin: 8px 0 0; padding: 12px 14px 12px 30px; background: var(--surface-2); border: 1px solid var(--line-in); border-radius: 3px; display: flex; flex-direction: column; gap: 10px; }
-.nest-story ul::before { content: ""; position: absolute; left: 16px; top: 16px; bottom: 16px; width: 2px; background: #D9CBA8; } /* 타임라인 줄 */
+/* ── 둥지 이야기: 식구 칸 '둥지 식구' 제목 아래. '지금' 장면만 보이고, 칸을 누르면 지난 장면이 타임라인으로 펼쳐짐 ── */
+.nest-story { position: relative; padding: 11px 14px 11px 30px; background: var(--surface-2); border: 1px solid var(--line-in); border-radius: 3px; }
+.nest-story[open]::before { content: ""; position: absolute; left: 16px; top: 18px; bottom: 18px; width: 2px; background: #D9CBA8; } /* 펼쳤을 때 타임라인 줄 */
+.nest-story > summary { position: relative; display: flex; flex-direction: column; gap: 2px; cursor: pointer; list-style: none; }
+.nest-story > summary::-webkit-details-marker { display: none; }
+.nest-story > summary::before { content: ""; position: absolute; left: -19px; top: 5px; width: 8px; height: 8px; border-radius: 50%; background: #C2AD7E; border: 2px solid #C2AD7E; } /* 지금 */
+.nest-story > summary:focus-visible { outline: 2px solid var(--steel); outline-offset: 4px; }
+.nest-story .ns-h { display: flex; align-items: center; gap: 6px; }
+.nest-story .ns-chev { width: 6px; height: 6px; margin-top: -2px; border-right: 1.5px solid #8C7A52; border-bottom: 1.5px solid #8C7A52; transform: rotate(45deg); transition: transform .15s; } /* 접힘: 아래 화살표 */
+.nest-story[open] .ns-chev { margin-top: 2px; transform: rotate(-135deg); } /* 펼침: 위 화살표 */
+.nest-story ul { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .nest-story li { position: relative; display: flex; flex-direction: column; gap: 2px; }
-.nest-story li::before { content: ""; position: absolute; left: -19px; top: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--surface-2); border: 2px solid #C2AD7E; }
-.nest-story li:first-child::before { background: #C2AD7E; }
-.nest-story time { font: 600 11.5px/1.3 var(--sans); color: #8C7A52; font-variant-numeric: tabular-nums; }
+.nest-story li::before { content: ""; position: absolute; left: -19px; top: 5px; width: 8px; height: 8px; border-radius: 50%; background: var(--surface-2); border: 2px solid #C2AD7E; }
+.nest-story time { font: 600 11.5px/1.3 var(--sans); color: #7A6942; font-variant-numeric: tabular-nums; }
 .nest-story p { margin: 0; font: 400 14px/1.6 var(--serif); color: var(--ink-2); }
-.nest-story li:first-child p { color: var(--ink); }
+.nest-story > summary p { color: var(--ink); }
 
 /* ── 지하 회랑 (maze.js) ── */
 .center.in-maze > .region-card:not(#maze-card), .center.in-maze > .map { display: none !important; }

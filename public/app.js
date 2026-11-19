@@ -3133,6 +3133,8 @@
     const h = document.createElement('h3');
     h.textContent = `둥지 식구 · ${n.kin.home.length}/${n.maxKin || S.kinRules.maxKin}`;
     wrap.appendChild(h);
+    // 둥지 이야기: 식구들이 지금 뭘 하며 지내는지 (30분마다 새 장면). '지금' 장면만 보이고, 칸을 누르면 지난 장면이 펼쳐짐
+    if (n.region) { const st = nestStory(n); if (st) wrap.appendChild(st); }
     const note = (t) => { const p = document.createElement('p'); p.className = 'note'; p.textContent = t; wrap.appendChild(p); };
     const k = n.kin;
     const canAct = !!n.here && !S.me.exp;
@@ -4508,8 +4510,6 @@
           P.fac = $('fac-pane');
         }
 
-        // 둥지 이야기: 식구들이 지금 뭘 하며 지내는지 (30분마다 새 장면)
-        if (n.region) renderNestStory(P.nest, n);
 
         // 둥지 단계
         if (n.region) {
@@ -7665,47 +7665,47 @@
     else if (bond < 30) add(sp('awayLow', a));
     return storyText(pickOf(rnd, pool.length ? pool : STORY.kidH), a.name);
   }
-  function renderNestStory(host, n) {
+  let STORY_OPEN = false; // 둥지 이야기 펼침 (둥지 창을 다시 그려도 그대로)
+  function nestStory(n) {
     const kids = (n.kin?.home || []).filter((v) => v.status === 'home' && !v.errand && !v.runaway && !v.companion);
     const every = (n.kin?.home || []).filter((v) => v.status === 'home' && !v.errand && !v.runaway); // 곁에 둔 새끼도 (원정 장면용)
     storyCtx = { o: S.me?.name || '주인', r: S.regions?.[S.me?.exp?.region]?.name || '먼 곳', n: '' };
-    const sec = document.createElement('div');
-    sec.className = 'nest-story';
-    const h = document.createElement('h3');
-    h.textContent = '둥지 이야기';
-    sec.appendChild(h);
-    if (!kids.length) {
-      const p = document.createElement('p');
-      p.className = 'note';
-      const all = n.kin?.home || [];
-      p.textContent = all.some((v) => v.status === 'home') ? '식구들이 모두 바깥에 나가 있어 둥지가 조용하다.'
-        : all.length ? '아직 알에서 깨어난 식구가 없다. 알이 깨어나면 둥지에서 어떻게 지내는지 여기에 적힌다.'
-        : '아직 둥지에 함께 사는 식구가 없다. 식구가 생기면 둥지에서 어떻게 지내는지 여기에 적힌다.';
-      sec.appendChild(p);
-      host.appendChild(sec);
-      return;
-    }
-    const ul = document.createElement('ul');
+    if (!kids.length) return null; // 식구가 없거나 모두 바깥에 있으면 칸을 두지 않음 (식구 칸에 안내가 따로 있음)
     const now = Date.now();
     const cur = Math.floor(now / STORY_SLOT);
+    const items = [];
     let prevText = '';
     for (let i = 0; i < 4; i++) {
       const slot = cur - i;
-      const li = document.createElement('li');
-      const t = document.createElement('time');
       const d = new Date(slot * STORY_SLOT);
-      t.textContent = i === 0 ? '지금' : `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-      const p = document.createElement('p');
       // 바로 앞 장면과 같으면 다시 고름 (같은 때에는 늘 같은 결과)
       let text = storyMoment(slot, kids, n, 0, every);
       for (let k = 1; k < 4 && text === prevText; k++) text = storyMoment(slot, kids, n, k, every);
       prevText = text;
-      p.textContent = text;
-      li.append(t, p);
-      ul.appendChild(li);
+      items.push([i === 0 ? '지금' : `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`, text]);
     }
-    sec.appendChild(ul);
-    host.appendChild(sec);
+    const box = document.createElement('details');
+    box.className = 'nest-story';
+    box.open = STORY_OPEN;
+    box.addEventListener('toggle', () => { STORY_OPEN = box.open; });
+    const sm = document.createElement('summary');
+    const head = document.createElement('span'); head.className = 'ns-h';
+    const t0 = document.createElement('time'); t0.textContent = '둥지 이야기 · 지금';
+    const chev = document.createElement('span'); chev.className = 'ns-chev'; chev.setAttribute('aria-hidden', 'true');
+    head.append(t0, chev);
+    const p0 = document.createElement('p'); p0.textContent = items[0][1];
+    sm.append(head, p0);
+    sm.setAttribute('aria-label', `둥지 이야기 · 지금: ${items[0][1]} (누르면 지난 장면 ${items.length - 1}개)`);
+    box.appendChild(sm);
+    const ul = document.createElement('ul');
+    for (const [tt, text] of items.slice(1)) {
+      const li = document.createElement('li');
+      const t = document.createElement('time'); t.textContent = tt;
+      const p = document.createElement('p'); p.textContent = text;
+      li.append(t, p); ul.appendChild(li);
+    }
+    box.appendChild(ul);
+    return box;
   }
 
   // ── 다른 드래곤의 기록 (프로필) ──
