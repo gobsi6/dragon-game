@@ -1382,6 +1382,7 @@ function choosePath(d, kin, id, path, town, now = Date.now()) {
     return { title: k.name, lines: [
       `${ga(k)} ${REGIONS[town].name}${josa(REGIONS[town].name, '으로', '로')} 돌아갔다. 드래곤에게 길러진 사람의 이야기가 마을에 퍼진다.`,
       `${REGIONS[town].name} 평판 ${before} → ${r[town]}`,
+      ...logic.traitCount(d, 'sendoff'), // 어른이 된 인간을 마을로 떠나보냄도 '다 자란 식구를 떠나보내기'로 셈
     ] };
   }
   return { error: '알 수 없는 길이다.' };
@@ -1708,7 +1709,8 @@ function release(d, kin, id, now = Date.now()) {
     const m = k.data.mate.name;
     return { title: '독립', lines: [`${ga(k)} 짝 ${m}${josa(m, '과', '와')} 함께 떠나고 싶어 한다. ${m}의 보호자에게 함께 떠나도 될지 청을 보냈다. 허락하면 둘이 함께 둥지를 떠난다.`], leaves: [leaveInfo(k, d.region)] };
   }
-  return { title: '독립', lines: freeDrake(d, kin, k, now) };
+  // 칭호 '둥지를 떠나보낸 자'의 셈 (이벤트·짝과 함께 떠나기는 그쪽에서 셈. 전에는 이 '떠나보내기' 단추만 빠져 있었음)
+  return { title: '독립', lines: [...freeDrake(d, kin, k, now), ...logic.traitCount(d, 'sendoff')] };
 }
 // 새끼를 독립시키고 문장을 돌려줌 (떠나보내기, 이벤트에서 함께 씀)
 function freeDrake(d, kin, k, now) {

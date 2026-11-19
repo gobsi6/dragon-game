@@ -499,8 +499,18 @@
   function setMe(me) {
     if (me && $('arena-badge')) setBadge($('arena-badge'), me.duelUnseen || 0); // 확인하지 않은, 받은 자동 결투
     const expFlip = !!S.me && !!me && !!S.me.exp !== !!me.exp; // 원정을 떠나거나 돌아옴
+    // 행동력·기력이 차거나 원정·쉬기가 바뀜: 둥지 창의 '내 집터로 가기'·'둥지로 날아가기'·'가르치기' 같은 단추를 다시 맞춤 (둥지 창은 서버 답으로 그려 두어 저절로 안 바뀜)
+    // 늘어날 때만 (줄어드는 건 둥지 창에서 한 행동 때문이라 그 답으로 이미 다시 그림 → 두 번 그리지 않게)
+    const apFlip = !!S.me && !!me && (me.ap > S.me.ap || me.en > S.me.en || !!S.me.restAt !== !!me.restAt || expFlip);
     S.me = me;
     if (expFlip) setTimeout(() => { if ($('inv-dlg')?.open) renderInv(); if ($('craft-dlg')?.open) renderCraft(); }, 0); // 원정 중 회색 단추를 바로 맞춤
+    if (apFlip) setTimeout(() => {
+      const dlg = $('nest-dlg');
+      if (!dlg?.open) return;
+      const f = document.activeElement; // 이름을 적는 중이면 다시 그리지 않음 (적던 글이 사라지지 않게)
+      if (f && dlg.contains(f) && (f.tagName === 'INPUT' || f.tagName === 'TEXTAREA' || f.tagName === 'SELECT')) return;
+      renderNestAgain();
+    }, 0);
     const pct = (a, b) => `${Math.max(0, Math.min(100, (a / b) * 100))}%`;
     $('me-name').textContent = me.name;
     $('me-title').hidden = !me.title;
@@ -9573,7 +9583,13 @@
     S.fallOpenAnyway = false;
     const waitH = Math.round(S.deathCfg.waitMs / 3600000);
     const waiting = f.waiting && f.waiting > Date.now();
-    const noHelp = !waiting && f.helpLeft === 0; // 오늘 남의 도움으로 일어설 수 있는 횟수를 다 씀
+    // 받은 횟수가 어제 것이면(창을 연 채 자정을 넘김) 다시 다 찬 것으로 봄 (한국 날짜, 서버 logic.dayIdx와 같은 셈)
+    const today = Math.floor((Date.now() + 9 * 3600000) / 86400000);
+    const helpLeft = f.helpDay != null && f.helpDay !== today ? f.helpMax : f.helpLeft;
+    const noHelp = !waiting && helpLeft === 0; // 오늘 남의 도움으로 일어설 수 있는 횟수를 다 씀
+    // 횟수를 다 써서 막혀 있으면 자정(한국 시간)이 지나자마자 창을 다시 그려 단추를 풀어 줌
+    clearTimeout(S.fallMidnight);
+    if (noHelp) S.fallMidnight = setTimeout(() => { if ($('fall-dlg').open) checkFallen(); }, (today + 1) * 86400000 - 9 * 3600000 - Date.now() + 2000);
     $('fall-wait').disabled = (f.waited && !waiting) || noHelp;
     $('fall-wait').querySelector('b').textContent = waiting ? '계속 기다린다' : '도움을 기다린다';
     $('fall-wait-desc').textContent = waiting
@@ -9582,7 +9598,7 @@
         ? `오늘은 이미 ${f.helpMax}번 도움을 받아 일어섰다. 내일이 되기 전까지는 스스로 정해야 한다.`
       : f.waited
         ? '이미 기다려 보았지만 아무도 오지 않았다. 이제 스스로 정해야 한다.'
-        : `${waitH}시간 동안 다른 드래곤이 와서 일으켜 주기를 기다린다. 누군가 이곳에 와 주면 상흔 없이 일어선다. 오지 않으면 그때 다시 고른다. (쓰러질 때마다 한 번 · 하루 ${f.helpMax}번까지, 오늘 ${f.helpLeft}번 남음)`;
+        : `${waitH}시간 동안 다른 드래곤이 와서 일으켜 주기를 기다린다. 누군가 이곳에 와 주면 상흔 없이 일어선다. 오지 않으면 그때 다시 고른다. (쓰러질 때마다 한 번 · 하루 ${f.helpMax}번까지, 오늘 ${helpLeft}번 남음)`;
     $('fall-revive').disabled = !f.canRevive;
     $('fall-revive-desc').textContent = f.canRevive
       ? `상흔이 없는 능력치 하나가 무작위로 영구히 1 줄어든다. 체력 30%로 일어난다. (상흔 ${f.scars.length} / ${S.stats.length})`
@@ -13185,7 +13201,11 @@
     stat('접속 중', `${ov.online}`, `드래곤 ${ov.total}마리 가운데`, 'dragons');
     stat('진행 중인 이벤트', `${live.filter(([t]) => t !== '대륙의 재앙').length}`, live.filter(([t]) => t !== '대륙의 재앙').map(([t]) => t).join(' · ') || '없음', 'events');
     stat('대륙의 재앙', S.boss ? S.boss.name : '없음', S.boss ? S.regions[S.boss.region]?.name || '' : boss?.sum ? `${boss.pill} · ${boss.sum}` : '', 'weather');
-    stat('처리할 요청', `${ov.reqs}`, ov.reqs ? '비밀번호 다시 받기' : '없음', 'pwreq');
+    // 진행 중인 싸움 (예전 '처리할 요청' 자리. 요청은 왼쪽 메뉴의 빨간 점으로 알 수 있음) → 누르면 '서버' 메뉴의 진행 중인 싸움
+    const fg = ov.fights || { raids: 0, lobbies: 0, kinds: {} };
+    const fn = fg.raids + Object.values(fg.kinds).reduce((a, b) => a + b, 0);
+    const fsub = [fg.raids ? `레이드 ${fg.raids}팀` : '', ...Object.entries(fg.kinds).map(([k, n]) => `${k} ${n}`), fg.lobbies ? `레이드 모집 ${fg.lobbies}` : ''].filter(Boolean).join(' · ');
+    stat('진행 중인 싸움', `${fn}`, fsub || '없음 · 지금 올려도 괜찮다', 'server');
     body.appendChild(stats);
     const two = gEl('div', 'gm-ov-two');
     // 진행 중

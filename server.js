@@ -882,6 +882,17 @@ function enterWorld(socket, dragon) {
     const mw = logic.migrateMasterwork(dragon, (id) => db.itemCount(dragon.id, id));
     if (mw.changed) db.saveState(dragon, mw.items);
   }
+  { // 예전에 '떠나보내기' 단추(새끼)·'마을로 돌려보내기'(어른 인간)로 떠나보낸 식구가 칭호 셈에서 빠져 있던 것을 채움 (한 번만)
+    const c = logic.combatJson(dragon);
+    if (!c.sendoffFix) {
+      c.sendoffFix = 1;
+      const kin = db.kinLoad(dragon.id);
+      const gone = kin.filter((k) => (k.type === 'drake' && k.status === 'independent') || (k.type === 'human' && k.status === 'returned' && k.data?.path === 'return')).length;
+      const t = logic.traitsOf(dragon);
+      if (gone > (t.counts.sendoff || 0)) t.counts.sendoff = gone; // 이벤트로 이미 센 것과 겹치지 않게 더 큰 쪽만
+      db.saveState(dragon);
+    }
+  }
   syncKin(socket, dragon);
   sendMe(socket, dragon); // 접속할 때 새로 이룬 칭호도 확인
   if (arena) arena.resume(dragon.id, socket); // 새로고침 전의 싸움이 남아 있으면 이어서
@@ -1338,6 +1349,7 @@ const liveFights = (() => {
     bet: '서버가 다시 시작되어 하던 내기 결투가 끊겼다. 결투는 없던 일이 되었다.',
     elite: '서버가 다시 시작되어 강적과의 싸움이 끊겼다. 싸움은 없던 일이 되었다.',
     hunt: '서버가 다시 시작되어 사냥하던 싸움이 끊겼다. 싸움은 없던 일이 되었다.',
+    boss: '서버가 다시 시작되어 대륙의 재앙과의 싸움이 끊겼다. 싸움은 없던 일이 되었다.',
     calm: '서버가 다시 시작되어 광폭한 드래곤을 진정시키던 싸움이 끊겼다.',
   };
   // 켜질 때: 지난번에 싸우던 드래곤에게 쪽지 (다시 접속하면 '자리를 비운 동안'으로 보임)
@@ -2177,7 +2189,13 @@ function onConnect(socket) {
     const cc = contest.gmView ? contest.gmView() : null;
     const se = logic.seasonAt(now);
     const reqs = (db.worldGet('pwreq', []) || []).length;
-    ack({ ok: true, now,
+    // 진행 중인 싸움 (한눈에 보기): 레이드는 팀 수, 그 밖의 싸움은 종류별 마리 수
+    const FK = { hunt: '사냥', elite: '강적', boss: '대륙의 재앙', duel: '결투', bet: '내기 결투', calm: '광폭화 진정' };
+    const rv = raidBoss?.gmView?.() || { lobbies: [], fights: [] };
+    const fk = {};
+    for (const k of Object.values(liveFights.now())) if (k !== 'raid') fk[FK[k] || k] = (fk[FK[k] || k] || 0) + 1;
+    const fights = { raids: (rv.fights || []).length, lobbies: (rv.lobbies || []).length, kinds: fk };
+    ack({ ok: true, now, fights,
       online: online.size, total: db.dragonIds().length, reqs,
       yabawi: ys ? { open: true, until: ys.end, region: REGIONS[ys.region]?.name || '' } : { open: false, next: yn?.start || 0, region: yn ? REGIONS[yn.region]?.name || '' : '' },
       peddler: ps ? { open: true, until: ps.end } : { open: false, next: pn?.start || 0 },

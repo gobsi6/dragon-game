@@ -417,7 +417,7 @@ module.exports = function setupGm({ io, db, online, logic, life, meOf, sendMe, r
     // 진행 중인 싸움: 레이드 팀·모집, 그 밖의 싸움(사냥·강적·결투·진정)을 하는 드래곤. 파일을 올리기 전에 확인하려고
     on('gm:fights', () => {
       const f = fightsNow ? fightsNow() : { live: {}, lobbies: [], fights: [] };
-      const KIND = { hunt: '사냥', elite: '강적', duel: '결투', bet: '내기 결투', calm: '광폭화 진정', raid: '레이드' };
+      const KIND = { hunt: '사냥', elite: '강적', boss: '대륙의 재앙', duel: '결투', bet: '내기 결투', calm: '광폭화 진정', raid: '레이드' };
       const others = Object.entries(f.live || {}).filter(([, k]) => k !== 'raid').map(([id, k]) => {
         const d = online.get(Number(id))?.dragon || db.getDragon(Number(id));
         return { name: d?.name || `#${id}`, kind: KIND[k] || k, online: online.has(Number(id)) };

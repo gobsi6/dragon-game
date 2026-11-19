@@ -189,7 +189,7 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
     const first = logic.dexMeet(d, `boss:${st.key}`); // 도감
     const bossId = st.id;
     const T = BOSSES[st.key];
-    const c = { name: T.name, level: st.lv };
+    const c = { name: T.name, level: st.lv, boss: true }; // boss: GM 도구의 진행 중인 싸움에서 '대륙의 재앙'으로 따로 셈
     const lines = [`${ga(T.name)} 앞을 가로막았다. 모두의 상처가 쌓인 몸이다. (남은 체력 ${Math.round((st.hp / st.hpMax) * 100)}%)`, `${BOSS.turns}턴 동안 싸우고 물러난다. 입힌 피해는 모두의 몫으로 남는다.`];
     if (b.b.enraged) lines.push(`${ga(T.name)} 분노해 있다! 공격이 거세다.`);
     if (first) lines.push('도감에 대륙의 재앙을 적어 두었다.');

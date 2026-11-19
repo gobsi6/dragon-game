@@ -52,6 +52,7 @@ module.exports = function setupDeath({ io, db, online, logic, life, sendMe, broa
       waiting: waitingOf(d) ? f.wait.until : null, // 도움을 기다리는 중이면 끝나는 시각
       waited: !!f.waited,                         // 이번에 쓰러져서 이미 기다려 봤는지
       helpLeft: helpLeft(d), helpMax: DEATH.helpPerDay, // 오늘 남의 도움으로 더 일어설 수 있는 횟수
+      helpDay: logic.dayIdx(),                    // helpLeft를 센 날 (한국 날짜). 화면이 자정을 넘기면 횟수가 다시 찬 것으로 봄
     };
   }
 
