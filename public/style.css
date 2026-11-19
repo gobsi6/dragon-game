@@ -5840,3 +5840,9 @@ button.gm-stat:hover { border-color: #9DB3C6; }
 .xa-gift { padding-left: 28px; }
 .xa-gift > input[type="checkbox"] { flex: none; width: 16px; height: 16px; margin: 0 4px 0 -28px; }
 
+/* 지난 식구의 '성격 · 모습 · 가족' 칸: 목록 줄(.kin-past div/span) 모양을 덮어씀 */
+.kin-past .kin-past-info { display: block; margin: 0 0 8px; padding: 0; border: 1px solid #E4E6E2; font-size: 12.5px; }
+.kin-past .kin-past-info .kin-kv { display: grid; justify-content: initial; padding: 4px 10px 10px; border-top: 0; font-size: 12.5px; }
+.kin-past .kin-past-info span { text-align: left; }
+.kin-past .kin-past-info .kin-kv .v { color: var(--ink-2); font-size: 12.5px; }
+.kin-past .kin-past-info > summary small { font-size: 12px; }

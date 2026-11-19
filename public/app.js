@@ -3180,10 +3180,9 @@
           ? { returned: v.family != null ? `${v.family || '마을'}에 가정을 꾸렸다` : '마을로 돌아갔다', dead: `${v.age}일을 살고 떠났다` }[v.status]
           : v.status === 'cold' ? `${kindName(v.kind)}의 알 · 식어 버렸다`
           : `${kindName(v.kind)} · 독립 · ${{ friendly: '우호', hermit: '은둔', hostile: '적대' }[v.personality] || ''} 성격`;
-        // 지난 식구: 떠난 모습 뒤에 짝과 자녀만
-        const fam = [v.mate ? `짝: ${v.mate.name}` : '', v.kids?.length ? `자녀: ${v.kids.join(', ')}` : ''].filter(Boolean).join(' · ');
-        row.querySelector('span').textContent = [what, fam].filter(Boolean).join(' · ');
+        row.querySelector('span').textContent = what;
         list.appendChild(row);
+        const inf = pastInfo(v); if (inf) list.appendChild(inf); // 성격·모습·짝·자녀·단짝·친구 (접어 둠)
         const dy = kinDiary(v); if (dy) list.appendChild(dy); // 떠난 뒤에도 남는 함께한 날들
       }
       box.appendChild(list);
@@ -3193,6 +3192,32 @@
   // 반려의 둥지에 와 있을 때: 그 집 식구를 함께 돌봄 (아이에게 물건 건네기, 새끼 가르치기)
   // 함께한 날들: 접어 두었다가 펼쳐 봄 (며칠째 · 있었던 일)
   let PAST_OPEN = false; // 지난 식구 목록 펼침 (처음엔 접힘)
+  // 지난 식구의 '성격 · 모습 · 가족': 둥지에 있을 때와 같은 이름표 칸 (떠난 날의 모습 그대로, 접어 둠)
+  function pastInfo(v) {
+    const rows = [];
+    const add = (k, t, title) => { if (!t) return; const sp = document.createElement('span'); sp.textContent = t; if (title) sp.title = title; rows.push([k, sp]); };
+    if (v.traits?.length) add('성격', v.traits.map((t) => t.name).join(' · '), v.traits.map((t) => `${t.name}: ${t.desc}`).join('\n'));
+    add('모습', [v.sexName, ...(v.looks || [])].filter(Boolean).join(' · '));
+    if (v.mate) { const ex = [v.mate.kind ? kindName(v.mate.kind) : '', v.mate.home ? `${v.mate.home}의 둥지` : ''].filter(Boolean).join(', '); add('짝', `${v.mate.name}${ex ? ` (${ex})` : ''}`); }
+    if (v.kids?.length) add('자녀', v.kids.join(', '));
+    const fr = (best) => (v.friends || []).filter((f) => !!f.best === best).map((f) => `${f.name} (${f.owner}의 둥지)`).join(', ');
+    add('단짝', fr(true)); add('친구', fr(false));
+    if (!rows.length) return null;
+    const key = `past:${v.id}`;
+    const d = document.createElement('details');
+    d.className = 'kin-info kin-past-info';
+    d.open = KIN_INFO_OPEN.has(key);
+    d.addEventListener('toggle', () => { if (d.open) KIN_INFO_OPEN.add(key); else KIN_INFO_OPEN.delete(key); });
+    const sm = document.createElement('summary');
+    const ttl = document.createElement('span'); ttl.className = 'ttl'; ttl.textContent = '성격 · 모습 · 가족';
+    sm.appendChild(ttl);
+    const brief = (v.traits || []).map((t) => t.name).join(' · ');
+    if (brief) { const b = document.createElement('small'); b.textContent = brief; sm.appendChild(b); }
+    const kv = document.createElement('div'); kv.className = 'kin-kv';
+    for (const [k, node] of rows) { const l = document.createElement('span'); l.className = 'k'; l.textContent = k; node.classList.add('v'); kv.append(l, node); }
+    d.append(sm, kv);
+    return d;
+  }
   const DIARY_OPEN = new Set(); // 펼쳐 둔 일기 (둥지 창을 다시 그려도 펼친 채로)
   function kinDiary(v) {
     if (!v.diary?.length) return null;
@@ -3508,7 +3533,7 @@
             if (confirm(`${v.name}${josa(v.name, '을', '를')} ${tn}${ro(tn)} 돌려보낼까? 다시 데려올 수 없다. 대신 그 마을 평판이 크게 오른다.`)) nestAct('kin:path', { id: v.id, path: 'return', town }, true);
           });
         }
-      } else if (canAct && !v.onExp && !v.choosePath) {
+      } else if (canAct && !v.onExp && (!v.choosePath || partner)) { // 반려의 둥지에서는 갈 길을 아직 안 정한 어른도 돌볼 수 있음 (갈 길은 보호자만 정함)
         // 용기사가 둘 이상이면: 한 사람을 둥지로 내려와 남게 할 수 있음 (효과는 한 사람분만 적용되므로)
         if (!partner && v.path === 'knight' && (NEST_LAST?.nest?.kin?.home || []).some((x) => x.id !== v.id && x.type === 'human' && x.path === 'knight')) {
           label('용기사가 둘 이상이다. 용기사의 효과는 한 사람분만 적용된다.');
