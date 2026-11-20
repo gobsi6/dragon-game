@@ -1,35 +1,43 @@
-# pack.json v13
-# 1) 색이 여러 개인 가구를 색마다 따로 사는 가구로 나눔: 긴 깔개·네모 깔개(6)·색유리 창(6)·화분대(2)·마력 수정(4색, 색마다 한 알·무리 '모양')
-# 2) 이름 바꾸기, 둥근 걸상(걸상과 같은 그림) 지우기
-# 3) 도면이 있어야 만드는 가구: 붉은 방석 의자·은 거울·달 깔개·높은 철 울타리·색유리 창(색 여섯이 도면 하나를 같이 씀: bpKey)
+# 색이 다른 가구는 저마다 따로 만드는 가구로 (pack.json v36)
+# - 귀환 주문진·촛불 제단·룬 제단은 그대로 한 가구 ('색 바꾸기')
+# - 방향(앞·옆·세로)·놓는 곳·커튼 여닫기·받침대 위 책처럼 '상태'가 다른 것은 묶음 그대로
+# - 나뉜 가구는 기본 가구와 같은 인장·재료·종류, 도면은 기본 가구 것을 같이 씀(bpKey)
 import json, sys
 PACK = sys.argv[1] if len(sys.argv) > 1 else 'public/house/pack.json'
-P = json.load(open(PACK, encoding='utf-8')); P['v'] = 13
-S, C, G, GL = P['sprites'], P['cat'], P['groups'], P['groupLabel']
-def split(base, names):
-    ids = G.pop(base); GL.pop(base, None); src = dict(C[base])
-    for vid, nm in zip(ids, names):
-        S[vid].pop('of', None); S[vid]['name'] = nm
-        C[vid] = {**src, 'name': nm}
-split('rug', ['긴 깔개 (빨강)', '긴 깔개 (파랑)', '긴 깔개 (주황)', '긴 깔개 (초록)', '긴 깔개 (자홍)', '긴 깔개 (청록)'])
-split('rug_red', ['네모 깔개 (빨강)', '네모 깔개 (파랑)', '네모 깔개 (주황)', '네모 깔개 (초록)', '네모 깔개 (자홍)', '네모 깔개 (청록)'])
-split('glasswin', ['색유리 창 (갈색)', '색유리 창 (하늘)', '색유리 창 (남색)', '색유리 창 (초록)', '색유리 창 (분홍)', '색유리 창 (노랑)'])
-split('planter', ['화분대 (주황)', '화분대 (파랑)'])
-# 마력 수정: 색 넷으로 나누고, 색마다 한 알·무리를 '모양'으로
-cr = G.pop('crystal'); GL.pop('crystal', None); src = dict(C['crystal'])
-for i, col in enumerate(['초록', '분홍', '노랑', '하늘']):
-    a, b = cr[2 * i], cr[2 * i + 1]
-    for vid in (a, b): S[vid].pop('of', None)
-    S[a]['name'] = f'마력 수정 ({col})'; S[b]['name'] = f'마력 수정 ({col} 무리)'; S[b]['of'] = a
-    G[a] = [a, b]; GL[a] = '모양'; C[a] = {**src, 'name': f'마력 수정 ({col})'}
-# 이름 바꾸기
-for k, nm in {'bucket': '항아리', 'mug': '빈 잔', 'keg': '술통', 'book_tray': '책 선반', 'coins': '저울', 'stool': '낮은 의자', 'desk_read': '독서대', 'pond': '연못'}.items():
-    S[k]['name'] = nm; C[k]['name'] = nm
-# 둥근 걸상 지우기 (걸상과 같은 그림)
-S.pop('stool2', None); C.pop('stool2', None)
-# 도면
-for k, cost in {'chair_red': 40, 'mirror': 50, 'rug_moon': 60, 'fence_iron': 40, 'glasswin': 50}.items(): C[k]['bp'] = cost
-C['glasswin']['bpName'] = '색유리 창'
-for k in ['glasswin_1', 'glasswin_2', 'glasswin_3', 'glasswin_4', 'glasswin_5']: C[k]['bp'] = 0; C[k]['bpKey'] = 'glasswin'
+P = json.load(open(PACK, encoding='utf-8')); P['v'] = max(P['v'], 36); S, C, G, GL = P['sprites'], P['cat'], P['groups'], P.setdefault('groupLabel', {})
+def solo(k, base, name):   # 묶음에서 빼 따로 만드는 가구로
+    S[k].pop('of', None); S[k]['name'] = name
+    c = dict(C[base]); c['name'] = name; c.pop('fn', None)
+    if c.get('bp'): c['bpKey'] = C[base].get('bpKey', base); c['bp'] = 0   # 도면 가게에는 기본 가구 도면 하나만 (색유리 창처럼)
+    C[k] = c
+def ungroup(base, names):  # names: {그림 키: 가구 이름} (기본 가구 이름도 바꿀 수 있음)
+    for k in G.pop(base): 
+        if k == base: S[k]['name'] = C[k]['name'] = names.get(k, C[k]['name'])
+        else: solo(k, base, names.get(k, S[k]['name']))
+    GL.pop(base, None)
+ungroup('cauldron', {'cauldron': '연금 솥 (청록)'})
+ungroup('potion_tall', {'potion_tall': '긴 약병 (초록)', 'potion_tall_w': '긴 약병 (흰색)'})
+ungroup('potion_tray', {'potion_tray': '약병 받침 (분홍 약병)'})
+ungroup('alch_bench', {'alch_bench': '연금술 작업대 (갈색)'})
+ungroup('alch_table', {'alch_table': '약병 놓인 긴 탁자 (갈색)', 'alch_table_b': '약병 놓인 긴 탁자 (파랑, 단지)', 'alch_table_e': '빈 긴 탁자 (파랑)'})
+ungroup('book_tray', {'book_tray_brown': '책 선반 (갈색)', 'book_tray_orange': '책 선반 (주황)'})
+ungroup('mirror', {'mirror_gold': '금빛 거울'})
+# 새김 받침대: 받침대 색(나무·파랑)마다 한 가구, 위의 책 네 모양(마법서·펼친 책·책 한 권·빈 받침)은 '모양 바꾸기'
+lec = G.pop('lectern'); wood_ids = [k for k in lec if k == 'lectern' or k.startswith('lectern_w')]; blue = [k for k in lec if k.startswith('lectern_b')]
+G['lectern'] = wood_ids; GL['lectern'] = '모양'; S['lectern']['name'] = '새김 받침대'   # 기본 그림(마법서)은 가구 이름 그대로 (커튼처럼)
+solo(blue[0], 'lectern', '새김 받침대 (파랑)')
+for k in blue[1:]: S[k]['of'] = blue[0]
+G[blue[0]] = blue; GL[blue[0]] = '모양'
+# 커튼: 색마다 한 가구, 닫힌·걷은 모양은 '모양 바꾸기'
+cur = G.pop('curtain'); GL.pop('curtain', None)
+CN = ['옅은 갈색', '빨강', '노랑', '청록', '초록', '자홍', '흰색']
+for i in range(7):
+    a, b = cur[2 * i], cur[2 * i + 1]; name = f'커튼 ({CN[i]})'
+    if a == 'curtain': C[a]['name'] = name; S[a]['name'] = name
+    else: solo(a, 'curtain', name)
+    S[b]['of'] = a; S[b]['name'] = f'커튼 ({CN[i]}, 걷음)'
+    G[a] = [a, b]; GL[a] = '모양'
 json.dump(P, open(PACK, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
-print('ok', len(S), len(C))
+for b, ids in G.items():
+    if b in ('warp_circle', 'altar_candle', 'altar_rune') or b.startswith(('curtain', 'lectern')): print(b, GL.get(b), [S[k]['name'] for k in ids])
+print('new cat', len(C))

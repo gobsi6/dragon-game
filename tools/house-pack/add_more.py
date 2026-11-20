@@ -34,7 +34,7 @@ ITEMS = [  # id, 이름, 자르기, 분류, 인장, 재료, 더할 것
     ('potion', '보랏빛 병', (421, 257, 427, 269), 'kitchen', 2, {'cave_crystal': 1}, {'stack': 1}),
     ('herbs', '말린 약초 걸이', (390, 292, 409, 304), 'kitchen', 3, {'living_bark': 1, 'glow_moss': 2}, {'layer': 'wall'}),
     ('broom', '빗자루', (420, 288, 429, 313), 'kitchen', 2, {'living_bark': 2}, {}),
-    ('cab_small', '작은 수납장', (240, 336, 256, 352), 'store', 3, {'living_bark': 2}, {}),
+    ('cab_small', '작은 탁자', (240, 336, 256, 352), 'store', 3, {'living_bark': 2}, {}),
     ('counter_s', '짧은 진열대', (48, 370, 64, 400), 'kitchen', 3, {'rune_stone': 2}, {}),
     ('quill', '깃펜', (374, 369, 382, 382), 'study', 1, {'old_scroll': 1}, {'stack': 1}),
     ('scroll', '두루마리', (370, 388, 381, 396), 'study', 1, {'old_scroll': 1}, {'stack': 1}),

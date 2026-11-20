@@ -2642,10 +2642,23 @@
       });
     });
   }
+  // 바꿔 고를 수 있는 가구 표시(하늘색 동그라미, 그림 오른쪽 위): 색 · 모양 · 방향 (놓는 곳은 표시 안 함)
+  // 그림은 Lucide 아이콘 palette · shapes · rotate-cw (ISC License, Copyright (c) Lucide Icons and Contributors, https://github.com/lucide-icons/lucide)
+  const ALT_ICON = {
+    색: '<path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"/><g fill="#fff" stroke="none"><circle cx="13.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="10.5" r="1.5"/><circle cx="6.5" cy="12.5" r="1.5"/><circle cx="8.5" cy="7.5" r="1.5"/></g>',
+    모양: '<path d="M8.3 10a.7.7 0 0 1-.626-1.079L11.4 3a.7.7 0 0 1 1.198-.043L16.3 8.9a.7.7 0 0 1-.572 1.1Z"/><rect x="3" y="14" width="7" height="7" rx="1"/><circle cx="17.5" cy="17.5" r="3.5"/>',
+    방향: '<path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>',
+  };
+  const altBadge = (lab) => `<svg viewBox="0 0 24 24" width="17" height="17" shape-rendering="geometricPrecision"><circle cx="12" cy="12" r="10.6" fill="#4FA8DE" stroke="#fff" stroke-width="2"/><g transform="translate(6.2 6.2) scale(.483)" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round">${ALT_ICON[lab] || ALT_ICON['모양']}</g></svg>`;
   function markFn(root) {
     root.querySelectorAll('canvas.dk-th').forEach((c) => {
-      const note = HP.fn(c.dataset.s); if (!note || c.parentElement.classList.contains('th-fn')) return;
-      const w = document.createElement('span'); w.className = 'th-fn'; w.title = note; c.replaceWith(w); w.appendChild(c);
+      if (c.parentElement.classList.contains('th-fn')) return;
+      const note = HP.fn(c.dataset.s), g = HP.group(c.dataset.s), lab = g && g.length > 1 && HP.groupLabel(c.dataset.s) !== '놓는 곳' ? HP.groupLabel(c.dataset.s) : ''; // 놓는 곳(쪽지 바닥·벽)은 표시 안 함
+      if (!note && !lab) return;
+      const w = document.createElement('span'); w.className = 'th-fn'; c.replaceWith(w); w.appendChild(c);
+      w.title = [note, lab && `${lab}을 ${g.length}가지 중에서 골라 놓을 수 있다. 꾸미기에서 '${lab} 바꾸기'(R 키)`].filter(Boolean).join('\n');
+      if (lab) { const a = document.createElement('i'); a.className = 'fn-alt'; a.setAttribute('aria-hidden', 'true'); a.innerHTML = altBadge(lab); w.appendChild(a); }
+      if (!note) return;
       const st = document.createElement('i'); st.className = 'fn-star'; st.setAttribute('aria-hidden', 'true'); st.innerHTML = '<svg viewBox="0 0 24 24" width="17" height="17" shape-rendering="geometricPrecision"><circle cx="12" cy="12" r="10.6" fill="#C9922E" stroke="#fff" stroke-width="2"/><path d="M12 6.6l1.6 3.3 3.6.5-2.6 2.5.6 3.6L12 14.8l-3.2 1.7.6-3.6-2.6-2.5 3.6-.5z" fill="#fff" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/></svg>'; w.appendChild(st); // 금빛 동그라미(흰 테두리) 안에 끝이 둥근 흰 별
     });
   }
@@ -15928,7 +15941,7 @@
     if (tab === 'plan' && h.book && h.book.unread) { socket.emit('city:book:seen', {}, () => {}); setTimeout(() => { if (h.book) h.book.unread = 0; }, 0); } // 집터 탭을 열면 새 글을 읽은 것으로 (이번 화면에는 새 글 표시를 남김)
     body.innerHTML = `<div id="home-ui" class="hm-e">
       <header class="hd"><div class="hd-t"><h3>${plot.name}</h3><span class="hd-r"><span class="seal" title="오늘 보탠 재건도${h.bank ? ` · 다음 날로 넘긴 재건도 ${h.bank}` : ''}">재건도 <b>${h.daySon} / ${v.rules.dayCap}</b></span><span class="seal">인장 <b>${h.seals}</b></span><span class="tag">${stg} / 4단계</span></span></div>
-        <p class="hd-s">${plot.mood}</p>${h.perk ? `<p class="hd-perk${h.perk.on ? ' on' : ''}" title="${ctEsc(h.perk.text)}"><b>집터 덤</b> ${ctEsc(String(h.perk.text).split(' (')[0])}${h.perk.on ? (h.perk.up ? ' · <em>구역이 재건되어 한 단계 커짐</em>' : '') + (h.perk.kind !== 'passive' ? ` · 오늘 ${h.perk.left} / ${h.perk.max}` : ` · ${Math.round(h.perk.off * 100)}%`) : (() => { const rn = h.plots.find((p) => p.id === h.plot).room; return ` · ${ctEsc(rn)}${ctJ(rn, '을', '를')} 되살리면 열린다`; })()}</p>` : ''}${h.pondBack ? `<p class="hd-perk on"><b>연못</b> 분수로 바뀌었던 연못을 돌려받았다${h.pondBack.n ? ` (연못 ${h.pondBack.n}개)` : ''}${h.pondBack.bp ? ' · 연못 도면도 함께' : ''}. 꾸미기에서 놓을 수 있다.</p>` : ''}</header>
+        <p class="hd-s">${plot.mood}</p>${h.perk ? `<p class="hd-perk${h.perk.on ? ' on' : ''}" title="${ctEsc(h.perk.text)}"><b>집터 덤</b> ${ctEsc(String(h.perk.text).split(' (')[0])}${h.perk.on ? (h.perk.up ? ' · <em>구역이 재건되어 한 단계 커짐</em>' : '') + (h.perk.kind !== 'passive' ? ` · 오늘 ${h.perk.left} / ${h.perk.max}` : ` · ${Math.round(h.perk.off * 100)}%`) : (() => { const rn = h.plots.find((p) => p.id === h.plot).room; return ` · ${ctEsc(rn)}${ctJ(rn, '을', '를')} 되살리면 열린다`; })()}</p>` : ''}${h.pondBack ? `<p class="hd-perk on"><b>연못</b> 분수로 바뀌었던 연못을 돌려받았다${h.pondBack.n ? ` (연못 ${h.pondBack.n}개)` : ''}${h.pondBack.bp ? ' · 연못 도면도 함께' : ''}. 꾸미기에서 놓을 수 있다.</p>` : ''}${h.flowerBack ? `<p class="hd-perk on"><b>들꽃</b> 들꽃은 그림이 같은 노란 꽃으로 합쳐졌다. 노란 꽃 ${h.flowerBack.n}개로 옮기고, 값 차이로 석공 인장 ${h.flowerBack.back}개를 돌려받았다. 노란 꽃은 깔개 위에도 놓을 수 있다.</p>` : ''}</header>
       <nav class="hm-tabs" aria-label="내 집터 화면">${tabs.map(([k, n, x]) => `<button type="button" data-ct="tab:${k}" class="${tab === k ? 'on' : ''}"${tab === k ? ' aria-current="page"' : ''}>${n}${x}</button>`).join('')}</nav>
       ${main}</div>`;
     paintHouse(body, h);
@@ -16170,7 +16183,7 @@
     fetch('/house/pack.json').then((r) => r.json()).then(async (d) => {
       P = d; const jobs = [];
       jobs.push(load(d.base).then((i) => { IMG.__base = i; }), load(d.front).then((i) => { IMG.__front = i; }));
-      for (const [k, s] of Object.entries(d.sprites)) { jobs.push(load(s.src).then((i) => { IMG[k] = i; })); if (s.frames) jobs.push(Promise.all(s.frames.map(load)).then((a) => { FR[k] = a; })); }
+      for (const [k, s] of Object.entries(d.sprites)) { if (s.src) jobs.push(load(s.src).then((i) => { IMG[k] = i; })); if (s.frames) jobs.push(Promise.all(s.frames.map(load)).then((a) => { FR[k] = a; if (!s.src) IMG[k] = a[0]; })); } // 움직이는 그림은 src 없이 장면(frames)만 있음: 첫 장면을 멈춘 그림으로 (예전엔 없는 src를 불러 '/undefined' 요청이 났음)
       for (const f of d.floors) jobs.push(load(f.src).then((i) => { FT[f.id] = { s: f.s, px: pix(i, f.s, f.s), im: i }; }));
       jobs.push(load(d.cobble).then((i) => { FT.cobble = { s: 16, px: pix(i, 16, 16), im: i }; }));
       for (const f of d.walls) jobs.push(load(f.src).then((i) => { WT[f.id] = { px: pix(i, 16, 32), im: i }; }));
@@ -16208,11 +16221,11 @@
     const support = (o, list) => { if (!(sp(o.s) && sp(o.s).stack)) return null; const [w, h] = size(o.s), fx = o.x + w / 2, fy = o.y + h - 1;
       return list.find((q) => q !== o && layer(q.s) === '' && !(sp(q.s) && sp(q.s).stack) && (() => { const [qw, qh] = size(q.s); return fx >= q.x && fx < q.x + qw && fy >= q.y && fy < q.y + qh; })()) || null; };
     const effLayer = (o, list) => (support(o, list) ? 'top' : layer(o.s));
-    // 그리는 순서: 깔개 → 벽 장식 → 가구(아래쪽이 앞) · 올려 둔 소품은 받친 가구 바로 다음
+    // 그리는 순서: 귀환 주문진 → 깔개 → 꽃 같은 납작한 장식 → 벽 장식 → 가구(아래쪽이 앞) · 올려 둔 소품은 받친 가구 바로 다음
     // 건물 밖(가운데가 어느 방에도 없음)에 선 가구는 앞쪽 벽(방 아랫면)보다 앞에 그림. 깔개처럼 납작한 것은 그대로 아래에
     const zone = (o) => { const [w, h] = size(o.s), cx = o.x + w / 2, cy = o.y + h / 2; const r = Object.entries(ROOMS).find(([id, [rx, ry, rw, rh]]) => id !== 'yard' && cx >= rx && cx < rx + rw && cy >= ry && cy < ry + rh); return r ? r[0] : 'out'; }; // 서버 decoZone과 같음
     const outdoor = (o) => layer(o.s) !== 'flat' && zone(o) === 'out';
-    const order = (o, list = []) => { const L = layer(o.s); if (L === 'flat') return sp(o.s)?.under ? -2e4 : -1e4; /* under: 깔개보다도 아래 (귀환 주문진) */ if (L === 'wall') return -5e3 + o.y; const b = support(o, list); return b ? b.y + size(b.s)[1] + 0.5 + (o.y + size(o.s)[1]) / 1e3 : o.y + size(o.s)[1]; };
+    const order = (o, list = []) => { const L = layer(o.s); if (L === 'flat') return sp(o.s)?.under ? -2e4 : /^rug/.test(o.s) ? -1e4 : -9e3 + o.y + size(o.s)[1]; /* under: 깔개보다도 아래 (귀환 주문진) · 깔개 · 그 위에 꽃처럼 납작한 장식(아래쪽이 앞) */ if (L === 'wall') return -5e3 + o.y; const b = support(o, list); return b ? b.y + size(b.s)[1] + 0.5 + (o.y + size(o.s)[1]) / 1e3 : o.y + size(o.s)[1]; };
     // 움직이는 그림: 시각으로 장면을 고름. 가구마다 장면 하나의 길이(ms, 팩에 없으면 0.16초)가 달라도 됨 (불꽃은 조금 느리게)
     const frameOf = (k) => Math.floor(performance.now() / ((sp(k) && sp(k).ms) || 160)) % FR[k].length;
     function drawSprite(g, k, x, y, f) {

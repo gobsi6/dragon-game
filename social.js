@@ -1004,8 +1004,8 @@ module.exports = function setupSocial({ db, online, entryOf, sendMe, logic, life
     // 주고받은 기록: 선물·교환·이벤트 선물·GM 지급 (최근 것부터)
     // 가구 선물('furn:가구')에는 가구 이름을 붙여 보냄 (화면의 물건 목록에 없으므로)
     on('ledger:list', (d) => {
-      const FN = require('./city').CITY_FURN || {};
-      const named = (l) => l.map((x) => (String(x.id).startsWith('furn:') ? { ...x, name: FN[x.id.slice(5)]?.name || '가구', furn: true } : x));
+      const FN = require('./city').CITY_FURN || {}, GONE = require('./city').CITY_FURN_GONE || {};
+      const named = (l) => l.map((x) => (String(x.id).startsWith('furn:') ? { ...x, name: FN[x.id.slice(5)]?.name || GONE[x.id.slice(5)] || '가구', furn: true } : x));
       // 받은 이미지 선물: 간직할 수 있는지(imgKeep) — can: 아직 안 간직함 · kept: 보물 상자에 간직함 · gone: 90일이 지나 이미지가 지워짐
       const keepOf = (e) => { if (e.kind !== 'gift_in' || !e.img?.id) return null; const m = db.giftImg.meta(e.img.id); return !m ? 'gone' : m.kept ? 'kept' : m.to_id === d.id ? 'can' : null; };
       return { ok: true, list: db.ledgerList(d.id, 150).map((e) => ({ ...e, itemsIn: named(e.itemsIn || []), itemsOut: named(e.itemsOut || []), imgKeep: keepOf(e) })) };
