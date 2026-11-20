@@ -19,7 +19,7 @@ ungroup('cauldron', {'cauldron': '연금 솥 (청록)'})
 ungroup('potion_tall', {'potion_tall': '긴 약병 (초록)', 'potion_tall_w': '긴 약병 (흰색)'})
 ungroup('potion_tray', {'potion_tray': '약병 받침 (분홍 약병)'})
 ungroup('alch_bench', {'alch_bench': '연금술 작업대 (갈색)'})
-ungroup('alch_table', {'alch_table': '약병 놓인 긴 탁자 (갈색)', 'alch_table_b': '약병 놓인 긴 탁자 (파랑, 단지)', 'alch_table_e': '빈 긴 탁자 (파랑)'})
+ungroup('alch_table', {'alch_table': '약병 놓인 긴 탁자 (갈색)', 'alch_table_b': '약병 놓인 긴 탁자 (파랑)', 'alch_table_e': '빈 긴 탁자 (파랑)'})
 ungroup('book_tray', {'book_tray_brown': '책 선반 (갈색)', 'book_tray_orange': '책 선반 (주황)'})
 ungroup('mirror', {'mirror_gold': '금빛 거울'})
 # 새김 받침대: 받침대 색(나무·파랑)마다 한 가구, 위의 책 네 모양(마법서·펼친 책·책 한 권·빈 받침)은 '모양 바꾸기'
