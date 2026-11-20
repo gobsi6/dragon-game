@@ -13911,7 +13911,7 @@
     ntTitle.setAttribute('aria-label', '노트 제목');
     ntTitle.addEventListener('input', () => { GM.note.title = ntTitle.value; });
     const ntBody = gEl('textarea', 'input gm-ta');
-    ntBody.maxLength = 3000; ntBody.rows = 8; ntBody.value = GM.note.body;
+    ntBody.maxLength = 20000; /* 서버 NOTE.bodyMax와 같게 */ ntBody.rows = 8; ntBody.value = GM.note.body;
     ntBody.placeholder = '- 바뀐 점 하나\n- 바뀐 점 둘';
     ntBody.setAttribute('aria-label', '노트 내용');
     ntBody.addEventListener('input', () => { GM.note.body = ntBody.value; });

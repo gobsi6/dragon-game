@@ -1,8 +1,15 @@
-# 성 깔개 일곱 (2026-11-20)
+# 업데이트 노트가 잘리던 것 (2026-11-20)
+
+바뀐 파일: `server.js`, `public/app.js`, `CHANGES.md`
+
+- 업데이트 노트 본문이 3000자에서 잘리던 것(GM 입력칸과 서버 모두) → 20000자까지.
+- 새 노트를 올릴 때 60개를 넘는 오래된 노트가 지워지던 것 → 300개까지 남김. (공지도 같은 한도)
+
+# 고급 깔개 일곱 (2026-11-20)
 
 바뀐 파일: `public/house/pack.json`(v42), `tools/house-pack/add_castle_rugs.py`, `CHANGES.md`
 
-- RPG Castles asset pack(by Franuka)의 깔개: 성 깔개 파랑 · 회색 · 초록 · 주홍 · 분홍 · 자홍 · 진홍 (Rug_Tan은 뺌). 색마다 따로 만드는 가구, 생활, 목록에서는 달 깔개 다음.
+- RPG Castles asset pack(by Franuka)의 깔개: 고급 깔개 파랑 · 회색 · 초록 · 주홍 · 분홍 · 자홍 · 진홍 (Rug_Tan은 뺌). 색마다 따로 만드는 가구, 생활, 목록에서는 달 깔개 다음.
 - 그림 그대로(44×46). 다른 깔개처럼 바닥에 깔리고 꽃을 위에 올릴 수 있음. 값은 네모 깔개와 같게 인장 8 · 바랜 천 8.
 - 그림 팩 다시 만드는 차례: … → add_blueprints → add_castle_rugs → optimize_pngs
 

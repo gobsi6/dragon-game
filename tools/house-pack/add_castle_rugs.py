@@ -1,4 +1,4 @@
-# RPG Castles asset pack(by Franuka)의 깔개 일곱 (pack.json v42). Rug_Tan은 뺌. 색마다 따로 만드는 가구
+# RPG Castles asset pack(by Franuka)의 깔개 일곱('고급 깔개') (pack.json v42). Rug_Tan은 뺌. 색마다 따로 만드는 가구
 # 색 이름은 그림에 맞춤: Orange → 주홍, Purple → 자홍, Red → 진홍
 # 깔개 층(flat) · 키는 rug_로 시작(그리는 순서에서 깔개로 침 → 꽃은 그 위). 그림 그대로, 값은 네모 깔개와 같음. 목록에서는 달 깔개 다음
 import json, base64, io, os, sys
@@ -10,8 +10,8 @@ COL = [('blue', '파랑', 'Blue'), ('gray', '회색', 'Gray'), ('green', '초록
 P = json.load(open(PACK, encoding='utf-8')); P['v'] = max(P['v'], 42); new = {}
 for k, n, f in COL:
     im = Image.open(os.path.join(D, f'Rug_{f}.png')).convert('RGBA'); im = im.crop(im.getbbox()); key = f'rug_castle_{k}'
-    P['sprites'][key] = {'name': f'성 깔개 ({n})', 'w': im.width, 'h': im.height, 'src': uri(im), 'layer': 'flat'}
-    new[key] = {'name': f'성 깔개 ({n})', 'seals': 8, 'mats': {'faded_cloth': 8}, 'bp': 0, 'cat': 'live'}
+    P['sprites'][key] = {'name': f'고급 깔개 ({n})', 'w': im.width, 'h': im.height, 'src': uri(im), 'layer': 'flat'}
+    new[key] = {'name': f'고급 깔개 ({n})', 'seals': 8, 'mats': {'faded_cloth': 8}, 'bp': 0, 'cat': 'live'}
 cat = {}
 for k, v in P['cat'].items():
     if k in new: continue
