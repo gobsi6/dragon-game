@@ -1889,6 +1889,7 @@ function rememberEvent(d, id, now) {
   d.ev_recent = JSON.stringify(list);
 }
 
+const KIN_EVENT_IDS = new Set(EVENT_RULES.kinEvents || []);
 function rollEvent(d, kin, have, trigger, now = Date.now(), force = false) {
   if (pending(d)) return null;
   // 반드시 뜨는 이벤트(e.sure): 조건이 맞으면 확률을 굴리지 않고 바로 (예: 마을 무덤의 비석 장면)
@@ -1903,16 +1904,20 @@ function rollEvent(d, kin, have, trigger, now = Date.now(), force = false) {
       return eventView(e, c, vars);
     }
   }
-  if (!force && Math.random() >= (EVENT_RULES.chance[trigger] || 0) * (1 + FACILITY.list.library.event * logic.facPower(d, 'library'))) return null; // 서고: 이야기가 조금 더 자주
   const c = ctxOf(d, kin, have, trigger, now);
   // 멸망한 대륙에서는 그 땅의 이벤트(ruin)와 어울리는 오염 이벤트(ruinToo)만, 다른 곳에서는 멸망한 대륙 이벤트를 빼고
   const inRuin = logic.isRuin(c.region);
   const list = EVENTS.filter((e) => (inRuin ? e.ruin || e.ruinToo : !e.ruin) && e.when.includes(trigger) && safe(() => e.cond(c)) && weightOf(e, c) > 0);
+  // 식구를 보는 이벤트: 후보에 있으면 이벤트가 더 자주 일어나고(kinChance), 뽑힐 몫도 커짐(kinBoost)
+  const kinSet = KIN_EVENT_IDS, isKin = (e) => kinSet.has(e.id);
+  const kinHere = list.some(isKin) ? (EVENT_RULES.kinChance?.[trigger] || 0) : 0;
+  if (!force && Math.random() >= ((EVENT_RULES.chance[trigger] || 0) + kinHere) * (1 + FACILITY.list.library.event * logic.facPower(d, 'library'))) return null; // 서고: 이야기가 조금 더 자주
   if (!list.length) return null;
+  const wOf = (e) => weightOf(e, c) * (isKin(e) && EVENT_RULES.kinChance?.[trigger] != null ? (EVENT_RULES.kinBoost || 1) : 1);
   // 최근에 본 이벤트는 무게를 줄임. 후보가 모두 최근 것뿐이면 그만큼 아예 덜 일어남
   const recent = recentOf(d);
-  const w = new Map(list.map((e) => [e, weightOf(e, c) * recentFactor(recent, e.id, now)]));
-  const base = list.reduce((a, e) => a + weightOf(e, c), 0);
+  const w = new Map(list.map((e) => [e, wOf(e) * recentFactor(recent, e.id, now)]));
+  const base = list.reduce((a, e) => a + wOf(e), 0);
   const total = list.reduce((a, e) => a + w.get(e), 0);
   if (!force && Math.random() >= Math.max(EVENT_RULES.recent.floor, total / base)) return null;
   let r = Math.random() * total;

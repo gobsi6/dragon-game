@@ -1735,7 +1735,14 @@ const MATE_DRAKE_NAMES = ['아우렐', '벨라스', '카엘룸', '시리온', '�
 
 // 이벤트: 행동마다 일어날 확률 (시험 단계라 넉넉하게)
 const EVENT_RULES = {
-  chance: { explore: 0.3, gather: 0.15, expedition: 0.6, wake: 0.5, intimidate: 1, hunt: 0.15 },
+  chance: { explore: 0.45, gather: 0.15, expedition: 0.6, wake: 0.5, intimidate: 1, hunt: 0.15 }, // 탐사 0.3 → 0.45
+  // 식구를 보는 이벤트 (탐사): 후보에 하나라도 있으면 탐사의 이벤트 확률에 kinChance를 더하고, 뽑을 때 무게를 kinBoost배로
+  //   예) 식구 이벤트가 걸려 있으면 탐사 한 번에 이벤트 0.45 + 0.2 = 65%, 그중 식구 이벤트가 뽑힐 몫도 2.5배
+  kinChance: { explore: 0.2 },
+  kinBoost: 2.5,
+  kinEvents: ['kin_jealous', 'kin_compare', 'child_fever', 'first_flight', 'kin_fight', 'mixed_friendly', 'mixed_hermit', 'mixed_hostile',
+    'kin_squabble', 'kin_in_town', 'hatchling_spark', 'first_love', 'kin_heartbreak', 'drake_courtship', 'drake_love', 'drake_heartbreak',
+    'molting', 'grown_return', 'adopted_letter', 'ruin_companion_sniff'],
   // 최근에 겪은 이벤트는 한동안 덜 뜸: [이만큼 지나기 전까지, 뽑힐 무게 ×] (앞에서부터 맞는 칸)
   // floor: 후보가 모두 최근 것이어도 이벤트가 일어날 확률은 원래의 이만큼 아래로는 내려가지 않음
   recent: { keep: 30, steps: [[24 * 3600000, 0.15], [72 * 3600000, 0.4], [7 * 24 * 3600000, 0.75]], floor: 0.5 },
