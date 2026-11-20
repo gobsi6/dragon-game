@@ -3168,7 +3168,7 @@
       box.addEventListener('toggle', () => { PAST_OPEN = box.open; });
       const sm = document.createElement('summary');
       const h2 = document.createElement('h3');
-      h2.textContent = k.lineage ? `지난 식구와 계보 · ${k.lineage}마리 독립` : `지난 식구 · ${k.past.length}`;
+      h2.textContent = `${k.lineage ? '지난 식구와 계보' : '지난 식구'} · ${k.pastTotal ?? k.past.length}`; // 독립한 드래곤만이 아니라 아래 목록의 식구 모두를 셈
       sm.appendChild(h2);
       box.appendChild(sm);
       wrap.appendChild(box);

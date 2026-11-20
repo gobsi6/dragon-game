@@ -71,7 +71,7 @@ const babyTell = (h, c, k, baby, found = false) => {
     ? `${c.me}의 둥지 ${k.name}${c.josa(k.name, '과', '와')} 당신의 둥지 ${m}${c.josa(m, '이', '가')} 길 잃은 아이를 함께 데려왔다. 이름은 ${baby}. 아이는 ${c.me}의 둥지에서 자란다.`
     : `${c.me}의 둥지에서 ${k.name}${c.josa(k.name, '과', '와')} 당신의 둥지 ${m} 사이에 아이가 태어났다. 이름은 ${baby}. 아이는 ${c.me}의 둥지에서 자란다.`, '둥지 소식');
   const kl = require('./game-logic').hooks.kinLove;
-  if (kl) kl.babyShared(r, baby, c.now, found ? `짝 ${k.name}${c.josa(k.name, '과', '와')} 함께 길 잃은 아이 ${baby}${c.josa(baby, '을', '를')} 데려왔다. 아이는 짝의 둥지에서 자란다.` : null);
+  if (kl) kl.babyShared(r, baby, c.now, found, found ? `짝 ${k.name}${c.josa(k.name, '과', '와')} 함께 길 잃은 아이 ${baby}${c.josa(baby, '을', '를')} 데려왔다. 아이는 짝의 둥지에서 자란다.` : null);
 }; // 짝 쪽 기록에도 자녀를 남겨 두 둥지에서 겹쳐 생기지 않게
 // 새끼 드래곤이 다른 둥지의 용을 마음에 두고 있음: 서로 마음에 둔 사이이거나, 상대가 아직 마음을 정하지 않았을 때 (상대가 다 자란 용이 되면 더 기다리지 않음)
 // 이러는 동안에는 '둥지 위를 맴도는 낯선 용'이 뜨지 않음 (엇갈리면 '엇갈린 마음' 뒤에 다시 뜸)
@@ -118,13 +118,13 @@ const elderWord = (k) => (k.data.sex === 'f' ? '할머니' : '할아버지');
 // 짝 사이에 아이가 생겼을 때의 선택지 (found: 함께 데려온 아이)
 // 마을 사람과 둥지에 사는 짝: 둥지에서 키운다 · 다 같이 마을로 보낸다
 // 다른 둥지의 짝: 우리 둥지에서 키운다 · 짝의 둥지에서 키우게 한다(청) · 마을에 가정을 꾸리게 한다(청). 청은 상대 보호자가 둥지 창에서 받아들이거나 사양함 (kinlove.js)
-const kidAdd = (c, k, baby) => { (k.data.kids ||= []).push(baby); k.data.lastBaby = c.now; };
+const kidAdd = (c, k, baby, found = false) => { (k.data.kids ||= []).push(baby); k.data.lastBaby = c.now; if (found) (k.data.foundKids ||= []).push(baby); }; // foundKids: 함께 데려온 아이 (마을 장면에서 '닮았다'는 말을 하지 않게)
 // 업데이트 전에 떠 있던 이벤트는 v.ref·v.home이 없으므로 아이의 짝 기록으로 채움
 const bRef = (c, v) => (v.ref != null ? v.ref : !!c.k(v.id)?.data.mate?.ref);
 const bHome = (c, v) => v.home || c.k(v.id)?.data.mate?.home || '';
 const birthChoices = (found) => [
   { label: (c, v) => (bRef(c, v) ? '우리 둥지에서 키운다' : '둥지에서 키운다'), need: (c) => (c.full ? '둥지에 빈자리가 없다.' : null), run: (h, c, v) => {
-    const k = c.k(v.id); kidAdd(c, k, v.baby); babyTell(h, c, k, v.baby, found);
+    const k = c.k(v.id); kidAdd(c, k, v.baby, found); babyTell(h, c, k, v.baby, found);
     h.born(k, v.baby, found); h.bond(k, 8); h.fame(1);
     h.say(found
       ? `${v.baby}${h.josa(v.baby, '이', '가')} 둥지 식구가 되었다. 아이는 처음엔 머뭇거리다가, ${h.name(k)} 내민 손을 꼭 잡았다. (유대 +8, 명성 +1)`
@@ -132,17 +132,17 @@ const birthChoices = (found) => [
   } },
   // 둥지가 가득할 때: 믿을 만한 동료의 둥지에 맡김. 아기는 맡길 곳이 정해질 때까지 잠시 자리를 넘겨 둥지에서 지내고, 둥지 창의 입양 보내기로 동료를 고름
   { label: '동료의 둥지에 맡긴다', show: (c) => !!c.full, run: (h, c, v) => {
-    const k = c.k(v.id); kidAdd(c, k, v.baby); babyTell(h, c, k, v.baby, found);
+    const k = c.k(v.id); kidAdd(c, k, v.baby, found); babyTell(h, c, k, v.baby, found);
     h.bornOver(k, v.baby, found); h.bond(k, 3);
     h.say(`둥지에 자리가 없어, ${v.baby}${h.josa(v.baby, '을', '를')} 믿을 만한 동료의 둥지에 맡기기로 했다. 둥지 창의 식구 카드에서 입양 보내기로 맡길 동료를 고르자. 맡길 곳이 정해질 때까지 아기는 둥지에서 지내고, 그동안은 새 식구를 들일 수 없다. (유대 +3)`);
   } },
   { label: (c, v) => `${bHome(c, v)}의 둥지에서 키우게 한다`, show: (c, v) => bRef(c, v), run: (h, c, v) => {
-    const k = c.k(v.id); kidAdd(c, k, v.baby); h.bond(k, 4);
+    const k = c.k(v.id); kidAdd(c, k, v.baby, found); h.bond(k, 4);
     h.babyAsk(k, 'raise', v.baby, found);
     h.say(`${bHome(c, v)}에게 ${v.baby}${h.josa(v.baby, '을', '를')} 맡아 키워 달라는 청을 보냈다. 받아들이면 아이는 ${bHome(c, v)}의 둥지에서 자라고, 사양하면 이 둥지에서 자란다. (유대 +4)`);
   } },
   { label: (c, v) => (bRef(c, v) ? '마을에 가정을 꾸리게 한다' : '다 같이 마을로 보낸다'), run: (h, c, v) => {
-    const k = c.k(v.id); kidAdd(c, k, v.baby);
+    const k = c.k(v.id); kidAdd(c, k, v.baby, found);
     if (bRef(c, v)) { // 상대 둥지의 짝도 함께 떠나므로 그 보호자의 허락을 받음
       h.babyAsk(k, 'village', v.baby, found); h.bond(k, 4);
       h.say(`${bHome(c, v)}에게 두 사람이 ${v.baby}${h.josa(v.baby, '과', '와')} 함께 마을로 내려가 가정을 꾸리게 하자는 청을 보냈다. 받아들이면 셋이 함께 떠나고, 사양하면 아이는 이 둥지에서 자란다. (유대 +4)`);
@@ -160,6 +160,7 @@ const birthChoices = (found) => [
 // 사는 마을: 가정을 꾸렸으면 family, 보낸 마을이면 liveIn, 예전 기록이면 처음 온 마을(town)
 const liveOf = (x) => x.data.family || x.data.liveIn || x.data.town || null;
 const TOWN_GAP = DAYMS;              // 같은 식구는 하루에 한 번
+const TOWN_MEET = 0.6;              // 그 마을에 만날 식구가 있을 때 탐사 한 번에 마주칠 확률 (두 번 안에 약 84%)
 const LIFE_END = 25;                 // 인간 식구가 세상을 떠나는 나이(일). 지나면 마지막 장면 한 번
 const YOUNG = new Set(['아기', '아이', '소년', '청소년']); // 어린 나이에 마을로 간 식구 (기사단에게 돌려보낸 아이 등)
 // 무덤 장면은 유품을 거둘 때까지: 유품을 거두지 않고 떠났으면(꽃만 놓음·손주에게 소식만 전함, 또는 유품 선택지가 생기기 전에 본 식구) 하루 뒤 다시 들렀을 때 한 번 더 (ksSeen: 유품을 거둠)
@@ -192,6 +193,14 @@ const grandStage = (c, x, name) => {
   if (r) return c.stage(r);
   const days = (c.now - (x.data.lastBaby || x.data.ended || c.now)) / DAYMS;
   return [...KIN.human.stages].reverse().find((s) => days >= s.from)?.name || '아기';
+};
+// 데려온 아이인지 (부모 x의 자식 name): 데려올 때 남긴 표시, 둥지 기록의 유래, 표시가 생기기 전이면 부모 일기의 '○○을 데려왔다' 줄
+const foundKid = (c, x, name) => {
+  if (!name) return false;
+  if ((x.data.foundKids || []).includes(name)) return true;
+  const r = [...c.home, ...c.away, ...c.past].find((y) => y.name === name && (y.data.parents || []).includes(x.name));
+  if (r) return r.data.origin === 'found';
+  return (x.data.diary || []).some((e) => typeof e.t === 'string' && e.t.includes(name) && e.t.includes('데려왔'));
 };
 const grandOf = (c, x) => {
   const kids = x.data.kids || [], recs = [...c.home, ...c.away, ...c.past];
@@ -1671,7 +1680,8 @@ module.exports = [
     weight: 6,
     cond: (c) => c.town && c.away.some((x) => metOk(c, x)),
     // 비석 장면(수명을 다한 식구, 다시 들러 유품을 거둘 때 포함)은 조건이 맞으면 그 마을의 첫 탐사에 반드시 뜸 (확률·최근 본 이벤트 감점 없이)
-    sure: (c) => c.away.some((x) => metOk(c, x) && c.age(x) >= LIFE_END),
+    // 살아 있는 식구와의 만남도 조건이 맞으면 탐사마다 TOWN_MEET 확률로 바로 뜸 (탐사 한두 번이면 만나게. 같은 식구는 여전히 하루에 한 번)
+    sure: (c) => c.away.some((x) => metOk(c, x) && c.age(x) >= LIFE_END) || Math.random() < TOWN_MEET,
     setup: (c) => {
       const ok = c.away.filter((x) => metOk(c, x)), ends = ok.filter((x) => c.age(x) >= LIFE_END);
       const k = c.pick(ends.length ? ends : ok); // 비석 장면이 있으면 그쪽부터
@@ -1681,7 +1691,7 @@ module.exports = [
       const grand = grandOf(c, k), ng = grand ? null : nestGrandOf(c, k); // ng: 둥지에 맡기고 간 손주
       // pStage: 지금 이 식구의 단계 (어린 나이로 마을에 간 아이), gStage: 마을에 함께 사는 손주의 단계
       const pStage = c.stage(k), gStage = grand ? grandStage(c, k, grand) : null;
-      return { id: k.id, name: k.name, mate: mateOf(c, k), grand, pStage, gStage, ngId: ng?.id ?? null, ng: ng?.name || null, ngStage: ng ? c.stage(ng) : null, ks: end && c.keepsake ? c.keepsake(k, { town: true, ng: !!ng }) : null, again: end && !!k.data.metEnd, told: !!k.data.ngTold, since: Math.floor(since), end, sneak: !c.human, vr: (() => { let r; do r = Math.floor(Math.random() * 6); while (r % 3 === (k.data.metVr ?? -1) % 3); return r; })(), call: c.callOf ? c.callOf(k) : c.call };
+      return { id: k.id, name: k.name, mate: mateOf(c, k), mateOut: !!k.data.mate?.ref, gFound: foundKid(c, k, grand), ngFound: !!ng && foundKid(c, k, ng.name), grand, pStage, gStage, ngId: ng?.id ?? null, ng: ng?.name || null, ngStage: ng ? c.stage(ng) : null, ks: end && c.keepsake ? c.keepsake(k, { town: true, ng: !!ng }) : null, again: end && !!k.data.metEnd, told: !!k.data.ngTold, since: Math.floor(since), end, sneak: !c.human, vr: (() => { let r; do r = Math.floor(Math.random() * 6); while (r % 3 === (k.data.metVr ?? -1) % 3); return r; })(), call: c.callOf ? c.callOf(k) : c.call };
     },
     text: (c, v) => {
       const n = v.name, ga = `${n}${c.josa(n, '이', '가')}`, g = v.grand, m = v.mate, ng = v.ng;
@@ -1757,7 +1767,7 @@ module.exports = [
           : `"${ng}에게 쓰는 편지예요. 이제 글을 곧잘 읽는다면서요? 답장 기다린다고 전해 주세요."`],
       ]);
       if (ng) return one([
-        [`해 질 녘, 마을 우물가에서 ${ga} 이웃들에게 둥지 이야기를 들려주고 있다.`, `이쪽을 알아보더니 다가와 조용히 물었다. "${ng}${J(ng, '은', '는')} 얼마나 컸어요? 저를 닮았어요?"`],
+        [`해 질 녘, 마을 우물가에서 ${ga} 이웃들에게 둥지 이야기를 들려주고 있다.`, v.ngFound ? `이쪽을 알아보더니 다가와 조용히 물었다. "${ng}${J(ng, '은', '는')} 얼마나 컸어요? 아직도 처음 왔을 때처럼 수줍어해요?"` : `이쪽을 알아보더니 다가와 조용히 물었다. "${ng}${J(ng, '은', '는')} 얼마나 컸어요? 저를 닮았어요?"`],
         [`${ga} 집 앞 텃밭에서 풀을 뽑고 있다.`, `"${ng} 이야기 좀 해 주세요. 요즘은 뭘 좋아해요?" 이야기를 듣는 내내 손에 쥔 풀을 놓지 않았다.`],
         [`${ga} 이제 마을에서 꽤 알려진 얼굴이 되었다. 길을 지나는 사람마다 인사를 건넨다.`, `인사를 받다가 이쪽을 알아보고 다가왔다. "${ng}${J(ng, '이', '가')} 둥지에서 행복하면 그걸로 됐어요."`],
       ]);
@@ -1771,7 +1781,7 @@ module.exports = [
           ])
           : one([
             [`${ga} ${g}${J(g, '을', '를')} 등에 업고 장을 보고 있다.`, `등에 업힌 아이가 하늘을 보고 팔을 버둥거렸다. ${ga} 돌아보더니 아이의 손을 잡고 함께 흔들었다. "인사해. 우리 집 드래곤이야."`],
-            [`마을 어귀의 작은 집 앞에서 ${ga} ${g}${J(g, '을', '를')} 안고 어르고 있다.`, `날개 그림자가 지나가자 아기가 울음을 뚝 그쳤다. ${ga} 웃으며 말했다. "하늘만 보면 울음을 그쳐요. 누굴 닮았나 봐요."`],
+            [`마을 어귀의 작은 집 앞에서 ${ga} ${g}${J(g, '을', '를')} 안고 어르고 있다.`, v.gFound ? `날개 그림자가 지나가자 아기가 울음을 뚝 그쳤다. ${ga} 웃으며 말했다. "처음 데려온 날 밤에도 하늘을 보여 주니까 울음을 그쳤어요. 그때부터 하늘만 찾아요."` : `날개 그림자가 지나가자 아기가 울음을 뚝 그쳤다. ${ga} 웃으며 말했다. "하늘만 보면 울음을 그쳐요. 누굴 닮았나 봐요."`],
             [`빨랫줄 아래 놓인 바구니에서 ${g}${J(g, '이', '가')} 잠들어 있다.`, `빨래를 널던 ${ga} 이쪽을 보고 손가락을 입에 댔다. "쉿, 겨우 재웠어요." 그러면서도 바구니를 살짝 기울여 아기 얼굴을 보여 주었다.`],
           ]);
         if (gs === '아이' || gs === '소년') return v.sneak
@@ -1780,8 +1790,8 @@ module.exports = [
             [`해 질 녘, 빨래를 걷던 ${ga} 지붕 위의 그림자를 보고 손을 멈추었다.`, `곁에 있던 ${g}${J(g, '이', '가')} "드래곤이다!" 하고 외치자, ${n}${J(n, '은', '는')} 얼른 아이의 입을 막고는 웃으며 고개를 끄덕여 보였다.`],
           ])
           : one([
-            [`골목을 지나는데 작은 아이 하나가 드래곤의 그림자를 쫓아 달려왔다. ${g}${J(g, '이다', '다')}.`, `뒤따라 나온 ${ga} 웃으며 아이를 안아 올렸다. "봐, 우리가 자란 둥지의 드래곤이야."`],
-            [`장터 한쪽에 깔린 돗자리 위에서 ${g}${J(g, '이', '가')} 나무로 깎은 드래곤 인형을 가지고 놀고 있다.`, `곁에 앉은 ${ga} 웃으며 말했다. "이 인형이 없으면 잠을 안 자요. 누굴 닮았는지 모르겠어요."`],
+            [`골목을 지나는데 작은 아이 하나가 드래곤의 그림자를 쫓아 달려왔다. ${g}${J(g, '이다', '다')}.`, `뒤따라 나온 ${ga} 웃으며 아이를 안아 올렸다. "봐, ${v.mateOut ? '내가' : '우리가'} 자란 둥지의 드래곤이야."`],
+            [`장터 한쪽에 깔린 돗자리 위에서 ${g}${J(g, '이', '가')} 나무로 깎은 드래곤 인형을 가지고 놀고 있다.`, v.gFound ? `곁에 앉은 ${ga} 웃으며 말했다. "처음 데려왔을 때 깎아 준 거예요. 이 인형이 없으면 잠을 안 자요."` : `곁에 앉은 ${ga} 웃으며 말했다. "이 인형이 없으면 잠을 안 자요. 누굴 닮았는지 모르겠어요."`],
             [`마을 아이들 틈에서 ${g}${J(g, '이', '가')} 큰 소리로 자랑하고 있다. "우리 집엔 드래곤이 놀러 와!"`, `문가에 기대선 ${ga} 그 모습을 보며 웃다가, 하늘을 올려다보고 손을 들었다.`],
             [`마을 축제 준비로 골목이 북적인다. ${g}${J(g, '이', '가')} 종이로 만든 날개를 달고 뛰어다닌다.`, `${ga} 웃으며 말했다. "올해는 드래곤 흉내를 내겠대요. 누구 이야기를 들었는지 뻔하죠."`],
             [`저녁 무렵, ${ga} 문간에 앉아 ${g}에게 옛이야기를 들려주고 있다.`, `"…그래서 그 드래곤은 아기를 날개 밑에 품고 겨울을 났대." ${g}${J(g, '이', '가')} 하늘을 가리키자, ${n}${J(n, '이', '가')} 고개를 들고 웃었다.`],

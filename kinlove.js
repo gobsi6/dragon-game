@@ -123,7 +123,7 @@ module.exports = function setupKinLove({ db, online, sendMe, life, logic, news, 
     }
     st.babies.push(o); save();
     // 짝 쪽 기록에도 자녀를 적어 둠 (두 둥지가 아이 수를 함께 세서, 답을 기다리는 사이 겹쳐 태어나지 않게)
-    babyShared(r, info.baby, now, o.found ? `짝 ${info.name}${josa(info.name, '과', '와')} 함께 길 잃은 아이 ${info.baby}${josa(info.baby, '을', '를')} 데려왔다.` : `짝 ${info.name}${josa(info.name, '과', '와')}의 사이에 아이 ${info.baby}${josa(info.baby, '이', '가')} 태어났다.`);
+    babyShared(r, info.baby, now, o.found, o.found ? `짝 ${info.name}${josa(info.name, '과', '와')} 함께 길 잃은 아이 ${info.baby}${josa(info.baby, '을', '를')} 데려왔다.` : `짝 ${info.name}${josa(info.name, '과', '와')}의 사이에 아이 ${info.baby}${josa(info.baby, '이', '가')} 태어났다.`);
     const what = o.kind === 'raise' ? `${info.baby}${josa(info.baby, '을', '를')} 당신의 둥지에서 키워 주기를 바란다` : `두 사람이 ${info.baby}${josa(info.baby, '과', '와')} 함께 마을로 내려가 가정을 꾸리기를 바란다`;
     { const e = live(r.owner); if (e) sendMe(e.socket, e.dragon); } // 받은 쪽 '둥지' 메뉴에 붉은 점
     tell(r.owner, [`${d.name}의 둥지 ${info.name}${josa(info.name, '과', '와')} 당신의 둥지 ${info.mate} 사이에 ${kidWord(o)} ${info.baby}의 일로 ${d.name}${josa(d.name, '이', '가')} 청을 보냈다. ${what}. 둥지에서 정할 수 있다. (${DAYS}일 안에)`], 'kinbaby:got', { from: d.name, baby: info.baby, kind: o.kind });
@@ -271,10 +271,11 @@ module.exports = function setupKinLove({ db, online, sendMe, life, logic, news, 
   }
 
   // 한쪽 둥지에서 아이가 태어나면 짝 쪽 기록에도 자녀를 적음 (아이 수·마지막 아이를 두 둥지가 함께 세서 겹쳐 태어나지 않게)
-  function babyShared(ref, baby, now = Date.now(), line = null) {
+  function babyShared(ref, baby, now = Date.now(), found = false, line = null) {
     const { kin, k } = homeKid(ref.owner, ref.id);
     if (!k) return;
     (k.data.kids ||= []).push(baby); k.data.lastBaby = now;
+    if (found) (k.data.foundKids ||= []).push(baby); // 함께 데려온 아이 (마을 장면 문구용)
     life.diary(k, line || `짝과의 사이에 아이 ${baby}${josa(baby, '이', '가')} 태어났다. 아이는 짝의 둥지에서 자란다.`, now);
     kinChanged(ref.owner, kin);
   }

@@ -857,6 +857,7 @@ function views(kin, now, d, owner = d) {
   return {
     home: kin.filter(isHome).map((k) => { const v = view(k, now, d, owner); if (over && k.data.entrust) v.entrust = true; return v; }),
     past: kin.filter((k) => !isHome(k)).sort((a, b) => (b.data.ended || 0) - (a.data.ended || 0)).slice(0, 12).map((k) => view(k, now, d)),
+    pastTotal: kin.filter((k) => !isHome(k)).length, // 지난 식구 전체 (목록은 최근 12까지만 보여 줌)
     lineage: kin.filter((k) => k.type === 'drake' && k.status === 'independent').length,
   };
 }
