@@ -5512,6 +5512,8 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .th-fn { position: relative; display: inline-flex; align-items: flex-end; justify-content: center; line-height: 0; }
 .th-fn .fn-star { position: absolute; left: -7px; top: -7px; width: 17px; height: 17px; line-height: 0; pointer-events: none; } /* 금빛 동그라미(흰 테두리) 안에 끝이 둥근 흰 별, 그림자 없음 */
 .th-fn .fn-star svg { display: block; }
+.th-fn .fn-alt { position: absolute; right: -7px; top: -7px; width: 17px; height: 17px; line-height: 0; pointer-events: none; } /* 바꿔 고를 수 있는 가구: 하늘색 동그라미(흰 테두리) · 별(왼쪽 위)과 겹치지 않게 오른쪽 위 */
+.th-fn .fn-alt svg { display: block; }
 
 /* 교환 창: 건넬 물건 찾기 */
 #trade-dlg .tr-q { width: 100%; height: 32px; min-height: 0; margin: 0 0 8px; padding: 0 10px; font-size: 13px; } /* 낮게 (전 약 46px) */
@@ -5541,6 +5543,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .gm-su-msg { width: 100%; margin-bottom: 8px; }
 #home-ui .mk-row > .th-fn { justify-self: center; align-self: center; } /* 목록 줄(가구 만들기·도면)에서도 별이 그림 바로 왼쪽 위에 붙게: 감싼 칸이 72px 열 전체로 늘어나지 않게 */
 #home-ui .mk-row > .th-fn .fn-star { left: -2px; top: -5px; } /* 목록 줄은 왼쪽 여백이 좁아, 별이 줄 테두리에 걸치지 않게 그림 쪽으로 조금 */
+#home-ui .mk-row > .th-fn .fn-alt { right: -2px; top: -5px; } /* 바꿔 고르기 표시도 같은 까닭으로 */
 /* 내 집터 창: 아래로 내려도 위의 탭(집터·할 일·골렘·꾸미기)과 꾸미기 메뉴(가구 놓기·만들기·도면·바닥·담)가 위에 붙어 있게 */
 #home-ui > .hm-tabs { position: sticky; top: -4px; z-index: 6; background: rgb(252, 250, 246); box-shadow: 0 -6px 0 rgb(252, 250, 246); } /* 창 본문 위쪽 여백(4px)까지 덮음 */
 #home-ui > .dk-mode { position: sticky; top: 40px; z-index: 5; background: rgb(252, 250, 246); box-shadow: 0 -8px 0 rgb(252, 250, 246), 0 8px 0 rgb(252, 250, 246); } /* 위아래 여백까지 덮어 아래 목록이 비치지 않게 */

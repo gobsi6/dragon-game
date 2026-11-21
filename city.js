@@ -151,7 +151,7 @@ const GSTAGE = ['씨앗', '새싹', '다 자람', '거둔 뒤'];
 // 2026-11 팩 그림으로 바꾸기 전 가구·도면 → 새 가구 (가진 수를 그대로 옮김. 짝이 없는 것은 석공 인장으로 돌려줌)
 const OLD_FURN = { pot: 'pot', crate: 'crate', barrel: 'barrel', signpost: 'signpost', bedplot: 'bedplot', planter: 'planter', bench: 'bench', lamp: 'lamp', table: 'table', shelf: 'shelf', rug: 'rug', steps: 'rock', bed: 'bed', workbench: 'workbench',
   tablets: 'bookcase', tablets2: 'bookcase', tablets3: 'bookcase', arch: 'arch', carvedesk: 'lectern', anvil: 'anvil', bell: 'bell', hearth: 'hearth', telescope: 'clock', pond: 'pond', well: 'well', jar: 'pot', chair: 'chair',
-  fence: 'fence_wood', flowers: 'flowers', mushroom: 'mushroom', bush: 'bush', stepstone: 'rock', flowerbed: 'planter', stonelamp: 'lamp', brazier: 'torch', tree: 'bush', candle: 'candle', cactus: 'pot', chest: 'chest', sofa: 'bench',
+  fence: 'fence_wood', flowers: 'flower2', mushroom: 'mushroom', bush: 'bush', stepstone: 'rock', flowerbed: 'planter', stonelamp: 'lamp', brazier: 'torch', tree: 'bush', candle: 'candle', cactus: 'pot', chest: 'chest', sofa: 'bench',
   mosaic: 'rug', crystallamp: 'lamp', goldlamp: 'lamp', glowpatch: 'bedplot', bookcase: 'bookcase', nestbed: 'rug', tapestry: 'banner', fountain: 'fountain', goldpile: 'chest', orb: 'lamp' };
 const OLD_FURN_SEALS = {}; // 짝이 없어 인장으로 돌려주는 가구 (만들 때 든 인장). 나무 울타리는 2026-11 v7부터 새 나무 울타리로 옮겨짐
 const OLD_BP = { arch: 'arch', hearth: 'hearth', bookcase: 'bookcase', well: 'well', fountain: 'fountain', pond: 'pond', bell: 'bellstand', carvedesk: 'lectern', tapestry: 'banner', telescope: 'clock' };
@@ -174,7 +174,7 @@ const GOLEM_NAMES = ['유적 골렘 1', '유적 골렘 2', '유적 골렘 3']; /
 const OLD_GOLEM_NAMES = ['돌멩이', '이끼등', '모래발'];
 const GOLEM_NAME_RE = /^[가-힣A-Za-z0-9 ·'\-]{1,12}$/;
 
-const josa = (w, a, b) => { w = String(w); const l = w[w.length - 1]; if (/[0-9]/.test(l)) return '013678'.includes(l) ? a : b; const c = w.charCodeAt(w.length - 1); if (c < 0xac00 || c > 0xd7a3) return b; if (a === '으로' && (c - 0xac00) % 28 === 8) return b; return (c - 0xac00) % 28 ? a : b; }; // 숫자로 끝나면 읽는 소리대로 (일·삼·육·칠·팔·영은 받침)
+const josa = (w, a, b) => { w = String(w).replace(/\s*\([^()]*\)$/, '') || String(w); const l = w[w.length - 1]; if (/[0-9]/.test(l)) return '013678'.includes(l) ? a : b; const c = w.charCodeAt(w.length - 1); if (c < 0xac00 || c > 0xd7a3) return b; if (a === '으로' && (c - 0xac00) % 28 === 8) return b; return (c - 0xac00) % 28 ? a : b; }; // 끝의 '(분홍)' 같은 덧말은 빼고 앞말에 맞춤('커튼 (청록)이'). 숫자로 끝나면 읽는 소리대로 (일·삼·육·칠·팔·영은 받침)
 const ga = (n) => `${n}${josa(n, '이', '가')}`;
 const ro = (w) => { const c = String(w).charCodeAt(String(w).length - 1); if (c < 0xac00 || c > 0xd7a3) return `${w}로`; const t = (c - 0xac00) % 28; return `${w}${t && t !== 8 ? '으로' : '로'}`; }; // ㄹ 받침은 '로'
 const eul = (n) => `${n}${josa(n, '을', '를')}`;
@@ -301,8 +301,18 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     return m;
   };
   // 팩 그림으로 바꾸기 전 집터: 가진 가구·도면은 새 가구로 옮기고, 배치는 새 기본 배치로, 산 바닥·담·벽지는 인장으로 돌려줌 (한 번만)
+  // '들꽃'은 '노란 꽃'과 그림이 같아 노란 꽃으로 합침. 가진 수·놓아 둔 것을 옮기고, 값 차이(하나에 인장 2)를 돌려줌
+  // 판 번호와 따로도 검사: 11월 21일 저녁에 이 옮기기가 빠진 서버로 판 번호만 먼저 올라간 집터가 있어서 (들꽃이 남아 있으면 한 번 더)
+  function mergeFlowers(m) {
+    if (!m.plot) return;
+    const placed = Array.isArray(m.deco) ? m.deco.filter((o) => o.s === 'flowers').length : 0, n = Math.max((m.furn && m.furn.flowers) || 0, placed);
+    if (!n) return;
+    m.furn.flower2 = (m.furn.flower2 || 0) + n; delete m.furn.flowers; m.seals = (m.seals || 0) + 2 * n;
+    if (placed) m.deco.forEach((o) => { if (o.s === 'flowers') o.s = 'flower2'; });
+    m.flowerBack = { at: Date.now(), n, back: 2 * n };
+  }
   function packMigrate(m) {
-    if (m.packV === PACK.v) return;
+    if (m.packV === PACK.v) { if (m.furn && (m.furn.flowers || (Array.isArray(m.deco) && m.deco.some((o) => o.s === 'flowers')))) mergeFlowers(m); return; }
     if (m.packV >= 1) { // 이미 팩 그림으로 옮긴 집: 그 뒤에 바뀐 것만 차례로
       if (m.plot && m.packV <= 2) { // 1·2 → 3: 먼저 올린 판(1)에서 연못이 샘물 분수로, 연못 도면이 분수 도면으로 바뀌었음
         // 그때 예전 목록을 남기지 않아 어느 분수가 원래 연못이었는지 모르므로 넉넉하게: 가진 분수 수만큼 연못을, 분수 도면이 있으면 연못 도면을 줌 (분수·분수 도면은 그대로)
@@ -345,6 +355,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
         if (m.furn.arch_small) { m.furn.arch = (m.furn.arch || 0) + m.furn.arch_small; delete m.furn.arch_small; }
         if (Array.isArray(m.deco)) m.deco = m.deco.filter((o) => o.s !== 'arch_small');
       }
+      if (m.plot && m.packV <= 39) mergeFlowers(m); // → 40: '들꽃'은 '노란 꽃'과 그림이 같아 노란 꽃으로 합침 (mergeFlowers)
       // 4 → 5: 덩굴 아치 · 5 → 6: 작은 종 · 6 → 7: 울타리 네 가지·꽃 · 7 → 8: 촛대 스탠드·초, 불 가구 움직임 · 8 → 9: 부엌·소품 가구, 깔개 색 · 9 → 10: 색유리 창·마법서·마력 수정·파랑 화분대 · 10 → 11: 긴 깔개 색 여섯, 네모 깔개 따로 · 11 → 12: 별밤 벽지·연한 벽돌 바닥·탁상시계·책 선반·은 거울·달 깔개 · 13 → 14: 마법 등불, 횃불 옆모습, 장작 테두리 · 15 → 16: 작은 덩굴 아치 · 16 → 17: 작은 덩굴 아치 뺌 · 17 → 18: 건물 앞·바깥뜰에 놓기 (새로 옮길 것 없음)
       m.packV = PACK.v; return;
     }
@@ -1259,7 +1270,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
         rooms: rs.map((r, i) => ({ id: r.id, name: r.name, hours: r.hours, h: m.rooms[r.id].h, mats: Object.entries(r.mats).map(([k, n]) => ({ id: k, name: ITEMS[k].name, need: n, put: m.rooms[r.id].mats[k] || 0 })), opens: r.opens, state: i < ci ? 'done' : i === ci ? 'cur' : 'lock' })),
         golems: m.golems.map((g, i) => ({ i, name: g.name, named: !!g.named, awake: g.awake, job: g.job, hours: g.hours, start: g.start, until: g.until, report: g.report, last: g.last || null, gate: g.awake ? null : gateOf(m, i), dur: g.dur ?? R.wear.max, mendBy: g.mendBy || null })),
         garden: m.plot ? { list: gBeds(m).map((o, k) => ({ g: o.g, n: k + 1, ...(m.garden[o.g] ? gInfo(m.garden[o.g]) : { c: null }) })), crops: GARDEN.crops, dry: GARDEN.dry, gold: Math.floor(d.gold || 0) } : null,
-        deco: m.deco || null, decoRules: { max: DECO.max }, packNote: m.packNote && m.packNote.at > Date.now() - 7 * 864e5 ? m.packNote : null, pondBack: m.pondBack && m.pondBack.at > Date.now() - 7 * 864e5 ? m.pondBack : null,
+        deco: m.deco || null, decoRules: { max: DECO.max }, packNote: m.packNote && m.packNote.at > Date.now() - 7 * 864e5 ? m.packNote : null, pondBack: m.pondBack && m.pondBack.at > Date.now() - 7 * 864e5 ? m.pondBack : null, flowerBack: m.flowerBack && m.flowerBack.at > Date.now() - 7 * 864e5 ? m.flowerBack : null,
         furn: m.furn, furnCat: Object.entries(FURN).map(([k, f]) => ({ s: k, name: f.name, cat: f.cat, seals: sealCost(f), base: f.seals, cap: FURN_CAP[k] || null, bp: own(BLUEPRINT, BPKEY[k]) ? !!(m.bp || {})[BPKEY[k]] : null, mats: Object.entries(f.mats).map(([id, n]) => ({ id, name: ITEMS[id].name, need: n })) })),
         zday: Object.fromEntries(Object.entries(m.zday || {}).filter(([, v]) => v === dayIdx())), springLeft: ZF.springTimes - (m.spring && m.spring.day === dayIdx() ? m.spring.n : 0), bell: (() => { const bt = bellToday(), by = Array.isArray(bt.by) ? bt.by : []; return { n: by.length, need: ZF.bellNeed, mine: by.includes(d.name), on: by.length >= ZF.bellNeed }; })(), forgeOff: done('forge') ? ZF.forgeOff : 0,
         bp: Object.entries(BLUEPRINT).map(([k, c]) => ({ s: k, name: bpName(k), seals: c, have: !!(m.bp || {})[k] })),
@@ -1462,3 +1473,4 @@ module.exports.CITY_TRADE = TRADE; // 재료 얻는 곳 안내(server.js ITEM_SO
 module.exports.CITY_WORKSHOP = WORKSHOP;
 module.exports.CITY_JOBS = JOBS;
 module.exports.CITY_FURN = FURN; // 주고받은 기록에 가구 이름을 붙일 때 (social.js)
+module.exports.CITY_FURN_GONE = { flowers: '들꽃' }; // 없어진 가구의 옛 이름 (지난 기록에 보이게)
