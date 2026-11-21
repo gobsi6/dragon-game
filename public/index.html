@@ -346,7 +346,7 @@
       </section>
       <section class="frame news" id="news" aria-live="polite" hidden>
         <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
-        <div class="rt"><b>둥지 소식</b><button class="x" type="button" id="news-close">닫기</button></div>
+        <div class="rt"><b>둥지 소식</b><button class="x" type="button" id="news-past">지난 소식</button><button class="x" type="button" id="news-close">닫기</button></div>
         <ul id="news-lines"></ul>
       </section>
       <section class="result" id="result" aria-live="polite" hidden>
@@ -1253,8 +1253,8 @@
   <div class="orn-h"><h2 id="ledger-dlg-title">주고받은 기록</h2></div>
   <div class="seg ctabs" role="group" aria-label="소지품 메뉴"><button type="button" data-go="inv">소지품</button><button type="button" data-go="log" class="on">주고받은 기록</button></div>
   <div class="body">
-    <p class="note" style="margin: 0">선물, 교환, 이벤트로 오간 선물, GM 지급이 남는다. 최근 90일 동안 300개까지 보관한다.</p>
-    <div class="mk-tabs" id="ledger-filter" role="tablist" aria-label="기록 거르기"><button type="button" role="tab" data-f="all" class="on">전체</button><button type="button" role="tab" data-f="in">받은 것</button><button type="button" role="tab" data-f="out">보낸 것</button><button type="button" role="tab" data-f="trade">교환</button></div>
+    <p class="note" style="margin: 0" id="ledger-note">선물, 교환, 이벤트로 오간 선물, GM 지급이 남는다. 최근 90일 동안 300개까지 보관한다.</p>
+    <div class="mk-tabs" id="ledger-filter" role="tablist" aria-label="기록 거르기"><button type="button" role="tab" data-f="all" class="on">전체</button><button type="button" role="tab" data-f="in">받은 것</button><button type="button" role="tab" data-f="out">보낸 것</button><button type="button" role="tab" data-f="trade">교환</button><button type="button" role="tab" data-f="news">지난 소식</button></div>
     <div class="lg-list" id="ledger-list"></div>
     <div class="row"><button class="btn" type="button" id="ledger-close">닫기</button></div>
   </div>

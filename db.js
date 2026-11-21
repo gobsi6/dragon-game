@@ -252,6 +252,21 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS ledger_dragon ON ledger(dragon_id, id);
 `);
 const LEDGER = { keep: 300, days: 90 };
+// 지난 소식: 알림(소식 카드·알림)과 이벤트 결과를 드래곤마다 남겨 둠. 카드를 닫았거나 알림을 꺼 두었어도 나중에 확인 (GM도 볼 수 있음)
+// 한 줄에 보통 0.3~1KB. 드래곤 하나에 많아야 keep개라 수십 마리여도 몇 MB 안쪽
+db.exec(`
+  CREATE TABLE IF NOT EXISTS newslog (
+    id         INTEGER PRIMARY KEY,
+    dragon_id  INTEGER NOT NULL REFERENCES dragons(id) ON DELETE CASCADE,
+    at         INTEGER NOT NULL,
+    title      TEXT NOT NULL DEFAULT '',
+    lines      TEXT NOT NULL DEFAULT '[]',
+    items      TEXT NOT NULL DEFAULT '[]',   -- [{ id, qty }] (잃은 것은 qty < 0)
+    gold       INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX IF NOT EXISTS newslog_dragon ON newslog(dragon_id, id);
+`);
+const NEWSLOG = { keep: 200, days: 14 };
 // 채팅 기록을 남겨 두는 수: 지역마다 · 용언 · 대륙 소식 (예전엔 모두 200개)
 const CHAT_KEEP = { region: 3000, '*': 10000, '!': 3000 };
 const chatPruneTick = new Proxy({}, { get: (o, k) => o[k] || 0, set: (o, k, v) => { o[k] = v; return true; } }); // 20번 쓸 때마다 한 번 정리 (매번 지우지 않게)
@@ -605,6 +620,11 @@ const q = {
   imgBytes:     db.prepare(`SELECT (SELECT COUNT(*) FROM slate_images) AS sn, (SELECT IFNULL(SUM(LENGTH(data)), 0) FROM slate_images) AS sb,
                             (SELECT COUNT(*) FROM gift_images) AS gn, (SELECT IFNULL(SUM(LENGTH(data)), 0) FROM gift_images) AS gb`),
   ledgerList:   db.prepare('SELECT * FROM ledger WHERE dragon_id = ? ORDER BY id DESC LIMIT ?'),
+  newsAdd:      db.prepare('INSERT INTO newslog (dragon_id, at, title, lines, items, gold) VALUES (?, ?, ?, ?, ?, ?)'),
+  newsList:     db.prepare('SELECT * FROM newslog WHERE dragon_id = ? ORDER BY id DESC LIMIT ?'),
+  newsLast:     db.prepare('SELECT id, at, title, lines FROM newslog WHERE dragon_id = ? ORDER BY id DESC LIMIT 1'),
+  newsLines:    db.prepare('UPDATE newslog SET lines = ? WHERE id = ?'),
+  newsPrune:    db.prepare(`DELETE FROM newslog WHERE dragon_id = @d AND (at < @old OR id <= (SELECT id FROM newslog WHERE dragon_id = @d ORDER BY id DESC LIMIT 1 OFFSET @keep))`),
   ledgerPrune:  db.prepare(`DELETE FROM ledger WHERE dragon_id = @d AND (at < @old OR id <= (SELECT id FROM ledger WHERE dragon_id = @d ORDER BY id DESC LIMIT 1 OFFSET @keep))`),
   giftIn:       db.prepare('INSERT INTO gift_inbox (to_id, from_id, from_name, from_kind, gold, items, msg, at, home) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'),
   giftList:     db.prepare('SELECT * FROM gift_inbox WHERE to_id = ? AND home = 0 ORDER BY id'),
@@ -944,6 +964,25 @@ function scrubGone(dragonId, name, userId = null, held = false) {
   return n;
 }
 
+// 지난 소식 한 묶음 남기기 (실패해도 게임은 그대로)
+function newsAdd(id, title, lines, items, gold) {
+  try {
+    if (!id) return;
+    const ls = (Array.isArray(lines) ? lines : [lines]).map((l) => String(l ?? '').slice(0, 600)).filter(Boolean).slice(0, 30);
+    const its = (items || []).filter((x) => x && x.id && x.qty).map((x) => ({ id: x.id, qty: x.qty, ...(x.name ? { name: x.name } : {}) })).slice(0, 40);
+    if (!ls.length && !its.length && !gold) return;
+    // 자리를 비운 동안 한 줄씩 들어오는 소식(noteAdd)은 같은 순간에 온 것끼리 한 묶음으로
+    if (title === '자리를 비운 동안' && !its.length && !gold) {
+      const last = q.newsLast.get(id);
+      if (last && last.title === title && Date.now() - last.at < 2000) {
+        let prev = []; try { prev = JSON.parse(last.lines || '[]'); } catch {}
+        if (prev.length < 30) { q.newsLines.run(JSON.stringify([...prev, ...ls].slice(0, 30)), last.id); return; }
+      }
+    }
+    q.newsAdd.run(id, Date.now(), String(title || '').slice(0, 60), JSON.stringify(ls), JSON.stringify(its), Math.round(gold || 0));
+    q.newsPrune.run({ d: id, old: Date.now() - NEWSLOG.days * 86400000, keep: NEWSLOG.keep });
+  } catch (e) { console.error('[지난 소식]', e.message); }
+}
 module.exports = {
   DB_PATH, snapshot, snapshotAsync, customRefs, customOrphans, checkBackup, stageRestore, closeDb, dbFileSize,
   countUsers: () => q.countUsers.get().n,
@@ -1056,7 +1095,12 @@ module.exports = {
   tpHear: (me, other) => q.tpHear.run(me, other),
   tpUnread: (me) => q.tpUnread.get(me).n,
   tpThreads: (me) => q.tpThreads.all({ me }),
-  noteAdd: (id, text) => q.noteAdd.run(id, text, Date.now()),
+  noteAdd: (id, text) => { q.noteAdd.run(id, text, Date.now()); newsAdd(id, '자리를 비운 동안', [text]); }, // 지난 소식에도 (다음 접속 때 다시 보여 주는 묶음 알림은 따로 남기지 않음)
+  newsAdd: (id, title, lines, items, gold) => newsAdd(id, title, lines, items, gold),
+  newsList: (id, n = NEWSLOG.keep) => q.newsList.all(id, n).map((r) => {
+    const parse = (t) => { try { return JSON.parse(t || '[]'); } catch { return []; } };
+    return { id: r.id, at: r.at, title: r.title, lines: parse(r.lines), items: parse(r.items), gold: r.gold };
+  }),
   // 주고받은 기록 한 줄. e: { kind, other: { id, name, kind } | null, goldIn, goldOut, itemsIn, itemsOut, msg, note }
   ledgerAdd: (dragonId, e) => {
     const clean = (l) => JSON.stringify((l || []).filter((x) => x && x.id && x.qty > 0).map((x) => ({ id: x.id, qty: x.qty })));

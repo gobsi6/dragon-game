@@ -929,6 +929,7 @@ dialog.frame:not(.as-panel) > .bl { bottom: 2px; left: 2px; } dialog.frame:not(.
 .news .rt { display: flex; align-items: baseline; gap: 10px; }
 .news .rt b { font: 700 15px/1.3 var(--serif); color: #6B4E12; }
 .news .rt .x { margin-left: auto; min-height: 30px; padding: 0 8px; background: transparent; border: 0; color: var(--muted); font-size: 13px; }
+.news .rt .x + .x { margin-left: 0; } /* 지난 소식 · 닫기 나란히 */
 .news ul { margin: 0; padding: 0 0 0 2px; list-style: none; display: flex; flex-direction: column; gap: 4px; font: 500 14px/1.65 var(--serif); color: #30353A; }
 .news li::before { content: "·"; margin-right: 6px; color: #B8913A; }
 .news .news-go { min-height: 28px; padding: 0 10px; margin-left: 4px; font: 600 12px/1 var(--sans); vertical-align: middle; }
@@ -2620,6 +2621,11 @@ button.trait.skill.on { background: #EEF2F6; box-shadow: inset 0 0 0 1px var(--s
 .lg-chip.gold { color: #6A4E12; border-color: #E2D2A6; background: #FBF6E8; }
 .lg-chip.gold::before { display: none; }
 .lg-msg { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--ink-2); padding-left: 8px; border-left: 2px solid var(--line-soft); }
+/* 지난 소식: 알림·이벤트 결과 */
+.lg-row.news { --lg-c: #6B7F8E; }
+.lg-row.news .lg-msg.news-line { border-left: 0; padding-left: 0; }
+.lg-row.news .lg-msg.news-line + .lg-msg.news-line { margin-top: -2px; }
+.gm-news { max-height: 420px; overflow: auto; }
 .seg.ctabs { grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 14px 0 8px; }
 .seg.ctabs button { padding: 6px 4px; line-height: 1.25; word-break: keep-all; }
 /* 메뉴 칸 안도 창 본문처럼 위아래 12px 간격 (나누기 전과 같게) */
@@ -5506,8 +5512,6 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .th-fn { position: relative; display: inline-flex; align-items: flex-end; justify-content: center; line-height: 0; }
 .th-fn .fn-star { position: absolute; left: -7px; top: -7px; width: 17px; height: 17px; line-height: 0; pointer-events: none; } /* 금빛 동그라미(흰 테두리) 안에 끝이 둥근 흰 별, 그림자 없음 */
 .th-fn .fn-star svg { display: block; }
-.th-fn .fn-alt { position: absolute; right: -7px; top: -7px; width: 17px; height: 17px; line-height: 0; pointer-events: none; } /* 바꿔 고를 수 있는 가구: 하늘색 동그라미(흰 테두리) · 별(왼쪽 위)과 겹치지 않게 오른쪽 위 */
-.th-fn .fn-alt svg { display: block; }
 
 /* 교환 창: 건넬 물건 찾기 */
 #trade-dlg .tr-q { width: 100%; height: 32px; min-height: 0; margin: 0 0 8px; padding: 0 10px; font-size: 13px; } /* 낮게 (전 약 46px) */
@@ -5537,7 +5541,6 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .gm-su-msg { width: 100%; margin-bottom: 8px; }
 #home-ui .mk-row > .th-fn { justify-self: center; align-self: center; } /* 목록 줄(가구 만들기·도면)에서도 별이 그림 바로 왼쪽 위에 붙게: 감싼 칸이 72px 열 전체로 늘어나지 않게 */
 #home-ui .mk-row > .th-fn .fn-star { left: -2px; top: -5px; } /* 목록 줄은 왼쪽 여백이 좁아, 별이 줄 테두리에 걸치지 않게 그림 쪽으로 조금 */
-#home-ui .mk-row > .th-fn .fn-alt { right: -2px; top: -5px; } /* 바꿔 고르기 표시도 같은 까닭으로 */
 /* 내 집터 창: 아래로 내려도 위의 탭(집터·할 일·골렘·꾸미기)과 꾸미기 메뉴(가구 놓기·만들기·도면·바닥·담)가 위에 붙어 있게 */
 #home-ui > .hm-tabs { position: sticky; top: -4px; z-index: 6; background: rgb(252, 250, 246); box-shadow: 0 -6px 0 rgb(252, 250, 246); } /* 창 본문 위쪽 여백(4px)까지 덮음 */
 #home-ui > .dk-mode { position: sticky; top: 40px; z-index: 5; background: rgb(252, 250, 246); box-shadow: 0 -8px 0 rgb(252, 250, 246), 0 8px 0 rgb(252, 250, 246); } /* 위아래 여백까지 덮어 아래 목록이 비치지 않게 */

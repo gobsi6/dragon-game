@@ -124,6 +124,8 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
       const gold = Math.round(st.lv * (BOSS.goldBase + BOSS.goldShare * share));
       const R = T.reward; // 잔치 재앙: 재앙의 핵 대신 (기본 n개 + 내 몫 × per, 많아야 max개)
       const ids = R ? Array(Math.min(R.max, R.n + Math.floor(share * R.per))).fill(R.item) : Array(BOSS.core).fill('calamity_core');
+      // 받은 몫을 적어 둠: 싸우는 사이 재앙이 쓰러졌다가 그 싸움 피해가 나중에 더해지면 모자란 만큼 더 줌 (topUp)
+      (st.got ||= {})[id] = { n: R ? ids.length : 0, gold, top: rank <= BOSS.top };
       if (rank <= BOSS.top) ids.push(...(R ? [] : Array(BOSS.topCore).fill('calamity_core')), logic.rollItem(st.key, { uncommon: 0, rare: 1 }));
       const items = logic.bundle(ids);
       d.gold += gold;
@@ -137,6 +139,34 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
       logic.dexWin(d, `boss:${st.key}`); // 도감
       logic.chron(d, 'mark', `${T.ev ? '' : '대륙의 재앙 '}${eul(T.name)} 함께 쓰러뜨렸다. (${rank}위${id === lastId ? ', 마지막 일격' : ''})`);
       return { title: tagOf(st.key), lines, items };
+    });
+  }
+  // 싸우는 사이 재앙이 쓰러져 먼저 몫을 받았는데, 그 싸움의 피해가 나중에 더해진 경우: 늘어난 몫만큼 더 줌
+  // (다리살·금화의 차이, 새로 상위에 들었으면 귀한 물건 하나와 상위 몫)
+  function topUp(id) {
+    const T = BOSSES[st.key], R = T.reward;
+    const was = st.got?.[id];
+    if (!was) return;
+    const sum = total() || 1, share = (st.dmg[id] || 0) / sum;
+    const rank = ranking().findIndex((x) => x.id === id) + 1;
+    const n = R ? Math.min(R.max, R.n + Math.floor(share * R.per)) : 0;
+    const gold = Math.round(st.lv * (BOSS.goldBase + BOSS.goldShare * share));
+    const top = rank > 0 && rank <= BOSS.top;
+    const ids = [];
+    if (R && n > was.n) ids.push(...Array(n - was.n).fill(R.item));
+    if (top && !was.top) ids.push(...(R ? [] : Array(BOSS.topCore).fill('calamity_core')), logic.rollItem(st.key, { uncommon: 0, rare: 1 }));
+    const addGold = Math.max(0, gold - was.gold);
+    st.got[id] = { n: Math.max(n, was.n), gold: Math.max(gold, was.gold), top: was.top || top };
+    if (!ids.length && !addGold) return;
+    save();
+    grant(id, (d) => {
+      const items = logic.bundle(ids);
+      d.gold += addGold;
+      const got = [...items.map(logic.itemLabel), ...(addGold ? [`금화 ${addGold}닢`] : [])].join(', ');
+      return { title: tagOf(st.key), items, lines: [
+        `싸움이 끝나고 ${T.name} 몫을 다시 셌다. 마지막 싸움까지 더하면 전체의 ${Math.round(share * 100)}%, ${rank}위였다.`,
+        `모자랐던 몫으로 ${got}${josa(got, '을', '를')} 더 얻었다.`,
+      ] };
     });
   }
   function defeat(lastId) {
@@ -231,6 +261,9 @@ module.exports = function setupBoss({ io, db, online, logic, combat, arena, send
         const r = ranking();
         setImmediate(() => payOne(d.id, r.findIndex((x) => x.id === d.id) + 1, st.dmg[d.id] / sum, st.last));
         lines.push('싸우는 사이 재앙이 쓰러졌다! 나의 몫도 받는다.');
+      } else if (st.done === 'win' && dealt > 0) {
+        // 이미 몫을 받았지만 (쓰러질 때 싸우는 중이었음) 이 싸움 피해는 빠져 있었음: 늘어난 만큼 더
+        setImmediate(() => topUp(d.id));
       }
       save();
     }

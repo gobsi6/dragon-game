@@ -1536,7 +1536,7 @@ const WELCOME_DEFAULT = `안녕하세요. 용의 대륙에 오신 것을 환영�
 
 본 게임은 바이브 코딩을 통해 제작되었습니다. 따라서 일부 기능이 원활하게 작동하지 않거나 예상치 못한 오류가 발생할 수 있습니다. 너그러운 마음으로 양해 부탁드리며, 플레이 중 문제가 발생한다면 GM(청우)에게 편하게 제보해주세요. 감사합니다!`;
 // ── 업데이트 노트: GM이 쓰고, 모두가 메뉴에서 읽음. world 표의 'notes'에 새것부터 [{ id, title, date, body }]
-const NOTE = { max: 300, titleMax: 60, bodyMax: 20000 }; // 2026-11-20: 본문 3000자에서 잘리던 것을 넉넉히, 오래된 노트가 60개를 넘으면 지워지던 것도 300개까지
+const NOTE = { max: 60, titleMax: 60, bodyMax: 3000 };
 const NOTES_DEFAULT = [{
   id: 1, date: '2026-10-17', title: '용언과 업데이트 노트',
   body: [
@@ -1674,6 +1674,16 @@ process.on('unhandledRejection', (e) => console.error('[놓친 오류(비동기)
 io.on('connection', (socket) => {
   socket.on('hb', (ack) => { if (typeof ack === 'function') ack(1); }); // 폰에서 돌아왔을 때 연결이 살아 있는지 확인하는 짧은 신호
   guardSocket(socket);
+  // 지난 소식: 이 드래곤에게 보내는 알림(notice)을 모두 남김 (카드를 닫거나 알림을 꺼도 나중에 확인)
+  // '자리를 비운 동안' 묶음은 쌓일 때(db.noteAdd) 이미 남겼으므로 빼고
+  const emit0 = socket.emit.bind(socket);
+  socket.emit = (ev, ...args) => {
+    if (ev === 'notice' && socket.data.dragonId && args[0] && args[0].title !== '자리를 비운 동안') {
+      const n = args[0];
+      db.newsAdd(socket.data.dragonId, n.title, n.lines, n.items, n.gold);
+    }
+    return emit0(ev, ...args);
+  };
   try { onConnect(socket); } catch (e) { softFail('접속', e); }
 });
 function onConnect(socket) {
@@ -2177,6 +2187,14 @@ function onConnect(socket) {
     ack({ ok: true, now: nowS ? { until: nowS.end } : null, today: peddler.daySlots(logic.dayIdx()).map((x) => ({ start: x.start, end: x.end })) });
   });
   // GM 도구 '한눈에 보기': 지금 대륙 (접속 · 진행 중인 이벤트 · 곧 일어날 일 · 최근 기록)
+  // GM: 한 드래곤의 지난 소식 (알림·이벤트 결과) — "받았는데 안 들어왔다" 같은 문의 확인용
+  socket.on('gm:newslog', (p, ack) => {
+    if (typeof ack !== 'function') return;
+    if (!socket.data.user?.is_gm) return ack({ error: 'GM만 쓸 수 있다.' });
+    const id = Number(p?.id);
+    if (!Number.isInteger(id) || !db.getDragon(id)) return ack({ error: '그런 드래곤이 없다.' });
+    ack({ ok: true, list: db.newsList(id) });
+  });
   socket.on('gm:overview', (p, ack) => {
     if (typeof ack !== 'function') return;
     if (!socket.data.user?.is_gm) return ack({ error: 'GM만 쓸 수 있다.' });
@@ -2331,6 +2349,7 @@ function onConnect(socket) {
       logic.regen(d, now);
       const kin = syncKin(socket, d, now);
       const have = (id) => db.itemCount(d.id, id);
+      const gold0 = d.gold || 0;
       const res = run(d, payload || {}, have, kin);
       if (res.error) return ack(res);
       // 이벤트가 다른 드래곤에게 남긴 소식 (라이벌 이벤트)
@@ -2353,6 +2372,8 @@ function onConnect(socket) {
         logic.tidyGear(d, (id) => have(id) + (delta[id] || 0));
       }
       db.saveState(d, res.items, res.hoardItems);
+      // 지난 소식: 이벤트를 고른 결과 (얻고 잃은 물건·금화까지)
+      if (event === 'event:choose') db.newsAdd(d.id, `이벤트 · ${res.title || ''}`, [res.choice ? `고른 것: '${res.choice}'` : '', ...(res.lines || [])], [...(res.items || []), ...(res.hoardItems || [])], (d.gold || 0) - gold0);
       sendMe(socket, d);
       if (after) after(d, res);
       ack({ ok: true, result: res });

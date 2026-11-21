@@ -2642,23 +2642,10 @@
       });
     });
   }
-  // 바꿔 고를 수 있는 가구 표시(하늘색 동그라미, 그림 오른쪽 위): 색 · 모양 · 방향 (놓는 곳은 표시 안 함)
-  // 그림은 Lucide 아이콘 palette · shapes · rotate-cw (ISC License, Copyright (c) Lucide Icons and Contributors, https://github.com/lucide-icons/lucide)
-  const ALT_ICON = {
-    색: '<path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"/><g fill="#fff" stroke="none"><circle cx="13.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="10.5" r="1.5"/><circle cx="6.5" cy="12.5" r="1.5"/><circle cx="8.5" cy="7.5" r="1.5"/></g>',
-    모양: '<path d="M8.3 10a.7.7 0 0 1-.626-1.079L11.4 3a.7.7 0 0 1 1.198-.043L16.3 8.9a.7.7 0 0 1-.572 1.1Z"/><rect x="3" y="14" width="7" height="7" rx="1"/><circle cx="17.5" cy="17.5" r="3.5"/>',
-    방향: '<path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>',
-  };
-  const altBadge = (lab) => `<svg viewBox="0 0 24 24" width="17" height="17" shape-rendering="geometricPrecision"><circle cx="12" cy="12" r="10.6" fill="#4FA8DE" stroke="#fff" stroke-width="2"/><g transform="translate(6.2 6.2) scale(.483)" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round">${ALT_ICON[lab] || ALT_ICON['모양']}</g></svg>`;
   function markFn(root) {
     root.querySelectorAll('canvas.dk-th').forEach((c) => {
-      if (c.parentElement.classList.contains('th-fn')) return;
-      const note = HP.fn(c.dataset.s), g = HP.group(c.dataset.s), lab = g && g.length > 1 && HP.groupLabel(c.dataset.s) !== '놓는 곳' ? HP.groupLabel(c.dataset.s) : ''; // 놓는 곳(쪽지 바닥·벽)은 표시 안 함
-      if (!note && !lab) return;
-      const w = document.createElement('span'); w.className = 'th-fn'; c.replaceWith(w); w.appendChild(c);
-      w.title = [note, lab && `${lab}을 ${g.length}가지 중에서 골라 놓을 수 있다. 꾸미기에서 '${lab} 바꾸기'(R 키)`].filter(Boolean).join('\n');
-      if (lab) { const a = document.createElement('i'); a.className = 'fn-alt'; a.setAttribute('aria-hidden', 'true'); a.innerHTML = altBadge(lab); w.appendChild(a); }
-      if (!note) return;
+      const note = HP.fn(c.dataset.s); if (!note || c.parentElement.classList.contains('th-fn')) return;
+      const w = document.createElement('span'); w.className = 'th-fn'; w.title = note; c.replaceWith(w); w.appendChild(c);
       const st = document.createElement('i'); st.className = 'fn-star'; st.setAttribute('aria-hidden', 'true'); st.innerHTML = '<svg viewBox="0 0 24 24" width="17" height="17" shape-rendering="geometricPrecision"><circle cx="12" cy="12" r="10.6" fill="#C9922E" stroke="#fff" stroke-width="2"/><path d="M12 6.6l1.6 3.3 3.6.5-2.6 2.5.6 3.6L12 14.8l-3.2 1.7.6-3.6-2.6-2.5 3.6-.5z" fill="#fff" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/></svg>'; w.appendChild(st); // 금빛 동그라미(흰 테두리) 안에 끝이 둥근 흰 별
     });
   }
@@ -2900,10 +2887,58 @@
     });
     return { id: () => st.id, title: () => title.value.trim(), busy: () => st.busy, clear: () => { st.id = 0; draw(''); } };
   }
+  // 지난 소식: 알림(소식 카드·알림)과 이벤트 결과. 카드를 닫았거나 알림을 꺼 두었어도 여기서 다시 봄
+  const LEDGER_NOTE = '선물, 교환, 이벤트로 오간 선물, GM 지급이 남는다. 최근 90일 동안 300개까지 보관한다.';
+  const NEWS_NOTE = '받은 알림과 이벤트 결과가 남는다. 소식 카드를 닫았거나 알림을 꺼 두었어도 여기서 다시 볼 수 있다. 최근 14일 동안 200개까지 보관한다.';
+  let newsCache = [];
+  const dayHead = (box, t, last) => {
+    const dk = (x) => { const d = new Date(x); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; };
+    const k = dk(t);
+    if (k === last) return last;
+    const h = document.createElement('div'); h.className = 'lg-day';
+    const d = new Date(t);
+    h.textContent = `${d.getMonth() + 1}월 ${d.getDate()}일 (${'일월화수목금토'[d.getDay()]})${k === dk(Date.now()) ? ' · 오늘' : k === dk(Date.now() - 86400000) ? ' · 어제' : ''}`;
+    box.appendChild(h);
+    return k;
+  };
+  // 지난 소식 목록을 box에 그림 (GM 화면에서도 씀)
+  function drawNewsLog(box, list, empty = '아직 남은 소식이 없다. 알림이나 이벤트 결과가 생기면 여기에 쌓인다.') {
+    box.replaceChildren();
+    if (!list.length) { const e = document.createElement('div'); e.className = 'mk-empty'; e.textContent = empty; box.appendChild(e); return; }
+    let last = '';
+    for (const e of list) {
+      last = dayHead(box, e.at, last);
+      const r = document.createElement('div'); r.className = 'lg-row news';
+      const top = document.createElement('div'); top.className = 'lg-top';
+      const kk = document.createElement('span'); kk.className = 'k'; kk.textContent = e.title || '소식';
+      const sp = document.createElement('b');
+      const tm = document.createElement('span'); tm.className = 't'; tm.textContent = chatTime(e.at);
+      top.append(kk, sp, tm);
+      r.appendChild(top);
+      for (const l of e.lines || []) { const p = document.createElement('p'); p.className = 'lg-msg news-line'; p.textContent = l; r.appendChild(p); }
+      const gotI = (e.items || []).filter((x) => x.qty > 0), lostI = (e.items || []).filter((x) => x.qty < 0).map((x) => ({ ...x, qty: -x.qty }));
+      const gIn = e.gold > 0 ? e.gold : 0, gOut = e.gold < 0 ? -e.gold : 0;
+      if (gIn || gotI.length || gOut || lostI.length) {
+        const flow = document.createElement('div'); flow.className = 'lg-flow';
+        const line = (cls, label, gold, items) => {
+          if (!gold && !items.length) return;
+          const l = document.createElement('div'); l.className = `ln ${cls}`;
+          const lb = document.createElement('span'); lb.className = 'lb'; lb.textContent = label;
+          l.appendChild(lb); ledgerChips(l, gold, items); flow.appendChild(l);
+        };
+        line('in', '얻음', gIn, gotI);
+        line('out', '잃음', gOut, lostI);
+        r.appendChild(flow);
+      }
+      box.appendChild(r);
+    }
+  }
   function renderLedger(list) {
     const box = $('ledger-list');
     box.replaceChildren();
     for (const t of $('ledger-filter').children) { const on = t.dataset.f === ledgerF; t.classList.toggle('on', on); t.setAttribute('aria-selected', String(on)); }
+    $('ledger-note').textContent = ledgerF === 'news' ? NEWS_NOTE : LEDGER_NOTE;
+    if (ledgerF === 'news') return drawNewsLog(box, newsCache);
     const hasIn = (e) => e.goldIn > 0 || e.itemsIn.length > 0 || (e.img && e.kind === 'gift_in'), hasOut = (e) => e.goldOut > 0 || e.itemsOut.length > 0 || (e.img && e.kind === 'gift_out');
     const rows = list.filter((e) => ledgerF === 'all' || (ledgerF === 'trade' ? e.kind === 'trade' : ledgerF === 'in' ? hasIn(e) && e.kind !== 'trade' : hasOut(e) && e.kind !== 'trade'));
     if (!rows.length) {
@@ -2974,11 +3009,21 @@
     socket.emit('ledger:list', {}, (res) => {
       if (res.error) return toast(res.error);
       ledgerCache = res.list || [];
-      renderLedger(ledgerCache);
-      openPanel('ledger-dlg');
+      const show = () => { renderLedger(ledgerCache); if (!$('ledger-dlg').open) openPanel('ledger-dlg'); };
+      if (ledgerF === 'news') loadNewsLog(show); else show();
     });
   }
-  $('ledger-filter').addEventListener('click', (e) => { const b = e.target.closest('button[data-f]'); if (!b) return; ledgerF = b.dataset.f; renderLedger(ledgerCache); });
+  function loadNewsLog(then) {
+    socket.emit('newslog:list', {}, (res) => {
+      if (res?.error) return toast(res.error);
+      newsCache = res.list || [];
+      then();
+    });
+  }
+  // 소식 카드의 '지난 소식': 기록 창을 지난 소식 칸으로 열기
+  function openNewsLog() { ledgerF = 'news'; openLedger(); }
+  $('news-past').addEventListener('click', openNewsLog);
+  $('ledger-filter').addEventListener('click', (e) => { const b = e.target.closest('button[data-f]'); if (!b) return; ledgerF = b.dataset.f; if (ledgerF === 'news') loadNewsLog(() => renderLedger(ledgerCache)); else renderLedger(ledgerCache); });
   $('ledger-close').addEventListener('click', () => $('ledger-dlg').close());
   $('inv-open').addEventListener('click', openInv);
 
@@ -13466,6 +13511,19 @@
     stat('능력치', Object.entries(d.stats).map(([k, v]) => `${S.stats.find((x) => x.key === k)?.name || k} ${v}`).join(' · '));
     body.appendChild(st);
 
+    // 지난 소식: 이 드래곤이 받은 알림·이벤트 결과 ("받았는데 안 들어왔다" 문의 확인용)
+    {
+      const ns = gmSection(body, '지난 소식 (알림·이벤트 결과, 최근 14일)');
+      const nr = gmRow(ns);
+      const nbox = gEl('div', 'lg-list gm-news'); nbox.hidden = true;
+      gBtn(nr, '불러오기', () => socket.emit('gm:newslog', { id: d.id }, (res) => {
+        if (res?.error) return toast(res.error);
+        nbox.hidden = false; drawNewsLog(nbox, res.list || [], '남은 소식이 없다.');
+      }));
+      gBtn(nr, '접기', () => { nbox.hidden = true; nbox.replaceChildren(); }, 'link');
+      ns.appendChild(nbox);
+    }
+
     // 빠른 처리
     let s = gmSection(body, '빠른 처리');
     let r = gmRow(s);
@@ -13911,7 +13969,7 @@
     ntTitle.setAttribute('aria-label', '노트 제목');
     ntTitle.addEventListener('input', () => { GM.note.title = ntTitle.value; });
     const ntBody = gEl('textarea', 'input gm-ta');
-    ntBody.maxLength = 20000; /* 서버 NOTE.bodyMax와 같게 */ ntBody.rows = 8; ntBody.value = GM.note.body;
+    ntBody.maxLength = 3000; ntBody.rows = 8; ntBody.value = GM.note.body;
     ntBody.placeholder = '- 바뀐 점 하나\n- 바뀐 점 둘';
     ntBody.setAttribute('aria-label', '노트 내용');
     ntBody.addEventListener('input', () => { GM.note.body = ntBody.value; });
@@ -15941,7 +15999,7 @@
     if (tab === 'plan' && h.book && h.book.unread) { socket.emit('city:book:seen', {}, () => {}); setTimeout(() => { if (h.book) h.book.unread = 0; }, 0); } // 집터 탭을 열면 새 글을 읽은 것으로 (이번 화면에는 새 글 표시를 남김)
     body.innerHTML = `<div id="home-ui" class="hm-e">
       <header class="hd"><div class="hd-t"><h3>${plot.name}</h3><span class="hd-r"><span class="seal" title="오늘 보탠 재건도${h.bank ? ` · 다음 날로 넘긴 재건도 ${h.bank}` : ''}">재건도 <b>${h.daySon} / ${v.rules.dayCap}</b></span><span class="seal">인장 <b>${h.seals}</b></span><span class="tag">${stg} / 4단계</span></span></div>
-        <p class="hd-s">${plot.mood}</p>${h.perk ? `<p class="hd-perk${h.perk.on ? ' on' : ''}" title="${ctEsc(h.perk.text)}"><b>집터 덤</b> ${ctEsc(String(h.perk.text).split(' (')[0])}${h.perk.on ? (h.perk.up ? ' · <em>구역이 재건되어 한 단계 커짐</em>' : '') + (h.perk.kind !== 'passive' ? ` · 오늘 ${h.perk.left} / ${h.perk.max}` : ` · ${Math.round(h.perk.off * 100)}%`) : (() => { const rn = h.plots.find((p) => p.id === h.plot).room; return ` · ${ctEsc(rn)}${ctJ(rn, '을', '를')} 되살리면 열린다`; })()}</p>` : ''}${h.pondBack ? `<p class="hd-perk on"><b>연못</b> 분수로 바뀌었던 연못을 돌려받았다${h.pondBack.n ? ` (연못 ${h.pondBack.n}개)` : ''}${h.pondBack.bp ? ' · 연못 도면도 함께' : ''}. 꾸미기에서 놓을 수 있다.</p>` : ''}${h.flowerBack ? `<p class="hd-perk on"><b>들꽃</b> 들꽃은 그림이 같은 노란 꽃으로 합쳐졌다. 노란 꽃 ${h.flowerBack.n}개로 옮기고, 값 차이로 석공 인장 ${h.flowerBack.back}개를 돌려받았다. 노란 꽃은 깔개 위에도 놓을 수 있다.</p>` : ''}</header>
+        <p class="hd-s">${plot.mood}</p>${h.perk ? `<p class="hd-perk${h.perk.on ? ' on' : ''}" title="${ctEsc(h.perk.text)}"><b>집터 덤</b> ${ctEsc(String(h.perk.text).split(' (')[0])}${h.perk.on ? (h.perk.up ? ' · <em>구역이 재건되어 한 단계 커짐</em>' : '') + (h.perk.kind !== 'passive' ? ` · 오늘 ${h.perk.left} / ${h.perk.max}` : ` · ${Math.round(h.perk.off * 100)}%`) : (() => { const rn = h.plots.find((p) => p.id === h.plot).room; return ` · ${ctEsc(rn)}${ctJ(rn, '을', '를')} 되살리면 열린다`; })()}</p>` : ''}${h.pondBack ? `<p class="hd-perk on"><b>연못</b> 분수로 바뀌었던 연못을 돌려받았다${h.pondBack.n ? ` (연못 ${h.pondBack.n}개)` : ''}${h.pondBack.bp ? ' · 연못 도면도 함께' : ''}. 꾸미기에서 놓을 수 있다.</p>` : ''}</header>
       <nav class="hm-tabs" aria-label="내 집터 화면">${tabs.map(([k, n, x]) => `<button type="button" data-ct="tab:${k}" class="${tab === k ? 'on' : ''}"${tab === k ? ' aria-current="page"' : ''}>${n}${x}</button>`).join('')}</nav>
       ${main}</div>`;
     paintHouse(body, h);
@@ -16183,7 +16241,7 @@
     fetch('/house/pack.json').then((r) => r.json()).then(async (d) => {
       P = d; const jobs = [];
       jobs.push(load(d.base).then((i) => { IMG.__base = i; }), load(d.front).then((i) => { IMG.__front = i; }));
-      for (const [k, s] of Object.entries(d.sprites)) { if (s.src) jobs.push(load(s.src).then((i) => { IMG[k] = i; })); if (s.frames) jobs.push(Promise.all(s.frames.map(load)).then((a) => { FR[k] = a; if (!s.src) IMG[k] = a[0]; })); } // 움직이는 그림은 src 없이 장면(frames)만 있음: 첫 장면을 멈춘 그림으로 (예전엔 없는 src를 불러 '/undefined' 요청이 났음)
+      for (const [k, s] of Object.entries(d.sprites)) { jobs.push(load(s.src).then((i) => { IMG[k] = i; })); if (s.frames) jobs.push(Promise.all(s.frames.map(load)).then((a) => { FR[k] = a; })); }
       for (const f of d.floors) jobs.push(load(f.src).then((i) => { FT[f.id] = { s: f.s, px: pix(i, f.s, f.s), im: i }; }));
       jobs.push(load(d.cobble).then((i) => { FT.cobble = { s: 16, px: pix(i, 16, 16), im: i }; }));
       for (const f of d.walls) jobs.push(load(f.src).then((i) => { WT[f.id] = { px: pix(i, 16, 32), im: i }; }));
@@ -16221,11 +16279,11 @@
     const support = (o, list) => { if (!(sp(o.s) && sp(o.s).stack)) return null; const [w, h] = size(o.s), fx = o.x + w / 2, fy = o.y + h - 1;
       return list.find((q) => q !== o && layer(q.s) === '' && !(sp(q.s) && sp(q.s).stack) && (() => { const [qw, qh] = size(q.s); return fx >= q.x && fx < q.x + qw && fy >= q.y && fy < q.y + qh; })()) || null; };
     const effLayer = (o, list) => (support(o, list) ? 'top' : layer(o.s));
-    // 그리는 순서: 귀환 주문진 → 깔개 → 꽃 같은 납작한 장식 → 벽 장식 → 가구(아래쪽이 앞) · 올려 둔 소품은 받친 가구 바로 다음
+    // 그리는 순서: 깔개 → 벽 장식 → 가구(아래쪽이 앞) · 올려 둔 소품은 받친 가구 바로 다음
     // 건물 밖(가운데가 어느 방에도 없음)에 선 가구는 앞쪽 벽(방 아랫면)보다 앞에 그림. 깔개처럼 납작한 것은 그대로 아래에
     const zone = (o) => { const [w, h] = size(o.s), cx = o.x + w / 2, cy = o.y + h / 2; const r = Object.entries(ROOMS).find(([id, [rx, ry, rw, rh]]) => id !== 'yard' && cx >= rx && cx < rx + rw && cy >= ry && cy < ry + rh); return r ? r[0] : 'out'; }; // 서버 decoZone과 같음
     const outdoor = (o) => layer(o.s) !== 'flat' && zone(o) === 'out';
-    const order = (o, list = []) => { const L = layer(o.s); if (L === 'flat') return sp(o.s)?.under ? -2e4 : /^rug/.test(o.s) ? -1e4 : -9e3 + o.y + size(o.s)[1]; /* under: 깔개보다도 아래 (귀환 주문진) · 깔개 · 그 위에 꽃처럼 납작한 장식(아래쪽이 앞) */ if (L === 'wall') return -5e3 + o.y; const b = support(o, list); return b ? b.y + size(b.s)[1] + 0.5 + (o.y + size(o.s)[1]) / 1e3 : o.y + size(o.s)[1]; };
+    const order = (o, list = []) => { const L = layer(o.s); if (L === 'flat') return sp(o.s)?.under ? -2e4 : -1e4; /* under: 깔개보다도 아래 (귀환 주문진) */ if (L === 'wall') return -5e3 + o.y; const b = support(o, list); return b ? b.y + size(b.s)[1] + 0.5 + (o.y + size(o.s)[1]) / 1e3 : o.y + size(o.s)[1]; };
     // 움직이는 그림: 시각으로 장면을 고름. 가구마다 장면 하나의 길이(ms, 팩에 없으면 0.16초)가 달라도 됨 (불꽃은 조금 느리게)
     const frameOf = (k) => Math.floor(performance.now() / ((sp(k) && sp(k).ms) || 160)) % FR[k].length;
     function drawSprite(g, k, x, y, f) {
