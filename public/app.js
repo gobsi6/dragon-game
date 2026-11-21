@@ -13524,6 +13524,36 @@
       ns.appendChild(nbox);
     }
 
+    // 집터 되살리기: 자동 백업(하루 한 번, 최근 7개)에서 이 드래곤의 집터 장식 배치만 꺼내 지금 집터에 덮어씀
+    {
+      const ps = gmSection(body, '집터 되살리기', "실수로 '처음 모습으로'를 저장하는 등 장식 배치를 잃었을 때. 고른 날의 자동 백업에서 이 드래곤의 장식 배치만 가져온다. 다른 드래곤·다른 기록은 그대로다.");
+      const pr = gmRow(ps);
+      const pbox = gEl('div', 'gm-plotbk'); pbox.hidden = true;
+      const load = () => socket.emit('city:gm:plotBackups', { id: d.id }, (res) => {
+        if (res?.error) return toast(res.error);
+        pbox.hidden = false; pbox.replaceChildren();
+        pbox.appendChild(gEl('p', 'note', res.plot ? `지금: ${res.plot} · 장식 ${res.deco == null ? '처음 모습' : `${res.deco}개`}` : '아직 집터를 고르지 않았다.'));
+        if (!res.list.length) { pbox.appendChild(gEl('p', 'note', '자동 백업이 없다.')); return; }
+        for (const b of res.list) {
+          const day = b.name.slice(5, 13), when = `${Number(day.slice(4, 6))}월 ${Number(day.slice(6, 8))}일`;
+          const r = gmRow(pbox, when);
+          const info = b.error ? `읽지 못함 (${b.error})` : b.none ? '이 드래곤이 없던 때' : !b.plot ? '집터 없음' : `${b.plot} · 장식 ${b.deco == null ? '처음 모습' : `${b.deco}개`}${b.same ? '' : ' · 지금과 다른 집터'}`;
+          r.appendChild(gEl('span', 'note', info));
+          if (b.plot && b.same && res.plot) gBtn(r, '이 날로 되살리기', () => {
+            if (!confirm(`${d.name}의 집터 장식을 ${when} 모습으로 되살릴까?\n지금 놓인 배치는 사라진다. (가진 가구는 그대로)`)) return;
+            socket.emit('city:gm:plotRestore', { id: d.id, name: b.name }, (r2) => {
+              if (r2?.error) return toast(r2.error);
+              toast(`${r2.when} 모습으로 되살렸다.${r2.dropped ? ` 지금 없는 가구 ${r2.dropped}개는 뺐다.` : ''}`);
+              load();
+            });
+          });
+        }
+      });
+      gBtn(pr, '백업 보기', load);
+      gBtn(pr, '접기', () => { pbox.hidden = true; pbox.replaceChildren(); }, 'link');
+      ps.appendChild(pbox);
+    }
+
     // 빠른 처리
     let s = gmSection(body, '빠른 처리');
     let r = gmRow(s);

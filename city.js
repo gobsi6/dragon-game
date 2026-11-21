@@ -3,6 +3,8 @@
 // 도시 기록(재건도·재료함·기억의 벽·보탠 이)은 world 표의 'city'에, 드래곤마다 집터·골렘은 combat JSON의 city에 둔다.
 // 1단계: 도시 지도·구역·재건도(하루 상한)·재료함, 내 집터(네 칸)·골렘(공사·도시 일손·채집·잔해 뒤지기), 오늘의 부탁, 기억의 벽
 const { ITEMS, MIND, RUIN } = require('./game-data');
+const fs = require('fs');
+const path = require('path');
 
 const CITY_RULES = {
   region: 'ruins',                 // 입구가 있는 지역 (지하 회랑과 같은 곳)
@@ -149,7 +151,7 @@ const GSTAGE = ['씨앗', '새싹', '다 자람', '거둔 뒤'];
 // 2026-11 팩 그림으로 바꾸기 전 가구·도면 → 새 가구 (가진 수를 그대로 옮김. 짝이 없는 것은 석공 인장으로 돌려줌)
 const OLD_FURN = { pot: 'pot', crate: 'crate', barrel: 'barrel', signpost: 'signpost', bedplot: 'bedplot', planter: 'planter', bench: 'bench', lamp: 'lamp', table: 'table', shelf: 'shelf', rug: 'rug', steps: 'rock', bed: 'bed', workbench: 'workbench',
   tablets: 'bookcase', tablets2: 'bookcase', tablets3: 'bookcase', arch: 'arch', carvedesk: 'lectern', anvil: 'anvil', bell: 'bell', hearth: 'hearth', telescope: 'clock', pond: 'pond', well: 'well', jar: 'pot', chair: 'chair',
-  fence: 'fence_wood', flowers: 'flower2', mushroom: 'mushroom', bush: 'bush', stepstone: 'rock', flowerbed: 'planter', stonelamp: 'lamp', brazier: 'torch', tree: 'bush', candle: 'candle', cactus: 'pot', chest: 'chest', sofa: 'bench',
+  fence: 'fence_wood', flowers: 'flowers', mushroom: 'mushroom', bush: 'bush', stepstone: 'rock', flowerbed: 'planter', stonelamp: 'lamp', brazier: 'torch', tree: 'bush', candle: 'candle', cactus: 'pot', chest: 'chest', sofa: 'bench',
   mosaic: 'rug', crystallamp: 'lamp', goldlamp: 'lamp', glowpatch: 'bedplot', bookcase: 'bookcase', nestbed: 'rug', tapestry: 'banner', fountain: 'fountain', goldpile: 'chest', orb: 'lamp' };
 const OLD_FURN_SEALS = {}; // 짝이 없어 인장으로 돌려주는 가구 (만들 때 든 인장). 나무 울타리는 2026-11 v7부터 새 나무 울타리로 옮겨짐
 const OLD_BP = { arch: 'arch', hearth: 'hearth', bookcase: 'bookcase', well: 'well', fountain: 'fountain', pond: 'pond', bell: 'bellstand', carvedesk: 'lectern', tapestry: 'banner', telescope: 'clock' };
@@ -172,7 +174,7 @@ const GOLEM_NAMES = ['유적 골렘 1', '유적 골렘 2', '유적 골렘 3']; /
 const OLD_GOLEM_NAMES = ['돌멩이', '이끼등', '모래발'];
 const GOLEM_NAME_RE = /^[가-힣A-Za-z0-9 ·'\-]{1,12}$/;
 
-const josa = (w, a, b) => { w = String(w).replace(/\s*\([^()]*\)$/, '') || String(w); const l = w[w.length - 1]; if (/[0-9]/.test(l)) return '013678'.includes(l) ? a : b; const c = w.charCodeAt(w.length - 1); if (c < 0xac00 || c > 0xd7a3) return b; if (a === '으로' && (c - 0xac00) % 28 === 8) return b; return (c - 0xac00) % 28 ? a : b; }; // 끝의 '(분홍)' 같은 덧말은 빼고 앞말에 맞춤('커튼 (청록)이'). 숫자로 끝나면 읽는 소리대로 (일·삼·육·칠·팔·영은 받침)
+const josa = (w, a, b) => { w = String(w); const l = w[w.length - 1]; if (/[0-9]/.test(l)) return '013678'.includes(l) ? a : b; const c = w.charCodeAt(w.length - 1); if (c < 0xac00 || c > 0xd7a3) return b; if (a === '으로' && (c - 0xac00) % 28 === 8) return b; return (c - 0xac00) % 28 ? a : b; }; // 숫자로 끝나면 읽는 소리대로 (일·삼·육·칠·팔·영은 받침)
 const ga = (n) => `${n}${josa(n, '이', '가')}`;
 const ro = (w) => { const c = String(w).charCodeAt(String(w).length - 1); if (c < 0xac00 || c > 0xd7a3) return `${w}로`; const t = (c - 0xac00) % 28; return `${w}${t && t !== 8 ? '으로' : '로'}`; }; // ㄹ 받침은 '로'
 const eul = (n) => `${n}${josa(n, '을', '를')}`;
@@ -342,14 +344,6 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
       if (m.plot && m.packV === 16) { // 16 → 17: 잠깐 있던 작은 덩굴 아치를 뺌. 만든 것은 덩굴 아치로, 놓아 둔 것은 치움
         if (m.furn.arch_small) { m.furn.arch = (m.furn.arch || 0) + m.furn.arch_small; delete m.furn.arch_small; }
         if (Array.isArray(m.deco)) m.deco = m.deco.filter((o) => o.s !== 'arch_small');
-      }
-      if (m.plot && m.packV <= 39) { // → 40: '들꽃'은 '노란 꽃'과 그림이 같아 노란 꽃으로 합침. 가진 수·놓아 둔 것을 옮기고, 값 차이(하나에 인장 2)를 돌려줌
-        const placed = Array.isArray(m.deco) ? m.deco.filter((o) => o.s === 'flowers').length : 0, n = Math.max(m.furn.flowers || 0, placed);
-        if (n) {
-          m.furn.flower2 = (m.furn.flower2 || 0) + n; delete m.furn.flowers; m.seals = (m.seals || 0) + 2 * n;
-          if (placed) m.deco.forEach((o) => { if (o.s === 'flowers') o.s = 'flower2'; });
-          m.flowerBack = { at: Date.now(), n, back: 2 * n };
-        }
       }
       // 4 → 5: 덩굴 아치 · 5 → 6: 작은 종 · 6 → 7: 울타리 네 가지·꽃 · 7 → 8: 촛대 스탠드·초, 불 가구 움직임 · 8 → 9: 부엌·소품 가구, 깔개 색 · 9 → 10: 색유리 창·마법서·마력 수정·파랑 화분대 · 10 → 11: 긴 깔개 색 여섯, 네모 깔개 따로 · 11 → 12: 별밤 벽지·연한 벽돌 바닥·탁상시계·책 선반·은 거울·달 깔개 · 13 → 14: 마법 등불, 횃불 옆모습, 장작 테두리 · 15 → 16: 작은 덩굴 아치 · 16 → 17: 작은 덩굴 아치 뺌 · 17 → 18: 건물 앞·바깥뜰에 놓기 (새로 옮길 것 없음)
       m.packV = PACK.v; return;
@@ -1200,6 +1194,10 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
   // 장식 배치 저장. list가 null이면 처음 모습(칸마다 정해진 가구)으로
   function setDeco(d, list) {
     const e = ready(d); if (e) return e;
+    return applyDeco(d, list);
+  }
+  // 장식 배치를 검사하고 적용 (GM이 백업에서 집터를 되살릴 때도 씀: 도시 안에 있지 않아도 됨)
+  function applyDeco(d, list) {
     const m = ct(d); if (!m.plot) return err('먼저 집터를 골라야 한다.');
     if (list === null) { m.deco = null; return { ok: true, lines: ['장식을 처음 모습으로 되돌렸다.'] }; }
     if (!Array.isArray(list)) return err('장식 배치를 다시 해 보자.');
@@ -1261,7 +1259,7 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
         rooms: rs.map((r, i) => ({ id: r.id, name: r.name, hours: r.hours, h: m.rooms[r.id].h, mats: Object.entries(r.mats).map(([k, n]) => ({ id: k, name: ITEMS[k].name, need: n, put: m.rooms[r.id].mats[k] || 0 })), opens: r.opens, state: i < ci ? 'done' : i === ci ? 'cur' : 'lock' })),
         golems: m.golems.map((g, i) => ({ i, name: g.name, named: !!g.named, awake: g.awake, job: g.job, hours: g.hours, start: g.start, until: g.until, report: g.report, last: g.last || null, gate: g.awake ? null : gateOf(m, i), dur: g.dur ?? R.wear.max, mendBy: g.mendBy || null })),
         garden: m.plot ? { list: gBeds(m).map((o, k) => ({ g: o.g, n: k + 1, ...(m.garden[o.g] ? gInfo(m.garden[o.g]) : { c: null }) })), crops: GARDEN.crops, dry: GARDEN.dry, gold: Math.floor(d.gold || 0) } : null,
-        deco: m.deco || null, decoRules: { max: DECO.max }, packNote: m.packNote && m.packNote.at > Date.now() - 7 * 864e5 ? m.packNote : null, pondBack: m.pondBack && m.pondBack.at > Date.now() - 7 * 864e5 ? m.pondBack : null, flowerBack: m.flowerBack && m.flowerBack.at > Date.now() - 7 * 864e5 ? m.flowerBack : null,
+        deco: m.deco || null, decoRules: { max: DECO.max }, packNote: m.packNote && m.packNote.at > Date.now() - 7 * 864e5 ? m.packNote : null, pondBack: m.pondBack && m.pondBack.at > Date.now() - 7 * 864e5 ? m.pondBack : null,
         furn: m.furn, furnCat: Object.entries(FURN).map(([k, f]) => ({ s: k, name: f.name, cat: f.cat, seals: sealCost(f), base: f.seals, cap: FURN_CAP[k] || null, bp: own(BLUEPRINT, BPKEY[k]) ? !!(m.bp || {})[BPKEY[k]] : null, mats: Object.entries(f.mats).map(([id, n]) => ({ id, name: ITEMS[id].name, need: n })) })),
         zday: Object.fromEntries(Object.entries(m.zday || {}).filter(([, v]) => v === dayIdx())), springLeft: ZF.springTimes - (m.spring && m.spring.day === dayIdx() ? m.spring.n : 0), bell: (() => { const bt = bellToday(), by = Array.isArray(bt.by) ? bt.by : []; return { n: by.length, need: ZF.bellNeed, mine: by.includes(d.name), on: by.length >= ZF.bellNeed }; })(), forgeOff: done('forge') ? ZF.forgeOff : 0,
         bp: Object.entries(BLUEPRINT).map(([k, c]) => ({ s: k, name: bpName(k), seals: c, have: !!(m.bp || {})[k] })),
@@ -1364,6 +1362,68 @@ module.exports = function city({ io, db, online, logic, sendMe }) {
     });
     const zi = (id) => ZONES.findIndex((z) => z.id === id);
     on('city:gm:get', () => ({}));
+    // ── 집터 되살리기: 자동 백업(하루 한 번, 최근 7개)에서 한 드래곤의 집터 장식 배치만 꺼내 지금 집터에 덮어씀 ──
+    // 다른 드래곤·다른 기록은 그대로. 실수로 '처음 모습으로'를 저장했을 때 등
+    const BK_DIR = path.join(path.dirname(db.DB_PATH), 'backups'), BK_RE = /^auto-\d{8}\.db$/;
+    const bkList = () => { try { return fs.readdirSync(BK_DIR).filter((n) => BK_RE.test(n)).sort().reverse(); } catch { return []; } };
+    // 백업 속 그 드래곤의 고대도시 기록을 지금 판으로 맞춰 읽음 (그사이 가구 그림이 바뀌었으면 ct()가 옮겨 줌)
+    const bkCity = (name, id) => {
+      const row = db.peekDragon(path.join(BK_DIR, name), id);
+      if (!row) return null;
+      const tmp = { id, region: row.region, combat: row.combat };
+      const c = logic.combatJson(tmp);
+      if (!c.city || !c.city.plot) return { plot: null };
+      return ct(tmp);
+    };
+    const gmOn = (ev, fn) => socket.on(ev, (p, ack) => {
+      if (typeof ack !== 'function') return;
+      const u = socket.data && socket.data.user; if (!u || !u.is_gm) return ack({ error: 'GM만 쓸 수 있다.' });
+      try { ack(fn(p && typeof p === 'object' ? p : {}, u)); }
+      catch (er) { console.error('[집터 되살리기]', ev, er.stack); ack({ error: '처리하다 문제가 생겼다. 서버 기록을 확인하자.' }); }
+    });
+    gmOn('city:gm:plotBackups', (p) => {
+      const id = Number(p.id);
+      const e = online.get(id), d = e ? e.dragon : db.getDragon(id);
+      if (!d) return { error: '그런 드래곤이 없다.' };
+      const now = ct(d);
+      const list = bkList().map((name) => {
+        try {
+          const m = bkCity(name, id);
+          if (!m) return { name, none: true };
+          return { name, plot: m.plot ? (PLOTS.find((x) => x.id === m.plot)?.name || m.plot) : null, same: !!m.plot && m.plot === now.plot,
+            deco: Array.isArray(m.deco) ? m.deco.length : null };
+        } catch (er) { return { name, error: er.message }; }
+      });
+      return { ok: true, plot: now.plot ? (PLOTS.find((x) => x.id === now.plot)?.name || now.plot) : null, deco: Array.isArray(now.deco) ? now.deco.length : null, list };
+    });
+    gmOn('city:gm:plotRestore', (p, u) => {
+      const id = Number(p.id), name = String(p.name || '');
+      if (!BK_RE.test(name) || !bkList().includes(name)) return { error: '그런 백업은 없다.' };
+      const e = online.get(id), d = e ? e.dragon : db.getDragon(id);
+      if (!d) return { error: '그런 드래곤이 없다.' };
+      const now = ct(d);
+      if (!now.plot) return { error: '이 드래곤은 아직 집터를 고르지 않았다.' };
+      const m = bkCity(name, id);
+      if (!m || !m.plot) return { error: '그 백업에는 이 드래곤의 집터가 없다.' };
+      if (m.plot !== now.plot) return { error: '그 백업 때와 지금의 집터가 다르다. (집터를 옮긴 뒤라 되살릴 수 없다)' };
+      let res, dropped = 0;
+      if (!Array.isArray(m.deco)) { now.deco = null; res = { ok: true }; }
+      else {
+        // 그사이 가구를 팔거나 줬으면, 지금 가진 수만큼만 놓음 (모자란 것은 빼고)
+        grantFurn(d);
+        const left = { ...(now.furn || {}) }, list = [];
+        for (const it of m.deco) { const k = DECO.base[it.s]; if (k && (left[k] || 0) > 0) { left[k] -= 1; list.push(it); } else dropped++; }
+        res = applyDeco(d, list);
+        if (res.error) return res;
+      }
+      db.saveState(d);
+      if (e) sendMe(e.socket, d);
+      const day = name.slice(5, 13), when = `${Number(day.slice(4, 6))}월 ${Number(day.slice(6, 8))}일`;
+      const line = `GM이 집터 장식을 ${when} 모습으로 되살려 주었다.${dropped ? ` (지금 없는 가구 ${dropped}개는 빼고)` : ''}`;
+      if (e) e.socket.emit('notice', { title: '대륙의 목소리', lines: [line] }); else db.noteAdd(id, line);
+      try { db.gmLog(u.username, d.name, `집터 되살리기 (${name}, 장식 ${Array.isArray(now.deco) ? now.deco.length : '처음 모습'}개${dropped ? `, 없는 가구 ${dropped}개 뺌` : ''})`); } catch {}
+      return { ok: true, deco: Array.isArray(now.deco) ? now.deco.length : null, dropped, when };
+    });
     on('city:gm:close', (p) => { W.closed = !!p.on; return { log: W.closed ? '도시 잠시 닫음 (점검)' : '도시 다시 엶' }; });
     on('city:gm:son', (p) => {
       const n = Math.trunc(Number(p.n)); if (!Number.isFinite(n) || !n) return { error: '더하거나 뺄 값을 적어야 한다.' };
@@ -1402,4 +1462,3 @@ module.exports.CITY_TRADE = TRADE; // 재료 얻는 곳 안내(server.js ITEM_SO
 module.exports.CITY_WORKSHOP = WORKSHOP;
 module.exports.CITY_JOBS = JOBS;
 module.exports.CITY_FURN = FURN; // 주고받은 기록에 가구 이름을 붙일 때 (social.js)
-module.exports.CITY_FURN_GONE = { flowers: '들꽃' }; // 없어진 가구의 옛 이름 (지난 기록에 보이게)

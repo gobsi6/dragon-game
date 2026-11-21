@@ -781,6 +781,14 @@ async function snapshotAsync(to) {
   return to;
 }
 // 올린 파일이 이 게임의 저장 파일이 맞는지 살펴봄 (SQLite이고, 드래곤·계정 표가 있는지)
+// 백업 파일 속 드래곤 한 마리의 기록만 읽음 (GM: 집터 되살리기). 지금 저장 파일은 건드리지 않음
+function peekDragon(file, id) {
+  let t;
+  try {
+    t = new Database(file, { readonly: true, fileMustExist: true });
+    return t.prepare('SELECT id, name, region, combat FROM dragons WHERE id = ?').get(id) || null;
+  } finally { try { t && t.close(); } catch {} }
+}
 function checkBackup(file) {
   const buf = fs.readFileSync(file);
   if (buf.length < 100 || buf.subarray(0, 16).toString('latin1') !== 'SQLite format 3\u0000') return { error: '저장 파일(.db)이 아니다.' };
@@ -984,7 +992,7 @@ function newsAdd(id, title, lines, items, gold) {
   } catch (e) { console.error('[지난 소식]', e.message); }
 }
 module.exports = {
-  DB_PATH, snapshot, snapshotAsync, customRefs, customOrphans, checkBackup, stageRestore, closeDb, dbFileSize,
+  DB_PATH, snapshot, snapshotAsync, customRefs, customOrphans, checkBackup, peekDragon, stageRestore, closeDb, dbFileSize,
   countUsers: () => q.countUsers.get().n,
   getUserByName: (name) => q.userByName.get(name),
   // 비밀번호 바꾸기. keepToken이 있으면 그 접속만 남기고 다른 기기의 로그인은 모두 끊음
